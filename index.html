@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FindMyBasket — Your Skincare Routine, Optimised</title>
+  <meta name="description" content="FindMyBasket compares skincare prices across Boots, Superdrug, Cult Beauty and LOOKFANTASTIC — and finds the cheapest way to buy your whole routine in one go." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream: #FAF8F4;
+      --warm-white: #FFFDF9;
+      --ink: #1C1A18;
+      --ink-light: #4A4845;
+      --gold: #C9A96E;
+      --gold-light: #E8D5B0;
+      --sage: #7A9E87;
+      --sage-light: #C8DDD0;
+      --blush: #E8C4B8;
+      --border: rgba(28,26,24,0.1);
+      --shadow: 0 4px 40px rgba(28,26,24,0.08);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cream);
+      color: var(--ink);
+      overflow-x: hidden;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 48px;
+      background: rgba(250,248,244,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px; font-weight: 600; letter-spacing: 0.02em;
+      color: var(--ink); text-decoration: none;
+    }
+    .nav-logo span { color: var(--gold); }
+    .nav-links { display: flex; gap: 36px; align-items: center; }
+    .nav-links a {
+      font-size: 14px; font-weight: 400; color: var(--ink-light);
+      text-decoration: none; letter-spacing: 0.02em;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--ink); }
+    .nav-cta {
+      background: var(--ink) !important; color: var(--cream) !important;
+      padding: 10px 22px; border-radius: 100px;
+      font-weight: 500 !important; font-size: 13px !important;
+      transition: background 0.2s, transform 0.15s !important;
+    }
+    .nav-cta:hover { background: var(--gold) !important; transform: translateY(-1px); }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 120px 24px 80px;
+      position: relative;
+      overflow: hidden;
+      text-align: center;
+    }
+    .hero-bg {
+      position: absolute; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 20%, rgba(201,169,110,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 80% at 80% 80%, rgba(122,158,135,0.10) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 60% 10%, rgba(232,196,184,0.15) 0%, transparent 50%);
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(201,169,110,0.12); border: 1px solid rgba(201,169,110,0.3);
+      border-radius: 100px; padding: 8px 18px;
+      font-size: 12px; font-weight: 500; letter-spacing: 0.08em;
+      color: #8A6A30; text-transform: uppercase;
+      margin-bottom: 32px; position: relative; z-index: 1;
+      animation: fadeUp 0.8s ease both;
+    }
+    .hero-badge::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--gold); display: block;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.4); }
+    }
+    .hero h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(52px, 9vw, 96px);
+      font-weight: 600; line-height: 0.95;
+      letter-spacing: -0.02em;
+      position: relative; z-index: 1;
+      animation: fadeUp 0.8s 0.1s ease both;
+    }
+    .hero h1 em {
+      font-style: italic; color: var(--gold);
+    }
+    .hero-sub {
+      font-size: clamp(16px, 2vw, 20px);
+      color: var(--ink-light); font-weight: 300;
+      max-width: 560px; line-height: 1.6;
+      margin: 28px auto 0;
+      position: relative; z-index: 1;
+      animation: fadeUp 0.8s 0.2s ease both;
+    }
+    .hero-form {
+      display: flex; gap: 12px; margin-top: 48px;
+      position: relative; z-index: 1;
+      animation: fadeUp 0.8s 0.3s ease both;
+      flex-wrap: wrap; justify-content: center;
+    }
+    .hero-form input {
+      padding: 16px 24px;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      background: var(--warm-white);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px; color: var(--ink);
+      width: 300px; outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .hero-form input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 4px rgba(201,169,110,0.12);
+    }
+    .hero-form input::placeholder { color: #AAA8A4; }
+    .btn-primary {
+      padding: 16px 32px;
+      background: var(--ink); color: var(--cream);
+      border: none; border-radius: 100px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px; font-weight: 500;
+      cursor: pointer; white-space: nowrap;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .btn-primary:hover { background: var(--gold); transform: translateY(-2px); }
+    .btn-primary:active { transform: translateY(0); }
+    .hero-note {
+      font-size: 12px; color: #AAA8A4; margin-top: 16px;
+      position: relative; z-index: 1;
+      animation: fadeUp 0.8s 0.4s ease both;
+    }
+    .hero-retailers {
+      display: flex; align-items: center; gap: 24px;
+      margin-top: 56px; position: relative; z-index: 1;
+      animation: fadeUp 0.8s 0.5s ease both;
+      flex-wrap: wrap; justify-content: center;
+    }
+    .hero-retailers span {
+      font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: #AAA8A4; font-weight: 500;
+    }
+    .retailer-pill {
+      padding: 8px 16px;
+      background: var(--warm-white);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 13px; font-weight: 500; color: var(--ink-light);
+    }
+
+    /* ── STATS STRIP ── */
+    .stats {
+      background: var(--ink);
+      padding: 32px 48px;
+      display: flex; justify-content: center; gap: 80px;
+      flex-wrap: wrap;
+    }
+    .stat { text-align: center; }
+    .stat-num {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 40px; font-weight: 600; color: var(--gold);
+      line-height: 1;
+    }
+    .stat-label {
+      font-size: 13px; color: rgba(250,248,244,0.5);
+      margin-top: 4px; letter-spacing: 0.04em;
+    }
+
+    /* ── HOW IT WORKS ── */
+    section { padding: 100px 24px; }
+    .section-inner { max-width: 1100px; margin: 0 auto; }
+    .section-tag {
+      font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--gold); font-weight: 500; margin-bottom: 16px;
+    }
+    .section-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(36px, 5vw, 56px);
+      font-weight: 600; line-height: 1.1;
+      letter-spacing: -0.01em;
+    }
+    .section-title em { font-style: italic; color: var(--sage); }
+
+    .steps {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 2px; margin-top: 60px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 24px; overflow: hidden;
+    }
+    .step {
+      background: var(--warm-white);
+      padding: 48px 36px;
+      position: relative;
+      transition: background 0.2s;
+    }
+    .step:hover { background: #FFFEF8; }
+    .step-num {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 64px; font-weight: 600;
+      color: rgba(201,169,110,0.2);
+      line-height: 1; margin-bottom: 24px;
+    }
+    .step-icon {
+      width: 48px; height: 48px;
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin-bottom: 20px;
+    }
+    .step h3 {
+      font-size: 18px; font-weight: 600; margin-bottom: 12px;
+    }
+    .step p { font-size: 15px; color: var(--ink-light); line-height: 1.6; }
+
+    /* ── DEMO ── */
+    .demo-section { background: var(--ink); }
+    .demo-section .section-title { color: var(--cream); }
+    .demo-section .section-tag { color: var(--gold); }
+    .demo-section p { color: rgba(250,248,244,0.6); }
+
+    .demo-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px; padding: 40px;
+      margin-top: 48px;
+    }
+    .demo-routine {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 12px; margin-bottom: 32px;
+    }
+    .demo-product {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px; padding: 14px 16px;
+    }
+    .demo-product-dot {
+      width: 36px; height: 36px; border-radius: 10px;
+      flex-shrink: 0;
+    }
+    .demo-product-info { flex: 1; }
+    .demo-product-name { font-size: 13px; font-weight: 500; color: var(--cream); }
+    .demo-product-brand { font-size: 11px; color: rgba(250,248,244,0.4); margin-top: 2px; }
+
+    .demo-results { margin-top: 8px; }
+    .demo-result-label {
+      font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(250,248,244,0.4); margin-bottom: 16px;
+    }
+    .demo-basket {
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px; padding: 20px 24px;
+      margin-bottom: 10px;
+      position: relative; overflow: hidden;
+    }
+    .demo-basket.best {
+      border-color: rgba(201,169,110,0.4);
+      background: rgba(201,169,110,0.08);
+    }
+    .demo-basket.best::before {
+      content: 'BEST'; position: absolute; top: 0; right: 0;
+      background: var(--gold); color: var(--ink);
+      font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+      padding: 4px 12px; border-radius: 0 14px 0 10px;
+    }
+    .basket-retailer { font-size: 15px; font-weight: 500; color: var(--cream); }
+    .basket-items { font-size: 13px; color: rgba(250,248,244,0.5); margin-top: 2px; }
+    .basket-price {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px; font-weight: 600; color: var(--gold);
+    }
+    .basket-saving {
+      font-size: 12px; color: var(--sage); text-align: right; margin-top: 2px;
+    }
+
+    /* ── WHY ── */
+    .why-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 24px; margin-top: 60px;
+    }
+    .why-card {
+      padding: 36px 32px;
+      background: var(--warm-white);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .why-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow);
+    }
+    .why-icon {
+      width: 52px; height: 52px;
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; margin-bottom: 24px;
+    }
+    .why-card h3 { font-size: 18px; font-weight: 600; margin-bottom: 10px; }
+    .why-card p { font-size: 14px; color: var(--ink-light); line-height: 1.65; }
+
+    /* ── CTA ── */
+    .cta-section {
+      background: linear-gradient(135deg, #1C1A18 0%, #2E2B27 100%);
+      text-align: center;
+    }
+    .cta-section .section-title { color: var(--cream); }
+    .cta-inner { max-width: 640px; margin: 0 auto; }
+    .cta-sub {
+      font-size: 17px; color: rgba(250,248,244,0.5);
+      margin-top: 20px; line-height: 1.6;
+    }
+    .cta-form {
+      display: flex; gap: 12px; margin-top: 40px;
+      justify-content: center; flex-wrap: wrap;
+    }
+    .cta-form input {
+      padding: 16px 24px;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 100px;
+      background: rgba(255,255,255,0.06);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px; color: var(--cream);
+      width: 280px; outline: none;
+      transition: border-color 0.2s;
+    }
+    .cta-form input:focus { border-color: var(--gold); }
+    .cta-form input::placeholder { color: rgba(250,248,244,0.3); }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--ink);
+      padding: 48px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 20px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .footer-logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 20px; font-weight: 600; color: var(--cream);
+    }
+    .footer-logo span { color: var(--gold); }
+    .footer-links { display: flex; gap: 28px; }
+    .footer-links a {
+      font-size: 13px; color: rgba(250,248,244,0.4);
+      text-decoration: none; transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--cream); }
+    .footer-copy { font-size: 12px; color: rgba(250,248,244,0.25); }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .reveal {
+      opacity: 0; transform: translateY(32px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* ── SUCCESS STATE ── */
+    .success-msg {
+      display: none; color: var(--sage);
+      font-size: 14px; margin-top: 12px;
+      animation: fadeUp 0.4s ease both;
+    }
+    .success-msg.show { display: block; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      nav { padding: 16px 20px; }
+      .nav-links { display: none; }
+      .stats { gap: 40px; padding: 32px 24px; }
+      .steps { grid-template-columns: 1fr; }
+      .demo-routine { grid-template-columns: 1fr; }
+      .why-grid { grid-template-columns: 1fr; }
+      footer { flex-direction: column; text-align: center; padding: 32px 24px; }
+      .footer-links { justify-content: center; }
+    }
+    @media (max-width: 900px) {
+      .steps { grid-template-columns: 1fr; }
+      .why-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="#" class="nav-logo">Find<span>My</span>Basket</a>
+    <div class="nav-links">
+      <a href="#how-it-works">How it works</a>
+      <a href="#why">Why us</a>
+      <a href="#waitlist" class="nav-cta">Join waitlist</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-badge">Coming Soon — Join the Waitlist</div>
+    <h1>Your skincare<br/>routine. <em>Optimised.</em></h1>
+    <p class="hero-sub">Stop overpaying. FindMyBasket compares prices across your favourite retailers and finds the cheapest way to buy your whole routine — in as few orders as possible.</p>
+    <form class="hero-form" onsubmit="handleSignup(event, 'hero-success')">
+      <input type="email" id="hero-email" placeholder="Your email address" required />
+      <button type="submit" class="btn-primary">Notify me when live</button>
+    </form>
+    <p class="success-msg" id="hero-success">✓ You're on the list! We'll be in touch soon.</p>
+    <p class="hero-note">Free to use. No account needed. No spam, ever.</p>
+    <div class="hero-retailers">
+      <span>Comparing</span>
+      <div class="retailer-pill">Boots</div>
+      <div class="retailer-pill">Superdrug</div>
+      <div class="retailer-pill">Cult Beauty</div>
+      <div class="retailer-pill">LOOKFANTASTIC</div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-num">4</div>
+      <div class="stat-label">Major retailers</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">£0</div>
+      <div class="stat-label">Free to use</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">1–2</div>
+      <div class="stat-label">Baskets. Not ten.</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">Seconds</div>
+      <div class="stat-label">To find your saving</div>
+    </div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <section id="how-it-works">
+    <div class="section-inner">
+      <p class="section-tag reveal">How it works</p>
+      <h2 class="section-title reveal">Three steps to a <em>smarter</em> shop</h2>
+      <div class="steps">
+        <div class="step reveal">
+          <div class="step-num">01</div>
+          <div class="step-icon">🧴</div>
+          <h3>Build your routine</h3>
+          <p>Search and add the products in your skincare routine — cleanser, serum, moisturiser, SPF. Add as many as you like.</p>
+        </div>
+        <div class="step reveal" style="transition-delay:0.1s">
+          <div class="step-num">02</div>
+          <div class="step-icon">🔍</div>
+          <h3>We compare the prices</h3>
+          <p>FindMyBasket checks live prices across Boots, Superdrug, Cult Beauty, and LOOKFANTASTIC — including delivery thresholds.</p>
+        </div>
+        <div class="step reveal" style="transition-delay:0.2s">
+          <div class="step-num">03</div>
+          <div class="step-icon">🛒</div>
+          <h3>Shop the optimal basket</h3>
+          <p>We recommend the cheapest 1 or 2 retailer split for your whole routine. See exactly how much you save, then click through to shop.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEMO -->
+  <section class="demo-section">
+    <div class="section-inner">
+      <p class="section-tag reveal">See it in action</p>
+      <h2 class="section-title reveal">Real savings on real routines</h2>
+      <p class="reveal" style="margin-top:16px; max-width:500px;">Here's an example of what FindMyBasket will show you for a typical 4-product morning routine.</p>
+
+      <div class="demo-card reveal">
+        <div class="demo-result-label">Your routine</div>
+        <div class="demo-routine">
+          <div class="demo-product">
+            <div class="demo-product-dot" style="background: linear-gradient(135deg,#E8D5C4,#C4A882)"></div>
+            <div class="demo-product-info">
+              <div class="demo-product-name">Gentle Foaming Cleanser</div>
+              <div class="demo-product-brand">CeraVe</div>
+            </div>
+          </div>
+          <div class="demo-product">
+            <div class="demo-product-dot" style="background: linear-gradient(135deg,#B8D4E8,#7AAAC4)"></div>
+            <div class="demo-product-info">
+              <div class="demo-product-name">Hyaluronic Acid 2% + B5</div>
+              <div class="demo-product-brand">The Ordinary</div>
+            </div>
+          </div>
+          <div class="demo-product">
+            <div class="demo-product-dot" style="background: linear-gradient(135deg,#D4C8E8,#A89AC4)"></div>
+            <div class="demo-product-info">
+              <div class="demo-product-name">Moisturising Lotion SPF 50</div>
+              <div class="demo-product-brand">La Roche-Posay</div>
+            </div>
+          </div>
+          <div class="demo-product">
+            <div class="demo-product-dot" style="background: linear-gradient(135deg,#E8C8C8,#C49090)"></div>
+            <div class="demo-product-info">
+              <div class="demo-product-name">Niacinamide 10% + Zinc 1%</div>
+              <div class="demo-product-brand">The Ordinary</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="demo-results">
+          <div class="demo-result-label">FindMyBasket recommends</div>
+          <div class="demo-basket best">
+            <div>
+              <div class="basket-retailer">LOOKFANTASTIC + Superdrug</div>
+              <div class="basket-items">3 items + 1 item — free delivery both</div>
+            </div>
+            <div>
+              <div class="basket-price">£38.40</div>
+              <div class="basket-saving">Save £11.55 vs buying separately</div>
+            </div>
+          </div>
+          <div class="demo-basket">
+            <div>
+              <div class="basket-retailer">LOOKFANTASTIC only</div>
+              <div class="basket-items">All 4 items — free delivery over £25</div>
+            </div>
+            <div>
+              <div class="basket-price">£43.10</div>
+              <div class="basket-saving">Save £6.85 vs worst case</div>
+            </div>
+          </div>
+          <div class="demo-basket">
+            <div>
+              <div class="basket-retailer">Boots only</div>
+              <div class="basket-items">All 4 items — free delivery over £25</div>
+            </div>
+            <div>
+              <div class="basket-price">£46.20</div>
+              <div class="basket-saving" style="color: rgba(250,248,244,0.3)">Baseline option</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY -->
+  <section id="why">
+    <div class="section-inner">
+      <p class="section-tag reveal">Why FindMyBasket</p>
+      <h2 class="section-title reveal">Built for the way you <em>actually</em> shop</h2>
+      <div class="why-grid">
+        <div class="why-card reveal">
+          <div class="why-icon">💡</div>
+          <h3>Routine-first thinking</h3>
+          <p>Most comparison tools compare one product. We optimise your entire routine — because that's how you actually buy skincare.</p>
+        </div>
+        <div class="why-card reveal" style="transition-delay:0.1s">
+          <div class="why-icon">📦</div>
+          <h3>Fewer parcels, less hassle</h3>
+          <p>We minimise the number of orders you need to place — saving you time, packaging waste, and multiple delivery windows.</p>
+        </div>
+        <div class="why-card reveal" style="transition-delay:0.2s">
+          <div class="why-icon">🚚</div>
+          <h3>Delivery costs included</h3>
+          <p>We factor in each retailer's free delivery threshold — so you always see the true total cost, not just the product price.</p>
+        </div>
+        <div class="why-card reveal" style="transition-delay:0.0s">
+          <div class="why-icon">✨</div>
+          <h3>Completely free to use</h3>
+          <p>FindMyBasket is free for everyone, always. We earn a small affiliate commission when you buy — at no extra cost to you.</p>
+        </div>
+        <div class="why-card reveal" style="transition-delay:0.1s">
+          <div class="why-icon">🔄</div>
+          <h3>Live prices, always</h3>
+          <p>Prices update daily from all four retailers, so you're always seeing accurate, current data — not yesterday's deals.</p>
+        </div>
+        <div class="why-card reveal" style="transition-delay:0.2s">
+          <div class="why-icon">🇬🇧</div>
+          <h3>Built for UK shoppers</h3>
+          <p>UK prices, UK retailers, UK delivery. No irrelevant international results — just the best deals for British shoppers.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section" id="waitlist">
+    <div class="cta-inner">
+      <p class="section-tag reveal">Be first</p>
+      <h2 class="section-title reveal">Join the waitlist</h2>
+      <p class="cta-sub reveal">FindMyBasket is launching soon. Sign up to be the first to know — and we'll let you know the moment you can start saving on your routine.</p>
+      <form class="cta-form reveal" onsubmit="handleSignup(event, 'cta-success')">
+        <input type="email" id="cta-email" placeholder="Enter your email" required />
+        <button type="submit" class="btn-primary">Join waitlist</button>
+      </form>
+      <p class="success-msg" id="cta-success" style="color: var(--sage-light);">✓ You're on the list! We'll be in touch soon.</p>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-logo">Find<span>My</span>Basket</div>
+    <div class="footer-links">
+      <a href="#">Privacy Policy</a>
+      <a href="#">Terms of Use</a>
+      <a href="mailto:hello@findmybasket.co.uk">Contact</a>
+    </div>
+    <div class="footer-copy">© 2025 FindMyBasket. All rights reserved.</div>
+  </footer>
+
+  <script>
+    // Scroll reveal
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.1 });
+    reveals.forEach(r => observer.observe(r));
+
+    // Waitlist form
+    function handleSignup(e, successId) {
+      e.preventDefault();
+      const emailId = successId === 'hero-success' ? 'hero-email' : 'cta-email';
+      const email = document.getElementById(emailId).value;
+      // In production: POST to your email service (Mailchimp, Resend, etc.)
+      console.log('Signup:', email);
+      document.getElementById(emailId).value = '';
+      document.getElementById(successId).classList.add('show');
+      setTimeout(() => document.getElementById(successId).classList.remove('show'), 5000);
+    }
+  </script>
+</body>
+</html>
