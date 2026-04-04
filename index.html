@@ -631,12 +631,12 @@
     <div class="footer-links">
       <a href="#">Privacy Policy</a>
       <a href="#">Terms of Use</a>
-      <a href="mailto:hello@findmybasket.co.uk">Contact</a>
+      <a href="/cdn-cgi/l/email-protection#d4bcb1b8b8bb94b2bdbab0b9adb6b5a7bfb1a0fab7bbfaa1bf">Contact</a>
     </div>
     <div class="footer-copy">© 2025 FindMyBasket. All rights reserved.</div>
   </footer>
 
-  <script>
+    <script>
     // Scroll reveal
     const reveals = document.querySelectorAll('.reveal');
     const observer = new IntersectionObserver((entries) => {
@@ -644,16 +644,49 @@
     }, { threshold: 0.1 });
     reveals.forEach(r => observer.observe(r));
 
-    // Waitlist form
+    // Mailchimp waitlist signup (JSONP for cross-origin)
+    const MC_URL = 'https://findmybasket.us9.list-manage.com/subscribe/post-json?u=85e20f90e8764aa69a39faedb&id=7adbac12f5&f_id=00a66fe1f0';
+
     function handleSignup(e, successId) {
       e.preventDefault();
       const emailId = successId === 'hero-success' ? 'hero-email' : 'cta-email';
       const email = document.getElementById(emailId).value;
-      // In production: POST to your email service (Mailchimp, Resend, etc.)
-      console.log('Signup:', email);
-      document.getElementById(emailId).value = '';
-      document.getElementById(successId).classList.add('show');
-      setTimeout(() => document.getElementById(successId).classList.remove('show'), 5000);
+      const btn = e.target.querySelector('button');
+      const originalText = btn.textContent;
+      btn.textContent = 'Sending...';
+      btn.disabled = true;
+
+      const callbackName = 'mc_cb_' + Date.now();
+      const script = document.createElement('script');
+
+      window[callbackName] = function(data) {
+        delete window[callbackName];
+        if (document.body.contains(script)) document.body.removeChild(script);
+        btn.textContent = originalText;
+        btn.disabled = false;
+        if (data.result === 'success' || (data.msg && data.msg.includes('already subscribed'))) {
+          document.getElementById(emailId).value = '';
+          const msg = document.getElementById(successId);
+          msg.classList.add('show');
+          setTimeout(() => msg.classList.remove('show'), 6000);
+        } else {
+          alert('Something went wrong — please try again or email hello@findmybasket.co.uk');
+        }
+      };
+
+      script.src = MC_URL + '&EMAIL=' + encodeURIComponent(email) + '&c=' + callbackName;
+      document.body.appendChild(script);
+
+      // Timeout fallback
+      setTimeout(() => {
+        if (window[callbackName]) {
+          delete window[callbackName];
+          if (document.body.contains(script)) document.body.removeChild(script);
+          btn.textContent = originalText;
+          btn.disabled = false;
+          alert('Request timed out — please try again.');
+        }
+      }, 8000);
     }
   </script>
 </body>
