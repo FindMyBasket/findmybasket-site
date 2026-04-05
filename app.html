@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FindMyBasket — Find Your Best Price</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream: #FAF8F4;
+      --warm-white: #FFFDF9;
+      --ink: #1C1A18;
+      --ink-light: #4A4845;
+      --gold: #C9A96E;
+      --gold-light: #E8D5B0;
+      --sage: #7A9E87;
+      --sage-light: #C8DDD0;
+      --blush: #E8C4B8;
+      --border: rgba(28,26,24,0.1);
+      --shadow: 0 4px 40px rgba(28,26,24,0.08);
+      --shadow-lg: 0 12px 60px rgba(28,26,24,0.14);
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cream);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    /* ── NAV ── */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 48px;
+      background: rgba(250,248,244,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .nav-logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px; font-weight: 600;
+      color: var(--ink); text-decoration: none;
+    }
+    .nav-logo span { color: var(--gold); }
+    .nav-back {
+      font-size: 13px; color: var(--ink-light);
+      text-decoration: none; display: flex; align-items: center; gap: 6px;
+      transition: color 0.2s;
+    }
+    .nav-back:hover { color: var(--ink); }
+
+    /* ── LAYOUT ── */
+    .app-layout {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 0;
+      min-height: calc(100vh - 65px);
+    }
+
+    /* ── LEFT PANEL ── */
+    .left-panel {
+      padding: 48px;
+      border-right: 1px solid var(--border);
+    }
+
+    .panel-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 36px; font-weight: 600;
+      margin-bottom: 8px; line-height: 1.1;
+    }
+    .panel-title em { font-style: italic; color: var(--gold); }
+    .panel-sub {
+      font-size: 15px; color: var(--ink-light);
+      margin-bottom: 32px; line-height: 1.5;
+    }
+
+    /* ── SEARCH ── */
+    .search-wrap {
+      position: relative; margin-bottom: 24px;
+    }
+    .search-input {
+      width: 100%; padding: 16px 20px 16px 48px;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      background: var(--warm-white);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px; color: var(--ink);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .search-input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 4px rgba(201,169,110,0.12);
+    }
+    .search-input::placeholder { color: #B0ADA8; }
+    .search-icon {
+      position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+      color: #B0ADA8; font-size: 18px; pointer-events: none;
+    }
+    .search-spinner {
+      position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+      width: 18px; height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: none;
+    }
+    .search-spinner.active { display: block; }
+    @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+
+    /* ── SEARCH RESULTS ── */
+    .search-results {
+      background: var(--warm-white);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+      display: none;
+    }
+    .search-results.visible { display: block; }
+    .search-result-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      cursor: pointer;
+      transition: background 0.15s;
+      border-bottom: 1px solid var(--border);
+    }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: var(--cream); }
+    .result-info { flex: 1; }
+    .result-name { font-size: 14px; font-weight: 500; color: var(--ink); }
+    .result-brand { font-size: 12px; color: var(--ink-light); margin-top: 2px; }
+    .result-category {
+      font-size: 11px; padding: 3px 10px;
+      background: var(--cream); border: 1px solid var(--border);
+      border-radius: 100px; color: var(--ink-light);
+    }
+    .add-btn {
+      width: 28px; height: 28px;
+      background: var(--ink); color: var(--cream);
+      border: none; border-radius: 8px;
+      font-size: 18px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      margin-left: 12px;
+      transition: background 0.15s, transform 0.1s;
+      flex-shrink: 0;
+    }
+    .add-btn:hover { background: var(--gold); transform: scale(1.1); }
+    .no-results {
+      padding: 20px; text-align: center;
+      font-size: 14px; color: var(--ink-light);
+    }
+
+    /* ── ROUTINE LIST ── */
+    .routine-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .routine-label {
+      font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--ink-light);
+    }
+    .routine-count {
+      font-size: 12px; color: var(--ink-light);
+      background: var(--cream); border: 1px solid var(--border);
+      padding: 4px 10px; border-radius: 100px;
+    }
+    .routine-empty {
+      padding: 40px 20px; text-align: center;
+      border: 2px dashed var(--border); border-radius: 14px;
+      color: var(--ink-light); font-size: 14px; line-height: 1.6;
+    }
+    .routine-empty-icon { font-size: 32px; margin-bottom: 12px; }
+
+    .routine-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 16px;
+      background: var(--warm-white);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-12px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .routine-item-dot {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--gold-light), var(--blush));
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .routine-item-info { flex: 1; }
+    .routine-item-name { font-size: 14px; font-weight: 500; }
+    .routine-item-brand { font-size: 12px; color: var(--ink-light); margin-top: 2px; }
+    .remove-btn {
+      width: 28px; height: 28px;
+      background: transparent; color: #C0BDBA;
+      border: 1px solid var(--border); border-radius: 8px;
+      font-size: 14px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s; flex-shrink: 0;
+    }
+    .remove-btn:hover { background: #FEF0EE; color: #C0392B; border-color: #C0392B; }
+
+    .optimise-btn {
+      width: 100%; padding: 18px;
+      background: var(--ink); color: var(--cream);
+      border: none; border-radius: 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px; font-weight: 500;
+      cursor: pointer; margin-top: 24px;
+      transition: background 0.2s, transform 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .optimise-btn:hover:not(:disabled) { background: var(--gold); transform: translateY(-2px); }
+    .optimise-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .optimise-btn.loading { background: var(--ink-light); }
+
+    /* ── RIGHT PANEL ── */
+    .right-panel {
+      padding: 48px 40px;
+      background: var(--ink);
+      position: sticky; top: 65px;
+      height: calc(100vh - 65px);
+      overflow-y: auto;
+    }
+
+    .results-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px; font-weight: 600; color: var(--cream);
+      margin-bottom: 8px;
+    }
+    .results-sub { font-size: 14px; color: rgba(250,248,244,0.4); margin-bottom: 32px; }
+
+    .results-placeholder {
+      text-align: center; padding: 60px 20px;
+    }
+    .results-placeholder-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+    .results-placeholder p {
+      font-size: 14px; color: rgba(250,248,244,0.3); line-height: 1.6;
+    }
+
+    /* ── BASKET RESULTS ── */
+    .basket-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px; padding: 24px;
+      margin-bottom: 12px;
+      position: relative; overflow: hidden;
+      animation: fadeUp 0.4s ease both;
+    }
+    .basket-card.best {
+      border-color: rgba(201,169,110,0.5);
+      background: rgba(201,169,110,0.08);
+    }
+    .basket-card.best::before {
+      content: '✦ BEST VALUE';
+      position: absolute; top: 0; right: 0;
+      background: var(--gold); color: var(--ink);
+      font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+      padding: 5px 14px; border-radius: 0 16px 0 12px;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .basket-retailers {
+      font-size: 16px; font-weight: 600; color: var(--cream);
+      margin-bottom: 4px; padding-right: 80px;
+    }
+    .basket-desc { font-size: 12px; color: rgba(250,248,244,0.4); margin-bottom: 16px; }
+
+    .basket-price-row {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .basket-total {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 36px; font-weight: 600; color: var(--gold);
+    }
+    .basket-saving {
+      font-size: 13px; color: var(--sage); font-weight: 500;
+    }
+
+    .basket-breakdown {
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding-top: 14px; margin-top: 4px;
+    }
+    .breakdown-item {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 8px; font-size: 13px;
+    }
+    .breakdown-product { color: rgba(250,248,244,0.6); flex: 1; padding-right: 12px; }
+    .breakdown-retailer-price {
+      display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+    }
+    .breakdown-retailer {
+      font-size: 11px; color: rgba(250,248,244,0.35);
+      text-align: right;
+    }
+    .breakdown-price { color: var(--cream); font-weight: 500; }
+    .delivery-row {
+      display: flex; justify-content: space-between;
+      font-size: 12px; color: rgba(250,248,244,0.4);
+      margin-top: 8px; padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .delivery-free { color: var(--sage); }
+
+    .shop-btn {
+      width: 100%; padding: 14px;
+      background: var(--gold); color: var(--ink);
+      border: none; border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; margin-top: 16px;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .shop-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    .savings-summary {
+      background: rgba(122,158,135,0.15);
+      border: 1px solid rgba(122,158,135,0.3);
+      border-radius: 12px; padding: 16px 20px;
+      margin-bottom: 24px;
+      display: none;
+    }
+    .savings-summary.visible { display: block; }
+    .savings-summary-label { font-size: 12px; color: rgba(250,248,244,0.5); margin-bottom: 4px; }
+    .savings-summary-amount {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 32px; font-weight: 600; color: var(--sage);
+    }
+    .savings-summary-desc { font-size: 13px; color: rgba(250,248,244,0.4); margin-top: 4px; }
+
+    @media (max-width: 900px) {
+      .app-layout { grid-template-columns: 1fr; }
+      .right-panel { position: static; height: auto; }
+      nav { padding: 16px 20px; }
+      .left-panel { padding: 24px 20px; }
+      .right-panel { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">Find<span>My</span>Basket</a>
+  <a href="index.html" class="nav-back">← Back to home</a>
+</nav>
+
+<div class="app-layout">
+
+  <!-- LEFT: Search + Routine Builder -->
+  <div class="left-panel">
+    <h1 class="panel-title">Build your <em>routine</em></h1>
+    <p class="panel-sub">Search for your skincare products and add them to your routine. We'll find the cheapest way to buy them all.</p>
+
+    <!-- Search -->
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-input" id="searchInput" placeholder="Search by product name or brand..." autocomplete="off" />
+      <div class="search-spinner" id="searchSpinner"></div>
+    </div>
+
+    <!-- Search Results -->
+    <div class="search-results" id="searchResults"></div>
+
+    <!-- Routine -->
+    <div class="routine-header">
+      <span class="routine-label">Your Routine</span>
+      <span class="routine-count" id="routineCount">0 products</span>
+    </div>
+
+    <div id="routineList">
+      <div class="routine-empty">
+        <div class="routine-empty-icon">🧴</div>
+        Search for products above and add them to your routine.<br/>
+        Then hit <strong>Find my basket</strong> to see your savings.
+      </div>
+    </div>
+
+    <button class="optimise-btn" id="optimiseBtn" disabled onclick="optimiseBasket()">
+      <span>🛒</span> <span id="optimiseBtnText">Find my basket</span>
+    </button>
+  </div>
+
+  <!-- RIGHT: Results -->
+  <div class="right-panel">
+    <h2 class="results-title">Your best baskets</h2>
+    <p class="results-sub">Add products and click "Find my basket" to see your optimised options.</p>
+
+    <div class="savings-summary" id="savingsSummary">
+      <div class="savings-summary-label">YOU COULD SAVE</div>
+      <div class="savings-summary-amount" id="savingsAmount">£0.00</div>
+      <div class="savings-summary-desc" id="savingsDesc">vs buying everything at the most expensive retailer</div>
+    </div>
+
+    <div id="resultsContainer">
+      <div class="results-placeholder">
+        <div class="results-placeholder-icon">✨</div>
+        <p>Your optimised basket recommendations will appear here once you've added your products.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── SUPABASE INIT ──
+  const SUPABASE_URL = 'https://crtrjoescntlcjiwdtrt.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNydHJqb2VzY250bGNqaXdkdHJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzOTA3NDUsImV4cCI6MjA5MDk2Njc0NX0.D9zbYCQqqVQaHCTW9mYyTxGZcw7-ru2o2eXVber8uDg';
+  const { createClient } = supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // ── STATE ──
+  let routine = []; // array of product objects
+  let searchTimeout = null;
+  let retailers = [];
+
+  // ── LOAD RETAILERS ON START ──
+  async function loadRetailers() {
+    const { data } = await db.from('retailers').select('*').eq('active', true);
+    if (data) retailers = data;
+  }
+  loadRetailers();
+
+  // ── SEARCH ──
+  const searchInput = document.getElementById('searchInput');
+  const searchResults = document.getElementById('searchResults');
+  const searchSpinner = document.getElementById('searchSpinner');
+
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    const q = searchInput.value.trim();
+    if (q.length < 2) { searchResults.classList.remove('visible'); return; }
+    searchSpinner.classList.add('active');
+    searchTimeout = setTimeout(() => searchProducts(q), 350);
+  });
+
+  searchInput.addEventListener('blur', () => {
+    setTimeout(() => searchResults.classList.remove('visible'), 200);
+  });
+
+  async function searchProducts(query) {
+    const { data, error } = await db
+      .from('products')
+      .select('*')
+      .or(`name.ilike.%${query}%,brand.ilike.%${query}%`)
+      .limit(6);
+
+    searchSpinner.classList.remove('active');
+
+    if (!data || data.length === 0) {
+      searchResults.innerHTML = `<div class="no-results">No products found for "${query}"</div>`;
+      searchResults.classList.add('visible');
+      return;
+    }
+
+    searchResults.innerHTML = data.map(p => `
+      <div class="search-result-item" onclick="addToRoutine(${p.id}, '${p.name.replace(/'/g,"\\'")}', '${(p.brand||'').replace(/'/g,"\\'")}', '${p.category||''}')">
+        <div class="result-info">
+          <div class="result-name">${p.name}</div>
+          <div class="result-brand">${p.brand || ''}</div>
+        </div>
+        <span class="result-category">${p.category || 'Skincare'}</span>
+        <button class="add-btn">+</button>
+      </div>
+    `).join('');
+    searchResults.classList.add('visible');
+  }
+
+  // ── ADD TO ROUTINE ──
+  function addToRoutine(id, name, brand, category) {
+    if (routine.find(p => p.id === id)) return; // no duplicates
+    routine.push({ id, name, brand, category });
+    searchInput.value = '';
+    searchResults.classList.remove('visible');
+    renderRoutine();
+  }
+
+  function removeFromRoutine(id) {
+    routine = routine.filter(p => p.id !== id);
+    renderRoutine();
+    if (routine.length === 0) resetResults();
+  }
+
+  const emojis = ['🧴', '✨', '💧', '🌿', '☀️', '🫧', '💆', '🌸'];
+
+  function renderRoutine() {
+    const list = document.getElementById('routineList');
+    const count = document.getElementById('routineCount');
+    const btn = document.getElementById('optimiseBtn');
+
+    count.textContent = `${routine.length} product${routine.length !== 1 ? 's' : ''}`;
+    btn.disabled = routine.length === 0;
+
+    if (routine.length === 0) {
+      list.innerHTML = `
+        <div class="routine-empty">
+          <div class="routine-empty-icon">🧴</div>
+          Search for products above and add them to your routine.<br/>
+          Then hit <strong>Find my basket</strong> to see your savings.
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = routine.map((p, i) => `
+      <div class="routine-item">
+        <div class="routine-item-dot">${emojis[i % emojis.length]}</div>
+        <div class="routine-item-info">
+          <div class="routine-item-name">${p.name}</div>
+          <div class="routine-item-brand">${p.brand}</div>
+        </div>
+        <button class="remove-btn" onclick="removeFromRoutine(${p.id})">×</button>
+      </div>
+    `).join('');
+  }
+
+  // ── BASKET OPTIMISATION ──
+  async function optimiseBasket() {
+    if (routine.length === 0) return;
+
+    const btn = document.getElementById('optimiseBtn');
+    const btnText = document.getElementById('optimiseBtnText');
+    btn.disabled = true;
+    btn.classList.add('loading');
+    btnText.textContent = 'Finding best prices...';
+
+    // Fetch all prices for routine products
+    const productIds = routine.map(p => p.id);
+    const { data: prices } = await db
+      .from('retailer_prices')
+      .select('*, retailers(*)')
+      .in('product_id', productIds)
+      .eq('in_stock', true);
+
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    btnText.textContent = 'Find my basket';
+
+    if (!prices || prices.length === 0) {
+      showError('No price data found. Please try again later.');
+      return;
+    }
+
+    // Build price map: productId -> { retailerId -> { price, url, retailerName } }
+    const priceMap = {};
+    for (const row of prices) {
+      if (!priceMap[row.product_id]) priceMap[row.product_id] = {};
+      priceMap[row.product_id][row.retailer_id] = {
+        price: parseFloat(row.price),
+        url: row.url,
+        retailerName: row.retailers.name,
+        deliveryThreshold: parseFloat(row.retailers.delivery_threshold),
+        deliveryCost: parseFloat(row.retailers.delivery_cost)
+      };
+    }
+
+    // Get unique retailer ids that have at least one product
+    const allRetailerIds = [...new Set(prices.map(p => p.retailer_id))];
+
+    // Get cheapest price per product overall (for savings comparison)
+    const worstCaseTotal = routine.reduce((sum, product) => {
+      const productPrices = priceMap[product.id];
+      if (!productPrices) return sum;
+      const maxPrice = Math.max(...Object.values(productPrices).map(p => p.price));
+      return sum + maxPrice;
+    }, 0);
+
+    // Calculate all single-retailer options
+    const singleOptions = [];
+    for (const rid of allRetailerIds) {
+      let total = 0; let covered = 0;
+      const breakdown = [];
+      let retailerName = '';
+
+      for (const product of routine) {
+        const pp = priceMap[product.id]?.[rid];
+        if (pp) {
+          total += pp.price;
+          covered++;
+          retailerName = pp.retailerName;
+          breakdown.push({ product, price: pp.price, retailerName: pp.retailerName, url: pp.url });
+        }
+      }
+
+      if (covered === routine.length) {
+        // Get delivery info
+        const sample = Object.values(priceMap[routine[0].id] || {})[0];
+        const rInfo = prices.find(p => p.retailer_id === rid)?.retailers;
+        const deliveryCost = total >= (rInfo?.delivery_threshold || 25) ? 0 : (rInfo?.delivery_cost || 3.95);
+        singleOptions.push({
+          retailers: [retailerName],
+          total: total + deliveryCost,
+          productsTotal: total,
+          deliveryCost,
+          breakdown,
+          type: 'single'
+        });
+      }
+    }
+
+    // Calculate all 2-retailer combinations
+    const twoOptions = [];
+    for (let i = 0; i < allRetailerIds.length; i++) {
+      for (let j = i + 1; j < allRetailerIds.length; j++) {
+        const r1 = allRetailerIds[i];
+        const r2 = allRetailerIds[j];
+        let total = 0;
+        const breakdown = [];
+        let r1Total = 0; let r2Total = 0;
+        let r1Name = ''; let r2Name = '';
+        let r1Info = null; let r2Info = null;
+        let allCovered = true;
+
+        for (const product of routine) {
+          const p1 = priceMap[product.id]?.[r1];
+          const p2 = priceMap[product.id]?.[r2];
+
+          if (!p1 && !p2) { allCovered = false; break; }
+
+          if (p1 && p2) {
+            // Pick cheaper
+            if (p1.price <= p2.price) {
+              r1Total += p1.price; total += p1.price;
+              r1Name = p1.retailerName;
+              if (!r1Info) r1Info = prices.find(p => p.retailer_id === r1)?.retailers;
+              breakdown.push({ product, price: p1.price, retailerName: p1.retailerName, url: p1.url });
+            } else {
+              r2Total += p2.price; total += p2.price;
+              r2Name = p2.retailerName;
+              if (!r2Info) r2Info = prices.find(p => p.retailer_id === r2)?.retailers;
+              breakdown.push({ product, price: p2.price, retailerName: p2.retailerName, url: p2.url });
+            }
+          } else if (p1) {
+            r1Total += p1.price; total += p1.price;
+            r1Name = p1.retailerName;
+            if (!r1Info) r1Info = prices.find(p => p.retailer_id === r1)?.retailers;
+            breakdown.push({ product, price: p1.price, retailerName: p1.retailerName, url: p1.url });
+          } else {
+            r2Total += p2.price; total += p2.price;
+            r2Name = p2.retailerName;
+            if (!r2Info) r2Info = prices.find(p => p.retailer_id === r2)?.retailers;
+            breakdown.push({ product, price: p2.price, retailerName: p2.retailerName, url: p2.url });
+          }
+        }
+
+        if (!allCovered) continue;
+
+        const d1 = r1Total > 0 ? (r1Total >= (r1Info?.delivery_threshold || 25) ? 0 : (r1Info?.delivery_cost || 3.95)) : 0;
+        const d2 = r2Total > 0 ? (r2Total >= (r2Info?.delivery_threshold || 25) ? 0 : (r2Info?.delivery_cost || 3.95)) : 0;
+        const retailers = [r1Name, r2Name].filter(Boolean);
+
+        twoOptions.push({
+          retailers,
+          total: total + d1 + d2,
+          productsTotal: total,
+          deliveryCost: d1 + d2,
+          breakdown,
+          type: 'split'
+        });
+      }
+    }
+
+    // Combine and sort
+    const allOptions = [...singleOptions, ...twoOptions].sort((a, b) => a.total - b.total);
+    const top3 = allOptions.slice(0, 3);
+
+    if (top3.length === 0) {
+      showError('Could not find prices for all products. Some may not be stocked by these retailers.');
+      return;
+    }
+
+    renderResults(top3, worstCaseTotal);
+  }
+
+  function renderResults(options, worstCase) {
+    const bestTotal = options[0].total;
+    const saving = worstCase - bestTotal;
+
+    // Show savings summary
+    const summary = document.getElementById('savingsSummary');
+    document.getElementById('savingsAmount').textContent = `£${saving.toFixed(2)}`;
+    document.getElementById('savingsDesc').textContent = `vs buying everything at the highest price`;
+    summary.classList.add('visible');
+
+    const container = document.getElementById('resultsContainer');
+    container.innerHTML = options.map((opt, i) => {
+      const isBest = i === 0;
+      const savingVsWorst = worstCase - opt.total;
+      const deliveryText = opt.deliveryCost === 0
+        ? '<span class="delivery-free">Free delivery</span>'
+        : `Delivery: £${opt.deliveryCost.toFixed(2)}`;
+
+      const breakdownHTML = opt.breakdown.map(b => `
+        <div class="breakdown-item">
+          <span class="breakdown-product">${b.product.name}</span>
+          <div class="breakdown-retailer-price">
+            <span class="breakdown-retailer">${b.retailerName}</span>
+            <span class="breakdown-price">£${b.price.toFixed(2)}</span>
+          </div>
+        </div>
+      `).join('');
+
+      return `
+        <div class="basket-card ${isBest ? 'best' : ''}">
+          <div class="basket-retailers">${opt.retailers.join(' + ')}</div>
+          <div class="basket-desc">${opt.type === 'single' ? 'Buy everything from one retailer' : 'Split across ' + opt.retailers.length + ' retailers for best price'}</div>
+          <div class="basket-price-row">
+            <div class="basket-total">£${opt.total.toFixed(2)}</div>
+            ${savingVsWorst > 0 ? `<div class="basket-saving">Save £${savingVsWorst.toFixed(2)}</div>` : ''}
+          </div>
+          <div class="basket-breakdown">
+            ${breakdownHTML}
+            <div class="delivery-row">
+              <span>Delivery</span>
+              ${deliveryText}
+            </div>
+          </div>
+          ${isBest ? `<button class="shop-btn" onclick="alert('Affiliate links will be added once AWIN is approved!')">Shop this basket →</button>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function resetResults() {
+    document.getElementById('savingsSummary').classList.remove('visible');
+    document.getElementById('resultsContainer').innerHTML = `
+      <div class="results-placeholder">
+        <div class="results-placeholder-icon">✨</div>
+        <p>Your optimised basket recommendations will appear here once you've added your products.</p>
+      </div>`;
+  }
+
+  function showError(msg) {
+    document.getElementById('resultsContainer').innerHTML = `
+      <div class="results-placeholder">
+        <div class="results-placeholder-icon">⚠️</div>
+        <p>${msg}</p>
+      </div>`;
+  }
+</script>
+</body>
+</html>
