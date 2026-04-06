@@ -429,7 +429,8 @@
     /* ── RESPONSIVE ── */
     @media (max-width: 768px) {
       nav { padding: 16px 20px; }
-      .nav-links { display: none; }
+      .nav-links a:not(.nav-cta):not([href="/savings-hub.html"]) { display: none; }
+      .nav-links a[href="/savings-hub.html"] { font-size: 13px; }
       .stats { gap: 40px; padding: 32px 24px; }
       .steps { grid-template-columns: 1fr; }
       .demo-routine { grid-template-columns: 1fr; }
@@ -441,6 +442,13 @@
       .steps { grid-template-columns: 1fr; }
       .why-grid { grid-template-columns: 1fr 1fr; }
     }
+
+    .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px; }
+    .hamburger span { width: 22px; height: 2px; background: var(--ink); border-radius: 2px; }
+    .mobile-menu { display: none; position: fixed; top: 65px; left: 0; right: 0; background: var(--cream); border-bottom: 1px solid var(--border); padding: 20px 24px; z-index: 99; flex-direction: column; gap: 4px; }
+    .mobile-menu a { font-size: 16px; color: var(--ink-light); text-decoration: none; padding: 12px 0; border-bottom: 1px solid var(--border); font-family: 'DM Sans', sans-serif; }
+    .mobile-menu a:last-child { border-bottom: none; }
+    .mobile-menu.open { display: flex; }
   </style>
 </head>
 <body>
@@ -454,7 +462,14 @@
       <a href="#why">Why us</a>
       <a href="/app.html" class="nav-cta" style="background:var(--gold)!important;color:var(--ink)!important;margin-right:8px">Try it now</a><a href="#waitlist" class="nav-cta">Join waitlist</a>
     </div>
+    <div class="hamburger" onclick="toggleMenu()" id="hamburger"><span></span><span></span><span></span></div>
   </nav>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="/savings-hub.html">Savings Hub</a>
+    <a href="#how-it-works">How it works</a>
+    <a href="/app.html">Try it now</a>
+    <a href="#waitlist">Join waitlist</a>
+  </div>
 
   <!-- HERO -->
   <section class="hero">
@@ -663,9 +678,9 @@
   <footer>
     <div class="footer-logo" style="display:flex;align-items:center;gap:10px;"><svg height="28" viewBox="0 0 347.59 137.24" xmlns="http://www.w3.org/2000/svg"><g><path fill="#ffffff" d="M77.21,80.25l-.03.17-2.04,9.68c-1,4.75-5.25,8.19-10.1,8.19H22.69c-4.85,0-9.1-3.44-10.1-8.19l-5.7-27.11h46c-.19-.65-.34-1.32-.46-2-.25-1.35-.37-2.74-.37-4.17v-.2H4.15c-2.63,0-4.6,2.42-4.06,5l6.27,29.79c1.63,7.72,8.44,13.25,16.33,13.25h42.35c7.89,0,14.7-5.53,16.33-13.25l2.63-12.51.03-.16c-2.14.84-4.43,1.36-6.82,1.51Z"/><path fill="#ffffff" d="M58.54,40.65c-.25.26-.49.52-.72.79-.49.56-.95,1.14-1.38,1.74-.63.87-1.19,1.79-1.68,2.74-2.14-.96-4.41-1.45-6.77-1.45h-8.24c-4.46,0-8.65,1.74-11.81,4.9-2.03,2.03-3.49,4.52-4.25,7.25-.07.24-.13.48-.19.72-.14.56-.24,1.13-.32,1.78l-.4,3.16-6.32-.8.4-3.16c.08-.6.17-1.17.28-1.7.05-.26.11-.51.17-.76.96-4.13,3.08-7.94,6.13-10.99,4.36-4.36,10.15-6.76,16.31-6.76h8.24c3.43,0,6.73.74,9.81,2.19l.74.35Z"/><path fill="#ffffff" d="M24.91,92.19c-.89,0-1.71-.6-1.94-1.5l-5.24-20.52c-.27-1.07.37-2.16,1.44-2.43,1.07-.28,2.16.37,2.43,1.44l5.24,20.52c.27,1.07-.37,2.16-1.44,2.43-.17.04-.33.06-.5.06Z"/><path fill="#ffffff" d="M37.81,92.43c-.98,0-1.83-.72-1.98-1.71l-3.03-20.99c-.16-1.09.6-2.11,1.69-2.27,1.09-.15,2.11.6,2.27,1.69l3.03,20.99c.16,1.09-.6,2.11-1.69,2.27-.1.01-.19.02-.29.02Z"/><path fill="#ffffff" d="M66.6,78.54l-3.31,12.17c-.24.89-1.04,1.47-1.92,1.47-.17,0-.35-.02-.52-.07-1.06-.29-1.69-1.38-1.4-2.44l3.51-12.89s.02-.08.04-.12c.08.06.17.11.25.16.49.31,1,.6,1.52.87.59.31,1.2.6,1.83.85Z"/><path fill="#ffffff" d="M49.97,92.43c-.1,0-.19,0-.29-.02-1.09-.16-1.85-1.17-1.69-2.27l3.03-20.99c.16-1.09,1.18-1.85,2.27-1.69,1.09.16,1.85,1.17,1.69,2.27l-3.03,20.99c-.14,1-1,1.71-1.98,1.71Z"/></g><g><path fill="#C9A96E" d="M61.13,59.92h-6.79c1.08,6.04,4.73,11.2,9.77,14.31l1.85-6.81c-2.32-1.91-4.04-4.52-4.83-7.5ZM75.24,34.91c-6.4,0-12.14,2.84-16.03,7.34-2.71,3.11-4.53,7-5.04,11.3-.12.85-.17,1.72-.17,2.6,0,1.29.11,2.55.34,3.77,1.08,6.04,4.73,11.2,9.77,14.31,3.24,2.01,7.06,3.16,11.13,3.16.39,0,.78-.01,1.17-.04,2.4-.12,4.69-.65,6.82-1.52.59-.24,1.16-.5,1.72-.8,2.38-1.22,4.5-2.88,6.24-4.88,3.3-3.74,5.3-8.63,5.3-14,0-11.71-9.54-21.24-21.25-21.24ZM77.85,70.52c-.84.16-1.72.24-2.61.24-3.53,0-6.76-1.26-9.28-3.34-2.32-1.91-4.04-4.52-4.83-7.5-.33-1.2-.5-2.47-.5-3.77,0-.89.08-1.76.24-2.6.43-2.4,1.45-4.6,2.91-6.44,2.67-3.39,6.82-5.57,11.46-5.57,8.06,0,14.61,6.56,14.61,14.61,0,4.25-1.83,8.09-4.74,10.75-1.99,1.84-4.49,3.12-7.26,3.62Z"/><path fill="#C9A96E" d="M103.19,90.99l-.56.45c-2.02,1.61-4.98,1.21-6.49-.89l-11.28-15.66,6.17-4.93,12.74,14.54c1.69,1.93,1.43,4.89-.58,6.49Z"/><path fill="#C9A96E" d="M88.48,55.01c0,.18-.15.33-.33.33s-.32-.15-.32-.33c0-6.26-5.54-11.74-11.84-11.74-.18,0-.33-.15-.33-.33s.15-.32.33-.32c6.65,0,12.49,5.79,12.49,12.39Z"/></g></svg><span style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--cream);">Find<span style="color:var(--gold);">My</span>Basket</span></div>
     <div class="footer-links">
-      <a href="#">Privacy Policy</a>
-      <a href="#">Terms of Use</a>
-      <a href="/cdn-cgi/l/email-protection#d4bcb1b8b8bb94b2bdbab0b9adb6b5a7bfb1a0fab7bbfaa1bf">Contact</a>
+      <a href="/privacy-policy.html">Privacy Policy</a>
+      <a href="/terms.html">Terms of Use</a>
+      <a href="mailto:hello@findmybasket.co.uk">Contact</a>
     </div>
     <div class="footer-copy">© 2025 FindMyBasket. All rights reserved.</div>
   </footer>
@@ -721,6 +736,11 @@
           alert('Request timed out — please try again.');
         }
       }, 8000);
+    }
+  </script>
+  <script>
+    function toggleMenu() {
+      document.getElementById('mobileMenu').classList.toggle('open');
     }
   </script>
 </body>

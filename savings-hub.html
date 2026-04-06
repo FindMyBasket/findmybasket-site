@@ -61,6 +61,13 @@
     .nav-links { display: flex; align-items: center; gap: 28px; }
     .nav-links a { font-size: 14px; color: var(--ink-light); text-decoration: none; transition: color 0.2s; }
     .nav-links a:hover, .nav-links a.active { color: var(--ink); }
+    .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px; }
+    .hamburger span { width: 22px; height: 2px; background: var(--ink); border-radius: 2px; }
+    .mobile-menu { display: none; position: fixed; top: 65px; left: 0; right: 0; background: var(--cream); border-bottom: 1px solid var(--border); padding: 20px 24px; z-index: 99; flex-direction: column; gap: 4px; }
+    .mobile-menu a { font-size: 16px; color: var(--ink-light); text-decoration: none; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .mobile-menu a:last-child { border-bottom: none; }
+    .mobile-menu.open { display: flex; }
+    @media(max-width:768px) { .nav-links { display: none !important; } .hamburger { display: flex; } }
     .nav-cta {
       background: var(--ink) !important; color: var(--cream) !important;
       padding: 10px 22px; border-radius: 100px; font-weight: 500 !important;
@@ -118,7 +125,14 @@
       <a href="/savings-hub.html" class="active">Savings Hub</a>
       <a href="/app.html" class="nav-cta">Try it now</a>
     </div>
+    <div class="hamburger" onclick="toggleMenu()" id="hamburger"><span></span><span></span><span></span></div>
   </nav>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="/index.html">Home</a>
+    <a href="/savings-hub.html">Savings Hub</a>
+    <a href="/app.html">Try it now</a>
+    <a href="/index.html#waitlist">Join waitlist</a>
+  </div>
   <div class="hub-hero">
     <p class="hub-tag">Savings Hub</p>
     <h1 class="hub-title">Spend less on skincare.<br/><em>Without switching products.</em></h1>
@@ -212,8 +226,8 @@
       <div class="footer-links">
         <a href="/savings-hub.html">Savings Hub</a>
         <a href="/app.html">Try it now</a>
-        <a href="/cdn-cgi/l/email-protection#d4bcb1b8b8bb94b2bdbab0b9adb6b5a7bfb1a0fab7bbfaa1bf">Contact</a>
-        <a href="#">Privacy Policy</a>
+        <a href="mailto:hello@findmybasket.co.uk">Contact</a>
+        <a href="/privacy-policy.html">Privacy Policy</a>
       </div>
       <p class="footer-copy">© 2025 FindMyBasket. All rights reserved.</p>
     </div>
