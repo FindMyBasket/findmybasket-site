@@ -358,6 +358,28 @@
       transition: opacity 0.2s, transform 0.15s;
     }
     .shop-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .amazon-btn {
+      width: 100%; padding: 12px;
+      background: transparent;
+      color: rgba(250,248,244,0.5);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 400;
+      cursor: pointer; margin-top: 8px;
+      transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .amazon-btn:hover { border-color: rgba(255,153,0,0.4); color: #FF9900; }
+    .amazon-section {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .amazon-label {
+      font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: rgba(250,248,244,0.3); margin-bottom: 12px;
+    }
 
     .savings-summary {
       background: rgba(122,158,135,0.15);
@@ -442,6 +464,10 @@
         <div class="results-placeholder-icon">✨</div>
         <p>Your optimised basket recommendations will appear here once you've added your products.</p>
       </div>
+    </div>
+    <div class="amazon-section" id="amazonSection" style="display:none;">
+      <div class="amazon-label">Also worth checking</div>
+      <div id="amazonButtons"></div>
     </div>
   </div>
 
@@ -763,10 +789,21 @@
         </div>
       `;
     }).join('');
+
+    // Show Amazon fallback section
+    const amazonBtns = document.getElementById('amazonButtons');
+    amazonBtns.innerHTML = routine.map(p => `
+      <a href="https://www.amazon.co.uk/s?k=${encodeURIComponent(p.brand + ' ' + p.name)}&tag=findmybasket-21" target="_blank" rel="noopener" class="amazon-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="#FF9900" style="flex-shrink:0"><path d="M.045 18.02c.072-.116.187-.124.348-.022 3.636 2.11 7.594 3.166 11.87 3.166 2.852 0 5.668-.533 8.447-1.595l.315-.14c.226-.088.39-.046.525.13.12.174.09.336-.12.48-.256.19-.6.41-1.006.67-1.747 1.07-3.65 1.85-5.71 2.34-2.065.49-4.11.73-6.15.73-4.6 0-8.71-1.09-12.33-3.28-.21-.13-.27-.29-.18-.48z"/></svg>
+        Check ${p.brand} ${p.name} on Amazon
+      </a>
+    `).join('');
+    document.getElementById('amazonSection').style.display = 'block';
   }
 
   function resetResults() {
     document.getElementById('savingsSummary').classList.remove('visible');
+    document.getElementById('amazonSection').style.display = 'none';
     document.getElementById('resultsContainer').innerHTML = `
       <div class="results-placeholder">
         <div class="results-placeholder-icon">✨</div>
