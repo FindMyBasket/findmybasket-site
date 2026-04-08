@@ -387,26 +387,18 @@
   function selectTag(type, value) {
     selectedValue = value;
     activeTab = type;
-
-    // Update tag UI
-    document.querySelectorAll('.tag').forEach(t => t.classList.remove('selected'));
     document.querySelectorAll('.tag').forEach(t => {
-      if (t.textContent.trim().toLowerCase() === value.toLowerCase()) t.classList.add('selected');
+      t.classList.toggle('selected', t.textContent.trim().toLowerCase() === value.toLowerCase());
     });
-
-    // Show selected state
     document.getElementById('selected-text').textContent = value.charAt(0).toUpperCase() + value.slice(1);
     document.getElementById('selected-wrap').style.display = 'block';
   }
 
   function filterTags(type, query) {
     const container = document.getElementById(type + '-tags');
-    const tags = container.querySelectorAll('.tag');
-    tags.forEach(tag => {
-      tag.style.display = tag.textContent.toLowerCase().includes(query.toLowerCase()) ? 'block' : 'none';
+    container.querySelectorAll('.tag').forEach(tag => {
+      tag.style.display = tag.textContent.toLowerCase().includes(query.toLowerCase()) ? 'inline-block' : 'none';
     });
-
-    // Also allow typing a custom value
     if (query.length > 2) {
       selectedValue = query.toLowerCase();
       document.getElementById('selected-text').textContent = query;
@@ -429,34 +421,29 @@
     document.getElementById('resultsSearching').classList.remove('active');
   }
 
-  // ── OPEN BEAUTY FACTS INTEGRATION ──────────────────────────────────────────
-  const OBF_BASE = 'https://world.openbeautyfacts.org/cgi/search.pl';
-
   async function searchOpenBeautyFacts(term, type) {
-    // Search by ingredient tag or general search for concerns
-    const params = new URLSearchParams({
-      search_terms: term,
-      search_simple: '1',
-      action: 'process',
-      json: '1',
-      page_size: '12',
-      countries_tags: 'en:united-kingdom',
-      fields: 'product_name,brands,ingredients_tags,categories_tags,image_url,code,labels_tags'
-    });
-
-    if (type === 'ingredient') {
-      params.set('tagtype_0', 'ingredients');
-      params.set('tag_contains_0', 'contains');
-      params.set('tag_0', `en:${term.toLowerCase().replace(/ /g, '-')}`);
-    }
-
     try {
-      const res = await fetch(`${OBF_BASE}?${params}`, { signal: AbortSignal.timeout(8000) });
+      const params = new URLSearchParams({
+        search_terms: term,
+        search_simple: '1',
+        action: 'process',
+        json: '1',
+        page_size: '10',
+        fields: 'product_name,brands,ingredients_tags,code'
+      });
+      if (type === 'ingredient') {
+        params.set('tagtype_0', 'ingredients');
+        params.set('tag_contains_0', 'contains');
+        params.set('tag_0', 'en:' + term.toLowerCase().replace(/ /g, '-'));
+      }
+      const res = await fetch('https://world.openbeautyfacts.org/cgi/search.pl?' + params, {
+        signal: AbortSignal.timeout(8000)
+      });
       if (!res.ok) return [];
       const data = await res.json();
       return (data.products || []).filter(p => p.product_name && p.product_name.trim() !== '');
-    } catch (e) {
-      console.warn('OBF API error:', e);
+    } catch(e) {
+      console.warn('OBF error:', e);
       return [];
     }
   }
@@ -467,39 +454,7 @@
       .filter(t => t.startsWith('en:'))
       .map(t => t.replace('en:', '').replace(/-/g, ' '))
       .filter(t => t.length > 2 && t.length < 30)
-      .slice(0, 6);
-  }
-
-  function renderOBFProduct(product, idx, inOurDB) {
-    const name = product.product_name || 'Unknown Product';
-    const brand = product.brands ? product.brands.split(',')[0].trim() : '';
-    const ingredients = cleanIngredientTags(product.ingredients_tags);
-    const delay = idx * 0.05;
-
-    const ingredientPills = ingredients.map(i =>
-      `<span class="ingredient-pill">${i}</span>`
-    ).join('');
-
-    const priceSection = inOurDB
-      ? `<div class="price-from">Available on FindMyBasket</div>
-         <div class="price-amount" style="font-size:20px;color:var(--sage);">Price tracked ✓</div>`
-      : `<div class="price-from">Not yet in our database</div>
-         <div style="font-size:13px;color:rgba(250,248,244,0.4);margin-top:2px;">Check Amazon for pricing</div>`;
-
-    const actionBtn = inOurDB
-      ? `<a href="/app.html" class="add-routine-btn">Add to routine →</a>`
-      : `<a href="https://www.amazon.co.uk/s?k=${encodeURIComponent(brand + ' ' + name)}&tag=findmybasket-21" target="_blank" rel="noopener" class="add-routine-btn" style="border-color:rgba(255,153,0,0.3);color:#FF9900;">Check Amazon →</a>`;
-
-    return `
-      <div class="product-card" style="animation-delay:${delay}s">
-        <div class="product-brand">${brand}</div>
-        <div class="product-name">${name}</div>
-        ${ingredientPills ? `<div class="product-concerns">${ingredientPills}</div>` : ''}
-        <div class="price-row">
-          <div>${priceSection}</div>
-          ${actionBtn}
-        </div>
-      </div>`;
+      .slice(0, 5);
   }
 
   async function runSearch() {
@@ -513,22 +468,15 @@
     document.getElementById('resultsContainer').innerHTML = '';
 
     try {
-      // Run both searches in parallel
-      const [supabaseResult, obfProducts] = await Promise.all([
-        // Supabase - our own product database
-        (async () => {
-          let query = db.from('products').select(`
-            *,
-            retailer_prices (price, url, in_stock, retailers (name))
-          `);
-          if (activeTab === 'ingredient') {
-            query = query.contains('ingredients', [selectedValue.toLowerCase()]);
-          } else {
-            query = query.contains('concerns', [selectedValue.toLowerCase()]);
-          }
-          return query;
-        })(),
-        // Open Beauty Facts
+      let supaQuery = db.from('products').select('*, retailer_prices(price, url, in_stock, retailers(name))');
+      if (activeTab === 'ingredient') {
+        supaQuery = supaQuery.contains('ingredients', [selectedValue.toLowerCase()]);
+      } else {
+        supaQuery = supaQuery.contains('concerns', [selectedValue.toLowerCase()]);
+      }
+
+      const [supaResult, obfProducts] = await Promise.all([
+        supaQuery,
         searchOpenBeautyFacts(selectedValue, activeTab)
       ]);
 
@@ -536,86 +484,78 @@
       btn.disabled = false;
       btnText.textContent = 'Find products';
 
-      const ourProducts = supabaseResult.data || [];
-      const ourProductNames = ourProducts.map(p => p.name.toLowerCase());
-
-      // Combine results - our products first, then OBF products not already in ours
+      const ourProducts = supaResult.data || [];
+      const ourNames = ourProducts.map(p => p.name.toLowerCase());
       const uniqueOBF = obfProducts.filter(p =>
-        !ourProductNames.some(name => p.product_name && p.product_name.toLowerCase().includes(name))
+        p.product_name && !ourNames.some(n => p.product_name.toLowerCase().includes(n))
       );
+      const total = ourProducts.length + uniqueOBF.length;
 
-      const totalCount = ourProducts.length + uniqueOBF.length;
-
-      if (totalCount === 0) {
-        document.getElementById('results-sub').textContent = `No products found for "${selectedValue}"`;
-        document.getElementById('resultsContainer').innerHTML = `
-          <div class="no-results">
-            <p>No products found for "${selectedValue}".</p>
-            <p style="margin-top:12px;">Try a different ingredient or concern.</p>
-          </div>`;
+      if (total === 0) {
+        document.getElementById('results-sub').textContent = 'No products found for "' + selectedValue + '"';
+        document.getElementById('resultsContainer').innerHTML = '<div class="no-results"><p>No products found. Try a different search.</p></div>';
         return;
       }
 
       document.getElementById('results-sub').textContent =
-        `${totalCount} product${totalCount !== 1 ? 's' : ''} found for "${selectedValue}"`;
+        total + ' product' + (total !== 1 ? 's' : '') + ' found for "' + selectedValue + '"';
 
-      const container = document.getElementById('resultsContainer');
-
-      // Render our tracked products first with prices
       let html = '';
 
       if (ourProducts.length > 0) {
-        html += `<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:12px;">Tracked by FindMyBasket</div>`;
-        html += ourProducts.map((product, idx) => {
-          const prices = (product.retailer_prices || []).filter(p => p.in_stock && p.price);
-          const minPrice = prices.length ? Math.min(...prices.map(p => parseFloat(p.price))) : null;
-          const cheapest = prices.find(p => parseFloat(p.price) === minPrice);
-          const ingredientPills = (product.ingredients || []).map(i => `<span class="ingredient-pill">${i}</span>`).join('');
-          const concernPills = (product.concerns || []).map(c => `<span class="concern-pill">${c}</span>`).join('');
-          return `
-            <div class="product-card" style="animation-delay:${idx * 0.06}s; border-color:rgba(201,169,110,0.3);">
-              <div class="product-brand">${product.brand || ''}</div>
-              <div class="product-name">${product.name}</div>
-              <div class="product-concerns">${ingredientPills}${concernPills}</div>
-              <div class="price-row">
-                <div>
-                  <div class="price-from">From ${cheapest ? cheapest.retailers.name : 'multiple retailers'}</div>
-                  <div class="price-amount">${minPrice ? '£' + minPrice.toFixed(2) : 'Check retailers'}</div>
-                </div>
-                <a href="/app.html" class="add-routine-btn">Add to routine →</a>
-              </div>
-            </div>`;
-        }).join('');
+        html += '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:12px;">Tracked by FindMyBasket</div>';
+        ourProducts.forEach((p, i) => {
+          const prices = (p.retailer_prices || []).filter(r => r.in_stock && r.price);
+          const minPrice = prices.length ? Math.min(...prices.map(r => parseFloat(r.price))) : null;
+          const cheapest = prices.find(r => parseFloat(r.price) === minPrice);
+          const iPills = (p.ingredients || []).map(i => '<span class="ingredient-pill">' + i + '</span>').join('');
+          const cPills = (p.concerns || []).map(c => '<span class="concern-pill">' + c + '</span>').join('');
+          html += '<div class="product-card" style="animation-delay:' + (i*0.06) + 's;border-color:rgba(201,169,110,0.3);">' +
+            '<div class="product-brand">' + (p.brand || '') + '</div>' +
+            '<div class="product-name">' + p.name + '</div>' +
+            '<div class="product-concerns">' + iPills + cPills + '</div>' +
+            '<div class="price-row"><div>' +
+            '<div class="price-from">From ' + (cheapest ? cheapest.retailers.name : 'multiple retailers') + '</div>' +
+            '<div class="price-amount">' + (minPrice ? '£' + minPrice.toFixed(2) : 'Check retailers') + '</div>' +
+            '</div><a href="/app.html" class="add-routine-btn">Add to routine →</a></div></div>';
+        });
       }
 
-      // Then OBF products
       if (uniqueOBF.length > 0) {
         if (ourProducts.length > 0) {
-          html += `<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(250,248,244,0.4);font-weight:500;margin:24px 0 12px;">More products</div>`;
+          html += '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(250,248,244,0.4);font-weight:500;margin:24px 0 12px;">More products</div>';
         }
-        html += uniqueOBF.slice(0, 8).map((p, idx) =>
-          renderOBFProduct(p, idx + ourProducts.length, false)
-        ).join('');
+        uniqueOBF.slice(0, 8).forEach((p, i) => {
+          const brand = p.brands ? p.brands.split(',')[0].trim() : '';
+          const name = p.product_name || '';
+          const ings = cleanIngredientTags(p.ingredients_tags);
+          const iPills = ings.map(ing => '<span class="ingredient-pill">' + ing + '</span>').join('');
+          const amazonUrl = 'https://www.amazon.co.uk/s?k=' + encodeURIComponent(brand + ' ' + name) + '&tag=findmybasket-21';
+          html += '<div class="product-card" style="animation-delay:' + ((i + ourProducts.length)*0.05) + 's">' +
+            '<div class="product-brand">' + brand + '</div>' +
+            '<div class="product-name">' + name + '</div>' +
+            (iPills ? '<div class="product-concerns">' + iPills + '</div>' : '') +
+            '<div class="price-row"><div>' +
+            '<div class="price-from">Not yet tracked</div>' +
+            '<div style="font-size:13px;color:rgba(250,248,244,0.4);margin-top:2px;">Check Amazon for pricing</div>' +
+            '</div><a href="' + amazonUrl + '" target="_blank" rel="noopener" class="add-routine-btn" style="border-color:rgba(255,153,0,0.3);color:#FF9900;">Check Amazon →</a></div></div>';
+        });
       }
 
-      // CTA
-      html += `
-        <div class="cta-box" style="margin-top:24px;">
-          <p>Found something you want? Add your full routine to the basket optimiser to find the cheapest way to buy everything.</p>
-          <a href="/app.html">Try the basket optimiser</a>
-        </div>`;
+      html += '<div class="cta-box" style="margin-top:24px;"><p>Found something you want? Add your full routine to find the cheapest basket.</p><a href="/app.html">Try the basket optimiser</a></div>';
+      document.getElementById('resultsContainer').innerHTML = html;
 
-      container.innerHTML = html;
-
-    } catch (err) {
+    } catch(err) {
       console.error(err);
       document.getElementById('resultsSearching').classList.remove('active');
       btn.disabled = false;
       btnText.textContent = 'Find products';
-      document.getElementById('resultsContainer').innerHTML = `<div class="no-results"><p>Something went wrong. Please try again.</p></div>`;
+      document.getElementById('resultsContainer').innerHTML = '<div class="no-results"><p>Something went wrong. Please try again.</p></div>';
     }
   }
 
-  // Allow Enter key to trigger search
   document.getElementById('ingredient-input').addEventListener('keydown', e => { if (e.key === 'Enter' && selectedValue) runSearch(); });
-  docu
+  document.getElementById('concern-input').addEventListener('keydown', e => { if (e.key === 'Enter' && selectedValue) runSearch(); });
+</script>
+</body>
+</html>
