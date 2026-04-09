@@ -399,11 +399,10 @@
 </footer>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
   const SUPABASE_URL = 'https://crtrjoescntlcjiwdtrt.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNydHJqb2VzY250bGNqaXdkdHJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzOTA3NDUsImV4cCI6MjA5MDk2Njc0NX0.D9zbYCQqqVQaHCTW9mYyTxGZcw7-ru2o2eXVber8uDg';
-  const { createClient } = supabase;
-  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+  let db;
+  window.addEventListener('load', function() { const { createClient } = supabase; db = createClient(SUPABASE_URL, SUPABASE_KEY); });
 
   let activeTab = 'ingredient';
   let selectedValue = null;
@@ -590,7 +589,6 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('ingredient-input').addEventListener('keydown', e => { if (e.key === 'Enter' && selectedValue) runSearch(); });
 
   document.getElementById('concern-input').addEventListener('keydown', e => { if (e.key === 'Enter' && selectedValue) runSearch(); });
-}); // end DOMContentLoaded
 </script>
 </body>
 </html>
