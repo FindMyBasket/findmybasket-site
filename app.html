@@ -360,6 +360,18 @@
       transition: opacity 0.2s, transform 0.15s;
     }
     .shop-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .shop-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+    .shop-retailer-btn {
+      width: 100%; padding: 14px;
+      background: #4A90D9; color: #FAF8F4;
+      border: none; border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 500;
+      cursor: pointer; text-align: center;
+      text-decoration: none; display: block;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .shop-retailer-btn:hover { opacity: 0.9; transform: translateY(-1px); }
     .amazon-btn {
       width: 100%; padding: 12px;
       background: transparent;
@@ -791,7 +803,9 @@
               ${deliveryText}
             </div>
           </div>
-          ${isBest ? `<button class="shop-btn" onclick="alert('Affiliate links will be added once AWIN is approved!')">Shop this basket →</button>` : ''}
+          ${isBest ? `<div class="shop-actions">
+            ${shopLinks || '<a href="/index.html#waitlist" class="shop-btn">Join waitlist to shop →</a>'}
+          </div>` : ''}
         </div>
       `;
     }).join('');
@@ -840,10 +854,6 @@
       <a href="/app.html" style="font-size:13px;color:rgba(250,248,244,0.4);text-decoration:none;">Try it now</a>
       <a href="/privacy-policy.html" style="font-size:13px;color:rgba(250,248,244,0.4);text-decoration:none;">Privacy Policy</a>
       <a href="/terms.html" style="font-size:13px;color:rgba(250,248,244,0.4);text-decoration:none;">Terms of Use</a>
-      <a href="mailto:hello@findmybasket.co.uk" style="font-size:13px;color:rgba(250,248,244,0.4);text-decoration:none;">Contact</a>
+      <a href="/cdn-cgi/l/email-protection#1d75787171725d7b74737970647f7c6e767869337e72336876" style="font-size:13px;color:rgba(250,248,244,0.4);text-decoration:none;">Contact</a>
     </div>
-    <p style="font-size:12px;color:rgba(250,248,244,0.2);">© 2025 FindMyBasket. All rights reserved.</p>
-  </div>
-</footer>
-</body>
-</html>
+    <p style="font-size:12px;color:rgba(250,248,244,0.2);">© 2025 FindMyBasket. All rights re
