@@ -389,7 +389,7 @@
       <a href="/product-finder.html">Product Finder</a>
       <a href="/app.html">Try it now</a>
       <a href="/privacy-policy.html">Privacy Policy</a>
-      <a href="mailto:hello@findmybasket.co.uk">Contact</a>
+      <a href="/cdn-cgi/l/email-protection#442c2128282b04222d2a20293d2625372f21306a272b6a312f">Contact</a>
         <a href="/terms.html">Terms of Use</a>
       <a href="/cdn-cgi/l/email-protection#dab2bfb6b6b59abcb3b4beb7a3b8bba9b1bfaef4b9b5f4afb1">Contact</a>
     </div>
@@ -397,7 +397,7 @@
   </div>
 </footer>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
   const SUPABASE_URL = 'https://crtrjoescntlcjiwdtrt.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNydHJqb2VzY250bGNqaXdkdHJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzOTA3NDUsImV4cCI6MjA5MDk2Njc0NX0.D9zbYCQqqVQaHCTW9mYyTxGZcw7-ru2o2eXVber8uDg';
   const { createClient } = supabase;
@@ -548,7 +548,7 @@
             '<div class="price-row"><div>' +
             '<div class="price-from">From ' + (cheapest ? cheapest.retailers.name : 'multiple retailers') + '</div>' +
             '<div class="price-amount">' + (minPrice ? '£' + minPrice.toFixed(2) : 'Check retailers') + '</div>' +
-            '</div><a href="/app.html" class="add-routine-btn">Add to routine →</a></div></div>';
+            '</div><a href="/app.html" class="add-routine-btn" title="Go to basket optimiser to compare prices">Compare prices →</a></div></div>';
         });
       }
 
@@ -586,7 +586,4 @@
   }
 
   document.getElementById('ingredient-input').addEventListener('keydown', e => { if (e.key === 'Enter' && selectedValue) runSearch(); });
-  document.getElementById('concern-input').addEventListener('keydown', e => { if (e.key === 'Enter' && selectedValue) runSearch(); });
-</script>
-</body>
-</html>
+  doc
