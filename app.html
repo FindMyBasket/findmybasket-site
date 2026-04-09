@@ -788,6 +788,13 @@
         </div>
       `).join('');
 
+      // Build shop links - one per retailer, using real affiliate URLs where available
+      const retailerUrls = {};
+      opt.breakdown.forEach(b => { if (b.url && !retailerUrls[b.retailerName]) retailerUrls[b.retailerName] = b.url; });
+      const shopLinks = Object.entries(retailerUrls)
+        .map(([name, url]) => `<a href="${url}" target="_blank" rel="noopener" class="shop-retailer-btn">Shop ${name} →</a>`)
+        .join('');
+
       return `
         <div class="basket-card ${isBest ? 'best' : ''}">
           <div class="basket-retailers">${opt.retailers.join(' + ')}</div>
