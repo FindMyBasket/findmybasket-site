@@ -17,6 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- supabase loaded in head -->
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -397,7 +398,8 @@
   </div>
 </footer>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
   const SUPABASE_URL = 'https://crtrjoescntlcjiwdtrt.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNydHJqb2VzY250bGNqaXdkdHJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzOTA3NDUsImV4cCI6MjA5MDk2Njc0NX0.D9zbYCQqqVQaHCTW9mYyTxGZcw7-ru2o2eXVber8uDg';
   const { createClient } = supabase;
@@ -586,4 +588,9 @@
   }
 
   document.getElementById('ingredient-input').addEventListener('keydown', e => { if (e.key === 'Enter' && selectedValue) runSearch(); });
-  doc
+
+  document.getElementById('concern-input').addEventListener('keydown', e => { if (e.key === 'Enter' && selectedValue) runSearch(); });
+}); // end DOMContentLoaded
+</script>
+</body>
+</html>
