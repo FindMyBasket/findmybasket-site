@@ -12,461 +12,198 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>FindMyBasket - Find the Cheapest Way to Buy Your Skincare Routine in the UK</title>
-  <meta name="description" content="Stop overpaying for skincare. FindMyBasket compares prices across Boots, Cult Beauty, Beauty Bay and Escentual and finds the cheapest way to buy your whole routine in one go. Free to use."/>
-  <meta name="keywords" content="skincare price comparison UK, cheapest skincare UK, Cult Beauty vs Boots, CeraVe cheapest UK, skincare routine comparison"/>
+  <meta name="description" content="Stop overpaying for skincare. FindMyBasket compares prices across the UK's major beauty retailers and finds the cheapest way to buy your whole routine in one go. Free to use."/>
+  <meta name="keywords" content="skincare price comparison UK, cheapest skincare UK, skincare routine comparison, UK beauty retailers"/>
   <link rel="canonical" href="https://www.findmybasket.co.uk/"/>
   <meta property="og:title" content="FindMyBasket - Find the Cheapest Way to Buy Your Skincare Routine in the UK"/>
-  <meta property="og:description" content="Stop overpaying for skincare. FindMyBasket compares prices across Boots, Cult Beauty, Beauty Bay and Escentual and finds the cheapest way to buy your whole routine in one go. Free to use."/>
+  <meta property="og:description" content="Stop overpaying for skincare. FindMyBasket compares prices across the UK's major beauty retailers and finds the cheapest way to buy your whole routine. Free to use."/>
   <meta property="og:url" content="https://www.findmybasket.co.uk/"/>
   <meta property="og:type" content="website"/>
   <meta property="og:site_name" content="FindMyBasket"/>
-  <meta name="twitter:card" content="summary"/>
+  <meta property="og:image" content="https://www.findmybasket.co.uk/og-image.jpg"/>
+  <meta property="og:image:width" content="1200"/>
+  <meta property="og:image:height" content="630"/>
+  <meta name="twitter:card" content="summary_large_image"/>
   <meta name="twitter:title" content="FindMyBasket - Find the Cheapest Way to Buy Your Skincare Routine in the UK"/>
-  <meta name="twitter:description" content="Stop overpaying for skincare. FindMyBasket compares prices across Boots, Cult Beauty, Beauty Bay and Escentual and finds the cheapest way to buy your whole routine in one go. Free to use."/>
-  <script type="application/ld+json">{
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "FindMyBasket",
-    "url": "https://www.findmybasket.co.uk",
-    "description": "UK skincare price comparison tool that finds the cheapest way to buy your whole routine across major retailers.",
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": "https://www.findmybasket.co.uk/app.html?q={search_term_string}",
-      "query-input": "required name=search_term_string"
-    }
-  }</script>
+  <meta name="twitter:description" content="Stop overpaying for skincare. FindMyBasket compares prices across the UK's major beauty retailers and finds the cheapest way to buy your whole routine. Free to use."/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <link rel="alternate icon" href="/favicon.ico"/>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"FindMyBasket","url":"https://www.findmybasket.co.uk","description":"UK skincare price comparison tool that finds the cheapest way to buy your whole routine across major retailers.","potentialAction":{"@type":"SearchAction","target":"https://www.findmybasket.co.uk/app.html?q={search_term_string}","query-input":"required name=search_term_string"}}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --cream: #FAF8F4;
-      --warm-white: #FFFDF9;
-      --ink: #1C1A18;
-      --ink-light: #4A4845;
-      --gold: #C9A96E;
-      --gold-light: #E8D5B0;
-      --sage: #7A9E87;
-      --sage-light: #C8DDD0;
-      --blush: #E8C4B8;
-      --border: rgba(28,26,24,0.1);
-      --shadow: 0 4px 40px rgba(28,26,24,0.08);
+      --cream: #FAF8F4; --warm-white: #FFFDF9; --ink: #1C1A18; --ink-light: #4A4845;
+      --gold: #C9A96E; --gold-light: #E8D5B0; --sage: #7A9E87; --sage-light: #C8DDD0;
+      --blush: #E8C4B8; --border: rgba(28,26,24,0.1); --shadow: 0 4px 40px rgba(28,26,24,0.08);
     }
-
     html { scroll-behavior: smooth; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); overflow-x: hidden; }
 
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--cream);
-      color: var(--ink);
-      overflow-x: hidden;
-    }
-
-    /* ── NAV ── */
+    /* NAV */
     nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
       display: flex; align-items: center; justify-content: space-between;
       padding: 20px 48px;
-      background: rgba(250,248,244,0.92);
-      backdrop-filter: blur(12px);
+      background: rgba(250,248,244,0.92); backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
     }
-    .nav-logo {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 22px; font-weight: 600; letter-spacing: 0.02em;
-      color: var(--ink); text-decoration: none;
-    }
+    .nav-logo { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: var(--ink); text-decoration: none; display:flex; align-items:center; gap:10px; }
     .nav-logo span { color: var(--gold); }
-    .nav-links { display: flex; gap: 36px; align-items: center; }
-    .nav-links a {
-      font-size: 14px; font-weight: 400; color: var(--ink-light);
-      text-decoration: none; letter-spacing: 0.02em;
-      transition: color 0.2s;
-    }
+    .nav-links { display: flex; gap: 28px; align-items: center; }
+    .nav-links a { font-size: 14px; font-weight: 400; color: var(--ink-light); text-decoration: none; transition: color 0.2s; }
     .nav-links a:hover { color: var(--ink); }
-    .nav-cta {
-      background: var(--ink) !important; color: var(--cream) !important;
-      padding: 10px 22px; border-radius: 100px;
-      font-weight: 500 !important; font-size: 13px !important;
-      transition: background 0.2s, transform 0.15s !important;
-    }
-    .nav-cta:hover { background: var(--gold) !important; transform: translateY(-1px); }
-
-    /* ── HERO ── */
-    .hero {
-      min-height: 100vh;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 120px 24px 80px;
-      position: relative;
-      overflow: hidden;
-      text-align: center;
-    }
-    .hero-bg {
-      position: absolute; inset: 0; z-index: 0;
-      background:
-        radial-gradient(ellipse 80% 60% at 20% 20%, rgba(201,169,110,0.12) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 80% at 80% 80%, rgba(122,158,135,0.10) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 40% at 60% 10%, rgba(232,196,184,0.15) 0%, transparent 50%);
-    }
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(201,169,110,0.12); border: 1px solid rgba(201,169,110,0.3);
-      border-radius: 100px; padding: 8px 18px;
-      font-size: 12px; font-weight: 500; letter-spacing: 0.08em;
-      color: #8A6A30; text-transform: uppercase;
-      margin-bottom: 32px; position: relative; z-index: 1;
-      animation: fadeUp 0.8s ease both;
-    }
-    .hero-badge::before {
-      content: ''; width: 6px; height: 6px; border-radius: 50%;
-      background: var(--gold); display: block;
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(1.4); }
-    }
-    .hero h1 {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(52px, 9vw, 96px);
-      font-weight: 600; line-height: 0.95;
-      letter-spacing: -0.02em;
-      position: relative; z-index: 1;
-      animation: fadeUp 0.8s 0.1s ease both;
-    }
-    .hero h1 em {
-      font-style: italic; color: var(--gold);
-    }
-    .hero-sub {
-      font-size: clamp(16px, 2vw, 20px);
-      color: var(--ink-light); font-weight: 300;
-      max-width: 560px; line-height: 1.6;
-      margin: 28px auto 0;
-      position: relative; z-index: 1;
-      animation: fadeUp 0.8s 0.2s ease both;
-    }
-    .hero-form {
-      display: flex; gap: 12px; margin-top: 48px;
-      position: relative; z-index: 1;
-      animation: fadeUp 0.8s 0.3s ease both;
-      flex-wrap: wrap; justify-content: center;
-    }
-    .hero-form input {
-      padding: 16px 24px;
-      border: 1px solid var(--border);
-      border-radius: 100px;
-      background: var(--warm-white);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 15px; color: var(--ink);
-      width: 300px; outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .hero-form input:focus {
-      border-color: var(--gold);
-      box-shadow: 0 0 0 4px rgba(201,169,110,0.12);
-    }
-    .hero-form input::placeholder { color: #AAA8A4; }
-    .btn-primary {
-      padding: 16px 32px;
-      background: var(--ink); color: var(--cream);
-      border: none; border-radius: 100px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 15px; font-weight: 500;
-      cursor: pointer; white-space: nowrap;
-      transition: background 0.2s, transform 0.15s;
-    }
-    .btn-primary:hover { background: var(--gold); transform: translateY(-2px); }
-    .btn-primary:active { transform: translateY(0); }
-    .hero-note {
-      font-size: 12px; color: #AAA8A4; margin-top: 16px;
-      position: relative; z-index: 1;
-      animation: fadeUp 0.8s 0.4s ease both;
-    }
-    .hero-retailers {
-      display: flex; align-items: center; justify-content: center;
-      margin-top: 48px; position: relative; z-index: 1;
-      animation: fadeUp 0.8s 0.5s ease both;
-    }
-    .hero-retailers span {
-      font-size: 13px; letter-spacing: 0.06em;
-      color: #AAA8A4; font-weight: 400;
-      border: 1px solid rgba(170,168,164,0.3);
-      padding: 10px 24px; border-radius: 100px;
-    }
-
-    /* ── STATS STRIP ── */
-    .stats {
-      background: var(--ink);
-      padding: 32px 48px;
-      display: flex; justify-content: center; gap: 80px;
-      flex-wrap: wrap;
-    }
-    .stat { text-align: center; }
-    .stat-num {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 40px; font-weight: 600; color: var(--gold);
-      line-height: 1;
-    }
-    .stat-label {
-      font-size: 13px; color: rgba(250,248,244,0.5);
-      margin-top: 4px; letter-spacing: 0.04em;
-    }
-
-    /* ── HOW IT WORKS ── */
-    section { padding: 100px 24px; }
-    .section-inner { max-width: 1100px; margin: 0 auto; }
-    .section-tag {
-      font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
-      color: var(--gold); font-weight: 500; margin-bottom: 16px;
-    }
-    .section-title {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(36px, 5vw, 56px);
-      font-weight: 600; line-height: 1.1;
-      letter-spacing: -0.01em;
-    }
-    .section-title em { font-style: italic; color: var(--sage); }
-
-    .steps {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 2px; margin-top: 60px;
-      background: var(--border);
-      border: 1px solid var(--border);
-      border-radius: 24px; overflow: hidden;
-    }
-    .step {
-      background: var(--warm-white);
-      padding: 48px 36px;
-      position: relative;
-      transition: background 0.2s;
-    }
-    .step:hover { background: #FFFEF8; }
-    .step-num {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 64px; font-weight: 600;
-      color: rgba(201,169,110,0.2);
-      line-height: 1; margin-bottom: 24px;
-    }
-    .step-icon {
-      width: 48px; height: 48px;
-      background: var(--cream);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px; margin-bottom: 20px;
-    }
-    .step h3 {
-      font-size: 18px; font-weight: 600; margin-bottom: 12px;
-    }
-    .step p { font-size: 15px; color: var(--ink-light); line-height: 1.6; }
-
-    /* ── DEMO ── */
-    .demo-section { background: var(--ink); }
-    .demo-section .section-title { color: var(--cream); }
-    .demo-section .section-tag { color: var(--gold); }
-    .demo-section p { color: rgba(250,248,244,0.6); }
-
-    .demo-card {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 24px; padding: 40px;
-      margin-top: 48px;
-    }
-    .demo-routine {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 12px; margin-bottom: 32px;
-    }
-    .demo-product {
-      display: flex; align-items: center; gap: 12px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 12px; padding: 14px 16px;
-    }
-    .demo-product-dot {
-      width: 36px; height: 36px; border-radius: 10px;
-      flex-shrink: 0;
-    }
-    .demo-product-info { flex: 1; }
-    .demo-product-name { font-size: 13px; font-weight: 500; color: var(--cream); }
-    .demo-product-brand { font-size: 11px; color: rgba(250,248,244,0.4); margin-top: 2px; }
-
-    .demo-results { margin-top: 8px; }
-    .demo-result-label {
-      font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
-      color: rgba(250,248,244,0.4); margin-bottom: 16px;
-    }
-    .demo-basket {
-      display: flex; align-items: center; justify-content: space-between;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 14px; padding: 20px 24px;
-      margin-bottom: 10px;
-      position: relative; overflow: hidden;
-    }
-    .demo-basket.best {
-      border-color: rgba(201,169,110,0.4);
-      background: rgba(201,169,110,0.08);
-    }
-    .demo-basket.best::before {
-      content: 'BEST'; position: absolute; top: 0; right: 0;
-      background: var(--gold); color: var(--ink);
-      font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
-      padding: 4px 12px; border-radius: 0 14px 0 10px;
-    }
-    .basket-retailer { font-size: 15px; font-weight: 500; color: var(--cream); }
-    .basket-items { font-size: 13px; color: rgba(250,248,244,0.5); margin-top: 2px; }
-    .basket-price {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 28px; font-weight: 600; color: var(--gold);
-    }
-    .basket-saving {
-      font-size: 12px; color: var(--sage); text-align: right; margin-top: 2px;
-    }
-
-    /* ── WHY ── */
-    .why-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 24px; margin-top: 60px;
-    }
-    .why-card {
-      padding: 36px 32px;
-      background: var(--warm-white);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .why-card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow);
-    }
-    .why-icon {
-      width: 52px; height: 52px;
-      background: var(--cream);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 24px; margin-bottom: 24px;
-    }
-    .why-card h3 { font-size: 18px; font-weight: 600; margin-bottom: 10px; }
-    .why-card p { font-size: 14px; color: var(--ink-light); line-height: 1.65; }
-
-    /* ── CTA ── */
-    .cta-section {
-      background: linear-gradient(135deg, #1C1A18 0%, #2E2B27 100%);
-      text-align: center;
-    }
-    .cta-section .section-title { color: var(--cream); }
-    .cta-inner { max-width: 640px; margin: 0 auto; }
-    .cta-sub {
-      font-size: 17px; color: rgba(250,248,244,0.5);
-      margin-top: 20px; line-height: 1.6;
-    }
-    .cta-form {
-      display: flex; gap: 12px; margin-top: 40px;
-      justify-content: center; flex-wrap: wrap;
-    }
-    .cta-form input {
-      padding: 16px 24px;
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 100px;
-      background: rgba(255,255,255,0.06);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 15px; color: var(--cream);
-      width: 280px; outline: none;
-      transition: border-color 0.2s;
-    }
-    .cta-form input:focus { border-color: var(--gold); }
-    .cta-form input::placeholder { color: rgba(250,248,244,0.3); }
-
-    /* ── FOOTER ── */
-    footer {
-      background: var(--ink);
-      padding: 48px;
-      display: flex; align-items: center; justify-content: space-between;
-      flex-wrap: wrap; gap: 20px;
-      border-top: 1px solid rgba(255,255,255,0.06);
-    }
-    .footer-logo {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 20px; font-weight: 600; color: var(--cream);
-    }
-    .footer-logo span { color: var(--gold); }
-    .footer-links { display: flex; gap: 28px; }
-    .footer-links a {
-      font-size: 13px; color: rgba(250,248,244,0.4);
-      text-decoration: none; transition: color 0.2s;
-    }
-    .footer-links a:hover { color: var(--cream); }
-    .footer-copy { font-size: 12px; color: rgba(250,248,244,0.25); }
-
-    /* ── ANIMATIONS ── */
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(24px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .reveal {
-      opacity: 1; transform: translateY(0);
-      transition: opacity 0.7s ease, transform 0.7s ease;
-    }
-    .reveal.visible { opacity: 1; transform: translateY(0); }
-
-    /* ── SUCCESS STATE ── */
-    .success-msg {
-      display: none; color: var(--sage);
-      font-size: 14px; margin-top: 12px;
-      animation: fadeUp 0.4s ease both;
-    }
-    .success-msg.show { display: block; }
-
-    /* ── RESPONSIVE ── */
-    @media (max-width: 768px) {
-      nav { padding: 16px 20px; }
-      .nav-links a:not(.nav-cta):not([href="/savings-hub.html"]) { display: none; }
-      .nav-links a[href="/savings-hub.html"] { font-size: 13px; }
-      .stats { gap: 40px; padding: 32px 24px; }
-      .steps { grid-template-columns: 1fr; }
-      .demo-routine { grid-template-columns: 1fr; }
-      .why-grid { grid-template-columns: 1fr; }
-      footer { flex-direction: column; text-align: center; padding: 32px 24px; }
-      .footer-links { justify-content: center; }
-    }
-    @media (max-width: 900px) {
-      .steps { grid-template-columns: 1fr; }
-      .why-grid { grid-template-columns: 1fr 1fr; }
-    }
-
+    .nav-cta { background: var(--ink) !important; color: var(--cream) !important; padding: 10px 22px; border-radius: 100px; font-weight: 500 !important; font-size: 13px !important; }
+    .nav-cta:hover { background: var(--gold) !important; }
     .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px; }
     .hamburger span { width: 22px; height: 2px; background: var(--ink); border-radius: 2px; }
     .mobile-menu { display: none; position: fixed; top: 65px; left: 0; right: 0; background: var(--cream); border-bottom: 1px solid var(--border); padding: 20px 24px; z-index: 99; flex-direction: column; gap: 4px; }
     .mobile-menu a { font-size: 16px; color: var(--ink-light); text-decoration: none; padding: 12px 0; border-bottom: 1px solid var(--border); font-family: 'DM Sans', sans-serif; }
     .mobile-menu a:last-child { border-bottom: none; }
     .mobile-menu.open { display: flex; }
+
+    /* HERO */
+    .hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 120px 24px 80px; position: relative; overflow: hidden; text-align: center; }
+    .hero-bg { position: absolute; inset: 0; z-index: 0; background: radial-gradient(ellipse 80% 60% at 20% 20%, rgba(201,169,110,0.12) 0%, transparent 60%), radial-gradient(ellipse 60% 80% at 80% 80%, rgba(122,158,135,0.10) 0%, transparent 60%), radial-gradient(ellipse 50% 40% at 60% 10%, rgba(232,196,184,0.15) 0%, transparent 50%); }
+    .hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(201,169,110,0.12); border: 1px solid rgba(201,169,110,0.3); border-radius: 100px; padding: 8px 18px; font-size: 12px; font-weight: 500; letter-spacing: 0.08em; color: #8A6A30; text-transform: uppercase; margin-bottom: 32px; position: relative; z-index: 1; animation: fadeUp 0.8s ease both; }
+    .hero-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); display: block; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.4); } }
+    .hero h1 { font-family: 'Cormorant Garamond', serif; font-size: clamp(52px, 9vw, 96px); font-weight: 600; line-height: 0.95; letter-spacing: -0.02em; position: relative; z-index: 1; animation: fadeUp 0.8s 0.1s ease both; }
+    .hero h1 em { font-style: italic; color: var(--gold); }
+    .hero-sub { font-size: clamp(16px, 2vw, 20px); color: var(--ink-light); font-weight: 300; max-width: 560px; line-height: 1.6; margin: 28px auto 0; position: relative; z-index: 1; animation: fadeUp 0.8s 0.2s ease both; }
+    .hero-form { display: flex; gap: 12px; margin-top: 48px; position: relative; z-index: 1; animation: fadeUp 0.8s 0.3s ease both; flex-wrap: wrap; justify-content: center; }
+    .hero-form input { padding: 16px 24px; border: 1px solid var(--border); border-radius: 100px; background: var(--warm-white); font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--ink); width: 300px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .hero-form input:focus { border-color: var(--gold); box-shadow: 0 0 0 4px rgba(201,169,110,0.12); }
+    .hero-form input::placeholder { color: #AAA8A4; }
+    .btn-primary { padding: 16px 32px; background: var(--ink); color: var(--cream); border: none; border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background 0.2s, transform 0.15s; }
+    .btn-primary:hover { background: var(--gold); transform: translateY(-2px); }
+    .hero-note { font-size: 12px; color: #AAA8A4; margin-top: 16px; position: relative; z-index: 1; animation: fadeUp 0.8s 0.4s ease both; }
+    .hero-retailers { display: flex; align-items: center; justify-content: center; margin-top: 48px; position: relative; z-index: 1; animation: fadeUp 0.8s 0.5s ease both; }
+    .hero-retailers span { font-size: 13px; letter-spacing: 0.06em; color: #AAA8A4; font-weight: 400; border: 1px solid rgba(170,168,164,0.3); padding: 10px 24px; border-radius: 100px; }
+
+    /* STATS */
+    .stats { background: var(--ink); padding: 32px 48px; display: flex; justify-content: center; gap: 80px; flex-wrap: wrap; }
+    .stat { text-align: center; }
+    .stat-num { font-family: 'Cormorant Garamond', serif; font-size: 40px; font-weight: 600; color: var(--gold); line-height: 1; }
+    .stat-label { font-size: 13px; color: rgba(250,248,244,0.5); margin-top: 4px; letter-spacing: 0.04em; }
+
+    /* SECTIONS */
+    section { padding: 100px 24px; }
+    .section-inner { max-width: 1100px; margin: 0 auto; }
+    .section-tag { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); font-weight: 500; margin-bottom: 16px; }
+    .section-title { font-family: 'Cormorant Garamond', serif; font-size: clamp(36px, 5vw, 56px); font-weight: 600; line-height: 1.1; letter-spacing: -0.01em; }
+    .section-title em { font-style: italic; color: var(--sage); }
+
+    /* STEPS */
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin-top: 60px; background: var(--border); border: 1px solid var(--border); border-radius: 24px; overflow: hidden; }
+    .step { background: var(--warm-white); padding: 48px 36px; transition: background 0.2s; }
+    .step:hover { background: #FFFEF8; }
+    .step-num { font-family: 'Cormorant Garamond', serif; font-size: 64px; font-weight: 600; color: rgba(201,169,110,0.2); line-height: 1; margin-bottom: 24px; }
+    .step-icon { width: 48px; height: 48px; background: var(--cream); border: 1px solid var(--border); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 20px; }
+    .step h3 { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
+    .step p { font-size: 15px; color: var(--ink-light); line-height: 1.6; }
+
+    /* DEMO */
+    .demo-section { background: var(--ink); }
+    .demo-section .section-title { color: var(--cream); }
+    .demo-section .section-tag { color: var(--gold); }
+    .demo-section p { color: rgba(250,248,244,0.6); }
+    .demo-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 40px; margin-top: 48px; }
+    .demo-routine { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 32px; }
+    .demo-product { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px 16px; }
+    .demo-product-dot { width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; }
+    .demo-product-name { font-size: 13px; font-weight: 500; color: var(--cream); }
+    .demo-product-brand { font-size: 11px; color: rgba(250,248,244,0.4); margin-top: 2px; }
+    .demo-result-label { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(250,248,244,0.4); margin-bottom: 16px; }
+    .demo-basket { display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 20px 24px; margin-bottom: 10px; position: relative; overflow: hidden; }
+    .demo-basket.best { border-color: rgba(201,169,110,0.4); background: rgba(201,169,110,0.08); }
+    .demo-basket.best::before { content: 'BEST'; position: absolute; top: 0; right: 0; background: var(--gold); color: var(--ink); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; padding: 4px 12px; border-radius: 0 14px 0 10px; }
+    .basket-retailer { font-size: 15px; font-weight: 500; color: var(--cream); }
+    .basket-items { font-size: 13px; color: rgba(250,248,244,0.5); margin-top: 2px; }
+    .basket-price { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 600; color: var(--gold); }
+    .basket-saving { font-size: 12px; color: var(--sage); text-align: right; margin-top: 2px; }
+
+    /* WHY */
+    .why-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 60px; }
+    .why-card { padding: 36px 32px; background: var(--warm-white); border: 1px solid var(--border); border-radius: 20px; transition: transform 0.2s, box-shadow 0.2s; }
+    .why-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+    .why-icon { width: 52px; height: 52px; background: var(--cream); border: 1px solid var(--border); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 24px; }
+    .why-card h3 { font-size: 18px; font-weight: 600; margin-bottom: 10px; }
+    .why-card p { font-size: 14px; color: var(--ink-light); line-height: 1.65; }
+
+    /* CTA */
+    .cta-section { background: linear-gradient(135deg, #1C1A18 0%, #2E2B27 100%); text-align: center; }
+    .cta-section .section-title { color: var(--cream); }
+    .cta-inner { max-width: 640px; margin: 0 auto; }
+    .cta-sub { font-size: 17px; color: rgba(250,248,244,0.5); margin-top: 20px; line-height: 1.6; }
+    .cta-form { display: flex; gap: 12px; margin-top: 40px; justify-content: center; flex-wrap: wrap; }
+    .cta-form input { padding: 16px 24px; border: 1px solid rgba(255,255,255,0.15); border-radius: 100px; background: rgba(255,255,255,0.06); font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--cream); width: 280px; outline: none; }
+    .cta-form input:focus { border-color: var(--gold); }
+    .cta-form input::placeholder { color: rgba(250,248,244,0.3); }
+
+    /* FOOTER */
+    footer { background: var(--ink); padding: 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; border-top: 1px solid rgba(255,255,255,0.06); }
+    .footer-logo { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 600; color: var(--cream); display:flex; align-items:center; gap:10px; }
+    .footer-logo span { color: var(--gold); }
+    .footer-links { display: flex; gap: 28px; flex-wrap: wrap; }
+    .footer-links a { font-size: 13px; color: rgba(250,248,244,0.4); text-decoration: none; transition: color 0.2s; }
+    .footer-links a:hover { color: var(--cream); }
+    .footer-copy { font-size: 12px; color: rgba(250,248,244,0.25); }
+
+    /* ANIMATIONS */
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+    .reveal { opacity: 1; transform: translateY(0); transition: opacity 0.7s ease, transform 0.7s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .success-msg { display: none; color: var(--sage); font-size: 14px; margin-top: 12px; }
+    .success-msg.show { display: block; }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      nav { padding: 14px 20px; }
+      .nav-links { display: none; }
+      .hamburger { display: flex; }
+      .stats { gap: 40px; padding: 32px 24px; }
+      .steps { grid-template-columns: 1fr; }
+      .demo-routine { grid-template-columns: 1fr; }
+      .why-grid { grid-template-columns: 1fr; }
+      footer { flex-direction: column; text-align: center; padding: 32px 24px; }
+      .footer-links { justify-content: center; }
+      #product-finder-feature .section-inner { grid-template-columns: 1fr !important; }
+    }
+    @media (max-width: 900px) {
+      .steps { grid-template-columns: 1fr; }
+      .why-grid { grid-template-columns: 1fr 1fr; }
+    }
   </style>
 </head>
 <body>
 
-  <!-- NAV -->
   <nav>
-    <a href="#" class="nav-logo" style="display:flex;align-items:center;gap:10px;text-decoration:none;"><svg height="36" viewBox="0 0 347.59 137.24" xmlns="http://www.w3.org/2000/svg"><g><path fill="#4a90d9" d="M77.21,80.25l-.03.17-2.04,9.68c-1,4.75-5.25,8.19-10.1,8.19H22.69c-4.85,0-9.1-3.44-10.1-8.19l-5.7-27.11h46c-.19-.65-.34-1.32-.46-2-.25-1.35-.37-2.74-.37-4.17v-.2H4.15c-2.63,0-4.6,2.42-4.06,5l6.27,29.79c1.63,7.72,8.44,13.25,16.33,13.25h42.35c7.89,0,14.7-5.53,16.33-13.25l2.63-12.51.03-.16c-2.14.84-4.43,1.36-6.82,1.51Z"/><path fill="#4a90d9" d="M58.54,40.65c-.25.26-.49.52-.72.79-.49.56-.95,1.14-1.38,1.74-.63.87-1.19,1.79-1.68,2.74-2.14-.96-4.41-1.45-6.77-1.45h-8.24c-4.46,0-8.65,1.74-11.81,4.9-2.03,2.03-3.49,4.52-4.25,7.25-.07.24-.13.48-.19.72-.14.56-.24,1.13-.32,1.78l-.4,3.16-6.32-.8.4-3.16c.08-.6.17-1.17.28-1.7.05-.26.11-.51.17-.76.96-4.13,3.08-7.94,6.13-10.99,4.36-4.36,10.15-6.76,16.31-6.76h8.24c3.43,0,6.73.74,9.81,2.19l.74.35Z"/><path fill="#4a90d9" d="M24.91,92.19c-.89,0-1.71-.6-1.94-1.5l-5.24-20.52c-.27-1.07.37-2.16,1.44-2.43,1.07-.28,2.16.37,2.43,1.44l5.24,20.52c.27,1.07-.37,2.16-1.44,2.43-.17.04-.33.06-.5.06Z"/><path fill="#4a90d9" d="M37.81,92.43c-.98,0-1.83-.72-1.98-1.71l-3.03-20.99c-.16-1.09.6-2.11,1.69-2.27,1.09-.15,2.11.6,2.27,1.69l3.03,20.99c.16,1.09-.6,2.11-1.69,2.27-.1.01-.19.02-.29.02Z"/><path fill="#4a90d9" d="M66.6,78.54l-3.31,12.17c-.24.89-1.04,1.47-1.92,1.47-.17,0-.35-.02-.52-.07-1.06-.29-1.69-1.38-1.4-2.44l3.51-12.89s.02-.08.04-.12c.08.06.17.11.25.16.49.31,1,.6,1.52.87.59.31,1.2.6,1.83.85Z"/><path fill="#4a90d9" d="M49.97,92.43c-.1,0-.19,0-.29-.02-1.09-.16-1.85-1.17-1.69-2.27l3.03-20.99c.16-1.09,1.18-1.85,2.27-1.69,1.09.16,1.85,1.17,1.69,2.27l-3.03,20.99c-.14,1-1,1.71-1.98,1.71Z"/></g><g><path fill="#4a90d9" d="M61.13,59.92h-6.79c1.08,6.04,4.73,11.2,9.77,14.31l1.85-6.81c-2.32-1.91-4.04-4.52-4.83-7.5ZM75.24,34.91c-6.4,0-12.14,2.84-16.03,7.34-2.71,3.11-4.53,7-5.04,11.3-.12.85-.17,1.72-.17,2.6,0,1.29.11,2.55.34,3.77,1.08,6.04,4.73,11.2,9.77,14.31,3.24,2.01,7.06,3.16,11.13,3.16.39,0,.78-.01,1.17-.04,2.4-.12,4.69-.65,6.82-1.52.59-.24,1.16-.5,1.72-.8,2.38-1.22,4.5-2.88,6.24-4.88,3.3-3.74,5.3-8.63,5.3-14,0-11.71-9.54-21.24-21.25-21.24ZM77.85,70.52c-.84.16-1.72.24-2.61.24-3.53,0-6.76-1.26-9.28-3.34-2.32-1.91-4.04-4.52-4.83-7.5-.33-1.2-.5-2.47-.5-3.77,0-.89.08-1.76.24-2.6.43-2.4,1.45-4.6,2.91-6.44,2.67-3.39,6.82-5.57,11.46-5.57,8.06,0,14.61,6.56,14.61,14.61,0,4.25-1.83,8.09-4.74,10.75-1.99,1.84-4.49,3.12-7.26,3.62Z"/><path fill="#4a90d9" d="M103.19,90.99l-.56.45c-2.02,1.61-4.98,1.21-6.49-.89l-11.28-15.66,6.17-4.93,12.74,14.54c1.69,1.93,1.43,4.89-.58,6.49Z"/><path fill="#4a90d9" d="M88.48,55.01c0,.18-.15.33-.33.33s-.32-.15-.32-.33c0-6.26-5.54-11.74-11.84-11.74-.18,0-.33-.15-.33-.33s.15-.32.33-.32c6.65,0,12.49,5.79,12.49,12.39Z"/></g></svg><span style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--ink);">Find<span style="color:var(--gold);">My</span>Basket</span></a>
+    <a href="/index.html" class="nav-logo">
+      <svg height="36" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg"><style>.nl7{fill:#4a90d9}</style><path class="nl7" d="M115.6,99.5v.2s-3,13.9-3,13.9c-1.4,6.8-7.5,11.8-14.5,11.8h-60.9c-7,0-13.1-4.9-14.5-11.8l-8.2-39h66.2c-.3-.9-.5-1.9-.7-2.9-.4-1.9-.5-3.9-.5-6v-.3H10.6c-3.8,0-6.6,3.5-5.8,7.2l9,42.8c2.3,11.1,12.1,19.1,23.5,19.1h60.9c11.3,0,21.1-8,23.5-19.1l3.8-18v-.2c-3,1.2-6.3,2-9.8,2.2Z"/><path class="nl7" d="M88.8,42.5c-.4.4-.7.7-1,1.1-.7.8-1.4,1.6-2,2.5-.9,1.3-1.7,2.6-2.4,3.9-3.1-1.4-6.3-2.1-9.7-2.1h-11.8c-6.4,0-12.4,2.5-17,7-2.9,2.9-5,6.5-6.1,10.4-.1.3-.2.7-.3,1-.2.8-.3,1.6-.5,2.6l-.6,4.5-9.1-1.2.6-4.5c.1-.9.2-1.7.4-2.4,0-.4.2-.7.2-1.1,1.4-5.9,4.4-11.4,8.8-15.8,6.3-6.3,14.6-9.7,23.5-9.7h11.8c4.9,0,9.7,1.1,14.1,3.1l1.1.5Z"/><path class="nl7" d="M40.4,116.6c-1.3,0-2.5-.9-2.8-2.2l-7.5-29.5c-.4-1.5.5-3.1,2.1-3.5,1.5-.4,3.1.5,3.5,2.1l7.5,29.5c.4,1.5-.5,3.1-2.1,3.5-.2,0-.5,0-.7,0Z"/><path class="nl7" d="M59,117c-1.4,0-2.6-1-2.8-2.5l-4.4-30.2c-.2-1.6.9-3,2.4-3.3,1.6-.2,3,.9,3.3,2.4l4.4,30.2c.2,1.6-.9,3-2.4,3.3-.1,0-.3,0-.4,0Z"/><path class="nl7" d="M100.4,97l-4.8,17.5c-.3,1.3-1.5,2.1-2.8,2.1s-.5,0-.7-.1c-1.5-.4-2.4-2-2-3.5l5-18.5c0,0,0-.1,0-.2.1,0,.2.2.4.2.7.4,1.4.9,2.2,1.3.8.4,1.7.9,2.6,1.2Z"/><path class="nl7" d="M76.4,117c-.1,0-.3,0-.4,0-1.6-.2-2.7-1.7-2.4-3.3l4.4-30.2c.2-1.6,1.7-2.7,3.3-2.4,1.6.2,2.7,1.7,2.4,3.3l-4.4,30.2c-.2,1.4-1.4,2.5-2.8,2.5Z"/><path style="fill:#C9A96E" d="M92.5,70.2h-9.8c1.6,8.7,6.8,16.1,14,20.6l2.7-9.8c-3.3-2.7-5.8-6.5-6.9-10.8ZM112.8,34.3c-9.2,0-17.5,4.1-23.1,10.6-3.9,4.5-6.5,10.1-7.2,16.3-.2,1.2-.2,2.5-.2,3.7,0,1.9.2,3.7.5,5.4,1.6,8.7,6.8,16.1,14,20.6,4.7,2.9,10.2,4.5,16,4.5s1.1,0,1.7,0c3.5-.2,6.7-.9,9.8-2.2.8-.3,1.7-.7,2.5-1.2,3.4-1.8,6.5-4.1,9-7,4.7-5.4,7.6-12.4,7.6-20.1,0-16.8-13.7-30.5-30.6-30.5ZM116.5,85.5c-1.2.2-2.5.3-3.8.3-5.1,0-9.7-1.8-13.3-4.8-3.3-2.7-5.8-6.5-6.9-10.8-.5-1.7-.7-3.6-.7-5.4s.1-2.5.3-3.7c.6-3.5,2.1-6.6,4.2-9.3,3.8-4.9,9.8-8,16.5-8,11.6,0,21,9.4,21,21s-2.6,11.6-6.8,15.5c-2.9,2.6-6.5,4.5-10.4,5.2Z"/><path style="fill:#C9A96E" d="M153,114.9l-.8.6c-2.9,2.3-7.2,1.7-9.3-1.3l-16.2-22.5,8.9-7.1,18.3,20.9c2.4,2.8,2.1,7-.8,9.3Z"/></svg>
+      <span>Find<span>My</span>Basket</span>
+    </a>
     <div class="nav-links">
       <a href="/savings-hub.html">Savings Hub</a>
+      <a href="/product-finder.html">Product Finder</a>
       <a href="#how-it-works">How it works</a>
       <a href="#why">Why us</a>
-      <a href="/product-finder.html">Product Finder</a>
-      <a href="/app.html" class="nav-cta" style="background:var(--gold)!important;color:var(--ink)!important;margin-right:8px">Try it now</a><a href="#waitlist" class="nav-cta">Join waitlist</a>
+      <a href="/app.html" class="nav-cta" style="background:var(--gold)!important;color:var(--ink)!important;">Try it now</a>
+      <a href="#waitlist" class="nav-cta">Join waitlist</a>
     </div>
     <div class="hamburger" onclick="toggleMenu()" id="hamburger"><span></span><span></span><span></span></div>
   </nav>
+
   <div class="mobile-menu" id="mobileMenu">
     <a href="/savings-hub.html">Savings Hub</a>
-    <a href="#how-it-works">How it works</a>
+    <a href="/product-finder.html">Product Finder</a>
+    <a href="#how-it-works" onclick="toggleMenu()">How it works</a>
+    <a href="#why" onclick="toggleMenu()">Why us</a>
     <a href="/app.html">Try it now</a>
-    <a href="#waitlist">Join waitlist</a>
+    <a href="#waitlist" onclick="toggleMenu()">Join waitlist</a>
   </div>
 
-  <!-- HERO -->
   <section class="hero">
     <div class="hero-bg"></div>
     <div class="hero-badge">Coming Soon — Join the Waitlist</div>
@@ -481,52 +218,33 @@
     <div style="position:relative;z-index:10;margin-top:12px;">
       <button onclick="window.location.href='/app.html'" style="background:transparent;color:var(--ink);border:1.5px solid rgba(28,26,24,0.15);border-radius:100px;padding:12px 28px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;">Or try it now — no email needed →</button>
     </div>
-    <div class="hero-retailers">
-      <span>Comparing the UK's major beauty retailers</span>
-    </div>
+    <div class="hero-retailers"><span>Comparing the UK's major beauty retailers</span></div>
   </section>
 
-  <!-- STATS -->
   <div class="stats">
-    <div class="stat">
-      <div class="stat-num">4</div>
-      <div class="stat-label">Major retailers</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">£0</div>
-      <div class="stat-label">Free to use</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">1–2</div>
-      <div class="stat-label">Baskets. Not ten.</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">Seconds</div>
-      <div class="stat-label">To find your saving</div>
-    </div>
+    <div class="stat"><div class="stat-num">4</div><div class="stat-label">Major retailers</div></div>
+    <div class="stat"><div class="stat-num">£0</div><div class="stat-label">Free to use</div></div>
+    <div class="stat"><div class="stat-num">1–2</div><div class="stat-label">Baskets. Not ten.</div></div>
+    <div class="stat"><div class="stat-num">Seconds</div><div class="stat-label">To find your saving</div></div>
   </div>
 
-  <!-- HOW IT WORKS -->
   <section id="how-it-works">
     <div class="section-inner">
       <p class="section-tag reveal">How it works</p>
       <h2 class="section-title reveal">Three steps to a <em>smarter</em> shop</h2>
       <div class="steps">
         <div class="step reveal">
-          <div class="step-num">01</div>
-          <div class="step-icon">🧴</div>
+          <div class="step-num">01</div><div class="step-icon">🧴</div>
           <h3>Build your routine</h3>
           <p>Search and add the products in your skincare routine — cleanser, serum, moisturiser, SPF. Add as many as you like.</p>
         </div>
         <div class="step reveal" style="transition-delay:0.1s">
-          <div class="step-num">02</div>
-          <div class="step-icon">🔍</div>
+          <div class="step-num">02</div><div class="step-icon">🔍</div>
           <h3>We compare the prices</h3>
           <p>FindMyBasket checks live prices across all major UK beauty retailers — including delivery thresholds.</p>
         </div>
         <div class="step reveal" style="transition-delay:0.2s">
-          <div class="step-num">03</div>
-          <div class="step-icon">🛒</div>
+          <div class="step-num">03</div><div class="step-icon">🛒</div>
           <h3>Shop the optimal basket</h3>
           <p>We recommend the cheapest 1 or 2 retailer split for your whole routine. See exactly how much you save, then click through to shop.</p>
         </div>
@@ -534,7 +252,6 @@
     </div>
   </section>
 
-  <!-- PRODUCT FINDER FEATURE -->
   <section id="product-finder-feature" style="padding:80px 24px; background:var(--warm-white); border-top:1px solid var(--border);">
     <div class="section-inner" style="max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:center;">
       <div>
@@ -542,151 +259,55 @@
         <h2 class="section-title" style="margin-bottom:20px;">Find products by <em>ingredient</em> or concern</h2>
         <p style="font-size:16px; color:var(--ink-light); line-height:1.7; margin-bottom:16px;">Not sure which product to buy? Search by ingredient or skin concern and we will find the cheapest matching products across all major UK retailers.</p>
         <p style="font-size:16px; color:var(--ink-light); line-height:1.7; margin-bottom:32px;">Search niacinamide, retinol, hyaluronic acid, dry skin, acne, anti-ageing and more.</p>
-        <a href="/product-finder.html" style="display:inline-flex; align-items:center; gap:10px; background:var(--ink); color:var(--cream); padding:16px 32px; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:500; text-decoration:none; transition:background 0.2s;" onmouseover="this.style.background='var(--gold)'" onmouseout="this.style.background='var(--ink)'">Try Product Finder →</a>
+        <a href="/product-finder.html" style="display:inline-flex;align-items:center;gap:10px;background:var(--ink);color:var(--cream);padding:16px 32px;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;">Try Product Finder →</a>
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <div style="background:var(--cream); border:1px solid var(--border); border-radius:14px; padding:18px 20px;">
-          <div style="font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--gold); font-weight:500; margin-bottom:8px;">Ingredient</div>
-          <div style="font-size:16px; font-weight:500; color:var(--ink);">Niacinamide</div>
-          <div style="font-size:13px; color:var(--ink-light); margin-top:4px;">3 products found</div>
-        </div>
-        <div style="background:var(--cream); border:1px solid var(--border); border-radius:14px; padding:18px 20px;">
-          <div style="font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--sage); font-weight:500; margin-bottom:8px;">Concern</div>
-          <div style="font-size:16px; font-weight:500; color:var(--ink);">Dry Skin</div>
-          <div style="font-size:13px; color:var(--ink-light); margin-top:4px;">4 products found</div>
-        </div>
-        <div style="background:var(--cream); border:1px solid var(--border); border-radius:14px; padding:18px 20px;">
-          <div style="font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--gold); font-weight:500; margin-bottom:8px;">Ingredient</div>
-          <div style="font-size:16px; font-weight:500; color:var(--ink);">Hyaluronic Acid</div>
-          <div style="font-size:13px; color:var(--ink-light); margin-top:4px;">2 products found</div>
-        </div>
-        <div style="background:var(--cream); border:1px solid var(--border); border-radius:14px; padding:18px 20px;">
-          <div style="font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--sage); font-weight:500; margin-bottom:8px;">Concern</div>
-          <div style="font-size:16px; font-weight:500; color:var(--ink);">Acne</div>
-          <div style="font-size:13px; color:var(--ink-light); margin-top:4px;">2 products found</div>
-        </div>
+        <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:18px 20px;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:8px;">Ingredient</div><div style="font-size:16px;font-weight:500;color:var(--ink);">Niacinamide</div><div style="font-size:13px;color:var(--ink-light);margin-top:4px;">3 products found</div></div>
+        <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:18px 20px;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--sage);font-weight:500;margin-bottom:8px;">Concern</div><div style="font-size:16px;font-weight:500;color:var(--ink);">Dry Skin</div><div style="font-size:13px;color:var(--ink-light);margin-top:4px;">4 products found</div></div>
+        <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:18px 20px;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:8px;">Ingredient</div><div style="font-size:16px;font-weight:500;color:var(--ink);">Hyaluronic Acid</div><div style="font-size:13px;color:var(--ink-light);margin-top:4px;">2 products found</div></div>
+        <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:18px 20px;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--sage);font-weight:500;margin-bottom:8px;">Concern</div><div style="font-size:16px;font-weight:500;color:var(--ink);">Acne</div><div style="font-size:13px;color:var(--ink-light);margin-top:4px;">2 products found</div></div>
       </div>
     </div>
   </section>
 
-  <!-- DEMO -->
   <section class="demo-section">
     <div class="section-inner">
       <p class="section-tag reveal">See it in action</p>
       <h2 class="section-title reveal">Real savings on real routines</h2>
       <p class="reveal" style="margin-top:16px; max-width:500px;">Here's an example of what FindMyBasket will show you for a typical 4-product morning routine.</p>
-
       <div class="demo-card reveal">
         <div class="demo-result-label">Your routine</div>
         <div class="demo-routine">
-          <div class="demo-product">
-            <div class="demo-product-dot" style="background: linear-gradient(135deg,#E8D5C4,#C4A882)"></div>
-            <div class="demo-product-info">
-              <div class="demo-product-name">Gentle Foaming Cleanser</div>
-              <div class="demo-product-brand">CeraVe</div>
-            </div>
-          </div>
-          <div class="demo-product">
-            <div class="demo-product-dot" style="background: linear-gradient(135deg,#B8D4E8,#7AAAC4)"></div>
-            <div class="demo-product-info">
-              <div class="demo-product-name">Hyaluronic Acid 2% + B5</div>
-              <div class="demo-product-brand">The Ordinary</div>
-            </div>
-          </div>
-          <div class="demo-product">
-            <div class="demo-product-dot" style="background: linear-gradient(135deg,#D4C8E8,#A89AC4)"></div>
-            <div class="demo-product-info">
-              <div class="demo-product-name">Moisturising Lotion SPF 50</div>
-              <div class="demo-product-brand">La Roche-Posay</div>
-            </div>
-          </div>
-          <div class="demo-product">
-            <div class="demo-product-dot" style="background: linear-gradient(135deg,#E8C8C8,#C49090)"></div>
-            <div class="demo-product-info">
-              <div class="demo-product-name">Niacinamide 10% + Zinc 1%</div>
-              <div class="demo-product-brand">The Ordinary</div>
-            </div>
-          </div>
+          <div class="demo-product"><div class="demo-product-dot" style="background:linear-gradient(135deg,#E8D5C4,#C4A882)"></div><div class="demo-product-info"><div class="demo-product-name">Gentle Foaming Cleanser</div><div class="demo-product-brand">CeraVe</div></div></div>
+          <div class="demo-product"><div class="demo-product-dot" style="background:linear-gradient(135deg,#B8D4E8,#7AAAC4)"></div><div class="demo-product-info"><div class="demo-product-name">Hyaluronic Acid 2% + B5</div><div class="demo-product-brand">The Ordinary</div></div></div>
+          <div class="demo-product"><div class="demo-product-dot" style="background:linear-gradient(135deg,#D4C8E8,#A89AC4)"></div><div class="demo-product-info"><div class="demo-product-name">Moisturising Lotion SPF 50</div><div class="demo-product-brand">La Roche-Posay</div></div></div>
+          <div class="demo-product"><div class="demo-product-dot" style="background:linear-gradient(135deg,#E8C8C8,#C49090)"></div><div class="demo-product-info"><div class="demo-product-name">Niacinamide 10% + Zinc 1%</div><div class="demo-product-brand">The Ordinary</div></div></div>
         </div>
-
         <div class="demo-results">
           <div class="demo-result-label">FindMyBasket recommends</div>
-          <div class="demo-basket best">
-            <div>
-              <div class="basket-retailer">Escentual + Beauty Bay</div>
-              <div class="basket-items">3 items + 1 item — free delivery both</div>
-            </div>
-            <div>
-              <div class="basket-price">£38.40</div>
-              <div class="basket-saving">Save £11.55 vs buying separately</div>
-            </div>
-          </div>
-          <div class="demo-basket">
-            <div>
-              <div class="basket-retailer">Escentual only</div>
-              <div class="basket-items">All 4 items — free delivery over £25</div>
-            </div>
-            <div>
-              <div class="basket-price">£43.10</div>
-              <div class="basket-saving">Save £6.85 vs worst case</div>
-            </div>
-          </div>
-          <div class="demo-basket">
-            <div>
-              <div class="basket-retailer">Alternative retailer</div>
-              <div class="basket-items">All 4 items — free delivery over £25</div>
-            </div>
-            <div>
-              <div class="basket-price">£46.20</div>
-              <div class="basket-saving" style="color: rgba(250,248,244,0.3)">Baseline option</div>
-            </div>
-          </div>
+          <div class="demo-basket best"><div><div class="basket-retailer">Escentual + Beauty Bay</div><div class="basket-items">3 items + 1 item — free delivery both</div></div><div><div class="basket-price">£38.40</div><div class="basket-saving">Save £11.55 vs buying separately</div></div></div>
+          <div class="demo-basket"><div><div class="basket-retailer">Escentual only</div><div class="basket-items">All 4 items — free delivery over £25</div></div><div><div class="basket-price">£43.10</div><div class="basket-saving">Save £6.85 vs worst case</div></div></div>
+          <div class="demo-basket"><div><div class="basket-retailer">Alternative retailer</div><div class="basket-items">All 4 items — free delivery over £25</div></div><div><div class="basket-price">£46.20</div><div class="basket-saving" style="color:rgba(250,248,244,0.3)">Baseline option</div></div></div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- WHY -->
   <section id="why">
     <div class="section-inner">
       <p class="section-tag reveal">Why FindMyBasket</p>
       <h2 class="section-title reveal">Built for the way you <em>actually</em> shop</h2>
       <div class="why-grid">
-        <div class="why-card reveal">
-          <div class="why-icon">💡</div>
-          <h3>Routine-first thinking</h3>
-          <p>Most comparison tools compare one product. We optimise your entire routine — because that's how you actually buy skincare.</p>
-        </div>
-        <div class="why-card reveal" style="transition-delay:0.1s">
-          <div class="why-icon">📦</div>
-          <h3>Fewer parcels, less hassle</h3>
-          <p>We minimise the number of orders you need to place — saving you time, packaging waste, and multiple delivery windows.</p>
-        </div>
-        <div class="why-card reveal" style="transition-delay:0.2s">
-          <div class="why-icon">🚚</div>
-          <h3>Delivery costs included</h3>
-          <p>We factor in each retailer's free delivery threshold — so you always see the true total cost, not just the product price.</p>
-        </div>
-        <div class="why-card reveal" style="transition-delay:0.0s">
-          <div class="why-icon">✨</div>
-          <h3>Completely free to use</h3>
-          <p>FindMyBasket is free for everyone, always. We earn a small affiliate commission when you buy — at no extra cost to you.</p>
-        </div>
-        <div class="why-card reveal" style="transition-delay:0.1s">
-          <div class="why-icon">🔄</div>
-          <h3>Live prices, always</h3>
-          <p>Prices update daily from all four retailers, so you're always seeing accurate, current data — not yesterday's deals.</p>
-        </div>
-        <div class="why-card reveal" style="transition-delay:0.2s">
-          <div class="why-icon">🇬🇧</div>
-          <h3>Built for UK shoppers</h3>
-          <p>UK prices, UK retailers, UK delivery. No irrelevant international results — just the best deals for British shoppers.</p>
-        </div>
+        <div class="why-card reveal"><div class="why-icon">💡</div><h3>Routine-first thinking</h3><p>Most comparison tools compare one product. We optimise your entire routine — because that's how you actually buy skincare.</p></div>
+        <div class="why-card reveal" style="transition-delay:0.1s"><div class="why-icon">📦</div><h3>Fewer parcels, less hassle</h3><p>We minimise the number of orders you need to place — saving you time, packaging waste, and multiple delivery windows.</p></div>
+        <div class="why-card reveal" style="transition-delay:0.2s"><div class="why-icon">🚚</div><h3>Delivery costs included</h3><p>We factor in each retailer's free delivery threshold — so you always see the true total cost, not just the product price.</p></div>
+        <div class="why-card reveal"><div class="why-icon">✨</div><h3>Completely free to use</h3><p>FindMyBasket is free for everyone, always. We earn a small affiliate commission when you buy — at no extra cost to you.</p></div>
+        <div class="why-card reveal" style="transition-delay:0.1s"><div class="why-icon">🔄</div><h3>Live prices, always</h3><p>Prices update daily from all retailers, so you're always seeing accurate, current data — not yesterday's deals.</p></div>
+        <div class="why-card reveal" style="transition-delay:0.2s"><div class="why-icon">🇬🇧</div><h3>Built for UK shoppers</h3><p>UK prices, UK retailers, UK delivery. No irrelevant international results — just the best deals for British shoppers.</p></div>
       </div>
     </div>
   </section>
 
-  <!-- CTA -->
   <section class="cta-section" id="waitlist">
     <div class="cta-inner">
       <p class="section-tag reveal">Be first</p>
@@ -696,39 +317,53 @@
         <input type="email" id="cta-email" placeholder="Enter your email" required />
         <button type="submit" class="btn-primary">Join waitlist</button>
       </form>
-      <p class="success-msg" id="cta-success" style="color: var(--sage-light);">✓ You're on the list! We'll be in touch soon.</p>
+      <p class="success-msg" id="cta-success" style="color:var(--sage-light);">✓ You're on the list! We'll be in touch soon.</p>
     </div>
   </section>
 
-  <!-- FOOTER -->
   <footer>
-    <div class="footer-logo" style="display:flex;align-items:center;gap:10px;"><svg height="28" viewBox="0 0 347.59 137.24" xmlns="http://www.w3.org/2000/svg"><g><path fill="#ffffff" d="M77.21,80.25l-.03.17-2.04,9.68c-1,4.75-5.25,8.19-10.1,8.19H22.69c-4.85,0-9.1-3.44-10.1-8.19l-5.7-27.11h46c-.19-.65-.34-1.32-.46-2-.25-1.35-.37-2.74-.37-4.17v-.2H4.15c-2.63,0-4.6,2.42-4.06,5l6.27,29.79c1.63,7.72,8.44,13.25,16.33,13.25h42.35c7.89,0,14.7-5.53,16.33-13.25l2.63-12.51.03-.16c-2.14.84-4.43,1.36-6.82,1.51Z"/><path fill="#ffffff" d="M58.54,40.65c-.25.26-.49.52-.72.79-.49.56-.95,1.14-1.38,1.74-.63.87-1.19,1.79-1.68,2.74-2.14-.96-4.41-1.45-6.77-1.45h-8.24c-4.46,0-8.65,1.74-11.81,4.9-2.03,2.03-3.49,4.52-4.25,7.25-.07.24-.13.48-.19.72-.14.56-.24,1.13-.32,1.78l-.4,3.16-6.32-.8.4-3.16c.08-.6.17-1.17.28-1.7.05-.26.11-.51.17-.76.96-4.13,3.08-7.94,6.13-10.99,4.36-4.36,10.15-6.76,16.31-6.76h8.24c3.43,0,6.73.74,9.81,2.19l.74.35Z"/><path fill="#ffffff" d="M24.91,92.19c-.89,0-1.71-.6-1.94-1.5l-5.24-20.52c-.27-1.07.37-2.16,1.44-2.43,1.07-.28,2.16.37,2.43,1.44l5.24,20.52c.27,1.07-.37,2.16-1.44,2.43-.17.04-.33.06-.5.06Z"/><path fill="#ffffff" d="M37.81,92.43c-.98,0-1.83-.72-1.98-1.71l-3.03-20.99c-.16-1.09.6-2.11,1.69-2.27,1.09-.15,2.11.6,2.27,1.69l3.03,20.99c.16,1.09-.6,2.11-1.69,2.27-.1.01-.19.02-.29.02Z"/><path fill="#ffffff" d="M66.6,78.54l-3.31,12.17c-.24.89-1.04,1.47-1.92,1.47-.17,0-.35-.02-.52-.07-1.06-.29-1.69-1.38-1.4-2.44l3.51-12.89s.02-.08.04-.12c.08.06.17.11.25.16.49.31,1,.6,1.52.87.59.31,1.2.6,1.83.85Z"/><path fill="#ffffff" d="M49.97,92.43c-.1,0-.19,0-.29-.02-1.09-.16-1.85-1.17-1.69-2.27l3.03-20.99c.16-1.09,1.18-1.85,2.27-1.69,1.09.16,1.85,1.17,1.69,2.27l-3.03,20.99c-.14,1-1,1.71-1.98,1.71Z"/></g><g><path fill="#C9A96E" d="M61.13,59.92h-6.79c1.08,6.04,4.73,11.2,9.77,14.31l1.85-6.81c-2.32-1.91-4.04-4.52-4.83-7.5ZM75.24,34.91c-6.4,0-12.14,2.84-16.03,7.34-2.71,3.11-4.53,7-5.04,11.3-.12.85-.17,1.72-.17,2.6,0,1.29.11,2.55.34,3.77,1.08,6.04,4.73,11.2,9.77,14.31,3.24,2.01,7.06,3.16,11.13,3.16.39,0,.78-.01,1.17-.04,2.4-.12,4.69-.65,6.82-1.52.59-.24,1.16-.5,1.72-.8,2.38-1.22,4.5-2.88,6.24-4.88,3.3-3.74,5.3-8.63,5.3-14,0-11.71-9.54-21.24-21.25-21.24ZM77.85,70.52c-.84.16-1.72.24-2.61.24-3.53,0-6.76-1.26-9.28-3.34-2.32-1.91-4.04-4.52-4.83-7.5-.33-1.2-.5-2.47-.5-3.77,0-.89.08-1.76.24-2.6.43-2.4,1.45-4.6,2.91-6.44,2.67-3.39,6.82-5.57,11.46-5.57,8.06,0,14.61,6.56,14.61,14.61,0,4.25-1.83,8.09-4.74,10.75-1.99,1.84-4.49,3.12-7.26,3.62Z"/><path fill="#C9A96E" d="M103.19,90.99l-.56.45c-2.02,1.61-4.98,1.21-6.49-.89l-11.28-15.66,6.17-4.93,12.74,14.54c1.69,1.93,1.43,4.89-.58,6.49Z"/><path fill="#C9A96E" d="M88.48,55.01c0,.18-.15.33-.33.33s-.32-.15-.32-.33c0-6.26-5.54-11.74-11.84-11.74-.18,0-.33-.15-.33-.33s.15-.32.33-.32c6.65,0,12.49,5.79,12.49,12.39Z"/></g></svg><span style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--cream);">Find<span style="color:var(--gold);">My</span>Basket</span></div>
+    <div class="footer-logo">
+      <svg height="28" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg"><path style="fill:#fff" d="M115.6,99.5v.2s-3,13.9-3,13.9c-1.4,6.8-7.5,11.8-14.5,11.8h-60.9c-7,0-13.1-4.9-14.5-11.8l-8.2-39h66.2c-.3-.9-.5-1.9-.7-2.9-.4-1.9-.5-3.9-.5-6v-.3H10.6c-3.8,0-6.6,3.5-5.8,7.2l9,42.8c2.3,11.1,12.1,19.1,23.5,19.1h60.9c11.3,0,21.1-8,23.5-19.1l3.8-18v-.2c-3,1.2-6.3,2-9.8,2.2Z"/><path style="fill:#C9A96E" d="M112.8,34.3c-9.2,0-17.5,4.1-23.1,10.6-3.9,4.5-6.5,10.1-7.2,16.3-.2,1.2-.2,2.5-.2,3.7,0,1.9.2,3.7.5,5.4,1.6,8.7,6.8,16.1,14,20.6,4.7,2.9,10.2,4.5,16,4.5s1.1,0,1.7,0c3.5-.2,6.7-.9,9.8-2.2.8-.3,1.7-.7,2.5-1.2,3.4-1.8,6.5-4.1,9-7,4.7-5.4,7.6-12.4,7.6-20.1,0-16.8-13.7-30.5-30.6-30.5Z"/><path style="fill:#C9A96E" d="M153,114.9l-.8.6c-2.9,2.3-7.2,1.7-9.3-1.3l-16.2-22.5,8.9-7.1,18.3,20.9c2.4,2.8,2.1,7-.8,9.3Z"/></svg>
+      <span>Find<span>My</span>Basket</span>
+    </div>
     <div class="footer-links">
+      <a href="/savings-hub.html">Savings Hub</a>
       <a href="/product-finder.html">Product Finder</a>
-        <a href="/privacy-policy.html">Privacy Policy</a>
+      <a href="/app.html">Try it now</a>
+      <a href="/privacy-policy.html">Privacy Policy</a>
       <a href="/terms.html">Terms of Use</a>
-      <a href="/cdn-cgi/l/email-protection#caa2afa6a6a58aaca3a4aea7b3a8abb9a1afbee4a9a5e4bfa1">Contact</a>
+      <a href="mailto:hello@findmybasket.co.uk">Contact</a>
     </div>
     <div class="footer-copy">© 2025 FindMyBasket. All rights reserved.</div>
   </footer>
 
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-    // Scroll reveal - lower threshold and immediate trigger for visible elements
+  <script>
+    // Scroll reveal
     const reveals = document.querySelectorAll('.reveal');
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
     }, { threshold: 0.05, rootMargin: '0px 0px -20px 0px' });
     reveals.forEach(r => observer.observe(r));
-    setTimeout(() => {
-      reveals.forEach(r => {
-        const rect = r.getBoundingClientRect();
-        if (rect.top < window.innerHeight) r.classList.add('visible');
-      });
-    }, 100);
+    setTimeout(() => { reveals.forEach(r => { const rect = r.getBoundingClientRect(); if (rect.top < window.innerHeight) r.classList.add('visible'); }); }, 100);
 
-    // Mailchimp waitlist signup (JSONP for cross-origin)
+    // Hamburger menu
+    function toggleMenu() {
+      const menu = document.getElementById('mobileMenu');
+      const hamburger = document.getElementById('hamburger');
+      menu.classList.toggle('open');
+      hamburger.style.opacity = menu.classList.contains('open') ? '0.5' : '1';
+    }
+    document.addEventListener('click', function(e) {
+      const menu = document.getElementById('mobileMenu');
+      const hamburger = document.getElementById('hamburger');
+      if (menu.classList.contains('open') && !menu.contains(e.target) && !hamburger.contains(e.target)) {
+        menu.classList.remove('open');
+        hamburger.style.opacity = '1';
+      }
+    });
+
+    // Mailchimp waitlist signup
     const MC_URL = 'https://findmybasket.us9.list-manage.com/subscribe/post-json?u=85e20f90e8764aa69a39faedb&id=7adbac12f5&f_id=00a66fe1f0';
-
     function handleSignup(e, successId) {
       e.preventDefault();
       const emailId = successId === 'hero-success' ? 'hero-email' : 'cta-email';
@@ -737,10 +372,8 @@
       const originalText = btn.textContent;
       btn.textContent = 'Sending...';
       btn.disabled = true;
-
       const callbackName = 'mc_cb_' + Date.now();
       const script = document.createElement('script');
-
       window[callbackName] = function(data) {
         delete window[callbackName];
         if (document.body.contains(script)) document.body.removeChild(script);
@@ -755,18 +388,17 @@
           alert('Something went wrong — please try again or email hello@findmybasket.co.uk');
         }
       };
-
       script.src = MC_URL + '&EMAIL=' + encodeURIComponent(email) + '&c=' + callbackName;
       document.body.appendChild(script);
-
-      // Timeout fallback
       setTimeout(() => {
         if (window[callbackName]) {
           delete window[callbackName];
           if (document.body.contains(script)) document.body.removeChild(script);
           btn.textContent = originalText;
           btn.disabled = false;
-          alert('Request timed out — please try again.');
         }
       }, 8000);
     }
+  </script>
+</body>
+</html>
