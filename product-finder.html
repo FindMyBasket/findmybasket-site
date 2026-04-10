@@ -91,7 +91,10 @@
 
     /* POPULAR TAGS */
     .tags-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-light); font-weight: 500; margin-bottom: 12px; }
-    .tags-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 32px; }
+    .tags-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 32px; max-height: 280px; overflow-y: auto; padding-right: 4px; }
+    .tags-wrap::-webkit-scrollbar { width: 4px; }
+    .tags-wrap::-webkit-scrollbar-track { background: transparent; }
+    .tags-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
     .tag {
       padding: 7px 14px; border-radius: 100px;
       border: 1px solid var(--border); background: var(--warm-white);
@@ -316,6 +319,53 @@
         <div class="tag" onclick="selectTag('ingredient', 'vitamin b5')">Vitamin B5</div>
         <div class="tag" onclick="selectTag('ingredient', 'squalane')">Squalane</div>
         <div class="tag" onclick="selectTag('ingredient', 'azelaic acid')">Azelaic Acid</div>
+        <div class="tag" onclick="selectTag('ingredient', 'bakuchiol')">Bakuchiol</div>
+        <div class="tag" onclick="selectTag('ingredient', 'lactic acid')">Lactic Acid</div>
+        <div class="tag" onclick="selectTag('ingredient', 'tranexamic acid')">Tranexamic Acid</div>
+        <div class="tag" onclick="selectTag('ingredient', 'kojic acid')">Kojic Acid</div>
+        <div class="tag" onclick="selectTag('ingredient', 'mandelic acid')">Mandelic Acid</div>
+        <div class="tag" onclick="selectTag('ingredient', 'benzoyl peroxide')">Benzoyl Peroxide</div>
+        <div class="tag" onclick="selectTag('ingredient', 'alpha arbutin')">Alpha Arbutin</div>
+        <div class="tag" onclick="selectTag('ingredient', 'vitamin e')">Vitamin E</div>
+        <div class="tag" onclick="selectTag('ingredient', 'vitamin a')">Vitamin A</div>
+        <div class="tag" onclick="selectTag('ingredient', 'retinaldehyde')">Retinaldehyde</div>
+        <div class="tag" onclick="selectTag('ingredient', 'tretinoin')">Tretinoin</div>
+        <div class="tag" onclick="selectTag('ingredient', 'collagen')">Collagen</div>
+        <div class="tag" onclick="selectTag('ingredient', 'coenzyme q10')">Coenzyme Q10</div>
+        <div class="tag" onclick="selectTag('ingredient', 'resveratrol')">Resveratrol</div>
+        <div class="tag" onclick="selectTag('ingredient', 'ferulic acid')">Ferulic Acid</div>
+        <div class="tag" onclick="selectTag('ingredient', 'aha')">AHA</div>
+        <div class="tag" onclick="selectTag('ingredient', 'bha')">BHA</div>
+        <div class="tag" onclick="selectTag('ingredient', 'pha')">PHA</div>
+        <div class="tag" onclick="selectTag('ingredient', 'centella asiatica')">Centella Asiatica</div>
+        <div class="tag" onclick="selectTag('ingredient', 'allantoin')">Allantoin</div>
+        <div class="tag" onclick="selectTag('ingredient', 'panthenol')">Panthenol</div>
+        <div class="tag" onclick="selectTag('ingredient', 'glycerin')">Glycerin</div>
+        <div class="tag" onclick="selectTag('ingredient', 'shea butter')">Shea Butter</div>
+        <div class="tag" onclick="selectTag('ingredient', 'argan oil')">Argan Oil</div>
+        <div class="tag" onclick="selectTag('ingredient', 'rosehip oil')">Rosehip Oil</div>
+        <div class="tag" onclick="selectTag('ingredient', 'jojoba oil')">Jojoba Oil</div>
+        <div class="tag" onclick="selectTag('ingredient', 'marula oil')">Marula Oil</div>
+        <div class="tag" onclick="selectTag('ingredient', 'sea buckthorn')">Sea Buckthorn</div>
+        <div class="tag" onclick="selectTag('ingredient', 'aloe vera')">Aloe Vera</div>
+        <div class="tag" onclick="selectTag('ingredient', 'green tea')">Green Tea</div>
+        <div class="tag" onclick="selectTag('ingredient', 'caffeine')">Caffeine</div>
+        <div class="tag" onclick="selectTag('ingredient', 'spf')">SPF</div>
+        <div class="tag" onclick="selectTag('ingredient', 'zinc oxide')">Zinc Oxide</div>
+        <div class="tag" onclick="selectTag('ingredient', 'titanium dioxide')">Titanium Dioxide</div>
+        <div class="tag" onclick="selectTag('ingredient', 'bio-retinol')">Bio-Retinol</div>
+        <div class="tag" onclick="selectTag('ingredient', 'exosome')">Exosomes</div>
+        <div class="tag" onclick="selectTag('ingredient', 'stem cell')">Stem Cells</div>
+        <div class="tag" onclick="selectTag('ingredient', 'snail mucin')">Snail Mucin</div>
+        <div class="tag" onclick="selectTag('ingredient', 'polyglutamic acid')">Polyglutamic Acid</div>
+        <div class="tag" onclick="selectTag('ingredient', 'madecassoside')">Madecassoside</div>
+        <div class="tag" onclick="selectTag('ingredient', 'licorice root')">Licorice Root</div>
+        <div class="tag" onclick="selectTag('ingredient', 'mulberry extract')">Mulberry Extract</div>
+        <div class="tag" onclick="selectTag('ingredient', 'sodium pca')">Sodium PCA</div>
+        <div class="tag" onclick="selectTag('ingredient', 'betaine')">Betaine</div>
+        <div class="tag" onclick="selectTag('ingredient', 'urea')">Urea</div>
+        <div class="tag" onclick="selectTag('ingredient', 'linseed oil')">Linseed Oil</div>
+        <div class="tag" onclick="selectTag('ingredient', 'ectoin')">Ectoin</div>
       </div>
     </div>
 
@@ -329,18 +379,51 @@
       <div class="tags-wrap" id="concern-tags">
         <div class="tag" onclick="selectTag('concern', 'dry skin')">Dry Skin</div>
         <div class="tag" onclick="selectTag('concern', 'oily skin')">Oily Skin</div>
-        <div class="tag" onclick="selectTag('concern', 'acne')">Acne</div>
+        <div class="tag" onclick="selectTag('concern', 'combination skin')">Combination Skin</div>
         <div class="tag" onclick="selectTag('concern', 'sensitive skin')">Sensitive Skin</div>
+        <div class="tag" onclick="selectTag('concern', 'acne')">Acne</div>
+        <div class="tag" onclick="selectTag('concern', 'acne scars')">Acne Scars</div>
+        <div class="tag" onclick="selectTag('concern', 'blackheads')">Blackheads</div>
+        <div class="tag" onclick="selectTag('concern', 'whiteheads')">Whiteheads</div>
+        <div class="tag" onclick="selectTag('concern', 'large pores')">Large Pores</div>
         <div class="tag" onclick="selectTag('concern', 'anti-ageing')">Anti-Ageing</div>
         <div class="tag" onclick="selectTag('concern', 'fine lines')">Fine Lines</div>
+        <div class="tag" onclick="selectTag('concern', 'wrinkles')">Wrinkles</div>
+        <div class="tag" onclick="selectTag('concern', 'loss of firmness')">Loss of Firmness</div>
+        <div class="tag" onclick="selectTag('concern', 'sagging')">Sagging</div>
         <div class="tag" onclick="selectTag('concern', 'uneven skin tone')">Uneven Skin Tone</div>
-        <div class="tag" onclick="selectTag('concern', 'large pores')">Large Pores</div>
+        <div class="tag" onclick="selectTag('concern', 'hyperpigmentation')">Hyperpigmentation</div>
+        <div class="tag" onclick="selectTag('concern', 'dark spots')">Dark Spots</div>
+        <div class="tag" onclick="selectTag('concern', 'sun damage')">Sun Damage</div>
+        <div class="tag" onclick="selectTag('concern', 'melasma')">Melasma</div>
+        <div class="tag" onclick="selectTag('concern', 'post-inflammatory hyperpigmentation')">PIH</div>
         <div class="tag" onclick="selectTag('concern', 'dehydration')">Dehydration</div>
         <div class="tag" onclick="selectTag('concern', 'dullness')">Dullness</div>
         <div class="tag" onclick="selectTag('concern', 'damaged barrier')">Damaged Barrier</div>
-        <div class="tag" onclick="selectTag('concern', 'hyperpigmentation')">Hyperpigmentation</div>
-        <div class="tag" onclick="selectTag('concern', 'eczema')">Eczema</div>
         <div class="tag" onclick="selectTag('concern', 'redness')">Redness</div>
+        <div class="tag" onclick="selectTag('concern', 'rosacea')">Rosacea</div>
+        <div class="tag" onclick="selectTag('concern', 'eczema')">Eczema</div>
+        <div class="tag" onclick="selectTag('concern', 'psoriasis')">Psoriasis</div>
+        <div class="tag" onclick="selectTag('concern', 'perioral dermatitis')">Perioral Dermatitis</div>
+        <div class="tag" onclick="selectTag('concern', 'dark circles')">Dark Circles</div>
+        <div class="tag" onclick="selectTag('concern', 'puffy eyes')">Puffy Eyes</div>
+        <div class="tag" onclick="selectTag('concern', 'under eye bags')">Under Eye Bags</div>
+        <div class="tag" onclick="selectTag('concern', 'sun protection')">Sun Protection</div>
+        <div class="tag" onclick="selectTag('concern', 'pollution')">Pollution Protection</div>
+        <div class="tag" onclick="selectTag('concern', 'anti-pollution')">Anti-Pollution</div>
+        <div class="tag" onclick="selectTag('concern', 'texture')">Uneven Texture</div>
+        <div class="tag" onclick="selectTag('concern', 'rough skin')">Rough Skin</div>
+        <div class="tag" onclick="selectTag('concern', 'flaky skin')">Flaky Skin</div>
+        <div class="tag" onclick="selectTag('concern', 'brightening')">Brightening</div>
+        <div class="tag" onclick="selectTag('concern', 'glow')">Glow</div>
+        <div class="tag" onclick="selectTag('concern', 'glass skin')">Glass Skin</div>
+        <div class="tag" onclick="selectTag('concern', 'pregnancy safe')">Pregnancy Safe</div>
+        <div class="tag" onclick="selectTag('concern', 'vegan')">Vegan</div>
+        <div class="tag" onclick="selectTag('concern', 'fragrance free')">Fragrance Free</div>
+        <div class="tag" onclick="selectTag('concern', 'alcohol free')">Alcohol Free</div>
+        <div class="tag" onclick="selectTag('concern', 'mens skin')">Men's Skin</div>
+        <div class="tag" onclick="selectTag('concern', 'mature skin')">Mature Skin</div>
+        <div class="tag" onclick="selectTag('concern', 'teenage skin')">Teenage Skin</div>
       </div>
     </div>
 
