@@ -638,7 +638,16 @@
       btn.disabled = false;
       btnText.textContent = 'Find products';
 
-      const ourProducts = supaResult.data || [];
+      // Sort: products with real prices first, then by lowest price
+      const ourProducts = (supaResult.data || []).sort((a, b) => {
+        const aPrices = (a.retailer_prices || []).filter(r => r.in_stock && r.price);
+        const bPrices = (b.retailer_prices || []).filter(r => r.in_stock && r.price);
+        if (aPrices.length > 0 && bPrices.length === 0) return -1;
+        if (bPrices.length > 0 && aPrices.length === 0) return 1;
+        const aMin = aPrices.length ? Math.min(...aPrices.map(r => parseFloat(r.price))) : 999;
+        const bMin = bPrices.length ? Math.min(...bPrices.map(r => parseFloat(r.price))) : 999;
+        return aMin - bMin;
+      });
       const ourNames = ourProducts.map(p => p.name.toLowerCase());
       const uniqueOBF = obfProducts.filter(p =>
         p.product_name && !ourNames.some(n => p.product_name.toLowerCase().includes(n))
