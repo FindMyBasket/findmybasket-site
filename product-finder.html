@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160'%3E%3Cstyle%3E.b%7Bfill:%234a90d9%7D.g%7Bfill:%23C9A96E%7D%3C/style%3E%3Cpath class='b' d='M115.6,99.5v.2s-3,13.9-3,13.9c-1.4,6.8-7.5,11.8-14.5,11.8h-60.9c-7,0-13.1-4.9-14.5-11.8l-8.2-39h66.2c-.3-.9-.5-1.9-.7-2.9-.4-1.9-.5-3.9-.5-6v-.3H10.6c-3.8,0-6.6,3.5-5.8,7.2l9,42.8c2.3,11.1,12.1,19.1,23.5,19.1h60.9c11.3,0,21.1-8,23.5-19.1l3.8-18v-.2c-3,1.2-6.3,2-9.8,2.2Z'/%3E%3Cpath class='b' d='M88.8,42.5c-.4.4-.7.7-1,1.1-.7.8-1.4,1.6-2,2.5-.9,1.3-1.7,2.6-2.4,3.9-3.1-1.4-6.3-2.1-9.7-2.1h-11.8c-6.4,0-12.4,2.5-17,7-2.9,2.9-5,6.5-6.1,10.4-.1.3-.2.7-.3,1-.2.8-.3,1.6-.5,2.6l-.6,4.5-9.1-1.2.6-4.5c.1-.9.2-1.7.4-2.4,0-.4.2-.7.2-1.1,1.4-5.9,4.4-11.4,8.8-15.8,6.3-6.3,14.6-9.7,23.5-9.7h11.8c4.9,0,9.7,1.1,14.1,3.1l1.1.5Z'/%3E%3Cpath class='g' d='M92.5,70.2h-9.8c1.6,8.7,6.8,16.1,14,20.6l2.7-9.8c-3.3-2.7-5.8-6.5-6.9-10.8ZM112.8,34.3c-9.2,0-17.5,4.1-23.1,10.6-3.9,4.5-6.5,10.1-7.2,16.3-.2,1.2-.2,2.5-.2,3.7,0,1.9.2,3.7.5,5.4,1.6,8.7,6.8,16.1,14,20.6,4.7,2.9,10.2,4.5,16,4.5s1.1,0,1.7,0c3.5-.2,6.7-.9,9.8-2.2.8-.3,1.7-.7,2.5-1.2,3.4-1.8,6.5-4.1,9-7,4.7-5.4,7.6-12.4,7.6-20.1,0-16.8-13.7-30.5-30.6-30.5ZM116.5,85.5c-1.2.2-2.5.3-3.8.3-5.1,0-9.7-1.8-13.3-4.8-3.3-2.7-5.8-6.5-6.9-10.8-.5-1.7-.7-3.6-.7-5.4s.1-2.5.3-3.7c.6-3.5,2.1-6.6,4.2-9.3,3.8-4.9,9.8-8,16.5-8,11.6,0,21,9.4,21,21s-2.6,11.6-6.8,15.5c-2.9,2.6-6.5,4.5-10.4,5.2Z'/%3E%3Cpath class='g' d='M153,114.9l-.8.6c-2.9,2.3-7.2,1.7-9.3-1.3l-16.2-22.5,8.9-7.1,18.3,20.9c2.4,2.8,2.1,7-.8,9.3Z'/%3E%3C/svg%3E">
-<link rel="alternate icon" href="data:image/png;base64,iVBORw0KGgo=">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Product Finder - FindMyBasket</title>
   <meta name="description" content="Find the cheapest skincare products by ingredient or skin concern. Search niacinamide, retinol, hyaluronic acid and more across major UK beauty retailers."/>
@@ -206,6 +205,47 @@
       animation: spin 0.6s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* PRICE BADGE */
+    .price-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(122,158,135,0.15); border: 1px solid rgba(122,158,135,0.3);
+      color: var(--sage); font-size: 10px; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 100px; margin-bottom: 6px;
+    }
+    .price-badge::before { content: '✓'; }
+
+    /* BUY BUTTON */
+    .buy-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--gold); color: var(--ink);
+      padding: 10px 18px; border-radius: 100px;
+      font-size: 13px; font-weight: 600; text-decoration: none;
+      transition: opacity 0.2s, transform 0.15s;
+      white-space: nowrap;
+    }
+    .buy-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    /* RETAILER PRICE LIST */
+    .retailer-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .retailer-row {
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 8px; padding: 8px 12px;
+    }
+    .retailer-row.cheapest-row { border-color: rgba(122,158,135,0.3); background: rgba(122,158,135,0.06); }
+    .retailer-row-left { display: flex; align-items: center; gap: 8px; }
+    .retailer-name { font-size: 13px; color: rgba(250,248,244,0.7); }
+    .retailer-price-val { font-size: 16px; font-weight: 600; color: var(--cream); }
+    .cheapest-label { font-size: 10px; color: var(--sage); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+
+    /* PRODUCT COUNT STRIP */
+    .results-count-strip {
+      font-size: 12px; color: rgba(250,248,244,0.4);
+      margin-bottom: 16px; letter-spacing: 0.04em;
+    }
+    .results-count-strip strong { color: var(--gold); }
 
     /* CTA BOX */
     .cta-box {
@@ -473,9 +513,8 @@
       <a href="/product-finder.html">Product Finder</a>
       <a href="/app.html">Try it now</a>
       <a href="/privacy-policy.html">Privacy Policy</a>
-      <a href="/cdn-cgi/l/email-protection#442c2128282b04222d2a20293d2625372f21306a272b6a312f">Contact</a>
-        <a href="/terms.html">Terms of Use</a>
-      <a href="/cdn-cgi/l/email-protection#dab2bfb6b6b59abcb3b4beb7a3b8bba9b1bfaef4b9b5f4afb1">Contact</a>
+      <a href="/terms.html">Terms of Use</a>
+      <a href="mailto:hello@findmybasket.co.uk">Contact</a>
     </div>
     <p class="footer-copy">© 2025 FindMyBasket. All rights reserved.</p>
   </div>
@@ -615,24 +654,47 @@
       document.getElementById('results-sub').textContent =
         total + ' product' + (total !== 1 ? 's' : '') + ' found for "' + selectedValue + '"';
 
-      let html = '';
+      let html = '<div class="results-count-strip">Showing <strong>' + ourProducts.length + ' tracked</strong> + ' + Math.min(uniqueOBF.length, 8) + ' more products</div>';
 
       if (ourProducts.length > 0) {
         html += '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:12px;">Tracked by FindMyBasket</div>';
         ourProducts.forEach((p, i) => {
           const prices = (p.retailer_prices || []).filter(r => r.in_stock && r.price);
-          const minPrice = prices.length ? Math.min(...prices.map(r => parseFloat(r.price))) : null;
-          const cheapest = prices.find(r => parseFloat(r.price) === minPrice);
-          const iPills = (p.ingredients || []).map(i => '<span class="ingredient-pill">' + i + '</span>').join('');
-          const cPills = (p.concerns || []).map(c => '<span class="concern-pill">' + c + '</span>').join('');
+          const sortedPrices = prices.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+          const minPrice = sortedPrices.length ? parseFloat(sortedPrices[0].price) : null;
+          const cheapest = sortedPrices[0];
+          const iPills = (p.ingredients || []).slice(0, 4).map(i => '<span class="ingredient-pill">' + i + '</span>').join('');
+          const cPills = (p.concerns || []).slice(0, 3).map(c => '<span class="concern-pill">' + c + '</span>').join('');
+
+          // Build retailer price rows
+          const retailerRowsHtml = sortedPrices.map((r, ri) => {
+            const isCheapest = ri === 0 && sortedPrices.length > 1;
+            return '<div class="retailer-row' + (isCheapest ? ' cheapest-row' : '') + '">' +
+              '<div class="retailer-row-left">' +
+              '<span class="retailer-name">' + r.retailers.name + '</span>' +
+              (isCheapest ? '<span class="cheapest-label">Cheapest</span>' : '') +
+              '</div>' +
+              '<div style="display:flex;align-items:center;gap:10px;">' +
+              '<span class="retailer-price-val">£' + parseFloat(r.price).toFixed(2) + '</span>' +
+              '<a href="' + r.url + '" target="_blank" rel="noopener" class="buy-btn">Buy →</a>' +
+              '</div>' +
+              '</div>';
+          }).join('');
+
+          // If only one retailer, show a single prominent buy button
+          const singleBuyBtn = sortedPrices.length === 1 && cheapest ?
+            '<div class="price-row"><div>' +
+            '<div class="price-from">Available at ' + cheapest.retailers.name + '</div>' +
+            '<div class="price-amount">£' + minPrice.toFixed(2) + '</div>' +
+            '</div><a href="' + cheapest.url + '" target="_blank" rel="noopener" class="buy-btn">Buy now →</a></div>' : '';
+
           html += '<div class="product-card" style="animation-delay:' + (i*0.06) + 's;border-color:rgba(201,169,110,0.3);">' +
+            (minPrice && sortedPrices.length > 1 ? '<div class="price-badge">Cheapest from £' + minPrice.toFixed(2) + '</div>' : '') +
             '<div class="product-brand">' + (p.brand || '') + '</div>' +
             '<div class="product-name">' + p.name + '</div>' +
-            '<div class="product-concerns">' + iPills + cPills + '</div>' +
-            '<div class="price-row"><div>' +
-            '<div class="price-from">From ' + (cheapest ? cheapest.retailers.name : 'multiple retailers') + '</div>' +
-            '<div class="price-amount">' + (minPrice ? '£' + minPrice.toFixed(2) : 'Check retailers') + '</div>' +
-            '</div><a href="/app.html" class="add-routine-btn" title="Go to basket optimiser to compare prices">Compare prices →</a></div></div>';
+            (iPills || cPills ? '<div class="product-concerns">' + iPills + cPills + '</div>' : '') +
+            (sortedPrices.length > 1 ? '<div class="retailer-list">' + retailerRowsHtml + '</div>' : singleBuyBtn) +
+            '</div>';
         });
       }
 
