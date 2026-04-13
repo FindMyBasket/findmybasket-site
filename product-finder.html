@@ -5,11 +5,11 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Product Finder - FindMyBasket</title>
-  <meta name="description" content="Find the cheapest skincare products by ingredient or skin concern. Search niacinamide, retinol, hyaluronic acid and more across major UK beauty retailers."/>
+  <meta name="description" content="Find the best price on skincare products by ingredient or skin concern. Search niacinamide, retinol, hyaluronic acid and more across major UK beauty retailers."/>
   <meta name="keywords" content="cheapest niacinamide UK, cheapest retinol UK, best hyaluronic acid UK price, skincare ingredients price comparison UK"/>
   <link rel="canonical" href="https://www.findmybasket.co.uk/product-finder.html"/>
   <meta property="og:title" content="Search Skincare by Ingredient - FindMyBasket"/>
-  <meta property="og:description" content="Find the cheapest products for your skin concern or favourite ingredient across UK beauty retailers."/>
+  <meta property="og:description" content="Find the best price on products for your skin concern or favourite ingredient across UK beauty retailers."/>
   <!-- Google tag -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q3J7LSJFLQ"></script>
   <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-Q3J7LSJFLQ');</script>
@@ -295,7 +295,7 @@
     "@context": "https://schema.org",
     "@type": "WebApplication",
     "name": "FindMyBasket Product Finder",
-    "description": "Search for skincare products by ingredient or skin concern and find the cheapest price across UK retailers.",
+    "description": "Search for skincare products by ingredient or skin concern and find the best price on price across UK retailers.",
     "url": "https://www.findmybasket.co.uk/product-finder.html",
     "applicationCategory": "HealthApplication",
     "operatingSystem": "Web",
@@ -331,7 +331,7 @@
   <!-- LEFT PANEL -->
   <div class="left-panel">
     <h1 class="panel-title">Search by <em>ingredient</em> or concern</h1>
-    <p class="panel-sub">Find the cheapest products containing your favourite ingredients or targeting your skin concerns.</p>
+    <p class="panel-sub">Discover products containing your favourite ingredients or targeting your skin concerns, and find the best price across the UK's leading beauty retailers.</p>
 
     <!-- Tabs -->
     <div class="tab-wrap">
@@ -484,7 +484,7 @@
   <!-- RIGHT PANEL -->
   <div class="right-panel">
     <h2 class="results-title">Your results</h2>
-    <p class="results-sub" id="results-sub">Select an ingredient or concern to find the cheapest matching products.</p>
+    <p class="results-sub" id="results-sub">Select an ingredient or concern to discover matching products and their best prices.</p>
 
     <div class="results-searching" id="resultsSearching">
       <div class="spinner"></div>
@@ -494,7 +494,7 @@
     <div id="resultsContainer">
       <div class="results-placeholder">
         <div class="results-placeholder-icon">🌿</div>
-        <p>Search by ingredient or skin concern and we will find the cheapest matching products across all major UK retailers.</p>
+        <p>Search by ingredient or skin concern and we will find the best price on matching products across all major UK retailers.</p>
       </div>
     </div>
   </div>
@@ -569,9 +569,9 @@
     document.getElementById('resultsContainer').innerHTML = `
       <div class="results-placeholder">
         <div class="results-placeholder-icon">🌿</div>
-        <p>Search by ingredient or skin concern and we will find the cheapest matching products across all major UK retailers.</p>
+        <p>Search by ingredient or skin concern and we will find the best price on matching products across all major UK retailers.</p>
       </div>`;
-    document.getElementById('results-sub').textContent = 'Select an ingredient or concern to find the cheapest matching products.';
+    document.getElementById('results-sub').textContent = 'Select an ingredient or concern to discover matching products and their best prices.';
     document.getElementById('resultsSearching').classList.remove('active');
   }
 
@@ -681,7 +681,7 @@
             return '<div class="retailer-row' + (isCheapest ? ' cheapest-row' : '') + '">' +
               '<div class="retailer-row-left">' +
               '<span class="retailer-name">' + r.retailers.name + '</span>' +
-              (isCheapest ? '<span class="cheapest-label">Cheapest</span>' : '') +
+              (isCheapest ? '<span class="cheapest-label">Best price</span>' : '') +
               '</div>' +
               '<div style="display:flex;align-items:center;gap:10px;">' +
               '<span class="retailer-price-val">£' + parseFloat(r.price).toFixed(2) + '</span>' +
@@ -701,12 +701,12 @@
           const amazonUrl = 'https://www.amazon.co.uk/s?k=' + encodeURIComponent((p.brand || '') + ' ' + p.name) + '&tag=findmybasket-21';
           const amazonFallback = sortedPrices.length === 0 ?
             '<div class="price-row"><div>' +
-            '<div class="price-from">Not yet tracked by us</div>' +
-            '<div style="font-size:13px;color:rgba(250,248,244,0.4);margin-top:2px;">Check Amazon for pricing</div>' +
+            '<div class="price-from">Coming soon to FindMyBasket</div>' +
+            '<div style="font-size:13px;color:rgba(250,248,244,0.4);margin-top:2px;">Also available on Amazon</div>' +
             '</div><a href="' + amazonUrl + '" target="_blank" rel="noopener" class="add-routine-btn" style="border-color:rgba(255,153,0,0.3);color:#FF9900;">Check Amazon →</a></div>' : '';
 
           html += '<div class="product-card" style="animation-delay:' + (i*0.06) + 's;border-color:rgba(201,169,110,0.3);">' +
-            (minPrice && sortedPrices.length > 1 ? '<div class="price-badge">Cheapest from £' + minPrice.toFixed(2) + '</div>' : '') +
+            (minPrice && sortedPrices.length > 1 ? '<div class="price-badge">Best price from £' + minPrice.toFixed(2) + '</div>' : '') +
             '<div class="product-brand">' + (p.brand || '') + '</div>' +
             '<div class="product-name">' + p.name + '</div>' +
             (iPills || cPills ? '<div class="product-concerns">' + iPills + cPills + '</div>' : '') +
@@ -730,13 +730,13 @@
             '<div class="product-name">' + name + '</div>' +
             (iPills ? '<div class="product-concerns">' + iPills + '</div>' : '') +
             '<div class="price-row"><div>' +
-            '<div class="price-from">Not yet tracked</div>' +
-            '<div style="font-size:13px;color:rgba(250,248,244,0.4);margin-top:2px;">Check Amazon for pricing</div>' +
+            '<div class="price-from">Coming soon</div>' +
+            '<div style="font-size:13px;color:rgba(250,248,244,0.4);margin-top:2px;">Also available on Amazon</div>' +
             '</div><a href="' + amazonUrl + '" target="_blank" rel="noopener" class="add-routine-btn" style="border-color:rgba(255,153,0,0.3);color:#FF9900;">Check Amazon →</a></div></div>';
         });
       }
 
-      html += '<div class="cta-box" style="margin-top:24px;"><p>Found something you want? Add your full routine to find the cheapest basket.</p><a href="/app.html">Try the basket optimiser</a></div>';
+      html += '<div class="cta-box" style="margin-top:24px;"><p>Found something you want? Add your full routine to find the best price on basket.</p><a href="/app.html">Try the basket optimiser</a></div>';
       document.getElementById('resultsContainer').innerHTML = html;
 
     } catch(err) {
