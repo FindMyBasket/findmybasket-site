@@ -514,13 +514,13 @@
       <a href="/app.html">Try it now</a>
       <a href="/privacy-policy.html">Privacy Policy</a>
       <a href="/terms.html">Terms of Use</a>
-      <a href="mailto:hello@findmybasket.co.uk">Contact</a>
+      <a href="/cdn-cgi/l/email-protection#9bf3fef7f7f4dbfdf2f5fff6e2f9fae8f0feefb5f8f4b5eef0">Contact</a>
     </div>
     <p class="footer-copy">© 2025 FindMyBasket. All rights reserved.</p>
   </div>
 </footer>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
   const SUPABASE_URL = 'https://crtrjoescntlcjiwdtrt.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNydHJqb2VzY250bGNqaXdkdHJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzOTA3NDUsImV4cCI6MjA5MDk2Njc0NX0.D9zbYCQqqVQaHCTW9mYyTxGZcw7-ru2o2eXVber8uDg';
   let db;
@@ -688,12 +688,20 @@
             '<div class="price-amount">£' + minPrice.toFixed(2) + '</div>' +
             '</div><a href="' + cheapest.url + '" target="_blank" rel="noopener" class="buy-btn">Buy now →</a></div>' : '';
 
+          // Amazon fallback for products with no retailer prices yet
+          const amazonUrl = 'https://www.amazon.co.uk/s?k=' + encodeURIComponent((p.brand || '') + ' ' + p.name) + '&tag=findmybasket-21';
+          const amazonFallback = sortedPrices.length === 0 ?
+            '<div class="price-row"><div>' +
+            '<div class="price-from">Not yet tracked by us</div>' +
+            '<div style="font-size:13px;color:rgba(250,248,244,0.4);margin-top:2px;">Check Amazon for pricing</div>' +
+            '</div><a href="' + amazonUrl + '" target="_blank" rel="noopener" class="add-routine-btn" style="border-color:rgba(255,153,0,0.3);color:#FF9900;">Check Amazon →</a></div>' : '';
+
           html += '<div class="product-card" style="animation-delay:' + (i*0.06) + 's;border-color:rgba(201,169,110,0.3);">' +
             (minPrice && sortedPrices.length > 1 ? '<div class="price-badge">Cheapest from £' + minPrice.toFixed(2) + '</div>' : '') +
             '<div class="product-brand">' + (p.brand || '') + '</div>' +
             '<div class="product-name">' + p.name + '</div>' +
             (iPills || cPills ? '<div class="product-concerns">' + iPills + cPills + '</div>' : '') +
-            (sortedPrices.length > 1 ? '<div class="retailer-list">' + retailerRowsHtml + '</div>' : singleBuyBtn) +
+            (sortedPrices.length > 1 ? '<div class="retailer-list">' + retailerRowsHtml + '</div>' : sortedPrices.length === 1 ? singleBuyBtn : amazonFallback) +
             '</div>';
         });
       }
@@ -733,7 +741,4 @@
 
   document.getElementById('ingredient-input').addEventListener('keydown', e => { if (e.key === 'Enter' && selectedValue) runSearch(); });
 
-  document.getElementById('concern-input').addEventListener('keydown', e => { if (e.key === 'Enter' && selectedValue) runSearch(); });
-</script>
-</body>
-</html>
+  doc
