@@ -710,7 +710,11 @@
 
       if (total === 0) {
         document.getElementById('results-sub').textContent = 'No products found for "' + selectedValue + '"';
-        document.getElementById('resultsContainer').innerHTML = '<div class="no-results"><p>No products found. Try a different search.</p></div>';
+        const amazonFallbackUrl = 'https://www.amazon.co.uk/s?k=' + encodeURIComponent(selectedValue) + '+skincare&tag=findmybasket-21';
+        const noResultsHtml = activeTab === 'product'
+          ? '<div class="no-results"><p>We don't track this product yet — we're adding more retailers all the time.</p><div style="margin-top:20px;"><a href="' + amazonFallbackUrl + '" target="_blank" rel="noopener" class="buy-btn" style="display:inline-flex;">Check Amazon →</a></div><p style="margin-top:12px;font-size:12px;color:rgba(250,248,244,0.3);">We may earn a small commission if you purchase through this link.</p></div>'
+          : '<div class="no-results"><p>No products found. Try a different search.</p></div>';
+        document.getElementById('resultsContainer').innerHTML = noResultsHtml;
         return;
       }
 
