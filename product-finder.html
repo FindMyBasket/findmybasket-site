@@ -497,6 +497,9 @@
         <div class="tag" onclick="selectProductTag('CosRx')">CosRx</div>
         <div class="tag" onclick="selectProductTag('Beauty of Joseon')">Beauty of Joseon</div>
       </div>
+      <button class="search-btn" id="searchBtnProduct" onclick="runSearch()" style="margin-top:8px;">
+        <span>🔍</span> <span>Find products</span>
+      </button>
     </div>
 
   </div>
@@ -616,6 +619,7 @@
     document.getElementById('selected-wrap').style.display = 'none';
     document.getElementById('ingredient-input').value = '';
     document.getElementById('concern-input').value = '';
+    document.getElementById('product-input').value = '';
     document.getElementById('resultsContainer').innerHTML = `
       <div class="results-placeholder">
         <div class="results-placeholder-icon">🌿</div>
@@ -662,11 +666,19 @@
   }
 
   async function runSearch() {
+    // For product tab, read directly from input if selectedValue not set
+    if (activeTab === 'product' && !selectedValue) {
+      const val = document.getElementById('product-input').value.trim();
+      if (!val) return;
+      selectedValue = val.toLowerCase();
+    }
     if (!selectedValue) return;
 
     const btn = document.getElementById('searchBtn');
+    const btnProduct = document.getElementById('searchBtnProduct');
     const btnText = document.getElementById('searchBtnText');
     btn.disabled = true;
+    if (btnProduct) btnProduct.disabled = true;
     btnText.textContent = 'Searching...';
     document.getElementById('resultsSearching').classList.add('active');
     document.getElementById('resultsContainer').innerHTML = '';
@@ -690,6 +702,7 @@
 
       document.getElementById('resultsSearching').classList.remove('active');
       btn.disabled = false;
+      if (btnProduct) btnProduct.disabled = false;
       btnText.textContent = 'Find products';
 
       // Sort: products with real prices first, then by lowest price
@@ -801,6 +814,7 @@
       console.error(err);
       document.getElementById('resultsSearching').classList.remove('active');
       btn.disabled = false;
+      if (btnProduct) btnProduct.disabled = false;
       btnText.textContent = 'Find products';
       document.getElementById('resultsContainer').innerHTML = '<div class="no-results"><p>Something went wrong. Please try again.</p></div>';
     }
