@@ -330,13 +330,14 @@
 
   <!-- LEFT PANEL -->
   <div class="left-panel">
-    <h1 class="panel-title">Search by <em>ingredient</em> or concern</h1>
-    <p class="panel-sub">Discover products containing your favourite ingredients or targeting your skin concerns, and find the best price across the UK's leading beauty retailers.</p>
+    <h1 class="panel-title">Search by <em>ingredient</em>, concern or product</h1>
+    <p class="panel-sub">Discover products containing your favourite ingredients, targeting your skin concerns, or search for a specific product — and find the best price across the UK's leading beauty retailers.</p>
 
     <!-- Tabs -->
     <div class="tab-wrap">
       <button class="tab active" onclick="switchTab('ingredient')" id="tab-ingredient">By Ingredient</button>
       <button class="tab" onclick="switchTab('concern')" id="tab-concern">By Concern</button>
+      <button class="tab" onclick="switchTab('product')" id="tab-product">By Product</button>
     </div>
 
     <!-- Ingredient search -->
@@ -479,12 +480,31 @@
       </button>
     </div>
 
+    <!-- Product search panel -->
+    <div id="panel-product" style="display:none;">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" id="product-input" placeholder="e.g. Medicube Collagen Jelly Cream..." oninput="handleProductInput(this.value)"/>
+      </div>
+      <p class="tags-label">Try searching for</p>
+      <div class="tags-wrap">
+        <div class="tag" onclick="selectProductTag('CeraVe Foaming Cleanser')">CeraVe Foaming Cleanser</div>
+        <div class="tag" onclick="selectProductTag('The Ordinary Niacinamide')">The Ordinary Niacinamide</div>
+        <div class="tag" onclick="selectProductTag('La Roche-Posay Toleriane')">La Roche-Posay Toleriane</div>
+        <div class="tag" onclick="selectProductTag('Evolve')">Evolve Beauty</div>
+        <div class="tag" onclick="selectProductTag('Clarins')">Clarins</div>
+        <div class="tag" onclick="selectProductTag('Elemis')">Elemis</div>
+        <div class="tag" onclick="selectProductTag('CosRx')">CosRx</div>
+        <div class="tag" onclick="selectProductTag('Beauty of Joseon')">Beauty of Joseon</div>
+      </div>
+    </div>
+
   </div>
 
   <!-- RIGHT PANEL -->
   <div class="right-panel">
     <h2 class="results-title">Your results</h2>
-    <p class="results-sub" id="results-sub">Select an ingredient or concern to discover matching products and their best prices.</p>
+    <p class="results-sub" id="results-sub">Select an ingredient, concern or product name to discover matching products and their best prices.</p>
 
     <div class="results-searching" id="resultsSearching">
       <div class="spinner"></div>
@@ -494,7 +514,7 @@
     <div id="resultsContainer">
       <div class="results-placeholder">
         <div class="results-placeholder-icon">🌿</div>
-        <p>Search by ingredient or skin concern and we will find the best price on matching products across all major UK retailers.</p>
+        <p>Search by ingredient, skin concern or product name and we will find the best price across all major UK retailers.</p>
       </div>
     </div>
   </div>
@@ -533,9 +553,39 @@
     activeTab = tab;
     document.getElementById('tab-ingredient').classList.toggle('active', tab === 'ingredient');
     document.getElementById('tab-concern').classList.toggle('active', tab === 'concern');
+    document.getElementById('tab-product').classList.toggle('active', tab === 'product');
     document.getElementById('panel-ingredient').style.display = tab === 'ingredient' ? 'block' : 'none';
     document.getElementById('panel-concern').style.display = tab === 'concern' ? 'block' : 'none';
+    document.getElementById('panel-product').style.display = tab === 'product' ? 'block' : 'none';
     clearSelection();
+    if (tab === 'product') {
+      document.getElementById('selected-wrap').style.display = 'none';
+      document.getElementById('searchBtn').disabled = false;
+    }
+  }
+
+  function handleProductInput(val) {
+    selectedValue = val.trim().toLowerCase();
+    if (selectedValue.length > 1) {
+      document.getElementById('selected-text').textContent = val.trim();
+      document.getElementById('selected-wrap').style.display = 'block';
+      document.querySelectorAll('#panel-product .tag').forEach(t => {
+        t.classList.toggle('selected', t.textContent.toLowerCase().includes(selectedValue));
+      });
+    } else {
+      selectedValue = null;
+      document.getElementById('selected-wrap').style.display = 'none';
+    }
+  }
+
+  function selectProductTag(value) {
+    selectedValue = value.toLowerCase();
+    document.getElementById('product-input').value = value;
+    document.getElementById('selected-text').textContent = value;
+    document.getElementById('selected-wrap').style.display = 'block';
+    document.querySelectorAll('#panel-product .tag').forEach(t => {
+      t.classList.toggle('selected', t.textContent.toLowerCase().includes(selectedValue));
+    });
   }
 
   function selectTag(type, value) {
@@ -569,7 +619,7 @@
     document.getElementById('resultsContainer').innerHTML = `
       <div class="results-placeholder">
         <div class="results-placeholder-icon">🌿</div>
-        <p>Search by ingredient or skin concern and we will find the best price on matching products across all major UK retailers.</p>
+        <p>Search by ingredient, skin concern or product name and we will find the best price across all major UK retailers.</p>
       </div>`;
     document.getElementById('results-sub').textContent = 'Select an ingredient or concern to discover matching products and their best prices.';
     document.getElementById('resultsSearching').classList.remove('active');
@@ -625,13 +675,17 @@
       let supaQuery = db.from('products').select('*, retailer_prices(price, url, in_stock, retailers(name))');
       if (activeTab === 'ingredient') {
         supaQuery = supaQuery.contains('ingredients', [selectedValue.toLowerCase()]);
-      } else {
+      } else if (activeTab === 'concern') {
         supaQuery = supaQuery.contains('concerns', [selectedValue.toLowerCase()]);
+      } else {
+        // product name/brand search
+        const q = selectedValue.toLowerCase();
+        supaQuery = supaQuery.or('name.ilike.%' + q + '%,brand.ilike.%' + q + '%');
       }
 
       const [supaResult, obfProducts] = await Promise.all([
         supaQuery,
-        searchOpenBeautyFacts(selectedValue, activeTab)
+        activeTab === 'product' ? Promise.resolve([]) : searchOpenBeautyFacts(selectedValue, activeTab)
       ]);
 
       document.getElementById('resultsSearching').classList.remove('active');
@@ -751,6 +805,8 @@
   document.getElementById('ingredient-input').addEventListener('keydown', e => { if (e.key === 'Enter' && selectedValue) runSearch(); });
 
   document.getElementById('concern-input').addEventListener('keydown', e => { if (e.key === 'Enter' && selectedValue) runSearch(); });
+
+  document.getElementById('product-input').addEventListener('keydown', e => { if (e.key === 'Enter' && selectedValue) runSearch(); });
 </script>
 </body>
 </html>
