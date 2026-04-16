@@ -547,50 +547,25 @@
   const SUPABASE_URL = 'https://crtrjoescntlcjiwdtrt.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNydHJqb2VzY250bGNqaXdkdHJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzOTA3NDUsImV4cCI6MjA5MDk2Njc0NX0.D9zbYCQqqVQaHCTW9mYyTxGZcw7-ru2o2eXVber8uDg';
   let db;
-  window.addEventListener('load', function() { const { createClient } = supabase; db = createClient(SUPABASE_URL, SUPABASE_KEY); });
+  window.addEventListener('load', function() {
+    const { createClient } = supabase;
+    db = createClient(SUPABASE_URL, SUPABASE_KEY);
+  });
 
   let activeTab = 'ingredient';
   let selectedValue = null;
 
+  // ── Tab switching ──────────────────────────────────────────
   function switchTab(tab) {
     activeTab = tab;
-    document.getElementById('tab-ingredient').classList.toggle('active', tab === 'ingredient');
-    document.getElementById('tab-concern').classList.toggle('active', tab === 'concern');
-    document.getElementById('tab-product').classList.toggle('active', tab === 'product');
-    document.getElementById('panel-ingredient').style.display = tab === 'ingredient' ? 'block' : 'none';
-    document.getElementById('panel-concern').style.display = tab === 'concern' ? 'block' : 'none';
-    document.getElementById('panel-product').style.display = tab === 'product' ? 'block' : 'none';
-    clearSelection();
-    if (tab === 'product') {
-      document.getElementById('selected-wrap').style.display = 'none';
-      document.getElementById('searchBtn').disabled = false;
-    }
-  }
-
-  function handleProductInput(val) {
-    selectedValue = val.trim().toLowerCase();
-    if (selectedValue.length > 1) {
-      document.getElementById('selected-text').textContent = val.trim();
-      document.getElementById('selected-wrap').style.display = 'block';
-      document.querySelectorAll('#panel-product .tag').forEach(t => {
-        t.classList.toggle('selected', t.textContent.toLowerCase().includes(selectedValue));
-      });
-    } else {
-      selectedValue = null;
-      document.getElementById('selected-wrap').style.display = 'none';
-    }
-  }
-
-  function selectProductTag(value) {
-    selectedValue = value.toLowerCase();
-    document.getElementById('product-input').value = value;
-    document.getElementById('selected-text').textContent = value;
-    document.getElementById('selected-wrap').style.display = 'block';
-    document.querySelectorAll('#panel-product .tag').forEach(t => {
-      t.classList.toggle('selected', t.textContent.toLowerCase().includes(selectedValue));
+    ['ingredient','concern','product'].forEach(t => {
+      document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+      document.getElementById('panel-' + t).style.display = t === tab ? 'block' : 'none';
     });
+    clearSelection();
   }
 
+  // ── Tag selection (ingredient / concern tabs) ──────────────
   function selectTag(type, value) {
     selectedValue = value;
     activeTab = type;
@@ -601,6 +576,7 @@
     document.getElementById('selected-wrap').style.display = 'block';
   }
 
+  // ── Typing filter for ingredient / concern tags ────────────
   function filterTags(type, query) {
     const container = document.getElementById(type + '-tags');
     container.querySelectorAll('.tag').forEach(tag => {
@@ -613,6 +589,21 @@
     }
   }
 
+  // ── Product tab: typing ────────────────────────────────────
+  function handleProductInput(val) {
+    selectedValue = val.trim() ? val.trim().toLowerCase() : null;
+  }
+
+  // ── Product tab: quick tag click ───────────────────────────
+  function selectProductTag(value) {
+    selectedValue = value.toLowerCase();
+    document.getElementById('product-input').value = value;
+    document.querySelectorAll('#panel-product .tag').forEach(t => {
+      t.classList.toggle('selected', t.textContent.trim() === value);
+    });
+  }
+
+  // ── Clear everything ───────────────────────────────────────
   function clearSelection() {
     selectedValue = null;
     document.querySelectorAll('.tag').forEach(t => t.classList.remove('selected'));
@@ -625,18 +616,16 @@
         <div class="results-placeholder-icon">🌿</div>
         <p>Search by ingredient, skin concern or product name and we will find the best price across all major UK retailers.</p>
       </div>`;
-    document.getElementById('results-sub').textContent = 'Select an ingredient or concern to discover matching products and their best prices.';
+    document.getElementById('results-sub').textContent = 'Select an ingredient, concern or product name to discover matching products and their best prices.';
     document.getElementById('resultsSearching').classList.remove('active');
   }
 
+  // ── Open Beauty Facts ──────────────────────────────────────
   async function searchOpenBeautyFacts(term, type) {
     try {
       const params = new URLSearchParams({
-        search_terms: term,
-        search_simple: '1',
-        action: 'process',
-        json: '1',
-        page_size: '10',
+        search_terms: term, search_simple: '1', action: 'process',
+        json: '1', page_size: '10',
         fields: 'product_name,brands,ingredients_tags,code'
       });
       if (type === 'ingredient') {
@@ -644,29 +633,21 @@
         params.set('tag_contains_0', 'contains');
         params.set('tag_0', 'en:' + term.toLowerCase().replace(/ /g, '-'));
       }
-      const res = await fetch('https://world.openbeautyfacts.org/cgi/search.pl?' + params, {
-        signal: AbortSignal.timeout(8000)
-      });
+      const res = await fetch('https://world.openbeautyfacts.org/cgi/search.pl?' + params, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) return [];
       const data = await res.json();
       return (data.products || []).filter(p => p.product_name && p.product_name.trim() !== '');
-    } catch(e) {
-      console.warn('OBF error:', e);
-      return [];
-    }
+    } catch(e) { return []; }
   }
 
   function cleanIngredientTags(tags) {
     if (!tags) return [];
-    return tags
-      .filter(t => t.startsWith('en:'))
-      .map(t => t.replace('en:', '').replace(/-/g, ' '))
-      .filter(t => t.length > 2 && t.length < 30)
-      .slice(0, 5);
+    return tags.filter(t => t.startsWith('en:')).map(t => t.replace('en:','').replace(/-/g,' ')).filter(t => t.length > 2 && t.length < 30).slice(0, 5);
   }
 
+  // ── Main search ────────────────────────────────────────────
   async function runSearch() {
-    // For product tab, read directly from input if selectedValue not set
+    // For product tab, fall back to reading the input directly
     if (activeTab === 'product' && !selectedValue) {
       const val = document.getElementById('product-input').value.trim();
       if (!val) return;
@@ -674,12 +655,9 @@
     }
     if (!selectedValue) return;
 
-    const btn = document.getElementById('searchBtn');
-    const btnProduct = document.getElementById('searchBtnProduct');
-    const btnText = document.getElementById('searchBtnText');
-    btn.disabled = true;
-    if (btnProduct) btnProduct.disabled = true;
-    btnText.textContent = 'Searching...';
+    // Disable all search buttons
+    document.querySelectorAll('.search-btn').forEach(b => { b.disabled = true; });
+    document.getElementById('searchBtnText').textContent = 'Searching...';
     document.getElementById('resultsSearching').classList.add('active');
     document.getElementById('resultsContainer').innerHTML = '';
 
@@ -690,7 +668,6 @@
       } else if (activeTab === 'concern') {
         supaQuery = supaQuery.contains('concerns', [selectedValue.toLowerCase()]);
       } else {
-        // product name/brand search
         const q = selectedValue.toLowerCase();
         supaQuery = supaQuery.or('name.ilike.%' + q + '%,brand.ilike.%' + q + '%');
       }
@@ -701,11 +678,9 @@
       ]);
 
       document.getElementById('resultsSearching').classList.remove('active');
-      btn.disabled = false;
-      if (btnProduct) btnProduct.disabled = false;
-      btnText.textContent = 'Find products';
+      document.querySelectorAll('.search-btn').forEach(b => { b.disabled = false; });
+      document.getElementById('searchBtnText').textContent = 'Find products';
 
-      // Sort: products with real prices first, then by lowest price
       const ourProducts = (supaResult.data || []).sort((a, b) => {
         const aPrices = (a.retailer_prices || []).filter(r => r.in_stock && r.price);
         const bPrices = (b.retailer_prices || []).filter(r => r.in_stock && r.price);
@@ -715,24 +690,21 @@
         const bMin = bPrices.length ? Math.min(...bPrices.map(r => parseFloat(r.price))) : 999;
         return aMin - bMin;
       });
+
       const ourNames = ourProducts.map(p => p.name.toLowerCase());
-      const uniqueOBF = obfProducts.filter(p =>
-        p.product_name && !ourNames.some(n => p.product_name.toLowerCase().includes(n))
-      );
+      const uniqueOBF = obfProducts.filter(p => p.product_name && !ourNames.some(n => p.product_name.toLowerCase().includes(n)));
       const total = ourProducts.length + uniqueOBF.length;
 
       if (total === 0) {
         document.getElementById('results-sub').textContent = 'No products found for "' + selectedValue + '"';
-        const amazonFallbackUrl = 'https://www.amazon.co.uk/s?k=' + encodeURIComponent(selectedValue) + '+skincare&tag=findmybasket-21';
-        const noResultsHtml = activeTab === 'product'
-          ? '<div class="no-results"><p>We don't track this product yet — we're adding more retailers all the time.</p><div style="margin-top:20px;"><a href="' + amazonFallbackUrl + '" target="_blank" rel="noopener" class="buy-btn" style="display:inline-flex;">Check Amazon →</a></div><p style="margin-top:12px;font-size:12px;color:rgba(250,248,244,0.3);">We may earn a small commission if you purchase through this link.</p></div>'
+        const amazonUrl = 'https://www.amazon.co.uk/s?k=' + encodeURIComponent(selectedValue) + '+skincare&tag=findmybasket-21';
+        document.getElementById('resultsContainer').innerHTML = activeTab === 'product'
+          ? '<div class="no-results"><p>We do not track this product yet — we are adding more retailers all the time.</p><div style="margin-top:20px;"><a href="' + amazonUrl + '" target="_blank" rel="noopener" class="buy-btn" style="display:inline-flex;">Check Amazon →</a></div><p style="margin-top:12px;font-size:12px;color:rgba(250,248,244,0.3);">We may earn a small commission if you purchase through this link.</p></div>'
           : '<div class="no-results"><p>No products found. Try a different search.</p></div>';
-        document.getElementById('resultsContainer').innerHTML = noResultsHtml;
         return;
       }
 
-      document.getElementById('results-sub').textContent =
-        total + ' product' + (total !== 1 ? 's' : '') + ' found for "' + selectedValue + '"';
+      document.getElementById('results-sub').textContent = total + ' product' + (total !== 1 ? 's' : '') + ' found for "' + selectedValue + '"';
 
       let html = '<div class="results-count-strip">Showing <strong>' + ourProducts.length + ' tracked</strong> + ' + Math.min(uniqueOBF.length, 8) + ' more products</div>';
 
@@ -745,37 +717,19 @@
           const cheapest = sortedPrices[0];
           const iPills = (p.ingredients || []).slice(0, 4).map(i => '<span class="ingredient-pill">' + i + '</span>').join('');
           const cPills = (p.concerns || []).slice(0, 3).map(c => '<span class="concern-pill">' + c + '</span>').join('');
-
-          // Build retailer price rows
           const retailerRowsHtml = sortedPrices.map((r, ri) => {
             const isCheapest = ri === 0 && sortedPrices.length > 1;
             return '<div class="retailer-row' + (isCheapest ? ' cheapest-row' : '') + '">' +
-              '<div class="retailer-row-left">' +
-              '<span class="retailer-name">' + r.retailers.name + '</span>' +
-              (isCheapest ? '<span class="cheapest-label">Best price</span>' : '') +
-              '</div>' +
-              '<div style="display:flex;align-items:center;gap:10px;">' +
-              '<span class="retailer-price-val">£' + parseFloat(r.price).toFixed(2) + '</span>' +
-              '<a href="' + r.url + '" target="_blank" rel="noopener" class="buy-btn">Buy →</a>' +
-              '</div>' +
-              '</div>';
+              '<div class="retailer-row-left"><span class="retailer-name">' + r.retailers.name + '</span>' +
+              (isCheapest ? '<span class="cheapest-label">Best price</span>' : '') + '</div>' +
+              '<div style="display:flex;align-items:center;gap:10px;"><span class="retailer-price-val">£' + parseFloat(r.price).toFixed(2) + '</span>' +
+              '<a href="' + r.url + '" target="_blank" rel="noopener" class="buy-btn">Buy →</a></div></div>';
           }).join('');
-
-          // If only one retailer, show a single prominent buy button
-          const singleBuyBtn = sortedPrices.length === 1 && cheapest ?
-            '<div class="price-row"><div>' +
-            '<div class="price-from">Available at ' + cheapest.retailers.name + '</div>' +
-            '<div class="price-amount">£' + minPrice.toFixed(2) + '</div>' +
-            '</div><a href="' + cheapest.url + '" target="_blank" rel="noopener" class="buy-btn">Buy now →</a></div>' : '';
-
-          // Amazon fallback for products with no retailer prices yet
-          const amazonUrl = 'https://www.amazon.co.uk/s?k=' + encodeURIComponent((p.brand || '') + ' ' + p.name) + '&tag=findmybasket-21';
-          const amazonFallback = sortedPrices.length === 0 ?
-            '<div class="price-row"><div>' +
-            '<div class="price-from">Coming soon to FindMyBasket</div>' +
-            '<div style="font-size:13px;color:rgba(250,248,244,0.4);margin-top:2px;">Also available on Amazon</div>' +
-            '</div><a href="' + amazonUrl + '" target="_blank" rel="noopener" class="add-routine-btn" style="border-color:rgba(255,153,0,0.3);color:#FF9900;">Check Amazon →</a></div>' : '';
-
+          const singleBuyBtn = sortedPrices.length === 1 && cheapest
+            ? '<div class="price-row"><div><div class="price-from">Available at ' + cheapest.retailers.name + '</div><div class="price-amount">£' + minPrice.toFixed(2) + '</div></div><a href="' + cheapest.url + '" target="_blank" rel="noopener" class="buy-btn">Buy now →</a></div>' : '';
+          const amazonFbUrl = 'https://www.amazon.co.uk/s?k=' + encodeURIComponent((p.brand || '') + ' ' + p.name) + '&tag=findmybasket-21';
+          const amazonFallback = sortedPrices.length === 0
+            ? '<div class="price-row"><div><div class="price-from">Coming soon to FindMyBasket</div><div style="font-size:13px;color:rgba(250,248,244,0.4);margin-top:2px;">Also available on Amazon</div></div><a href="' + amazonFbUrl + '" target="_blank" rel="noopener" class="add-routine-btn" style="border-color:rgba(255,153,0,0.3);color:#FF9900;">Check Amazon →</a></div>' : '';
           html += '<div class="product-card" style="animation-delay:' + (i*0.06) + 's;border-color:rgba(201,169,110,0.3);">' +
             (minPrice && sortedPrices.length > 1 ? '<div class="price-badge">Best price from £' + minPrice.toFixed(2) + '</div>' : '') +
             '<div class="product-brand">' + (p.brand || '') + '</div>' +
@@ -787,9 +741,7 @@
       }
 
       if (uniqueOBF.length > 0) {
-        if (ourProducts.length > 0) {
-          html += '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(250,248,244,0.4);font-weight:500;margin:24px 0 12px;">More products</div>';
-        }
+        if (ourProducts.length > 0) html += '<div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(250,248,244,0.4);font-weight:500;margin:24px 0 12px;">More products</div>';
         uniqueOBF.slice(0, 8).forEach((p, i) => {
           const brand = p.brands ? p.brands.split(',')[0].trim() : '';
           const name = p.product_name || '';
@@ -797,13 +749,10 @@
           const iPills = ings.map(ing => '<span class="ingredient-pill">' + ing + '</span>').join('');
           const amazonUrl = 'https://www.amazon.co.uk/s?k=' + encodeURIComponent(brand + ' ' + name) + '&tag=findmybasket-21';
           html += '<div class="product-card" style="animation-delay:' + ((i + ourProducts.length)*0.05) + 's">' +
-            '<div class="product-brand">' + brand + '</div>' +
-            '<div class="product-name">' + name + '</div>' +
+            '<div class="product-brand">' + brand + '</div><div class="product-name">' + name + '</div>' +
             (iPills ? '<div class="product-concerns">' + iPills + '</div>' : '') +
-            '<div class="price-row"><div>' +
-            '<div class="price-from">Coming soon</div>' +
-            '<div style="font-size:13px;color:rgba(250,248,244,0.4);margin-top:2px;">Also available on Amazon</div>' +
-            '</div><a href="' + amazonUrl + '" target="_blank" rel="noopener" class="add-routine-btn" style="border-color:rgba(255,153,0,0.3);color:#FF9900;">Check Amazon →</a></div></div>';
+            '<div class="price-row"><div><div class="price-from">Coming soon</div><div style="font-size:13px;color:rgba(250,248,244,0.4);margin-top:2px;">Also available on Amazon</div></div>' +
+            '<a href="' + amazonUrl + '" target="_blank" rel="noopener" class="add-routine-btn" style="border-color:rgba(255,153,0,0.3);color:#FF9900;">Check Amazon →</a></div></div>';
         });
       }
 
@@ -813,18 +762,15 @@
     } catch(err) {
       console.error(err);
       document.getElementById('resultsSearching').classList.remove('active');
-      btn.disabled = false;
-      if (btnProduct) btnProduct.disabled = false;
-      btnText.textContent = 'Find products';
+      document.querySelectorAll('.search-btn').forEach(b => { b.disabled = false; });
+      document.getElementById('searchBtnText').textContent = 'Find products';
       document.getElementById('resultsContainer').innerHTML = '<div class="no-results"><p>Something went wrong. Please try again.</p></div>';
     }
   }
 
   document.getElementById('ingredient-input').addEventListener('keydown', e => { if (e.key === 'Enter' && selectedValue) runSearch(); });
-
   document.getElementById('concern-input').addEventListener('keydown', e => { if (e.key === 'Enter' && selectedValue) runSearch(); });
-
-  document.getElementById('product-input').addEventListener('keydown', e => { if (e.key === 'Enter' && selectedValue) runSearch(); });
+  document.getElementById('product-input').addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(); });
 </script>
 </body>
 </html>
