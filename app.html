@@ -645,13 +645,17 @@
     // Get unique retailer ids that have at least one product
     const allRetailerIds = [...new Set(prices.map(p => p.retailer_id))];
 
-    // Get cheapest price per product overall (for savings comparison)
-    const worstCaseTotal = routine.reduce((sum, product) => {
+    // Get worst case: highest price per product + assume paid delivery for every order
+    // Use number of unique retailers as proxy for number of orders
+    const uniqueRetailerCount = allRetailerIds.length || 1;
+    const worstDelivery = uniqueRetailerCount * 3.95;
+    const worstCaseProducts = routine.reduce((sum, product) => {
       const productPrices = priceMap[product.id];
       if (!productPrices) return sum;
       const maxPrice = Math.max(...Object.values(productPrices).map(p => p.price));
       return sum + maxPrice;
     }, 0);
+    const worstCaseTotal = worstCaseProducts + worstDelivery;
 
     // Calculate all single-retailer options
     const singleOptions = [];
@@ -797,7 +801,7 @@
     // Show savings summary
     const summary = document.getElementById('savingsSummary');
     document.getElementById('savingsAmount').textContent = `£${saving.toFixed(2)}`;
-    document.getElementById('savingsDesc').textContent = `compared to buying each product at its highest available price`;
+    document.getElementById('savingsDesc').textContent = `compared to buying each product at its most expensive available price, including delivery`;
     summary.classList.add('visible');
 
     const container = document.getElementById('resultsContainer');
