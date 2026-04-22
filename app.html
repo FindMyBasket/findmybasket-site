@@ -753,7 +753,37 @@
     const top3 = allOptions.slice(0, 3);
 
     if (top3.length === 0) {
-      showError('Could not find prices for all products. Some may not be stocked by these retailers.');
+      // No retailer covers all products — build best effort using cheapest per product
+      const fallbackBreakdown = [];
+      let fallbackTotal = 0;
+      let allHavePrices = true;
+
+      for (const product of routine) {
+        const productPrices = priceMap[product.id];
+        if (!productPrices || Object.keys(productPrices).length === 0) {
+          allHavePrices = false;
+          fallbackBreakdown.push({
+            product,
+            price: null,
+            retailerName: 'Not tracked yet',
+            url: 'https://www.amazon.co.uk/s?k=' + encodeURIComponent(product.brand + ' ' + product.name) + '&tag=findmybasket-21'
+          });
+        } else {
+          const cheapest = Object.values(productPrices).sort((a, b) => a.price - b.price)[0];
+          fallbackTotal += cheapest.price;
+          fallbackBreakdown.push({ product, price: cheapest.price, retailerName: cheapest.retailerName, url: cheapest.url });
+        }
+      }
+
+      renderResults([{
+        retailers: ['Best available prices'],
+        total: fallbackTotal,
+        productsTotal: fallbackTotal,
+        deliveryCost: 0,
+        breakdown: fallbackBreakdown,
+        type: 'split',
+        partial: true
+      }], worstCaseTotal);
       return;
     }
 
@@ -783,7 +813,7 @@
           <span class="breakdown-product">${b.product.name}</span>
           <div class="breakdown-retailer-price">
             <span class="breakdown-retailer">${b.retailerName}</span>
-            <span class="breakdown-price">£${b.price.toFixed(2)}</span>
+            <span class="breakdown-price">${b.price !== null ? '£' + b.price.toFixed(2) : '—'}</span>
           </div>
         </div>
       `).join('');
