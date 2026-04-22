@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Product Finder - FindMyBasket</title>
   <meta name="description" content="Find the best price on skincare products by ingredient or skin concern. Search niacinamide, retinol, hyaluronic acid and more across major UK beauty retailers."/>
-  <meta name="keywords" content="cheapest niacinamide UK, cheapest retinol UK, best hyaluronic acid UK price, skincare ingredients price comparison UK"/>
+  <meta name="keywords" content="best price niacinamide UK, best price retinol UK, best hyaluronic acid UK price, skincare ingredients price comparison UK"/>
   <link rel="canonical" href="https://www.findmybasket.co.uk/product-finder.html"/>
   <meta property="og:title" content="Search Skincare by Ingredient - FindMyBasket"/>
   <meta property="og:description" content="Find the best price on products for your skin concern or favourite ingredient across UK beauty retailers."/>
@@ -699,8 +699,9 @@
       if (total === 0) {
         document.getElementById('results-sub').textContent = 'No products found for "' + selectedValue + '"';
         const amazonUrl = 'https://www.amazon.co.uk/s?k=' + encodeURIComponent(selectedValue) + '+skincare&tag=findmybasket-21';
+        const ebayUrl = 'https://www.ebay.co.uk/sch/i.html?_nkw=' + encodeURIComponent(selectedValue) + '+skincare&mkcid=1&mkrid=710-53481-19255-0&campid=7221119&toolid=10001';
         document.getElementById('resultsContainer').innerHTML = activeTab === 'product'
-          ? '<div class="no-results"><p>We do not track this product yet — we are adding more retailers all the time.</p><div style="margin-top:20px;"><a href="' + amazonUrl + '" target="_blank" rel="noopener" class="buy-btn" style="display:inline-flex;">Check Amazon →</a></div><p style="margin-top:12px;font-size:12px;color:rgba(250,248,244,0.3);">We may earn a small commission if you purchase through this link.</p></div>'
+          ? '<div class="no-results"><p>We do not track this product yet — we are adding more retailers all the time.</p><div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;"><a href="' + amazonUrl + '" target="_blank" rel="noopener" class="buy-btn" style="display:inline-flex;">Check Amazon →</a><a href="' + ebayUrl + '" target="_blank" rel="noopener" class="buy-btn" style="display:inline-flex;background:rgba(201,169,110,0.2);color:#C9A96E;">Check eBay →</a></div><p style="margin-top:12px;font-size:12px;color:rgba(250,248,244,0.3);">We may earn a small commission if you purchase through these links.</p></div>'
           : '<div class="no-results"><p>No products found. Try a different search.</p></div>';
         return;
       }
@@ -729,8 +730,9 @@
           const singleBuyBtn = sortedPrices.length === 1 && cheapest
             ? '<div class="price-row"><div><div class="price-from">Available at ' + cheapest.retailers.name + '</div><div class="price-amount">£' + minPrice.toFixed(2) + '</div></div><a href="' + cheapest.url + '" target="_blank" rel="noopener" class="buy-btn">Buy now →</a></div>' : '';
           const amazonFbUrl = 'https://www.amazon.co.uk/s?k=' + encodeURIComponent((p.brand || '') + ' ' + p.name) + '&tag=findmybasket-21';
+          const ebayFbUrl = 'https://www.ebay.co.uk/sch/i.html?_nkw=' + encodeURIComponent((p.brand || '') + ' ' + p.name) + '&mkcid=1&mkrid=710-53481-19255-0&campid=7221119&toolid=10001';
           const amazonFallback = sortedPrices.length === 0
-            ? '<div class="price-row"><div><div class="price-from">Coming soon to FindMyBasket</div><div style="font-size:13px;color:rgba(250,248,244,0.4);margin-top:2px;">Also available on Amazon</div></div><a href="' + amazonFbUrl + '" target="_blank" rel="noopener" class="add-routine-btn" style="border-color:rgba(255,153,0,0.3);color:#FF9900;">Check Amazon →</a></div>' : '';
+            ? '<div class="price-row"><div><div class="price-from">Coming soon to FindMyBasket</div><div style="font-size:13px;color:rgba(250,248,244,0.4);margin-top:2px;">Also available on Amazon or eBay</div></div><div style="display:flex;gap:6px;"><a href="' + amazonFbUrl + '" target="_blank" rel="noopener" class="add-routine-btn" style="border-color:rgba(255,153,0,0.3);color:#FF9900;">Amazon →</a><a href="' + ebayFbUrl + '" target="_blank" rel="noopener" class="add-routine-btn" style="border-color:rgba(201,169,110,0.3);color:#C9A96E;">eBay →</a></div></div>' : '';
           html += '<div class="product-card" style="animation-delay:' + (i*0.06) + 's;border-color:rgba(201,169,110,0.3);">' +
             (minPrice && sortedPrices.length > 1 ? '<div class="price-badge">Best price from £' + minPrice.toFixed(2) + '</div>' : '') +
             '<div class="product-brand">' + (p.brand || '') + '</div>' +
