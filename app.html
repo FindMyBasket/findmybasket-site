@@ -796,12 +796,12 @@
 
   function renderResults(options, worstCase) {
     const bestTotal = options[0].total;
-    const saving = worstCase - bestTotal;
+    const saving = worstCase - options[0].productsTotal;
 
     // Show savings summary
     const summary = document.getElementById('savingsSummary');
     document.getElementById('savingsAmount').textContent = `£${saving.toFixed(2)}`;
-    document.getElementById('savingsDesc').textContent = `compared to buying each product at its most expensive available price, including delivery`;
+    document.getElementById('savingsDesc').textContent = `on product prices compared to buying each product at its most expensive available price`;
     summary.classList.add('visible');
 
     const container = document.getElementById('resultsContainer');
