@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    { "source": "/partners", "destination": "/partners.html", "permanent": true },
+    { "source": "/app", "destination": "/app.html", "permanent": true },
+    { "source": "/product-finder", "destination": "/product-finder.html", "permanent": true },
+    { "source": "/savings-hub", "destination": "/savings-hub.html", "permanent": true },
+    { "source": "/ingredients", "destination": "/ingredients.html", "permanent": true }
+  ]
+}
