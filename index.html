@@ -387,34 +387,49 @@
     });
 
     // Mailchimp waitlist signup
-    const MC_URL = 'https://findmybasket.us9.list-manage.com/subscribe/post-json?u=85e20f90e8764aa69a39faedb&id=7adbac12f5&f_id=00a66fe1f0';
     function handleSignup(e, successId) {
       e.preventDefault();
       const emailId = successId === 'hero-success' ? 'hero-email' : 'cta-email';
       const email = document.getElementById(emailId).value;
       const btn = e.target.querySelector('button');
       const originalText = btn.textContent;
-      btn.textContent = 'Sending...';
+      btn.textContent = 'Joining...';
       btn.disabled = true;
-      const callbackName = 'mc_cb_' + Date.now();
-      const script = document.createElement('script');
-      window[callbackName] = function(data) {
-        delete window[callbackName];
-        if (document.body.contains(script)) document.body.removeChild(script);
+
+      fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      })
+      .then(r => r.json())
+      .then(data => {
         btn.textContent = originalText;
         btn.disabled = false;
-        if (data.result === 'success' || (data.msg && data.msg.includes('already subscribed'))) {
+        if (data.success) {
           document.getElementById(emailId).value = '';
           const msg = document.getElementById(successId);
-          msg.classList.add('show');
-          setTimeout(() => msg.classList.remove('show'), 6000);
+          if (msg) { msg.classList.add('show'); setTimeout(() => msg.classList.remove('show'), 6000); }
         } else {
           alert('Something went wrong — please try again or email hello@findmybasket.co.uk');
         }
-      };
-      script.src = MC_URL + '&EMAIL=' + encodeURIComponent(email) + '&c=' + callbackName;
-      document.body.appendChild(script);
-      setTimeout(() => {
-        if (window[callbackName]) {
-          delete window[callbackName];
-          if (document.body.contains(script)) document.body
+      })
+      .catch(() => {
+        btn.textContent = originalText;
+        btn.disabled = false;
+        alert('Something went wrong — please try again or email hello@findmybasket.co.uk');
+      });
+    }
+
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('visible'); } });
+    }, { threshold: 0.1 });
+    reveals.forEach(el => observer.observe(el));
+
+    function toggleMenu() {
+      const menu = document.getElementById('mobile-menu');
+      if (menu) menu.classList.toggle('open');
+    }
+  </script>
+</body>
+</html>
