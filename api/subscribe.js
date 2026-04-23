@@ -13,6 +13,13 @@ export default async function handler(req, res) {
   const LIST_ID = '7adbac12f5';
   const DC = 'us9';
 
+  if (!API_KEY) {
+    return res.status(500).json({ error: 'API key not configured' });
+  }
+
+  // Temporary debug -- remove after confirming key format
+  const keyPreview = API_KEY.substring(0, 6) + '...' + API_KEY.slice(-6);
+
   try {
     const response = await fetch(
       `https://${DC}.api.mailchimp.com/3.0/lists/${LIST_ID}/members`,
@@ -39,9 +46,9 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, existing: true });
     }
 
-    return res.status(400).json({ error: data.detail || 'Signup failed' });
+    return res.status(400).json({ error: data.detail || 'Signup failed', keyPreview, mcStatus: response.status, mcTitle: data.title });
 
   } catch (err) {
-    return res.status(500).json({ error: 'Server error' });
+    return res.status(500).json({ error: 'Server error', detail: err.message });
   }
 }
