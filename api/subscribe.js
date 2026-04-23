@@ -19,7 +19,7 @@ export default async function handler(req, res) {
       {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${API_KEY}`,
+          Authorization: `Basic ${Buffer.from(`anystring:${API_KEY}`).toString('base64')}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
