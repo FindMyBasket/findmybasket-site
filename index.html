@@ -387,7 +387,7 @@
     });
 
     // Mailchimp waitlist signup
-    function handleSignup(e, successId) {
+    window.handleSignup = function(e, successId) {
       e.preventDefault();
       const emailId = successId === 'hero-success' ? 'hero-email' : 'cta-email';
       const email = document.getElementById(emailId).value;
@@ -418,7 +418,7 @@
         btn.disabled = false;
         alert('Something went wrong — please try again or email hello@findmybasket.co.uk');
       });
-    }
+    };
 
     function toggleMenu() {
       const menu = document.getElementById('mobile-menu');
