@@ -699,8 +699,10 @@
         let total = 0;
         const breakdown = [];
         let r1Total = 0; let r2Total = 0;
-        let r1Name = ''; let r2Name = '';
-        let r1Info = null; let r2Info = null;
+        let r1Name = prices.find(p => p.retailer_id === r1)?.retailers?.name || '';
+        let r2Name = prices.find(p => p.retailer_id === r2)?.retailers?.name || '';
+        let r1Info = prices.find(p => p.retailer_id === r1)?.retailers || null;
+        let r2Info = prices.find(p => p.retailer_id === r2)?.retailers || null;
         let allCovered = true;
 
         for (const product of routine) {
