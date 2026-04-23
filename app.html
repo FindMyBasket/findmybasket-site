@@ -756,7 +756,7 @@
 
     // Combine and sort
     const allOptions = [...singleOptions, ...twoOptions].sort((a, b) => a.total - b.total);
-    const top3 = allOptions.slice(0, 3);
+    const top3 = allOptions.slice(0, 5);
 
     if (top3.length === 0) {
       // No retailer covers all products — build best effort using cheapest per product
