@@ -417,6 +417,49 @@
       .left-panel { padding: 24px 20px; }
       .right-panel { padding: 24px 20px; }
     }
+
+    /* ── CONCERN FILTERS ── */
+    .filter-section {
+      margin-bottom: 12px;
+    }
+    .filter-label {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink-light);
+      margin-bottom: 8px;
+      display: block;
+    }
+    .filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
+      border-radius: 100px;
+      border: 1px solid var(--stone);
+      background: transparent;
+      font-family: inherit;
+      font-size: 12px;
+      color: var(--ink-light);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .chip:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+    .chip.active {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: #fff;
+    }
+    .chip .chip-icon { font-size: 13px; }
   </style>
 
   <meta property="og:image" content="https://www.findmybasket.co.uk/og-image.jpg"/>
@@ -438,6 +481,21 @@
     <p class="panel-sub">Search for your skincare products and add them to your routine. We'll find the best value way to buy everything — in as few orders as possible.</p>
 
     <!-- Search -->
+    <div class="filter-section">
+      <span class="filter-label">Filter by skin concern</span>
+      <div class="filter-chips" id="filterChips">
+        <button class="chip" data-concern="hydration" onclick="toggleConcern('hydration', this)"><span class="chip-icon">💧</span>Hydration</button>
+        <button class="chip" data-concern="brightening" onclick="toggleConcern('brightening', this)"><span class="chip-icon">✨</span>Brightening</button>
+        <button class="chip" data-concern="anti-ageing" onclick="toggleConcern('anti-ageing', this)"><span class="chip-icon">⏳</span>Anti-ageing</button>
+        <button class="chip" data-concern="acne" onclick="toggleConcern('acne', this)"><span class="chip-icon">🎯</span>Acne</button>
+        <button class="chip" data-concern="soothing" onclick="toggleConcern('soothing', this)"><span class="chip-icon">🌿</span>Soothing</button>
+        <button class="chip" data-concern="sensitive" onclick="toggleConcern('sensitive', this)"><span class="chip-icon">🌸</span>Sensitive</button>
+        <button class="chip" data-concern="pores" onclick="toggleConcern('pores', this)"><span class="chip-icon">🔬</span>Pores</button>
+        <button class="chip" data-concern="barrier" onclick="toggleConcern('barrier', this)"><span class="chip-icon">🛡️</span>Barrier</button>
+        <button class="chip" data-concern="exfoliation" onclick="toggleConcern('exfoliation', this)"><span class="chip-icon">🧪</span>Exfoliation</button>
+        <button class="chip" data-concern="sun-protection" onclick="toggleConcern('sun-protection', this)"><span class="chip-icon">☀️</span>Sun protection</button>
+      </div>
+    </div>
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
       <input type="text" class="search-input" id="searchInput" placeholder="Search by product name or brand..." autocomplete="off" />
@@ -501,6 +559,7 @@
   // ── STATE ──
   let routine = []; // array of product objects
   let searchTimeout = null;
+  let activeConcern = null;
   let retailers = [];
 
   // ── LOAD RETAILERS ON START ──
@@ -509,6 +568,60 @@
     if (data) retailers = data;
   }
   loadRetailers();
+
+  // ── CONCERN FILTER ──
+  function toggleConcern(concern, el) {
+    if (activeConcern === concern) {
+      activeConcern = null;
+      document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    } else {
+      activeConcern = concern;
+      document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+    }
+    // Re-run search if there's a query, otherwise clear results
+    const q = document.getElementById('searchInput').value.trim();
+    if (q.length >= 2) {
+      searchProducts(q);
+    } else if (activeConcern) {
+      searchByConcern();
+    } else {
+      document.getElementById('searchResults').classList.remove('visible');
+    }
+  }
+
+  async function searchByConcern() {
+    const searchResults = document.getElementById('searchResults');
+    const searchSpinner = document.getElementById('searchSpinner');
+    searchSpinner.classList.add('active');
+
+    const { data } = await db
+      .from('products')
+      .select('id, name, brand, category, concerns')
+      .contains('concerns', [activeConcern])
+      .limit(8);
+
+    searchSpinner.classList.remove('active');
+
+    if (!data || data.length === 0) {
+      searchResults.innerHTML = `<div class="no-results">No products found for this concern</div>`;
+      searchResults.classList.add('visible');
+      return;
+    }
+
+    searchResults.innerHTML = data.map(p => `
+      <div class="search-result-item" onclick="addToRoutine(${p.id}, '${p.name.replace(/'/g,"\'")}', '${(p.brand||'').replace(/'/g,"\'")}', '${p.category||''}')">
+        <div class="result-info">
+          <div class="result-name">${p.name}</div>
+          <div class="result-brand">${p.brand || ''}</div>
+        </div>
+        <span class="result-category">${p.category || 'Skincare'}</span>
+        <button class="add-btn">+</button>
+      </div>
+    `).join('');
+    searchResults.classList.add('visible');
+  }
+
 
   // ── SEARCH ──
   const searchInput = document.getElementById('searchInput');
@@ -528,11 +641,15 @@
   });
 
   async function searchProducts(query) {
-    const { data, error } = await db
+    let q2 = db
       .from('products')
-      .select('*')
+      .select('id, name, brand, category, concerns')
       .or(`name.ilike.%${query}%,brand.ilike.%${query}%`)
-      .limit(6);
+      .limit(8);
+    if (activeConcern) {
+      q2 = q2.contains('concerns', [activeConcern]);
+    }
+    const { data, error } = await q2;
 
     searchSpinner.classList.remove('active');
 
