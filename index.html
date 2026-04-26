@@ -191,7 +191,7 @@
       <a href="#how-it-works">How it works</a>
       <a href="#why">Why us</a>
       <a href="/app.html" class="nav-cta" style="background:var(--gold)!important;color:var(--ink)!important;">Try it now</a>
-      <a href="#save-routine" class="nav-cta">Save my routine</a>
+      <a href="#save-routine-feature" class="nav-cta">Save my routine</a>
     </div>
     <div class="hamburger" onclick="toggleMenu()" id="hamburger"><span></span><span></span><span></span></div>
   </nav>
@@ -202,19 +202,19 @@
     <a href="#how-it-works" onclick="toggleMenu()">How it works</a>
     <a href="#why" onclick="toggleMenu()">Why us</a>
     <a href="/app.html">Try it now</a>
-    <a href="#save-routine" onclick="toggleMenu()">Save my routine</a>
+    <a href="#save-routine-feature" onclick="toggleMenu()">Save my routine</a>
   </div>
 
   <section class="hero">
     <div class="hero-bg"></div>
     <div class="hero-badge" style="background:rgba(122,158,135,0.15); color:var(--sage); border-color:rgba(122,158,135,0.3);">✓ Live now — 1,300+ products tracked</div>
     <h1>Your skincare<br/>routine. <em>Optimised.</em></h1>
-    <p class="hero-sub">Compare prices across the UK's leading beauty retailers and find the best value way to buy your whole routine — in one or two orders.</p>
+    <p class="hero-sub">Compare prices across the UK's leading beauty retailers — then save your routine and we'll email you the best price each month.</p>
     <div class="hero-form" style="display:flex; flex-direction:column; gap:12px; align-items:center;">
       <button onclick="window.location.href='/app.html'" class="btn-primary" style="padding:16px 36px; font-size:15px;">Find my basket →</button>
       <a href="/savings-hub.html" style="font-family:'DM Sans',sans-serif; font-size:13px; color:var(--ink-light); text-decoration:underline; text-underline-offset:3px;">or browse the Savings Hub</a>
     </div>
-    <p class="hero-note">Free to use. No account needed. Save up to 35%.</p>
+    <p class="hero-note">Free to use. No account needed. Compare prices in seconds.</p>
   </section>
 
   <section style="padding:48px 24px 56px; background:var(--warm-white); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
@@ -277,7 +277,7 @@
 
   <div class="stats">
     <div class="stat"><div class="stat-num">1,300+</div><div class="stat-label">Products tracked</div></div>
-    <div class="stat"><div class="stat-num">35%</div><div class="stat-label">Average saving</div></div>
+    <div class="stat"><div class="stat-num">5</div><div class="stat-label">UK retailers</div></div>
     <div class="stat"><div class="stat-num">£0</div><div class="stat-label">Always free to use</div></div>
   </div>
 
@@ -319,6 +319,43 @@
         <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:18px 20px;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--sage);font-weight:500;margin-bottom:8px;">Concern</div><div style="font-size:16px;font-weight:500;color:var(--ink);">Dry Skin</div><div style="font-size:13px;color:var(--ink-light);margin-top:4px;">4 products found</div></div>
         <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:18px 20px;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:8px;">Ingredient</div><div style="font-size:16px;font-weight:500;color:var(--ink);">Hyaluronic Acid</div><div style="font-size:13px;color:var(--ink-light);margin-top:4px;">2 products found</div></div>
         <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:18px 20px;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--sage);font-weight:500;margin-bottom:8px;">Concern</div><div style="font-size:16px;font-weight:500;color:var(--ink);">Acne</div><div style="font-size:13px;color:var(--ink-light);margin-top:4px;">2 products found</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="save-routine-feature" style="padding:80px 24px; background:var(--cream); border-top:1px solid var(--border);">
+    <div class="section-inner" style="max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:center;">
+      <div style="display:grid; grid-template-rows:auto auto; gap:14px;">
+        <div style="background:#fff; border:1px solid var(--border); border-radius:16px; padding:22px 24px; box-shadow:0 4px 24px rgba(28,26,24,0.04); position:relative;">
+          <div style="position:absolute; top:14px; right:14px; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-light); background:var(--cream); padding:3px 8px; border-radius:100px; font-weight:600; opacity:0.7;">Example</div>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; padding-right:80px;">
+            <div style="font-family:'Cormorant Garamond',serif; font-size:18px; font-weight:600; color:var(--ink);">Your routine — May</div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--ink-light);"><span>CosRx Snail Essence</span><span style="color:var(--ink); font-weight:500;">£15.99</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--ink-light);"><span>Beauty of Joseon Sunscreen</span><span style="color:var(--ink); font-weight:500;">£14.50</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--ink-light);"><span>ANUA Heartleaf Toner</span><span style="color:var(--ink); font-weight:500;">£18.95</span></div>
+          </div>
+          <div style="border-top:1px solid var(--border); padding-top:12px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:13px; color:var(--ink-light);">Best price this month</span>
+            <span style="font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:600; color:var(--sage);">£49.44</span>
+          </div>
+        </div>
+        <div style="background:rgba(74,144,217,0.08); border:1px solid rgba(74,144,217,0.2); border-radius:12px; padding:14px 18px; display:flex; align-items:center; gap:12px;">
+          <div style="width:32px; height:32px; border-radius:50%; background:#4A90D9; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 8l9 6 9-6M3 8v10a2 2 0 002 2h14a2 2 0 002-2V8M3 8l9-5 9 5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div style="font-size:13px; color:var(--ink-light); line-height:1.4;">
+            <strong style="color:var(--ink);">Email arrives 1st of every month</strong><br/>with this month's best price for your routine.
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="section-tag" style="color:#4A90D9;">New</p>
+        <h2 class="section-title" style="margin-bottom:20px;">Save your routine. <em>We'll find the best price each month.</em></h2>
+        <p style="font-size:16px; color:var(--ink-light); line-height:1.7; margin-bottom:16px;">Build your skincare routine once. We'll email you on the 1st of every month with the best price across UK retailers — so you only ever buy at the right price, on the right day, from the right shop.</p>
+        <p style="font-size:16px; color:var(--ink-light); line-height:1.7; margin-bottom:32px;">No account needed. No spam. Unsubscribe anytime.</p>
+        <a href="/app.html" style="display:inline-flex;align-items:center;gap:10px;background:#4A90D9;color:#fff;padding:16px 32px;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;">Build &amp; save my routine →</a>
       </div>
     </div>
   </section>
