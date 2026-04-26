@@ -191,7 +191,7 @@
       <a href="#how-it-works">How it works</a>
       <a href="#why">Why us</a>
       <a href="/app.html" class="nav-cta" style="background:var(--gold)!important;color:var(--ink)!important;">Try it now</a>
-      <a href="#waitlist" class="nav-cta">Join waitlist</a>
+      <a href="#save-routine" class="nav-cta">Save my routine</a>
     </div>
     <div class="hamburger" onclick="toggleMenu()" id="hamburger"><span></span><span></span><span></span></div>
   </nav>
@@ -202,32 +202,22 @@
     <a href="#how-it-works" onclick="toggleMenu()">How it works</a>
     <a href="#why" onclick="toggleMenu()">Why us</a>
     <a href="/app.html">Try it now</a>
-    <a href="#waitlist" onclick="toggleMenu()">Join waitlist</a>
+    <a href="#save-routine" onclick="toggleMenu()">Save my routine</a>
   </div>
 
   <section class="hero">
     <div class="hero-bg"></div>
-    <div class="hero-badge">Coming Soon — Join the Waitlist</div>
+    <div class="hero-badge" style="background:rgba(122,158,135,0.15); color:var(--sage); border-color:rgba(122,158,135,0.3);">✓ Live now — 1,300+ products tracked</div>
     <h1>Your skincare<br/>routine. <em>Optimised.</em></h1>
-    <p class="hero-sub">Shop smarter. FindMyBasket compares prices across the UK's leading beauty retailers and finds the best value way to buy your whole routine — in one or two orders.</p>
-    <form class="hero-form" onsubmit="handleSignup(event, 'hero-success')">
-      <input type="email" id="hero-email" placeholder="Your email address" required />
-      <button type="submit" class="btn-primary">Notify me when live</button>
-    </form>
-    <p class="success-msg" id="hero-success">✓ You're on the list! We'll be in touch soon.</p>
-    <p class="hero-note">Free to use. No account needed. No spam, ever.</p>
-    <div style="position:relative;z-index:10;margin-top:12px;">
-      <button onclick="window.location.href='/app.html'" style="background:transparent;color:var(--ink);border:1.5px solid rgba(28,26,24,0.15);border-radius:100px;padding:12px 28px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;">Or try it now — no email needed →</button>
+    <p class="hero-sub">Compare prices across the UK's leading beauty retailers and find the best value way to buy your whole routine — in one or two orders.</p>
+    <div class="hero-form" style="display:flex; flex-direction:column; gap:12px; align-items:center;">
+      <button onclick="window.location.href='/app.html'" class="btn-primary" style="padding:16px 36px; font-size:15px;">Find my basket →</button>
+      <a href="/savings-hub.html" style="font-family:'DM Sans',sans-serif; font-size:13px; color:var(--ink-light); text-decoration:underline; text-underline-offset:3px;">or browse the Savings Hub</a>
     </div>
+    <p class="hero-note">Free to use. No account needed. Save up to 35%.</p>
   </section>
 
-  <div class="stats">
-    <div class="stat"><div class="stat-num">£0</div><div class="stat-label">Always free</div></div>
-    <div class="stat"><div class="stat-num">1–2</div><div class="stat-label">Baskets. Not ten.</div></div>
-    <div class="stat"><div class="stat-num">Seconds</div><div class="stat-label">To find your saving</div></div>
-  </div>
-
-  <section style="padding:64px 24px; background:var(--warm-white); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+  <section style="padding:48px 24px 56px; background:var(--warm-white); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
     <div style="max-width:1000px; margin:0 auto;">
 
       <!-- RETAILERS WE TRACK -->
@@ -237,20 +227,20 @@
         <!-- Live retailers grid -->
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:16px; margin-bottom:8px; max-width:840px; margin-left:auto; margin-right:auto;">
           <div style="display:flex; align-items:center; justify-content:center; height:80px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px;">
-            <img src="/logos/skin-cupid.png" alt="Skin Cupid" style="max-height:48px; max-width:100%; object-fit:contain;" loading="lazy"/>
+            <img src="/logos/skin-cupid.png" alt="Skin Cupid" style="max-height:48px; max-width:100%; object-fit:contain;"/>
           </div>
           <div style="display:flex; align-items:center; justify-content:center; height:80px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px;">
-            <img src="/logos/branded-beauty.png" alt="Branded Beauty" style="max-height:54px; max-width:100%; object-fit:contain;" loading="lazy"/>
+            <img src="/logos/branded-beauty.png" alt="Branded Beauty" style="max-height:54px; max-width:100%; object-fit:contain;"/>
           </div>
           <div style="display:flex; align-items:center; justify-content:center; height:80px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px;">
-            <img src="/logos/escentual.png" alt="Escentual" style="max-height:32px; max-width:100%; object-fit:contain;" loading="lazy"/>
+            <img src="/logos/escentual.png" alt="Escentual" style="max-height:32px; max-width:100%; object-fit:contain;"/>
           </div>
           <div style="display:flex; align-items:center; justify-content:center; height:80px; background:var(--cream); border:1px solid var(--border); border-radius:12px; font-family:'Cormorant Garamond',serif; font-size:18px; font-weight:600; color:var(--ink); padding:16px;">Evolve Beauty</div>
           <div style="display:flex; align-items:center; justify-content:center; height:80px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px;">
-            <img src="/logos/amazon.png" alt="Available at Amazon" style="max-height:60px; max-width:100%; object-fit:contain;" loading="lazy"/>
+            <img src="/logos/amazon.png" alt="Available at Amazon" style="max-height:60px; max-width:100%; object-fit:contain;"/>
           </div>
           <div style="display:flex; align-items:center; justify-content:center; height:80px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px;">
-            <img src="/logos/ebay.png" alt="eBay" style="max-height:36px; max-width:100%; object-fit:contain;" loading="lazy"/>
+            <img src="/logos/ebay.png" alt="eBay" style="max-height:36px; max-width:100%; object-fit:contain;"/>
           </div>
         </div>
       </div>
@@ -284,6 +274,12 @@
 
     </div>
   </section>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num">1,300+</div><div class="stat-label">Products tracked</div></div>
+    <div class="stat"><div class="stat-num">35%</div><div class="stat-label">Average saving</div></div>
+    <div class="stat"><div class="stat-num">£0</div><div class="stat-label">Always free to use</div></div>
+  </div>
 
   <section id="how-it-works">
     <div class="section-inner">
@@ -365,16 +361,15 @@
     </div>
   </section>
 
-  <section class="cta-section" id="waitlist">
+  <section class="cta-section" id="save-routine">
     <div class="cta-inner">
-      <p class="section-tag reveal">Be first</p>
-      <h2 class="section-title reveal">Join the waitlist</h2>
-      <p class="cta-sub reveal">FindMyBasket is launching soon. Sign up to be the first to know — and we'll let you know the moment it goes live.</p>
-      <form class="cta-form reveal" onsubmit="handleSignup(event, 'cta-success')">
-        <input type="email" id="cta-email" placeholder="Enter your email" required />
-        <button type="submit" class="btn-primary">Join waitlist</button>
-      </form>
-      <p class="success-msg" id="cta-success" style="color:var(--sage-light);">✓ You're on the list! We'll be in touch soon.</p>
+      <p class="section-tag reveal">Never overpay again</p>
+      <h2 class="section-title reveal">Save your routine. <em>We'll find the best price each month.</em></h2>
+      <p class="cta-sub reveal">Build your routine on FindMyBasket and save it. Each month we'll email you the best price across UK retailers — so you only ever buy at the right price.</p>
+      <div class="cta-form reveal" style="display:flex; flex-direction:column; gap:12px; align-items:center;">
+        <button onclick="window.location.href='/app.html'" class="btn-primary" style="padding:16px 36px; font-size:15px;">Build and save my routine →</button>
+        <p style="font-family:'DM Sans',sans-serif; font-size:12px; color:rgba(250,248,244,0.45); margin-top:8px;">Free. No account. Unsubscribe anytime.</p>
+      </div>
     </div>
   </section>
 
