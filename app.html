@@ -372,6 +372,17 @@
       transition: opacity 0.2s, transform 0.15s;
     }
     .shop-retailer-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .shop-all-btn {
+      width: 100%; padding: 16px;
+      background: var(--gold); color: var(--ink);
+      border: none; border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; text-align: center;
+      transition: opacity 0.2s, transform 0.15s;
+      margin-bottom: 4px;
+    }
+    .shop-all-btn:hover { opacity: 0.9; transform: translateY(-1px); }
     .amazon-btn {
       width: 100%; padding: 12px;
       background: transparent;
@@ -409,6 +420,91 @@
       font-size: 32px; font-weight: 600; color: var(--sage);
     }
     .savings-summary-desc { font-size: 13px; color: rgba(250,248,244,0.4); margin-top: 4px; }
+
+    /* ── SAVE ROUTINE ── */
+    .save-routine-card {
+      background: rgba(74,144,217,0.12);
+      border: 1px solid rgba(74,144,217,0.3);
+      border-radius: 12px;
+      padding: 20px 22px;
+      margin-bottom: 24px;
+      display: none;
+    }
+    .save-routine-card.visible { display: block; }
+    .save-routine-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--cream);
+      margin-bottom: 6px;
+    }
+    .save-routine-desc {
+      font-size: 13px;
+      color: rgba(250,248,244,0.55);
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+    .save-routine-form {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .save-routine-input {
+      flex: 1;
+      min-width: 180px;
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      color: var(--cream);
+      font-family: inherit;
+      font-size: 14px;
+    }
+    .save-routine-input:focus {
+      outline: none;
+      border-color: rgba(74,144,217,0.6);
+      background: rgba(255,255,255,0.08);
+    }
+    .save-routine-input::placeholder { color: rgba(250,248,244,0.3); }
+    .save-routine-input:disabled { opacity: 0.5; cursor: not-allowed; }
+    .save-routine-btn {
+      padding: 12px 22px;
+      background: #4A90D9;
+      color: var(--cream);
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .save-routine-btn:hover:not(:disabled) {
+      background: #3A7AB8;
+      transform: translateY(-1px);
+    }
+    .save-routine-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .save-routine-success {
+      font-size: 13px;
+      color: var(--sage);
+      margin-top: 10px;
+      display: none;
+    }
+    .save-routine-success.visible { display: block; }
+    .save-routine-error {
+      font-size: 13px;
+      color: #d97a7a;
+      margin-top: 10px;
+      display: none;
+    }
+    .save-routine-error.visible { display: block; }
+    .save-routine-fineprint {
+      font-size: 11px;
+      color: rgba(250,248,244,0.3);
+      margin-top: 10px;
+      line-height: 1.5;
+    }
 
     @media (max-width: 900px) {
       .app-layout { grid-template-columns: 1fr; }
@@ -533,6 +629,18 @@
       <div class="savings-summary-label">YOU COULD SAVE</div>
       <div class="savings-summary-amount" id="savingsAmount">£0.00</div>
       <div class="savings-summary-desc" id="savingsDesc">vs buying everything at the most expensive retailer</div>
+    </div>
+
+    <div class="save-routine-card" id="saveRoutineCard">
+      <div class="save-routine-title">Save your routine ✨</div>
+      <p class="save-routine-desc">Get the best prices for your routine emailed to you each month. Free, and you can unsubscribe anytime.</p>
+      <div class="save-routine-form">
+        <input type="email" class="save-routine-input" id="saveRoutineEmail" placeholder="your@email.com" />
+        <button class="save-routine-btn" id="saveRoutineBtn" onclick="saveRoutine()">Save routine</button>
+      </div>
+      <p class="save-routine-success" id="saveRoutineSuccess">✓ Saved. We'll email you with this month's best prices.</p>
+      <p class="save-routine-error" id="saveRoutineError">Something went wrong. Please try again.</p>
+      <p class="save-routine-fineprint">No account needed. Unsubscribe link in every email.</p>
     </div>
 
     <div id="resultsContainer">
@@ -873,7 +981,8 @@
 
     // Combine and sort
     const allOptions = [...singleOptions, ...twoOptions].sort((a, b) => a.total - b.total);
-    const top3 = allOptions.slice(0, 5);
+    // Show all options instead of just top 5 to demonstrate the full power of the optimiser
+    const top3 = allOptions;
 
     if (top3.length === 0) {
       // No retailer covers all products — build best effort using cheapest per product
@@ -922,6 +1031,7 @@
     document.getElementById('savingsAmount').textContent = `£${saving.toFixed(2)}`;
     document.getElementById('savingsDesc').textContent = `on product prices compared to buying each product at its most expensive available price`;
     summary.classList.add('visible');
+    document.getElementById('saveRoutineCard').classList.add('visible');
 
     const container = document.getElementById('resultsContainer');
     container.innerHTML = options.map((opt, i) => {
@@ -947,6 +1057,7 @@
       const shopLinks = Object.entries(retailerUrls)
         .map(([name, url]) => `<a href="${url}" target="_blank" rel="noopener" class="shop-retailer-btn">Shop ${name} →</a>`)
         .join('');
+      const allUrlsJson = JSON.stringify(Object.values(retailerUrls)).replace(/"/g, '&quot;');
 
       return `
         <div class="basket-card ${isBest ? 'best' : ''}">
@@ -964,6 +1075,7 @@
             </div>
           </div>
           ${isBest ? `<div class="shop-actions">
+            ${Object.keys(retailerUrls).length > 1 ? `<button class="shop-all-btn" onclick="openAllRetailers(${allUrlsJson})">Open all retailers →</button>` : ''}
             ${shopLinks || '<a href="/index.html#waitlist" class="shop-btn">Join waitlist to shop →</a>'}
           </div>` : ''}
         </div>
@@ -981,8 +1093,75 @@
     document.getElementById('amazonSection').style.display = 'block';
   }
 
+  // ── SAVE ROUTINE ──
+  async function saveRoutine() {
+    const emailEl = document.getElementById('saveRoutineEmail');
+    const btn = document.getElementById('saveRoutineBtn');
+    const successEl = document.getElementById('saveRoutineSuccess');
+    const errorEl = document.getElementById('saveRoutineError');
+
+    const email = emailEl.value.trim().toLowerCase();
+    if (!email || !email.includes('@') || !email.includes('.')) {
+      errorEl.textContent = 'Please enter a valid email address.';
+      errorEl.classList.add('visible');
+      successEl.classList.remove('visible');
+      return;
+    }
+    if (routine.length === 0) {
+      errorEl.textContent = 'Add some products to your routine first.';
+      errorEl.classList.add('visible');
+      successEl.classList.remove('visible');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    errorEl.classList.remove('visible');
+
+    const productIds = routine.map(p => p.id);
+
+    try {
+      const { error } = await db.from('saved_routines').insert({
+        email,
+        routine: productIds
+      });
+
+      if (error) throw error;
+
+      successEl.classList.add('visible');
+      btn.textContent = 'Saved ✓';
+      emailEl.disabled = true;
+
+      // Track in GA if available
+      if (typeof gtag === 'function') {
+        gtag('event', 'save_routine', {
+          routine_size: productIds.length
+        });
+      }
+    } catch (err) {
+      console.error('Save routine error:', err);
+      errorEl.textContent = 'Something went wrong. Please try again.';
+      errorEl.classList.add('visible');
+      btn.disabled = false;
+      btn.textContent = 'Save routine';
+    }
+  }
+
+  function openAllRetailers(urls) {
+    if (!urls || urls.length === 0) return;
+    // Open the first URL in current tab if it would be blocked, others as new tabs
+    // Most browsers allow multiple window.open calls only when triggered by a single user gesture
+    urls.forEach((url, i) => {
+      // Small stagger to avoid popup blockers
+      setTimeout(() => {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }, i * 50);
+    });
+  }
+
   function resetResults() {
     document.getElementById('savingsSummary').classList.remove('visible');
+    document.getElementById('saveRoutineCard').classList.remove('visible');
     document.getElementById('amazonSection').style.display = 'none';
     document.getElementById('resultsContainer').innerHTML = `
       <div class="results-placeholder">
