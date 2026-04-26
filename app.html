@@ -1149,14 +1149,27 @@
 
   function openAllRetailers(urls) {
     if (!urls || urls.length === 0) return;
-    // Open the first URL in current tab if it would be blocked, others as new tabs
-    // Most browsers allow multiple window.open calls only when triggered by a single user gesture
-    urls.forEach((url, i) => {
-      // Small stagger to avoid popup blockers
-      setTimeout(() => {
-        window.open(url, '_blank', 'noopener,noreferrer');
-      }, i * 50);
+
+    // Open all URLs synchronously within the user click handler.
+    // Browsers only allow multiple popups if all window.open calls happen
+    // inside the same user-gesture stack (no setTimeout).
+    const opened = [];
+    const blocked = [];
+    urls.forEach(url => {
+      const win = window.open(url, '_blank', 'noopener,noreferrer');
+      if (win) {
+        opened.push(url);
+      } else {
+        blocked.push(url);
+      }
     });
+
+    // If any were blocked, give the user fallback links
+    if (blocked.length > 0) {
+      const msg = `Your browser blocked ${blocked.length} tab${blocked.length > 1 ? 's' : ''}. ` +
+        `Please allow popups for findmybasket.co.uk, or click the individual "Shop" buttons below.`;
+      alert(msg);
+    }
   }
 
   function resetResults() {
