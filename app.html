@@ -675,7 +675,54 @@
     const { data } = await db.from('retailers').select('*');
     if (data) retailers = data;
   }
-  loadRetailers();
+
+  // ── PRE-LOAD ROUTINE FROM URL PARAM ──
+  // Used by routine emails: app.html?routine=1,2,3
+  async function loadRoutineFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const ids = params.get('routine');
+    if (!ids) return;
+
+    const productIds = ids.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+    if (productIds.length === 0) return;
+
+    // Fetch product details
+    const { data, error } = await db
+      .from('products')
+      .select('id, name, brand, category')
+      .in('id', productIds);
+
+    if (error || !data) {
+      console.error('Failed to load routine from URL:', error);
+      return;
+    }
+
+    // Add each product to the routine
+    routine = data.map(p => ({
+      id: p.id,
+      name: p.name,
+      brand: p.brand,
+      category: p.category
+    }));
+    renderRoutine();
+
+    // Auto-run the optimiser so the user sees their savings immediately
+    if (routine.length > 0) {
+      // Small delay to let the UI render first
+      setTimeout(() => optimiseBasket(), 300);
+    }
+
+    // Track in GA
+    if (typeof gtag === 'function') {
+      gtag('event', 'load_routine_from_url', {
+        routine_size: routine.length,
+        source: 'email'
+      });
+    }
+  }
+
+  // Run on page load
+  loadRetailers().then(() => loadRoutineFromUrl());
 
   // ── CONCERN FILTER ──
   function toggleConcern(concern, el) {
