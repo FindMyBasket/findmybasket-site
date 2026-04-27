@@ -152,10 +152,12 @@
       background: var(--warm-white);
       border: 1px solid var(--border);
       border-radius: 14px;
-      overflow: hidden;
+      overflow-y: auto;
+      max-height: 50vh;
       margin-bottom: 24px;
       box-shadow: var(--shadow);
       display: none;
+      -webkit-overflow-scrolling: touch;
     }
     .search-results.visible { display: block; }
     .search-result-item {
@@ -764,8 +766,13 @@
       return;
     }
 
-    searchResults.innerHTML = data.map(p => `
-      <div class="search-result-item" onclick="addToRoutine(${p.id}, '${p.name.replace(/'/g,"\'")}', '${(p.brand||'').replace(/'/g,"\'")}', '${p.category||''}')">
+    searchResults.innerHTML = data.map(p => {
+      const safeName = (p.name || '').replace(/'/g,"\\'");
+      const safeBrand = (p.brand || '').replace(/'/g,"\\'");
+      const safeCategory = p.category || '';
+      const args = `${p.id}, '${safeName}', '${safeBrand}', '${safeCategory}'`;
+      return `
+      <div class="search-result-item" onmousedown="event.preventDefault(); addToRoutine(${args})" ontouchstart="event.preventDefault(); addToRoutine(${args})">
         <div class="result-info">
           <div class="result-name">${p.name}</div>
           <div class="result-brand">${p.brand || ''}</div>
@@ -773,7 +780,8 @@
         <span class="result-category">${p.category || 'Skincare'}</span>
         <button class="add-btn">+</button>
       </div>
-    `).join('');
+    `;
+    }).join('');
     searchResults.classList.add('visible');
   }
 
@@ -814,8 +822,13 @@
       return;
     }
 
-    searchResults.innerHTML = data.map(p => `
-      <div class="search-result-item" onclick="addToRoutine(${p.id}, '${p.name.replace(/'/g,"\\'")}', '${(p.brand||'').replace(/'/g,"\\'")}', '${p.category||''}')">
+    searchResults.innerHTML = data.map(p => {
+      const safeName = (p.name || '').replace(/'/g,"\\'");
+      const safeBrand = (p.brand || '').replace(/'/g,"\\'");
+      const safeCategory = p.category || '';
+      const args = `${p.id}, '${safeName}', '${safeBrand}', '${safeCategory}'`;
+      return `
+      <div class="search-result-item" onmousedown="event.preventDefault(); addToRoutine(${args})" ontouchstart="event.preventDefault(); addToRoutine(${args})">
         <div class="result-info">
           <div class="result-name">${p.name}</div>
           <div class="result-brand">${p.brand || ''}</div>
@@ -823,7 +836,8 @@
         <span class="result-category">${p.category || 'Skincare'}</span>
         <button class="add-btn">+</button>
       </div>
-    `).join('');
+    `;
+    }).join('');
     searchResults.classList.add('visible');
   }
 
