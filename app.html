@@ -804,15 +804,55 @@
   });
 
   async function searchProducts(query) {
+    // Split query into words so multi-word queries match across both name AND brand
+    const words = query.trim().split(/\s+/).filter(Boolean);
+
+    // Build OR clause: every word must appear in name OR brand somewhere
     let q2 = db
       .from('products')
       .select('id, name, brand, category, concerns')
       .or(`name.ilike.%${query}%,brand.ilike.%${query}%`)
-      .limit(8);
+      .limit(25);
     if (activeConcern) {
       q2 = q2.contains('concerns', [activeConcern]);
     }
-    const { data, error } = await q2;
+    let { data, error } = await q2;
+
+    // If first pass returns few results AND the query has multiple words, try a broader fallback —
+    // match each word independently against name OR brand
+    if ((!data || data.length < 5) && words.length > 1) {
+      let fallback = db
+        .from('products')
+        .select('id, name, brand, category, concerns');
+      // Build a query where each word appears in name OR brand
+      for (const w of words) {
+        fallback = fallback.or(`name.ilike.%${w}%,brand.ilike.%${w}%`);
+      }
+      fallback = fallback.limit(25);
+      if (activeConcern) fallback = fallback.contains('concerns', [activeConcern]);
+      const { data: fallbackData } = await fallback;
+      if (fallbackData && fallbackData.length > (data?.length || 0)) {
+        data = fallbackData;
+      }
+    }
+
+    // Sort: exact-prefix-on-brand wins, then prefix-on-name, then everything else alphabetical
+    if (data && data.length > 0) {
+      const qLower = query.toLowerCase();
+      data.sort((a, b) => {
+        const aBrand = (a.brand || '').toLowerCase();
+        const bBrand = (b.brand || '').toLowerCase();
+        const aName = (a.name || '').toLowerCase();
+        const bName = (b.name || '').toLowerCase();
+        const aBrandStarts = aBrand.startsWith(qLower) ? 0 : 1;
+        const bBrandStarts = bBrand.startsWith(qLower) ? 0 : 1;
+        if (aBrandStarts !== bBrandStarts) return aBrandStarts - bBrandStarts;
+        const aNameStarts = aName.startsWith(qLower) ? 0 : 1;
+        const bNameStarts = bName.startsWith(qLower) ? 0 : 1;
+        if (aNameStarts !== bNameStarts) return aNameStarts - bNameStarts;
+        return aName.localeCompare(bName);
+      });
+    }
 
     searchSpinner.classList.remove('active');
 
@@ -1027,7 +1067,14 @@
 
         const d1 = r1Total > 0 ? (r1Total >= (r1Info?.delivery_threshold || 25) ? 0 : (r1Info?.delivery_cost || 3.95)) : 0;
         const d2 = r2Total > 0 ? (r2Total >= (r2Info?.delivery_threshold || 25) ? 0 : (r2Info?.delivery_cost || 3.95)) : 0;
-        const retailers = [r1Name, r2Name].filter(Boolean);
+        // Only include a retailer if it actually has products in this combo (non-zero spend)
+        const retailers = [];
+        if (r1Total > 0 && r1Name) retailers.push(r1Name);
+        if (r2Total > 0 && r2Name) retailers.push(r2Name);
+
+        // If only one retailer ended up being used, this is effectively a single-retailer option
+        // — skip to avoid duplicating an entry already in singleOptions
+        if (retailers.length < 2) continue;
 
         twoOptions.push({
           retailers,
@@ -1068,13 +1115,20 @@
         }
       }
 
+      // Derive distinct retailers from the actual breakdown — excluding the "Not tracked yet" placeholder
+      const fallbackRetailers = [...new Set(
+        fallbackBreakdown
+          .filter(b => b.retailerName && b.retailerName !== 'Not tracked yet')
+          .map(b => b.retailerName)
+      )];
+
       renderResults([{
-        retailers: ['Best available prices'],
+        retailers: fallbackRetailers.length > 0 ? fallbackRetailers : ['Best available prices'],
         total: fallbackTotal,
         productsTotal: fallbackTotal,
         deliveryCost: 0,
         breakdown: fallbackBreakdown,
-        type: 'split',
+        type: fallbackRetailers.length === 1 ? 'single' : 'split',
         partial: true
       }], worstCaseTotal);
       return;
@@ -1120,10 +1174,21 @@
         .join('');
       const allUrlsJson = JSON.stringify(Object.values(retailerUrls)).replace(/"/g, '&quot;');
 
+      // Derive the actual distinct retailer count from the breakdown — source of truth
+      const distinctRetailerCount = new Set(
+        opt.breakdown
+          .filter(b => b.retailerName && b.retailerName !== 'Not tracked yet')
+          .map(b => b.retailerName)
+      ).size;
+
+      const descText = opt.type === 'single' || distinctRetailerCount === 1
+        ? 'Shop everything from one retailer'
+        : `Split across ${distinctRetailerCount} retailers for best price`;
+
       return `
         <div class="basket-card ${isBest ? 'best' : ''}">
           <div class="basket-retailers">${opt.retailers.join(' + ')}</div>
-          <div class="basket-desc">${opt.type === 'single' ? 'Shop everything from one retailer' : 'Split across ' + opt.retailers.length + ' retailers for best price'}</div>
+          <div class="basket-desc">${descText}</div>
           <div class="basket-price-row">
             <div class="basket-total">£${opt.total.toFixed(2)}</div>
             ${savingVsWorst > 0 ? `<div class="basket-saving">Save £${savingVsWorst.toFixed(2)}</div>` : ''}
