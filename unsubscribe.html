@@ -92,6 +92,30 @@
     color: var(--ink-light);
     font-style: italic;
   }
+  .confirm-btn {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 14px 32px;
+    background: var(--ink);
+    color: var(--cream);
+    border: none;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+  .confirm-btn:hover { opacity: 0.85; }
+  .confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .keep-link {
+    display: block;
+    margin-top: 20px;
+    color: var(--ink-light);
+    text-decoration: none;
+    font-size: 13px;
+  }
+  .keep-link:hover { text-decoration: underline; }
   footer {
     padding: 32px 48px;
     text-align: center;
@@ -117,12 +141,23 @@
 
 <main>
   <div class="card">
-    <div id="loadingState">
+    <!-- Confirmation state: shown by default, requires explicit click -->
+    <div id="confirmState">
+      <div class="icon">✉️</div>
+      <h1>Unsubscribe from FindMyBasket?</h1>
+      <p>You'll stop receiving routine emails about price updates and the best monthly basket.</p>
+      <button class="confirm-btn" id="confirmBtn" onclick="performUnsubscribe()">Yes, unsubscribe me</button>
+      <a href="/index.html" class="keep-link">Never mind, keep me subscribed</a>
+    </div>
+
+    <!-- Loading state: shown after click -->
+    <div id="loadingState" style="display:none">
       <div class="icon">⏳</div>
       <h1>Unsubscribing...</h1>
       <p class="loading">Hold on a moment.</p>
     </div>
 
+    <!-- Success state -->
     <div id="successState" style="display:none">
       <div class="icon">✓</div>
       <h1>You've been unsubscribed</h1>
@@ -131,12 +166,22 @@
       <a href="/index.html" class="home-link">Back to FindMyBasket →</a>
     </div>
 
+    <!-- Generic error state (link invalid, expired, or already used) -->
     <div id="errorState" style="display:none">
       <div class="icon">⚠</div>
-      <h1>Something went wrong</h1>
-      <p id="errorMessage">We couldn't find your subscription. The link may have expired or already been used.</p>
+      <h1>We couldn't unsubscribe you</h1>
+      <p id="errorMessage">The link may have expired or already been used.</p>
       <p>If you're still receiving emails, contact us at <a href="mailto:hello@findmybasket.co.uk" style="color:var(--gold)">hello@findmybasket.co.uk</a> and we'll sort it out.</p>
       <a href="/index.html" class="home-link">Back to FindMyBasket →</a>
+    </div>
+
+    <!-- Retry state (database error, not user's fault) -->
+    <div id="retryState" style="display:none">
+      <div class="icon">⚠</div>
+      <h1>Something went wrong on our end</h1>
+      <p>We couldn't reach our servers. This isn't your fault.</p>
+      <button class="confirm-btn" id="retryBtn" onclick="performUnsubscribe()">Try again</button>
+      <a href="mailto:hello@findmybasket.co.uk" class="keep-link">Or email us instead</a>
     </div>
   </div>
 </main>
@@ -152,20 +197,52 @@
   const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
   function show(stateId) {
-    ['loadingState','successState','errorState'].forEach(id => {
+    ['confirmState','loadingState','successState','errorState','retryState'].forEach(id => {
       document.getElementById(id).style.display = id === stateId ? 'block' : 'none';
     });
   }
 
-  async function unsubscribe() {
+  // Validate token presence on page load — but DO NOT perform the update yet.
+  // Mail scanners and link previewers fetch URLs passively. If we unsubscribed
+  // here, those scanners would unsubscribe users who never clicked.
+  function getToken() {
     const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
+    return params.get('token');
+  }
 
+  // If there's no token at all, show the error state immediately —
+  // no point making them click a button on a broken link.
+  (function init() {
+    const token = getToken();
     if (!token) {
-      document.getElementById('errorMessage').textContent = 'No unsubscribe token in the link.';
+      document.getElementById('errorMessage').textContent = 'This unsubscribe link is missing its token. Please use the link from your email.';
+      show('errorState');
+    }
+  })();
+
+  async function performUnsubscribe() {
+    const token = getToken();
+    if (!token) {
       show('errorState');
       return;
     }
+
+    // Disable the button to prevent double-clicks
+    const confirmBtn = document.getElementById('confirmBtn');
+    const retryBtn = document.getElementById('retryBtn');
+    if (confirmBtn) confirmBtn.disabled = true;
+    if (retryBtn) retryBtn.disabled = true;
+
+    show('loadingState');
+
+    // Safety net: if the request hangs, fall back to retry state after 10s.
+    let timedOut = false;
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      show('retryState');
+      if (confirmBtn) confirmBtn.disabled = false;
+      if (retryBtn) retryBtn.disabled = false;
+    }, 10000);
 
     try {
       const { data, error } = await db
@@ -174,23 +251,49 @@
         .eq('unsubscribe_token', token)
         .select();
 
-      if (error) throw error;
+      if (timedOut) return; // already showed retry state, ignore late response
+      clearTimeout(timeoutId);
 
-      if (!data || data.length === 0) {
-        document.getElementById('errorMessage').textContent = "We couldn't find a matching subscription. The link may have expired or already been used.";
-        show('errorState');
+      if (error) {
+        // Database error — not the user's fault, let them retry
+        console.error('Unsubscribe DB error');
+        show('retryState');
+        if (confirmBtn) confirmBtn.disabled = false;
+        if (retryBtn) retryBtn.disabled = false;
+        if (typeof gtag === 'function') {
+          gtag('event', 'unsubscribe_error', { kind: 'db_error' });
+        }
         return;
       }
 
+      if (!data || data.length === 0) {
+        // Token didn't match any row — invalid/expired/already used
+        document.getElementById('errorMessage').textContent =
+          "We couldn't find a matching subscription. The link may have expired or already been used.";
+        show('errorState');
+        if (typeof gtag === 'function') {
+          gtag('event', 'unsubscribe_error', { kind: 'token_not_found' });
+        }
+        return;
+      }
+
+      // Success
       show('successState');
+      if (typeof gtag === 'function') {
+        gtag('event', 'unsubscribe_success');
+      }
     } catch (err) {
-      console.error(err);
-      document.getElementById('errorMessage').textContent = 'There was a problem unsubscribing. Please try again or email us.';
-      show('errorState');
+      if (timedOut) return;
+      clearTimeout(timeoutId);
+      console.error('Unsubscribe network error');
+      show('retryState');
+      if (confirmBtn) confirmBtn.disabled = false;
+      if (retryBtn) retryBtn.disabled = false;
+      if (typeof gtag === 'function') {
+        gtag('event', 'unsubscribe_error', { kind: 'network_error' });
+      }
     }
   }
-
-  unsubscribe();
 </script>
 
 </body>
