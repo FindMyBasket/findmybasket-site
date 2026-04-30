@@ -245,11 +245,7 @@
     }, 10000);
 
     try {
-      const { data, error } = await db
-        .from('saved_routines')
-        .update({ active: false })
-        .eq('unsubscribe_token', token)
-        .select();
+      const { data, error } = await db.rpc('unsubscribe_routine', { p_token: token });
 
       if (timedOut) return; // already showed retry state, ignore late response
       clearTimeout(timeoutId);
@@ -266,7 +262,10 @@
         return;
       }
 
-      if (!data || data.length === 0) {
+      // RPC returns [{ success: true|false }]
+      const success = Array.isArray(data) && data[0] && data[0].success === true;
+
+      if (!success) {
         // Token didn't match any row — invalid/expired/already used
         document.getElementById('errorMessage').textContent =
           "We couldn't find a matching subscription. The link may have expired or already been used.";
