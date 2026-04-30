@@ -888,12 +888,29 @@
     searchInput.value = '';
     searchResults.classList.remove('visible');
     renderRoutine();
+    resetSaveRoutineForm();
   }
 
   function removeFromRoutine(id) {
     routine = routine.filter(p => p.id !== id);
     renderRoutine();
+    resetSaveRoutineForm();
     if (routine.length === 0) resetResults();
+  }
+
+  // Re-enable the save routine form whenever the routine changes,
+  // so users can re-save updated routines and see fresh feedback.
+  function resetSaveRoutineForm() {
+    const btn = document.getElementById('saveRoutineBtn');
+    const emailEl = document.getElementById('saveRoutineEmail');
+    const successEl = document.getElementById('saveRoutineSuccess');
+    const errorEl = document.getElementById('saveRoutineError');
+    if (!btn) return;
+    btn.disabled = false;
+    btn.textContent = 'Update saved routine';
+    emailEl.disabled = false;
+    successEl.classList.remove('visible');
+    errorEl.classList.remove('visible');
   }
 
   const emojis = ['🧴', '✨', '💧', '🌿', '☀️', '🫧', '💆', '🌸'];
@@ -1275,7 +1292,8 @@ try {
       successEl.textContent = mode === 'updated'
         ? "✓ Routine updated. We'll email you with this month's best prices."
         : "✓ Saved. We'll email you with this month's best prices.";
-      btn.textContent = 'Saved ✓';
+      btn.textContent = mode === 'updated' ? 'Updated ✓' : 'Saved ✓';
+      btn.disabled = true;
       emailEl.disabled = true;
       // Track in GA if available
       if (typeof gtag === 'function') {
