@@ -1246,21 +1246,41 @@
 
     const productIds = routine.map(p => p.id);
 
-    try {
-      const { error } = await db.from('saved_routines').insert({
+try {
+      // Try insert first (covers brand new email subscribers)
+      const insertResult = await db.from('saved_routines').insert({
         email,
-        routine: productIds
+        routine: productIds,
+        last_emailed_at: null,
+        active: true
       });
-
-      if (error) throw error;
-
+      let mode = 'inserted';
+      // If we hit the unique constraint, the email already exists — update instead
+      if (insertResult.error) {
+        if (insertResult.error.code === '23505') {
+          const updateResult = await db.from('saved_routines')
+            .update({
+              routine: productIds,
+              last_emailed_at: null,
+              active: true
+            })
+            .eq('email', email);
+          if (updateResult.error) throw updateResult.error;
+          mode = 'updated';
+        } else {
+          throw insertResult.error;
+        }
+      }
       successEl.classList.add('visible');
+      successEl.textContent = mode === 'updated'
+        ? "✓ Routine updated. We'll email you with this month's best prices."
+        : "✓ Saved. We'll email you with this month's best prices.";
       btn.textContent = 'Saved ✓';
       emailEl.disabled = true;
-
       // Track in GA if available
       if (typeof gtag === 'function') {
         gtag('event', 'save_routine', {
+          mode,
           routine_size: productIds.length
         });
       }
@@ -1271,7 +1291,7 @@
       btn.disabled = false;
       btn.textContent = 'Save routine';
     }
-  }
+
 
   function openAllRetailers(urls) {
     if (!urls || urls.length === 0) return;
