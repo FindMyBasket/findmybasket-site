@@ -1156,19 +1156,30 @@
 
   function renderResults(options, worstCase) {
     const bestTotal = options[0].total;
-    const saving = worstCase - options[0].productsTotal;
+
+    // Savings = best basket vs next-best basket (consistent with card 'Save £X').
+    // If only one option exists (rare, e.g. single-retailer fallback), compare
+    // against worstCase using total (includes delivery) so headline matches cards.
+    const comparisonTotal = options.length > 1 ? options[1].total : worstCase;
+    const saving = comparisonTotal - bestTotal;
 
     // Show savings summary
     const summary = document.getElementById('savingsSummary');
     document.getElementById('savingsAmount').textContent = `£${saving.toFixed(2)}`;
-    document.getElementById('savingsDesc').textContent = `on product prices compared to buying each product at its most expensive available price`;
+    document.getElementById('savingsDesc').textContent = options.length > 1
+      ? `vs the next-best basket option`
+      : `vs buying everything from a single retailer`;
     summary.classList.add('visible');
     document.getElementById('saveRoutineCard').classList.add('visible');
 
     const container = document.getElementById('resultsContainer');
     container.innerHTML = options.map((opt, i) => {
       const isBest = i === 0;
-      const savingVsWorst = worstCase - opt.total;
+      // Each card shows its own saving vs the next-best basket (or vs worst if only one option)
+      const cardComparison = options.length > 1
+        ? (isBest ? options[1].total : worstCase)
+        : worstCase;
+      const savingVsWorst = cardComparison - opt.total;
       const deliveryText = opt.deliveryCost === 0
         ? '<span class="delivery-free">Free delivery</span>'
         : `Delivery: £${opt.deliveryCost.toFixed(2)}`;
