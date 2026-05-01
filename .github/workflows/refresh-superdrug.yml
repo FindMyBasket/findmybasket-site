@@ -1,26 +1,11 @@
 name: refresh-superdrug
 
 # Weekly refresh of Superdrug catalogue from Rakuten LinkShare SFTP feed.
-#
-# Pipeline:
-#   1. SFTP into aftp.linksynergy.com using publisher credentials
-#   2. Download Superdrug's full feed (filename: 50336_4684964_mp.xml.gz)
-#   3. Decompress, filter to skincare-only, convert XML -> NDJSON
-#   4. Re-gzip and upload to Supabase Storage at feeds/superdrug/latest.ndjson.gz
-#   5. POST to import-rakuten-feed function to apply the import
-#
-# Required GitHub Secrets:
-#   - RAKUTEN_SFTP_USER       - LinkShare SFTP username
-#   - RAKUTEN_SFTP_PASSWORD   - LinkShare SFTP password
-#   - SUPABASE_PROJECT_REF    - e.g. "crtrjoescntlcjiwdtrt"
-#   - SUPABASE_SERVICE_KEY    - service role key for Storage upload + function call
-#
-# Schedule: every Monday at 03:00 UTC.
 
 on:
   schedule:
-    - cron: '0 3 * * 1'  # Mon 03:00 UTC
-  workflow_dispatch:      # Allow manual trigger
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
 
 env:
   FEED_FILENAME: 50336_4684964_mp.xml.gz
@@ -41,8 +26,6 @@ jobs:
           SFTP_PASSWORD: ${{ secrets.RAKUTEN_SFTP_PASSWORD }}
         run: |
           mkdir -p feed
-          # SFTP doesn't reliably expand wildcards on this server, so we use
-          # the exact filename. The publisher ID (4684964) is stable per account.
           sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no \
             -o BatchMode=no \
             "$SFTP_USER@aftp.linksynergy.com" <<EOF
@@ -73,7 +56,7 @@ jobs:
           count = 0
           skipped_no_url = 0
           inspected = 0
-          sample_categories = set()
+          first_skincare_dumped = False
 
           with open("superdrug_skincare.ndjson", "w", encoding="utf-8") as f_out:
               context = ET.iterparse(xml_file, events=("end",))
@@ -85,12 +68,25 @@ jobs:
                   category = p.find("category")
                   secondary = category.findtext("secondary", "") if category is not None else ""
 
-                  if inspected <= 50 and secondary:
-                      sample_categories.add(secondary[:80])
-
                   if "Skincare" not in secondary:
                       p.clear()
                       continue
+
+                  # DIAGNOSTIC: dump the first skincare product's full XML so
+                  # we can see what URL element name this _mp format uses.
+                  if not first_skincare_dumped:
+                      print("=" * 60)
+                      print("FIRST SKINCARE PRODUCT FULL XML:")
+                      print("=" * 60)
+                      print(ET.tostring(p, encoding="unicode")[:3000])
+                      print("=" * 60)
+                      print("CHILD ELEMENT NAMES:")
+                      for child in p:
+                          print(f"  <{child.tag}>")
+                          for grandchild in child:
+                              print(f"    <{grandchild.tag}>: {(grandchild.text or '')[:80]}")
+                      print("=" * 60)
+                      first_skincare_dumped = True
 
                   attrs = p.attrib
                   primary = category.findtext("primary", "") if category is not None else ""
@@ -129,9 +125,6 @@ jobs:
 
           print(f"Inspected {inspected} products total")
           print(f"Wrote {count} skincare records (skipped {skipped_no_url} with no URL)")
-          print(f"Sample category strings from first 50 products:")
-          for c in list(sample_categories)[:10]:
-              print(f"  - {c}")
           if count < 50:
               raise SystemExit(f"ERROR: Fewer than 50 skincare records ({count}) - likely a filter/format mismatch")
           PYEOF
