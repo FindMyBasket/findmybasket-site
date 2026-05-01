@@ -1,0 +1,176 @@
+name: refresh-superdrug
+
+# Weekly refresh of Superdrug catalogue from Rakuten LinkShare SFTP feed.
+#
+# Pipeline:
+#   1. SFTP into aftp.linksynergy.com using publisher credentials
+#   2. Download Superdrug's latest feed (Rakuten merchantId 50336)
+#   3. Decompress and pre-filter to skincare-only XML (drops 88MB → ~5MB)
+#   4. Re-gzip and upload to Supabase Storage at feeds/superdrug/latest.xml.gz
+#   5. POST to import-rakuten-feed function to apply the import
+#
+# Why pre-filter?
+#   Supabase Edge Functions have memory limits that struggle with 88MB XML.
+#   The Rakuten Superdrug feed contains 41,465 products across all categories
+#   but only ~7,048 are skincare. Pre-filtering keeps the edge function fast
+#   and reliable.
+#
+# Required GitHub Secrets:
+#   - RAKUTEN_SFTP_USER       - LinkShare SFTP username
+#   - RAKUTEN_SFTP_PASSWORD   - LinkShare SFTP password
+#   - SUPABASE_PROJECT_REF    - e.g. "crtrjoescntlcjiwdtrt"
+#   - SUPABASE_SERVICE_KEY    - service role key for Storage upload + function call
+#
+# Schedule: every Monday at 03:00 UTC, BEFORE the import-awin-feed crons run.
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'  # Mon 03:00 UTC
+  workflow_dispatch:      # Allow manual trigger
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+
+      - name: Download feed via SFTP
+        env:
+          SFTP_USER: ${{ secrets.RAKUTEN_SFTP_USER }}
+          SFTP_PASSWORD: ${{ secrets.RAKUTEN_SFTP_PASSWORD }}
+        run: |
+          mkdir -p feed
+          # List available feed files for Superdrug (merchantId 50336)
+          # Rakuten convention: files are named *<merchant_id>*cmp_xml.gz
+          # We want the LATEST file matching pattern *50336*cmp_xml.gz
+          sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no \
+            -o BatchMode=no \
+            "$SFTP_USER@aftp.linksynergy.com" <<'EOF'
+          cd /
+          ls -la
+          mget *50336*cmp_xml.gz feed/
+          bye
+          EOF
+          # Pick the largest .gz file (the comprehensive feed; smaller files are partials)
+          LATEST=$(ls -S feed/*.gz | head -1)
+          if [ -z "$LATEST" ]; then
+            echo "::error::No feed file found"
+            exit 1
+          fi
+          echo "Using feed: $LATEST"
+          echo "FEED_FILE=$LATEST" >> $GITHUB_ENV
+          ls -lah feed/
+
+      - name: Decompress, filter to skincare, convert to NDJSON
+        run: |
+          # Decompress
+          gunzip -k "$FEED_FILE"
+          XML_FILE="${FEED_FILE%.gz}"
+          ls -lah "$XML_FILE"
+
+          # Streaming XML → NDJSON conversion. Filters to skincare-only and
+          # flattens the XML structure into one JSON object per line. The edge
+          # function reads line-by-line so memory stays bounded.
+          python3 <<PYEOF
+          import xml.etree.ElementTree as ET
+          import json
+
+          count = 0
+          skipped_no_url = 0
+          
+          with open("superdrug_skincare.ndjson", "w", encoding="utf-8") as f_out:
+              # Use iterparse for memory-bounded parsing of huge XML
+              context = ET.iterparse("$XML_FILE", events=("end",))
+              for event, p in context:
+                  if p.tag != "product":
+                      continue
+                  
+                  category = p.find("category")
+                  secondary = category.findtext("secondary", "") if category is not None else ""
+                  
+                  # Skip non-skincare
+                  if "Skincare" not in secondary:
+                      p.clear()
+                      continue
+                  
+                  attrs = p.attrib
+                  primary = category.findtext("primary", "") if category is not None else ""
+                  price_elem = p.find("price/retail")
+                  price_text = price_elem.text if price_elem is not None else ""
+                  url_elem = p.find("URL/product")
+                  url = url_elem.text if url_elem is not None and url_elem.text else ""
+                  avail_elem = p.find("shipping/availability")
+                  availability = avail_elem.text if avail_elem is not None else ""
+                  brand = p.findtext("brand", "") or attrs.get("manufacturer_name", "")
+                  
+                  if not url:
+                      skipped_no_url += 1
+                      p.clear()
+                      continue
+                  
+                  try:
+                      price = float(price_text) if price_text else 0
+                  except ValueError:
+                      price = 0
+                  
+                  record = {
+                      "name": attrs.get("name", ""),
+                      "sku": attrs.get("sku_number", ""),
+                      "product_id": attrs.get("product_id", ""),
+                      "brand": brand,
+                      "category_primary": primary,
+                      "category_secondary": secondary,
+                      "price": price,
+                      "availability": availability,
+                      "url": url,
+                  }
+                  f_out.write(json.dumps(record, ensure_ascii=False) + "\n")
+                  count += 1
+                  p.clear()  # Free memory as we go
+          
+          print(f"Wrote {count} skincare records (skipped {skipped_no_url} with no URL)")
+          if count < 50:
+              raise SystemExit("ERROR: Fewer than 50 skincare records — likely a filter bug")
+          PYEOF
+
+          ls -lah superdrug_skincare.ndjson
+
+          # Gzip the NDJSON output
+          gzip -9 superdrug_skincare.ndjson
+          ls -lah superdrug_skincare.ndjson.gz
+
+      - name: Upload filtered feed to Supabase Storage
+        env:
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          # Upload to bucket "rakuten-feeds" at path feeds/superdrug/latest.ndjson.gz
+          curl -fsSL -X POST \
+            "https://${PROJECT_REF}.supabase.co/storage/v1/object/rakuten-feeds/feeds/superdrug/latest.ndjson.gz" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "Content-Type: application/gzip" \
+            -H "x-upsert: true" \
+            --data-binary "@superdrug_skincare.ndjson.gz" \
+            -w "Storage upload HTTP %{http_code}\n"
+
+      - name: Trigger import-rakuten-feed
+        env:
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          RESPONSE=$(curl -fsSL -X POST \
+            "https://${PROJECT_REF}.supabase.co/functions/v1/import-rakuten-feed" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            --max-time 240 \
+            -d '{"retailer_id": 12, "feed_path": "feeds/superdrug/latest.ndjson.gz", "dry_run": false}')
+          echo "$RESPONSE" | head -c 4000
+          echo ""
+          echo "$RESPONSE" | grep -q '"applied"' || {
+            echo "::error::Import function did not return success"
+            exit 1
+          }
