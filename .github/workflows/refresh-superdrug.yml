@@ -2,10 +2,11 @@ name: refresh-superdrug
 
 # Weekly refresh of Superdrug catalogue from Rakuten LinkShare SFTP feed.
 #
-# Note on file structure: Superdrug's cmp feed is split across multiple files
-# in /50336/ named like 50336_4684964_<categoryId>_cmp.xml.gz. Skincare data
-# spans several of these (1069, 1089 etc are the largest), so we download all
-# *cmp.xml.gz files and process each in turn.
+# The cmp feed lives in /50336/ split across multiple category files.
+# Each <product> contains <URL><product>...</product></URL> — i.e. nested
+# <product> tags. Our iterparse loop must use depth-aware processing so we
+# only act on top-level products, otherwise inner <URL><product> tags get
+# mistaken for products and the .clear() call wipes URLs before extraction.
 
 on:
   schedule:
@@ -28,9 +29,6 @@ jobs:
           SFTP_PASSWORD: ${{ secrets.RAKUTEN_SFTP_PASSWORD }}
         run: |
           mkdir -p feed
-          # Download all cmp files. mget supports glob (verified by previous
-          # successful 50336_*_mp.xml.gz attempt — wildcard works when the
-          # pattern is right; previous typo was _xml vs .xml).
           sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no \
             -o BatchMode=no \
             "$SFTP_USER@aftp.linksynergy.com" <<'EOF'
@@ -39,10 +37,7 @@ jobs:
           bye
           EOF
 
-          # Move whatever got downloaded into feed/
           mv *_cmp.xml.gz feed/ 2>/dev/null || true
-
-          # Drop template and delta files just in case the glob matched broadly
           rm -f feed/*template* feed/*delta* 2>/dev/null || true
 
           ls -lah feed/
@@ -55,7 +50,6 @@ jobs:
 
       - name: Decompress, filter to skincare, convert to NDJSON
         run: |
-          # Decompress all
           for f in feed/*.gz; do
             gunzip -k "$f"
           done
@@ -68,7 +62,7 @@ jobs:
           import os
 
           xml_files = sorted(glob.glob("feed/*.xml"))
-          print(f"Processing {len(xml_files)} XML files: {[os.path.basename(f) for f in xml_files]}")
+          print(f"Processing {len(xml_files)} XML files")
 
           count = 0
           skipped_no_url = 0
@@ -78,10 +72,27 @@ jobs:
               for xml_file in xml_files:
                   file_count_before = count
                   file_inspected_before = inspected
-                  context = ET.iterparse(xml_file, events=("end",))
-                  for event, p in context:
-                      if p.tag != "product":
+
+                  # Depth-aware iterparse: <product> appears both as the top-level
+                  # element AND as a child of <URL>. Only process and clear() when
+                  # we're at the top level (depth == 1 after the start event).
+                  context = ET.iterparse(xml_file, events=("start", "end"))
+                  depth = 0
+                  for event, elem in context:
+                      if elem.tag != "product":
                           continue
+                      if event == "start":
+                          depth += 1
+                          continue
+                      # event == "end"
+                      if depth != 1:
+                          # Inner <product> inside <URL> — leave it alone, the
+                          # outer-product handler will read its text via XPath.
+                          depth -= 1
+                          continue
+
+                      # depth == 1: this is a real top-level product
+                      p = elem
                       inspected += 1
 
                       category = p.find("category")
@@ -89,6 +100,7 @@ jobs:
 
                       if "Skincare" not in secondary:
                           p.clear()
+                          depth -= 1
                           continue
 
                       attrs = p.attrib
@@ -104,6 +116,7 @@ jobs:
                       if not url:
                           skipped_no_url += 1
                           p.clear()
+                          depth -= 1
                           continue
 
                       try:
@@ -125,6 +138,7 @@ jobs:
                       f_out.write(json.dumps(record, ensure_ascii=False) + "\n")
                       count += 1
                       p.clear()
+                      depth -= 1
 
                   print(f"  {os.path.basename(xml_file)}: inspected {inspected - file_inspected_before}, wrote {count - file_count_before}")
 
