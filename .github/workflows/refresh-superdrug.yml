@@ -7,9 +7,6 @@ on:
     - cron: '0 3 * * 1'
   workflow_dispatch:
 
-env:
-  FEED_FILENAME: 50336_4684964_mp.xml.gz
-
 jobs:
   refresh:
     runs-on: ubuntu-latest
@@ -20,25 +17,46 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq sshpass
 
-      - name: Download feed via SFTP
+      - name: Discover and download cmp feed via SFTP
         env:
           SFTP_USER: ${{ secrets.RAKUTEN_SFTP_USER }}
           SFTP_PASSWORD: ${{ secrets.RAKUTEN_SFTP_PASSWORD }}
         run: |
           mkdir -p feed
+          # The cmp (comprehensive) feed lives in the 50336/ subdirectory.
+          # First listing run: explore the subdirectory to confirm filename pattern.
+          # Second action: download whatever .gz file we find there.
           sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no \
             -o BatchMode=no \
-            "$SFTP_USER@aftp.linksynergy.com" <<EOF
-          cd /
-          get $FEED_FILENAME feed/$FEED_FILENAME
+            "$SFTP_USER@aftp.linksynergy.com" <<'EOF'
+          cd /50336
+          ls -la
           bye
           EOF
-          if [ ! -f "feed/$FEED_FILENAME" ]; then
-            echo "::error::Feed file not downloaded"
+
+          # Now actually download. We get all .gz files in 50336/, then pick
+          # the right one by name pattern below.
+          sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no \
+            -o BatchMode=no \
+            "$SFTP_USER@aftp.linksynergy.com" <<'EOF'
+          cd /50336
+          get *cmp_xml.gz
+          bye
+          EOF
+
+          # The 'get' above may or may not work depending on glob support.
+          # Move any downloaded files into feed/ for further processing.
+          mv *cmp_xml.gz feed/ 2>/dev/null || true
+          ls -lah feed/
+
+          # Pick the largest .gz file we found
+          LATEST=$(ls -S feed/*.gz 2>/dev/null | head -1)
+          if [ -z "$LATEST" ]; then
+            echo "::error::No cmp feed file downloaded — check listing above for actual filename"
             exit 1
           fi
-          ls -lah feed/
-          echo "FEED_FILE=feed/$FEED_FILENAME" >> $GITHUB_ENV
+          echo "Using feed: $LATEST"
+          echo "FEED_FILE=$LATEST" >> $GITHUB_ENV
 
       - name: Decompress, filter to skincare, convert to NDJSON
         run: |
@@ -56,7 +74,6 @@ jobs:
           count = 0
           skipped_no_url = 0
           inspected = 0
-          first_skincare_dumped = False
 
           with open("superdrug_skincare.ndjson", "w", encoding="utf-8") as f_out:
               context = ET.iterparse(xml_file, events=("end",))
@@ -71,22 +88,6 @@ jobs:
                   if "Skincare" not in secondary:
                       p.clear()
                       continue
-
-                  # DIAGNOSTIC: dump the first skincare product's full XML so
-                  # we can see what URL element name this _mp format uses.
-                  if not first_skincare_dumped:
-                      print("=" * 60)
-                      print("FIRST SKINCARE PRODUCT FULL XML:")
-                      print("=" * 60)
-                      print(ET.tostring(p, encoding="unicode")[:3000])
-                      print("=" * 60)
-                      print("CHILD ELEMENT NAMES:")
-                      for child in p:
-                          print(f"  <{child.tag}>")
-                          for grandchild in child:
-                              print(f"    <{grandchild.tag}>: {(grandchild.text or '')[:80]}")
-                      print("=" * 60)
-                      first_skincare_dumped = True
 
                   attrs = p.attrib
                   primary = category.findtext("primary", "") if category is not None else ""
@@ -126,7 +127,7 @@ jobs:
           print(f"Inspected {inspected} products total")
           print(f"Wrote {count} skincare records (skipped {skipped_no_url} with no URL)")
           if count < 50:
-              raise SystemExit(f"ERROR: Fewer than 50 skincare records ({count}) - likely a filter/format mismatch")
+              raise SystemExit(f"ERROR: Fewer than 50 skincare records ({count})")
           PYEOF
 
           ls -lah superdrug_skincare.ndjson
