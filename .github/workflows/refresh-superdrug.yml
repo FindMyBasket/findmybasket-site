@@ -5,15 +5,9 @@ name: refresh-superdrug
 # Pipeline:
 #   1. SFTP into aftp.linksynergy.com using publisher credentials
 #   2. Download Superdrug's latest feed (Rakuten merchantId 50336)
-#   3. Decompress and pre-filter to skincare-only XML (drops 88MB → ~5MB)
-#   4. Re-gzip and upload to Supabase Storage at feeds/superdrug/latest.xml.gz
+#   3. Decompress, filter to skincare-only, convert XML -> NDJSON
+#   4. Re-gzip and upload to Supabase Storage at feeds/superdrug/latest.ndjson.gz
 #   5. POST to import-rakuten-feed function to apply the import
-#
-# Why pre-filter?
-#   Supabase Edge Functions have memory limits that struggle with 88MB XML.
-#   The Rakuten Superdrug feed contains 41,465 products across all categories
-#   but only ~7,048 are skincare. Pre-filtering keeps the edge function fast
-#   and reliable.
 #
 # Required GitHub Secrets:
 #   - RAKUTEN_SFTP_USER       - LinkShare SFTP username
@@ -21,7 +15,7 @@ name: refresh-superdrug
 #   - SUPABASE_PROJECT_REF    - e.g. "crtrjoescntlcjiwdtrt"
 #   - SUPABASE_SERVICE_KEY    - service role key for Storage upload + function call
 #
-# Schedule: every Monday at 03:00 UTC, BEFORE the import-awin-feed crons run.
+# Schedule: every Monday at 03:00 UTC.
 
 on:
   schedule:
@@ -44,19 +38,20 @@ jobs:
           SFTP_PASSWORD: ${{ secrets.RAKUTEN_SFTP_PASSWORD }}
         run: |
           mkdir -p feed
-          # List available feed files for Superdrug (merchantId 50336)
-          # Rakuten convention: files are named *<merchant_id>*cmp_xml.gz
-          # We want the LATEST file matching pattern *50336*cmp_xml.gz
+          # Download Superdrug feed files (Rakuten merchantId 50336)
+          # Pattern matches files like 50336_4684964_mp.xml.gz
           sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no \
             -o BatchMode=no \
             "$SFTP_USER@aftp.linksynergy.com" <<'EOF'
           cd /
           ls -la
-          mget *50336*cmp_xml.gz feed/
+          mget 50336_*_mp.xml.gz feed/
           bye
           EOF
-          # Pick the largest .gz file (the comprehensive feed; smaller files are partials)
-          LATEST=$(ls -S feed/*.gz | head -1)
+          # Drop any template or delta files that matched the pattern
+          rm -f feed/*template* feed/*delta*
+          # Pick the largest remaining .xml.gz file (the full feed)
+          LATEST=$(ls -S feed/*.xml.gz 2>/dev/null | head -1)
           if [ -z "$LATEST" ]; then
             echo "::error::No feed file found"
             exit 1
@@ -66,37 +61,48 @@ jobs:
           ls -lah feed/
 
       - name: Decompress, filter to skincare, convert to NDJSON
+        env:
+          XML_FILE_PATH: ${{ env.FEED_FILE }}
         run: |
           # Decompress
-          gunzip -k "$FEED_FILE"
-          XML_FILE="${FEED_FILE%.gz}"
+          gunzip -k "$XML_FILE_PATH"
+          XML_FILE="${XML_FILE_PATH%.gz}"
           ls -lah "$XML_FILE"
+          export XML_FILE
 
-          # Streaming XML → NDJSON conversion. Filters to skincare-only and
-          # flattens the XML structure into one JSON object per line. The edge
-          # function reads line-by-line so memory stays bounded.
-          python3 <<PYEOF
+          # Streaming XML -> NDJSON conversion. Filters to skincare-only and
+          # flattens the XML into one JSON object per line. The edge function
+          # reads line-by-line so memory stays bounded.
+          python3 <<'PYEOF'
           import xml.etree.ElementTree as ET
           import json
+          import os
 
+          xml_file = os.environ["XML_FILE"]
           count = 0
           skipped_no_url = 0
-          
+          inspected = 0
+          sample_categories = set()
+
           with open("superdrug_skincare.ndjson", "w", encoding="utf-8") as f_out:
-              # Use iterparse for memory-bounded parsing of huge XML
-              context = ET.iterparse("$XML_FILE", events=("end",))
+              context = ET.iterparse(xml_file, events=("end",))
               for event, p in context:
                   if p.tag != "product":
                       continue
-                  
+                  inspected += 1
+
                   category = p.find("category")
                   secondary = category.findtext("secondary", "") if category is not None else ""
-                  
+
+                  # For first 50 products, capture sample categories for debug visibility
+                  if inspected <= 50 and secondary:
+                      sample_categories.add(secondary[:80])
+
                   # Skip non-skincare
                   if "Skincare" not in secondary:
                       p.clear()
                       continue
-                  
+
                   attrs = p.attrib
                   primary = category.findtext("primary", "") if category is not None else ""
                   price_elem = p.find("price/retail")
@@ -106,17 +112,17 @@ jobs:
                   avail_elem = p.find("shipping/availability")
                   availability = avail_elem.text if avail_elem is not None else ""
                   brand = p.findtext("brand", "") or attrs.get("manufacturer_name", "")
-                  
+
                   if not url:
                       skipped_no_url += 1
                       p.clear()
                       continue
-                  
+
                   try:
                       price = float(price_text) if price_text else 0
                   except ValueError:
                       price = 0
-                  
+
                   record = {
                       "name": attrs.get("name", ""),
                       "sku": attrs.get("sku_number", ""),
@@ -130,11 +136,15 @@ jobs:
                   }
                   f_out.write(json.dumps(record, ensure_ascii=False) + "\n")
                   count += 1
-                  p.clear()  # Free memory as we go
-          
+                  p.clear()
+
+          print(f"Inspected {inspected} products total")
           print(f"Wrote {count} skincare records (skipped {skipped_no_url} with no URL)")
+          print(f"Sample category strings from first 50 products:")
+          for c in list(sample_categories)[:10]:
+              print(f"  - {c}")
           if count < 50:
-              raise SystemExit("ERROR: Fewer than 50 skincare records — likely a filter bug")
+              raise SystemExit(f"ERROR: Fewer than 50 skincare records ({count}) - likely a filter/format mismatch")
           PYEOF
 
           ls -lah superdrug_skincare.ndjson
@@ -166,7 +176,7 @@ jobs:
             "https://${PROJECT_REF}.supabase.co/functions/v1/import-rakuten-feed" \
             -H "Authorization: Bearer ${SERVICE_KEY}" \
             -H "Content-Type: application/json" \
-            --max-time 240 \
+            --max-time 300 \
             -d '{"retailer_id": 12, "feed_path": "feeds/superdrug/latest.ndjson.gz", "dry_run": false}')
           echo "$RESPONSE" | head -c 4000
           echo ""
