@@ -1,6 +1,11 @@
 name: refresh-superdrug
 
 # Weekly refresh of Superdrug catalogue from Rakuten LinkShare SFTP feed.
+#
+# Note on file structure: Superdrug's cmp feed is split across multiple files
+# in /50336/ named like 50336_4684964_<categoryId>_cmp.xml.gz. Skincare data
+# spans several of these (1069, 1089 etc are the largest), so we download all
+# *cmp.xml.gz files and process each in turn.
 
 on:
   schedule:
@@ -10,122 +15,121 @@ on:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Install dependencies
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq sshpass
 
-      - name: Discover and download cmp feed via SFTP
+      - name: Download cmp feeds via SFTP
         env:
           SFTP_USER: ${{ secrets.RAKUTEN_SFTP_USER }}
           SFTP_PASSWORD: ${{ secrets.RAKUTEN_SFTP_PASSWORD }}
         run: |
           mkdir -p feed
-          # The cmp (comprehensive) feed lives in the 50336/ subdirectory.
-          # First listing run: explore the subdirectory to confirm filename pattern.
-          # Second action: download whatever .gz file we find there.
+          # Download all cmp files. mget supports glob (verified by previous
+          # successful 50336_*_mp.xml.gz attempt — wildcard works when the
+          # pattern is right; previous typo was _xml vs .xml).
           sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no \
             -o BatchMode=no \
             "$SFTP_USER@aftp.linksynergy.com" <<'EOF'
           cd /50336
-          ls -la
+          mget *_cmp.xml.gz
           bye
           EOF
 
-          # Now actually download. We get all .gz files in 50336/, then pick
-          # the right one by name pattern below.
-          sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no \
-            -o BatchMode=no \
-            "$SFTP_USER@aftp.linksynergy.com" <<'EOF'
-          cd /50336
-          get *cmp_xml.gz
-          bye
-          EOF
+          # Move whatever got downloaded into feed/
+          mv *_cmp.xml.gz feed/ 2>/dev/null || true
 
-          # The 'get' above may or may not work depending on glob support.
-          # Move any downloaded files into feed/ for further processing.
-          mv *cmp_xml.gz feed/ 2>/dev/null || true
+          # Drop template and delta files just in case the glob matched broadly
+          rm -f feed/*template* feed/*delta* 2>/dev/null || true
+
           ls -lah feed/
-
-          # Pick the largest .gz file we found
-          LATEST=$(ls -S feed/*.gz 2>/dev/null | head -1)
-          if [ -z "$LATEST" ]; then
-            echo "::error::No cmp feed file downloaded — check listing above for actual filename"
+          COUNT=$(ls feed/*.gz 2>/dev/null | wc -l)
+          if [ "$COUNT" -lt 1 ]; then
+            echo "::error::No cmp feed files downloaded"
             exit 1
           fi
-          echo "Using feed: $LATEST"
-          echo "FEED_FILE=$LATEST" >> $GITHUB_ENV
+          echo "Downloaded $COUNT feed files"
 
       - name: Decompress, filter to skincare, convert to NDJSON
         run: |
-          gunzip -k "$FEED_FILE"
-          XML_FILE="${FEED_FILE%.gz}"
-          ls -lah "$XML_FILE"
-          export XML_FILE
+          # Decompress all
+          for f in feed/*.gz; do
+            gunzip -k "$f"
+          done
+          ls -lah feed/
 
           python3 <<'PYEOF'
           import xml.etree.ElementTree as ET
           import json
+          import glob
           import os
 
-          xml_file = os.environ["XML_FILE"]
+          xml_files = sorted(glob.glob("feed/*.xml"))
+          print(f"Processing {len(xml_files)} XML files: {[os.path.basename(f) for f in xml_files]}")
+
           count = 0
           skipped_no_url = 0
           inspected = 0
 
           with open("superdrug_skincare.ndjson", "w", encoding="utf-8") as f_out:
-              context = ET.iterparse(xml_file, events=("end",))
-              for event, p in context:
-                  if p.tag != "product":
-                      continue
-                  inspected += 1
+              for xml_file in xml_files:
+                  file_count_before = count
+                  file_inspected_before = inspected
+                  context = ET.iterparse(xml_file, events=("end",))
+                  for event, p in context:
+                      if p.tag != "product":
+                          continue
+                      inspected += 1
 
-                  category = p.find("category")
-                  secondary = category.findtext("secondary", "") if category is not None else ""
+                      category = p.find("category")
+                      secondary = category.findtext("secondary", "") if category is not None else ""
 
-                  if "Skincare" not in secondary:
+                      if "Skincare" not in secondary:
+                          p.clear()
+                          continue
+
+                      attrs = p.attrib
+                      primary = category.findtext("primary", "") if category is not None else ""
+                      price_elem = p.find("price/retail")
+                      price_text = price_elem.text if price_elem is not None else ""
+                      url_elem = p.find("URL/product")
+                      url = url_elem.text if url_elem is not None and url_elem.text else ""
+                      avail_elem = p.find("shipping/availability")
+                      availability = avail_elem.text if avail_elem is not None else ""
+                      brand = p.findtext("brand", "") or attrs.get("manufacturer_name", "")
+
+                      if not url:
+                          skipped_no_url += 1
+                          p.clear()
+                          continue
+
+                      try:
+                          price = float(price_text) if price_text else 0
+                      except ValueError:
+                          price = 0
+
+                      record = {
+                          "name": attrs.get("name", ""),
+                          "sku": attrs.get("sku_number", ""),
+                          "product_id": attrs.get("product_id", ""),
+                          "brand": brand,
+                          "category_primary": primary,
+                          "category_secondary": secondary,
+                          "price": price,
+                          "availability": availability,
+                          "url": url,
+                      }
+                      f_out.write(json.dumps(record, ensure_ascii=False) + "\n")
+                      count += 1
                       p.clear()
-                      continue
 
-                  attrs = p.attrib
-                  primary = category.findtext("primary", "") if category is not None else ""
-                  price_elem = p.find("price/retail")
-                  price_text = price_elem.text if price_elem is not None else ""
-                  url_elem = p.find("URL/product")
-                  url = url_elem.text if url_elem is not None and url_elem.text else ""
-                  avail_elem = p.find("shipping/availability")
-                  availability = avail_elem.text if avail_elem is not None else ""
-                  brand = p.findtext("brand", "") or attrs.get("manufacturer_name", "")
+                  print(f"  {os.path.basename(xml_file)}: inspected {inspected - file_inspected_before}, wrote {count - file_count_before}")
 
-                  if not url:
-                      skipped_no_url += 1
-                      p.clear()
-                      continue
-
-                  try:
-                      price = float(price_text) if price_text else 0
-                  except ValueError:
-                      price = 0
-
-                  record = {
-                      "name": attrs.get("name", ""),
-                      "sku": attrs.get("sku_number", ""),
-                      "product_id": attrs.get("product_id", ""),
-                      "brand": brand,
-                      "category_primary": primary,
-                      "category_secondary": secondary,
-                      "price": price,
-                      "availability": availability,
-                      "url": url,
-                  }
-                  f_out.write(json.dumps(record, ensure_ascii=False) + "\n")
-                  count += 1
-                  p.clear()
-
-          print(f"Inspected {inspected} products total")
-          print(f"Wrote {count} skincare records (skipped {skipped_no_url} with no URL)")
+          print(f"\nTotal inspected: {inspected}")
+          print(f"Total wrote: {count} skincare records (skipped {skipped_no_url} with no URL)")
           if count < 50:
               raise SystemExit(f"ERROR: Fewer than 50 skincare records ({count})")
           PYEOF
