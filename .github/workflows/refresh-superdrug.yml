@@ -4,7 +4,7 @@ name: refresh-superdrug
 #
 # Pipeline:
 #   1. SFTP into aftp.linksynergy.com using publisher credentials
-#   2. Download Superdrug's latest feed (Rakuten merchantId 50336)
+#   2. Download Superdrug's full feed (filename: 50336_4684964_mp.xml.gz)
 #   3. Decompress, filter to skincare-only, convert XML -> NDJSON
 #   4. Re-gzip and upload to Supabase Storage at feeds/superdrug/latest.ndjson.gz
 #   5. POST to import-rakuten-feed function to apply the import
@@ -22,6 +22,9 @@ on:
     - cron: '0 3 * * 1'  # Mon 03:00 UTC
   workflow_dispatch:      # Allow manual trigger
 
+env:
+  FEED_FILENAME: 50336_4684964_mp.xml.gz
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
@@ -38,41 +41,29 @@ jobs:
           SFTP_PASSWORD: ${{ secrets.RAKUTEN_SFTP_PASSWORD }}
         run: |
           mkdir -p feed
-          # Download Superdrug feed files (Rakuten merchantId 50336)
-          # Pattern matches files like 50336_4684964_mp.xml.gz
+          # SFTP doesn't reliably expand wildcards on this server, so we use
+          # the exact filename. The publisher ID (4684964) is stable per account.
           sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no \
             -o BatchMode=no \
-            "$SFTP_USER@aftp.linksynergy.com" <<'EOF'
+            "$SFTP_USER@aftp.linksynergy.com" <<EOF
           cd /
-          ls -la
-          mget 50336_*_mp.xml.gz feed/
+          get $FEED_FILENAME feed/$FEED_FILENAME
           bye
           EOF
-          # Drop any template or delta files that matched the pattern
-          rm -f feed/*template* feed/*delta*
-          # Pick the largest remaining .xml.gz file (the full feed)
-          LATEST=$(ls -S feed/*.xml.gz 2>/dev/null | head -1)
-          if [ -z "$LATEST" ]; then
-            echo "::error::No feed file found"
+          if [ ! -f "feed/$FEED_FILENAME" ]; then
+            echo "::error::Feed file not downloaded"
             exit 1
           fi
-          echo "Using feed: $LATEST"
-          echo "FEED_FILE=$LATEST" >> $GITHUB_ENV
           ls -lah feed/
+          echo "FEED_FILE=feed/$FEED_FILENAME" >> $GITHUB_ENV
 
       - name: Decompress, filter to skincare, convert to NDJSON
-        env:
-          XML_FILE_PATH: ${{ env.FEED_FILE }}
         run: |
-          # Decompress
-          gunzip -k "$XML_FILE_PATH"
-          XML_FILE="${XML_FILE_PATH%.gz}"
+          gunzip -k "$FEED_FILE"
+          XML_FILE="${FEED_FILE%.gz}"
           ls -lah "$XML_FILE"
           export XML_FILE
 
-          # Streaming XML -> NDJSON conversion. Filters to skincare-only and
-          # flattens the XML into one JSON object per line. The edge function
-          # reads line-by-line so memory stays bounded.
           python3 <<'PYEOF'
           import xml.etree.ElementTree as ET
           import json
@@ -94,11 +85,9 @@ jobs:
                   category = p.find("category")
                   secondary = category.findtext("secondary", "") if category is not None else ""
 
-                  # For first 50 products, capture sample categories for debug visibility
                   if inspected <= 50 and secondary:
                       sample_categories.add(secondary[:80])
 
-                  # Skip non-skincare
                   if "Skincare" not in secondary:
                       p.clear()
                       continue
@@ -148,8 +137,6 @@ jobs:
           PYEOF
 
           ls -lah superdrug_skincare.ndjson
-
-          # Gzip the NDJSON output
           gzip -9 superdrug_skincare.ndjson
           ls -lah superdrug_skincare.ndjson.gz
 
@@ -158,7 +145,6 @@ jobs:
           PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
-          # Upload to bucket "rakuten-feeds" at path feeds/superdrug/latest.ndjson.gz
           curl -fsSL -X POST \
             "https://${PROJECT_REF}.supabase.co/storage/v1/object/rakuten-feeds/feeds/superdrug/latest.ndjson.gz" \
             -H "Authorization: Bearer ${SERVICE_KEY}" \
