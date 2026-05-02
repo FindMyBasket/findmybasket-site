@@ -398,6 +398,19 @@
       display: flex; align-items: center; justify-content: center; gap: 8px;
     }
     .amazon-btn:hover { border-color: rgba(255,153,0,0.4); color: #FF9900; }
+    .ebay-btn {
+      width: 100%; padding: 12px;
+      background: transparent;
+      color: rgba(250,248,244,0.5);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 400;
+      cursor: pointer; margin-top: 8px;
+      transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .ebay-btn:hover { border-color: rgba(229,16,59,0.4); color: #E53238; }
     .amazon-section {
       margin-top: 24px;
       padding-top: 20px;
@@ -654,6 +667,7 @@
     <div class="amazon-section" id="amazonSection" style="display:none;">
       <div class="amazon-label">Also worth checking</div>
       <div id="amazonButtons"></div>
+      <div id="ebayButtons"></div>
     </div>
   </div>
 
@@ -888,29 +902,12 @@
     searchInput.value = '';
     searchResults.classList.remove('visible');
     renderRoutine();
-    resetSaveRoutineForm();
   }
 
   function removeFromRoutine(id) {
     routine = routine.filter(p => p.id !== id);
     renderRoutine();
-    resetSaveRoutineForm();
     if (routine.length === 0) resetResults();
-  }
-
-  // Re-enable the save routine form whenever the routine changes,
-  // so users can re-save updated routines and see fresh feedback.
-  function resetSaveRoutineForm() {
-    const btn = document.getElementById('saveRoutineBtn');
-    const emailEl = document.getElementById('saveRoutineEmail');
-    const successEl = document.getElementById('saveRoutineSuccess');
-    const errorEl = document.getElementById('saveRoutineError');
-    if (!btn) return;
-    btn.disabled = false;
-    btn.textContent = 'Update saved routine';
-    emailEl.disabled = false;
-    successEl.classList.remove('visible');
-    errorEl.classList.remove('visible');
   }
 
   const emojis = ['🧴', '✨', '💧', '🌿', '☀️', '🫧', '💆', '🌸'];
@@ -1156,30 +1153,19 @@
 
   function renderResults(options, worstCase) {
     const bestTotal = options[0].total;
-
-    // Savings = best basket vs next-best basket (consistent with card 'Save £X').
-    // If only one option exists (rare, e.g. single-retailer fallback), compare
-    // against worstCase using total (includes delivery) so headline matches cards.
-    const comparisonTotal = options.length > 1 ? options[1].total : worstCase;
-    const saving = comparisonTotal - bestTotal;
+    const saving = worstCase - options[0].productsTotal;
 
     // Show savings summary
     const summary = document.getElementById('savingsSummary');
     document.getElementById('savingsAmount').textContent = `£${saving.toFixed(2)}`;
-    document.getElementById('savingsDesc').textContent = options.length > 1
-      ? `vs the next-best basket option`
-      : `vs buying everything from a single retailer`;
+    document.getElementById('savingsDesc').textContent = `on product prices compared to buying each product at its most expensive available price`;
     summary.classList.add('visible');
     document.getElementById('saveRoutineCard').classList.add('visible');
 
     const container = document.getElementById('resultsContainer');
     container.innerHTML = options.map((opt, i) => {
       const isBest = i === 0;
-      // Each card shows its own saving vs the next-best basket (or vs worst if only one option)
-      const cardComparison = options.length > 1
-        ? (isBest ? options[1].total : worstCase)
-        : worstCase;
-      const savingVsWorst = cardComparison - opt.total;
+      const savingVsWorst = worstCase - opt.total;
       const deliveryText = opt.deliveryCost === 0
         ? '<span class="delivery-free">Free delivery</span>'
         : `Delivery: £${opt.deliveryCost.toFixed(2)}`;
@@ -1200,7 +1186,18 @@
       const shopLinks = Object.entries(retailerUrls)
         .map(([name, url]) => `<a href="${url}" target="_blank" rel="noopener" class="shop-retailer-btn">Shop ${name} →</a>`)
         .join('');
-      const allUrlsJson = JSON.stringify(Object.values(retailerUrls)).replace(/"/g, '&quot;');
+
+      // Build per-product URL list for "Open all products" — one tab per product
+      // pointing to the chosen retailer's product page. This saves the user
+      // searching for each product when they get to the retailer site.
+      const productLinks = opt.breakdown
+        .filter(b => b.url)
+        .map(b => ({
+          name: `${b.product.brand} ${b.product.name}`,
+          url: b.url,
+          retailer: b.retailerName,
+        }));
+      const productLinksJson = JSON.stringify(productLinks).replace(/"/g, '&quot;');
 
       // Derive the actual distinct retailer count from the breakdown — source of truth
       const distinctRetailerCount = new Set(
@@ -1229,7 +1226,7 @@
             </div>
           </div>
           ${isBest ? `<div class="shop-actions">
-            ${Object.keys(retailerUrls).length > 1 ? `<button class="shop-all-btn" onclick="openAllRetailers(${allUrlsJson})">Open all retailers →</button>` : ''}
+            ${productLinks.length > 1 ? `<button class="shop-all-btn" onclick="openAllProducts(${productLinksJson})">Open all ${productLinks.length} products →</button>` : ''}
             ${shopLinks || '<a href="/index.html#waitlist" class="shop-btn">Join waitlist to shop →</a>'}
           </div>` : ''}
         </div>
@@ -1244,6 +1241,18 @@
         Check ${p.brand} ${p.name} on Amazon
       </a>
     `).join('');
+
+    // Show eBay fallback buttons (one per product, mirrors Amazon pattern).
+    // EPN params: mkrid=710-53481-19255-0 is eBay UK's GeoCookie ID.
+    // campid=7221119 is our Partner Network campaign ID.
+    const ebayBtns = document.getElementById('ebayButtons');
+    ebayBtns.innerHTML = routine.map(p => `
+      <a href="https://www.ebay.co.uk/sch/i.html?_nkw=${encodeURIComponent(p.brand + ' ' + p.name)}&_sacat=26396&mkrid=710-53481-19255-0&campid=7221119&customid=findmybasket&toolid=10001" target="_blank" rel="noopener" class="ebay-btn">
+        <svg width="32" height="14" viewBox="0 0 100 40" style="flex-shrink:0"><text x="0" y="30" font-family="Arial,sans-serif" font-weight="bold" font-size="32"><tspan fill="#E53238">e</tspan><tspan fill="#0064D2">b</tspan><tspan fill="#F5AF02">a</tspan><tspan fill="#86B817">y</tspan></text></svg>
+        Check ${p.brand} ${p.name} on eBay
+      </a>
+    `).join('');
+
     document.getElementById('amazonSection').style.display = 'block';
   }
 
@@ -1303,8 +1312,7 @@ try {
       successEl.textContent = mode === 'updated'
         ? "✓ Routine updated. We'll email you with this month's best prices."
         : "✓ Saved. We'll email you with this month's best prices.";
-      btn.textContent = mode === 'updated' ? 'Updated ✓' : 'Saved ✓';
-      btn.disabled = true;
+      btn.textContent = 'Saved ✓';
       emailEl.disabled = true;
       // Track in GA if available
       if (typeof gtag === 'function') {
@@ -1322,29 +1330,91 @@ try {
     }
   }
 
-  function openAllRetailers(urls) {
-    if (!urls || urls.length === 0) return;
+  // Open one tab per product, each going directly to the chosen retailer's
+  // product page. Saves users searching for each product when they arrive
+  // at the retailer.
+  //
+  // Approach 3: try synchronous window.open() for all products. If browser
+  // blocks any (popup blocker), show a modal listing the remaining links
+  // so the user can click each one individually (each click = one tab,
+  // guaranteed to work).
+  function openAllProducts(products) {
+    if (!products || products.length === 0) return;
 
-    // Open all URLs synchronously within the user click handler.
-    // Browsers only allow multiple popups if all window.open calls happen
-    // inside the same user-gesture stack (no setTimeout).
-    const opened = [];
+    // First, try to open them all synchronously inside this click handler.
+    // Browsers permit multiple window.open() calls in the same user-gesture
+    // stack only if popups are allowed for this origin.
     const blocked = [];
-    urls.forEach(url => {
-      const win = window.open(url, '_blank', 'noopener,noreferrer');
-      if (win) {
-        opened.push(url);
-      } else {
-        blocked.push(url);
+    products.forEach(p => {
+      const win = window.open(p.url, '_blank', 'noopener,noreferrer');
+      if (!win || win.closed || typeof win.closed === 'undefined') {
+        blocked.push(p);
       }
     });
 
-    // If any were blocked, give the user fallback links
+    // If any were blocked, show a fallback modal with clickable links.
     if (blocked.length > 0) {
-      const msg = `Your browser blocked ${blocked.length} tab${blocked.length > 1 ? 's' : ''}. ` +
-        `Please allow popups for findmybasket.co.uk, or click the individual "Shop" buttons below.`;
-      alert(msg);
+      showProductLinksModal(blocked);
     }
+
+    if (typeof gtag === 'function') {
+      gtag('event', 'open_all_products', {
+        product_count: products.length,
+        blocked_count: blocked.length,
+      });
+    }
+  }
+
+  // Fallback modal: shows a list of clickable product links so the user
+  // can open each tab individually with their own click (always works).
+  function showProductLinksModal(products) {
+    // Remove any existing modal first
+    const existing = document.getElementById('productLinksModal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'productLinksModal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) overlay.remove();
+    });
+
+    const dialog = document.createElement('div');
+    dialog.style.cssText = 'background:#fff;border-radius:12px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
+
+    const title = document.createElement('h3');
+    title.textContent = 'Open your products';
+    title.style.cssText = 'margin:0 0 8px;font-size:18px;font-weight:600;color:#1a1a1a;';
+
+    const subtitle = document.createElement('p');
+    subtitle.textContent = 'Your browser blocked some of the popups. Click each link below to open it in a new tab.';
+    subtitle.style.cssText = 'margin:0 0 16px;font-size:14px;color:#666;line-height:1.4;';
+
+    const list = document.createElement('div');
+    list.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+    products.forEach(p => {
+      const link = document.createElement('a');
+      link.href = p.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = `${p.name} → ${p.retailer}`;
+      link.style.cssText = 'display:block;padding:12px;border:1px solid #e5e5e5;border-radius:8px;color:#1a1a1a;text-decoration:none;font-size:14px;transition:background 0.15s;';
+      link.addEventListener('mouseenter', () => { link.style.background = '#f5f5f5'; });
+      link.addEventListener('mouseleave', () => { link.style.background = '#fff'; });
+      list.appendChild(link);
+    });
+
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Close';
+    closeBtn.style.cssText = 'margin-top:16px;padding:10px 20px;border:none;background:#1a1a1a;color:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;width:100%;';
+    closeBtn.addEventListener('click', () => overlay.remove());
+
+    dialog.appendChild(title);
+    dialog.appendChild(subtitle);
+    dialog.appendChild(list);
+    dialog.appendChild(closeBtn);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
   }
 
   function resetResults() {
