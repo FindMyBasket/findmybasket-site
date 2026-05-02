@@ -1256,19 +1256,47 @@
     const bestTotal = options[0].total;
 
     // Honest saving = optimal basket total vs the next-best alternative.
-    // For a single product, this is the difference between cheapest and
-    // second-cheapest retailer. For a multi-product routine, this is the
-    // difference between the optimal split and the next-best split.
-    // If there's only one option (e.g. only one retailer has the product),
-    // saving is £0 and we hide the panel.
+    // Hide the headline if any single product in the basket has a price
+    // spread > 2.5x between min and max retailer (likely a bad merge slipping through).
     let saving = 0;
+    let suspectProductDetected = false;
+
     if (options.length >= 2) {
       saving = options[1].total - options[0].total;
     }
 
-    // Show savings summary only when there's a real saving to surface
+    // Defensive guard: check each product's price spread across retailers
+    // If any product has max > 2.5x min, that's almost certainly a bad merge.
+    // Hide the savings figure rather than risk surfacing a fake comparison.
+    if (options[0] && options[0].breakdown) {
+      const productPriceMap = {};
+      // Build a map of product_id -> all retailer prices we've seen
+      for (const opt of options) {
+        for (const item of opt.breakdown || []) {
+          if (item.product && item.price !== null && item.price !== undefined) {
+            const pid = item.product.id;
+            if (!productPriceMap[pid]) productPriceMap[pid] = [];
+            productPriceMap[pid].push(item.price);
+          }
+        }
+      }
+      // Check each product's spread
+      for (const pid in productPriceMap) {
+        const prices = productPriceMap[pid];
+        if (prices.length >= 2) {
+          const min = Math.min(...prices);
+          const max = Math.max(...prices);
+          if (min > 0 && max / min > 2.5) {
+            suspectProductDetected = true;
+            break;
+          }
+        }
+      }
+    }
+
+    // Show savings summary only when there's a real saving AND no suspect comparison
     const summary = document.getElementById('savingsSummary');
-    if (saving > 0.01) {
+    if (saving > 0.01 && !suspectProductDetected) {
       document.getElementById('savingsAmount').textContent = `£${saving.toFixed(2)}`;
       document.getElementById('savingsDesc').textContent = `vs the next-best option across our partnered retailers`;
       summary.classList.add('visible');
