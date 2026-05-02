@@ -593,18 +593,20 @@
 
     <!-- Search -->
     <div class="filter-section">
-      <span class="filter-label">Filter by skin concern</span>
+      <span class="filter-label">Filter by product type</span>
       <div class="filter-chips" id="filterChips">
-        <button class="chip" data-concern="hydration" onclick="toggleConcern('hydration', this)"><span class="chip-icon">💧</span>Hydration</button>
-        <button class="chip" data-concern="brightening" onclick="toggleConcern('brightening', this)"><span class="chip-icon">✨</span>Brightening</button>
-        <button class="chip" data-concern="anti-ageing" onclick="toggleConcern('anti-ageing', this)"><span class="chip-icon">⏳</span>Anti-ageing</button>
-        <button class="chip" data-concern="acne" onclick="toggleConcern('acne', this)"><span class="chip-icon">🎯</span>Acne</button>
-        <button class="chip" data-concern="soothing" onclick="toggleConcern('soothing', this)"><span class="chip-icon">🌿</span>Soothing</button>
-        <button class="chip" data-concern="sensitive" onclick="toggleConcern('sensitive', this)"><span class="chip-icon">🌸</span>Sensitive</button>
-        <button class="chip" data-concern="pores" onclick="toggleConcern('pores', this)"><span class="chip-icon">🔬</span>Pores</button>
-        <button class="chip" data-concern="barrier" onclick="toggleConcern('barrier', this)"><span class="chip-icon">🛡️</span>Barrier</button>
-        <button class="chip" data-concern="exfoliation" onclick="toggleConcern('exfoliation', this)"><span class="chip-icon">🧪</span>Exfoliation</button>
-        <button class="chip" data-concern="sun-protection" onclick="toggleConcern('sun-protection', this)"><span class="chip-icon">☀️</span>Sun protection</button>
+        <button class="chip" data-category="Cleanser" onclick="toggleCategory('Cleanser', this)"><span class="chip-icon">🫧</span>Cleanser</button>
+        <button class="chip" data-category="Toner" onclick="toggleCategory('Toner', this)"><span class="chip-icon">💧</span>Toner</button>
+        <button class="chip" data-category="Serum" onclick="toggleCategory('Serum', this)"><span class="chip-icon">✨</span>Serum</button>
+        <button class="chip" data-category="Moisturiser" onclick="toggleCategory('Moisturiser', this)"><span class="chip-icon">🧴</span>Moisturiser</button>
+        <button class="chip" data-category="SPF" onclick="toggleCategory('SPF', this)"><span class="chip-icon">☀️</span>SPF</button>
+        <button class="chip" data-category="Eye Care" onclick="toggleCategory('Eye Care', this)"><span class="chip-icon">👁️</span>Eye Care</button>
+        <button class="chip" data-category="Mask" onclick="toggleCategory('Mask', this)"><span class="chip-icon">🎭</span>Mask</button>
+        <button class="chip" data-category="Treatment" onclick="toggleCategory('Treatment', this)"><span class="chip-icon">🎯</span>Treatment</button>
+        <button class="chip" data-category="Oil" onclick="toggleCategory('Oil', this)"><span class="chip-icon">🪔</span>Oil</button>
+        <button class="chip" data-category="Exfoliator" onclick="toggleCategory('Exfoliator', this)"><span class="chip-icon">🧪</span>Exfoliator</button>
+        <button class="chip" data-category="Lip Care" onclick="toggleCategory('Lip Care', this)"><span class="chip-icon">💋</span>Lip Care</button>
+        <button class="chip" data-category="Mist" onclick="toggleCategory('Mist', this)"><span class="chip-icon">💨</span>Mist</button>
       </div>
     </div>
     <div class="search-wrap">
@@ -683,7 +685,7 @@
   // ── STATE ──
   let routine = []; // array of product objects
   let searchTimeout = null;
-  let activeConcern = null;
+  let activeCategory = null;
   let retailers = [];
 
   // ── LOAD RETAILERS ON START ──
@@ -741,27 +743,27 @@
   loadRetailers().then(() => loadRoutineFromUrl());
 
   // ── CONCERN FILTER ──
-  function toggleConcern(concern, el) {
-    if (activeConcern === concern) {
-      activeConcern = null;
+  function toggleCategory(category, el) {
+    if (activeCategory === category) {
+      activeCategory = null;
       document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
     } else {
-      activeConcern = concern;
+      activeCategory = category;
       document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
       el.classList.add('active');
     }
-    // Re-run search if there's a query, otherwise clear results
+    // Re-run search if there's a query, otherwise show category browse results
     const q = document.getElementById('searchInput').value.trim();
     if (q.length >= 2) {
       searchProducts(q);
-    } else if (activeConcern) {
-      searchByConcern();
+    } else if (activeCategory) {
+      searchByCategory();
     } else {
       document.getElementById('searchResults').classList.remove('visible');
     }
   }
 
-  async function searchByConcern() {
+  async function searchByCategory() {
     const searchResults = document.getElementById('searchResults');
     const searchSpinner = document.getElementById('searchSpinner');
     searchSpinner.classList.add('active');
@@ -769,13 +771,13 @@
     const { data } = await db
       .from('products')
       .select('id, name, brand, category, concerns')
-      .contains('concerns', [activeConcern])
+      .eq('category', activeCategory)
       .limit(8);
 
     searchSpinner.classList.remove('active');
 
     if (!data || data.length === 0) {
-      searchResults.innerHTML = `<div class="no-results">No products found for this concern</div>`;
+      searchResults.innerHTML = `<div class="no-results">No products found in this category</div>`;
       searchResults.classList.add('visible');
       return;
     }
@@ -827,8 +829,8 @@
       .select('id, name, brand, category, concerns')
       .or(`name.ilike.%${query}%,brand.ilike.%${query}%`)
       .limit(25);
-    if (activeConcern) {
-      q2 = q2.contains('concerns', [activeConcern]);
+    if (activeCategory) {
+      q2 = q2.eq('category', activeCategory);
     }
     let { data, error } = await q2;
 
@@ -843,7 +845,7 @@
         fallback = fallback.or(`name.ilike.%${w}%,brand.ilike.%${w}%`);
       }
       fallback = fallback.limit(25);
-      if (activeConcern) fallback = fallback.contains('concerns', [activeConcern]);
+      if (activeCategory) fallback = fallback.eq('category', activeCategory);
       const { data: fallbackData } = await fallback;
       if (fallbackData && fallbackData.length > (data?.length || 0)) {
         data = fallbackData;
