@@ -172,6 +172,9 @@
     .result-info { flex: 1; }
     .result-name { font-size: 14px; font-weight: 500; color: var(--ink); }
     .result-brand { font-size: 12px; color: var(--ink-light); margin-top: 2px; }
+    .result-multi-retailer {
+      color: var(--sage); font-weight: 500;
+    }
     .result-category {
       font-size: 11px; padding: 3px 10px;
       background: var(--cream); border: 1px solid var(--border);
@@ -191,6 +194,19 @@
     .no-results {
       padding: 20px; text-align: center;
       font-size: 14px; color: var(--ink-light);
+    }
+    .category-show-more {
+      padding: 12px; text-align: center;
+      border-top: 1px solid var(--border);
+    }
+    .category-show-more button {
+      background: transparent; border: 1px solid var(--border);
+      color: var(--ink); font-family: inherit; font-size: 13px;
+      padding: 8px 20px; border-radius: 100px; cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .category-show-more button:hover {
+      background: var(--cream); border-color: var(--ink);
     }
 
     /* ── ROUTINE LIST ── */
@@ -686,6 +702,8 @@
   let routine = []; // array of product objects
   let searchTimeout = null;
   let activeCategory = null;
+  let categoryPage = 0;
+  let categoryHasMore = false;
   let retailers = [];
 
   // ── LOAD RETAILERS ON START ──
@@ -752,6 +770,9 @@
       document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
       el.classList.add('active');
     }
+    // Reset pagination when category changes
+    categoryPage = 0;
+    categoryHasMore = false;
     // Re-run search if there's a query, otherwise show category browse results
     const q = document.getElementById('searchInput').value.trim();
     if (q.length >= 2) {
@@ -763,42 +784,120 @@
     }
   }
 
-  async function searchByCategory() {
+  // Browse products in a category. Fetches a page of products plus their
+  // in_stock retailer_prices so we can sort by retailer count (multi-retailer
+  // products surface first — that's where price comparison adds value).
+  // Pagination: each call fetches PAGE_SIZE products. "Show more" increments
+  // categoryPage and appends.
+  async function searchByCategory(append = false) {
+    const PAGE_SIZE = 25;
     const searchResults = document.getElementById('searchResults');
     const searchSpinner = document.getElementById('searchSpinner');
     searchSpinner.classList.add('active');
 
-    const { data } = await db
+    // Fetch one page of products in this category, with their in-stock
+    // retailer_prices joined inline so we can rank by retailer count.
+    // Fetch a wider window so client-side multi-retailer sort has enough
+    // products to choose from; then slice down to PAGE_SIZE for display.
+    const FETCH_WINDOW = PAGE_SIZE * 4;
+    const start = categoryPage * FETCH_WINDOW;
+    const end = start + FETCH_WINDOW - 1;
+
+    const { data, error } = await db
       .from('products')
-      .select('id, name, brand, category, concerns')
+      .select('id, name, brand, category, concerns, retailer_prices!inner(retailer_id, in_stock)')
       .eq('category', activeCategory)
-      .limit(8);
+      .eq('retailer_prices.in_stock', true)
+      .order('brand', { ascending: true })
+      .order('name', { ascending: true })
+      .range(start, end);
 
     searchSpinner.classList.remove('active');
 
-    if (!data || data.length === 0) {
-      searchResults.innerHTML = `<div class="no-results">No products found in this category</div>`;
+    if (error) {
+      console.error('Category browse error:', error);
+      searchResults.innerHTML = `<div class="no-results">Error loading products</div>`;
       searchResults.classList.add('visible');
       return;
     }
 
-    searchResults.innerHTML = data.map(p => {
+    if (!data || data.length === 0) {
+      if (!append) {
+        searchResults.innerHTML = `<div class="no-results">No products found in this category</div>`;
+        searchResults.classList.add('visible');
+      }
+      categoryHasMore = false;
+      renderCategoryFooter();
+      return;
+    }
+
+    // Compute retailer count per product (distinct retailer_ids in in-stock prices)
+    const enriched = data.map(p => {
+      const retailerIds = new Set((p.retailer_prices || []).map(rp => rp.retailer_id));
+      return { ...p, retailerCount: retailerIds.size };
+    });
+
+    // Sort: multi-retailer (count >= 2) first, then by retailer count desc,
+    // then alphabetical brand+name within each tier.
+    enriched.sort((a, b) => {
+      if (a.retailerCount !== b.retailerCount) return b.retailerCount - a.retailerCount;
+      const aBrand = (a.brand || '').toLowerCase();
+      const bBrand = (b.brand || '').toLowerCase();
+      if (aBrand !== bBrand) return aBrand.localeCompare(bBrand);
+      return (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase());
+    });
+
+    // Take only the page-size slice from the sorted window
+    const pageData = enriched.slice(0, PAGE_SIZE);
+    categoryHasMore = data.length === FETCH_WINDOW;  // probably more available
+
+    const itemsHTML = pageData.map(p => {
       const safeName = (p.name || '').replace(/'/g,"\\'");
       const safeBrand = (p.brand || '').replace(/'/g,"\\'");
       const safeCategory = p.category || '';
       const args = `${p.id}, '${safeName}', '${safeBrand}', '${safeCategory}'`;
+      const retailerBadge = p.retailerCount >= 2
+        ? `<span class="result-multi-retailer">${p.retailerCount} retailers</span>`
+        : '';
       return `
       <div class="search-result-item" onmousedown="event.preventDefault(); addToRoutine(${args})" ontouchstart="event.preventDefault(); addToRoutine(${args})">
         <div class="result-info">
           <div class="result-name">${p.name}</div>
-          <div class="result-brand">${p.brand || ''}</div>
+          <div class="result-brand">${p.brand || ''}${retailerBadge ? ' · ' + retailerBadge : ''}</div>
         </div>
         <span class="result-category">${p.category || 'Skincare'}</span>
         <button class="add-btn">+</button>
       </div>
     `;
     }).join('');
+
+    if (append) {
+      // Replace the "show more" footer with the new items + new footer
+      const footer = document.getElementById('categoryShowMore');
+      if (footer) footer.remove();
+      searchResults.insertAdjacentHTML('beforeend', itemsHTML);
+    } else {
+      searchResults.innerHTML = itemsHTML;
+    }
     searchResults.classList.add('visible');
+    renderCategoryFooter();
+  }
+
+  function renderCategoryFooter() {
+    const searchResults = document.getElementById('searchResults');
+    const existing = document.getElementById('categoryShowMore');
+    if (existing) existing.remove();
+    if (!categoryHasMore) return;
+    const footer = document.createElement('div');
+    footer.id = 'categoryShowMore';
+    footer.className = 'category-show-more';
+    footer.innerHTML = `<button onmousedown="event.preventDefault(); loadMoreCategory()" ontouchstart="event.preventDefault(); loadMoreCategory()">Show more</button>`;
+    searchResults.appendChild(footer);
+  }
+
+  function loadMoreCategory() {
+    categoryPage += 1;
+    searchByCategory(true);
   }
 
 
