@@ -661,7 +661,7 @@
     <div class="savings-summary" id="savingsSummary">
       <div class="savings-summary-label">YOU COULD SAVE</div>
       <div class="savings-summary-amount" id="savingsAmount">£0.00</div>
-      <div class="savings-summary-desc" id="savingsDesc">vs buying everything at the most expensive retailer</div>
+      <div class="savings-summary-desc" id="savingsDesc">vs the next-best option across our partnered retailers</div>
     </div>
 
     <div class="save-routine-card" id="saveRoutineCard">
@@ -1254,19 +1254,38 @@
 
   function renderResults(options, worstCase) {
     const bestTotal = options[0].total;
-    const saving = worstCase - options[0].productsTotal;
 
-    // Show savings summary
+    // Honest saving = optimal basket total vs the next-best alternative.
+    // For a single product, this is the difference between cheapest and
+    // second-cheapest retailer. For a multi-product routine, this is the
+    // difference between the optimal split and the next-best split.
+    // If there's only one option (e.g. only one retailer has the product),
+    // saving is £0 and we hide the panel.
+    let saving = 0;
+    if (options.length >= 2) {
+      saving = options[1].total - options[0].total;
+    }
+
+    // Show savings summary only when there's a real saving to surface
     const summary = document.getElementById('savingsSummary');
-    document.getElementById('savingsAmount').textContent = `£${saving.toFixed(2)}`;
-    document.getElementById('savingsDesc').textContent = `on product prices compared to buying each product at its most expensive available price`;
-    summary.classList.add('visible');
+    if (saving > 0.01) {
+      document.getElementById('savingsAmount').textContent = `£${saving.toFixed(2)}`;
+      document.getElementById('savingsDesc').textContent = `vs the next-best option across our partnered retailers`;
+      summary.classList.add('visible');
+    } else {
+      summary.classList.remove('visible');
+    }
     document.getElementById('saveRoutineCard').classList.add('visible');
+
+    // Worst viable single-retailer or split option (not phantom delivery-inflated worst case)
+    const worstViableTotal = options.length > 0
+      ? Math.max(...options.map(o => o.total))
+      : 0;
 
     const container = document.getElementById('resultsContainer');
     container.innerHTML = options.map((opt, i) => {
       const isBest = i === 0;
-      const savingVsWorst = worstCase - opt.total;
+      const savingVsWorst = worstViableTotal - opt.total;
       const deliveryText = opt.deliveryCost === 0
         ? '<span class="delivery-free">Free delivery</span>'
         : `Delivery: £${opt.deliveryCost.toFixed(2)}`;
