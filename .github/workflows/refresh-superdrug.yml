@@ -7,6 +7,16 @@ name: refresh-superdrug
 # <product> tags. Our iterparse loop must use depth-aware processing so we
 # only act on top-level products, otherwise inner <URL><product> tags get
 # mistaken for products and the .clear() call wipes URLs before extraction.
+#
+# Extracted fields per product:
+#   name, sku, product_id, brand, category_primary, category_secondary,
+#   price, availability, url, upc, mpn
+#
+# upc = <upc> at top level of product. ~99% coverage in real Superdrug
+# data. Used for cross-retailer EAN matching by import-rakuten-feed.
+# mpn = <mpn> at top level. Superdrug currently doesn't supply this, but
+# we extract it defensively so adding it later doesn't require another
+# converter change.
 
 on:
   schedule:
@@ -67,6 +77,8 @@ jobs:
           count = 0
           skipped_no_url = 0
           inspected = 0
+          with_upc = 0
+          with_mpn = 0
 
           with open("superdrug_skincare.ndjson", "w", encoding="utf-8") as f_out:
               for xml_file in xml_files:
@@ -113,6 +125,12 @@ jobs:
                       availability = avail_elem.text if avail_elem is not None else ""
                       brand = p.findtext("brand", "") or attrs.get("manufacturer_name", "")
 
+                      # UPC and MPN at top level. p.findtext returns "" if the
+                      # element is absent, which is what we want — empty strings
+                      # are filtered out as "no value" downstream.
+                      upc = (p.findtext("upc", "") or "").strip()
+                      mpn = (p.findtext("mpn", "") or "").strip()
+
                       if not url:
                           skipped_no_url += 1
                           p.clear()
@@ -124,6 +142,11 @@ jobs:
                       except ValueError:
                           price = 0
 
+                      if upc:
+                          with_upc += 1
+                      if mpn:
+                          with_mpn += 1
+
                       record = {
                           "name": attrs.get("name", ""),
                           "sku": attrs.get("sku_number", ""),
@@ -134,6 +157,8 @@ jobs:
                           "price": price,
                           "availability": availability,
                           "url": url,
+                          "upc": upc,
+                          "mpn": mpn,
                       }
                       f_out.write(json.dumps(record, ensure_ascii=False) + "\n")
                       count += 1
@@ -144,6 +169,8 @@ jobs:
 
           print(f"\nTotal inspected: {inspected}")
           print(f"Total wrote: {count} skincare records (skipped {skipped_no_url} with no URL)")
+          print(f"With UPC: {with_upc} ({100.0 * with_upc / max(count, 1):.1f}%)")
+          print(f"With MPN: {with_mpn} ({100.0 * with_mpn / max(count, 1):.1f}%)")
           if count < 50:
               raise SystemExit(f"ERROR: Fewer than 50 skincare records ({count})")
           PYEOF
