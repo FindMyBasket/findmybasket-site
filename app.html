@@ -732,7 +732,7 @@
     // Fetch product details
     const { data, error } = await db
       .from('products')
-      .select('id, name, brand, category')
+      .select('id, name, brand, product_type')
       .in('id', productIds);
 
     if (error || !data) {
@@ -745,7 +745,7 @@
       id: p.id,
       name: p.name,
       brand: p.brand,
-      category: p.category
+      category: p.product_type
     }));
     renderRoutine();
 
@@ -812,8 +812,8 @@
 
     const { data, error } = await db
       .from('products')
-      .select('id, name, brand, category, concerns, retailer_prices!inner(retailer_id, in_stock)')
-      .eq('category', activeCategory)
+      .select('id, name, brand, product_type, concerns, retailer_prices!inner(retailer_id, in_stock)')
+      .eq('product_type', activeCategory)
       .eq('retailer_prices.in_stock', true)
       .order('brand', { ascending: true })
       .order('name', { ascending: true })
@@ -861,7 +861,7 @@
     const itemsHTML = pageData.map(p => {
       const safeName = (p.name || '').replace(/'/g,"\\'");
       const safeBrand = (p.brand || '').replace(/'/g,"\\'");
-      const safeCategory = p.category || '';
+      const safeCategory = p.product_type || '';
       const args = `${p.id}, '${safeName}', '${safeBrand}', '${safeCategory}'`;
       const retailerBadge = p.retailerCount >= 2
         ? `<span class="result-multi-retailer">${p.retailerCount} retailers</span>`
@@ -872,7 +872,7 @@
           <div class="result-name">${p.name}</div>
           <div class="result-brand">${p.brand || ''}${retailerBadge ? ' · ' + retailerBadge : ''}</div>
         </div>
-        <span class="result-category">${p.category || 'Skincare'}</span>
+        <span class="result-category">${p.product_type || 'Skincare'}</span>
         <button class="add-btn">+</button>
       </div>
     `;
@@ -932,11 +932,11 @@
     // Build OR clause: every word must appear in name OR brand somewhere
     let q2 = db
       .from('products')
-      .select('id, name, brand, category, concerns')
+      .select('id, name, brand, product_type, concerns')
       .or(`name.ilike.%${query}%,brand.ilike.%${query}%`)
       .limit(25);
     if (activeCategory) {
-      q2 = q2.eq('category', activeCategory);
+      q2 = q2.eq('product_type', activeCategory);
     }
     let { data, error } = await q2;
 
@@ -945,13 +945,13 @@
     if ((!data || data.length < 5) && words.length > 1) {
       let fallback = db
         .from('products')
-        .select('id, name, brand, category, concerns');
+        .select('id, name, brand, product_type, concerns');
       // Build a query where each word appears in name OR brand
       for (const w of words) {
         fallback = fallback.or(`name.ilike.%${w}%,brand.ilike.%${w}%`);
       }
       fallback = fallback.limit(25);
-      if (activeCategory) fallback = fallback.eq('category', activeCategory);
+      if (activeCategory) fallback = fallback.eq('product_type', activeCategory);
       const { data: fallbackData } = await fallback;
       if (fallbackData && fallbackData.length > (data?.length || 0)) {
         data = fallbackData;
@@ -987,7 +987,7 @@
     searchResults.innerHTML = data.map(p => {
       const safeName = (p.name || '').replace(/'/g,"\\'");
       const safeBrand = (p.brand || '').replace(/'/g,"\\'");
-      const safeCategory = p.category || '';
+      const safeCategory = p.product_type || '';
       const args = `${p.id}, '${safeName}', '${safeBrand}', '${safeCategory}'`;
       return `
       <div class="search-result-item" onmousedown="event.preventDefault(); addToRoutine(${args})" ontouchstart="event.preventDefault(); addToRoutine(${args})">
@@ -995,7 +995,7 @@
           <div class="result-name">${p.name}</div>
           <div class="result-brand">${p.brand || ''}</div>
         </div>
-        <span class="result-category">${p.category || 'Skincare'}</span>
+        <span class="result-category">${p.product_type || 'Skincare'}</span>
         <button class="add-btn">+</button>
       </div>
     `;
