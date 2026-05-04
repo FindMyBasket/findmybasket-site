@@ -342,6 +342,13 @@
     .basket-saving {
       font-size: 13px; color: var(--sage); font-weight: 500;
     }
+    .basket-checkout-note {
+      font-size: 11px; color: rgba(250,248,244,0.5);
+      font-style: italic; line-height: 1.4;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
 
     .basket-breakdown {
       border-top: 1px solid rgba(255,255,255,0.08);
@@ -605,7 +612,7 @@
   <!-- LEFT: Search + Routine Builder -->
   <div class="left-panel">
     <h1 class="panel-title">Build your <em>routine</em></h1>
-    <p class="panel-sub">Search for your skincare products and add them to your routine. We'll find the best value way to buy everything — in as few orders as possible.</p>
+    <p class="panel-sub">Search for your skincare products and add them to your routine. We'll find the best value way to buy everything, in as few orders as possible.</p>
 
     <!-- Search -->
     <div class="filter-section">
@@ -786,7 +793,7 @@
 
   // Browse products in a category. Fetches a page of products plus their
   // in_stock retailer_prices so we can sort by retailer count (multi-retailer
-  // products surface first — that's where price comparison adds value).
+  // products surface first, that's where price comparison adds value).
   // Pagination: each call fetches PAGE_SIZE products. "Show more" increments
   // categoryPage and appends.
   async function searchByCategory(append = false) {
@@ -933,7 +940,7 @@
     }
     let { data, error } = await q2;
 
-    // If first pass returns few results AND the query has multiple words, try a broader fallback —
+    // If first pass returns few results AND the query has multiple words, try a broader fallback 
     // match each word independently against name OR brand
     if ((!data || data.length < 5) && words.length > 1) {
       let fallback = db
@@ -1055,11 +1062,37 @@
 
     // Fetch all prices for routine products
     const productIds = routine.map(p => p.id);
-    const { data: prices } = await db
+    const { data: pricesRaw } = await db
       .from('retailer_prices')
       .select('*, retailers(*)')
       .in('product_id', productIds)
       .eq('in_stock', true);
+
+    // ── STYLEVANA DE-RANK ──
+    // Stylevana ships from a Hong Kong importer with longer delivery and
+    // potential customs charges. Surface them only when no UK alternative
+    // carries the product. Per-product check: if a product has ANY non-Stylevana
+    // in-stock row, hide Stylevana for that product.
+    const prices = (() => {
+      if (!pricesRaw) return pricesRaw;
+      const byProduct = {};
+      for (const row of pricesRaw) {
+        if (!byProduct[row.product_id]) byProduct[row.product_id] = [];
+        byProduct[row.product_id].push(row);
+      }
+      const out = [];
+      for (const pid in byProduct) {
+        const rows = byProduct[pid];
+        const hasNonStylevana = rows.some(r => r.retailers && r.retailers.name !== 'Stylevana');
+        for (const r of rows) {
+          const isStylevana = r.retailers && r.retailers.name === 'Stylevana';
+          if (!isStylevana || !hasNonStylevana) {
+            out.push(r);
+          }
+        }
+      }
+      return out;
+    })();
 
     btn.disabled = false;
     btn.classList.remove('loading');
@@ -1188,7 +1221,7 @@
         if (r2Total > 0 && r2Name) retailers.push(r2Name);
 
         // If only one retailer ended up being used, this is effectively a single-retailer option
-        // — skip to avoid duplicating an entry already in singleOptions
+        //, skip to avoid duplicating an entry already in singleOptions
         if (retailers.length < 2) continue;
 
         twoOptions.push({
@@ -1208,7 +1241,7 @@
     const top3 = allOptions;
 
     if (top3.length === 0) {
-      // No retailer covers all products — build best effort using cheapest per product
+      // No retailer covers all products, build best effort using cheapest per product
       const fallbackBreakdown = [];
       let fallbackTotal = 0;
       let allHavePrices = true;
@@ -1230,7 +1263,7 @@
         }
       }
 
-      // Derive distinct retailers from the actual breakdown — excluding the "Not tracked yet" placeholder
+      // Derive distinct retailers from the actual breakdown, excluding the "Not tracked yet" placeholder
       const fallbackRetailers = [...new Set(
         fallbackBreakdown
           .filter(b => b.retailerName && b.retailerName !== 'Not tracked yet')
@@ -1298,7 +1331,7 @@
     const summary = document.getElementById('savingsSummary');
     if (saving > 0.01 && !suspectProductDetected) {
       document.getElementById('savingsAmount').textContent = `£${saving.toFixed(2)}`;
-      document.getElementById('savingsDesc').textContent = `vs the next-best option across our partnered retailers`;
+      document.getElementById('savingsDesc').textContent = `vs the next-best option. Checkout prices may be lower with active sales or member discounts.`;
       summary.classList.add('visible');
     } else {
       summary.classList.remove('visible');
@@ -1323,7 +1356,7 @@
           <span class="breakdown-product">${b.product.name}</span>
           <div class="breakdown-retailer-price">
             <span class="breakdown-retailer">${b.retailerName}</span>
-            <span class="breakdown-price">${b.price !== null ? '£' + b.price.toFixed(2) : '—'}</span>
+            <span class="breakdown-price">${b.price !== null ? '£' + b.price.toFixed(2) : '–'}</span>
           </div>
         </div>
       `).join('');
@@ -1335,7 +1368,7 @@
         .map(([name, url]) => `<a href="${url}" target="_blank" rel="noopener" class="shop-retailer-btn">Shop ${name} →</a>`)
         .join('');
 
-      // Build per-product URL list for "Open all products" — one tab per product
+      // Build per-product URL list for "Open all products", one tab per product
       // pointing to the chosen retailer's product page. This saves the user
       // searching for each product when they get to the retailer site.
       const productLinks = opt.breakdown
@@ -1347,7 +1380,7 @@
         }));
       const productLinksJson = JSON.stringify(productLinks).replace(/"/g, '&quot;');
 
-      // Derive the actual distinct retailer count from the breakdown — source of truth
+      // Derive the actual distinct retailer count from the breakdown, source of truth
       const distinctRetailerCount = new Set(
         opt.breakdown
           .filter(b => b.retailerName && b.retailerName !== 'Not tracked yet')
@@ -1366,6 +1399,7 @@
             <div class="basket-total">£${opt.total.toFixed(2)}</div>
             ${savingVsWorst > 0 ? `<div class="basket-saving">Save £${savingVsWorst.toFixed(2)}</div>` : ''}
           </div>
+          ${isBest ? `<div class="basket-checkout-note">Final checkout price may be lower with active sales or member discounts.</div>` : ''}
           <div class="basket-breakdown">
             ${breakdownHTML}
             <div class="delivery-row">
@@ -1440,7 +1474,7 @@ try {
         active: true
       });
       let mode = 'inserted';
-      // If we hit the unique constraint, the email already exists — update instead
+      // If we hit the unique constraint, the email already exists, update instead
       if (insertResult.error) {
         if (insertResult.error.code === '23505') {
           const updateResult = await db.from('saved_routines')
