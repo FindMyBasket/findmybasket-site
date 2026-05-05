@@ -1,0 +1,68 @@
+name: Sync Branded Beauty feed to Supabase Storage
+
+# Runs daily at 03:00 UTC + on demand from the Actions tab
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync-bb-feed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download BB feed from AWIN
+        run: |
+          set -euo pipefail
+          echo "Downloading BB feed..."
+          curl -sSf -o bb-feed.csv.gz "${DARWIN_FEED_URL_BB}"
+          ls -la bb-feed.csv.gz
+          # Verify it's actually gzip
+          file bb-feed.csv.gz | grep -q "gzip compressed" || (echo "Not a gzip file"; exit 1)
+        env:
+          DARWIN_FEED_URL_BB: ${{ secrets.DARWIN_FEED_URL_BB }}
+
+      - name: Decompress
+        run: |
+          set -euo pipefail
+          gunzip bb-feed.csv.gz
+          ls -la bb-feed.csv
+          # Check it has a reasonable number of rows
+          rows=$(wc -l < bb-feed.csv)
+          echo "Decompressed feed has $rows rows"
+          if [ "$rows" -lt 100 ]; then
+            echo "Feed has fewer than 100 rows — aborting"
+            exit 1
+          fi
+
+      - name: Upload to Supabase Storage
+        run: |
+          set -euo pipefail
+          # Upload via Supabase Storage REST API.
+          # Endpoint: POST /storage/v1/object/{bucket}/{path}
+          # Use upsert to overwrite if file already exists.
+          response=$(curl -sS -w "\n%{http_code}" -X POST \
+            "${SUPABASE_URL}/storage/v1/object/awin-feeds/branded-beauty.csv" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: text/csv" \
+            -H "x-upsert: true" \
+            --data-binary @bb-feed.csv)
+
+          body=$(echo "$response" | head -n -1)
+          status=$(echo "$response" | tail -n 1)
+          echo "Upload status: $status"
+          echo "Upload response: $body"
+
+          if [ "$status" != "200" ] && [ "$status" != "201" ]; then
+            echo "Upload failed with status $status"
+            exit 1
+          fi
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Summary
+        run: |
+          echo "BB feed synced successfully to Supabase Storage"
+          echo "Bucket: awin-feeds"
+          echo "Path: branded-beauty.csv"
+          echo "Edge function should now be able to import via signed URL."
