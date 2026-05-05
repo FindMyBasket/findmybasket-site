@@ -195,7 +195,7 @@ jobs:
             -H "Authorization: Bearer ${SERVICE_KEY}" \
             -H "Content-Type: application/json" \
             --max-time 300 \
-            -d '{"retailer_id": 12, "feed_path": "feeds/superdrug/latest.ndjson.gz", "dry_run": false}')
+            -d '{"retailer_id": 12, "feed_path": "feeds/superdrug/latest.ndjson.gz", "dry_run": true}')
           echo "$RESPONSE" | head -c 4000
           echo ""
           echo "$RESPONSE" | grep -q '"applied"' || {
