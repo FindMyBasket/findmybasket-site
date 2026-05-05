@@ -74,9 +74,13 @@ jobs:
           with_upc = 0
           with_mpn = 0
 
-          # v6 update: no skincare-only pre-filter. All beauty products pass through.
-          # Categorisation now happens in import-rakuten-feed (v6.15) via the
-          # inferCategorisation function (skincare/makeup/hair).
+          # v6 update: coarse beauty pre-filter to keep feed size manageable.
+          # The Rakuten cmp feed without filtering is 40K+ rows. Combined
+          # with the edge function's 40K+ product cross-retailer index load,
+          # we exceed the 400ms CPU limit. This pre-filter cuts the feed to
+          # roughly 20-25K beauty rows. Fine-grained skincare/makeup/hair
+          # split still happens in import-rakuten-feed.
+          BEAUTY_KEYWORDS = ("Skincare", "Cosmetics", "Hair Care", "Bath & Body", "Make-up", "Makeup", "Nail")
 
           with open("superdrug_all.ndjson", "w", encoding="utf-8") as f_out:
               for xml_file in xml_files:
@@ -101,6 +105,13 @@ jobs:
                       category = p.find("category")
                       secondary = category.findtext("secondary", "") if category is not None else ""
                       primary = category.findtext("primary", "") if category is not None else ""
+
+                      # Coarse beauty pre-filter (v6 update)
+                      if not any(kw in secondary for kw in BEAUTY_KEYWORDS):
+                          p.clear()
+                          depth -= 1
+                          continue
+
                       attrs = p.attrib
                       price_elem = p.find("price/retail")
                       price_text = price_elem.text if price_elem is not None else ""
