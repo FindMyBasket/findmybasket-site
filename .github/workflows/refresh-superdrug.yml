@@ -65,7 +65,9 @@ jobs:
           import glob
           import os
 
-          xml_files = sorted(glob.glob("feed/*.xml"))
+          # Only process file 1089 (Health & Beauty). Other files contain
+          # Clothing, Sporting Goods, Furniture etc. that aren't relevant.
+          xml_files = sorted([f for f in glob.glob("feed/*.xml") if "_1089_" in f])
           print(f"Processing {len(xml_files)} XML files")
 
           count = 0
@@ -195,7 +197,7 @@ jobs:
             -H "Authorization: Bearer ${SERVICE_KEY}" \
             -H "Content-Type: application/json" \
             --max-time 300 \
-            -d '{"retailer_id": 12, "feed_path": "feeds/superdrug/latest.ndjson.gz", "dry_run": true}')
+            -d '{"retailer_id": 12, "feed_path": "feeds/superdrug/latest.ndjson.gz", "dry_run": false}')
           echo "$RESPONSE" | head -c 4000
           echo ""
           echo "$RESPONSE" | grep -q '"applied"' || {
