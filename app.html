@@ -1031,6 +1031,15 @@
     searchTimeout = setTimeout(() => searchProducts(q), 350);
   });
 
+  // On mobile, scroll the search input to the top of the visible area when
+  // focused so the dropdown renders fully above the on-screen keyboard.
+  // 350ms delay lets the keyboard finish appearing before we measure.
+  searchInput.addEventListener('focus', () => {
+    setTimeout(() => {
+      searchInput.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 350);
+  });
+
   searchInput.addEventListener('blur', () => {
     setTimeout(() => searchResults.classList.remove('visible'), 200);
   });
