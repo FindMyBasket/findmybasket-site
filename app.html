@@ -158,6 +158,13 @@
       box-shadow: var(--shadow);
       display: none;
       -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
+    }
+    @media (max-width: 768px) {
+      .search-results {
+        max-height: 40vh;
+      }
     }
     .search-results.visible { display: block; }
     .search-result-item {
