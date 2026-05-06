@@ -163,7 +163,12 @@
     }
     @media (max-width: 768px) {
       .search-results {
-        max-height: 40vh;
+        /* On mobile, the on-screen keyboard eats half the viewport when the
+           input is focused. Use small dynamic viewport units (svh) so the
+           dropdown height shrinks to fit the actual visible area, and cap at
+           300px so it never covers the rest of the page. */
+        max-height: 300px;  /* Fallback for browsers without svh support */
+        max-height: min(45svh, 300px);
       }
     }
     .search-results.visible { display: block; }
