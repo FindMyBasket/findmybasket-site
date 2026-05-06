@@ -75,6 +75,9 @@ jobs:
           inspected = 0
           with_upc = 0
           with_mpn = 0
+          with_image = 0
+          # Debug: dump first product's full XML so we can see what fields exist
+          first_product_dumped = False
 
           # v6 update: coarse beauty pre-filter to keep feed size manageable.
           # The Rakuten cmp feed without filtering is 40K+ rows. Combined
@@ -103,6 +106,13 @@ jobs:
 
                       p = elem
                       inspected += 1
+
+                      # Debug: dump first product's full XML to see what fields exist
+                      if not first_product_dumped:
+                          print("=== FIRST PRODUCT XML (debug) ===")
+                          print(ET.tostring(p, encoding="unicode")[:3000])
+                          print("=== END FIRST PRODUCT ===")
+                          first_product_dumped = True
 
                       category = p.find("category")
                       secondary = category.findtext("secondary", "") if category is not None else ""
@@ -160,6 +170,8 @@ jobs:
                           with_upc += 1
                       if mpn:
                           with_mpn += 1
+                      if image_url:
+                          with_image += 1
 
                       record = {
                           "name": attrs.get("name", ""),
@@ -173,6 +185,7 @@ jobs:
                           "url": url,
                           "upc": upc,
                           "mpn": mpn,
+                          "image_url": image_url,
                       }
                       f_out.write(json.dumps(record, ensure_ascii=False) + "\n")
                       count += 1
@@ -185,6 +198,7 @@ jobs:
           print(f"Total wrote: {count} records (skipped {skipped_no_url} with no URL)")
           print(f"With UPC: {with_upc} ({100.0 * with_upc / max(count, 1):.1f}%)")
           print(f"With MPN: {with_mpn} ({100.0 * with_mpn / max(count, 1):.1f}%)")
+          print(f"With image: {with_image} ({100.0 * with_image / max(count, 1):.1f}%)")
           if count < 50:
               raise SystemExit(f"ERROR: Fewer than 50 records ({count})")
           PYEOF
