@@ -126,6 +126,25 @@ jobs:
                       upc = (p.findtext("upc", "") or "").strip()
                       mpn = (p.findtext("mpn", "") or "").strip()
 
+                      # Image URL extraction. Rakuten cmp XML format varies
+                      # by feed; we try multiple known field locations and
+                      # take the first non-empty value.
+                      image_url = ""
+                      # Try top-level <imageurl> (most common)
+                      image_url = (p.findtext("imageurl", "") or "").strip()
+                      # Try nested <URL><image>
+                      if not image_url:
+                          url_block = p.find("URL")
+                          if url_block is not None:
+                              image_url = (url_block.findtext("image", "") or "").strip()
+                      # Try top-level <image>
+                      if not image_url:
+                          image_url = (p.findtext("image", "") or "").strip()
+                      # Try attribute (some feeds use product@image_url)
+                      if not image_url:
+                          image_url = attrs.get("image_url", "") or attrs.get("imageurl", "") or ""
+                          image_url = image_url.strip()
+
                       if not url:
                           skipped_no_url += 1
                           p.clear()
