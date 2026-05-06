@@ -93,6 +93,14 @@ jobs:
                       if isinstance(tags, str):
                           tags = [t.strip() for t in tags.split(",") if t.strip()]
                       variants = p.get("variants") or []
+                      images = p.get("images") or []
+
+                      # Use first product-level image. Variants may have their own
+                      # featured_image but it's frequently null on Shopify; the
+                      # product-level images array is more reliable.
+                      product_image = ""
+                      if images and isinstance(images, list) and len(images) > 0:
+                          product_image = images[0].get("src") or ""
 
                       # Each variant becomes a separate NDJSON row, since variants
                       # have different SKUs/prices/availability. The product-level
@@ -113,6 +121,13 @@ jobs:
                           else:
                               display_name = title
 
+                          # Prefer variant featured_image if set, fall back to product-level image
+                          variant_image = ""
+                          v_featured = v.get("featured_image")
+                          if v_featured and isinstance(v_featured, dict):
+                              variant_image = v_featured.get("src") or ""
+                          final_image = variant_image or product_image
+
                           record = {
                               "title": display_name,
                               "vendor": vendor,
@@ -123,6 +138,7 @@ jobs:
                               "price": v.get("price") or "0",
                               "available": bool(v.get("available")),
                               "url": build_affiliate_url(handle),
+                              "image_url": final_image,
                           }
                           f_out.write(json.dumps(record, ensure_ascii=False) + "\n")
                           total_variants += 1
