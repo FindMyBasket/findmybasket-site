@@ -9,3 +9,4 @@ out/
 *.pem
 .vercel
 next-env.d.ts
+.DS_Store

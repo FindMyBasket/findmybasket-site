@@ -32,6 +32,9 @@ function SiteNav() {
           <Link href="/hair" className="text-sm text-ink-light hover:text-ink transition-colors">
             Hair
           </Link>
+          <Link href="/edit/k-beauty" className="text-sm text-ink-light hover:text-ink transition-colors">
+            K-Beauty
+          </Link>
           <a href="/savings-hub.html" className="text-sm text-ink-light hover:text-ink transition-colors">
             Savings Hub
           </a>
@@ -58,6 +61,7 @@ function SiteFooter() {
               <li><Link href="/skincare" className="hover:text-cream transition-colors">Skincare</Link></li>
               <li><Link href="/makeup" className="hover:text-cream transition-colors">Makeup</Link></li>
               <li><Link href="/hair" className="hover:text-cream transition-colors">Hair</Link></li>
+              <li><Link href="/edit/k-beauty" className="hover:text-cream transition-colors">K-Beauty</Link></li>
             </ul>
           </div>
           <div>
