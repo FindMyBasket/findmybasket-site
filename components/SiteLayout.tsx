@@ -1,9 +1,5 @@
 import Link from 'next/link';
-
-// SiteLayout wraps every Next.js page with the consistent FindMyBasket
-// nav and footer. It mirrors the existing static HTML site's nav so
-// users moving between Next.js pages and legacy HTML pages don't see
-// a visual jump.
+import { Logo } from './Logo';
 
 export function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -19,8 +15,11 @@ function SiteNav() {
   return (
     <nav className="sticky top-0 z-50 bg-cream/90 backdrop-blur-md border-b border-border">
       <div className="max-w-site mx-auto px-6 py-4 flex items-center justify-between">
-        <a href="/index.html" className="font-serif text-[22px] font-semibold text-ink no-underline flex items-center gap-2.5">
-          findmybasket<span className="text-gold">.</span>
+        <a href="/index.html" className="flex items-center gap-2.5 no-underline">
+          <Logo height={32} />
+          <span className="font-serif text-[22px] font-semibold text-ink">
+            Find<span className="text-gold">My</span>Basket
+          </span>
         </a>
         <div className="hidden md:flex items-center gap-7">
           <Link href="/skincare" className="text-sm text-ink-light hover:text-ink transition-colors">
