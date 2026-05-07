@@ -1,9 +1,10 @@
 {
   "redirects": [
-    { "source": "/partners", "destination": "/partners.html", "permanent": true },
-    { "source": "/app", "destination": "/app.html", "permanent": true },
-    { "source": "/product-finder", "destination": "/product-finder.html", "permanent": true },
-    { "source": "/savings-hub", "destination": "/savings-hub.html", "permanent": true },
-    { "source": "/ingredients", "destination": "/ingredients.html", "permanent": true }
-  ]
+    { "source": "/partners", "destination": "/partners.html", "permanent": false },
+    { "source": "/app", "destination": "/app.html", "permanent": false },
+    { "source": "/product-finder", "destination": "/product-finder.html", "permanent": false },
+    { "source": "/savings-hub", "destination": "/savings-hub.html", "permanent": false }
+  ],
+  "cleanUrls": false,
+  "trailingSlash": false
 }
