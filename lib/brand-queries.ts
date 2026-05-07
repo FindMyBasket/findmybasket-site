@@ -18,26 +18,34 @@ export interface BrandProductTypeChip {
 }
 
 // Reverse-slug lookup: given a slug like "the-ordinary", find the actual
-// normalised_brand string in the database that matches.
+// normalised_brand string in the database that matches. Pulls in paginated
+// batches so we cover the full catalogue (Supabase default limit is 1000).
 export async function findBrandBySlug(slug: string): Promise<BrandLookup | null> {
-  const { data } = await supabase
-    .from('products')
-    .select('normalised_brand, brand')
-    .not('normalised_brand', 'is', null);
-
-  if (!data) return null;
-
-  // Pick the most common display name for this slug
+  const PAGE_SIZE = 1000;
+  let offset = 0;
   const matches = new Map<string, number>();
   let chosenNormalised: string | null = null;
 
-  for (const row of data) {
-    if (!row.normalised_brand) continue;
-    if (brandSlug(row.normalised_brand) === slug) {
-      chosenNormalised = row.normalised_brand;
-      const display = row.brand ?? row.normalised_brand;
-      matches.set(display, (matches.get(display) ?? 0) + 1);
+  while (true) {
+    const { data, error } = await supabase
+      .from('products')
+      .select('normalised_brand, brand')
+      .not('normalised_brand', 'is', null)
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (error || !data || data.length === 0) break;
+
+    for (const row of data) {
+      if (!row.normalised_brand) continue;
+      if (brandSlug(row.normalised_brand) === slug) {
+        chosenNormalised = row.normalised_brand;
+        const display = row.brand ?? row.normalised_brand;
+        matches.set(display, (matches.get(display) ?? 0) + 1);
+      }
     }
+
+    if (data.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
   }
 
   if (!chosenNormalised) return null;
@@ -60,7 +68,6 @@ export async function findBrandBySlug(slug: string): Promise<BrandLookup | null>
 
 // Stats for a brand page hero
 export async function getBrandStats(normalisedBrand: string): Promise<BrandStats> {
-  // Total products and category breakdown
   const { data: catRows, count: totalProducts } = await supabase
     .from('products')
     .select('top_category', { count: 'exact' })
@@ -76,7 +83,6 @@ export async function getBrandStats(normalisedBrand: string): Promise<BrandStats
     .map(([category, count]) => ({ category: category as TopCategory, count }))
     .sort((a, b) => b.count - a.count);
 
-  // Distinct retailers
   const { data: retailerRows } = await supabase
     .from('retailer_prices')
     .select('retailer_id, products!inner(normalised_brand)')
@@ -91,7 +97,6 @@ export async function getBrandStats(normalisedBrand: string): Promise<BrandStats
   };
 }
 
-// Product type chips for the brand page
 export async function getBrandProductTypes(
   normalisedBrand: string,
   limit = 12
@@ -116,7 +121,6 @@ export async function getBrandProductTypes(
     .slice(0, limit);
 }
 
-// Paginated products for a brand page
 export async function getBrandProducts(
   normalisedBrand: string,
   page = 1,
@@ -180,7 +184,6 @@ export async function getBrandProducts(
     });
   }
 
-  // Sort: multi-retailer first (by count desc + savings), then single-retailer
   featured.sort((a, b) => {
     if (b.retailer_count !== a.retailer_count) return b.retailer_count - a.retailer_count;
     return b.saving_pct - a.saving_pct;
