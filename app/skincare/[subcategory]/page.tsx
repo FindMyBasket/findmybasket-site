@@ -1,12 +1,6 @@
 import { SubcategoryPage } from '../../../components/SubcategoryPage';
-import { getValidSubcategories } from '../../../lib/subcategory-queries';
 
 export const revalidate = 3600;
-
-export async function generateStaticParams() {
-  const subs = await getValidSubcategories('skincare');
-  return subs.map(sub => ({ subcategory: sub }));
-}
 
 export async function generateMetadata({ params }: { params: { subcategory: string } }) {
   const sub = params.subcategory;
