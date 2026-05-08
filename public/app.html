@@ -885,7 +885,22 @@
     }
   }
   // Run on page load
-  loadRetailers().then(() => loadRoutineFromUrl()).then(() => loadAddedProductFromUrl());
+  loadRetailers()
+    .then(() => loadRoutineFromUrl())
+    .then(() => loadAddedProductFromUrl())
+    .then(() => {
+      // If routine is still empty after URL params, restore from localStorage
+      if (routine.length === 0) {
+        const stored = loadRoutineFromStorage();
+        if (stored.length > 0) {
+          routine = stored;
+          renderRoutine();
+        }
+      } else {
+        // Routine was loaded from URL/?add= - sync to storage
+        saveRoutineToStorage();
+      }
+    });
 
   // ── CONCERN FILTER ──
   // Switch the visible chip group when user clicks a vertical tab. Clears any
@@ -1160,6 +1175,7 @@
     searchInput.value = '';
     searchResults.classList.remove('visible');
     renderRoutine();
+    saveRoutineToStorage();
   }
 
   function removeFromRoutine(id) {
@@ -1198,6 +1214,7 @@
         <button class="remove-btn" onclick="removeFromRoutine(${p.id})">×</button>
       </div>
     `).join('');
+  saveRoutineToStorage();
   }
 
   // ── BASKET OPTIMISATION ──
@@ -1766,6 +1783,29 @@ try {
         <div class="results-placeholder-icon">⚠️</div>
         <p>${msg}</p>
       </div>`;
+  }
+  // ── ROUTINE PERSISTENCE ──
+  // Sync routine state with localStorage so it persists across pages
+  // (including the /product/[id] pages on the Next.js side of the site).
+  function saveRoutineToStorage() {
+    try {
+      localStorage.setItem('fmb_routine', JSON.stringify(routine));
+    } catch (e) {
+      console.warn('Could not save routine:', e);
+    }
+  }
+
+  function loadRoutineFromStorage() {
+    try {
+      const raw = localStorage.getItem('fmb_routine');
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.filter(it =>
+        it && typeof it === 'object' && typeof it.id === 'number'
+      ) : [];
+    } catch {
+      return [];
+    }
   }
 </script>
 

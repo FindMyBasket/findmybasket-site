@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Logo } from './Logo';
+import { RoutineIndicator } from './RoutineIndicator';
 
 export function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -7,6 +8,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
       <SiteNav />
       <main>{children}</main>
       <SiteFooter />
+      <RoutineIndicator />
     </>
   );
 }

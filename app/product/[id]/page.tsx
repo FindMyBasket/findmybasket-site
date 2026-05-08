@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { SiteLayout } from '../../../components/SiteLayout';
 import { ProductCard } from '../../../components/ProductCard';
+import { SaveToRoutineButton } from '../../../components/SaveToRoutineButton';
 import {
   getProductById,
   getRetailerOffers,
@@ -79,6 +80,14 @@ export default async function ProductPage({ params }: { params: { id: string } }
           availability: 'https://schema.org/InStock',
         }
       : undefined,
+  };
+
+  // Item shape used by the routine store
+  const routineItem = {
+    id: product.id,
+    name: product.name,
+    brand: product.brand ?? '',
+    category: product.product_type ?? '',
   };
 
   return (
@@ -186,14 +195,8 @@ export default async function ProductPage({ params }: { params: { id: string } }
               </div>
             )}
 
-            {/* Save to routine button - links to app.html with the product ID as URL param */}
             {inStockOffers.length > 0 && (
-              <a
-                href={`/app.html?add=${product.id}`}
-                className="block w-full text-center bg-warm-white border-2 border-ink text-ink rounded-full px-6 py-3 text-sm font-medium hover:bg-ink hover:text-cream transition-colors mb-4"
-              >
-                Save to routine
-              </a>
+              <SaveToRoutineButton product={routineItem} />
             )}
 
             {inStockOffers.length === 0 && offers.length > 0 && (
