@@ -1,4 +1,4 @@
-git add -A && git status | head -10import { supabase } from './supabase';
+import { supabase } from './supabase';
 import { brandSlug, type FeaturedProduct } from './queries';
 
 export interface ProductDetail {
