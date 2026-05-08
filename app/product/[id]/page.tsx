@@ -17,6 +17,24 @@ const CATEGORY_DISPLAY: Record<string, string> = {
   hair: 'Hair',
 };
 
+// Affiliate tags for retailers we don't have direct price data for, but
+// users may want to search anyway. Pulled from retailers table at build time
+// of the queries above; hard-coded here for the search-link generation.
+const AMAZON_TAG = 'findmybasket-21';
+const EBAY_CAMPID = '7221119';
+
+function buildAmazonSearchUrl(productName: string, brand: string | null): string {
+  const query = brand ? `${brand} ${productName}` : productName;
+  const encoded = encodeURIComponent(query.replace(/\s+/g, ' ').trim());
+  return `https://www.amazon.co.uk/s?k=${encoded}&tag=${AMAZON_TAG}`;
+}
+
+function buildEbaySearchUrl(productName: string, brand: string | null): string {
+  const query = brand ? `${brand} ${productName}` : productName;
+  const encoded = encodeURIComponent(query.replace(/\s+/g, ' ').trim());
+  return `https://www.ebay.co.uk/sch/i.html?_nkw=${encoded}&campid=${EBAY_CAMPID}`;
+}
+
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const id = parseInt(params.id, 10);
   if (Number.isNaN(id)) return { title: 'Product not found | FindMyBasket' };
@@ -82,13 +100,15 @@ export default async function ProductPage({ params }: { params: { id: string } }
       : undefined,
   };
 
-  // Item shape used by the routine store
   const routineItem = {
     id: product.id,
     name: product.name,
     brand: product.brand ?? '',
     category: product.product_type ?? '',
   };
+
+  const amazonUrl = buildAmazonSearchUrl(product.name, product.brand);
+  const ebayUrl = buildEbaySearchUrl(product.name, product.brand);
 
   return (
     <SiteLayout>
@@ -237,6 +257,40 @@ export default async function ProductPage({ params }: { params: { id: string } }
             )}
           </div>
         )}
+      </section>
+
+      {/* Amazon and eBay search links - not in price comparison, just additional shopping options */}
+      <section className="max-w-site mx-auto px-6 py-12">
+        <h2 className="font-serif text-3xl text-ink mb-2">Also try</h2>
+        <p className="text-ink-light mb-8">
+          Search for this product on Amazon and eBay. Prices not compared.
+        </p>
+        <div className="grid md:grid-cols-2 gap-4">
+          <a
+            href={amazonUrl}
+            target="_blank"
+            rel="nofollow sponsored noopener"
+            className="group bg-warm-white border border-border rounded-2xl p-6 hover:border-gold transition-colors flex items-center justify-between"
+          >
+            <div>
+              <p className="font-medium text-ink mb-1">Search on Amazon</p>
+              <p className="text-sm text-ink-light">Open results in a new tab</p>
+            </div>
+            <span className="text-2xl text-ink-light group-hover:text-gold transition-colors">→</span>
+          </a>
+          <a
+            href={ebayUrl}
+            target="_blank"
+            rel="nofollow sponsored noopener"
+            className="group bg-warm-white border border-border rounded-2xl p-6 hover:border-gold transition-colors flex items-center justify-between"
+          >
+            <div>
+              <p className="font-medium text-ink mb-1">Search on eBay</p>
+              <p className="text-sm text-ink-light">Open results in a new tab</p>
+            </div>
+            <span className="text-2xl text-ink-light group-hover:text-gold transition-colors">→</span>
+          </a>
+        </div>
       </section>
 
       {related.length > 0 && (
