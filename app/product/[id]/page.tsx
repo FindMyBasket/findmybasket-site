@@ -62,7 +62,6 @@ export default async function ProductPage({ params }: { params: { id: string } }
     ? Math.round(((highestPrice - lowestPrice) / highestPrice) * 100)
     : 0;
 
-  // JSON-LD structured data for Google rich results
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -91,7 +90,6 @@ export default async function ProductPage({ params }: { params: { id: string } }
       />
 
       <section className="max-w-site mx-auto px-6 py-12">
-        {/* Breadcrumb */}
         <nav className="text-sm text-ink-light mb-8 flex flex-wrap gap-1.5 items-center">
           {product.top_category && (
             <>
@@ -123,7 +121,6 @@ export default async function ProductPage({ params }: { params: { id: string } }
         </nav>
 
         <div className="grid md:grid-cols-2 gap-12 mb-12">
-          {/* Image */}
           <div className="bg-warm-white border border-border rounded-2xl aspect-square flex items-center justify-center overflow-hidden">
             {product.image_url ? (
               /* eslint-disable-next-line @next/next/no-img-element */
@@ -137,7 +134,6 @@ export default async function ProductPage({ params }: { params: { id: string } }
             )}
           </div>
 
-          {/* Hero info */}
           <div>
             {product.brand && (
               <p className="text-xs uppercase tracking-widest text-gold font-medium mb-3">
@@ -175,7 +171,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
             )}
 
             {lowestPrice !== null && (
-              <div className="bg-cream border border-border rounded-2xl p-6 mb-6">
+              <div className="bg-cream border border-border rounded-2xl p-6 mb-4">
                 <p className="text-xs uppercase tracking-widest text-ink-light mb-1.5">
                   Best price across {inStockOffers.length} retailer{inStockOffers.length === 1 ? '' : 's'}
                 </p>
@@ -190,6 +186,16 @@ export default async function ProductPage({ params }: { params: { id: string } }
               </div>
             )}
 
+            {/* Save to routine button - links to app.html with the product ID as URL param */}
+            {inStockOffers.length > 0 && (
+              <a
+                href={`/app.html?add=${product.id}`}
+                className="block w-full text-center bg-warm-white border-2 border-ink text-ink rounded-full px-6 py-3 text-sm font-medium hover:bg-ink hover:text-cream transition-colors mb-4"
+              >
+                Save to routine
+              </a>
+            )}
+
             {inStockOffers.length === 0 && offers.length > 0 && (
               <div className="bg-cream border border-border rounded-2xl p-6 mb-6">
                 <p className="text-sm text-ink-light">
@@ -201,7 +207,6 @@ export default async function ProductPage({ params }: { params: { id: string } }
         </div>
       </section>
 
-      {/* Retailer comparison */}
       <section className="max-w-site mx-auto px-6 py-12">
         <h2 className="font-serif text-3xl text-ink mb-2">Compare prices</h2>
         <p className="text-ink-light mb-8">
@@ -231,7 +236,6 @@ export default async function ProductPage({ params }: { params: { id: string } }
         )}
       </section>
 
-      {/* Related products */}
       {related.length > 0 && (
         <section className="max-w-site mx-auto px-6 py-12">
           <h2 className="font-serif text-3xl text-ink mb-2">Related products</h2>

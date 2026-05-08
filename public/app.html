@@ -853,8 +853,39 @@
     }
   }
 
+  async function loadAddedProductFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const idStr = params.get('add');
+    if (!idStr) return;
+    const id = parseInt(idStr, 10);
+    if (isNaN(id)) return;
+    // Fetch this product
+    const { data, error } = await db
+      .from('products')
+      .select('id, name, brand, product_type')
+      .eq('id', id)
+      .single();
+    if (error || !data) {
+      console.error('Failed to load product from ?add= param:', error);
+      return;
+    }
+    // Add to routine using the existing handler
+    addToRoutine(data.id, data.name, data.brand || '', data.product_type || '');
+    // Clean the URL so refreshing doesn't re-add
+    const url = new URL(window.location.href);
+    url.searchParams.delete('add');
+    window.history.replaceState({}, '', url);
+    // Track in GA
+    if (typeof gtag === 'function') {
+      gtag('event', 'add_product_from_url', {
+        product_id: data.id,
+        product_name: data.name,
+        source: 'product_page'
+      });
+    }
+  }
   // Run on page load
-  loadRetailers().then(() => loadRoutineFromUrl());
+  loadRetailers().then(() => loadRoutineFromUrl()).then(() => loadAddedProductFromUrl());
 
   // ── CONCERN FILTER ──
   // Switch the visible chip group when user clicks a vertical tab. Clears any
