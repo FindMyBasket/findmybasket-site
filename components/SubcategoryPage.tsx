@@ -16,6 +16,7 @@ interface Props {
   categoryDisplay: string;
   subcategory: string;
   page?: number;
+  productType?: string;
 }
 
 const PAGE_SIZE = 48;
@@ -25,8 +26,20 @@ function displaySub(sub: string): string {
   return sub.charAt(0).toUpperCase() + sub.slice(1);
 }
 
-export async function SubcategoryPage({ category, categoryDisplay, subcategory, page = 1 }: Props) {
-  // Validate subcategory exists for this category
+// Build a URL preserving page context but with optional filter changes
+function buildUrl(
+  category: string,
+  subcategory: string,
+  options: { type?: string | null; page?: number } = {}
+): string {
+  const params = new URLSearchParams();
+  if (options.type) params.set('type', options.type);
+  if (options.page && options.page > 1) params.set('page', String(options.page));
+  const qs = params.toString();
+  return `/${category}/${subcategory}${qs ? `?${qs}` : ''}`;
+}
+
+export async function SubcategoryPage({ category, categoryDisplay, subcategory, page = 1, productType }: Props) {
   const validSubs = await getValidSubcategories(category);
   if (!validSubs.includes(subcategory)) {
     notFound();
@@ -35,12 +48,16 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
   const [stats, productTypes, brands, productResult] = await Promise.all([
     getSubcategoryStats(category, subcategory),
     getProductTypes(category, subcategory, 12),
-    getSubcategoryTopBrands(category, subcategory, 16),
-    getSubcategoryProducts(category, subcategory, page, PAGE_SIZE),
+    getSubcategoryTopBrands(category, subcategory, 16, productType),
+    getSubcategoryProducts(category, subcategory, page, PAGE_SIZE, productType),
   ]);
 
-  // If the subcategory exists but has zero products, treat as 404
   if (stats.total_products === 0) {
+    notFound();
+  }
+
+  // If filter is active but no products match, treat as 404 to be safe
+  if (productType && productResult.totalCount === 0) {
     notFound();
   }
 
@@ -56,48 +73,82 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
           </Link>
         </p>
         <h1 className="font-serif text-5xl md:text-7xl text-ink mb-6 capitalize">
-          {subDisplay}
+          {productType ? `${productType} - ${subDisplay}` : subDisplay}
         </h1>
         <p className="text-base md:text-lg text-ink-light max-w-2xl mx-auto mb-10 leading-relaxed">
-          Compare {subDisplay.toLowerCase()} {categoryDisplay.toLowerCase()} prices across UK retailers. {stats.total_products.toLocaleString()} products from {stats.total_brands.toLocaleString()} brands.
+          {productType ? (
+            <>
+              Compare {productType.toLowerCase()} prices in {subDisplay.toLowerCase()} {categoryDisplay.toLowerCase()} across UK retailers. {productResult.totalCount.toLocaleString()} products.
+            </>
+          ) : (
+            <>
+              Compare {subDisplay.toLowerCase()} {categoryDisplay.toLowerCase()} prices across UK retailers. {stats.total_products.toLocaleString()} products from {stats.total_brands.toLocaleString()} brands.
+            </>
+          )}
         </p>
         <div className="inline-flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-ink-light">
           <span>
             <strong className="text-ink font-semibold">
-              {stats.total_products.toLocaleString()}
+              {(productType ? productResult.totalCount : stats.total_products).toLocaleString()}
             </strong>{' '}
             products
           </span>
-          <span className="text-ink-light/40">·</span>
-          <span>
-            <strong className="text-ink font-semibold">
-              {stats.total_brands.toLocaleString()}
-            </strong>{' '}
-            brands
-          </span>
-          <span className="text-ink-light/40">·</span>
-          <span>
-            <strong className="text-ink font-semibold">
-              {stats.total_retailers}
-            </strong>{' '}
-            retailers
-          </span>
+          {!productType && (
+            <>
+              <span className="text-ink-light/40">·</span>
+              <span>
+                <strong className="text-ink font-semibold">
+                  {stats.total_brands.toLocaleString()}
+                </strong>{' '}
+                brands
+              </span>
+              <span className="text-ink-light/40">·</span>
+              <span>
+                <strong className="text-ink font-semibold">
+                  {stats.total_retailers}
+                </strong>{' '}
+                retailers
+              </span>
+            </>
+          )}
         </div>
       </section>
 
       {productTypes.length > 0 && (
         <section className="max-w-site mx-auto px-6 py-12">
-          <h2 className="font-serif text-3xl text-ink mb-8">Browse by type</h2>
-          <div className="flex flex-wrap gap-2">
-            {productTypes.map(pt => (
-              <span
-                key={pt.product_type}
-                className="bg-warm-white border border-border rounded-full px-5 py-2.5 text-sm text-ink"
+          <div className="flex items-baseline justify-between mb-8 flex-wrap gap-4">
+            <h2 className="font-serif text-3xl text-ink">Browse by type</h2>
+            {productType && (
+              <Link
+                href={buildUrl(category, subcategory)}
+                className="text-sm text-ink-light hover:text-ink transition-colors"
               >
-                {pt.product_type}
-                <span className="text-ink-light ml-1.5 text-xs">{pt.count}</span>
-              </span>
-            ))}
+                ✕ Clear filter
+              </Link>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {productTypes.map(pt => {
+              const isActive = pt.product_type === productType;
+              return (
+                <Link
+                  key={pt.product_type}
+                  href={buildUrl(category, subcategory, {
+                    type: isActive ? null : pt.product_type,
+                  })}
+                  className={`rounded-full px-5 py-2.5 text-sm transition-colors border ${
+                    isActive
+                      ? 'bg-ink text-cream border-ink hover:bg-gold hover:border-gold'
+                      : 'bg-warm-white text-ink border-border hover:border-gold hover:bg-cream'
+                  }`}
+                >
+                  {pt.product_type}
+                  <span className={`ml-1.5 text-xs ${isActive ? 'text-cream/70' : 'text-ink-light'}`}>
+                    {pt.count}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}
@@ -106,7 +157,9 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
         <section className="max-w-site mx-auto px-6 py-12">
           <h2 className="font-serif text-3xl text-ink mb-2">Top brands</h2>
           <p className="text-ink-light mb-8">
-            The most stocked brands in {subDisplay.toLowerCase()} {categoryDisplay.toLowerCase()}.
+            {productType
+              ? `The most stocked brands in ${productType.toLowerCase()}.`
+              : `The most stocked brands in ${subDisplay.toLowerCase()} ${categoryDisplay.toLowerCase()}.`}
           </p>
           <div className="flex flex-wrap gap-2">
             {brands.map(brand => (
@@ -127,7 +180,7 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
         <h2 className="font-serif text-3xl text-ink mb-2">Products</h2>
         <p className="text-ink-light mb-8">
           {page > 1 ? `Page ${page} of ${totalPages}. ` : ''}
-          {productResult.totalCount.toLocaleString()} total products in this subcategory.
+          {productResult.totalCount.toLocaleString()} {productType ? `${productType.toLowerCase()} ` : ''}product{productResult.totalCount === 1 ? '' : 's'}.
         </p>
         {productResult.products.length === 0 ? (
           <div className="bg-warm-white border border-border rounded-2xl p-12 text-center text-ink-light">
@@ -145,7 +198,7 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
               <div className="flex justify-center items-center gap-2 mt-12">
                 {page > 1 && (
                   <Link
-                    href={`/${category}/${subcategory}${page > 2 ? `?page=${page - 1}` : ''}`}
+                    href={buildUrl(category, subcategory, { type: productType, page: page - 1 })}
                     className="px-5 py-2.5 bg-warm-white border border-border rounded-full text-sm text-ink hover:border-gold transition-colors"
                   >
                     ← Previous
@@ -156,7 +209,7 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
                 </span>
                 {page < totalPages && (
                   <Link
-                    href={`/${category}/${subcategory}?page=${page + 1}`}
+                    href={buildUrl(category, subcategory, { type: productType, page: page + 1 })}
                     className="px-5 py-2.5 bg-warm-white border border-border rounded-full text-sm text-ink hover:border-gold transition-colors"
                   >
                     Next →

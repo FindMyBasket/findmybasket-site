@@ -12,7 +12,6 @@ export interface ProductTypeChip {
   count: number;
 }
 
-// Stats for a category + subcategory page
 export async function getSubcategoryStats(
   category: TopCategory,
   subcategory: string
@@ -47,7 +46,6 @@ export async function getSubcategoryStats(
   };
 }
 
-// Product type chips for the subcategory page (Cleanser, Serum, Moisturiser etc.)
 export async function getProductTypes(
   category: TopCategory,
   subcategory: string,
@@ -74,18 +72,24 @@ export async function getProductTypes(
     .slice(0, limit);
 }
 
-// Top brands within this subcategory
 export async function getSubcategoryTopBrands(
   category: TopCategory,
   subcategory: string,
-  limit = 16
+  limit = 16,
+  productType?: string
 ): Promise<TopBrand[]> {
-  const { data } = await supabase
+  let query = supabase
     .from('products')
     .select('normalised_brand, brand')
     .eq('top_category', category)
     .eq('subcategory', subcategory)
     .not('normalised_brand', 'is', null);
+
+  if (productType) {
+    query = query.eq('product_type', productType);
+  }
+
+  const { data } = await query;
 
   if (!data) return [];
 
@@ -113,25 +117,29 @@ export async function getSubcategoryTopBrands(
     .slice(0, limit);
 }
 
-// Featured products in a subcategory, paginated
 export async function getSubcategoryProducts(
   category: TopCategory,
   subcategory: string,
   page = 1,
-  pageSize = 48
+  pageSize = 48,
+  productType?: string
 ): Promise<{ products: FeaturedProduct[]; totalCount: number }> {
-  // Pull the matching product IDs first - using a wider candidate pool than
-  // pageSize so we have enough multi-retailer products to fill the page
   const offset = (page - 1) * pageSize;
   const candidateLimit = pageSize * 4;
 
-  const { data: products, count: totalCount } = await supabase
+  let query = supabase
     .from('products')
     .select('id, name, brand, normalised_brand, product_type, subcategory, image_url', { count: 'exact' })
     .eq('top_category', category)
     .eq('subcategory', subcategory)
     .not('image_url', 'is', null)
-    .neq('image_url', '')
+    .neq('image_url', '');
+
+  if (productType) {
+    query = query.eq('product_type', productType);
+  }
+
+  const { data: products, count: totalCount } = await query
     .range(offset, offset + candidateLimit - 1);
 
   if (!products || products.length === 0) {
@@ -181,7 +189,6 @@ export async function getSubcategoryProducts(
     });
   }
 
-  // Sort: multi-retailer first (by count desc + savings), then single-retailer
   featured.sort((a, b) => {
     if (b.retailer_count !== a.retailer_count) return b.retailer_count - a.retailer_count;
     return b.saving_pct - a.saving_pct;
@@ -193,7 +200,6 @@ export async function getSubcategoryProducts(
   };
 }
 
-// Pre-build list of valid subcategories for static generation
 export async function getValidSubcategories(category: TopCategory): Promise<string[]> {
   const { data } = await supabase
     .from('products')
