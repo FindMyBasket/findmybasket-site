@@ -20,7 +20,6 @@ interface Props {
 
 const PAGE_SIZE = 48;
 
-// Capitalise first letter of a subcategory string for display
 function displaySub(sub: string): string {
   if (!sub) return '';
   return sub.charAt(0).toUpperCase() + sub.slice(1);
@@ -40,6 +39,11 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
     getSubcategoryProducts(category, subcategory, page, PAGE_SIZE),
   ]);
 
+  // If the subcategory exists but has zero products, treat as 404
+  if (stats.total_products === 0) {
+    notFound();
+  }
+
   const totalPages = Math.ceil(productResult.totalCount / PAGE_SIZE);
   const subDisplay = displaySub(subcategory);
 
@@ -52,7 +56,7 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
           </Link>
         </p>
         <h1 className="font-serif text-5xl md:text-7xl text-ink mb-6 capitalize">
-          {subDisplay} {categoryDisplay.toLowerCase()}
+          {subDisplay}
         </h1>
         <p className="text-base md:text-lg text-ink-light max-w-2xl mx-auto mb-10 leading-relaxed">
           Compare {subDisplay.toLowerCase()} {categoryDisplay.toLowerCase()} prices across UK retailers. {stats.total_products.toLocaleString()} products from {stats.total_brands.toLocaleString()} brands.
