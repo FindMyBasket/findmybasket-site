@@ -61,8 +61,14 @@ export async function getProductTypes(
   if (!data) return [];
 
   const counts = new Map<string, number>();
+// Catch-all product_types that match the top_category name aren't useful
+  // as filter chips - they're a junk default applied when no specific type
+  // could be inferred. Hide them from the chip UI but leave the data intact.
+  const JUNK_TYPES = new Set(['Skincare', 'Makeup', 'Hair']);
+
   for (const row of data) {
     if (!row.product_type) continue;
+    if (JUNK_TYPES.has(row.product_type)) continue;
     counts.set(row.product_type, (counts.get(row.product_type) ?? 0) + 1);
   }
 
