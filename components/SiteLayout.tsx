@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Logo } from './Logo';
 import { RoutineIndicator } from './RoutineIndicator';
+import { SiteSearch } from './SiteSearch';
 
 export function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -16,8 +17,8 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
 function SiteNav() {
   return (
     <nav className="sticky top-0 z-50 bg-cream/90 backdrop-blur-md border-b border-border">
-      <div className="max-w-site mx-auto px-6 py-4 flex items-center justify-between">
-        <a href="/index.html" className="flex items-center gap-2.5 no-underline">
+      <div className="max-w-site mx-auto px-6 py-4 flex items-center justify-between gap-4">
+        <a href="/index.html" className="flex items-center gap-2.5 no-underline flex-shrink-0">
           <Logo height={32} />
           <span className="font-serif text-[22px] font-semibold text-ink">
             Find<span className="text-gold">My</span>Basket
@@ -39,12 +40,17 @@ function SiteNav() {
           <a href="/savings-hub.html" className="text-sm text-ink-light hover:text-ink transition-colors">
             Savings Hub
           </a>
+          <SiteSearch />
           <a
             href="/app.html"
             className="bg-ink text-cream px-5 py-2.5 rounded-full text-[13px] font-medium hover:bg-gold transition-colors"
           >
             Build a routine
           </a>
+        </div>
+        {/* Mobile: just show search on the right */}
+        <div className="md:hidden flex items-center">
+          <SiteSearch />
         </div>
       </div>
     </nav>
@@ -63,6 +69,7 @@ function SiteFooter() {
               <li><Link href="/makeup" className="hover:text-cream transition-colors">Makeup</Link></li>
               <li><Link href="/hair" className="hover:text-cream transition-colors">Hair</Link></li>
               <li><Link href="/edit/k-beauty" className="hover:text-cream transition-colors">K-Beauty</Link></li>
+              <li><Link href="/brands" className="hover:text-cream transition-colors">All brands</Link></li>
             </ul>
           </div>
           <div>
