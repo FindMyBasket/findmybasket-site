@@ -8,7 +8,6 @@ export interface EditStats {
   total_retailers: number;
 }
 
-// Get headline stats for an edit page
 export async function getEditStats(edit: Edit): Promise<EditStats> {
   const productIds = await getEditProductIds(edit);
 
@@ -16,16 +15,15 @@ export async function getEditStats(edit: Edit): Promise<EditStats> {
     return { total_products: 0, total_brands: 0, total_retailers: 0 };
   }
 
-  // Distinct brands among edit products
   const { data: brandRows } = await supabase
     .from('products')
     .select('normalised_brand')
     .in('id', productIds)
-    .not('normalised_brand', 'is', null);
+    .not('normalised_brand', 'is', null)
+    .not('tags', 'cs', '{cleanup_remove}');
 
   const distinctBrands = new Set((brandRows ?? []).map(r => r.normalised_brand));
 
-  // Distinct retailers stocking edit products
   const { data: retailerRows } = await supabase
     .from('retailer_prices')
     .select('retailer_id')
@@ -40,7 +38,6 @@ export async function getEditStats(edit: Edit): Promise<EditStats> {
   };
 }
 
-// Top brands within this edit, by product count
 export async function getEditTopBrands(edit: Edit, limit = 16): Promise<TopBrand[]> {
   const productIds = await getEditProductIds(edit);
 
@@ -50,7 +47,8 @@ export async function getEditTopBrands(edit: Edit, limit = 16): Promise<TopBrand
     .from('products')
     .select('normalised_brand, brand')
     .in('id', productIds)
-    .not('normalised_brand', 'is', null);
+    .not('normalised_brand', 'is', null)
+    .not('tags', 'cs', '{cleanup_remove}');
 
   if (!data) return [];
 
@@ -78,7 +76,6 @@ export async function getEditTopBrands(edit: Edit, limit = 16): Promise<TopBrand
     .slice(0, limit);
 }
 
-// Featured products within this edit
 export async function getEditFeaturedProducts(
   edit: Edit,
   limit = 24
@@ -87,20 +84,19 @@ export async function getEditFeaturedProducts(
 
   if (productIds.length === 0) return [];
 
-  // Pull product details with images
   const { data: products } = await supabase
     .from('products')
     .select('id, name, brand, normalised_brand, product_type, subcategory, image_url')
     .in('id', productIds)
     .not('image_url', 'is', null)
     .neq('image_url', '')
+    .not('tags', 'cs', '{cleanup_remove}')
     .limit(500);
 
   if (!products || products.length === 0) return [];
 
   const fetchedIds = products.map(p => p.id);
 
-  // Pull all retailer prices for these products
   const { data: prices } = await supabase
     .from('retailer_prices')
     .select('product_id, retailer_id, price, in_stock')
@@ -118,9 +114,6 @@ export async function getEditFeaturedProducts(
     byProduct.set(p.product_id, entry);
   }
 
-  // Build featured records. Allow single-retailer for edits because
-  // many K-beauty products are stocked at only one retailer (Skin Cupid)
-  // and we still want to show them.
   const featured: FeaturedProduct[] = [];
   for (const product of products) {
     const entry = byProduct.get(product.id);
@@ -145,7 +138,6 @@ export async function getEditFeaturedProducts(
     });
   }
 
-  // Sort by retailer count desc, then by saving pct desc
   featured.sort((a, b) => {
     if (b.retailer_count !== a.retailer_count) return b.retailer_count - a.retailer_count;
     return b.saving_pct - a.saving_pct;
@@ -154,9 +146,6 @@ export async function getEditFeaturedProducts(
   return featured.slice(0, limit);
 }
 
-// Internal: get the IDs of products that match an edit's criteria.
-// Cached per request via a module-level memo since multiple page-level
-// queries call this.
 const productIdCache = new Map<string, number[]>();
 
 async function getEditProductIds(edit: Edit): Promise<number[]> {
@@ -167,19 +156,18 @@ async function getEditProductIds(edit: Edit): Promise<number[]> {
 
   const productIds = new Set<number>();
 
-  // Match by brand
   if (edit.brand_slugs.length > 0) {
     const { data: brandMatches } = await supabase
       .from('products')
       .select('id')
-      .in('normalised_brand', edit.brand_slugs);
+      .in('normalised_brand', edit.brand_slugs)
+      .not('tags', 'cs', '{cleanup_remove}');
 
     for (const row of brandMatches ?? []) {
       productIds.add(row.id);
     }
   }
 
-  // Match by retailer
   if (edit.include_retailer_ids.length > 0) {
     const { data: retailerMatches } = await supabase
       .from('retailer_prices')

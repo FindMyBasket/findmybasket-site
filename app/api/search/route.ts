@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { supabase } from '../../../lib/supabase';
 import { brandSlug } from '../../../lib/queries';
 
-// Site-wide search API. Returns matching brands and products for a query.
-// Used by the nav search component (client-side fetch).
-
 export const dynamic = 'force-dynamic';
 
 interface BrandMatch {
@@ -46,12 +43,12 @@ export async function GET(request: Request) {
 }
 
 async function searchBrands(query: string): Promise<BrandMatch[]> {
-  // Pull distinct brands matching the query
   const { data } = await supabase
     .from('products')
     .select('normalised_brand, brand')
     .ilike('brand', `%${query}%`)
     .not('normalised_brand', 'is', null)
+    .not('tags', 'cs', '{cleanup_remove}')
     .limit(200);
 
   if (!data) return [];
@@ -70,7 +67,6 @@ async function searchBrands(query: string): Promise<BrandMatch[]> {
     }
   }
 
-  // Build matches with prefix-bonus sorting
   const qLower = query.toLowerCase();
   const matches = Array.from(brandMap.entries()).map(([normalised, { display, count }]) => ({
     display_name: display,
@@ -90,17 +86,16 @@ async function searchBrands(query: string): Promise<BrandMatch[]> {
 }
 
 async function searchProducts(query: string): Promise<ProductMatch[]> {
-  // Match on name OR brand
   const { data } = await supabase
     .from('products')
     .select('id, name, brand, product_type, image_url')
     .or(`name.ilike.%${query}%,brand.ilike.%${query}%`)
     .not('image_url', 'is', null)
     .neq('image_url', '')
+    .not('tags', 'cs', '{cleanup_remove}')
     .limit(40);
 
   if (!data || data.length === 0) {
-    // Fallback: per-word OR matching for multi-word queries
     const words = query.split(/\s+/).filter(w => w.length >= 2);
     if (words.length > 1) {
       let fallbackQuery = supabase
@@ -112,6 +107,7 @@ async function searchProducts(query: string): Promise<ProductMatch[]> {
       const { data: fallback } = await fallbackQuery
         .not('image_url', 'is', null)
         .neq('image_url', '')
+        .not('tags', 'cs', '{cleanup_remove}')
         .limit(40);
       if (fallback) return rankProducts(fallback, query).slice(0, PRODUCT_LIMIT);
     }

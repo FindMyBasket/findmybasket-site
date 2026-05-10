@@ -17,8 +17,9 @@ export interface BrandProductTypeChip {
   count: number;
 }
 
-// Reverse-slug lookup: given a slug like "the-ordinary", find the actual
-// normalised_brand string in the database that matches.
+// Reverse-slug lookup. Does NOT filter out cleanup_remove products
+// because we want brand pages to resolve even if all of a brand's
+// products happen to be tagged for cleanup.
 export async function findBrandBySlug(slug: string): Promise<BrandLookup | null> {
   const PAGE_SIZE = 1000;
   let offset = 0;
@@ -69,7 +70,8 @@ export async function getBrandStats(normalisedBrand: string): Promise<BrandStats
     .from('products')
     .select('top_category', { count: 'exact' })
     .eq('normalised_brand', normalisedBrand)
-    .not('top_category', 'is', null);
+    .not('top_category', 'is', null)
+    .not('tags', 'cs', '{cleanup_remove}');
 
   const breakdown = new Map<string, number>();
   for (const row of catRows ?? []) {
@@ -102,12 +104,11 @@ export async function getBrandProductTypes(
     .from('products')
     .select('product_type')
     .eq('normalised_brand', normalisedBrand)
-    .not('product_type', 'is', null);
+    .not('product_type', 'is', null)
+    .not('tags', 'cs', '{cleanup_remove}');
 
   if (!data) return [];
 
-  // Hide catch-all product_types - they're a junk default applied when no
-  // specific type could be inferred. Same exclusion as subcategory pages.
   const JUNK_TYPES = new Set(['Skincare', 'Makeup', 'Hair']);
 
   const counts = new Map<string, number>();
@@ -137,7 +138,8 @@ export async function getBrandProducts(
     .select('id, name, brand, normalised_brand, product_type, subcategory, image_url', { count: 'exact' })
     .eq('normalised_brand', normalisedBrand)
     .not('image_url', 'is', null)
-    .neq('image_url', '');
+    .neq('image_url', '')
+    .not('tags', 'cs', '{cleanup_remove}');
 
   if (productType) {
     query = query.eq('product_type', productType);

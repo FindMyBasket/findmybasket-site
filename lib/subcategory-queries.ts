@@ -20,14 +20,16 @@ export async function getSubcategoryStats(
     .from('products')
     .select('*', { count: 'exact', head: true })
     .eq('top_category', category)
-    .eq('subcategory', subcategory);
+    .eq('subcategory', subcategory)
+    .not('tags', 'cs', '{cleanup_remove}');
 
   const { data: brandRows } = await supabase
     .from('products')
     .select('normalised_brand')
     .eq('top_category', category)
     .eq('subcategory', subcategory)
-    .not('normalised_brand', 'is', null);
+    .not('normalised_brand', 'is', null)
+    .not('tags', 'cs', '{cleanup_remove}');
 
   const distinctBrands = new Set((brandRows ?? []).map(r => r.normalised_brand));
 
@@ -56,16 +58,14 @@ export async function getProductTypes(
     .select('product_type')
     .eq('top_category', category)
     .eq('subcategory', subcategory)
-    .not('product_type', 'is', null);
+    .not('product_type', 'is', null)
+    .not('tags', 'cs', '{cleanup_remove}');
 
   if (!data) return [];
 
-  const counts = new Map<string, number>();
-// Catch-all product_types that match the top_category name aren't useful
-  // as filter chips - they're a junk default applied when no specific type
-  // could be inferred. Hide them from the chip UI but leave the data intact.
   const JUNK_TYPES = new Set(['Skincare', 'Makeup', 'Hair']);
 
+  const counts = new Map<string, number>();
   for (const row of data) {
     if (!row.product_type) continue;
     if (JUNK_TYPES.has(row.product_type)) continue;
@@ -89,7 +89,8 @@ export async function getSubcategoryTopBrands(
     .select('normalised_brand, brand')
     .eq('top_category', category)
     .eq('subcategory', subcategory)
-    .not('normalised_brand', 'is', null);
+    .not('normalised_brand', 'is', null)
+    .not('tags', 'cs', '{cleanup_remove}');
 
   if (productType) {
     query = query.eq('product_type', productType);
@@ -139,7 +140,8 @@ export async function getSubcategoryProducts(
     .eq('top_category', category)
     .eq('subcategory', subcategory)
     .not('image_url', 'is', null)
-    .neq('image_url', '');
+    .neq('image_url', '')
+    .not('tags', 'cs', '{cleanup_remove}');
 
   if (productType) {
     query = query.eq('product_type', productType);

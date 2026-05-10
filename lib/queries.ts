@@ -1,7 +1,5 @@
 import { supabase } from './supabase';
 
-// Types matching the products + retailer_prices schemas
-
 export type TopCategory = 'skincare' | 'makeup' | 'hair';
 
 export interface CategoryStats {
@@ -31,7 +29,6 @@ export interface FeaturedProduct {
   saving_pct: number;
 }
 
-// Convert "La Roche-Posay" -> "la-roche-posay", "L'Oreal" -> "loreal"
 export function brandSlug(brand: string): string {
   return brand
     .toLowerCase()
@@ -40,23 +37,22 @@ export function brandSlug(brand: string): string {
     .replace(/^-|-$/g, '');
 }
 
-// Headline stats for a category page hero
 export async function getCategoryStats(category: TopCategory): Promise<CategoryStats> {
   const { count: totalProducts } = await supabase
     .from('products')
     .select('*', { count: 'exact', head: true })
-    .eq('top_category', category);
+    .eq('top_category', category)
+    .not('tags', 'cs', '{cleanup_remove}');
 
-  // Distinct brands in this category
   const { data: brandRows } = await supabase
     .from('products')
     .select('normalised_brand')
     .eq('top_category', category)
-    .not('normalised_brand', 'is', null);
+    .not('normalised_brand', 'is', null)
+    .not('tags', 'cs', '{cleanup_remove}');
 
   const distinctBrands = new Set((brandRows ?? []).map(r => r.normalised_brand));
 
-  // Distinct retailers stocking products in this category - inner join filter
   const { data: retailerRows } = await supabase
     .from('retailer_prices')
     .select('retailer_id, products!inner(top_category)')
@@ -72,17 +68,16 @@ export async function getCategoryStats(category: TopCategory): Promise<CategoryS
   };
 }
 
-// Top brands by product count in this category
 export async function getTopBrands(category: TopCategory, limit = 16): Promise<TopBrand[]> {
   const { data } = await supabase
     .from('products')
     .select('normalised_brand, brand')
     .eq('top_category', category)
-    .not('normalised_brand', 'is', null);
+    .not('normalised_brand', 'is', null)
+    .not('tags', 'cs', '{cleanup_remove}');
 
   if (!data) return [];
 
-  // Group by normalised_brand, count products, pick a display name
   const brandCounts = new Map<string, { display: string; count: number }>();
   for (const row of data) {
     if (!row.normalised_brand) continue;
@@ -107,25 +102,23 @@ export async function getTopBrands(category: TopCategory, limit = 16): Promise<T
     .slice(0, limit);
 }
 
-// Featured products: multi-retailer with images, sorted by retailer count
 export async function getFeaturedProducts(
   category: TopCategory,
   limit = 24
 ): Promise<FeaturedProduct[]> {
-  // Pull a generous candidate pool of products with images
   const { data: products } = await supabase
     .from('products')
     .select('id, name, brand, normalised_brand, product_type, subcategory, image_url')
     .eq('top_category', category)
     .not('image_url', 'is', null)
     .neq('image_url', '')
+    .not('tags', 'cs', '{cleanup_remove}')
     .limit(500);
 
   if (!products || products.length === 0) return [];
 
   const productIds = products.map(p => p.id);
 
-  // Pull all retailer prices for those products
   const { data: prices } = await supabase
     .from('retailer_prices')
     .select('product_id, retailer_id, price, in_stock')
@@ -134,7 +127,6 @@ export async function getFeaturedProducts(
 
   if (!prices) return [];
 
-  // Group prices by product_id
   const byProduct = new Map<number, { retailers: Set<number>; prices: number[] }>();
   for (const p of prices) {
     if (!p.product_id || !p.price) continue;
@@ -144,7 +136,6 @@ export async function getFeaturedProducts(
     byProduct.set(p.product_id, entry);
   }
 
-  // Build featured records, only for products with 2+ retailers
   const featured: FeaturedProduct[] = [];
   for (const product of products) {
     const entry = byProduct.get(product.id);
@@ -169,7 +160,6 @@ export async function getFeaturedProducts(
     });
   }
 
-  // Sort by retailer count desc, then by saving pct desc
   featured.sort((a, b) => {
     if (b.retailer_count !== a.retailer_count) return b.retailer_count - a.retailer_count;
     return b.saving_pct - a.saving_pct;
@@ -178,14 +168,13 @@ export async function getFeaturedProducts(
   return featured.slice(0, limit);
 }
 
-// Subcategories present in a category (face, body, hand, eyes, lips, cleanse)
-// with product counts
 export async function getSubcategories(category: TopCategory): Promise<{ name: string; count: number }[]> {
   const { data } = await supabase
     .from('products')
     .select('subcategory')
     .eq('top_category', category)
-    .not('subcategory', 'is', null);
+    .not('subcategory', 'is', null)
+    .not('tags', 'cs', '{cleanup_remove}');
 
   if (!data) return [];
 
