@@ -567,7 +567,7 @@ export default function RoutineBuilder() {
   // ── RENDER ────────────────────────────────────────────────────────────
 
   return (
-    <div className="routine-builder-scope">
+    <main className="routine-builder-scope">
       <div className="rb-page">
         <header className="rb-header">
           <h1 className="rb-title">
@@ -931,6 +931,6 @@ export default function RoutineBuilder() {
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }
