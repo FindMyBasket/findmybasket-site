@@ -13,17 +13,17 @@ export async function generateMetadata({
   const display = sub.charAt(0).toUpperCase() + sub.slice(1);
   if (searchParams.type) {
     return {
-      title: `${searchParams.type} - ${display} hair care best prices | FindMyBasket`,
-      description: `Compare ${searchParams.type.toLowerCase()} prices in ${sub} hair care across UK retailers.`,
+      title: `${searchParams.type} - ${display} makeup best prices | FindMyBasket`,
+      description: `Compare ${searchParams.type.toLowerCase()} prices in ${sub} makeup across UK retailers.`,
     };
   }
   return {
-    title: `${display} hair care best prices | FindMyBasket`,
-    description: `Compare ${sub} hair care prices across UK retailers. Find the best deal on ${sub} shampoo, conditioner, treatments and styling products.`,
+    title: `${display} makeup best prices | FindMyBasket`,
+    description: `Compare ${sub} makeup prices across UK retailers. Find the best deal on ${sub} foundation, lipstick, mascara and more.`,
   };
 }
 
-export default async function HairSubPage({
+export default async function MakeupSubPage({
   params,
   searchParams,
 }: {
@@ -33,8 +33,8 @@ export default async function HairSubPage({
   const page = searchParams.page ? parseInt(searchParams.page, 10) : 1;
   return (
     <SubcategoryPage
-      category="hair"
-      categoryDisplay="Hair"
+      category="makeup"
+      categoryDisplay="Makeup"
       subcategory={params.subcategory}
       page={page}
       productType={searchParams.type}
