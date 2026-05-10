@@ -12,10 +12,37 @@ export interface ProductTypeChip {
   count: number;
 }
 
+// ── PAGINATION HELPER ──────────────────────────────────────────────────
+//
+// Supabase silently caps `.select()` row returns at 1,000 unless you
+// either use `count: 'exact', head: true` (count-only, no rows) or
+// paginate via `.range()`. This helper paginates a select that we need
+// the actual rows for (e.g. to dedupe / aggregate in JS).
+
+const PAGE_SIZE = 1000;
+
+async function fetchAllRows<T>(
+  build: (offset: number) => Promise<{ data: T[] | null; error: any }>,
+): Promise<T[]> {
+  const all: T[] = [];
+  let offset = 0;
+  while (true) {
+    const { data, error } = await build(offset);
+    if (error || !data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+  return all;
+}
+
+// ── QUERIES ────────────────────────────────────────────────────────────
+
 export async function getSubcategoryStats(
   category: TopCategory,
   subcategory: string
 ): Promise<SubcategoryStats> {
+  // Total products — count-only, no row cap
   const { count: totalProducts } = await supabase
     .from('products')
     .select('*', { count: 'exact', head: true })
@@ -23,23 +50,31 @@ export async function getSubcategoryStats(
     .eq('subcategory', subcategory)
     .not('tags', 'cs', '{cleanup_remove}');
 
-  const { data: brandRows } = await supabase
-    .from('products')
-    .select('normalised_brand')
-    .eq('top_category', category)
-    .eq('subcategory', subcategory)
-    .not('normalised_brand', 'is', null)
-    .not('tags', 'cs', '{cleanup_remove}');
+  // Distinct brands — paginated row fetch
+  const brandRows = await fetchAllRows<{ normalised_brand: string | null }>(offset =>
+    supabase
+      .from('products')
+      .select('normalised_brand')
+      .eq('top_category', category)
+      .eq('subcategory', subcategory)
+      .not('normalised_brand', 'is', null)
+      .not('tags', 'cs', '{cleanup_remove}')
+      .range(offset, offset + PAGE_SIZE - 1),
+  );
 
-  const distinctBrands = new Set((brandRows ?? []).map(r => r.normalised_brand));
+  const distinctBrands = new Set(brandRows.map(r => r.normalised_brand).filter(Boolean));
 
-  const { data: retailerRows } = await supabase
-    .from('retailer_prices')
-    .select('retailer_id, products!inner(top_category, subcategory)')
-    .eq('products.top_category', category)
-    .eq('products.subcategory', subcategory);
+  // Distinct retailers — paginated row fetch
+  const retailerRows = await fetchAllRows<{ retailer_id: number }>(offset =>
+    supabase
+      .from('retailer_prices')
+      .select('retailer_id, products!inner(top_category, subcategory)')
+      .eq('products.top_category', category)
+      .eq('products.subcategory', subcategory)
+      .range(offset, offset + PAGE_SIZE - 1),
+  );
 
-  const totalRetailers = new Set((retailerRows ?? []).map(r => r.retailer_id)).size;
+  const totalRetailers = new Set(retailerRows.map(r => r.retailer_id)).size;
 
   return {
     total_products: totalProducts ?? 0,
@@ -53,15 +88,16 @@ export async function getProductTypes(
   subcategory: string,
   limit = 12
 ): Promise<ProductTypeChip[]> {
-  const { data } = await supabase
-    .from('products')
-    .select('product_type')
-    .eq('top_category', category)
-    .eq('subcategory', subcategory)
-    .not('product_type', 'is', null)
-    .not('tags', 'cs', '{cleanup_remove}');
-
-  if (!data) return [];
+  const data = await fetchAllRows<{ product_type: string | null }>(offset =>
+    supabase
+      .from('products')
+      .select('product_type')
+      .eq('top_category', category)
+      .eq('subcategory', subcategory)
+      .not('product_type', 'is', null)
+      .not('tags', 'cs', '{cleanup_remove}')
+      .range(offset, offset + PAGE_SIZE - 1),
+  );
 
   const JUNK_TYPES = new Set(['Skincare', 'Makeup', 'Hair']);
 
@@ -84,21 +120,21 @@ export async function getSubcategoryTopBrands(
   limit = 16,
   productType?: string
 ): Promise<TopBrand[]> {
-  let query = supabase
-    .from('products')
-    .select('normalised_brand, brand')
-    .eq('top_category', category)
-    .eq('subcategory', subcategory)
-    .not('normalised_brand', 'is', null)
-    .not('tags', 'cs', '{cleanup_remove}');
+  const data = await fetchAllRows<{ normalised_brand: string | null; brand: string | null }>(
+    offset => {
+      let query = supabase
+        .from('products')
+        .select('normalised_brand, brand')
+        .eq('top_category', category)
+        .eq('subcategory', subcategory)
+        .not('normalised_brand', 'is', null)
+        .not('tags', 'cs', '{cleanup_remove}');
 
-  if (productType) {
-    query = query.eq('product_type', productType);
-  }
+      if (productType) query = query.eq('product_type', productType);
 
-  const { data } = await query;
-
-  if (!data) return [];
+      return query.range(offset, offset + PAGE_SIZE - 1);
+    },
+  );
 
   const brandCounts = new Map<string, { display: string; count: number }>();
   for (const row of data) {
@@ -131,6 +167,9 @@ export async function getSubcategoryProducts(
   pageSize = 48,
   productType?: string
 ): Promise<{ products: FeaturedProduct[]; totalCount: number }> {
+  // Note: this function paginates by design via `.range()`. The 1,000-row
+  // cap is irrelevant because we only ever ask for `pageSize * 4` rows
+  // (max ~192) at a time.
   const offset = (page - 1) * pageSize;
   const candidateLimit = pageSize * 4;
 
@@ -209,13 +248,14 @@ export async function getSubcategoryProducts(
 }
 
 export async function getValidSubcategories(category: TopCategory): Promise<string[]> {
-  const { data } = await supabase
-    .from('products')
-    .select('subcategory')
-    .eq('top_category', category)
-    .not('subcategory', 'is', null);
-
-  if (!data) return [];
+  const data = await fetchAllRows<{ subcategory: string | null }>(offset =>
+    supabase
+      .from('products')
+      .select('subcategory')
+      .eq('top_category', category)
+      .not('subcategory', 'is', null)
+      .range(offset, offset + PAGE_SIZE - 1),
+  );
 
   const unique = new Set<string>();
   for (const row of data) {

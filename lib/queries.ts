@@ -37,6 +37,23 @@ export function brandSlug(brand: string): string {
     .replace(/^-|-$/g, '');
 }
 
+const PAGE_SIZE = 1000;
+
+async function fetchAllRows<T>(
+  build: (offset: number) => Promise<{ data: T[] | null; error: any }>,
+): Promise<T[]> {
+  const all: T[] = [];
+  let offset = 0;
+  while (true) {
+    const { data, error } = await build(offset);
+    if (error || !data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+  return all;
+}
+
 export async function getCategoryStats(category: TopCategory): Promise<CategoryStats> {
   const { count: totalProducts } = await supabase
     .from('products')
@@ -44,21 +61,27 @@ export async function getCategoryStats(category: TopCategory): Promise<CategoryS
     .eq('top_category', category)
     .not('tags', 'cs', '{cleanup_remove}');
 
-  const { data: brandRows } = await supabase
-    .from('products')
-    .select('normalised_brand')
-    .eq('top_category', category)
-    .not('normalised_brand', 'is', null)
-    .not('tags', 'cs', '{cleanup_remove}');
+  const brandRows = await fetchAllRows<{ normalised_brand: string | null }>(offset =>
+    supabase
+      .from('products')
+      .select('normalised_brand')
+      .eq('top_category', category)
+      .not('normalised_brand', 'is', null)
+      .not('tags', 'cs', '{cleanup_remove}')
+      .range(offset, offset + PAGE_SIZE - 1),
+  );
 
-  const distinctBrands = new Set((brandRows ?? []).map(r => r.normalised_brand));
+  const distinctBrands = new Set(brandRows.map(r => r.normalised_brand).filter(Boolean));
 
-  const { data: retailerRows } = await supabase
-    .from('retailer_prices')
-    .select('retailer_id, products!inner(top_category)')
-    .eq('products.top_category', category);
+  const retailerRows = await fetchAllRows<{ retailer_id: number }>(offset =>
+    supabase
+      .from('retailer_prices')
+      .select('retailer_id, products!inner(top_category)')
+      .eq('products.top_category', category)
+      .range(offset, offset + PAGE_SIZE - 1),
+  );
 
-  const totalRetailers = new Set((retailerRows ?? []).map(r => r.retailer_id)).size;
+  const totalRetailers = new Set(retailerRows.map(r => r.retailer_id)).size;
 
   return {
     total_products: totalProducts ?? 0,
@@ -69,14 +92,16 @@ export async function getCategoryStats(category: TopCategory): Promise<CategoryS
 }
 
 export async function getTopBrands(category: TopCategory, limit = 16): Promise<TopBrand[]> {
-  const { data } = await supabase
-    .from('products')
-    .select('normalised_brand, brand')
-    .eq('top_category', category)
-    .not('normalised_brand', 'is', null)
-    .not('tags', 'cs', '{cleanup_remove}');
-
-  if (!data) return [];
+  const data = await fetchAllRows<{ normalised_brand: string | null; brand: string | null }>(
+    offset =>
+      supabase
+        .from('products')
+        .select('normalised_brand, brand')
+        .eq('top_category', category)
+        .not('normalised_brand', 'is', null)
+        .not('tags', 'cs', '{cleanup_remove}')
+        .range(offset, offset + PAGE_SIZE - 1),
+  );
 
   const brandCounts = new Map<string, { display: string; count: number }>();
   for (const row of data) {
@@ -169,14 +194,15 @@ export async function getFeaturedProducts(
 }
 
 export async function getSubcategories(category: TopCategory): Promise<{ name: string; count: number }[]> {
-  const { data } = await supabase
-    .from('products')
-    .select('subcategory')
-    .eq('top_category', category)
-    .not('subcategory', 'is', null)
-    .not('tags', 'cs', '{cleanup_remove}');
-
-  if (!data) return [];
+  const data = await fetchAllRows<{ subcategory: string | null }>(offset =>
+    supabase
+      .from('products')
+      .select('subcategory')
+      .eq('top_category', category)
+      .not('subcategory', 'is', null)
+      .not('tags', 'cs', '{cleanup_remove}')
+      .range(offset, offset + PAGE_SIZE - 1),
+  );
 
   const counts = new Map<string, number>();
   for (const row of data) {
