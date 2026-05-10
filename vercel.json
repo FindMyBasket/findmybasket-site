@@ -5,6 +5,7 @@
     { "source": "/product-finder", "destination": "/product-finder.html", "permanent": false },
     { "source": "/savings-hub", "destination": "/savings-hub.html", "permanent": false },
     { "source": "/skincare/nails", "destination": "/makeup/nails", "permanent": true }
+    { "source": "/app.html", "destination": "/app", "permanent": true }
   ],
   "cleanUrls": false,
   "trailingSlash": false

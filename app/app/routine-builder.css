@@ -1,0 +1,800 @@
+/* Routine Builder — single-column review/optimise page.
+ *
+ * Scoped under .routine-builder-scope so styles don't leak to the rest of
+ * the Next.js app. Brand variables (--cream, --ink, --gold, etc.) are
+ * defined in app/globals.css and are reused here.
+ *
+ * Class prefix: `rb-` to avoid any chance of collision with sibling
+ * components.
+ */
+
+.routine-builder-scope {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--ink, #1C1A18);
+  background: var(--cream, #FAF8F4);
+  min-height: 100vh;
+}
+
+.rb-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+}
+
+@media (max-width: 600px) {
+  .rb-page {
+    padding: 24px 16px 64px;
+  }
+}
+
+/* ── HEADER ────────────────────────────────────────────────────────── */
+
+.rb-header {
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.rb-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: clamp(36px, 6vw, 56px);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--ink, #1C1A18);
+  margin: 0 0 12px;
+}
+
+.rb-title em {
+  font-style: italic;
+  color: #8A6A30; /* accessible gold-on-cream */
+}
+
+.rb-sub {
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--ink-light, #4A4845);
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+/* ── LOADING & EMPTY STATE ────────────────────────────────────────── */
+
+.rb-loading {
+  text-align: center;
+  padding: 64px 24px;
+  color: var(--ink-light, #4A4845);
+  font-size: 14px;
+}
+
+.rb-empty {
+  background: #fff;
+  border: 1px solid rgba(28, 26, 24, 0.08);
+  border-radius: 20px;
+  padding: 56px 32px;
+  text-align: center;
+  box-shadow: 0 4px 24px rgba(28, 26, 24, 0.04);
+}
+
+.rb-empty-icon {
+  font-size: 56px;
+  margin-bottom: 20px;
+}
+
+.rb-empty-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0 0 12px;
+  color: var(--ink, #1C1A18);
+}
+
+.rb-empty-desc {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-light, #4A4845);
+  max-width: 440px;
+  margin: 0 auto 32px;
+}
+
+.rb-browse-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  max-width: 540px;
+  margin: 0 auto;
+}
+
+@media (max-width: 600px) {
+  .rb-browse-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rb-browse-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 16px;
+  background: var(--cream, #FAF8F4);
+  border: 1px solid rgba(28, 26, 24, 0.08);
+  border-radius: 14px;
+  text-decoration: none;
+  color: var(--ink, #1C1A18);
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+
+@media (max-width: 600px) {
+  .rb-browse-card {
+    flex-direction: row;
+    justify-content: flex-start;
+    text-align: left;
+    gap: 14px;
+    padding: 16px 20px;
+  }
+}
+
+.rb-browse-card:hover {
+  border-color: #8A6A30;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(28, 26, 24, 0.06);
+}
+
+.rb-browse-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.rb-browse-label {
+  font-size: 14px;
+  font-weight: 500;
+  flex: 1;
+}
+
+.rb-browse-arrow {
+  font-size: 16px;
+  color: #8A6A30;
+}
+
+@media (min-width: 601px) {
+  .rb-browse-arrow {
+    display: none;
+  }
+}
+
+/* ── ROUTINE LIST ─────────────────────────────────────────────────── */
+
+.rb-routine-section {
+  background: #fff;
+  border: 1px solid rgba(28, 26, 24, 0.08);
+  border-radius: 20px;
+  padding: 28px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 24px rgba(28, 26, 24, 0.04);
+}
+
+@media (max-width: 600px) {
+  .rb-routine-section {
+    padding: 20px;
+  }
+}
+
+.rb-routine-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(28, 26, 24, 0.08);
+}
+
+.rb-routine-label {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8A6A30;
+  font-weight: 500;
+}
+
+.rb-routine-count {
+  font-size: 13px;
+  color: var(--ink-light, #4A4845);
+}
+
+.rb-routine-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rb-routine-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 6px;
+  border-radius: 10px;
+  transition: background 0.15s;
+}
+
+.rb-routine-item:hover {
+  background: var(--cream, #FAF8F4);
+}
+
+.rb-routine-dot {
+  font-size: 22px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rb-routine-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.rb-routine-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink, #1C1A18);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.rb-routine-brand {
+  font-size: 12px;
+  color: var(--ink-light, #4A4845);
+  margin-top: 2px;
+}
+
+.rb-remove-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(28, 26, 24, 0.12);
+  background: transparent;
+  color: var(--ink-light, #4A4845);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.rb-remove-btn:hover {
+  background: var(--ink, #1C1A18);
+  color: #fff;
+  border-color: var(--ink, #1C1A18);
+}
+
+.rb-add-more {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(28, 26, 24, 0.08);
+  font-size: 13px;
+  color: var(--ink-light, #4A4845);
+  text-align: center;
+}
+
+.rb-add-more a {
+  color: #8A6A30;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.rb-add-more a:hover {
+  text-decoration: underline;
+}
+
+/* ── OPTIMISE BUTTON ─────────────────────────────────────────────── */
+
+.rb-optimise-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 18px 24px;
+  background: var(--ink, #1C1A18);
+  color: var(--cream, #FAF8F4);
+  border: none;
+  border-radius: 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+  margin-bottom: 20px;
+}
+
+.rb-optimise-btn:hover:not(:disabled) {
+  background: #8A6A30;
+  transform: translateY(-1px);
+}
+
+.rb-optimise-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rb-optimise-btn.loading {
+  background: var(--ink-light, #4A4845);
+}
+
+/* ── SAVINGS SUMMARY ─────────────────────────────────────────────── */
+
+.rb-savings-summary {
+  background: linear-gradient(135deg, #F4ECDD 0%, #FFF7E8 100%);
+  border: 1px solid rgba(138, 106, 48, 0.2);
+  border-radius: 18px;
+  padding: 24px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.rb-savings-label {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  font-weight: 500;
+  color: #8A6A30;
+  margin-bottom: 6px;
+}
+
+.rb-savings-amount {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ink, #1C1A18);
+  margin-bottom: 8px;
+}
+
+.rb-savings-desc {
+  font-size: 12px;
+  color: var(--ink-light, #4A4845);
+  line-height: 1.45;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+/* ── RESULTS / BASKET CARDS ──────────────────────────────────────── */
+
+.rb-results {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.rb-results-placeholder {
+  background: #fff;
+  border: 1px dashed rgba(28, 26, 24, 0.15);
+  border-radius: 18px;
+  padding: 48px 24px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.rb-results-icon {
+  font-size: 36px;
+  margin-bottom: 10px;
+}
+
+.rb-results-placeholder p {
+  font-size: 14px;
+  color: var(--ink-light, #4A4845);
+  margin: 0;
+}
+
+.rb-basket-card {
+  background: #fff;
+  border: 1px solid rgba(28, 26, 24, 0.08);
+  border-radius: 18px;
+  padding: 24px;
+  position: relative;
+  transition: border-color 0.15s;
+}
+
+.rb-basket-card.best {
+  border: 1.5px solid #8A6A30;
+  box-shadow: 0 6px 28px rgba(138, 106, 48, 0.1);
+}
+
+.rb-basket-card.best::before {
+  content: 'BEST PRICE';
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #8A6A30;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 5px 14px;
+  border-radius: 0 17px 0 12px;
+}
+
+.rb-basket-retailers {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink, #1C1A18);
+  margin-bottom: 4px;
+}
+
+.rb-basket-desc {
+  font-size: 13px;
+  color: var(--ink-light, #4A4845);
+  margin-bottom: 16px;
+}
+
+.rb-basket-price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(28, 26, 24, 0.08);
+  margin-bottom: 14px;
+}
+
+.rb-basket-total {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ink, #1C1A18);
+}
+
+.rb-basket-saving {
+  font-size: 13px;
+  font-weight: 500;
+  color: #4F7059;
+}
+
+.rb-basket-checkout-note {
+  font-size: 11px;
+  color: var(--ink-light, #4A4845);
+  font-style: italic;
+  line-height: 1.45;
+  margin-bottom: 14px;
+}
+
+.rb-basket-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rb-breakdown-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 13px;
+}
+
+.rb-breakdown-product {
+  color: var(--ink, #1C1A18);
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.rb-breakdown-retailer-price {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.rb-breakdown-retailer {
+  font-size: 11px;
+  color: var(--ink-light, #4A4845);
+  margin-bottom: 1px;
+}
+
+.rb-breakdown-price {
+  font-weight: 600;
+  color: var(--ink, #1C1A18);
+}
+
+.rb-delivery-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  margin-top: 4px;
+  border-top: 1px dashed rgba(28, 26, 24, 0.1);
+  font-size: 13px;
+  color: var(--ink-light, #4A4845);
+}
+
+.rb-delivery-free {
+  color: #4F7059;
+  font-weight: 500;
+}
+
+.rb-shop-actions {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(28, 26, 24, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rb-shop-all-btn,
+.rb-shop-retailer-btn,
+.rb-shop-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-radius: 100px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+  border: none;
+}
+
+.rb-shop-all-btn {
+  background: var(--ink, #1C1A18);
+  color: var(--cream, #FAF8F4);
+}
+
+.rb-shop-all-btn:hover {
+  background: #8A6A30;
+  transform: translateY(-1px);
+}
+
+.rb-shop-retailer-btn {
+  background: #fff;
+  color: var(--ink, #1C1A18);
+  border: 1px solid rgba(28, 26, 24, 0.15);
+}
+
+.rb-shop-retailer-btn:hover {
+  border-color: #8A6A30;
+  background: var(--cream, #FAF8F4);
+}
+
+.rb-shop-btn {
+  background: #8A6A30;
+  color: #fff;
+}
+
+/* ── SAVE ROUTINE CARD ───────────────────────────────────────────── */
+
+.rb-save-card {
+  background: linear-gradient(135deg, #FFF7E8 0%, #FAF8F4 100%);
+  border: 1px solid rgba(138, 106, 48, 0.2);
+  border-radius: 18px;
+  padding: 28px;
+  margin-bottom: 20px;
+}
+
+.rb-save-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--ink, #1C1A18);
+  margin-bottom: 6px;
+}
+
+.rb-save-desc {
+  font-size: 13px;
+  color: var(--ink-light, #4A4845);
+  line-height: 1.55;
+  margin-bottom: 14px;
+}
+
+.rb-save-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 480px) {
+  .rb-save-form {
+    flex-direction: column;
+  }
+}
+
+.rb-save-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid rgba(28, 26, 24, 0.15);
+  border-radius: 10px;
+  background: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: var(--ink, #1C1A18);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.rb-save-input:focus {
+  border-color: #8A6A30;
+  box-shadow: 0 0 0 3px rgba(138, 106, 48, 0.12);
+}
+
+.rb-save-input:disabled {
+  background: var(--cream, #FAF8F4);
+  color: var(--ink-light, #4A4845);
+  cursor: not-allowed;
+}
+
+.rb-save-btn {
+  padding: 12px 22px;
+  background: var(--ink, #1C1A18);
+  color: var(--cream, #FAF8F4);
+  border: none;
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.rb-save-btn:hover:not(:disabled) {
+  background: #8A6A30;
+}
+
+.rb-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.rb-save-success {
+  font-size: 13px;
+  color: #4F7059;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+.rb-save-error {
+  font-size: 13px;
+  color: #B53030;
+  margin-top: 6px;
+}
+
+.rb-save-fineprint {
+  font-size: 11px;
+  color: var(--ink-light, #4A4845);
+  opacity: 0.75;
+  margin-top: 10px;
+}
+
+/* ── AMAZON / EBAY FALLBACK ──────────────────────────────────────── */
+
+.rb-amazon-section {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(28, 26, 24, 0.08);
+}
+
+.rb-amazon-label {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-light, #4A4845);
+  font-weight: 500;
+  margin-bottom: 14px;
+  text-align: center;
+}
+
+.rb-amazon-buttons,
+.rb-ebay-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.rb-amazon-btn,
+.rb-ebay-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid rgba(28, 26, 24, 0.1);
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--ink, #1C1A18);
+  font-size: 13px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.rb-amazon-btn:hover,
+.rb-ebay-btn:hover {
+  border-color: #8A6A30;
+  background: var(--cream, #FAF8F4);
+}
+
+/* ── MODAL ───────────────────────────────────────────────────────── */
+
+.rb-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.rb-modal-dialog {
+  background: #fff;
+  border-radius: 16px;
+  max-width: 480px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 28px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.rb-modal-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0 0 8px;
+  color: var(--ink, #1C1A18);
+}
+
+.rb-modal-subtitle {
+  font-size: 13px;
+  color: var(--ink-light, #4A4845);
+  line-height: 1.5;
+  margin: 0 0 16px;
+}
+
+.rb-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rb-modal-link {
+  display: block;
+  padding: 12px 14px;
+  border: 1px solid rgba(28, 26, 24, 0.1);
+  border-radius: 8px;
+  color: var(--ink, #1C1A18);
+  text-decoration: none;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+
+.rb-modal-link:hover {
+  background: var(--cream, #FAF8F4);
+}
+
+.rb-modal-close {
+  margin-top: 16px;
+  padding: 12px 24px;
+  border: none;
+  background: var(--ink, #1C1A18);
+  color: var(--cream, #FAF8F4);
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  width: 100%;
+}
