@@ -40,7 +40,7 @@ export function brandSlug(brand: string): string {
 const PAGE_SIZE = 1000;
 
 async function fetchAllRows<T>(
-  build: (offset: number) => Promise<{ data: T[] | null; error: any }>,
+  build: (offset: number) => PromiseLike<{ data: T[] | null; error: any }>,
 ): Promise<T[]> {
   const all: T[] = [];
   let offset = 0;
