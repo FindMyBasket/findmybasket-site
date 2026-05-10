@@ -9,6 +9,7 @@ import {
   getProductTypes,
   getValidSubcategories,
 } from '../lib/subcategory-queries';
+import { buildBreadcrumbJsonLd } from '../lib/breadcrumb';
 import type { TopCategory } from '../lib/queries';
 
 interface Props {
@@ -26,7 +27,6 @@ function displaySub(sub: string): string {
   return sub.charAt(0).toUpperCase() + sub.slice(1);
 }
 
-// Build a URL preserving page context but with optional filter changes
 function buildUrl(
   category: string,
   subcategory: string,
@@ -56,7 +56,6 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
     notFound();
   }
 
-  // If filter is active but no products match, treat as 404 to be safe
   if (productType && productResult.totalCount === 0) {
     notFound();
   }
@@ -64,8 +63,28 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
   const totalPages = Math.ceil(productResult.totalCount / PAGE_SIZE);
   const subDisplay = displaySub(subcategory);
 
+  // BreadcrumbList structured data
+  const breadcrumbItems = [
+    { name: 'Home', url: '/' },
+    { name: categoryDisplay, url: `/${category}` },
+    { name: subDisplay, url: `/${category}/${subcategory}` },
+  ];
+  if (productType) {
+    breadcrumbItems.push({
+      name: productType,
+      url: `/${category}/${subcategory}?type=${encodeURIComponent(productType)}`,
+    });
+  }
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd(breadcrumbItems);
+
   return (
     <SiteLayout>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+
       <section className="max-w-site mx-auto px-6 py-16 md:py-24 text-center">
         <p className="text-xs uppercase tracking-widest text-gold font-medium mb-4">
           <Link href={`/${category}`} className="hover:text-ink transition-colors">

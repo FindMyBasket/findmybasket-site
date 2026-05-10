@@ -8,6 +8,7 @@ import {
   getRetailerOffers,
   getRelatedProducts,
 } from '../../../lib/product-queries';
+import { buildBreadcrumbJsonLd } from '../../../lib/breadcrumb';
 
 export const revalidate = 3600;
 
@@ -17,9 +18,6 @@ const CATEGORY_DISPLAY: Record<string, string> = {
   hair: 'Hair',
 };
 
-// Affiliate tags for retailers we don't have direct price data for, but
-// users may want to search anyway. Pulled from retailers table at build time
-// of the queries above; hard-coded here for the search-link generation.
 const AMAZON_TAG = 'findmybasket-21';
 const EBAY_CAMPID = '7221119';
 
@@ -33,6 +31,11 @@ function buildEbaySearchUrl(productName: string, brand: string | null): string {
   const query = brand ? `${brand} ${productName}` : productName;
   const encoded = encodeURIComponent(query.replace(/\s+/g, ' ').trim());
   return `https://www.ebay.co.uk/sch/i.html?_nkw=${encoded}&campid=${EBAY_CAMPID}`;
+}
+
+function displaySub(sub: string | null): string {
+  if (!sub) return '';
+  return sub.charAt(0).toUpperCase() + sub.slice(1);
 }
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
@@ -81,7 +84,8 @@ export default async function ProductPage({ params }: { params: { id: string } }
     ? Math.round(((highestPrice - lowestPrice) / highestPrice) * 100)
     : 0;
 
-  const jsonLd = {
+  // Product JSON-LD
+  const productJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.name,
@@ -100,6 +104,28 @@ export default async function ProductPage({ params }: { params: { id: string } }
       : undefined,
   };
 
+  // BreadcrumbList JSON-LD
+  const breadcrumbItems = [
+    { name: 'Home', url: '/' },
+  ];
+  if (product.top_category) {
+    breadcrumbItems.push({
+      name: CATEGORY_DISPLAY[product.top_category] ?? product.top_category,
+      url: `/${product.top_category}`,
+    });
+  }
+  if (product.subcategory && product.top_category) {
+    breadcrumbItems.push({
+      name: displaySub(product.subcategory),
+      url: `/${product.top_category}/${product.subcategory}`,
+    });
+  }
+  breadcrumbItems.push({
+    name: product.brand ? `${product.brand} ${product.name}` : product.name,
+    url: `/product/${product.id}`,
+  });
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd(breadcrumbItems);
+
   const routineItem = {
     id: product.id,
     name: product.name,
@@ -115,7 +141,12 @@ export default async function ProductPage({ params }: { params: { id: string } }
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
 
       <section className="max-w-site mx-auto px-6 py-12">
@@ -259,7 +290,6 @@ export default async function ProductPage({ params }: { params: { id: string } }
         )}
       </section>
 
-      {/* Amazon and eBay search links - not in price comparison, just additional shopping options */}
       <section className="max-w-site mx-auto px-6 py-12">
         <h2 className="font-serif text-3xl text-ink mb-2">Also try</h2>
         <p className="text-ink-light mb-8">

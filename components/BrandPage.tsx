@@ -8,6 +8,7 @@ import {
   getBrandProductTypes,
   getBrandProducts,
 } from '../lib/brand-queries';
+import { buildBreadcrumbJsonLd } from '../lib/breadcrumb';
 
 interface Props {
   slug: string;
@@ -41,7 +42,6 @@ export async function BrandPage({ slug, page = 1, productType }: Props) {
     getBrandProducts(brand.normalised_brand, page, PAGE_SIZE, productType),
   ]);
 
-  // If a filter is active but no products match, treat as 404
   if (productType && productResult.totalCount === 0) {
     notFound();
   }
@@ -52,8 +52,28 @@ export async function BrandPage({ slug, page = 1, productType }: Props) {
     .map(({ category, count }) => `${CATEGORY_DISPLAY[category] ?? category} (${count})`)
     .join(', ');
 
+  // BreadcrumbList structured data
+  const breadcrumbItems = [
+    { name: 'Home', url: '/' },
+    { name: 'Brands', url: '/brands' },
+    { name: brand.display_name, url: `/brands/${slug}` },
+  ];
+  if (productType) {
+    breadcrumbItems.push({
+      name: productType,
+      url: `/brands/${slug}?type=${encodeURIComponent(productType)}`,
+    });
+  }
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd(breadcrumbItems);
+
   return (
     <SiteLayout>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+
       <section className="max-w-site mx-auto px-6 py-16 md:py-24 text-center">
         <p className="text-xs uppercase tracking-widest text-gold font-medium mb-4">
           Brand
