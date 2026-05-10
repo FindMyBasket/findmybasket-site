@@ -1,6 +1,5 @@
 {
   "redirects": [
-    { "source": "/partners", "destination": "/partners.html", "permanent": false },
     { "source": "/app", "destination": "/app.html", "permanent": false },
     { "source": "/product-finder", "destination": "/product-finder.html", "permanent": false },
     { "source": "/savings-hub", "destination": "/savings-hub.html", "permanent": false },
