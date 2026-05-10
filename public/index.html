@@ -30,12 +30,16 @@
   <link rel="alternate icon" href="/favicon.ico"/>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"FindMyBasket","url":"https://www.findmybasket.co.uk","description":"UK beauty price comparison tool. Compares skincare, makeup and hair prices across major retailers to find the best way to buy your whole routine.","potentialAction":{"@type":"SearchAction","target":"https://www.findmybasket.co.uk/app.html?q={search_term_string}","query-input":"required name=search_term_string"}}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" /></noscript>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --cream: #FAF8F4; --warm-white: #FFFDF9; --ink: #1C1A18; --ink-light: #4A4845;
-      --gold: #C9A96E; --gold-light: #E8D5B0; --sage: #7A9E87; --sage-light: #C8DDD0;
+      --gold: #C9A96E; --gold-light: #E8D5B0; --gold-text: #8A6A30;
+      --sage: #7A9E87; --sage-light: #C8DDD0; --sage-text: #4F7059; --sage-deep: #4F7059;
       --blush: #E8C4B8; --border: rgba(28,26,24,0.1); --shadow: 0 4px 40px rgba(28,26,24,0.08);
     }
     html { scroll-behavior: smooth; }
@@ -70,7 +74,7 @@
     .hero-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); display: block; animation: pulse 2s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.4); } }
     .hero h1 { font-family: 'Cormorant Garamond', serif; font-size: clamp(52px, 9vw, 96px); font-weight: 600; line-height: 0.95; letter-spacing: -0.02em; position: relative; z-index: 1; animation: fadeUp 0.8s 0.1s ease both; }
-    .hero h1 em { font-style: italic; color: var(--gold); }
+    .hero h1 em { font-style: italic; color: var(--gold-text); }
     .hero-sub { font-size: clamp(16px, 2vw, 20px); color: var(--ink-light); font-weight: 300; max-width: 560px; line-height: 1.6; margin: 28px auto 0; position: relative; z-index: 1; animation: fadeUp 0.8s 0.2s ease both; }
     .hero-form { display: flex; gap: 12px; margin-top: 48px; position: relative; z-index: 1; animation: fadeUp 0.8s 0.3s ease both; flex-wrap: wrap; justify-content: center; }
     .hero-form input { padding: 16px 24px; border: 1px solid var(--border); border-radius: 100px; background: var(--warm-white); font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--ink); width: 300px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
@@ -85,15 +89,15 @@
     /* STATS */
     .stats { background: var(--ink); padding: 32px 48px; display: flex; justify-content: center; gap: 80px; flex-wrap: wrap; }
     .stat { text-align: center; }
-    .stat-num { font-family: 'Cormorant Garamond', serif; font-size: 40px; font-weight: 600; color: var(--gold); line-height: 1; }
+    .stat-num { font-family: 'Cormorant Garamond', serif; font-size: 40px; font-weight: 600; color: var(--gold-text); line-height: 1; }
     .stat-label { font-size: 13px; color: rgba(250,248,244,0.5); margin-top: 4px; letter-spacing: 0.04em; }
 
     /* SECTIONS */
     section { padding: 100px 24px; }
     .section-inner { max-width: 1100px; margin: 0 auto; }
-    .section-tag { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); font-weight: 500; margin-bottom: 16px; }
+    .section-tag { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold-text); font-weight: 500; margin-bottom: 16px; }
     .section-title { font-family: 'Cormorant Garamond', serif; font-size: clamp(36px, 5vw, 56px); font-weight: 600; line-height: 1.1; letter-spacing: -0.01em; }
-    .section-title em { font-style: italic; color: var(--sage); }
+    .section-title em { font-style: italic; color: var(--sage-text); }
 
     /* STEPS */
     .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin-top: 60px; background: var(--border); border: 1px solid var(--border); border-radius: 24px; overflow: hidden; }
@@ -107,7 +111,7 @@
     /* DEMO */
     .demo-section { background: var(--ink); }
     .demo-section .section-title { color: var(--cream); }
-    .demo-section .section-tag { color: var(--gold); }
+    .demo-section .section-tag { color: var(--gold-text); }
     .demo-section p { color: rgba(250,248,244,0.6); }
     .demo-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 40px; margin-top: 48px; }
     .demo-routine { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 32px; }
@@ -121,8 +125,8 @@
     .demo-basket.best::before { content: 'BEST'; position: absolute; top: 0; right: 0; background: var(--gold); color: var(--ink); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; padding: 4px 12px; border-radius: 0 14px 0 10px; }
     .basket-retailer { font-size: 15px; font-weight: 500; color: var(--cream); }
     .basket-items { font-size: 13px; color: rgba(250,248,244,0.5); margin-top: 2px; }
-    .basket-price { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 600; color: var(--gold); }
-    .basket-saving { font-size: 12px; color: var(--sage); text-align: right; margin-top: 2px; }
+    .basket-price { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 600; color: var(--gold-text); }
+    .basket-saving { font-size: 12px; color: var(--sage-text); text-align: right; margin-top: 2px; }
 
     /* WHY */
     .why-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 60px; }
@@ -147,15 +151,15 @@
     .footer-logo { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 600; color: var(--cream); display:flex; align-items:center; gap:10px; }
     .footer-logo span { color: var(--gold); }
     .footer-links { display: flex; gap: 28px; flex-wrap: wrap; }
-    .footer-links a { font-size: 13px; color: rgba(250,248,244,0.4); text-decoration: none; transition: color 0.2s; }
+    .footer-links a { font-size: 13px; color: rgba(250,248,244,0.7); text-decoration: none; transition: color 0.2s; }
     .footer-links a:hover { color: var(--cream); }
-    .footer-copy { font-size: 12px; color: rgba(250,248,244,0.25); }
+    .footer-copy { font-size: 12px; color: rgba(250,248,244,0.55); }
 
     /* ANIMATIONS */
     @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
     .reveal { opacity: 1; transform: translateY(0); transition: opacity 0.7s ease, transform 0.7s ease; }
     .reveal.visible { opacity: 1; transform: translateY(0); }
-    .success-msg { display: none; color: var(--sage); font-size: 14px; margin-top: 12px; }
+    .success-msg { display: none; color: var(--sage-text); font-size: 14px; margin-top: 12px; }
     .success-msg.show { display: block; }
 
     /* RESPONSIVE */
@@ -185,30 +189,29 @@
       <span>Find<span>My</span>Basket</span>
     </a>
     <div class="nav-links">
-      <a href="/skincare">Skincare</a>
-      <a href="/makeup">Makeup</a>
-      <a href="/hair">Hair</a>
-      <a href="/edit/k-beauty">K-Beauty</a>
       <a href="/savings-hub.html">Savings Hub</a>
+      <a href="/product-finder.html">Product Finder</a>
       <a href="/about.html">About</a>
-      <a href="/app.html" class="nav-cta">Build a routine</a>
+      <a href="#how-it-works">How it works</a>
+      <a href="#why">Why us</a>
+      <a href="/app.html" class="nav-cta" style="background:var(--gold)!important;color:var(--ink)!important;">Try it now</a>
+      <a href="#save-routine-feature" class="nav-cta">Save my routine</a>
     </div>
     <div class="hamburger" onclick="toggleMenu()" id="hamburger"><span></span><span></span><span></span></div>
   </nav>
 
   <div class="mobile-menu" id="mobileMenu">
-    <a href="/skincare">Skincare</a>
-    <a href="/makeup">Makeup</a>
-    <a href="/hair">Hair</a>
-    <a href="/edit/k-beauty">K-Beauty</a>
     <a href="/savings-hub.html">Savings Hub</a>
-    <a href="/about.html">About</a>
-    <a href="/app.html">Build a routine</a>
+    <a href="/product-finder.html">Product Finder</a>
+    <a href="#how-it-works" onclick="toggleMenu()">How it works</a>
+    <a href="#why" onclick="toggleMenu()">Why us</a>
+    <a href="/app.html">Try it now</a>
+    <a href="#save-routine-feature" onclick="toggleMenu()">Save my routine</a>
   </div>
 
   <section class="hero">
     <div class="hero-bg"></div>
-    <div class="hero-badge" style="background:rgba(122,158,135,0.15); color:var(--sage); border-color:rgba(122,158,135,0.3);">✓ Live now · 23% median saving across 1,200+ comparisons</div>
+    <div class="hero-badge" style="background:rgba(122,158,135,0.15); color:var(--sage-text); border-color:rgba(122,158,135,0.3);">✓ Live now · 23% median saving across 1,200+ comparisons</div>
     <h1>Your beauty<br/>routine. <em>Optimised.</em></h1>
     <p class="hero-sub">Honest comparison across the UK's leading beauty retailers. Save your routine and we'll email you the best price each month.</p>
     <div class="hero-form" style="display:flex; flex-direction:column; gap:12px; align-items:center;">
@@ -223,46 +226,46 @@
 
       <!-- RETAILERS WE TRACK -->
       <div style="text-align:center; margin-bottom:48px;">
-        <p style="font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--gold); font-weight:500; margin-bottom:24px;">Retailers we are partnered with</p>
+        <p style="font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--gold-text); font-weight:500; margin-bottom:24px;">Retailers we are partnered with</p>
 
         <!-- Live retailers grid -->
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:16px; margin-bottom:8px; max-width:840px; margin-left:auto; margin-right:auto;">
           <div style="display:flex; align-items:center; justify-content:center; height:80px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px;">
-            <img src="/logos/boots.jpg" alt="Boots" style="max-height:48px; max-width:100%; object-fit:contain;"/>
+            <img src="/logos/boots.webp" alt="Boots" width="48" height="48" loading="lazy" decoding="async" style="max-height:48px; max-width:100%; height:auto; width:auto; object-fit:contain;"/>
           </div>
           <div style="display:flex; align-items:center; justify-content:center; height:80px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px;">
-            <img src="/logos/superdrug.png" alt="Superdrug" style="max-height:40px; max-width:100%; object-fit:contain;"/>
+            <img src="/logos/superdrug.webp" alt="Superdrug" width="108" height="40" loading="lazy" decoding="async" style="max-height:40px; max-width:100%; height:auto; width:auto; object-fit:contain;"/>
           </div>
           <div style="display:flex; align-items:center; justify-content:center; height:80px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px;">
-            <img src="/logos/escentual.png" alt="Escentual" style="max-height:32px; max-width:100%; object-fit:contain;"/>
+            <img src="/logos/escentual.webp" alt="Escentual" width="125" height="32" loading="lazy" decoding="async" style="max-height:32px; max-width:100%; height:auto; width:auto; object-fit:contain;"/>
           </div>
           <div style="display:flex; align-items:center; justify-content:center; height:80px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px;">
-            <img src="/logos/stylevana.jpg" alt="Stylevana" style="max-height:48px; max-width:100%; object-fit:contain;"/>
+            <img src="/logos/stylevana.webp" alt="Stylevana" width="82" height="48" loading="lazy" decoding="async" style="max-height:48px; max-width:100%; height:auto; width:auto; object-fit:contain;"/>
           </div>
           <div style="display:flex; align-items:center; justify-content:center; height:80px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px;">
-            <img src="/logos/skin-cupid.png" alt="Skin Cupid" style="max-height:48px; max-width:100%; object-fit:contain;"/>
+            <img src="/logos/skin-cupid.webp" alt="Skin Cupid" width="94" height="48" loading="lazy" decoding="async" style="max-height:48px; max-width:100%; height:auto; width:auto; object-fit:contain;"/>
           </div>
           <div style="display:flex; align-items:center; justify-content:center; height:80px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px;">
-            <img src="/logos/the-organic-pharmacy.webp" alt="The Organic Pharmacy" style="max-height:36px; max-width:100%; object-fit:contain;"/>
+            <img src="/logos/the-organic-pharmacy.webp" alt="The Organic Pharmacy" width="97" height="36" loading="lazy" decoding="async" style="max-height:36px; max-width:100%; height:auto; width:auto; object-fit:contain;"/>
           </div>
           <div style="display:flex; align-items:center; justify-content:center; height:80px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px;">
-            <img src="/logos/evolve.avif" alt="Evolve Beauty" style="max-height:48px; max-width:100%; object-fit:contain;"/>
+            <img src="/logos/evolve.webp" alt="Evolve Beauty" width="136" height="48" loading="lazy" decoding="async" style="max-height:48px; max-width:100%; height:auto; width:auto; object-fit:contain;"/>
           </div>
           <div style="display:flex; align-items:center; justify-content:center; height:80px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px;">
-            <img src="/logos/amazon.png" alt="Available at Amazon" style="max-height:60px; max-width:100%; object-fit:contain;"/>
+            <img src="/logos/amazon.webp" alt="Available at Amazon" width="104" height="60" loading="lazy" decoding="async" style="max-height:60px; max-width:100%; height:auto; width:auto; object-fit:contain;"/>
           </div>
           <div style="display:flex; align-items:center; justify-content:center; height:80px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px;">
-            <img src="/logos/ebay.png" alt="eBay" style="max-height:36px; max-width:100%; object-fit:contain;"/>
+            <img src="/logos/ebay.webp" alt="eBay" width="36" height="36" loading="lazy" decoding="async" style="max-height:36px; max-width:100%; height:auto; width:auto; object-fit:contain;"/>
           </div>
           <div style="display:flex; align-items:center; justify-content:center; height:80px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px;">
-            <img src="/logos/branded-beauty.png" alt="Branded Beauty" style="max-height:54px; max-width:100%; object-fit:contain;"/>
+            <img src="/logos/branded-beauty.webp" alt="Branded Beauty" width="85" height="54" loading="lazy" decoding="async" style="max-height:54px; max-width:100%; height:auto; width:auto; object-fit:contain;"/>
           </div>
         </div>
       </div>
 
       <!-- BRANDS YOU CAN FIND -->
       <div style="text-align:center; padding-top:32px; border-top:1px solid var(--border);">
-        <p style="font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--gold); font-weight:500; margin-bottom:16px;">Brands you can find on FindMyBasket</p>
+        <p style="font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--gold-text); font-weight:500; margin-bottom:16px;">Brands you can find on FindMyBasket</p>
         <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-bottom:16px;">
           <span style="font-family:'DM Sans',sans-serif; font-size:13px; color:var(--ink-light); border:1px solid var(--border); border-radius:100px; padding:7px 16px; background:var(--cream);">Estée Lauder</span>
           <span style="font-family:'DM Sans',sans-serif; font-size:13px; color:var(--ink-light); border:1px solid var(--border); border-radius:100px; padding:7px 16px; background:var(--cream);">Clinique</span>
@@ -281,7 +284,7 @@
           <span style="font-family:'DM Sans',sans-serif; font-size:13px; color:var(--ink-light); border:1px solid var(--border); border-radius:100px; padding:7px 16px; background:var(--cream);">Kerastase</span>
           <span style="font-family:'DM Sans',sans-serif; font-size:13px; color:var(--ink-light); border:1px solid var(--border); border-radius:100px; padding:7px 16px; background:var(--cream);">Aveda</span>
           <span style="font-family:'DM Sans',sans-serif; font-size:13px; color:var(--ink-light); border:1px solid var(--border); border-radius:100px; padding:7px 16px; background:var(--cream);">Pantene</span>
-          <span style="font-family:'DM Sans',sans-serif; font-size:13px; color:var(--gold); border:1px solid rgba(201,169,110,0.3); border-radius:100px; padding:7px 16px; background:rgba(201,169,110,0.08); font-weight:500;">+ 1,500 more</span>
+          <span style="font-family:'DM Sans',sans-serif; font-size:13px; color:var(--gold-text); border:1px solid rgba(201,169,110,0.3); border-radius:100px; padding:7px 16px; background:rgba(201,169,110,0.08); font-weight:500;">+ 1,500 more</span>
         </div>
         <p style="font-family:'DM Sans',sans-serif; font-size:13px; color:var(--ink-light); opacity:0.6;">54,000+ products across 1,500+ brands and our retailer network</p>
       </div>
@@ -301,17 +304,17 @@
       <h2 class="section-title reveal">Three steps to a <em>smarter</em> shop</h2>
       <div class="steps">
         <div class="step reveal">
-          <div class="step-num">01</div><div class="step-icon">🧴</div>
+          <div class="step-num" aria-hidden="true">01</div><div class="step-icon">🧴</div>
           <h3>Build your routine</h3>
           <p>Search and add the products in your beauty routine: skincare, makeup, hair, whatever you use. Add as many as you like.</p>
         </div>
         <div class="step reveal" style="transition-delay:0.1s">
-          <div class="step-num">02</div><div class="step-icon">🔍</div>
+          <div class="step-num" aria-hidden="true">02</div><div class="step-icon">🔍</div>
           <h3>We compare the prices</h3>
           <p>FindMyBasket checks live prices across all major UK beauty retailers, including delivery thresholds.</p>
         </div>
         <div class="step reveal" style="transition-delay:0.2s">
-          <div class="step-num">03</div><div class="step-icon">🛒</div>
+          <div class="step-num" aria-hidden="true">03</div><div class="step-icon">🛒</div>
           <h3>Shop your optimal basket</h3>
           <p>We recommend the best value 1 or 2 retailer split for your whole routine. See exactly how much you save, then click through to shop.</p>
         </div>
@@ -330,7 +333,7 @@
 
         <!-- Tile 1: Skincare (live) -->
         <div class="reveal" style="background:#fff; border:1.5px solid var(--sage); border-radius:18px; padding:32px 28px; text-align:left; position:relative; box-shadow:0 4px 24px rgba(122,158,135,0.12);">
-          <div style="position:absolute; top:18px; right:18px; background:var(--sage); color:#fff; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; font-weight:600; padding:5px 12px; border-radius:100px;">✓ Live</div>
+          <div style="position:absolute; top:18px; right:18px; background:var(--sage-deep); color:#fff; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; font-weight:600; padding:5px 12px; border-radius:100px;">✓ Live</div>
           <div style="font-size:32px; margin-bottom:14px;">🧴</div>
           <h3 style="font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:600; color:var(--ink); margin-bottom:8px;">Skincare</h3>
           <p style="font-size:14px; color:var(--ink-light); line-height:1.6;">Compare cleansers, serums, moisturisers and SPF across the UK's major beauty retailers. Live now.</p>
@@ -338,7 +341,7 @@
 
         <!-- Tile 2: Hair (live) -->
         <div class="reveal" style="transition-delay:0.1s; background:#fff; border:1.5px solid var(--sage); border-radius:18px; padding:32px 28px; text-align:left; position:relative; box-shadow:0 4px 24px rgba(122,158,135,0.12);">
-          <div style="position:absolute; top:18px; right:18px; background:var(--sage); color:#fff; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; font-weight:600; padding:5px 12px; border-radius:100px;">✓ Live</div>
+          <div style="position:absolute; top:18px; right:18px; background:var(--sage-deep); color:#fff; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; font-weight:600; padding:5px 12px; border-radius:100px;">✓ Live</div>
           <div style="font-size:32px; margin-bottom:14px;">💆</div>
           <h3 style="font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:600; color:var(--ink); margin-bottom:8px;">Hair</h3>
           <p style="font-size:14px; color:var(--ink-light); line-height:1.6;">Compare shampoos, conditioners, treatments and styling across the UK's major hair retailers. Live now.</p>
@@ -346,7 +349,7 @@
 
         <!-- Tile 3: Makeup (live) -->
         <div class="reveal" style="transition-delay:0.2s; background:#fff; border:1.5px solid var(--sage); border-radius:18px; padding:32px 28px; text-align:left; position:relative; box-shadow:0 4px 24px rgba(122,158,135,0.12);">
-          <div style="position:absolute; top:18px; right:18px; background:var(--sage); color:#fff; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; font-weight:600; padding:5px 12px; border-radius:100px;">✓ Live</div>
+          <div style="position:absolute; top:18px; right:18px; background:var(--sage-deep); color:#fff; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; font-weight:600; padding:5px 12px; border-radius:100px;">✓ Live</div>
           <div style="font-size:32px; margin-bottom:14px;">💄</div>
           <h3 style="font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:600; color:var(--ink); margin-bottom:8px;">Makeup</h3>
           <p style="font-size:14px; color:var(--ink-light); line-height:1.6;">Compare foundations, lipsticks, mascaras and more across the same UK retailers you already trust. Live now.</p>
@@ -366,10 +369,10 @@
         <a href="/product-finder.html" style="display:inline-flex;align-items:center;gap:10px;background:var(--ink);color:var(--cream);padding:16px 32px;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;">Try Product Finder →</a>
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:18px 20px;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:8px;">Ingredient</div><div style="font-size:16px;font-weight:500;color:var(--ink);">Niacinamide</div><div style="font-size:13px;color:var(--ink-light);margin-top:4px;">3 products found</div></div>
-        <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:18px 20px;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--sage);font-weight:500;margin-bottom:8px;">Concern</div><div style="font-size:16px;font-weight:500;color:var(--ink);">Dry Skin</div><div style="font-size:13px;color:var(--ink-light);margin-top:4px;">4 products found</div></div>
-        <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:18px 20px;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:8px;">Ingredient</div><div style="font-size:16px;font-weight:500;color:var(--ink);">Hyaluronic Acid</div><div style="font-size:13px;color:var(--ink-light);margin-top:4px;">2 products found</div></div>
-        <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:18px 20px;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--sage);font-weight:500;margin-bottom:8px;">Concern</div><div style="font-size:16px;font-weight:500;color:var(--ink);">Acne</div><div style="font-size:13px;color:var(--ink-light);margin-top:4px;">2 products found</div></div>
+        <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:18px 20px;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold-text);font-weight:500;margin-bottom:8px;">Ingredient</div><div style="font-size:16px;font-weight:500;color:var(--ink);">Niacinamide</div><div style="font-size:13px;color:var(--ink-light);margin-top:4px;">3 products found</div></div>
+        <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:18px 20px;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--sage-text);font-weight:500;margin-bottom:8px;">Concern</div><div style="font-size:16px;font-weight:500;color:var(--ink);">Dry Skin</div><div style="font-size:13px;color:var(--ink-light);margin-top:4px;">4 products found</div></div>
+        <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:18px 20px;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold-text);font-weight:500;margin-bottom:8px;">Ingredient</div><div style="font-size:16px;font-weight:500;color:var(--ink);">Hyaluronic Acid</div><div style="font-size:13px;color:var(--ink-light);margin-top:4px;">2 products found</div></div>
+        <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:18px 20px;"><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--sage-text);font-weight:500;margin-bottom:8px;">Concern</div><div style="font-size:16px;font-weight:500;color:var(--ink);">Acne</div><div style="font-size:13px;color:var(--ink-light);margin-top:4px;">2 products found</div></div>
       </div>
     </div>
   </section>
@@ -378,7 +381,7 @@
     <div class="section-inner" style="max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:center;">
       <div style="display:grid; grid-template-rows:auto auto; gap:14px;">
         <div style="background:#fff; border:1px solid var(--border); border-radius:16px; padding:22px 24px; box-shadow:0 4px 24px rgba(28,26,24,0.04); position:relative;">
-          <div style="position:absolute; top:14px; right:14px; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-light); background:var(--cream); padding:3px 8px; border-radius:100px; font-weight:600; opacity:0.7;">Example</div>
+          <div style="position:absolute; top:14px; right:14px; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-light); background:var(--cream); padding:3px 8px; border-radius:100px; font-weight:600;">Example</div>
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; padding-right:80px;">
             <div style="font-family:'Cormorant Garamond',serif; font-size:18px; font-weight:600; color:var(--ink);">Your routine, May</div>
           </div>
@@ -389,7 +392,7 @@
           </div>
           <div style="border-top:1px solid var(--border); padding-top:12px; display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size:13px; color:var(--ink-light);">Best price this month</span>
-            <span style="font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:600; color:var(--sage);">£49.44</span>
+            <span style="font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:600; color:var(--sage-text);">£49.44</span>
           </div>
         </div>
         <div style="background:rgba(74,144,217,0.08); border:1px solid rgba(74,144,217,0.2); border-radius:12px; padding:14px 18px; display:flex; align-items:center; gap:12px;">
