@@ -18,8 +18,7 @@ export interface BrandProductTypeChip {
 }
 
 // Reverse-slug lookup: given a slug like "the-ordinary", find the actual
-// normalised_brand string in the database that matches. Pulls in paginated
-// batches so we cover the full catalogue (Supabase default limit is 1000).
+// normalised_brand string in the database that matches.
 export async function findBrandBySlug(slug: string): Promise<BrandLookup | null> {
   const PAGE_SIZE = 1000;
   let offset = 0;
@@ -50,7 +49,6 @@ export async function findBrandBySlug(slug: string): Promise<BrandLookup | null>
 
   if (!chosenNormalised) return null;
 
-  // Most-frequent display name wins
   let bestDisplay = chosenNormalised;
   let bestCount = 0;
   for (const [display, count] of matches.entries()) {
@@ -66,7 +64,6 @@ export async function findBrandBySlug(slug: string): Promise<BrandLookup | null>
   };
 }
 
-// Stats for a brand page hero
 export async function getBrandStats(normalisedBrand: string): Promise<BrandStats> {
   const { data: catRows, count: totalProducts } = await supabase
     .from('products')
@@ -109,9 +106,14 @@ export async function getBrandProductTypes(
 
   if (!data) return [];
 
+  // Hide catch-all product_types - they're a junk default applied when no
+  // specific type could be inferred. Same exclusion as subcategory pages.
+  const JUNK_TYPES = new Set(['Skincare', 'Makeup', 'Hair']);
+
   const counts = new Map<string, number>();
   for (const row of data) {
     if (!row.product_type) continue;
+    if (JUNK_TYPES.has(row.product_type)) continue;
     counts.set(row.product_type, (counts.get(row.product_type) ?? 0) + 1);
   }
 
@@ -124,17 +126,24 @@ export async function getBrandProductTypes(
 export async function getBrandProducts(
   normalisedBrand: string,
   page = 1,
-  pageSize = 48
+  pageSize = 48,
+  productType?: string
 ): Promise<{ products: FeaturedProduct[]; totalCount: number }> {
   const offset = (page - 1) * pageSize;
   const candidateLimit = pageSize * 4;
 
-  const { data: products, count: totalCount } = await supabase
+  let query = supabase
     .from('products')
     .select('id, name, brand, normalised_brand, product_type, subcategory, image_url', { count: 'exact' })
     .eq('normalised_brand', normalisedBrand)
     .not('image_url', 'is', null)
-    .neq('image_url', '')
+    .neq('image_url', '');
+
+  if (productType) {
+    query = query.eq('product_type', productType);
+  }
+
+  const { data: products, count: totalCount } = await query
     .range(offset, offset + candidateLimit - 1);
 
   if (!products || products.length === 0) {
