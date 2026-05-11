@@ -107,11 +107,19 @@ const { data: retailers } = await supabase    .from('retailers')
     });
   }
 
-  offers.sort((a, b) => {
+ offers.sort((a, b) => {
     if (a.in_stock !== b.in_stock) return a.in_stock ? -1 : 1;
     return a.effective_price - b.effective_price;
   });
 
+  // Stylevana (retailer_id = 11) is a specialist K-beauty importer. Hide it
+  // when other retailers stock the same product, since UK retailers are
+  // cheaper/faster/more trustworthy. Keep it when it's the only option.
+  const STYLEVANA_ID = 11;
+  const hasOtherInStock = offers.some(o => o.retailer_id !== STYLEVANA_ID && o.in_stock);
+  if (hasOtherInStock) {
+    return offers.filter(o => o.retailer_id !== STYLEVANA_ID);
+  }
 
   return offers;
 }

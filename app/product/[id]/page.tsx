@@ -76,6 +76,9 @@ export default async function ProductPage({ params }: { params: { id: string } }
 
   const inStockOffers = offers.filter(o => o.in_stock);
   const outOfStockOffers = offers.filter(o => !o.in_stock);
+  // Stylevana-only products get a "Specialist import" badge to set expectations
+  const STYLEVANA_ID = 11;
+  const isSpecialistOnly = inStockOffers.length > 0 && inStockOffers.every(o => o.retailer_id === STYLEVANA_ID);
   const lowestPrice = inStockOffers.length > 0 ? inStockOffers[0].effective_price : null;
   const highestPrice = inStockOffers.length > 0
     ? Math.max(...inStockOffers.map(o => o.effective_price))
@@ -209,6 +212,11 @@ export default async function ProductPage({ params }: { params: { id: string } }
             <h1 className="font-serif text-4xl md:text-5xl text-ink mb-6 leading-tight">
               {product.name}
             </h1>
+            {isSpecialistOnly && (
+              <div className="inline-flex items-center gap-2 bg-cream border border-border rounded-full px-4 py-1.5 mb-6 text-xs text-ink-light">
+                <span>✦ Specialist import — longer delivery times may apply</span>
+              </div>
+            )}
 
             {(product.product_type || product.canonical_size || product.shade) && (
               <div className="flex flex-wrap gap-2 mb-8">
