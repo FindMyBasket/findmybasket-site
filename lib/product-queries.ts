@@ -79,7 +79,22 @@ export async function getRetailerOffers(productId: number): Promise<RetailerOffe
     .in('id', retailerIds)
     .eq('active', true);
 
-  if (!retailers) return [];
+  if (!retailers) return console.log(`[DEBUG 13371] prices result:`, JSON.stringify(prices), `count: ${prices?.length}`);
+  if (!prices || prices.length === 0) return [];
+
+  // Get retailer metadata
+  const retailerIds = Array.from(new Set(prices.map(p => p.retailer_id)));
+  console.log(`[DEBUG 13371] retailerIds:`, retailerIds);
+
+  const { data: retailers, error: retailersError } = await supabase
+    .from('retailers')
+    .select('id, name, base_url, delivery_cost, delivery_threshold, active')
+    .in('id', retailerIds)
+    .eq('active', true);
+
+  console.log(`[DEBUG 13371] retailers result:`, JSON.stringify(retailers), `error:`, JSON.stringify(retailersError));
+
+  if (!retailers) return [];[];
 
   const retailerMap = new Map(retailers.map(r => [r.id, r]));
 
