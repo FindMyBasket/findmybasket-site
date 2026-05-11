@@ -214,7 +214,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
             </h1>
             {isSpecialistOnly && (
               <div className="inline-flex items-center gap-2 bg-cream border border-border rounded-full px-4 py-1.5 mb-6 text-xs text-ink-light">
-                <span>✦ Specialist import — longer delivery times may apply</span>
+                <span>✦ Specialist import · longer delivery times may apply</span>
               </div>
             )}
 
