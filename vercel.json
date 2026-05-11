@@ -3,7 +3,10 @@
     { "source": "/app.html", "destination": "/app", "permanent": true },
     { "source": "/product-finder", "destination": "/product-finder.html", "permanent": false },
     { "source": "/savings-hub", "destination": "/savings-hub.html", "permanent": false },
-    { "source": "/skincare/nails", "destination": "/makeup/nails", "permanent": true }
+    { "source": "/skincare/nails", "destination": "/makeup/nails", "permanent": true },
+    { "source": "/skincare/hand", "destination": "/skincare/body", "permanent": true },
+    { "source": "/skincare/foot", "destination": "/skincare/body", "permanent": true },
+    { "source": "/skincare/both", "destination": "/skincare/body", "permanent": true }
   ],
   "cleanUrls": false,
   "trailingSlash": false
