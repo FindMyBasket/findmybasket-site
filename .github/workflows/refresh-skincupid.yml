@@ -14,17 +14,7 @@ name: refresh-skincupid
 
 "on":
   schedule:
-    - cron: '0 4 * * *'   # Weekly Sunday 04:00 UTC
-  workflow_dispatch:
-    inputs:
-      dry_run:
-        description: 'Dry run (no DB writes)'
-        required: false
-        default: 'false'
-        type: choice
-        options:
-          - 'true'
-          - 'false'
+   - cron: '0 4 * * *'  # Daily 04:00 UTC
 
 jobs:
   refresh:
