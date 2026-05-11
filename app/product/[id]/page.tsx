@@ -137,7 +137,10 @@ export default async function ProductPage({ params }: { params: { id: string } }
   const ebayUrl = buildEbaySearchUrl(product.name, product.brand);
 
   return (
-    <SiteLayout>
+  <SiteLayout>
+      <div style={{background:'red',color:'white',padding:'10px',textAlign:'center',fontWeight:'bold'}}>
+        DEBUG BUILD {new Date().toISOString()} - offers: {offers.length}, inStock: {inStockOffers.length}
+      </div>
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
