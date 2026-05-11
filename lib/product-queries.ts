@@ -62,20 +62,17 @@ export async function getRetailerOffers(productId: number): Promise<RetailerOffe
     .select('retailer_id, price, url, in_stock, last_updated')
     .eq('product_id', productId);
 
-  console.log(`[DEBUG offers ${productId}] prices:`, prices?.length ?? 0, JSON.stringify(prices));
+
 
   if (!prices || prices.length === 0) return [];
 
   const retailerIds = Array.from(new Set(prices.map(p => p.retailer_id)));
-  console.log(`[DEBUG offers ${productId}] retailerIds:`, retailerIds);
 
-  const { data: retailers, error: retailersError } = await supabase
-    .from('retailers')
+const { data: retailers } = await supabase    .from('retailers')
     .select('id, name, base_url, delivery_cost, delivery_threshold, active')
     .in('id', retailerIds)
     .eq('active', true);
 
-  console.log(`[DEBUG offers ${productId}] retailers:`, retailers?.length ?? 0, JSON.stringify(retailers), `error:`, JSON.stringify(retailersError));
 
   if (!retailers) return [];
 
@@ -115,7 +112,6 @@ export async function getRetailerOffers(productId: number): Promise<RetailerOffe
     return a.effective_price - b.effective_price;
   });
 
-  console.log(`[DEBUG offers ${productId}] final offers count:`, offers.length);
 
   return offers;
 }
