@@ -26,7 +26,7 @@ export interface RetailerOffer {
   in_stock: boolean;
   delivery_cost: number | null;
   delivery_threshold: number | null;
-  effective_price: number; // price + delivery if under threshold
+  effective_price: number;
   last_updated: string | null;
 }
 
@@ -57,34 +57,17 @@ export async function getProductById(id: number): Promise<ProductDetail | null> 
 }
 
 export async function getRetailerOffers(productId: number): Promise<RetailerOffer[]> {
-  // Pull retailer prices joined with retailer metadata
   const { data: prices } = await supabase
     .from('retailer_prices')
-    .select(`
-      retailer_id,
-      price,
-      url,
-      in_stock,
-      last_updated
-    `)
+    .select('retailer_id, price, url, in_stock, last_updated')
     .eq('product_id', productId);
 
+  console.log(`[DEBUG offers ${productId}] prices:`, prices?.length ?? 0, JSON.stringify(prices));
+
   if (!prices || prices.length === 0) return [];
 
-  // Get retailer metadata
   const retailerIds = Array.from(new Set(prices.map(p => p.retailer_id)));
-  const { data: retailers } = await supabase
-    .from('retailers')
-    .select('id, name, base_url, delivery_cost, delivery_threshold, active')
-    .in('id', retailerIds)
-    .eq('active', true);
-
-  if (!retailers) return console.log(`[DEBUG 13371] prices result:`, JSON.stringify(prices), `count: ${prices?.length}`);
-  if (!prices || prices.length === 0) return [];
-
-  // Get retailer metadata
-  const retailerIds = Array.from(new Set(prices.map(p => p.retailer_id)));
-  console.log(`[DEBUG 13371] retailerIds:`, retailerIds);
+  console.log(`[DEBUG offers ${productId}] retailerIds:`, retailerIds);
 
   const { data: retailers, error: retailersError } = await supabase
     .from('retailers')
@@ -92,9 +75,9 @@ export async function getRetailerOffers(productId: number): Promise<RetailerOffe
     .in('id', retailerIds)
     .eq('active', true);
 
-  console.log(`[DEBUG 13371] retailers result:`, JSON.stringify(retailers), `error:`, JSON.stringify(retailersError));
+  console.log(`[DEBUG offers ${productId}] retailers:`, retailers?.length ?? 0, JSON.stringify(retailers), `error:`, JSON.stringify(retailersError));
 
-  if (!retailers) return [];[];
+  if (!retailers) return [];
 
   const retailerMap = new Map(retailers.map(r => [r.id, r]));
 
@@ -127,29 +110,26 @@ export async function getRetailerOffers(productId: number): Promise<RetailerOffe
     });
   }
 
-  // Sort: in-stock first, then by effective price ascending
   offers.sort((a, b) => {
     if (a.in_stock !== b.in_stock) return a.in_stock ? -1 : 1;
     return a.effective_price - b.effective_price;
   });
 
+  console.log(`[DEBUG offers ${productId}] final offers count:`, offers.length);
+
   return offers;
 }
 
-// Related products: same brand or same product_type, excluding current
 export async function getRelatedProducts(product: ProductDetail, limit = 6): Promise<FeaturedProduct[]> {
   if (!product.brand && !product.product_type) return [];
 
-  // First try same brand + same product_type (most specific)
   let candidates = await fetchRelated(product, true, true);
 
-  // Fallback: same product_type only
   if (candidates.length < limit && product.product_type) {
     const more = await fetchRelated(product, false, true);
     candidates = mergeUnique(candidates, more);
   }
 
-  // Fallback: same brand only
   if (candidates.length < limit && product.brand) {
     const more = await fetchRelated(product, true, false);
     candidates = mergeUnique(candidates, more);
@@ -181,7 +161,6 @@ async function fetchRelated(
   const { data: rows } = await query;
   if (!rows || rows.length === 0) return [];
 
-  // Get retailer counts and prices
   const productIds = rows.map(r => r.id);
   const { data: prices } = await supabase
     .from('retailer_prices')
