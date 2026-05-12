@@ -1,7 +1,8 @@
 {
   "redirects": [
     { "source": "/app.html", "destination": "/app", "permanent": true },
-    { "source": "/product-finder", "destination": "/product-finder.html", "permanent": false },
+    { "source": "/product-finder", "destination": "/skincare", "permanent": true },
+    { "source": "/product-finder.html", "destination": "/skincare", "permanent": true },
     { "source": "/savings-hub", "destination": "/savings-hub.html", "permanent": false },
     { "source": "/skincare/nails", "destination": "/makeup/nails", "permanent": true },
     { "source": "/skincare/hand", "destination": "/skincare/body", "permanent": true },
