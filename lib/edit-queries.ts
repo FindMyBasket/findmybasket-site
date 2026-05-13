@@ -16,7 +16,7 @@ export async function getEditStats(edit: Edit): Promise<EditStats> {
   }
 
   const { data: brandRows } = await supabase
-    .from('products')
+    .from('products_active')
     .select('normalised_brand')
     .in('id', productIds)
     .not('normalised_brand', 'is', null)
@@ -44,7 +44,7 @@ export async function getEditTopBrands(edit: Edit, limit = 16): Promise<TopBrand
   if (productIds.length === 0) return [];
 
   const { data } = await supabase
-    .from('products')
+    .from('products_active')
     .select('normalised_brand, brand')
     .in('id', productIds)
     .not('normalised_brand', 'is', null)
@@ -85,7 +85,7 @@ export async function getEditFeaturedProducts(
   if (productIds.length === 0) return [];
 
   const { data: products } = await supabase
-    .from('products')
+    .from('products_active')
     .select('id, name, brand, normalised_brand, product_type, subcategory, image_url')
     .in('id', productIds)
     .not('image_url', 'is', null)
@@ -158,7 +158,7 @@ async function getEditProductIds(edit: Edit): Promise<number[]> {
 
   if (edit.brand_slugs.length > 0) {
     const { data: brandMatches } = await supabase
-      .from('products')
+      .from('products_active')
       .select('id')
       .in('normalised_brand', edit.brand_slugs)
       .not('tags', 'cs', '{cleanup_remove}');

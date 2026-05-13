@@ -56,14 +56,14 @@ async function fetchAllRows<T>(
 
 export async function getCategoryStats(category: TopCategory): Promise<CategoryStats> {
   const { count: totalProducts } = await supabase
-    .from('products')
+    .from('products_active')
     .select('*', { count: 'exact', head: true })
     .eq('top_category', category)
     .not('tags', 'cs', '{cleanup_remove}');
 
   const brandRows = await fetchAllRows<{ normalised_brand: string | null }>(offset =>
     supabase
-      .from('products')
+      .from('products_active')
       .select('normalised_brand')
       .eq('top_category', category)
       .not('normalised_brand', 'is', null)
@@ -95,7 +95,7 @@ export async function getTopBrands(category: TopCategory, limit = 16): Promise<T
   const data = await fetchAllRows<{ normalised_brand: string | null; brand: string | null }>(
     offset =>
       supabase
-        .from('products')
+        .from('products_active')
         .select('normalised_brand, brand')
         .eq('top_category', category)
         .not('normalised_brand', 'is', null)
@@ -132,7 +132,7 @@ export async function getFeaturedProducts(
   limit = 24
 ): Promise<FeaturedProduct[]> {
   const { data: products } = await supabase
-    .from('products')
+    .from('products_active')
     .select('id, name, brand, normalised_brand, product_type, subcategory, image_url')
     .eq('top_category', category)
     .not('image_url', 'is', null)
@@ -209,7 +209,7 @@ export async function getFeaturedProducts(
 export async function getSubcategories(category: TopCategory): Promise<{ name: string; count: number }[]> {
   const data = await fetchAllRows<{ subcategory: string | null }>(offset =>
     supabase
-      .from('products')
+      .from('products_active')
       .select('subcategory')
       .eq('top_category', category)
       .not('subcategory', 'is', null)

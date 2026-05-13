@@ -32,7 +32,7 @@ export interface RetailerOffer {
 
 export async function getProductById(id: number): Promise<ProductDetail | null> {
   const { data, error } = await supabase
-    .from('products')
+    .from('products_active')
     .select('id, name, brand, normalised_brand, top_category, subcategory, product_type, image_url, ingredients, concerns, ean, canonical_size, shade')
     .eq('id', id)
     .single();
@@ -148,7 +148,7 @@ async function fetchRelated(
   matchType: boolean
 ): Promise<FeaturedProduct[]> {
   let query = supabase
-    .from('products')
+    .from('products_active')
     .select('id, name, brand, normalised_brand, product_type, subcategory, image_url')
     .neq('id', product.id)
     .not('image_url', 'is', null)

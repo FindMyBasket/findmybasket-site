@@ -102,7 +102,7 @@ export default function RoutineBuilder() {
     let cancelled = false;
     (async () => {
       const { data, error } = await db
-        .from('products')
+        .from('products_active')
         .select('id, name, brand, product_type')
         .in('id', productIds);
 

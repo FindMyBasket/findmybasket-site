@@ -44,7 +44,7 @@ export async function GET(request: Request) {
 
 async function searchBrands(query: string): Promise<BrandMatch[]> {
   const { data } = await supabase
-    .from('products')
+    .from('products_active')
     .select('normalised_brand, brand')
     .ilike('brand', `%${query}%`)
     .not('normalised_brand', 'is', null)
@@ -87,7 +87,7 @@ async function searchBrands(query: string): Promise<BrandMatch[]> {
 
 async function searchProducts(query: string): Promise<ProductMatch[]> {
   const { data } = await supabase
-    .from('products')
+    .from('products_active')
     .select('id, name, brand, product_type, image_url')
     .or(`name.ilike.%${query}%,brand.ilike.%${query}%`)
     .not('image_url', 'is', null)
@@ -99,7 +99,7 @@ async function searchProducts(query: string): Promise<ProductMatch[]> {
     const words = query.split(/\s+/).filter(w => w.length >= 2);
     if (words.length > 1) {
       let fallbackQuery = supabase
-        .from('products')
+        .from('products_active')
         .select('id, name, brand, product_type, image_url');
       for (const w of words) {
         fallbackQuery = fallbackQuery.or(`name.ilike.%${w}%,brand.ilike.%${w}%`);

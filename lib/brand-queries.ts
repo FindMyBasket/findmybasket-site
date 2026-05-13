@@ -28,7 +28,7 @@ export async function findBrandBySlug(slug: string): Promise<BrandLookup | null>
 
   while (true) {
     const { data, error } = await supabase
-      .from('products')
+      .from('products_active')
       .select('normalised_brand, brand')
       .not('normalised_brand', 'is', null)
       .range(offset, offset + PAGE_SIZE - 1);
@@ -67,7 +67,7 @@ export async function findBrandBySlug(slug: string): Promise<BrandLookup | null>
 
 export async function getBrandStats(normalisedBrand: string): Promise<BrandStats> {
   const { data: catRows, count: totalProducts } = await supabase
-    .from('products')
+    .from('products_active')
     .select('top_category', { count: 'exact' })
     .eq('normalised_brand', normalisedBrand)
     .not('top_category', 'is', null)
@@ -101,7 +101,7 @@ export async function getBrandProductTypes(
   limit = 12
 ): Promise<BrandProductTypeChip[]> {
   const { data } = await supabase
-    .from('products')
+    .from('products_active')
     .select('product_type')
     .eq('normalised_brand', normalisedBrand)
     .not('product_type', 'is', null)
@@ -134,7 +134,7 @@ export async function getBrandProducts(
   const candidateLimit = pageSize * 4;
 
   let query = supabase
-    .from('products')
+    .from('products_active')
     .select('id, name, brand, normalised_brand, product_type, subcategory, image_url', { count: 'exact' })
     .eq('normalised_brand', normalisedBrand)
     .not('image_url', 'is', null)

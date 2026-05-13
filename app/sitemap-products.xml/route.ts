@@ -32,7 +32,7 @@ export async function GET() {
     const limit = Math.min(PAGE_SIZE, remaining);
 
     const { data, error } = await supabase
-      .from('products')
+      .from('products_active')
       .select('id, created_at')
       .not('image_url', 'is', null)
       .neq('image_url', '')

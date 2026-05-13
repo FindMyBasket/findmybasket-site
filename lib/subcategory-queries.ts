@@ -44,7 +44,7 @@ export async function getSubcategoryStats(
 ): Promise<SubcategoryStats> {
   // Total products — count-only, no row cap
   const { count: totalProducts } = await supabase
-    .from('products')
+    .from('products_active')
     .select('*', { count: 'exact', head: true })
     .eq('top_category', category)
     .eq('subcategory', subcategory)
@@ -53,7 +53,7 @@ export async function getSubcategoryStats(
   // Distinct brands — paginated row fetch
   const brandRows = await fetchAllRows<{ normalised_brand: string | null }>(offset =>
     supabase
-      .from('products')
+      .from('products_active')
       .select('normalised_brand')
       .eq('top_category', category)
       .eq('subcategory', subcategory)
@@ -90,7 +90,7 @@ export async function getProductTypes(
 ): Promise<ProductTypeChip[]> {
   const data = await fetchAllRows<{ product_type: string | null }>(offset =>
     supabase
-      .from('products')
+      .from('products_active')
       .select('product_type')
       .eq('top_category', category)
       .eq('subcategory', subcategory)
@@ -123,7 +123,7 @@ export async function getSubcategoryTopBrands(
   const data = await fetchAllRows<{ normalised_brand: string | null; brand: string | null }>(
     offset => {
       let query = supabase
-        .from('products')
+        .from('products_active')
         .select('normalised_brand, brand')
         .eq('top_category', category)
         .eq('subcategory', subcategory)
@@ -174,7 +174,7 @@ export async function getSubcategoryProducts(
   const candidateLimit = pageSize * 4;
 
   let query = supabase
-    .from('products')
+    .from('products_active')
     .select('id, name, brand, normalised_brand, product_type, subcategory, image_url', { count: 'exact' })
     .eq('top_category', category)
     .eq('subcategory', subcategory)
@@ -262,7 +262,7 @@ export async function getSubcategoryProducts(
 export async function getValidSubcategories(category: TopCategory): Promise<string[]> {
   const data = await fetchAllRows<{ subcategory: string | null }>(offset =>
     supabase
-      .from('products')
+      .from('products_active')
       .select('subcategory')
       .eq('top_category', category)
       .not('subcategory', 'is', null)

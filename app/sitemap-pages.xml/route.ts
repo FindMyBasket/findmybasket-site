@@ -72,7 +72,7 @@ export async function GET() {
   // Subcategories: /skincare/face etc.
   for (const cat of CATEGORIES) {
     const { data } = await supabase
-      .from('products')
+      .from('products_active')
       .select('subcategory')
       .eq('top_category', cat)
       .not('subcategory', 'is', null);
@@ -108,7 +108,7 @@ export async function GET() {
   const brandSlugs = new Set<string>();
   while (true) {
     const { data, error } = await supabase
-      .from('products')
+      .from('products_active')
       .select('normalised_brand')
       .not('normalised_brand', 'is', null)
       .range(offset, offset + PAGE_SIZE - 1);
