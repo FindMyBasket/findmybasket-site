@@ -162,6 +162,7 @@ export async function getBrandProducts(
 
   if (!prices) return { products: [], totalCount: totalCount ?? 0 };
 
+  const STYLEVANA_ID = 11;
   const byProduct = new Map<number, { retailers: Set<number>; prices: number[] }>();
   for (const p of prices) {
     if (!p.product_id || !p.price) continue;
@@ -169,6 +170,18 @@ export async function getBrandProducts(
     entry.retailers.add(p.retailer_id);
     entry.prices.push(Number(p.price));
     byProduct.set(p.product_id, entry);
+  }
+
+  // Hide Stylevana from products that have UK retailer alternatives. Same
+  // rationale as getRetailerOffers in product-queries.ts.
+  for (const [productId, entry] of byProduct) {
+    if (entry.retailers.has(STYLEVANA_ID) && entry.retailers.size > 1) {
+      const stylevanaPrices = prices
+        .filter(p => p.product_id === productId && p.retailer_id === STYLEVANA_ID)
+        .map(p => Number(p.price));
+      entry.retailers.delete(STYLEVANA_ID);
+      entry.prices = entry.prices.filter(price => !stylevanaPrices.includes(price));
+    }
   }
 
   const featured: FeaturedProduct[] = [];
