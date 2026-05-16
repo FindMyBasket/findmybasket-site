@@ -195,7 +195,6 @@ export default async function ProductPage({ params }: { params: { id: string } }
              e.currentTarget.onerror = null;
              }}
             />
-            )}
           </div>
 
           <div>
