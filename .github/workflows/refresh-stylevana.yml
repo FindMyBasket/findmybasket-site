@@ -54,7 +54,7 @@ jobs:
           echo "usd_to_gbp=$RATE" >> "$GITHUB_OUTPUT"
           echo "USD→GBP rate: $RATE"
 
-       - name: Download cmp feeds via SFTP
+      - name: Download cmp feeds via SFTP
         env:
           SFTP_USER: ${{ secrets.RAKUTEN_SFTP_USER }}
           SFTP_PASSWORD: ${{ secrets.RAKUTEN_SFTP_PASSWORD }}
