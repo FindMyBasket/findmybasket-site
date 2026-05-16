@@ -1,4 +1,3 @@
-"use client";
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { SiteLayout } from '../../../components/SiteLayout';
@@ -191,10 +190,6 @@ export default async function ProductPage({ params }: { params: { id: string } }
               src={product.image_url || '/placeholder-product.svg'}
               alt={product.name}
               className="max-w-full max-h-full object-contain p-8"
-              onError={(e) => {
-             e.currentTarget.src = '/placeholder-product.svg';
-             e.currentTarget.onerror = null;
-             }}
             />
           </div>
 
