@@ -54,19 +54,6 @@ jobs:
           echo "usd_to_gbp=$RATE" >> "$GITHUB_OUTPUT"
           echo "USD→GBP rate: $RATE"
 
-          - name: Discover SFTP structure
-        env:
-          SFTP_USER: ${{ secrets.RAKUTEN_SFTP_USER }}
-          SFTP_PASSWORD: ${{ secrets.RAKUTEN_SFTP_PASSWORD }}
-        run: |
-          sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no \
-            -o BatchMode=no \
-            "$SFTP_USER@aftp.linksynergy.com" <<'EOF'
-          pwd
-          ls -la
-          bye
-          EOF
-
       - name: Download cmp feeds via SFTP
         env:
           SFTP_USER: ${{ secrets.RAKUTEN_SFTP_USER }}
