@@ -1,0 +1,278 @@
+name: refresh-stylevana
+
+# Daily refresh of Stylevana catalogue from Rakuten LinkShare SFTP feed.
+#
+# Replaces the AWIN Stylevana feed (which had data quality issues with
+# broken links). The Rakuten feed has:
+#   - ~20,664 products (vs ~5,219 in AWIN)
+#   - 80% UPC/EAN coverage
+#   - USD pricing (we convert to GBP via Frankfurter API)
+#   - Two feed files: 53421_4684964_1_cmp_xml.gz (main, ~20k products)
+#     and 53421_4684964_4_cmp_xml.gz (supplementary, ~125 products)
+#
+# Pipeline:
+#   1. Pull both cmp.xml.gz files from aftp.linksynergy.com/53421
+#   2. Get USD→GBP rate from frankfurter.app (cached for the run)
+#   3. Parse both XMLs, convert USD prices, output NDJSON
+#   4. Upload gzipped NDJSON to Supabase Storage
+#   5. Trigger import-rakuten-feed with retailer_id=11
+#
+# Schedule: 03:30 UTC daily (after Rakuten's nightly feed regeneration).
+
+"on":
+  schedule:
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+
+      - name: Get USD to GBP exchange rate
+        id: fx
+        run: |
+          # Frankfurter API: ECB rates, no auth, very reliable.
+          # Returns JSON: {"amount":1,"base":"USD","date":"2026-05-16","rates":{"GBP":0.79}}
+          RATE=$(curl -fsSL "https://api.frankfurter.app/latest?from=USD&to=GBP" \
+            | python3 -c "import json,sys; print(json.load(sys.stdin)['rates']['GBP'])")
+          if [ -z "$RATE" ]; then
+            echo "::error::Failed to fetch USD→GBP rate from Frankfurter"
+            exit 1
+          fi
+          # Sanity check: rate should be between 0.5 and 1.5
+          IS_SANE=$(python3 -c "r=float('$RATE'); print(1 if 0.5 <= r <= 1.5 else 0)")
+          if [ "$IS_SANE" != "1" ]; then
+            echo "::error::USD→GBP rate ($RATE) is outside sane range (0.5-1.5)"
+            exit 1
+          fi
+          echo "usd_to_gbp=$RATE" >> "$GITHUB_OUTPUT"
+          echo "USD→GBP rate: $RATE"
+
+      - name: Download cmp feeds via SFTP
+        env:
+          SFTP_USER: ${{ secrets.RAKUTEN_SFTP_USER }}
+          SFTP_PASSWORD: ${{ secrets.RAKUTEN_SFTP_PASSWORD }}
+        run: |
+          mkdir -p feed
+          sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no \
+            -o BatchMode=no \
+            "$SFTP_USER@aftp.linksynergy.com" <<'EOF'
+          cd /53421
+          mget *_cmp_xml.gz
+          bye
+          EOF
+
+          mv *_cmp_xml.gz feed/ 2>/dev/null || true
+
+          ls -lah feed/
+          COUNT=$(ls feed/*.gz 2>/dev/null | wc -l)
+          if [ "$COUNT" -lt 1 ]; then
+            echo "::error::No cmp feed files downloaded"
+            exit 1
+          fi
+          echo "Downloaded $COUNT feed files"
+
+      - name: Decompress and convert to NDJSON
+        env:
+          USD_TO_GBP: ${{ steps.fx.outputs.usd_to_gbp }}
+        run: |
+          for f in feed/*.gz; do
+            gunzip -k "$f"
+          done
+          ls -lah feed/
+
+          python3 <<'PYEOF'
+          import xml.etree.ElementTree as ET
+          import json
+          import glob
+          import os
+          import sys
+
+          USD_TO_GBP = float(os.environ["USD_TO_GBP"])
+          print(f"Using FX rate USD→GBP: {USD_TO_GBP}")
+
+          # Process all Stylevana cmp XML files (feed 1: main ~20k products,
+          # feed 4: supplementary ~125 products). No partition filtering
+          # like Superdrug because Stylevana's feeds aren't split by category.
+          xml_files = sorted(glob.glob("feed/*.xml"))
+          print(f"Processing {len(xml_files)} XML files")
+
+          count = 0
+          skipped_no_url = 0
+          inspected = 0
+          with_upc = 0
+          with_mpn = 0
+          with_image = 0
+
+          # Coarse beauty pre-filter. Stylevana sells mostly K-beauty so most
+          # products qualify, but the supplementary feed has supplements/protein
+          # which the importer would reject anyway — better to filter upstream.
+          BEAUTY_KEYWORDS = ("Skin Care", "Skincare", "Cosmetics", "Hair Care",
+                              "Bath & Body", "Make-up", "Makeup", "Nail",
+                              "Beauty", "Personal Care")
+
+          with open("stylevana_all.ndjson", "w", encoding="utf-8") as f_out:
+              for xml_file in xml_files:
+                  file_count_before = count
+                  file_inspected_before = inspected
+
+                  context = ET.iterparse(xml_file, events=("start", "end"))
+                  depth = 0
+                  for event, elem in context:
+                      if elem.tag != "product":
+                          continue
+                      if event == "start":
+                          depth += 1
+                          continue
+                      if depth != 1:
+                          depth -= 1
+                          continue
+
+                      p = elem
+                      inspected += 1
+
+                      category = p.find("category")
+                      secondary = category.findtext("secondary", "") if category is not None else ""
+                      primary = category.findtext("primary", "") if category is not None else ""
+
+                      # Coarse beauty pre-filter
+                      combined = f"{primary} {secondary}"
+                      if not any(kw in combined for kw in BEAUTY_KEYWORDS):
+                          p.clear()
+                          depth -= 1
+                          continue
+
+                      attrs = p.attrib
+
+                      # Stylevana uses <price><sale> and <price><retail>.
+                      # Prefer sale (what customer pays). Both in USD.
+                      sale_elem = p.find("price/sale")
+                      retail_elem = p.find("price/retail")
+                      sale_text = sale_elem.text if sale_elem is not None else ""
+                      retail_text = retail_elem.text if retail_elem is not None else ""
+
+                      try:
+                          usd_price = float(sale_text or retail_text or 0)
+                      except ValueError:
+                          usd_price = 0
+
+                      # Convert to GBP, round to 2dp
+                      gbp_price = round(usd_price * USD_TO_GBP, 2) if usd_price > 0 else 0
+
+                      url_elem = p.find("URL/product")
+                      url = url_elem.text if url_elem is not None and url_elem.text else ""
+                      avail_elem = p.find("shipping/availability")
+                      availability = avail_elem.text if avail_elem is not None else ""
+                      brand = p.findtext("brand", "") or attrs.get("manufacturer_name", "")
+
+                      upc = (p.findtext("upc", "") or "").strip()
+                      mpn = (p.findtext("mpn", "") or "").strip()
+
+                      # Image URL
+                      image_url = ""
+                      url_block = p.find("URL")
+                      if url_block is not None:
+                          image_url = (url_block.findtext("productImage", "") or "").strip()
+
+                      if not url:
+                          skipped_no_url += 1
+                          p.clear()
+                          depth -= 1
+                          continue
+
+                      if upc:
+                          with_upc += 1
+                      if mpn:
+                          with_mpn += 1
+                      if image_url:
+                          with_image += 1
+
+                      record = {
+                          "name": attrs.get("name", ""),
+                          "sku": attrs.get("sku_number", ""),
+                          "product_id": attrs.get("product_id", ""),
+                          "brand": brand,
+                          "category_primary": primary,
+                          "category_secondary": secondary,
+                          "price": gbp_price,
+                          "availability": availability,
+                          "url": url,
+                          "upc": upc,
+                          "mpn": mpn,
+                          "image_url": image_url,
+                      }
+                      f_out.write(json.dumps(record, ensure_ascii=False) + "\n")
+                      count += 1
+                      p.clear()
+                      depth -= 1
+
+                  print(f"  {os.path.basename(xml_file)}: inspected {inspected - file_inspected_before}, wrote {count - file_count_before}")
+
+          print(f"\nTotal inspected: {inspected}")
+          print(f"Total wrote: {count} records (skipped {skipped_no_url} with no URL)")
+          print(f"With UPC: {with_upc} ({100.0 * with_upc / max(count, 1):.1f}%)")
+          print(f"With MPN: {with_mpn} ({100.0 * with_mpn / max(count, 1):.1f}%)")
+          print(f"With image: {with_image} ({100.0 * with_image / max(count, 1):.1f}%)")
+          if count < 50:
+              raise SystemExit(f"ERROR: Fewer than 50 records ({count})")
+          PYEOF
+
+          ls -lah stylevana_all.ndjson
+          gzip -9 stylevana_all.ndjson
+          ls -lah stylevana_all.ndjson.gz
+
+      - name: Upload feed to Supabase Storage
+        env:
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          curl -fsSL -X POST \
+            "https://${PROJECT_REF}.supabase.co/storage/v1/object/rakuten-feeds/feeds/stylevana/latest.ndjson.gz" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "Content-Type: application/gzip" \
+            -H "x-upsert: true" \
+            --data-binary "@stylevana_all.ndjson.gz" \
+            -w "Storage upload HTTP %{http_code}\n"
+
+      - name: Trigger import-rakuten-feed (dry run first)
+        env:
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          # Dry run first - if it fails or shows weird numbers,
+          # the apply step below will fail too. Lets us see the
+          # diagnostic counts in the workflow logs.
+          DRY_RESPONSE=$(curl -fsSL -X POST \
+            "https://${PROJECT_REF}.supabase.co/functions/v1/import-rakuten-feed" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            --max-time 300 \
+            -d '{"retailer_id": 11, "feed_path": "feeds/stylevana/latest.ndjson.gz", "dry_run": true}')
+          echo "=== DRY RUN ==="
+          echo "$DRY_RESPONSE" | head -c 4000
+          echo ""
+
+      - name: Trigger import-rakuten-feed (apply)
+        env:
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          RESPONSE=$(curl -fsSL -X POST \
+            "https://${PROJECT_REF}.supabase.co/functions/v1/import-rakuten-feed" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            --max-time 300 \
+            -d '{"retailer_id": 11, "feed_path": "feeds/stylevana/latest.ndjson.gz", "dry_run": false}')
+          echo "=== APPLY ==="
+          echo "$RESPONSE" | head -c 4000
+          echo ""
+          echo "$RESPONSE" | grep -q '"applied"' || {
+            echo "::error::Import function did not return success"
+            exit 1
+          }
