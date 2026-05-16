@@ -54,42 +54,36 @@ jobs:
           echo "usd_to_gbp=$RATE" >> "$GITHUB_OUTPUT"
           echo "USD→GBP rate: $RATE"
 
-      - name: Download cmp feeds via SFTP
+       - name: Download cmp feeds via SFTP
         env:
           SFTP_USER: ${{ secrets.RAKUTEN_SFTP_USER }}
           SFTP_PASSWORD: ${{ secrets.RAKUTEN_SFTP_PASSWORD }}
         run: |
-          # First, discover the SFTP layout - prints structure to logs
-          echo "=== SFTP DISCOVERY ==="
+          echo "=== LISTING /53421 ==="
           sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no \
             -o BatchMode=no \
-            "$SFTP_USER@aftp.linksynergy.com" <<'EOF'
-          pwd
+            "$SFTP_USER@aftp.linksynergy.com" <<'EOF' || true
+          cd /53421
           ls -la
           bye
           EOF
           
           echo ""
           echo "=== ATTEMPTING DOWNLOAD ==="
-          # Now try the download - this will fail if /53421 doesn't exist,
-          # but we'll have the discovery output above to diagnose
           mkdir -p feed
           sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no \
             -o BatchMode=no \
             "$SFTP_USER@aftp.linksynergy.com" <<'EOF' || true
           cd /53421
-          mget *_cmp_xml.gz
+          mget *.gz
           bye
           EOF
           
-          mv *_cmp_xml.gz feed/ 2>/dev/null || true
-          
+          mv *.gz feed/ 2>/dev/null || true
           ls -lah feed/
           COUNT=$(ls feed/*.gz 2>/dev/null | wc -l)
           if [ "$COUNT" -lt 1 ]; then
-            echo "::warning::No files downloaded from /53421 - check discovery output above for actual layout"
-            # Don't exit - let the workflow continue so we can see what's available
-            # Once we know the right path, we'll fix the cd command
+            echo "::error::No files - check listing above for actual filenames"
             exit 1
           fi
           echo "Downloaded $COUNT feed files"
