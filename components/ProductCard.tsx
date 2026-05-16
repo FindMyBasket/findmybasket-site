@@ -12,19 +12,17 @@ export function ProductCard({ product }: Props) {
       className="group block bg-warm-white border border-border rounded-2xl overflow-hidden hover:border-gold transition-colors"
     >
       <div className="aspect-square bg-cream relative overflow-hidden">
-        {product.image_url ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={product.image_url}
-            alt={product.name}
-            className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-ink-light text-xs">
-            No image
-          </div>
-        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+         src={product.image_url || '/placeholder-product.svg'}
+         alt={product.name}
+         className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
+         loading="lazy"
+          onError={(e) => {
+           e.currentTarget.src = '/placeholder-product.svg';
+           e.currentTarget.onerror = null;
+         }}
+        />
         {product.saving_pct >= 10 && (
           <span className="absolute top-3 right-3 bg-gold text-white text-xs font-medium px-2 py-1 rounded-full">
             Save {product.saving_pct}%

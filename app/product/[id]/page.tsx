@@ -185,15 +185,16 @@ export default async function ProductPage({ params }: { params: { id: string } }
 
         <div className="grid md:grid-cols-2 gap-12 mb-12">
           <div className="bg-warm-white border border-border rounded-2xl aspect-square flex items-center justify-center overflow-hidden">
-            {product.image_url ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={product.image_url}
-                alt={product.name}
-                className="max-w-full max-h-full object-contain p-8"
-              />
-            ) : (
-              <span className="text-ink-light text-sm">No image available</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={product.image_url || '/placeholder-product.svg'}
+              alt={product.name}
+              className="max-w-full max-h-full object-contain p-8"
+              onError={(e) => {
+             e.currentTarget.src = '/placeholder-product.svg';
+             e.currentTarget.onerror = null;
+             }}
+            />
             )}
           </div>
 

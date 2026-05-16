@@ -175,15 +175,17 @@ export function SiteSearch() {
                         onClick={() => setOpen(false)}
                       >
                         <div className="w-10 h-10 bg-cream rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden">
-                          {product.image_url ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img
-                              src={product.image_url}
-                              alt=""
-                              className="w-full h-full object-contain"
-                              loading="lazy"
-                            />
-                          ) : null}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={product.image_url || '/placeholder-product.svg'}
+                            alt=""
+                           className="w-full h-full object-contain"
+                            loading="lazy"
+                            onError={(e) => {
+                             e.currentTarget.src = '/placeholder-product.svg';
+                              e.currentTarget.onerror = null;
+                             }}
+                          />
                         </div>
                         <div className="flex-1 min-w-0">
                           {product.brand && (
