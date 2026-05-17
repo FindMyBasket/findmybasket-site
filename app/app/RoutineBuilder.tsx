@@ -711,9 +711,9 @@ export default function RoutineBuilder() {
                       <div className="rb-basket-desc">{descText}</div>
                       <div className="rb-basket-price-row">
                         <div className="rb-basket-total">£{opt.total.toFixed(2)}</div>
-                        {savingVsWorst > 0 && (
+                        {!isBest && savingVsWorst > 0 && (
                           <div className="rb-basket-saving">
-                            Save £{savingVsWorst.toFixed(2)}
+                            £{savingVsWorst.toFixed(2)} more
                           </div>
                         )}
                       </div>
