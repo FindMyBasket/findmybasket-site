@@ -435,11 +435,13 @@ export default function RoutineBuilder() {
     finishRender(allOptions, worstCaseTotal);
   }, []);
 
-  const finishRender = (options: BasketOption[], _worstCase: number) => {
+  const finishRender = (options: BasketOption[], worstCaseTotal: number) => {
     let saving = 0;
     let suspect = false;
 
-    if (options.length >= 2) saving = options[1].total - options[0].total;
+    if (options.length >= 1 && worstCaseTotal > options[0].total) {
+      saving = worstCaseTotal - options[0].total;
+    }
 
     if (options[0]?.breakdown) {
       const productPriceMap: Record<number, number[]> = {};
@@ -662,7 +664,7 @@ export default function RoutineBuilder() {
                 <div className="rb-savings-label">YOU COULD SAVE</div>
                 <div className="rb-savings-amount">£{savings.toFixed(2)}</div>
                 <div className="rb-savings-desc">
-                  vs the next-best option. Checkout prices may be lower with active
+                  vs paying full price at a single retailer. Checkout prices may be lower with active
                   sales or member discounts.
                 </div>
               </div>
