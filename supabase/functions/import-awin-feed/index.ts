@@ -1480,7 +1480,6 @@ serve(async (req) => {
     const shade = extractShade(name, brand);
 
     if (isOrdinary) ordinaryDiagnostic.would_create_new++;
-    if (isOrdinary) ordinaryDiagnostic.would_create_new++;
     createActions.push({
       ext_id: matchValue,
       name,
@@ -1499,6 +1498,8 @@ serve(async (req) => {
       mpn: rawMpn,
       image_url: imageUrl,
     });
+    // Track URL for shade-variant detection on subsequent rows in this same import
+    if (wrappedUrl) urlToProductId.set(wrappedUrl, -1);
     if (sampleCreateNew.length < SAMPLE_LIMIT_CREATE_NEW) {
       sampleCreateNew.push({
         name,
