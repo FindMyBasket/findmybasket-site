@@ -1510,6 +1510,7 @@ serve(async (req) => {
         canonical_size: canonicalSize,
         shade: shade,
         price,
+        url: wrappedUrl,
       });
     }
   }
