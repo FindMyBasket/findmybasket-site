@@ -21,7 +21,7 @@ const config: Config = {
       fontFamily: {
         // Cormorant for headings, DM Sans for body - matching existing site
         sans: ['"DM Sans"', 'sans-serif'],
-        serif: ['"Cormorant Garamond"', 'serif'],
+        serif: ['var(--font-cormorant)', 'Georgia', 'serif'],
       },
       maxWidth: {
         'site': '1200px',
