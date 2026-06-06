@@ -846,6 +846,41 @@ serve(async (req) => {
       ? config.top_category_default
       : null;
 
+  // Brand canonicalisation: load the brand_aliases map ONCE (not per row), then
+  // map raw feed brands to their canonical form before any downstream use
+  // (categorisation, match-key building, storage). Mirrors the table lookup
+  // WHERE LOWER(alias) = LOWER(input). Also seeds canonical→canonical so a feed
+  // already sending the canonical passes through unchanged.
+  const brandAliasMap = new Map<string, string>();
+  {
+    const { data: aliasRows, error: aliasErr } = await supa
+      .from("brand_aliases")
+      .select("alias, canonical");
+    if (aliasErr) {
+      console.warn("brand_aliases load failed; proceeding without canonicalisation:", aliasErr.message);
+    } else if (aliasRows) {
+      for (const r of aliasRows) {
+        const a = String(r.alias ?? "").toLowerCase().trim();
+        const c = String(r.canonical ?? "");
+        if (a && c) brandAliasMap.set(a, c);
+      }
+      for (const r of aliasRows) {              // canonical passthrough (don't override an alias row)
+        const c = String(r.canonical ?? "");
+        const ck = c.toLowerCase().trim();
+        if (ck && !brandAliasMap.has(ck)) brandAliasMap.set(ck, c);
+      }
+    }
+  }
+  const lookupCanonicalBrand = (raw: string): string => {
+    const key = String(raw ?? "").toLowerCase().trim();
+    if (!key) return raw;
+    return brandAliasMap.get(key) ?? raw;
+  };
+  // Diagnostics: rows whose brand we rewrote, and unmatched brands by feed
+  // frequency (low-frequency ones are surfaced for future alias review).
+  let countBrandCanonicalised = 0;
+  const unmatchedBrandCounts = new Map<string, number>();
+
   // Step 2: Load existing retailer_prices rows for this retailer
   // We fetch in batches because Supabase caps at 1000 per request.
   const existingRows: any[] = [];
@@ -1283,7 +1318,13 @@ serve(async (req) => {
 
     const fields = parseRow(line).map(f => f.replace(/^"|"$/g, ""));
     const name = fields[idx.product_name] || "";
-    const brand = fields[idx.brand_name] || "";
+    const rawBrand = fields[idx.brand_name] || "";
+    const brand = lookupCanonicalBrand(rawBrand);   // canonical from here down
+    if (rawBrand) {
+      if (brand !== rawBrand) countBrandCanonicalised++;
+      else if (!brandAliasMap.has(rawBrand.toLowerCase().trim()))
+        unmatchedBrandCounts.set(rawBrand, (unmatchedBrandCounts.get(rawBrand) ?? 0) + 1);
+    }
     const categoryPath = fields[idx.category_path] || "";
     const categoryName = fields[idx.category_name] || "";
 
@@ -1633,6 +1674,22 @@ serve(async (req) => {
     }, null, 2), { status: 200, headers: { "Content-Type": "application/json" } });
   }
 
+  // Brand canonicalisation diagnostics + low-frequency unmatched brands for review
+  const unmatchedLowFreq = Array.from(unmatchedBrandCounts.entries())
+    .filter(([, n]) => n < 5)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 100)
+    .map(([brand, count]) => ({ brand, count }));
+  if (unmatchedLowFreq.length) {
+    console.log(`brand_canonicalisation: ${unmatchedLowFreq.length} low-freq unmatched brands (<5 rows) for review`);
+  }
+  const brandCanonicalisation = {
+    alias_map_size: brandAliasMap.size,
+    rows_canonicalised: countBrandCanonicalised,
+    distinct_unmatched_brands: unmatchedBrandCounts.size,
+    unmatched_lowfreq_sample: unmatchedLowFreq,
+  };
+
   // Step 6: Apply (or report)
   const result: any = {
     retailer_id: retailerId,
@@ -1667,6 +1724,7 @@ serve(async (req) => {
     },
     v6_top_category_breakdown: v6TopCategoryBreakdown,
     v6_exclusion_breakdown: v6ExclusionBreakdown,
+    brand_canonicalisation: brandCanonicalisation,
     ordinary_diagnostic: ordinaryDiagnostic,
     sample_v6_excluded: sampleV6Excluded,
     sample_excluded_by_category: sampleExcluded,
