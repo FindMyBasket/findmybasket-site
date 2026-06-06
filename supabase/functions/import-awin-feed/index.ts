@@ -340,11 +340,21 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
   const fragranceIsScentDescriptor = (
     /\b(shampoo|conditioner|hair mask|hair oil|hair serum|hair spray|hairspray|dry shampoo|body wash|body lotion|body cream|body butter|hand cream|shower gel|bubble bath)\b/.test(t)
   );
+  // Pre-check: "body spray" matches the deodorant denylist, but sunscreen and
+  // oil body sprays (e.g. "SPF30 Sunscreen Body Spray", "Dry Oil Body Spray")
+  // are skincare. Skip the deodorant entry for those — unless the name actually
+  // says deodorant/antiperspirant (then it really is one, keep excluding).
+  const bodySprayIsSkincare = (
+    /\b(spf|sunscreen|sun cream|self.?tan|tanning|dry oil|body oil|moistur)\b/.test(t) &&
+    !/\b(deodorant|antiperspirant)\b/.test(t)
+  );
 
   for (const [reason, re] of excludeChecks) {
     // Skip fragrance denylist when the name is clearly haircare/body care
     // and 'fragrance' appears as a scent descriptor.
     if (reason === "fragrance" && fragranceIsScentDescriptor) continue;
+    // Skip deodorant denylist for sunscreen/oil body sprays (see above).
+    if (reason === "deodorant" && bodySprayIsSkincare) continue;
     if (re.test(t)) {
       return {
         top_category: null,

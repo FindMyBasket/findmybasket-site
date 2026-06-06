@@ -74,7 +74,7 @@ type Case = {
   name: string;
   brand?: string;
   expect: Expect;
-  fixedBy: 0 | 1 | 2 | 3 | 4 | 5;
+  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   note?: string;
 };
 
@@ -121,6 +121,10 @@ const CASES: Case[] = [
   { name: "OLAY Regenerist Micro-Sculpting Cream - 50g", brand: "Olay", expect: "skincare", fixedBy: 5 },
   // True positive that must still route to hair after the pomade guard
   { name: "Slick Gorilla Clay Pomade 70g", brand: "Slick Gorilla", expect: "hair", fixedBy: 5 },
+
+  // ── Commit 6: sunscreen/oil body sprays are skincare, not deodorant ───────
+  { name: "St Moriz Suncare SPF30 Sunscreen Body Spray 200ml", brand: "St Moriz", expect: "skincare", fixedBy: 6 },
+  { name: "No7 Beautiful Skin Pampering Dry Oil Body Spray 200ml", brand: "No7", expect: "skincare", fixedBy: 6 },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
