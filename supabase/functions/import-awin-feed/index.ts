@@ -370,9 +370,12 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
     // alone (clay mask, body wax, hand cream) so they're only matched when paired
     // with a styling qualifier (molding/sculpting/styling/matte/texture).
     if (/\b(pomade|(mo(u)?lding|sculpting|styling|matte|texturi[sz]ing|texture|grooming) (clay|paste|cream|wax|mud|powder|spray)|sea salt spray|surf spray|edge control)\b/.test(t)) return true;
-    // Brand-name signals: brands whose entire range is hair (low risk of false positives)
-    if (/\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs)\b/.test(t)) return true;
-    if (/\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs)\b/.test(b)) return true;
+    // Brand-name signals: brands whose entire range is hair (low risk of false
+    // positives), so products with no hair keyword in the name still route to
+    // hair (e.g. "Forming Cream", "Surf Infusion", "Full Dry Volume Blast").
+    const hairBrand = /\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs|american crew|bumble and bumble|bumble & bumble|living proof|redken|paul mitchell|pureology|color wow|colour wow|sachajuan|label\.?m|tigi|matrix)\b/;
+    if (hairBrand.test(t)) return true;
+    if (hairBrand.test(b)) return true;
     return false;
   })();
 
