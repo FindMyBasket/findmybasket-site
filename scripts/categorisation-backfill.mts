@@ -2,10 +2,10 @@
  * One-off categorisation backfill for the products table.
  *
  * Re-runs inferCategorisation() over every existing product and re-categorises
- * the rows whose classification CHANGED as a result of this session's four
- * commits (084f8d3, 3c51332, 2131767, 9aecc95). To isolate *exactly* those
- * commits' effect — and avoid sweeping in years of legacy drift unrelated to
- * them — it compares the OLD function (extracted from the pre-session commit
+ * the rows whose classification CHANGED as a result of this session's
+ * categorisation commits (everything since the pre-session baseline da666aa).
+ * To isolate *exactly* those commits' effect — and avoid sweeping in years of
+ * legacy drift unrelated to them — it compares the OLD function (extracted from
  * da666aa) against the NEW function (current working tree) and only acts on
  * products where OLD(name,brand) !== NEW(name,brand).
  *
@@ -159,6 +159,18 @@ for (const r of rows) {
     nowExcluded.push({ id: r.id, name, brand, reason: newC.excluded ?? "unclassified", from_top: r.top_category });
     continue;
   }
+  // If the stored row already matches the new categorisation exactly, it has
+  // nothing to backfill — skip it regardless of which branch it would fall in.
+  // (Must precede the makeup guard: that branch otherwise re-reports already-
+  // correct makeup rows as pending writes.)
+  const storedMatches =
+    r.top_category === target.top_category &&
+    r.product_type === target.product_type &&
+    r.category === target.product_type &&
+    r.subcategory === target.subcategory &&
+    JSON.stringify(r.tags ?? []) === JSON.stringify(target.tags);
+  if (storedMatches) { alreadyCorrect++; continue; }
+
   if (r.top_category === "makeup") {
     skippedMakeupGuard++;
     makeupGuard.push({
@@ -168,13 +180,6 @@ for (const r of rows) {
     });
     continue;
   }
-  const storedMatches =
-    r.top_category === target.top_category &&
-    r.product_type === target.product_type &&
-    r.category === target.product_type &&
-    r.subcategory === target.subcategory &&
-    JSON.stringify(r.tags ?? []) === JSON.stringify(target.tags);
-  if (storedMatches) { alreadyCorrect++; continue; }
 
   changes.push({
     id: r.id, name, brand,
