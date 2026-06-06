@@ -365,6 +365,11 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
     if (/\b(hair (colour|color|dye|toner|bleach))\b/.test(t)) return true;
     if (/\b(dry shampoo|hair perfume|root touch.?up|heat protect|frizz control)\b/.test(t)) return true;
     if (/\b(hairspray|hair spray|hair lacquer|setting spray hair)\b/.test(t)) return true;
+    // Standalone styling keywords: unambiguous hair-styling product types that
+    // don't carry a "hair" prefix. 'clay'/'paste'/'wax'/'cream' are too generic
+    // alone (clay mask, body wax, hand cream) so they're only matched when paired
+    // with a styling qualifier (molding/sculpting/styling/matte/texture).
+    if (/\b(pomade|(mo(u)?lding|sculpting|styling|matte|texturi[sz]ing|texture|grooming) (clay|paste|cream|wax|mud|powder|spray)|sea salt spray|surf spray|edge control)\b/.test(t)) return true;
     // Brand-name signals: brands whose entire range is hair (low risk of false positives)
     if (/\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs)\b/.test(t)) return true;
     if (/\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs)\b/.test(b)) return true;
@@ -390,7 +395,7 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
     } else if (/\b(hair (oil|serum|tonic))|scalp (oil|tonic|serum|treatment)\b/.test(t)) {
       product_type = "Hair Treatment";
       subcategory = "treatment";
-    } else if (/\b(hair (spray|gel|mousse|wax|balm|cream|pomade|paste|fiber|fibre)|hairspray|edge control)\b/.test(t)) {
+    } else if (/\b(hair (spray|gel|mousse|wax|balm|cream|pomade|paste|fiber|fibre)|hairspray|edge control|pomade|(mo(u)?lding|sculpting|styling|matte|texturi[sz]ing|texture|grooming) (clay|paste|cream|wax|mud|powder|spray)|sea salt spray|surf spray)\b/.test(t)) {
       product_type = "Hair Styling";
       subcategory = "style";
     } else {
