@@ -358,7 +358,13 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
 
   // ─── Step 2: Hair detection ──────────────────────────────────────────────
   // Run BEFORE skincare so "hair oil" or "hair mask" goes to hair, not skincare.
+  // Beard products are facial men's-grooming (skincare), not hair — even from
+  // hair-only brands like American Crew. Detect them first and let them fall
+  // through to skincare below. (Beard tools — comb/brush — are denylisted in
+  // Step 1 already, so this only sees beard care products.)
+  const beardGrooming = /\bbeard\b/.test(t);
   const hairCheck = (() => {
+    if (beardGrooming) return false;
     if (/\b(shampoo|conditioner|co-?wash|leave-?in)\b/.test(t)) return true;
     if (/\b(hair (mask|oil|serum|spray|cream|gel|mousse|wax|balm|treatment|tonic|perfector|repair|food|primer))\b/.test(t)) return true;
     if (/\b(scalp (treatment|serum|oil|scrub|tonic|massage))\b/.test(t)) return true;
@@ -560,7 +566,7 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
     if (!skin_tags.includes("lips")) skin_tags.push("lips");
     skin_tags.push("lip_care");
   }
-  if (/\b(men|men's|for men|mens)\b/.test(t) || /\b(men|men's|for men|mens)\b/.test(b)) {
+  if (/\b(men|men's|for men|mens|beard)\b/.test(t) || /\b(men|men's|for men|mens)\b/.test(b)) {
     skin_tags.push("mens");
   }
 
