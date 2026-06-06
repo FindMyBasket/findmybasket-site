@@ -69,7 +69,29 @@
 
     /* HERO */
     .hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 120px 24px 80px; position: relative; overflow: hidden; text-align: center; }
-    .hero-bg { position: absolute; inset: 0; z-index: 0; background: radial-gradient(ellipse 80% 60% at 20% 20%, rgba(201,169,110,0.12) 0%, transparent 60%), radial-gradient(ellipse 60% 80% at 80% 80%, rgba(122,158,135,0.10) 0%, transparent 60%), radial-gradient(ellipse 50% 40% at 60% 10%, rgba(232,196,184,0.15) 0%, transparent 50%); }
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      /* Cream-fade gradient stacked ON TOP of the photo (first layer paints last),
+         so the fade reaches full cream — no element opacity to cap it. */
+      background-image:
+        linear-gradient(
+          to bottom,
+          var(--cream) 0%,
+          rgba(250, 248, 244, 0.85) 30%,
+          rgba(250, 248, 244, 0.4) 70%,
+          rgba(250, 248, 244, 0.2) 100%
+        ),
+        url('/images/hero-bottles-desktop.jpg');
+      background-size: cover, cover;
+      background-position: center bottom, center bottom;
+      background-repeat: no-repeat, no-repeat;
+    }
+    /* Exclude .hero-bg: it must stay position:absolute. Without :not(), this rule
+       (equal specificity, later in source) would override .hero-bg to relative,
+       collapsing it to height:0 so the photo never paints. */
+    .hero > *:not(.hero-bg) { position: relative; z-index: 1; }
     .hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(201,169,110,0.12); border: 1px solid rgba(201,169,110,0.3); border-radius: 100px; padding: 8px 18px; font-size: 12px; font-weight: 500; letter-spacing: 0.08em; color: #8A6A30; text-transform: uppercase; margin-bottom: 32px; position: relative; z-index: 1; animation: fadeUp 0.8s ease both; }
     .hero-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); display: block; animation: pulse 2s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.4); } }
@@ -173,6 +195,19 @@
       .why-grid { grid-template-columns: 1fr; }
       footer { flex-direction: column; text-align: center; padding: 32px 24px; }
       .footer-links { justify-content: center; }
+      /* Mobile: use portrait crop (inherits background-size/repeat from the base rule) */
+      .hero-bg {
+        background-image:
+          linear-gradient(
+            to bottom,
+            var(--cream) 0%,
+            rgba(250, 248, 244, 0.85) 25%,
+            rgba(250, 248, 244, 0.5) 65%,
+            rgba(250, 248, 244, 0.3) 100%
+          ),
+          url('/images/hero-bottles-mobile.jpg');
+        background-position: center top, center 70%;
+      }
     }
     @media (max-width: 900px) {
       .steps { grid-template-columns: 1fr; }
@@ -211,7 +246,7 @@
 
   <section class="hero">
     <div class="hero-bg"></div>
-    <div class="hero-badge" style="background:rgba(122,158,135,0.15); color:var(--sage-text); border-color:rgba(122,158,135,0.3);">✓ Live now · 25% median saving across 3,000+ comparisons</div>
+    <div class="hero-badge" style="background:rgba(122,158,135,0.15); color:var(--sage-text); border-color:rgba(122,158,135,0.3);">✓ Live now · 20% median saving across 5,000+ comparisons</div>
     <h1>Your beauty<br/>routine. <em>Optimised.</em></h1>
     <p class="hero-sub">Honest comparison across the UK's leading beauty retailers. Save your routine and we'll email you the best price each month.</p>
     <div class="hero-form" style="display:flex; flex-direction:column; gap:12px; align-items:center;">
