@@ -74,7 +74,7 @@ type Case = {
   name: string;
   brand?: string;
   expect: Expect;
-  fixedBy: 0 | 1 | 2 | 3 | 4;
+  fixedBy: 0 | 1 | 2 | 3 | 4 | 5;
   note?: string;
 };
 
@@ -108,6 +108,19 @@ const CASES: Case[] = [
   { name: "American Crew Beard Serum 50ml", brand: "American Crew", expect: "skincare", fixedBy: 4 },
   { name: "American Crew Beard Balm 60ml", brand: "American Crew", expect: "skincare", fixedBy: 4 },
   { name: "American Crew Beard Oil 30ml", brand: "American Crew", expect: "skincare", fixedBy: 4 },
+
+  // ── Commit 5: false positives surfaced by the backfill audit ─────────────
+  // 5a. brow/concealer 'pomade' is makeup, not hair styling (commit 2 over-match)
+  { name: "Maybelline Brow Extensions Eyebrow Pomade Crayon - 02 Soft Brown", brand: "Maybelline", expect: "makeup", fixedBy: 5 },
+  { name: "L'Oreal Infaillible 24H Concealer Pomade - 03 Dark", brand: "L'Oreal Paris", expect: "makeup", fixedBy: 5 },
+  { name: "Revolution Brow Pomade Dark Brown", brand: "Revolution", expect: "makeup", fixedBy: 5 },
+  // 5b. 'matrix' is a hair brand only in the brand field, not as a name word (commit 3 over-match)
+  { name: "Elemis Pro-Collagen Overnight Matrix 50ml", brand: "Elemis", expect: "skincare", fixedBy: 5 },
+  { name: "Matrix Food For Soft Oil 50ml", brand: "Matrix", expect: "hair", fixedBy: 5, note: "matrix in BRAND field still routes hair" },
+  // 5c. 'sculpting'/'matte' must not steal skincare firming creams into hair (commit 2 over-match)
+  { name: "OLAY Regenerist Micro-Sculpting Cream - 50g", brand: "Olay", expect: "skincare", fixedBy: 5 },
+  // True positive that must still route to hair after the pomade guard
+  { name: "Slick Gorilla Clay Pomade 70g", brand: "Slick Gorilla", expect: "hair", fixedBy: 5 },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────

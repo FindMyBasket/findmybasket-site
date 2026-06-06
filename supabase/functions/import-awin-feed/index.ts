@@ -374,14 +374,23 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
     // Standalone styling keywords: unambiguous hair-styling product types that
     // don't carry a "hair" prefix. 'clay'/'paste'/'wax'/'cream' are too generic
     // alone (clay mask, body wax, hand cream) so they're only matched when paired
-    // with a styling qualifier (molding/sculpting/styling/matte/texture).
-    if (/\b(pomade|(mo(u)?lding|sculpting|styling|matte|texturi[sz]ing|texture|grooming) (clay|paste|cream|wax|mud|powder|spray)|sea salt spray|surf spray|edge control)\b/.test(t)) return true;
+    // with a styling qualifier (molding/styling/texture/grooming).
+    //   - Gate on !brow/eyebrow/concealer: "brow pomade", "concealer pomade" and
+    //     "brow styling wax/cream" are makeup, not hair.
+    //   - 'sculpting' and 'matte' are intentionally NOT qualifiers — they collide
+    //     with skincare "(micro-)sculpting cream" and makeup "matte/sculpting powder".
+    if (!/\b(brow|eyebrow|concealer)\b/.test(t) &&
+        /\b(pomade|(mo(u)?lding|styling|texturi[sz]ing|texture|grooming) (clay|paste|cream|wax|mud|powder|spray)|sea salt spray|surf spray|edge control)\b/.test(t)) return true;
     // Brand-name signals: brands whose entire range is hair (low risk of false
     // positives), so products with no hair keyword in the name still route to
     // hair (e.g. "Forming Cream", "Surf Infusion", "Full Dry Volume Blast").
-    const hairBrand = /\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs|american crew|bumble and bumble|bumble & bumble|living proof|redken|paul mitchell|pureology|color wow|colour wow|sachajuan|label\.?m|tigi|matrix)\b/;
+    const hairBrand = /\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs|american crew|bumble and bumble|bumble & bumble|living proof|redken|paul mitchell|pureology|color wow|colour wow|sachajuan|label\.?m|tigi)\b/;
     if (hairBrand.test(t)) return true;
     if (hairBrand.test(b)) return true;
+    // 'Matrix' is a hair brand but also a common English word, so trust it only
+    // in the brand field — never when it merely appears in a product name
+    // (e.g. "Pro-Collagen Overnight Matrix", "Matrix Gel" nail polish).
+    if (/\bmatrix\b/.test(b)) return true;
     return false;
   })();
 
@@ -404,7 +413,7 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
     } else if (/\b(hair (oil|serum|tonic))|scalp (oil|tonic|serum|treatment)\b/.test(t)) {
       product_type = "Hair Treatment";
       subcategory = "treatment";
-    } else if (/\b(hair (spray|gel|mousse|wax|balm|cream|pomade|paste|fiber|fibre)|hairspray|edge control|pomade|(mo(u)?lding|sculpting|styling|matte|texturi[sz]ing|texture|grooming) (clay|paste|cream|wax|mud|powder|spray)|sea salt spray|surf spray)\b/.test(t)) {
+    } else if (/\b(hair (spray|gel|mousse|wax|balm|cream|pomade|paste|fiber|fibre)|hairspray|edge control|pomade|(mo(u)?lding|styling|texturi[sz]ing|texture|grooming) (clay|paste|cream|wax|mud|powder|spray)|sea salt spray|surf spray)\b/.test(t)) {
       product_type = "Hair Styling";
       subcategory = "style";
     } else {
