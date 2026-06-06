@@ -300,7 +300,12 @@ type Categorisation = {
 };
 
 function inferCategorisation(name: string, brand: string = ""): Categorisation {
-  const t = String(name || "").toLowerCase();
+  // Insert a space between a letter and an adjacent digit so size/qualifier
+  // tokens fused onto a keyword still tokenise, e.g. "Shampoo250ml" →
+  // "shampoo 250ml" and "SPF50" → "spf 50". Without this the \b-anchored
+  // keyword checks below miss the keyword entirely (no word boundary exists
+  // between a letter and a digit).
+  const t = String(name || "").toLowerCase().replace(/([a-z])(\d)/g, "$1 $2");
   const b = String(brand || "").toLowerCase();
 
   // ─── Step 1: Excluded categories (denylist) ──────────────────────────────
