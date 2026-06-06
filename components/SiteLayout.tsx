@@ -1,7 +1,6 @@
 import Link from 'next/link';
-import { Logo } from './Logo';
 import { RoutineIndicator } from './RoutineIndicator';
-import { SiteSearch } from './SiteSearch';
+import { SiteNav } from './SiteNav';
 
 export function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,49 +10,6 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
       <SiteFooter />
       <RoutineIndicator />
     </>
-  );
-}
-
-function SiteNav() {
-  return (
-    <nav className="sticky top-0 z-50 bg-cream/90 backdrop-blur-md border-b border-border">
-      <div className="max-w-site mx-auto px-6 py-4 flex items-center justify-between gap-4">
-        <a href="/index.html" className="flex items-center gap-2.5 no-underline flex-shrink-0">
-          <Logo height={32} />
-          <span className="font-serif text-[22px] font-semibold text-ink">
-            Find<span className="text-gold">My</span>Basket
-          </span>
-        </a>
-        <div className="hidden md:flex items-center gap-7">
-          <Link href="/skincare" className="text-sm text-ink-light hover:text-ink transition-colors">
-            Skincare
-          </Link>
-          <Link href="/makeup" className="text-sm text-ink-light hover:text-ink transition-colors">
-            Makeup
-          </Link>
-          <Link href="/hair" className="text-sm text-ink-light hover:text-ink transition-colors">
-            Hair
-          </Link>
-          <Link href="/edit/k-beauty" className="text-sm text-ink-light hover:text-ink transition-colors">
-            K-Beauty
-          </Link>
-          <a href="/savings-hub.html" className="text-sm text-ink-light hover:text-ink transition-colors">
-            Savings Hub
-          </a>
-          <SiteSearch />
-          <a
-            href="/app.html"
-            className="bg-ink text-cream px-5 py-2.5 rounded-full text-[13px] font-medium hover:bg-gold transition-colors"
-          >
-            Build a routine
-          </a>
-        </div>
-        {/* Mobile: just show search on the right */}
-        <div className="md:hidden flex items-center">
-          <SiteSearch />
-        </div>
-      </div>
-    </nav>
   );
 }
 

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { SiteNav } from '../../components/SiteNav';
 import RoutineBuilder from './RoutineBuilder';
 import './routine-builder.css';
 
@@ -41,6 +42,7 @@ export default function AppPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <SiteNav />
       <RoutineBuilder />
     </>
   );
