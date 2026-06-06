@@ -72,7 +72,7 @@ export function SiteNav() {
       ref={navRef}
       className="sticky top-0 z-50 bg-cream/90 backdrop-blur-md border-b border-border"
     >
-      <div className="max-w-site mx-auto px-6 py-5 flex items-center justify-between gap-4">
+      <div className="px-12 py-5 flex items-center justify-between gap-4">
         <a href="/index.html" className="flex items-center gap-2.5 no-underline flex-shrink-0">
           <Logo height={36} />
           <span className="font-serif text-[22px] font-semibold text-ink">
