@@ -14,7 +14,6 @@ const NAV_LINKS: { href: string; label: string; static?: boolean }[] = [
   { href: '/skincare', label: 'Skincare' },
   { href: '/makeup', label: 'Makeup' },
   { href: '/hair', label: 'Hair' },
-  { href: '/edit/k-beauty', label: 'K-Beauty' },
   { href: '/savings-hub.html', label: 'Savings Hub', static: true },
 ];
 
@@ -111,7 +110,7 @@ export function SiteNav() {
             aria-label="Toggle menu"
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen((v) => !v)}
-            className="flex flex-col gap-[5px] cursor-pointer p-1"
+            className="appearance-none border-0 bg-transparent flex flex-col gap-[5px] cursor-pointer p-1"
             style={{ opacity: mobileOpen ? 0.5 : 1 }}
           >
             <span className="block w-[22px] h-0.5 bg-ink rounded-sm" />
