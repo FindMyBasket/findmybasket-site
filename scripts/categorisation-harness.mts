@@ -74,7 +74,7 @@ type Case = {
   name: string;
   brand?: string;
   expect: Expect;
-  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
   note?: string;
 };
 
@@ -125,6 +125,23 @@ const CASES: Case[] = [
   // ── Commit 6: sunscreen/oil body sprays are skincare, not deodorant ───────
   { name: "St Moriz Suncare SPF30 Sunscreen Body Spray 200ml", brand: "St Moriz", expect: "skincare", fixedBy: 6 },
   { name: "No7 Beautiful Skin Pampering Dry Oil Body Spray 200ml", brand: "No7", expect: "skincare", fixedBy: 6 },
+
+  // ── Commit 7: davines + schwarzkopf added to the hair-brand whitelist ─────
+  // 7a. brand-only hair products with no hair keyword in the name
+  { name: "Davines OI All in One Milk", brand: "Davines", expect: "hair", fixedBy: 7 },
+  { name: "Davines OI Hair Butter", brand: "Davines", expect: "hair", fixedBy: 7 },
+  { name: "Davines VOLU Volume Boosting Hair Mist", brand: "Davines", expect: "hair", fixedBy: 7 },
+  { name: "Schwarzkopf Got2B Curlz Defining Jelly 150ml", brand: "Schwarzkopf", expect: "hair", fixedBy: 7 },
+  { name: "Schwarzkopf Got2B Frizz Taming Serum Smooth Operator200 ml", brand: "Schwarzkopf", expect: "hair", fixedBy: 7 },
+  { name: "Schwarzkopf Got2B Heat Protection Spray Guardian Angel200 ml", brand: "Schwarzkopf", expect: "hair", fixedBy: 7 },
+  // 7b. brow/eyebrow products from a hair brand are makeup, NOT hair (guard runs
+  //     before the brand-whitelist branch)
+  { name: "Schwarzkopf Got2B Glued 4 Brows & Edges Tinted Black 16ml", brand: "Schwarzkopf", expect: "makeup", fixedBy: 7 },
+  { name: "Schwarzkopf Got2B Glued Brow Lift Styling Wax", brand: "Schwarzkopf", expect: "makeup", fixedBy: 7 },
+  // 7c. "brown" must NOT trip the brow guard — hair-dye shades stay hair
+  { name: "Schwarzkopf Creme Supreme 4-0 Natural Dark Brown Permanent Hair Dye", brand: "Schwarzkopf", expect: "hair", fixedBy: 7 },
+  // 7d. Davines' Comfort Zone skincare sister line stays skincare despite the brand whitelist
+  { name: "Davines Comfort Zone Sacred Nature Nourishing Cream 60ml", brand: "Davines", expect: "skincare", fixedBy: 7 },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────

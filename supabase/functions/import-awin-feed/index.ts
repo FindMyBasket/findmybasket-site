@@ -1,6 +1,17 @@
-// Edge function: import-awin-feed (v6.16)
+// Edge function: import-awin-feed (v6.17)
 //
 // Generic, retailer-agnostic AWIN datafeed importer.
+//
+// v6.17 changes (Categorisation — deploy v55):
+//   - Hair-brand whitelist now includes davines and schwarzkopf (were dropped
+//     from the v54 whitelist, leaving brand-only hair products misfiled as
+//     skincare, e.g. "Davines OI All in One Milk", "Got2B Curlz Defining Jelly").
+//   - inferCategorisation bails out of hair detection for brow/eyebrow products
+//     BEFORE the brand-whitelist branch, so brow makeup from a hair brand
+//     (Schwarzkopf Got2B "Brows & Edges", "Brow Lift") routes to makeup, not
+//     hair. \bbrow\b does not match "brown", so hair-dye shades are unaffected.
+//   - Makeup brow detection broadened to plural "brows" / "brow lift".
+//   - Comfort Zone / Sacred Nature (Davines' skincare sister line) stays skincare.
 //
 // v6.16 changes (Stream B — canonical_size):
 //   - New extractCanonicalSize() pulls a size string (e.g. "50ml", "30g",
@@ -375,6 +386,16 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
   const beardGrooming = /\bbeard\b/.test(t);
   const hairCheck = (() => {
     if (beardGrooming) return false;
+    // Brow/eyebrow products are makeup, not hair — even when they come from a
+    // whitelisted hair brand (e.g. Schwarzkopf Got2B "Glued 4 Brows & Edges",
+    // "Brow Lift Styling Wax"). Bail here so they fall through to the makeup
+    // detector below. \bbrow\b does NOT match "brown" (no word boundary between
+    // "brow" and "n"), so hair-dye shades like "Dark Brown" are unaffected.
+    if (/\b(eyebrows?|brows?)\b/.test(t)) return false;
+    // Davines' sister skincare line (Comfort Zone / Sacred Nature) can ship
+    // under the Davines brand — keep it skincare, don't let the brand whitelist
+    // sweep it into hair.
+    if (/\bcomfort zone\b/.test(t) || /\bcomfort zone\b/.test(b)) return false;
     if (/\b(shampoo|conditioner|co-?wash|leave-?in)\b/.test(t)) return true;
     if (/\b(hair (mask|oil|serum|spray|cream|gel|mousse|wax|balm|treatment|tonic|perfector|repair|food|primer))\b/.test(t)) return true;
     if (/\b(scalp (treatment|serum|oil|scrub|tonic|massage))\b/.test(t)) return true;
@@ -394,7 +415,7 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
     // Brand-name signals: brands whose entire range is hair (low risk of false
     // positives), so products with no hair keyword in the name still route to
     // hair (e.g. "Forming Cream", "Surf Infusion", "Full Dry Volume Blast").
-    const hairBrand = /\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs|american crew|bumble and bumble|bumble & bumble|living proof|redken|paul mitchell|pureology|color wow|colour wow|sachajuan|label\.?m|tigi)\b/;
+    const hairBrand = /\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs|american crew|bumble and bumble|bumble & bumble|living proof|redken|paul mitchell|pureology|color wow|colour wow|sachajuan|label\.?m|tigi|davines|schwarzkopf)\b/;
     if (hairBrand.test(t)) return true;
     if (hairBrand.test(b)) return true;
     // 'Matrix' is a hair brand but also a common English word, so trust it only
@@ -442,7 +463,7 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
   // ─── Step 3: Makeup detection ────────────────────────────────────────────
   const makeupCheck = (() => {
     if (/\b(lipstick|lip gloss|lip stain|lip lacquer|lip pencil|lip liner|lip tint|lip plumper|lip cream|lip paint|lip color|lip colour|lip shine|lip crayon|color balm|colour balm|liquid lip|matte lip|cream lip)\b/.test(t)) return true;
-    if (/\b(mascara|eyeliner|eye liner|eye shadow|eyeshadow|eyebrow|brow (pencil|gel|pomade|powder|tint|definer|enhancer|fixer|sculptor))\b/.test(t)) return true;
+    if (/\b(mascara|eyeliner|eye liner|eye shadow|eyeshadow|eyebrows?|brows?)\b/.test(t)) return true;
     // Clinique 'Quickliner For Eye' brand-line pattern
     if (/\b(quickliner|kohl)\b/.test(t)) return true;
     if (/\b(foundation|concealer|colour corrector|color corrector|primer)\b/.test(t)) return true;
@@ -477,7 +498,7 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
     } else if (/\b(eyeshadow|eye shadow)\b/.test(t)) {
       product_type = "Eyeshadow";
       subcategory = "eyes";
-    } else if (/\b(eyebrow|brow (pencil|gel|pomade|powder|tint|definer|enhancer|fixer|sculptor))\b/.test(t)) {
+    } else if (/\b(eyebrows?|brows?)\b/.test(t)) {
       product_type = "Brow";
       subcategory = "eyes";
     } else if (/\bfalse (lashes|eyelashes)|lash (extension|adhesive|glue)\b/.test(t)) {
