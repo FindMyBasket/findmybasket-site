@@ -14,6 +14,7 @@ const config: Config = {
         'ink-light': '#4A4845',
         gold: '#C9A96E',
         'gold-light': '#E8D5B0',
+        'gold-text': '#8A6A30',
         sage: '#7A9E87',
         'sage-light': '#C8DDD0',
         border: '#E8E2D5',

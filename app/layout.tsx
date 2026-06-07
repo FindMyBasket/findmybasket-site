@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { Cormorant_Garamond, DM_Sans } from 'next/font/google';
 import './globals.css';
 
@@ -31,7 +32,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${cormorant.variable} ${dmSans.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Script src="/fmb-cookie-banner.js" strategy="afterInteractive" />
+      </body>
     </html>
   );
 }

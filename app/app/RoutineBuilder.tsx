@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { supabaseBrowser as db } from '@/lib/supabase-browser';
+import { AffiliateDisclosure } from '@/components/AffiliateDisclosure';
 import {
   getRoutine,
   addToRoutine as storeAdd,
@@ -678,6 +679,7 @@ export default function RoutineBuilder() {
               </div>
             ) : !results ? null : (
               <div className="rb-results">
+                <AffiliateDisclosure variant="banner" />
                 {results.map((opt, i) => {
                   const isBest = i === 0;
                   const savingVsWorst = worstViableTotal - opt.total;
