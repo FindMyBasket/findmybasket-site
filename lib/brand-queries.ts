@@ -96,9 +96,41 @@ export async function getBrandStats(normalisedBrand: string): Promise<BrandStats
   };
 }
 
+// Defines display order, NOT inclusion. Categories not listed sort to the end
+// alphabetically. Routine order: skincare -> makeup -> hair -> nails.
+const CATEGORY_ORDER: string[] = [
+  // Skincare in routine order
+  'Cleanser', 'Exfoliator', 'Toner', 'Mist',
+  'Essence', 'Serum', 'Treatment', 'Oil',
+  'Eye Care',
+  'Moisturiser', 'Mask', 'SPF',
+  // Makeup
+  'Primer', 'Foundation', 'Concealer', 'Powder',
+  'Setting', 'Blush/Bronzer',
+  'Eyeshadow', 'Eyeliner', 'Mascara', 'Brow',
+  'Lipstick', 'Lip Liner', 'Lip Colour', 'Lip Care',
+  // Hair
+  'Shampoo', 'Conditioner', 'Hair Treatment',
+  // Nails
+  'Nail Polish',
+  // Catch-all generics
+  'Skincare', 'Makeup',
+];
+
+function compareCategories(a: string, b: string): number {
+  const ai = CATEGORY_ORDER.indexOf(a);
+  const bi = CATEGORY_ORDER.indexOf(b);
+  if (ai === -1 && bi === -1) return a.localeCompare(b);
+  if (ai === -1) return 1; // unknowns to the end
+  if (bi === -1) return -1;
+  return ai - bi;
+}
+
+// Inclusion is derived from the data: every product type a brand has (minus the
+// generic top-level buckets) renders as a chip. Order is the only hardcoded
+// part — CATEGORY_ORDER above, unknowns alphabetical at the end. No cap.
 export async function getBrandProductTypes(
-  normalisedBrand: string,
-  limit = 12
+  normalisedBrand: string
 ): Promise<BrandProductTypeChip[]> {
   const { data } = await supabase
     .from('products_active')
@@ -120,8 +152,7 @@ export async function getBrandProductTypes(
 
   return Array.from(counts.entries())
     .map(([product_type, count]) => ({ product_type, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit);
+    .sort((a, b) => compareCategories(a.product_type, b.product_type));
 }
 
 export async function getBrandProducts(

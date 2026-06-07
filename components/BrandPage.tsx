@@ -38,7 +38,7 @@ export async function BrandPage({ slug, page = 1, productType }: Props) {
 
   const [stats, productTypes, productResult] = await Promise.all([
     getBrandStats(brand.normalised_brand),
-    getBrandProductTypes(brand.normalised_brand, 12),
+    getBrandProductTypes(brand.normalised_brand),
     getBrandProducts(brand.normalised_brand, page, PAGE_SIZE, productType),
   ]);
 

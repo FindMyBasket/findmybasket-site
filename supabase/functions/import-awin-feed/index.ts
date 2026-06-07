@@ -1827,6 +1827,11 @@ serve(async (req) => {
     const productRows = chunk.map(c => ({
       name: c.name,
       brand: c.brand,
+      // c.brand is already the canonical brand (lookupCanonicalBrand). Store its
+      // lowercased form so brand pages can group by normalised_brand. Mirrors the
+      // backfill COALESCE(LOWER(canonical), LOWER(brand)); without this, new
+      // products land with NULL normalised_brand and never surface on /brands/*.
+      normalised_brand: c.brand ? String(c.brand).toLowerCase().trim() || null : null,
       category: c.category,
       product_type: c.product_type,
       top_category: c.top_category,
