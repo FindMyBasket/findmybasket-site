@@ -82,6 +82,8 @@
     .footer-links { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 32px; }
     .footer-links a { font-size: 13px; color: rgba(250,248,244,0.4); text-decoration: none; transition: color 0.2s; }
     .footer-links a:hover { color: var(--cream); }
+    .footer-cookie-btn { font-family: inherit; font-size: 13px; color: rgba(250,248,244,0.4); background: none; border: none; padding: 0; cursor: pointer; transition: color 0.2s; }
+    .footer-cookie-btn:hover { color: var(--cream); }
     .footer-copy { font-size: 12px; color: rgba(250,248,244,0.2); }
     @media (max-width: 768px) { nav { padding: 14px 20px; } .nav-links a:not(.nav-cta) { display: none; } .nav-mobile-actions { display: flex; } footer { padding: 32px 20px; } }
 
@@ -267,9 +269,10 @@
         <a href="/app">Try it now</a>
         <a href="/cdn-cgi/l/email-protection#056d6069696a45636c6b61687c6764766e60712b666a2b706e">Contact</a>
         <a href="/product-finder.html">Product Finder</a>
-        <a href="/privacy-policy.html">Privacy Policy</a>
+        <a href="/privacy">Privacy Policy</a>
         <a href="/terms.html" style="font-size:13px;color:rgba(250,248,244,0.4);text-decoration:none;">Terms of Use</a>
         <a href="/cdn-cgi/l/email-protection#7018151c1c1f3016191e141d091211031b15045e131f5e051b" style="font-size:13px;color:rgba(250,248,244,0.4);text-decoration:none;">Contact</a>
+        <button type="button" class="footer-cookie-btn" onclick="if(window.FMBCookies)window.FMBCookies.open();return false;">Cookie Settings</button>
       </div>
       <p class="footer-copy">© 2026 FindMyBasket. All rights reserved.</p>
     </div>

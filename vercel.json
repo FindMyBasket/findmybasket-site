@@ -3,6 +3,7 @@
     { "source": "/privacy", "destination": "/privacy.html" }
   ],
   "redirects": [
+    { "source": "/privacy-policy.html", "destination": "/privacy", "permanent": true },
     { "source": "/app.html", "destination": "/app", "permanent": true },
     { "source": "/product-finder", "destination": "/skincare", "permanent": true },
     { "source": "/product-finder.html", "destination": "/skincare", "permanent": true },

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { RoutineIndicator } from './RoutineIndicator';
 import { SiteNav } from './SiteNav';
+import { CookieSettingsButton } from './CookieSettingsButton';
 
 export function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -45,8 +46,9 @@ function SiteFooter() {
           <div>
             <h4 className="font-serif text-cream text-lg mb-4">Legal</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="/privacy-policy.html" className="hover:text-cream transition-colors">Privacy</a></li>
+              <li><a href="/privacy" className="hover:text-cream transition-colors">Privacy</a></li>
               <li><a href="/terms.html" className="hover:text-cream transition-colors">Terms</a></li>
+              <li><CookieSettingsButton className="hover:text-cream transition-colors" /></li>
             </ul>
           </div>
         </div>
