@@ -1,4 +1,7 @@
 {
+  "rewrites": [
+    { "source": "/privacy", "destination": "/privacy.html" }
+  ],
   "redirects": [
     { "source": "/app.html", "destination": "/app", "permanent": true },
     { "source": "/product-finder", "destination": "/skincare", "permanent": true },
