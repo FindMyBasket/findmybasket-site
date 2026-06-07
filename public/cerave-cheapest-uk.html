@@ -76,54 +76,111 @@
 </style>
 </head>
 <body>
-<nav>
-  <a href="/index.html" class="nav-logo"><svg height="32" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg"><style>.nl{fill:#4a90d9}</style><path class="nl" d="M115.6,99.5v.2s-3,13.9-3,13.9c-1.4,6.8-7.5,11.8-14.5,11.8h-60.9c-7,0-13.1-4.9-14.5-11.8l-8.2-39h66.2c-.3-.9-.5-1.9-.7-2.9-.4-1.9-.5-3.9-.5-6v-.3H10.6c-3.8,0-6.6,3.5-5.8,7.2l9,42.8c2.3,11.1,12.1,19.1,23.5,19.1h60.9c11.3,0,21.1-8,23.5-19.1l3.8-18v-.2c-3,1.2-6.3,2-9.8,2.2Z"/><path class="nl" d="M88.8,42.5c-.4.4-.7.7-1,1.1-.7.8-1.4,1.6-2,2.5-.9,1.3-1.7,2.6-2.4,3.9-3.1-1.4-6.3-2.1-9.7-2.1h-11.8c-6.4,0-12.4,2.5-17,7-2.9,2.9-5,6.5-6.1,10.4-.1.3-.2.7-.3,1-.2.8-.3,1.6-.5,2.6l-.6,4.5-9.1-1.2.6-4.5c.1-.9.2-1.7.4-2.4,0-.4.2-.7.2-1.1,1.4-5.9,4.4-11.4,8.8-15.8,6.3-6.3,14.6-9.7,23.5-9.7h11.8c4.9,0,9.7,1.1,14.1,3.1l1.1.5Z"/><path style="fill:#C9A96E" d="M112.8,34.3c-9.2,0-17.5,4.1-23.1,10.6-3.9,4.5-6.5,10.1-7.2,16.3-.2,1.2-.2,2.5-.2,3.7,0,1.9.2,3.7.5,5.4,1.6,8.7,6.8,16.1,14,20.6,4.7,2.9,10.2,4.5,16,4.5s1.1,0,1.7,0c3.5-.2,6.7-.9,9.8-2.2.8-.3,1.7-.7,2.5-1.2,3.4-1.8,6.5-4.1,9-7,4.7-5.4,7.6-12.4,7.6-20.1,0-16.8-13.7-30.5-30.6-30.5Z"/><path style="fill:#C9A96E" d="M153,114.9l-.8.6c-2.9,2.3-7.2,1.7-9.3-1.3l-16.2-22.5,8.9-7.1,18.3,20.9c2.4,2.8,2.1,7-.8,9.3Z"/></svg><span class="nav-wordmark">Find<span>My</span>Basket</span></a>
-  <div class="nav-links">
+<!-- ===== Unified site nav (canonical) ===== -->
+  <style>
+    /* ===== Canonical site nav (from public/index.html); scoped + hardcoded so it
+       overrides each article's own head nav CSS. Sticky (no body padding-top). ===== */
+    nav { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 20px 48px; background: rgba(250,248,244,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(28,26,24,0.1); }
+    nav .nav-logo { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: #1C1A18; text-decoration: none; display: flex; align-items: center; gap: 10px; }
+    nav .nav-logo span { color: #C9A96E; }
+    nav .nav-links { display: flex; gap: 28px; align-items: center; }
+    nav .nav-links a { font-size: 14px; font-weight: 400; color: #4A4845; text-decoration: none; transition: color 0.2s; }
+    nav .nav-links a:hover { color: #1C1A18; }
+    nav .nav-cta { background: #1C1A18 !important; color: #FAF8F4 !important; padding: 10px 20px; border-radius: 100px; font-weight: 500 !important; font-size: 13px !important; }
+    nav .nav-cta:hover { background: #C9A96E !important; }
+    nav .nav-search { display: inline-flex; align-items: center; color: #4A4845; padding: 8px; transition: color 0.2s; }
+    nav .nav-search:hover { color: #1C1A18; }
+    nav .nav-mobile-actions { display: none; align-items: center; gap: 4px; }
+    .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px; }
+    .hamburger span { width: 22px; height: 2px; background: #1C1A18; border-radius: 2px; }
+    .mobile-menu { display: none; position: fixed; top: 64px; left: 0; right: 0; background: #FAF8F4; border-bottom: 1px solid rgba(28,26,24,0.1); padding: 20px 24px; z-index: 99; flex-direction: column; gap: 4px; }
+    .mobile-menu a { font-size: 16px; color: #4A4845; text-decoration: none; padding: 12px 0; border-bottom: 1px solid rgba(28,26,24,0.1); font-family: 'DM Sans', sans-serif; }
+    .mobile-menu a:last-child { border-bottom: none; }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu .mobile-cta { display: block; text-align: center; margin-top: 12px; background: #1C1A18; color: #FAF8F4; padding: 12px 20px; border-radius: 100px; font-size: 13px; font-weight: 500; border-bottom: none; }
+    @media (max-width: 768px) { nav { padding: 14px 20px; } nav .nav-links { display: none; } .hamburger { display: flex; } nav .nav-mobile-actions { display: flex; } }
+  </style>
+  <nav>
+    <a href="/index.html" class="nav-logo">
+      <svg height="36" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg"><path fill="#4a90d9" d="M115.6,99.5v.2s-3,13.9-3,13.9c-1.4,6.8-7.5,11.8-14.5,11.8h-60.9c-7,0-13.1-4.9-14.5-11.8l-8.2-39h66.2c-.3-.9-.5-1.9-.7-2.9-.4-1.9-.5-3.9-.5-6v-.3H10.6c-3.8,0-6.6,3.5-5.8,7.2l9,42.8c2.3,11.1,12.1,19.1,23.5,19.1h60.9c11.3,0,21.1-8,23.5-19.1l3.8-18v-.2c-3,1.2-6.3,2-9.8,2.2Z"/><path fill="#4a90d9" d="M88.8,42.5c-.4.4-.7.7-1,1.1-.7.8-1.4,1.6-2,2.5-.9,1.3-1.7,2.6-2.4,3.9-3.1-1.4-6.3-2.1-9.7-2.1h-11.8c-6.4,0-12.4,2.5-17,7-2.9,2.9-5,6.5-6.1,10.4-.1.3-.2.7-.3,1-.2.8-.3,1.6-.5,2.6l-.6,4.5-9.1-1.2.6-4.5c.1-.9.2-1.7.4-2.4,0-.4.2-.7.2-1.1,1.4-5.9,4.4-11.4,8.8-15.8,6.3-6.3,14.6-9.7,23.5-9.7h11.8c4.9,0,9.7,1.1,14.1,3.1l1.1.5Z"/><path fill="#4a90d9" d="M40.4,116.6c-1.3,0-2.5-.9-2.8-2.2l-7.5-29.5c-.4-1.5.5-3.1,2.1-3.5,1.5-.4,3.1.5,3.5,2.1l7.5,29.5c.4,1.5-.5,3.1-2.1,3.5-.2,0-.5,0-.7,0Z"/><path fill="#4a90d9" d="M59,117c-1.4,0-2.6-1-2.8-2.5l-4.4-30.2c-.2-1.6.9-3,2.4-3.3,1.6-.2,3,.9,3.3,2.4l4.4,30.2c.2,1.6-.9,3-2.4,3.3-.1,0-.3,0-.4,0Z"/><path fill="#4a90d9" d="M100.4,97l-4.8,17.5c-.3,1.3-1.5,2.1-2.8,2.1s-.5,0-.7-.1c-1.5-.4-2.4-2-2-3.5l5-18.5c0,0,0-.1,0-.2.1,0,.2.2.4.2.7.4,1.4.9,2.2,1.3.8.4,1.7.9,2.6,1.2Z"/><path fill="#4a90d9" d="M76.4,117c-.1,0-.3,0-.4,0-1.6-.2-2.7-1.7-2.4-3.3l4.4-30.2c.2-1.6,1.7-2.7,3.3-2.4,1.6.2,2.7,1.7,2.4,3.3l-4.4,30.2c-.2,1.4-1.4,2.5-2.8,2.5Z"/><path fill="#C9A96E" d="M92.5,70.2h-9.8c1.6,8.7,6.8,16.1,14,20.6l2.7-9.8c-3.3-2.7-5.8-6.5-6.9-10.8ZM112.8,34.3c-9.2,0-17.5,4.1-23.1,10.6-3.9,4.5-6.5,10.1-7.2,16.3-.2,1.2-.2,2.5-.2,3.7,0,1.9.2,3.7.5,5.4,1.6,8.7,6.8,16.1,14,20.6,4.7,2.9,10.2,4.5,16,4.5s1.1,0,1.7,0c3.5-.2,6.7-.9,9.8-2.2.8-.3,1.7-.7,2.5-1.2,3.4-1.8,6.5-4.1,9-7,4.7-5.4,7.6-12.4,7.6-20.1,0-16.8-13.7-30.5-30.6-30.5ZM116.5,85.5c-1.2.2-2.5.3-3.8.3-5.1,0-9.7-1.8-13.3-4.8-3.3-2.7-5.8-6.5-6.9-10.8-.5-1.7-.7-3.6-.7-5.4s.1-2.5.3-3.7c.6-3.5,2.1-6.6,4.2-9.3,3.8-4.9,9.8-8,16.5-8,11.6,0,21,9.4,21,21s-2.6,11.6-6.8,15.5c-2.9,2.6-6.5,4.5-10.4,5.2Z"/><path fill="#C9A96E" d="M153,114.9l-.8.6c-2.9,2.3-7.2,1.7-9.3-1.3l-16.2-22.5,8.9-7.1,18.3,20.9c2.4,2.8,2.1,7-.8,9.3Z"/></svg>
+      <span style="color:var(--ink)">Find<span style="color:var(--gold)">My</span>Basket</span>
+    </a>
+    <div class="nav-links">
       <a href="/skincare">Skincare</a>
       <a href="/makeup">Makeup</a>
       <a href="/hair">Hair</a>
       <a href="/edit/k-beauty">K-Beauty</a>
       <a href="/savings-hub.html">Savings Hub</a>
-      <a href="/about.html">About</a>
+      <a href="/skincare" class="nav-search" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></a>
       <a href="/app" class="nav-cta">Build a routine</a>
     </div>
-</nav>
+    <div class="nav-mobile-actions">
+      <a href="/skincare" class="nav-search" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></a>
+      <div class="hamburger" onclick="toggleMenu()" id="hamburger"><span></span><span></span><span></span></div>
+    </div>
+  </nav>
+
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="/skincare" onclick="toggleMenu()">Skincare</a>
+    <a href="/makeup" onclick="toggleMenu()">Makeup</a>
+    <a href="/hair" onclick="toggleMenu()">Hair</a>
+    <a href="/edit/k-beauty" onclick="toggleMenu()">K-Beauty</a>
+    <a href="/savings-hub.html">Savings Hub</a>
+    <a href="/app" class="mobile-cta">Build a routine</a>
+  </div>
+  <script>
+    // Hamburger menu (canonical, from public/index.html)
+    function toggleMenu() {
+      const menu = document.getElementById('mobileMenu');
+      const hamburger = document.getElementById('hamburger');
+      menu.classList.toggle('open');
+      hamburger.style.opacity = menu.classList.contains('open') ? '0.5' : '1';
+    }
+    document.addEventListener('click', function(e) {
+      const menu = document.getElementById('mobileMenu');
+      const hamburger = document.getElementById('hamburger');
+      if (menu.classList.contains('open') && !menu.contains(e.target) && !hamburger.contains(e.target)) {
+        menu.classList.remove('open');
+        hamburger.style.opacity = '1';
+      }
+    });
+  </script>
 <div class="article-wrap">
   <p class="article-tag">Price Guide · CeraVe</p>
   <h1 class="article-title">Where is CeraVe Cheapest in the UK? 2026 Price Guide</h1>
   <div class="article-meta">By FindMyBasket &nbsp;·&nbsp; Updated April 2026 &nbsp;·&nbsp; 5 min read</div>
   <div class="article-body">
 
-    <p>CeraVe has become one of the most popular skincare brands in the UK — developed with dermatologists and packed with ceramides, hyaluronic acid and niacinamide, it delivers clinical-grade results at an accessible price. But the price still varies depending on where you buy. Here is what to know before your next purchase.</p>
+    <p>CeraVe has become one of the most popular skincare brands in the UK, developed with dermatologists and packed with ceramides, hyaluronic acid and niacinamide, it delivers clinical-grade results at an accessible price. But the price still varies depending on where you buy. Here is what to know before your next purchase.</p>
 
-    <div class="tip-box"><p><strong>FindMyBasket tip:</strong> Use our <a href="/product-finder.html">Product Finder</a> to search CeraVe products by ingredient — ceramides, hyaluronic acid, niacinamide — and find the best price across UK retailers right now.</p></div>
+    <div class="tip-box"><p><strong>FindMyBasket tip:</strong> Use our <a href="/product-finder.html">Product Finder</a> to search CeraVe products by ingredient, ceramides, hyaluronic acid, niacinamide, and find the best price across UK retailers right now.</p></div>
 
     <h2>Why CeraVe prices vary across UK retailers</h2>
-    <p>CeraVe does not sell directly in the UK, which means you are always buying through a retailer — and those retailers set their own prices. The same 340g tub of Moisturising Cream can cost meaningfully more at one retailer versus another, with no difference in the product itself.</p>
+    <p>CeraVe does not sell directly in the UK, which means you are always buying through a retailer, and those retailers set their own prices. The same 340g tub of Moisturising Cream can cost meaningfully more at one retailer versus another, with no difference in the product itself.</p>
     <p>The difference tends to be most pronounced between high street pharmacies and online beauty retailers. Online retailers have lower overheads and frequently price popular skincare brands more competitively than high street alternatives.</p>
 
     <h2>The CeraVe products worth comparing</h2>
     <h3>CeraVe Foaming Cleanser 236ml</h3>
-    <p>The bestselling CeraVe face wash — a gentle, non-stripping cleanser suitable for normal to oily skin. Key ingredients: <span class="ingredient-tag">Ceramides</span><span class="ingredient-tag">Hyaluronic Acid</span><span class="ingredient-tag">Niacinamide</span>. One of the most price-compared products in UK skincare.</p>
+    <p>The bestselling CeraVe face wash, a gentle, non-stripping cleanser suitable for normal to oily skin. Key ingredients: <span class="ingredient-tag">Ceramides</span><span class="ingredient-tag">Hyaluronic Acid</span><span class="ingredient-tag">Niacinamide</span>. One of the most price-compared products in UK skincare.</p>
 
     <h3>CeraVe Moisturising Cream 340g</h3>
-    <p>A cult moisturiser for dry and sensitive skin. The large 340g tub lasts months, which makes the retailer you choose particularly impactful — a saving of even £1-2 per tub adds up significantly over a year of regular use. Key ingredients: <span class="ingredient-tag">Ceramides</span><span class="ingredient-tag">Hyaluronic Acid</span><span class="ingredient-tag">Glycerin</span>.</p>
+    <p>A cult moisturiser for dry and sensitive skin. The large 340g tub lasts months, which makes the retailer you choose particularly impactful, a saving of even £1-2 per tub adds up significantly over a year of regular use. Key ingredients: <span class="ingredient-tag">Ceramides</span><span class="ingredient-tag">Hyaluronic Acid</span><span class="ingredient-tag">Glycerin</span>.</p>
 
     <h3>CeraVe AM Facial Moisturising Lotion SPF50</h3>
-    <p>A daily SPF moisturiser hybrid that is used every single morning — which is exactly why the retailer price matters. Even a small saving per bottle compounds significantly when you restock every two to three months.</p>
+    <p>A daily SPF moisturiser hybrid that is used every single morning, which is exactly why the retailer price matters. Even a small saving per bottle compounds significantly when you restock every two to three months.</p>
 
     <h2>How to find the best price on CeraVe</h2>
-    <p>Prices change regularly across UK retailers as they run promotions and adjust pricing. Rather than showing figures that may be outdated, <strong>use FindMyBasket to check live prices</strong> across UK beauty retailers right now — and see the true total cost including delivery.</p>
+    <p>Prices change regularly across UK retailers as they run promotions and adjust pricing. Rather than showing figures that may be outdated, <strong>use FindMyBasket to check live prices</strong> across UK beauty retailers right now, and see the true total cost including delivery.</p>
     <ul>
-      <li><strong>Compare online retailers first</strong> — they consistently price more competitively than high street options for CeraVe</li>
-      <li><strong>Buy larger sizes</strong> — the 340g Moisturising Cream costs significantly less per use than smaller sizes</li>
-      <li><strong>Factor in delivery</strong> — a product that looks £1 cheaper may cost more overall if it doesn't meet the free delivery threshold</li>
-      <li><strong>Buy multiple products together</strong> — combining cleanser, moisturiser and SPF in one order usually clears most retailers' free delivery minimum</li>
+      <li><strong>Compare online retailers first</strong>. They consistently price more competitively than high street options for CeraVe</li>
+      <li><strong>Buy larger sizes</strong>. The 340g Moisturising Cream costs significantly less per use than smaller sizes</li>
+      <li><strong>Factor in delivery</strong>. A product that looks £1 cheaper may cost more overall if it doesn't meet the free delivery threshold</li>
+      <li><strong>Buy multiple products together</strong>. Combining cleanser, moisturiser and SPF in one order usually clears most retailers' free delivery minimum</li>
     </ul>
 
     <div class="cta-box">
       <h3>Find the best price on CeraVe now</h3>
-      <p>Add your CeraVe products to FindMyBasket and we will find the best price across UK retailers — including delivery costs — in seconds.</p>
+      <p>Add your CeraVe products to FindMyBasket and we will find the best price across UK retailers, including delivery costs, in seconds.</p>
       <a href="/app">Compare prices →</a>
     </div>
     <p class="disclosure">Prices vary across retailers and change regularly. Use FindMyBasket for live prices. FindMyBasket may earn a small commission when you shop through our links, at no extra cost to you.</p>
