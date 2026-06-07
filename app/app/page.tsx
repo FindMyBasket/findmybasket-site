@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { SiteNav } from '../../components/SiteNav';
+import { SiteFooter } from '../../components/SiteLayout';
 import RoutineBuilder from './RoutineBuilder';
 import './routine-builder.css';
 
@@ -44,6 +45,7 @@ export default function AppPage() {
       />
       <SiteNav />
       <RoutineBuilder />
+      <SiteFooter />
     </>
   );
 }

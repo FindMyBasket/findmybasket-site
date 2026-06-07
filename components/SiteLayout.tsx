@@ -43,7 +43,7 @@ function FooterLogo() {
   );
 }
 
-function SiteFooter() {
+export function SiteFooter() {
   return (
     <footer className="bg-ink mt-20 px-5 py-8 md:p-12">
       <div className="max-w-[1100px] mx-auto">
