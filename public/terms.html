@@ -163,5 +163,26 @@
         <a href="/terms.html">Terms of Use</a>
         <a href="/cdn-cgi/l/email-protection#b0d8d5dcdcdff0d6d9ded4ddc9d2d1c3dbd5c49ed3df9ec5db">Contact</a>
       </div>
-      <p class="footer-copy">© 2025 FindMyBaske
+      <p class="footer-copy">© 2026 FindMyBasket. All rights reserved.</p>
+    </div>
+  </footer>
+  <script>
+    // Hamburger menu (canonical, from public/index.html)
+    function toggleMenu() {
+      const menu = document.getElementById('mobileMenu');
+      const hamburger = document.getElementById('hamburger');
+      menu.classList.toggle('open');
+      hamburger.style.opacity = menu.classList.contains('open') ? '0.5' : '1';
+    }
+    document.addEventListener('click', function(e) {
+      const menu = document.getElementById('mobileMenu');
+      const hamburger = document.getElementById('hamburger');
+      if (menu.classList.contains('open') && !menu.contains(e.target) && !hamburger.contains(e.target)) {
+        menu.classList.remove('open');
+        hamburger.style.opacity = '1';
+      }
+    });
+  </script>
 <script src="/fmb-cookie-banner.js" defer></script>
+</body>
+</html>
