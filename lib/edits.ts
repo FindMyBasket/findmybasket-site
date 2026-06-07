@@ -13,6 +13,11 @@ export interface Edit {
   meta_title: string;
   meta_description: string;
 
+  // When true, the /edit/[slug] hero renders the photo banner from
+  // /images/category-hero/{slug}-{desktop,mobile}.jpg (the same treatment as
+  // the skincare/makeup/hair category heroes). Omit for a plain text hero.
+  hero_photo?: boolean;
+
   // Product selection: products match if their normalised_brand is in
   // brand_slugs OR they're stocked at one of include_retailer_ids.
   brand_slugs: string[];
@@ -24,7 +29,8 @@ export const EDITS: Record<string, Edit> = {
     slug: 'k-beauty',
     display_name: 'Korean beauty',
     hero_intro:
-      'The K-beauty edit. Korean skincare and makeup brands stocked across UK retailers. Innisfree, TIRTIR, ANUA, COSRX, Beauty of Joseon and more.',
+      'COSRX, Beauty of Joseon, mixsoon, medicube and more — the Korean skincare you want, at the best UK price.',
+    hero_photo: true,
     meta_title: 'Korean beauty (K-beauty) best prices UK | FindMyBasket',
     meta_description:
       'Compare prices on Korean skincare and makeup across UK retailers. From cult favourites like COSRX, Beauty of Joseon and TIRTIR to emerging brands. Find the best deal.',

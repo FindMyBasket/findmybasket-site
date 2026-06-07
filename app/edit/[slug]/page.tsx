@@ -37,37 +37,65 @@ export default async function EditPage({ params }: { params: { slug: string } })
 
   return (
     <SiteLayout>
-      <section className="max-w-site mx-auto px-6 py-16 md:py-24 text-center">
-        <p className="text-xs uppercase tracking-widest text-gold font-medium mb-4">
-          The Edit
-        </p>
-        <h1 className="font-serif text-5xl md:text-7xl text-ink mb-6">
-          {edit.display_name}
-        </h1>
-        <p className="text-base md:text-lg text-ink-light max-w-2xl mx-auto mb-10 leading-relaxed">
-          {edit.hero_intro}
-        </p>
-        <div className="inline-flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-ink-light">
-          <span>
-            <strong className="text-ink font-semibold">
-              {stats.total_products.toLocaleString()}
-            </strong>{' '}
-            products
-          </span>
-          <span className="text-ink-light/40">·</span>
-          <span>
-            <strong className="text-ink font-semibold">
-              {stats.total_brands.toLocaleString()}
-            </strong>{' '}
-            brands
-          </span>
-          <span className="text-ink-light/40">·</span>
-          <span>
-            <strong className="text-ink font-semibold">
-              {stats.total_retailers}
-            </strong>{' '}
-            retailers
-          </span>
+      <section className="relative overflow-hidden">
+        {edit.hero_photo && (
+          <>
+            {/* Hero photo — desktop crop */}
+            <div
+              className="absolute inset-0 z-0 hidden md:block bg-cover bg-[center_bottom]"
+              style={{
+                backgroundImage: `url('/images/category-hero/${edit.slug}-desktop.jpg')`,
+              }}
+            />
+            {/* Hero photo — mobile (portrait) crop */}
+            <div
+              className="absolute inset-0 z-0 md:hidden bg-cover bg-[center_bottom]"
+              style={{
+                backgroundImage: `url('/images/category-hero/${edit.slug}-mobile.jpg')`,
+              }}
+            />
+            {/* Cream-fade overlay painted on top of the photo — matches category heroes */}
+            <div
+              className="absolute inset-0 z-0"
+              style={{
+                backgroundImage:
+                  'linear-gradient(to bottom, rgb(250,248,244) 0%, rgba(250,248,244,0.85) 30%, rgba(250,248,244,0.4) 70%, rgba(250,248,244,0.2) 100%)',
+              }}
+            />
+          </>
+        )}
+        <div className="relative z-10 max-w-site mx-auto px-6 py-16 md:py-24 text-center">
+          <p className="text-xs uppercase tracking-widest text-gold font-medium mb-4">
+            The Edit
+          </p>
+          <h1 className="font-serif text-5xl md:text-7xl text-ink mb-6">
+            {edit.display_name}
+          </h1>
+          <p className="text-base md:text-lg text-ink-light max-w-2xl mx-auto mb-10 leading-relaxed">
+            {edit.hero_intro}
+          </p>
+          <div className="inline-flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-ink-light">
+            <span>
+              <strong className="text-ink font-semibold">
+                {stats.total_products.toLocaleString()}
+              </strong>{' '}
+              products
+            </span>
+            <span className="text-ink-light/40">·</span>
+            <span>
+              <strong className="text-ink font-semibold">
+                {stats.total_brands.toLocaleString()}
+              </strong>{' '}
+              brands
+            </span>
+            <span className="text-ink-light/40">·</span>
+            <span>
+              <strong className="text-ink font-semibold">
+                {stats.total_retailers}
+              </strong>{' '}
+              retailers
+            </span>
+          </div>
         </div>
       </section>
 
