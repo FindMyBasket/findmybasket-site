@@ -1,189 +1,339 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
-<meta charset="UTF-8"/>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>About FindMyBasket - The UK's Skincare Routine Optimiser</title>
-<meta name="description" content="FindMyBasket is the UK's first skincare routine price optimiser. Find out who built it, why, and how we help UK skincare shoppers find the best price on their routine."/>
-<link rel="canonical" href="https://www.findmybasket.co.uk/about.html"/>
-<meta property="og:title" content="About FindMyBasket"/>
-<meta property="og:description" content="FindMyBasket is the UK's first skincare routine price optimiser. Find out who built it, why, and how we help UK skincare shoppers."/>
-<meta property="og:url" content="https://www.findmybasket.co.uk/about.html"/>
-<meta property="og:type" content="website"/>
-<meta property="og:site_name" content="FindMyBasket"/>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About | FindMyBasket</title>
+<meta name="description" content="FindMyBasket compares beauty prices across UK retailers and optimises your whole routine for the lowest total cost. Built in Hampshire by Robbie Coffin.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://findmybasket.co.uk/about">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
+:root {
+  --cream: #FAF8F4;
+  --ink: #1C1A18;
+  --ink-light: #4A4845;
+  --ink-muted: #6B6B68;
+  --border: #E8E4DC;
+  --gold: #C9A96E;
+  --gold-text: #8A6A30;
+  --brand-blue: #4A90D9;
+  --max: 760px;
+}
 
-  :root{--cream:#FAF8F4;--warm-white:#FFFDF9;--ink:#1C1A18;--ink-light:#4A4845;--gold:#C9A96E;--gold-light:#E8D5B0;--sage:#7A9E87;--blue:#4A90D9;--border:rgba(28,26,24,0.1);--shadow:0 4px 40px rgba(28,26,24,0.08)}
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  html{scroll-behavior:smooth}
-  body{font-family:"DM Sans",sans-serif;background:var(--cream);color:var(--ink)}
-  nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:16px 48px;background:rgba(250,248,244,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
-  .nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
-  .nav-wordmark{font-family:"Cormorant Garamond",serif;font-size:22px;font-weight:600;color:var(--ink)}
-  .nav-wordmark span{color:var(--gold)}
-  .nav-links{display:flex;align-items:center;gap:28px}
-  .nav-links a{font-size:14px;color:var(--ink-light);text-decoration:none;transition:color 0.2s}
-  .nav-links a:hover{color:var(--ink)}
-  .nav-cta{background:var(--ink)!important;color:var(--cream)!important;padding:10px 22px;border-radius:100px;font-weight:500!important;font-size:13px!important;transition:background 0.2s!important}
-  .nav-cta:hover{background:var(--gold)!important}
-  footer{background:var(--ink);padding:48px;margin-top:0}
-  .footer-inner{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
-  .footer-wordmark{font-family:"Cormorant Garamond",serif;font-size:20px;font-weight:600;color:var(--cream)}
-  .footer-wordmark span{color:var(--gold)}
-  .footer-links{display:flex;gap:24px;flex-wrap:wrap}
-  .footer-links a{font-size:13px;color:rgba(250,248,244,0.4);text-decoration:none;transition:color 0.2s}
-  .footer-links a:hover{color:var(--cream)}
-  .footer-copy{font-size:12px;color:rgba(250,248,244,0.25)}
-  @media(max-width:768px){nav{padding:14px 20px}.nav-links a:not(.nav-cta){display:none}footer{padding:32px 20px}}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--ink);
+  background: var(--cream);
+  -webkit-font-smoothing: antialiased;
+}
 
-  .hero-section{background:var(--ink);padding:80px 48px;text-align:center}
-  .hero-section h1{font-family:"Cormorant Garamond",serif;font-size:clamp(40px,6vw,72px);font-weight:600;color:var(--cream);line-height:1.05;margin-bottom:20px}
-  .hero-section h1 em{font-style:italic;color:var(--gold)}
-  .hero-section p{font-size:18px;color:rgba(250,248,244,0.6);max-width:600px;margin:0 auto;line-height:1.7}
-  .page-inner{max-width:800px;margin:0 auto;padding:72px 24px}
-  .section-label{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:12px}
-  h2{font-family:"Cormorant Garamond",serif;font-size:36px;font-weight:600;margin-bottom:20px;line-height:1.1}
-  p{font-size:16px;line-height:1.8;color:var(--ink-light);margin-bottom:20px}
-  p strong{color:var(--ink)}
-  .divider{border:none;border-top:1px solid var(--border);margin:56px 0}
-  .founder-block{display:grid;grid-template-columns:120px 1fr;gap:32px;align-items:start;margin-bottom:48px}
-  .founder-avatar{width:120px;height:120px;border-radius:20px;background:linear-gradient(135deg,var(--blue),var(--gold));display:flex;align-items:center;justify-content:center;font-size:48px}
-  .founder-name{font-size:22px;font-weight:600;color:var(--ink);margin-bottom:4px}
-  .founder-title{font-size:14px;color:var(--ink-light);margin-bottom:16px}
-  .founder-bio{font-size:15px;line-height:1.75;color:var(--ink-light)}
-  .credentials{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-  .credential-tag{background:var(--cream);border:1px solid var(--border);border-radius:100px;padding:4px 12px;font-size:12px;color:var(--ink-light)}
-  .values-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:32px}
-  .value-card{background:var(--warm-white);border:1px solid var(--border);border-radius:16px;padding:28px 24px}
-  .value-icon{font-size:28px;margin-bottom:12px}
-  .value-title{font-size:16px;font-weight:600;margin-bottom:8px;color:var(--ink)}
-  .value-desc{font-size:14px;line-height:1.65;color:var(--ink-light)}
-  .stat-row{display:flex;gap:0;margin:40px 0;border:1px solid var(--border);border-radius:16px;overflow:hidden}
-  .stat-item{flex:1;text-align:center;padding:28px 16px;border-right:1px solid var(--border)}
-  .stat-item:last-child{border-right:none}
-  .stat-num{font-family:"Cormorant Garamond",serif;font-size:40px;font-weight:600;color:var(--gold);line-height:1}
-  .stat-label{font-size:12px;color:var(--ink-light);margin-top:6px;letter-spacing:0.04em}
-  .cta-strip{background:var(--ink);border-radius:20px;padding:40px;text-align:center;margin-top:48px}
-  .cta-strip h3{font-family:"Cormorant Garamond",serif;font-size:30px;color:var(--cream);margin-bottom:12px}
-  .cta-strip p{font-size:15px;color:rgba(250,248,244,0.5);margin-bottom:24px;line-height:1.6}
-  .cta-strip a{display:inline-block;background:var(--gold);color:var(--ink);padding:14px 32px;border-radius:100px;font-weight:600;font-size:14px;text-decoration:none;margin:0 6px}
-  .cta-strip a.secondary{background:transparent;color:rgba(250,248,244,0.5);border:1px solid rgba(250,248,244,0.15)}
-  .cta-strip a.secondary:hover{color:var(--cream);border-color:rgba(250,248,244,0.4)}
-  .disclosure{font-size:13px;color:var(--ink-light);background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.2);border-radius:12px;padding:16px 20px;margin-top:40px;line-height:1.6}
-  @media(max-width:768px){.founder-block{grid-template-columns:1fr}.values-grid{grid-template-columns:1fr}.stat-row{flex-wrap:wrap}.stat-item{flex:1 1 40%;border-bottom:1px solid var(--border)}.hero-section{padding:60px 24px}}
+a { color: var(--gold-text); text-decoration: underline; text-underline-offset: 3px; }
+a:hover { color: var(--ink); }
+
+.container {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 56px 24px 80px;
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold-text);
+  margin-bottom: 18px;
+}
+
+h1 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: clamp(38px, 5vw, 52px);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin-bottom: 14px;
+}
+
+.intro {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 19px;
+  color: var(--ink-light);
+  line-height: 1.5;
+  margin-bottom: 48px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+h2 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-top: 44px;
+  margin-bottom: 14px;
+  line-height: 1.2;
+}
+
+p { margin-bottom: 14px; color: var(--ink-light); }
+p strong { color: var(--ink); font-weight: 600; }
+
+ul { padding-left: 22px; margin-bottom: 16px; }
+ul li { margin-bottom: 6px; color: var(--ink-light); }
+ul li strong { color: var(--ink); }
+
+.callout {
+  background: rgba(74, 144, 217, 0.06);
+  border-left: 3px solid var(--brand-blue);
+  padding: 14px 18px;
+  border-radius: 0 8px 8px 0;
+  margin: 18px 0;
+}
+.callout p:last-child { margin-bottom: 0; }
+
+.cta-block {
+  background: rgba(232, 228, 220, 0.4);
+  border-radius: 12px;
+  padding: 28px 28px 24px;
+  margin: 36px 0 12px;
+}
+.cta-block h3 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.cta-block p { margin-bottom: 16px; }
+.cta-button {
+  display: inline-block;
+  background: var(--ink);
+  color: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  font-size: 15px;
+  padding: 11px 22px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.cta-button:hover { opacity: 0.85; color: var(--cream); }
+
+/* ===== Canonical site nav (copied from public/index.html) ===== */
+body { padding-top: 77px; }
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 48px;
+  background: rgba(250,248,244,0.92); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: var(--ink); text-decoration: none; display:flex; align-items:center; gap:10px; }
+.nav-logo span { color: var(--gold); }
+.nav-links { display: flex; gap: 28px; align-items: center; }
+.nav-links a { font-size: 14px; font-weight: 400; color: var(--ink-light); text-decoration: none; transition: color 0.2s; }
+.nav-links a:hover { color: var(--ink); }
+.nav-cta { background: var(--ink) !important; color: var(--cream) !important; padding: 10px 20px; border-radius: 100px; font-weight: 500 !important; font-size: 13px !important; }
+.nav-cta:hover { background: var(--gold) !important; }
+.nav-search { display: inline-flex; align-items: center; color: var(--ink-light); padding: 8px; transition: color 0.2s; }
+.nav-search:hover { color: var(--ink); }
+.nav-mobile-actions { display: none; align-items: center; gap: 4px; }
+.mobile-menu .mobile-cta { display: block; text-align: center; margin-top: 12px; background: var(--ink); color: var(--cream); padding: 12px 20px; border-radius: 100px; font-size: 13px; font-weight: 500; border-bottom: none; }
+.hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px; }
+.hamburger span { width: 22px; height: 2px; background: var(--ink); border-radius: 2px; }
+.mobile-menu { display: none; position: fixed; top: 65px; left: 0; right: 0; background: var(--cream); border-bottom: 1px solid var(--border); padding: 20px 24px; z-index: 99; flex-direction: column; gap: 4px; }
+.mobile-menu a { font-size: 16px; color: var(--ink-light); text-decoration: none; padding: 12px 0; border-bottom: 1px solid var(--border); font-family: 'DM Sans', sans-serif; }
+.mobile-menu a:last-child { border-bottom: none; }
+.mobile-menu.open { display: flex; }
+
+/* ===== Canonical site footer (copied from public/index.html) ===== */
+footer { background: var(--ink); padding: 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; border-top: 1px solid rgba(255,255,255,0.06); }
+.footer-logo { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 600; color: var(--cream); display:flex; align-items:center; gap:10px; }
+.footer-logo span { color: var(--gold); }
+.footer-links { display: flex; gap: 28px; flex-wrap: wrap; align-items: center; }
+.footer-links a { font-size: 13px; color: rgba(250,248,244,0.7); text-decoration: none; transition: color 0.2s; }
+.footer-links a:hover { color: var(--cream); }
+.footer-cookie-btn { font-family: 'DM Sans', sans-serif; font-size: 13px; color: rgba(250,248,244,0.7); background: none; border: none; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; transition: color 0.2s; }
+.footer-cookie-btn:hover { color: var(--cream); }
+.footer-copy { font-size: 12px; color: rgba(250,248,244,0.55); }
+
+@media (max-width: 768px) {
+  nav { padding: 14px 20px; }
+  .nav-links { display: none; }
+  .hamburger { display: flex; }
+  .nav-mobile-actions { display: flex; }
+  footer { flex-direction: column; text-align: center; padding: 32px 24px; }
+  .footer-links { justify-content: center; }
+}
 </style>
 </head>
+
 <body>
-<nav>
-  <a href="/index.html" class="nav-logo">
-    <svg height="32" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg"><style>.nl{fill:#4a90d9}</style><path class="nl" d="M115.6,99.5v.2s-3,13.9-3,13.9c-1.4,6.8-7.5,11.8-14.5,11.8h-60.9c-7,0-13.1-4.9-14.5-11.8l-8.2-39h66.2c-.3-.9-.5-1.9-.7-2.9-.4-1.9-.5-3.9-.5-6v-.3H10.6c-3.8,0-6.6,3.5-5.8,7.2l9,42.8c2.3,11.1,12.1,19.1,23.5,19.1h60.9c11.3,0,21.1-8,23.5-19.1l3.8-18v-.2c-3,1.2-6.3,2-9.8,2.2Z"/><path class="nl" d="M88.8,42.5c-.4.4-.7.7-1,1.1-.7.8-1.4,1.6-2,2.5-.9,1.3-1.7,2.6-2.4,3.9-3.1-1.4-6.3-2.1-9.7-2.1h-11.8c-6.4,0-12.4,2.5-17,7-2.9,2.9-5,6.5-6.1,10.4-.1.3-.2.7-.3,1-.2.8-.3,1.6-.5,2.6l-.6,4.5-9.1-1.2.6-4.5c.1-.9.2-1.7.4-2.4,0-.4.2-.7.2-1.1,1.4-5.9,4.4-11.4,8.8-15.8,6.3-6.3,14.6-9.7,23.5-9.7h11.8c4.9,0,9.7,1.1,14.1,3.1l1.1.5Z"/><path style="fill:#C9A96E" d="M112.8,34.3c-9.2,0-17.5,4.1-23.1,10.6-3.9,4.5-6.5,10.1-7.2,16.3-.2,1.2-.2,2.5-.2,3.7,0,1.9.2,3.7.5,5.4,1.6,8.7,6.8,16.1,14,20.6,4.7,2.9,10.2,4.5,16,4.5s1.1,0,1.7,0c3.5-.2,6.7-.9,9.8-2.2.8-.3,1.7-.7,2.5-1.2,3.4-1.8,6.5-4.1,9-7,4.7-5.4,7.6-12.4,7.6-20.1,0-16.8-13.7-30.5-30.6-30.5Z"/><path style="fill:#C9A96E" d="M153,114.9l-.8.6c-2.9,2.3-7.2,1.7-9.3-1.3l-16.2-22.5,8.9-7.1,18.3,20.9c2.4,2.8,2.1,7-.8,9.3Z"/></svg>
-    <span class="nav-wordmark">Find<span>My</span>Basket</span>
-  </a>
-  <div class="nav-links">
+
+  <nav>
+    <a href="/index.html" class="nav-logo">
+      <svg height="36" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg"><path fill="#4a90d9" d="M115.6,99.5v.2s-3,13.9-3,13.9c-1.4,6.8-7.5,11.8-14.5,11.8h-60.9c-7,0-13.1-4.9-14.5-11.8l-8.2-39h66.2c-.3-.9-.5-1.9-.7-2.9-.4-1.9-.5-3.9-.5-6v-.3H10.6c-3.8,0-6.6,3.5-5.8,7.2l9,42.8c2.3,11.1,12.1,19.1,23.5,19.1h60.9c11.3,0,21.1-8,23.5-19.1l3.8-18v-.2c-3,1.2-6.3,2-9.8,2.2Z"/><path fill="#4a90d9" d="M88.8,42.5c-.4.4-.7.7-1,1.1-.7.8-1.4,1.6-2,2.5-.9,1.3-1.7,2.6-2.4,3.9-3.1-1.4-6.3-2.1-9.7-2.1h-11.8c-6.4,0-12.4,2.5-17,7-2.9,2.9-5,6.5-6.1,10.4-.1.3-.2.7-.3,1-.2.8-.3,1.6-.5,2.6l-.6,4.5-9.1-1.2.6-4.5c.1-.9.2-1.7.4-2.4,0-.4.2-.7.2-1.1,1.4-5.9,4.4-11.4,8.8-15.8,6.3-6.3,14.6-9.7,23.5-9.7h11.8c4.9,0,9.7,1.1,14.1,3.1l1.1.5Z"/><path fill="#4a90d9" d="M40.4,116.6c-1.3,0-2.5-.9-2.8-2.2l-7.5-29.5c-.4-1.5.5-3.1,2.1-3.5,1.5-.4,3.1.5,3.5,2.1l7.5,29.5c.4,1.5-.5,3.1-2.1,3.5-.2,0-.5,0-.7,0Z"/><path fill="#4a90d9" d="M59,117c-1.4,0-2.6-1-2.8-2.5l-4.4-30.2c-.2-1.6.9-3,2.4-3.3,1.6-.2,3,.9,3.3,2.4l4.4,30.2c.2,1.6-.9,3-2.4,3.3-.1,0-.3,0-.4,0Z"/><path fill="#4a90d9" d="M100.4,97l-4.8,17.5c-.3,1.3-1.5,2.1-2.8,2.1s-.5,0-.7-.1c-1.5-.4-2.4-2-2-3.5l5-18.5c0,0,0-.1,0-.2.1,0,.2.2.4.2.7.4,1.4.9,2.2,1.3.8.4,1.7.9,2.6,1.2Z"/><path fill="#4a90d9" d="M76.4,117c-.1,0-.3,0-.4,0-1.6-.2-2.7-1.7-2.4-3.3l4.4-30.2c.2-1.6,1.7-2.7,3.3-2.4,1.6.2,2.7,1.7,2.4,3.3l-4.4,30.2c-.2,1.4-1.4,2.5-2.8,2.5Z"/><path fill="#C9A96E" d="M92.5,70.2h-9.8c1.6,8.7,6.8,16.1,14,20.6l2.7-9.8c-3.3-2.7-5.8-6.5-6.9-10.8ZM112.8,34.3c-9.2,0-17.5,4.1-23.1,10.6-3.9,4.5-6.5,10.1-7.2,16.3-.2,1.2-.2,2.5-.2,3.7,0,1.9.2,3.7.5,5.4,1.6,8.7,6.8,16.1,14,20.6,4.7,2.9,10.2,4.5,16,4.5s1.1,0,1.7,0c3.5-.2,6.7-.9,9.8-2.2.8-.3,1.7-.7,2.5-1.2,3.4-1.8,6.5-4.1,9-7,4.7-5.4,7.6-12.4,7.6-20.1,0-16.8-13.7-30.5-30.6-30.5ZM116.5,85.5c-1.2.2-2.5.3-3.8.3-5.1,0-9.7-1.8-13.3-4.8-3.3-2.7-5.8-6.5-6.9-10.8-.5-1.7-.7-3.6-.7-5.4s.1-2.5.3-3.7c.6-3.5,2.1-6.6,4.2-9.3,3.8-4.9,9.8-8,16.5-8,11.6,0,21,9.4,21,21s-2.6,11.6-6.8,15.5c-2.9,2.6-6.5,4.5-10.4,5.2Z"/><path fill="#C9A96E" d="M153,114.9l-.8.6c-2.9,2.3-7.2,1.7-9.3-1.3l-16.2-22.5,8.9-7.1,18.3,20.9c2.4,2.8,2.1,7-.8,9.3Z"/></svg>
+      <span style="color:var(--ink)">Find<span style="color:var(--gold)">My</span>Basket</span>
+    </a>
+    <div class="nav-links">
       <a href="/skincare">Skincare</a>
       <a href="/makeup">Makeup</a>
       <a href="/hair">Hair</a>
       <a href="/edit/k-beauty">K-Beauty</a>
       <a href="/savings-hub.html">Savings Hub</a>
-      <a href="/about.html">About</a>
+      <a href="/skincare" class="nav-search" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></a>
       <a href="/app" class="nav-cta">Build a routine</a>
     </div>
-</nav>
-
-<div class="hero-section">
-  <h1>Built for people who love<br/><em>great skincare</em></h1>
-  <p>FindMyBasket is the UK's first skincare routine optimiser — helping you find the best price on your whole routine across the UK's leading beauty retailers.</p>
-</div>
-
-<div class="page-inner">
-
-  <div class="stat-row">
-    <div class="stat-item"><div class="stat-num">59</div><div class="stat-label">Ingredients searchable</div></div>
-    <div class="stat-item"><div class="stat-num">47</div><div class="stat-label">Skin concerns covered</div></div>
-    <div class="stat-item"><div class="stat-num">2+</div><div class="stat-label">Retail partners live</div></div>
-    <div class="stat-item"><div class="stat-num">£0</div><div class="stat-label">Always free to use</div></div>
-  </div>
-
-  <hr class="divider"/>
-
-  <p class="section-label">Our story</p>
-  <h2>Why we built FindMyBasket</h2>
-  <p>It started with a simple frustration. The same skincare products — CeraVe, The Ordinary, La Roche-Posay — were available at completely different prices across different UK retailers. A four-product morning routine could cost £8-15 more depending on where you bought it. And yet no tool existed to compare prices across a whole routine at once.</p>
-  <p>Most price comparison tools work product by product. But that is not how people buy skincare. They buy a routine. So we built a tool that thinks the same way — one that looks at your whole basket, factors in delivery costs, and finds the optimal combination of retailers for your specific set of products.</p>
-  <p>FindMyBasket is also home to a <strong>Product Finder</strong> — a search tool covering 59 active ingredients and 47 skin concerns — that helps users discover the right products for their skin type and find the best price across UK retailers in one place.</p>
-
-  <hr class="divider"/>
-
-  <p class="section-label">Our values</p>
-  <h2>How we work</h2>
-  <div class="values-grid">
-    <div class="value-card"><div class="value-icon">🔍</div><div class="value-title">Editorially independent</div><div class="value-desc">We are not paid to promote any brand or retailer. Our recommendations are driven entirely by price data. We earn a small affiliate commission when users shop through our links — at no extra cost to them.</div></div>
-    <div class="value-card"><div class="value-icon">✅</div><div class="value-title">Accurate and honest</div><div class="value-desc">We only show products we actually track with real, verified prices. We never fabricate prices or show placeholder data. If we don't have a price, we say so and point users to Amazon instead.</div></div>
-    <div class="value-card"><div class="value-icon">🌱</div><div class="value-title">Ingredient-educated audience</div><div class="value-desc">Our audience actively researches skincare ingredients and skin concerns before buying. They are informed, considered shoppers — not bargain hunters. They choose quality products at the best available price.</div></div>
-    <div class="value-card"><div class="value-icon">🇬🇧</div><div class="value-title">Built for UK shoppers</div><div class="value-desc">UK prices, UK retailers, UK delivery thresholds. Every feature is designed specifically for the UK skincare market. No irrelevant international pricing or out-of-stock imports.</div></div>
-  </div>
-
-  <hr class="divider"/>
-
-  <p class="section-label">The founder</p>
-  <h2>Who we are</h2>
-  <div class="founder-block">
-    <div class="founder-avatar">👋</div>
-    <div>
-      <div class="founder-name">Our Founder</div>
-      <div class="founder-title">Founder, FindMyBasket</div>
-      <p class="founder-bio">Robbie is an NHS transformation professional and programme director with a background in biochemistry, quality management and digital transformation. He built FindMyBasket from scratch using AI-assisted development tools — with no prior coding experience — alongside his full-time role in the NHS and a board directorship at Citizens Advice.</p>
-      <p class="founder-bio">The idea came from a personal frustration: spending too much time manually comparing skincare prices across different retailers before every purchase. FindMyBasket is the tool he wished existed.</p>
-      <div class="credentials">
-        <span class="credential-tag">MSc Quality Management</span>
-        <span class="credential-tag">BSc Biochemistry</span>
-        <span class="credential-tag">PRINCE2</span>
-        <span class="credential-tag">FRSPH</span>
-        <span class="credential-tag">HSJ Workforce Initiative of the Year 2024</span>
-      </div>
+    <div class="nav-mobile-actions">
+      <a href="/skincare" class="nav-search" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></a>
+      <div class="hamburger" onclick="toggleMenu()" id="hamburger"><span></span><span></span><span></span></div>
     </div>
+  </nav>
+
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="/skincare" onclick="toggleMenu()">Skincare</a>
+    <a href="/makeup" onclick="toggleMenu()">Makeup</a>
+    <a href="/hair" onclick="toggleMenu()">Hair</a>
+    <a href="/edit/k-beauty" onclick="toggleMenu()">K-Beauty</a>
+    <a href="/savings-hub.html">Savings Hub</a>
+    <a href="/app" class="mobile-cta">Build a routine</a>
   </div>
 
-  <hr class="divider"/>
+<main class="container">
 
-  <p class="section-label">Get in touch</p>
-  <h2>Contact us</h2>
-  <p>For general enquiries, partnership opportunities or press requests, please contact us at <a href="mailto:hello@findmybasket.co.uk" style="color:var(--gold);text-decoration:none;font-weight:500">hello@findmybasket.co.uk</a>. We aim to respond within 48 hours.</p>
-  <p>For brand and affiliate partnership enquiries, please visit our <a href="/partners.html" style="color:var(--gold);text-decoration:none;font-weight:500">Work with us</a> page.</p>
+  <div class="eyebrow">About</div>
+  <h1>The beauty price comparison engine for your whole routine.</h1>
+  <p class="intro">Built in Hampshire to fix a small everyday annoyance: paying different prices for the same skincare across UK retailers.</p>
 
-  <div class="disclosure">
-    <strong>Affiliate disclosure:</strong> FindMyBasket participates in affiliate marketing programmes. When you click through to a retailer and make a purchase, we may earn a small commission at no extra cost to you. This never influences which products or retailers we feature — all recommendations are based purely on price data.
+
+  <h2>What FindMyBasket does</h2>
+
+  <p>FindMyBasket compares prices on beauty products across the UK's leading retailers, then works out the cheapest way to buy your whole routine. Not just one product. The whole basket.</p>
+
+  <p>That second bit is the part everyone else gets wrong. Most price comparison sites tell you who's cheapest on a single moisturiser. FindMyBasket factors in everything you're actually buying, every retailer's delivery threshold, and recommends the smallest number of orders to place to get the lowest total cost.</p>
+
+  <p>It's free, no account needed, and works across skincare, makeup, hair and K-Beauty.</p>
+
+
+  <h2>Why it exists</h2>
+
+  <p>The numbers spoke for themselves. The average price gap on the same skincare product across UK retailers is between 40% and 70%. People weren't comparison-shopping because the existing tools were product-level, not basket-level. Buying a four-product routine across four separate retailers to get the cheapest unit price often ended up more expensive than buying everything at the second-cheapest retailer, once delivery thresholds were factored in.</p>
+
+  <p>FindMyBasket exists because nobody else was doing whole-basket optimisation including delivery. That's the genuine gap in the market.</p>
+
+
+  <h2>How it works</h2>
+
+  <p>Three steps:</p>
+
+  <ol style="padding-left: 22px; margin-bottom: 16px;">
+    <li style="margin-bottom: 8px; color: var(--ink-light);"><strong>Build your routine.</strong> Search and add the products you use (cleanser, serum, moisturiser, whatever fits your routine).</li>
+    <li style="margin-bottom: 8px; color: var(--ink-light);"><strong>We compare live prices.</strong> Across all our partner retailers, including delivery thresholds.</li>
+    <li style="color: var(--ink-light);"><strong>We recommend the best split.</strong> Usually 1 or 2 retailers, sometimes more if it genuinely saves you money. You click through and shop.</li>
+  </ol>
+
+  <p>You can also save your routine and get an email on the 1st of every month with the latest best price across our network, so you only ever buy at the right price, on the right day, from the right shop.</p>
+
+
+  <h2>Who built this</h2>
+
+  <p>FindMyBasket is built and run solo by Robbie Coffin, based in Hampshire. Robbie has a public sector transformation background and builds FindMyBasket in evenings and weekends.</p>
+
+  <p>It's not a venture-backed startup or part of a larger group. The platform exists because the problem was annoying enough to be worth fixing, and the technical infrastructure (live datafeeds from major UK retailers, basket optimisation algorithms, automated weekly refreshes) was tractable enough to build alone.</p>
+
+
+  <h2>How we make money</h2>
+
+  <p>FindMyBasket is funded by affiliate commission. When you click through to a partner retailer and buy something, that retailer pays a small commission to FindMyBasket. You pay exactly the same price you would going to the retailer directly. There's no markup, no membership fee, nothing on top.</p>
+
+  <p>Importantly, the commission does not affect which retailer we recommend. The "best basket" is genuinely the cheapest option across our partner retailers, not the one paying the highest commission. We say so in our <a href="/privacy">privacy policy</a> and we live by it: if a recommendation engine started gaming itself to push higher-commission retailers, the entire proposition would collapse the moment users noticed.</p>
+
+
+  <h2>Who we partner with</h2>
+
+  <p>Currently live across 9 UK retailers covering skincare, makeup and hair:</p>
+
+  <ul>
+    <li>Boots</li>
+    <li>Superdrug</li>
+    <li>Escentual</li>
+    <li>Beauty Bay</li>
+    <li>The Organic Pharmacy</li>
+    <li>Stylevana</li>
+    <li>YesStyle</li>
+    <li>Branded Beauty</li>
+    <li>Beauty Flash</li>
+  </ul>
+
+  <p>More retailers are being added throughout the year. If you're a brand or retailer interested in partnering, <a href="/work-with-us">get in touch</a>.</p>
+
+
+  <h2>What's on the roadmap</h2>
+
+  <p>The current focus is on broadening retailer coverage in skincare, makeup and hair. Coming later:</p>
+
+  <ul>
+    <li><strong>Supplements:</strong> the same basket optimisation approach for wellness products.</li>
+    <li><strong>Native app with barcode scanner:</strong> scan a product in store, see if it's cheaper online.</li>
+  </ul>
+
+
+  <div class="cta-block">
+    <h3>Ready to try it?</h3>
+    <p>Build your routine, see your savings. Free, no account needed.</p>
+    <a href="/app" class="cta-button">Build my routine</a>
   </div>
 
-  <div class="cta-strip">
-    <h3>Try FindMyBasket</h3>
-    <p>Search by ingredient, find your skin concern, or build your full routine — completely free.</p>
-    <a href="/product-finder.html">Product Finder</a>
-    <a href="/app" class="secondary">Basket optimiser</a>
-  </div>
+</main>
 
-</div>
 
-<footer>
-  <div class="footer-inner">
-    <div class="footer-wordmark">Find<span>My</span>Basket</div>
-    <p style="font-size:13px;color:rgba(250,248,244,0.4);">Your skincare routine, optimised.</p>
+  <footer>
+    <div class="footer-logo">
+      <svg height="28" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg"><path style="fill:#fff" d="M115.6,99.5v.2s-3,13.9-3,13.9c-1.4,6.8-7.5,11.8-14.5,11.8h-60.9c-7,0-13.1-4.9-14.5-11.8l-8.2-39h66.2c-.3-.9-.5-1.9-.7-2.9-.4-1.9-.5-3.9-.5-6v-.3H10.6c-3.8,0-6.6,3.5-5.8,7.2l9,42.8c2.3,11.1,12.1,19.1,23.5,19.1h60.9c11.3,0,21.1-8,23.5-19.1l3.8-18v-.2c-3,1.2-6.3,2-9.8,2.2Z"/><path style="fill:#C9A96E" d="M112.8,34.3c-9.2,0-17.5,4.1-23.1,10.6-3.9,4.5-6.5,10.1-7.2,16.3-.2,1.2-.2,2.5-.2,3.7,0,1.9.2,3.7.5,5.4,1.6,8.7,6.8,16.1,14,20.6,4.7,2.9,10.2,4.5,16,4.5s1.1,0,1.7,0c3.5-.2,6.7-.9,9.8-2.2.8-.3,1.7-.7,2.5-1.2,3.4-1.8,6.5-4.1,9-7,4.7-5.4,7.6-12.4,7.6-20.1,0-16.8-13.7-30.5-30.6-30.5Z"/><path style="fill:#C9A96E" d="M153,114.9l-.8.6c-2.9,2.3-7.2,1.7-9.3-1.3l-16.2-22.5,8.9-7.1,18.3,20.9c2.4,2.8,2.1,7-.8,9.3Z"/></svg>
+      <span>Find<span>My</span>Basket</span>
+    </div>
     <div class="footer-links">
       <a href="/savings-hub.html">Savings Hub</a>
-      <a href="/product-finder.html">Product Finder</a>
       <a href="/app">Try it now</a>
-      <a href="/about.html">About</a>
-      <a href="/partners.html">Work with us</a>
-      <a href="/privacy-policy.html">Privacy Policy</a>
+      <a href="/privacy">Privacy Policy</a>
       <a href="/terms.html">Terms of Use</a>
       <a href="mailto:hello@findmybasket.co.uk">Contact</a>
+      <a href="/work-with-us">Work with us</a>
+      <button type="button" class="footer-cookie-btn" onclick="if(window.FMBCookies)window.FMBCookies.open();return false;">Cookie Settings</button>
     </div>
-    <p class="footer-copy">© 2025 FindMyBasket. All rights reserved.</p>
-  </div>
-</footer>
-  <script src="/fmb-cookie-banner.js" defer></script>
+    <p style="font-size:12px;color:rgba(250,248,244,0.25);line-height:1.6;">FindMyBasket may earn a small affiliate commission when you shop through our links, at no extra cost to you.</p>
+    <div class="footer-copy">© 2026 FindMyBasket. All rights reserved.</div>
+  </footer>
+
+  <script>
+    // Hamburger menu (canonical, from public/index.html)
+    function toggleMenu() {
+      const menu = document.getElementById('mobileMenu');
+      const hamburger = document.getElementById('hamburger');
+      menu.classList.toggle('open');
+      hamburger.style.opacity = menu.classList.contains('open') ? '0.5' : '1';
+    }
+    document.addEventListener('click', function(e) {
+      const menu = document.getElementById('mobileMenu');
+      const hamburger = document.getElementById('hamburger');
+      if (menu.classList.contains('open') && !menu.contains(e.target) && !hamburger.contains(e.target)) {
+        menu.classList.remove('open');
+        hamburger.style.opacity = '1';
+      }
+    });
+  </script>
+
+<script src="/fmb-cookie-banner.js" defer></script>
+
 </body>
 </html>

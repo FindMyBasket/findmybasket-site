@@ -1,9 +1,13 @@
 {
   "rewrites": [
-    { "source": "/privacy", "destination": "/privacy.html" }
+    { "source": "/privacy", "destination": "/privacy.html" },
+    { "source": "/about", "destination": "/about.html" },
+    { "source": "/work-with-us", "destination": "/work-with-us.html" }
   ],
   "redirects": [
     { "source": "/privacy-policy.html", "destination": "/privacy", "permanent": true },
+    { "source": "/partners.html", "destination": "/work-with-us", "permanent": true },
+    { "source": "/partners", "destination": "/work-with-us", "permanent": true },
     { "source": "/app.html", "destination": "/app", "permanent": true },
     { "source": "/product-finder", "destination": "/skincare", "permanent": true },
     { "source": "/product-finder.html", "destination": "/skincare", "permanent": true },
