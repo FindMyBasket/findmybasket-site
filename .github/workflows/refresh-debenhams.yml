@@ -91,9 +91,11 @@ jobs:
             --data-binary "@debenhams-beauty.csv.gz" \
             -w "Storage upload HTTP %{http_code}\n"
 
-      - name: Trigger import-awin-feed (DRY RUN — first run only)
-        # NOTE: dry_run is true so the first run reports what WOULD happen without
-        # writing. Once verified, change "dry_run": true -> false below to go live.
+      - name: Trigger import-awin-feed (LIVE — writes to catalogue)
+        # Go-live: dry_run is false so the daily run applies the import (creates
+        # new products, links retailer offers, updates prices). retailer 28 must
+        # also have retailer_import_config.enabled = true or the function 400s.
+        # Revert to "dry_run": true here to pause writes without disabling the cron.
         env:
           PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
@@ -103,7 +105,7 @@ jobs:
             -H "Authorization: Bearer ${SERVICE_KEY}" \
             -H "Content-Type: application/json" \
             --max-time 300 \
-            -d '{"retailer_id": 28, "dry_run": true}')
+            -d '{"retailer_id": 28, "dry_run": false}')
           echo "$RESPONSE" | head -c 4000
           echo ""
           echo "$RESPONSE" | grep -q '"feed_total_rows"' || {
