@@ -1,0 +1,99 @@
+name: refresh-debenhams
+
+# Daily refresh of Debenhams beauty catalogue (retailer_id 28) from the AWIN
+# multi-merchant datafeed.
+#
+# Why this exists: the full Debenhams feed is ~2.3M rows / ~4.85 GB uncompressed
+# across 8 AWIN feed IDs. That OOMs the import-awin-feed edge worker
+# (WORKER_RESOURCE_LIMIT). This Action downloads the raw feed here on a GitHub
+# runner, filters it down to ~17K beauty rows (scripts/filter-debenhams-feed.py),
+# uploads the filtered gzip to Supabase Storage, then triggers import-awin-feed.
+#
+# The function reads the filtered file via the storage:// URL scheme (v6.8):
+# retailer_import_config.feed_url = 'storage://retailer-feeds/debenhams-beauty.csv.gz'.
+# No migration or function change is needed — feed_format stays 'awin' and the
+# function downloads from Storage with the service role, then parses as AWIN.
+#
+# Required GitHub secrets:
+#   AWIN_API_KEY          - AWIN publisher API key (same value as the
+#                           import-awin-feed edge function secret)
+#   SUPABASE_PROJECT_REF  - crtrjoescntlcjiwdtrt
+#   SUPABASE_SERVICE_KEY  - Supabase service role key (storage upload + function auth)
+
+"on":
+  schedule:
+    - cron: '0 2 * * *'   # 02:00 UTC daily
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Debenhams AWIN feed (8 feed IDs, combined gzip)
+        env:
+          AWIN_API_KEY: ${{ secrets.AWIN_API_KEY }}
+        run: |
+          # Publisher 2841268, advertiser 22735 (Debenhams), all 8 beauty/general
+          # feed IDs combined. Column set mirrors buildFeedUrl() in
+          # import-awin-feed exactly so the parser maps every field it needs.
+          FIDS="90938,90940,90945,90947,91126,91133,91134,91135"
+          COLS="aw_deep_link,product_name,aw_product_id,merchant_product_id,search_price,store_price,merchant_deep_link,brand_name,rrp_price,in_stock,merchant_product_category_path,category_name,ean,mpn,merchant_image_url"
+          curl -fsSL \
+            "https://productdata.awin.com/datafeed/download/apikey/${AWIN_API_KEY}/fid/${FIDS}/format/csv/language/en/delimiter/%2C/compression/gzip/adultcontent/1/columns/${COLS}/" \
+            -o raw.csv.gz
+          ls -lah raw.csv.gz
+          # Sanity: AWIN sometimes returns an HTML/JSON error with a 200. Confirm gzip magic.
+          MAGIC=$(head -c 2 raw.csv.gz | xxd -p)
+          if [ "$MAGIC" != "1f8b" ]; then
+            echo "::error::Downloaded file is not gzip (magic=$MAGIC) — likely an AWIN error response"
+            head -c 500 raw.csv.gz
+            exit 1
+          fi
+
+      - name: Filter to beauty rows
+        run: |
+          python3 scripts/filter-debenhams-feed.py raw.csv.gz debenhams-beauty.csv.gz
+          ls -lah debenhams-beauty.csv.gz
+          # Guard against an over-narrow whitelist silently shipping an empty feed.
+          ROWS=$(zcat debenhams-beauty.csv.gz | wc -l)
+          echo "Filtered feed has $ROWS lines (incl. header)"
+          if [ "$ROWS" -lt 1000 ]; then
+            echo "::error::Filtered feed has only $ROWS lines — brand whitelist likely too narrow"
+            exit 1
+          fi
+
+      - name: Upload filtered feed to Supabase Storage
+        env:
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          curl -fsSL -X POST \
+            "https://${PROJECT_REF}.supabase.co/storage/v1/object/retailer-feeds/debenhams-beauty.csv.gz" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "Content-Type: application/gzip" \
+            -H "x-upsert: true" \
+            --data-binary "@debenhams-beauty.csv.gz" \
+            -w "Storage upload HTTP %{http_code}\n"
+
+      - name: Trigger import-awin-feed (DRY RUN — first run only)
+        # NOTE: dry_run is true so the first run reports what WOULD happen without
+        # writing. Once verified, change "dry_run": true -> false below to go live.
+        env:
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          RESPONSE=$(curl -fsSL -X POST \
+            "https://${PROJECT_REF}.supabase.co/functions/v1/import-awin-feed" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            --max-time 300 \
+            -d '{"retailer_id": 28, "dry_run": true}')
+          echo "$RESPONSE" | head -c 4000
+          echo ""
+          echo "$RESPONSE" | grep -q '"feed_total_rows"' || {
+            echo "::error::Import function did not return a successful result"
+            exit 1
+          }
