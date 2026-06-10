@@ -348,8 +348,17 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
   // Examples: "Batiste Dry Shampoo... Floral Fragrance Hair Shampoo".
   // When this fires, we skip the fragrance denylist entry but still apply
   // the rest of the denylist normally.
+  // ...but a hard fragrance product form (Eau de Toilette/Parfum/Cologne, EDT,
+  // EDP, "Parfum Spray/Refill/Nml") is unambiguously a fragrance product even
+  // when the name also bundles a shower gel / aftershave balm (gift sets like
+  // "...Eau de Toilette Spray 125ml After Shave Balm 100ml Shower Gel 100ml").
+  // Don't let the body-care descriptor bypass rescue those — keep excluding.
+  const hasHardFragranceForm = (
+    /\b(eau de (parfum|toilette|cologne)|edt|edp|parfum (spray|refill|refillable)|parfum \d+\s*(ml|oz))\b/.test(t)
+  );
   const fragranceIsScentDescriptor = (
     /\b(shampoo|conditioner|hair mask|hair oil|hair serum|hair spray|hairspray|dry shampoo|body wash|body lotion|body cream|body butter|hand cream|shower gel|bubble bath)\b/.test(t)
+    && !hasHardFragranceForm
   );
   // Pre-check: "body spray" matches the deodorant denylist, but sunscreen and
   // oil body sprays (e.g. "SPF30 Sunscreen Body Spray", "Dry Oil Body Spray")

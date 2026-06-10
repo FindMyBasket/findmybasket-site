@@ -74,7 +74,11 @@ type Case = {
   name: string;
   brand?: string;
   expect: Expect;
-  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  // When set, the case asserts the product is denylisted with this `excluded`
+  // reason (top_category null). Otherwise it asserts top_category === expect
+  // and that the product is NOT excluded.
+  excluded?: string;
+  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   note?: string;
 };
 
@@ -142,6 +146,18 @@ const CASES: Case[] = [
   { name: "Schwarzkopf Creme Supreme 4-0 Natural Dark Brown Permanent Hair Dye", brand: "Schwarzkopf", expect: "hair", fixedBy: 7 },
   // 7d. Davines' Comfort Zone skincare sister line stays skincare despite the brand whitelist
   { name: "Davines Comfort Zone Sacred Nature Nourishing Cream 60ml", brand: "Davines", expect: "skincare", fixedBy: 7 },
+
+  // ── Commit 8: fragrance gift sets bundling body care stay EXCLUDED ─────────
+  // A hard fragrance form (EDT/EDP/parfum spray) is unambiguously fragrance even
+  // when the name also lists shower gel / aftershave balm. The body-care scent-
+  // descriptor rescue must NOT pull these gift sets back in as skincare.
+  { name: "Hugo Boss Bottled Eau de Toilette Spray 125ml After Shave Balm 100ml Shower Gel 100ml", brand: "Hugo Boss", expect: null, excluded: "fragrance", fixedBy: 8 },
+  { name: "Paco Rabanne 1 Million Eau de Toilette 100ml Shower Gel 100ml Gift Set", brand: "Paco Rabanne", expect: null, excluded: "fragrance", fixedBy: 8 },
+  // Plain fragrance with no body-care descriptor was always excluded — regression guard.
+  { name: "Dior Sauvage Eau de Parfum 100ml", brand: "Dior", expect: null, excluded: "fragrance", fixedBy: 0 },
+  // The scent-descriptor rescue must STILL fire when there's no hard fragrance form:
+  // a real body wash that merely says "fragrance" stays a body product, not excluded.
+  { name: "Original Source Mint & Tea Tree Fragrance Shower Gel 250ml", brand: "Original Source", expect: "skincare", fixedBy: 0 },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
@@ -159,7 +175,9 @@ console.log("─".repeat(110));
 for (const c of CASES) {
   const r = inferCategorisation(c.name, c.brand ?? "");
   const got = r.excluded ? `excl:${r.excluded}` : r.top_category;
-  const ok = (r.top_category ?? null) === c.expect && !r.excluded;
+  const ok = c.excluded
+    ? r.excluded === c.excluded
+    : (r.top_category ?? null) === c.expect && !r.excluded;
   if (ok) pass++;
   else {
     fail++;
