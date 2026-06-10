@@ -5,10 +5,26 @@ Filters an AWIN datafeed gzip down to beauty-only rows.
 Usage:
   python3 scripts/filter-debenhams-feed.py <input.csv.gz> <output.csv.gz>
 """
-import sys, gzip, csv
+import sys, gzip, csv, re
 from pathlib import Path
 
 csv.field_size_limit(sys.maxsize)
+
+# Positive beauty signal for the empty-category-path fallback: a volume/weight
+# unit in the product name. Essentially every skincare/haircare/makeup/fragrance
+# SKU states its size ("50ml", "9g", "100ml"), while designer brands' eyewear,
+# apparel, watches and bags do NOT — eyewear ships model codes ("ORIA/G/SK"),
+# watches use case sizes in "mm" (not "ml"), apparel uses "| Size: Large". So
+# requiring a volume unit cleanly keeps the beauty and drops the accessories
+# that share an empty path and a whitelisted designer brand.
+VOLUME_RE = re.compile(r'\b\d+(?:\.\d+)?\s?(?:ml|cl|fl\.?\s?oz|g|gr)\b', re.I)
+
+# Fragrances are occasionally listed without a volume but with a clear scent
+# descriptor — admit those too so we don't lose designer fragrance.
+FRAGRANCE_HINTS = (
+    'eau de parfum', 'eau de toilette', 'eau de cologne', 'eau fraiche',
+    'parfum', 'aftershave', 'after shave', 'cologne', ' edt', ' edp',
+)
 
 # Brand whitelist (lower-cased for matching). Add/remove as needed.
 BEAUTY_BRANDS = {
@@ -80,7 +96,14 @@ def is_beauty(row):
     if brand not in BEAUTY_BRANDS:
         return False
     name = (row.get('product_name') or '').strip().lower()
-    return not any(h in name for h in NON_BEAUTY_NAME_HINTS)
+    if any(h in name for h in NON_BEAUTY_NAME_HINTS):
+        return False
+    # Require a positive beauty signal — a volume/weight unit or a fragrance
+    # descriptor. The denylist above can't catch designer eyewear ("Cat Eye
+    # Havana ... ORIA/G/SK"), watches ("Roller Buckle 40Mm") or apparel
+    # ("Cotton Crew | Size: Large") because their names use model codes and
+    # shapes, not category words. A volume unit does separate them cleanly.
+    return bool(VOLUME_RE.search(name)) or any(h in name for h in FRAGRANCE_HINTS)
 
 def main():
     if len(sys.argv) != 3:
