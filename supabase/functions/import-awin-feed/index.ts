@@ -326,12 +326,42 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
     // a fragrance product we exclude. Match the latter precisely.
     // Parfum: distinct from "perfumed" (scented). "Parfum Spray", "Parfum Refill",
     // and "Parfum 50ml" are fragrance. Match those, skip the -ed/-ing forms.
-    ["fragrance", /\b(fragrance|perfume|cologne|eau de (parfum|toilette)|edt|edp|aftershave splash|aftershave spray|aftershave cologne|after.?shave \d+\s*(ml|oz)\b|after.?shave (splash|spray|cologne)|parfum (spray|refill|refillable)|parfum \d+\s*(ml|oz))\b/],
+    // 'parfum' on its own is matched: it only ever appears in fragrance product
+    // NAMES (never skincare/makeup names — the cosmetic ingredient "parfum"
+    // lives in ingredient lists, not titles). Debenhams' newer feed format moves
+    // size into a separate "| Size: 50ml" field, so designer perfumes now read
+    // "...Le Parfum"/"...Parfum Intense" with no adjacent "50ml" — the old
+    // size-anchored parfum arm missed them. "parfumed" is unaffected (\b after).
+    ["fragrance", /\b(fragrance|perfume|cologne|parfum|eau de (parfum|toilette)|edt|edp|aftershave splash|aftershave spray|aftershave cologne|after.?shave \d+\s*(ml|oz)\b|after.?shave (splash|spray|cologne))\b/],
     ["supplement", /\b(supplement|vitamin tablet|capsule|gummies|protein shake|meal replacement|powder drink)\b/],
     ["oral_care", /\b(toothpaste|toothbrush|mouthwash|dental floss|whitening strip)\b/],
     ["period_care", /\b(tampons?|sanitary pads?|menstrual|period care|panty liner|pantyliner)\b/],
     ["deodorant", /\b(deodorant|antiperspirant|body spray)\b/],
     ["shaving", /\b(razor|shaving foam|shave gel|shave cream|epilator|wax strip)\b/],
+    // appliance: electric grooming devices (men's trimmers, clippers, electric
+    // shavers, laser caps). Debenhams' AWIN feed leaves category_path empty for
+    // these (or labels them "Haircare Appliances"), so the path/category
+    // excludes can't catch them — they fall through to the skincare catchall.
+    // Match on the device noun in the name instead. 'shaver' is distinct from
+    // the 'shaving' wet-shave consumables above (foam/gel/razor).
+    ["appliance", /\b(trimmer|clippers?|electric shaver|shaver|groomer|laser ?cap)\b/],
+    // eyewear: sunglasses/optical frames. Same feed gap — these arrive with an
+    // empty category and a model-code name ("BOSS 1743/S", "CK19137S", "FT0995")
+    // rather than the word "Sunglasses", so name_excludes ("Sunglasses") and the
+    // category excludes both miss them and they default to skincare/face. Catch
+    // via (a) eyewear vocabulary, (b) a frame-shape word paired with a sunglasses
+    // model suffix (digits + "/" + letter, the "/S" sun convention), or (c) the
+    // designer eyewear SKU patterns present in the feed (CK#####, FT####, SY####).
+    // \b before "ck"/"ft" prevents matching inside soft/black/gift etc.
+    ["eyewear", /\b(sunglasses?|eyewear|eyeglasses|spectacles|aviator|wayfarer|clubmaster|polari[sz]ed|anti.?reflective|oleophobic)\b|\b(rectangle|round|square|wrap|cat.?eye|oval|pilot|browline|rimless)\b.*\b\d{3,4}\s?\/\s?[a-z]\b|\b(ck\s?\d{4,5}s?|ft\s?\d{3,4}|sy\s?\d{4,5}|gg\s?\d{3,4}\s?s[a-z]?)\b/],
+    // apparel / footwear / bags: clothing and accessories that arrive with an
+    // empty category_path (the well-categorised ones are already dropped by the
+    // config category excludes "Clothing"/"Footwear"/"Bags & Wallets"). These
+    // leak the same way eyewear does. Match on garment/footwear/bag nouns that
+    // don't occur in beauty product names. Deliberately omits collision-prone
+    // words: "top"/"coat" (top coat, base coat), "cap" (laser cap, bottle cap),
+    // "boots" (Boots the brand/retailer), "shorts" ("short sleeve").
+    ["apparel", /\b(trunks?|boxers|briefs|jockstrap|jumper|hoodie|sweatshirt|sweater|cardigan|joggers?|jeans?|trousers?|chinos?|leggings?|shorts?|pants?|cargo|fleece|shirt|t-shirt|tee|polo|blouse|jacket|blazer|gilet|waistcoat|parka|robe|kimono|pyjamas?|pajamas?|dungarees?|beanie|scarf|belt|sneakers?|trainers?|loafers?|brogues?|espadrilles?|sandals?|flip ?flop|cupsole|lace[-\s]?up|low top|rucksack|backpack|duffle|holdall|satchel|crossbody|commuter|wash ?bag|dopp|wallet|billfold|card holder|cardholder|card case)\b/],
     // hair_tool: extended to catch hair brushes by brand (Mason Pearson) and
     // by descriptor patterns (bristle brush, boar bristle, paddle brush etc.)
     ["hair_tool", /\b(hair dryer|straightener|curling iron|curling wand|hair brush|paddle brush|bristle brush|boar bristle|comb|hair clip|hair tie|scrunchie|mason pearson)\b/],
@@ -348,8 +378,17 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
   // Examples: "Batiste Dry Shampoo... Floral Fragrance Hair Shampoo".
   // When this fires, we skip the fragrance denylist entry but still apply
   // the rest of the denylist normally.
+  // ...but a hard fragrance product form (Eau de Toilette/Parfum/Cologne, EDT,
+  // EDP, "Parfum Spray/Refill/Nml") is unambiguously a fragrance product even
+  // when the name also bundles a shower gel / aftershave balm (gift sets like
+  // "...Eau de Toilette Spray 125ml After Shave Balm 100ml Shower Gel 100ml").
+  // Don't let the body-care descriptor bypass rescue those — keep excluding.
+  const hasHardFragranceForm = (
+    /\b(eau de (parfum|toilette|cologne)|edt|edp|parfum (spray|refill|refillable)|parfum \d+\s*(ml|oz))\b/.test(t)
+  );
   const fragranceIsScentDescriptor = (
     /\b(shampoo|conditioner|hair mask|hair oil|hair serum|hair spray|hairspray|dry shampoo|body wash|body lotion|body cream|body butter|hand cream|shower gel|bubble bath)\b/.test(t)
+    && !hasHardFragranceForm
   );
   // Pre-check: "body spray" matches the deodorant denylist, but sunscreen and
   // oil body sprays (e.g. "SPF30 Sunscreen Body Spray", "Dry Oil Body Spray")

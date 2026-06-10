@@ -23,3 +23,11 @@ scripts/.brand-aliases-*.gen.sql
 
 # local Deno (edge function checks)
 deno.lock
+
+# build / tooling artifacts
+*.tsbuildinfo
+__pycache__/
+
+# ad-hoc feed import debug dumps
+boots-dryrun.json
+debenhams-feed-*.json
