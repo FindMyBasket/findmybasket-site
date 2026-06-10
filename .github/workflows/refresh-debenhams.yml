@@ -52,16 +52,29 @@ jobs:
             head -c 500 raw.csv.gz
             exit 1
           fi
+          # Sanity: AWIN occasionally cuts the connection mid-stream and returns a
+          # truncated-but-valid gzip (seen: 70 MB / 1.35M rows vs the usual
+          # ~122 MB / 2.31M rows). That passed the row-floor below and silently
+          # shipped a partial 3,858-row feed over the good one. Require the raw
+          # download to be at least 100 MB so a truncated feed fails loudly.
+          RAW_BYTES=$(stat -c%s raw.csv.gz)
+          if [ "$RAW_BYTES" -lt 104857600 ]; then
+            echo "::error::Raw feed is only $RAW_BYTES bytes (<100MB) — AWIN download likely truncated; not overwriting the good feed"
+            exit 1
+          fi
 
       - name: Filter to beauty rows
         run: |
           python3 scripts/filter-debenhams-feed.py raw.csv.gz debenhams-beauty.csv.gz
           ls -lah debenhams-beauty.csv.gz
-          # Guard against an over-narrow whitelist silently shipping an empty feed.
+          # Guard against an over-narrow whitelist OR a truncated raw feed silently
+          # shipping a partial catalogue. A full feed yields ~19.5K beauty rows; the
+          # truncated download that shipped 3,858 rows must fail here too, so the
+          # floor sits well above any plausible seasonal shrink but above 3,858.
           ROWS=$(zcat debenhams-beauty.csv.gz | wc -l)
           echo "Filtered feed has $ROWS lines (incl. header)"
-          if [ "$ROWS" -lt 1000 ]; then
-            echo "::error::Filtered feed has only $ROWS lines — brand whitelist likely too narrow"
+          if [ "$ROWS" -lt 12000 ]; then
+            echo "::error::Filtered feed has only $ROWS lines (<12000) — whitelist too narrow or raw feed truncated"
             exit 1
           fi
 

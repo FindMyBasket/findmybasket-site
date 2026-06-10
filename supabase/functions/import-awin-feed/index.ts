@@ -1298,6 +1298,13 @@ serve(async (req) => {
   // v6.13: aggregate ALL unique category paths with counts. Useful for designing
   // category_path_must_contain filters for new retailers.
   const categoryPathCounts: Map<string, number> = new Map();
+  // DIAGNOSTIC (measurement-only): of the rows that would create a new product,
+  // bucket by whether they carry a category_path / category_name. Hypothesis:
+  // empty-path designer rows split into beauty (category_name "Cosmetics &
+  // Skincare") vs non-beauty eyewear/apparel/bags (empty category_name). This
+  // tells us whether a category_name gate on empty-path rows is safe.
+  const createNewCatNameBreakdown: Record<string, number> = {};
+  const sampleCreateNewEmptyCatName: any[] = [];
 
   const updateActions: Array<{ rp_id: number; product_id: number; price: number; url: string; in_stock: boolean; ean: string; mpn: string; image_url: string }> = [];
   const linkActions: Array<{ product_id: number; ext_id: string; price: number; url: string; in_stock: boolean; ean: string; mpn: string; image_url: string }> = [];
@@ -1619,6 +1626,14 @@ serve(async (req) => {
     const shade = extractShade(name, brand);
 
     if (isOrdinary) ordinaryDiagnostic.would_create_new++;
+    // DIAGNOSTIC (measurement-only): bucket this create-new row by category_name.
+    const catNameKey = !categoryPath
+      ? (categoryName ? `emptyPath|${categoryName}` : "emptyPath|<blank>")
+      : "hasPath";
+    createNewCatNameBreakdown[catNameKey] = (createNewCatNameBreakdown[catNameKey] || 0) + 1;
+    if (!categoryPath && !categoryName && sampleCreateNewEmptyCatName.length < 40) {
+      sampleCreateNewEmptyCatName.push({ name, brand, top_category: finalTopCategory, product_type: cat.product_type });
+    }
     createActions.push({
       ext_id: matchValue,
       name,
@@ -1710,6 +1725,8 @@ serve(async (req) => {
       sample_create_new: sampleCreateNew,
       sample_raw_category_data: sampleRawCategoryData,
       category_path_breakdown: categoryPathBreakdown,
+      create_new_cat_name_breakdown: createNewCatNameBreakdown,
+      sample_create_new_empty_cat_name: sampleCreateNewEmptyCatName,
     }, null, 2), { status: 200, headers: { "Content-Type": "application/json" } });
   }
 
@@ -1771,6 +1788,8 @@ serve(async (req) => {
     sample_create_new: sampleCreateNew,
     sample_raw_category_data: sampleRawCategoryData,
     category_path_breakdown: categoryPathBreakdown,
+    create_new_cat_name_breakdown: createNewCatNameBreakdown,
+    sample_create_new_empty_cat_name: sampleCreateNewEmptyCatName,
     duration_ms_so_far: Date.now() - startTime,
   };
 
