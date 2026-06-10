@@ -44,21 +44,43 @@ BEAUTY_BRANDS = {
     'bareminerals', 'bare minerals',
 }
 
-# Category keyword match (in category_name or merchant_product_category_path).
-BEAUTY_CAT_HINTS = (
-    'beauty', 'skincare', 'skin care', 'haircare', 'hair care',
-    'cosmetic', 'cosmetics', 'fragrance', 'perfume', 'bodycare',
-    'body care', 'make-up', 'makeup',
+# Non-beauty product signals, used ONLY for the empty-category-path fallback
+# below. Designer brands on the whitelist (Hugo Boss, Gucci, Calvin Klein,
+# Jimmy Choo...) also sell eyewear, watches, bags and clothing at Debenhams,
+# and those rows frequently ship with an EMPTY merchant_product_category_path —
+# so brand alone can't be trusted. If a whitelisted-brand row has no category
+# path AND its name describes one of these, drop it.
+NON_BEAUTY_NAME_HINTS = (
+    'sunglass', 'aviator', 'eyewear', 'optical', 'glasses frame', 'spectacle',
+    'watch', 'wallet', 'handbag', 'backpack', 'rucksack', 'holdall', 'purse',
+    't-shirt', 't shirt', 'hoodie', 'sweatshirt', 'jumper', 'cardigan',
+    'trousers', 'jeans', 'shorts', 'skirt', 'dress', 'shirt', 'blouse',
+    'jacket', 'coat', 'blazer', 'trunks', 'boxers', 'briefs', 'thong',
+    'bralette', 'bra ', 'lingerie', 'socks', 'scarf', 'gloves', 'belt',
+    'trainers', 'shoes', 'boots', 'sandals', 'heels', 'loafers',
+    'trimmer', 'clipper', 'shaver', 'epilator', 'massager', 'masturbator',
+    'rug', 'cushion', 'duvet', 'bedding', 'towel', 'candle', 'diffuser',
 )
 
 def is_beauty(row):
-    brand = (row.get('brand_name') or '').strip().lower()
-    if brand in BEAUTY_BRANDS:
-        return True
-    cat = (row.get('category_name') or '').strip().lower()
+    # Primary signal: trust Debenhams' own taxonomy. The well-structured beauty
+    # catalogue ships a rich path like "Beauty > Face > Foundations"; everything
+    # under Clothing / Home & Garden / Toys / Health & Wellness / Accessories
+    # (and the eyewear/bags carrying those paths) is dropped here.
     path = (row.get('merchant_product_category_path') or '').strip().lower()
-    combined = f"{cat} {path}"
-    return any(h in combined for h in BEAUTY_CAT_HINTS)
+    if path:
+        return path.startswith('beauty')
+
+    # No category path at all: the bulk of these are designer fragrance and
+    # accessories. Admit only whitelisted beauty brands, and only when the
+    # product name doesn't clearly describe a non-beauty item (substring
+    # 'beauty' used to admit toy "Hair & Beauty Role Plays", so don't keyword
+    # on the category — gate on brand + a name denylist instead).
+    brand = (row.get('brand_name') or '').strip().lower()
+    if brand not in BEAUTY_BRANDS:
+        return False
+    name = (row.get('product_name') or '').strip().lower()
+    return not any(h in name for h in NON_BEAUTY_NAME_HINTS)
 
 def main():
     if len(sys.argv) != 3:
