@@ -38,11 +38,9 @@ jobs:
         run: |
           # Publisher 2841268, advertiser 22735 (Debenhams), all 8 beauty/general
           # feed IDs combined. Column set mirrors buildFeedUrl() in
-          # import-awin-feed, plus aw_image_url and large_image: Debenhams leaves
-          # merchant_image_url empty and ships images under the AWIN-hosted
-          # aw_image_url instead, so the importer falls back to it (v6.19).
+          # import-awin-feed exactly so the parser maps every field it needs.
           FIDS="90938,90940,90945,90947,91126,91133,91134,91135"
-          COLS="aw_deep_link,product_name,aw_product_id,merchant_product_id,search_price,store_price,merchant_deep_link,brand_name,rrp_price,in_stock,merchant_product_category_path,category_name,ean,mpn,merchant_image_url,aw_image_url,large_image"
+          COLS="aw_deep_link,product_name,aw_product_id,merchant_product_id,search_price,store_price,merchant_deep_link,brand_name,rrp_price,in_stock,merchant_product_category_path,category_name,ean,mpn,merchant_image_url"
           curl -fsSL \
             "https://productdata.awin.com/datafeed/download/apikey/${AWIN_API_KEY}/fid/${FIDS}/format/csv/language/en/delimiter/%2C/compression/gzip/adultcontent/1/columns/${COLS}/" \
             -o raw.csv.gz
@@ -79,35 +77,6 @@ jobs:
             echo "::error::Filtered feed has only $ROWS lines (<12000) — whitelist too narrow or raw feed truncated"
             exit 1
           fi
-
-      - name: Image-column fill diagnostic (TEMP — Spec 3 sanity gate)
-        # Prints how many filtered rows populate each image column, so we can
-        # confirm Debenhams ships images under aw_image_url before deploying the
-        # importer fallback. Remove this step once v6.19 is verified.
-        run: |
-          python3 - <<'PY'
-          import gzip, csv, sys
-          csv.field_size_limit(sys.maxsize)
-          cols = ['merchant_image_url', 'aw_image_url', 'large_image']
-          total = 0
-          counts = {c: 0 for c in cols}
-          with gzip.open('debenhams-beauty.csv.gz', 'rt', encoding='utf-8', errors='replace') as f:
-              r = csv.DictReader(f)
-              present = [c for c in cols if c in (r.fieldnames or [])]
-              for row in r:
-                  total += 1
-                  for c in present:
-                      if (row.get(c) or '').strip():
-                          counts[c] += 1
-          print('fieldnames:', r.fieldnames)
-          print('total filtered rows:', total)
-          for c in cols:
-              if c in present:
-                  pct = 100 * counts[c] / total if total else 0
-                  print(f'{c}: {counts[c]} populated ({pct:.1f}%)')
-              else:
-                  print(f'{c}: COLUMN ABSENT FROM FEED')
-          PY
 
       - name: Upload filtered feed to Supabase Storage
         env:
