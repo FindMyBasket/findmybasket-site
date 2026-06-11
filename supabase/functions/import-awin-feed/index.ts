@@ -885,9 +885,9 @@ serve(async (req) => {
     }), { status: 404, headers: { "Content-Type": "application/json" } });
   }
 
-  if (!config.enabled) {
+  if (!config.enabled && !dryRun) {
     return new Response(JSON.stringify({
-      error: "Retailer import is disabled (config.enabled = false)",
+      error: "Retailer import is disabled (config.enabled = false). Dry-runs (dry_run=true) are permitted for inspection.",
       retailer_id: retailerId,
     }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
