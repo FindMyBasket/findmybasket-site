@@ -44,13 +44,13 @@ export const EDITS: Record<string, Edit> = {
       'mizon', 'haruharu wonder', 'biodance', 'ma:nyo',
       'i\'m from', 'medicube', 'bring green', 'frudia', 'centellian24',
       'troiareuke', 'commonlabs', 'parnell', 'nacific', 'skinfood',
-      'erborian', 'skin cupid',
+      'erborian',
       // Makeup-leaning
       'tirtir', 'muzigae mansion', 'fwee', 'rom&nd', 'romand',
       'etude', 'etude house', 'dasique', 'laka', 'vt',
       'peach c', 'judydoll', 'joocyee',
     ],
-    include_retailer_ids: [7], // Skin Cupid - 99%+ K-beauty
+    include_retailer_ids: [], // brand-driven only (the former K-beauty retailer was wound down)
   },
 };
 
