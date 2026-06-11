@@ -482,6 +482,22 @@ function extractSize(normalised) {
   return "";
 }
 // ============================================================================
+// Records the outcome of an import attempt on the retailer's config row so that
+// monitor-retailer-feeds can alert on failures immediately (instead of waiting
+// for the 48h staleness backstop). Best-effort: never throws.
+async function recordImportStatus(supa, retailerId, status, errorMsg) {
+  try {
+    await supa.from("retailer_import_config").update({
+      last_attempt_at: new Date().toISOString(),
+      last_import_status: status,
+      last_import_error: errorMsg ? String(errorMsg).slice(0, 1000) : null,
+      updated_at: new Date().toISOString()
+    }).eq("retailer_id", retailerId);
+  } catch (e) {
+    console.error("recordImportStatus failed", String(e));
+  }
+}
+
 // Main handler
 // ============================================================================
 serve(async (req)=>{
@@ -699,6 +715,8 @@ serve(async (req)=>{
   const fetchT0 = Date.now();
   const { data: storageBlob, error: storageErr } = await supa.storage.from(feedBucket).download(feedPath);
   if (storageErr || !storageBlob) {
+    await recordImportStatus(supa, retailerId, "error",
+      `Storage download failed (${feedBucket}/${feedPath}): ${String(storageErr?.message || storageErr || "unknown")}`);
     return new Response(JSON.stringify({
       error: "Failed to download feed from Storage",
       bucket: feedBucket,
@@ -1002,6 +1020,7 @@ serve(async (req)=>{
       }
     }
   } catch (e) {
+    await recordImportStatus(supa, retailerId, "error", `Stream read failed: ${String(e)}`);
     return new Response(JSON.stringify({
       error: "Stream read failed",
       details: String(e).substring(0, 500),
@@ -1015,6 +1034,8 @@ serve(async (req)=>{
   }
   const fetchMs = Date.now() - fetchT0;
   if (feedRows < 50) {
+    await recordImportStatus(supa, retailerId, "error",
+      `Feed contains fewer than 50 products (${feedRows}) — likely partial upload or wrong feed`);
     return new Response(JSON.stringify({
       error: "Feed contains fewer than 50 products — aborting (likely partial upload or wrong feed)",
       products_found: feedRows,
@@ -1263,7 +1284,10 @@ serve(async (req)=>{
   }
   await supa.from("retailer_import_config").update({
     last_imported_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    updated_at: new Date().toISOString(),
+    last_attempt_at: new Date().toISOString(),
+    last_import_status: errors.length > 0 ? "error" : "ok",
+    last_import_error: errors.length > 0 ? errors.slice(0, 5).join("; ").slice(0, 1000) : null
   }).eq("retailer_id", retailerId);
   try {
     await supa.from("scrape_log").insert({

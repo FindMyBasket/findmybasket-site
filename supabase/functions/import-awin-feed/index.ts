@@ -1,6 +1,22 @@
-// Edge function: import-awin-feed (v6.17)
+// Edge function: import-awin-feed (v6.19)
 //
 // Generic, retailer-agnostic AWIN datafeed importer.
+//
+// v6.19 changes (chunk all bulk-apply RPCs):
+//   - bulk_update_retailer_prices and bulk_update_product_images were each sent
+//     as a single statement over the whole update batch. On large feeds
+//     (~6,800 rows for Debenhams) that exceeds the Postgres statement timeout
+//     and the statement is cancelled, silently dropping the entire batch — the
+//     price RPC was losing most of Boots's daily writes, the image RPC dropped
+//     the whole update-path image backfill (4,234 Debenhams products left with
+//     no image_url). v6.18's monitoring surfaced the image timeout.
+//   - All three (prices, update-image, link-image) now chunk at INSERT_CHUNK
+//     (500), matching the link/create upserts. updatesApplied accumulates with
+//     += across chunks instead of being overwritten.
+//
+// v6.18 changes (dry_run bypasses enabled gate):
+//   - The config.enabled gate now only blocks writes (dry_run=false); dry-runs
+//     are always allowed so disabled retailers can still be inspected.
 //
 // v6.17 changes (Categorisation — deploy v55):
 //   - Hair-brand whitelist now includes davines and schwarzkopf (were dropped
@@ -822,6 +838,31 @@ function extractSize(normalised: string): string {
   return "";
 }
 
+// Records the outcome of an import attempt on the retailer's config row so that
+// monitor-retailer-feeds can alert on failures immediately (instead of waiting
+// for the 48h staleness backstop). Best-effort: never throws — a failure to
+// write status must not change the import's own success/failure.
+async function recordImportStatus(
+  supa: any,
+  retailerId: number,
+  status: "ok" | "error",
+  errorMsg: string | null,
+): Promise<void> {
+  try {
+    await supa
+      .from("retailer_import_config")
+      .update({
+        last_attempt_at: new Date().toISOString(),
+        last_import_status: status,
+        last_import_error: errorMsg ? errorMsg.slice(0, 1000) : null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("retailer_id", retailerId);
+  } catch (e) {
+    console.error("recordImportStatus failed", String(e));
+  }
+}
+
 serve(async (req) => {
   const startTime = Date.now();
 
@@ -860,9 +901,9 @@ serve(async (req) => {
     }), { status: 404, headers: { "Content-Type": "application/json" } });
   }
 
-  if (!config.enabled) {
+  if (!config.enabled && !dryRun) {
     return new Response(JSON.stringify({
-      error: "Retailer import is disabled (config.enabled = false)",
+      error: "Retailer import is disabled (config.enabled = false). Dry-runs (dry_run=true) are permitted for inspection.",
       retailer_id: retailerId,
     }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
@@ -1052,6 +1093,8 @@ serve(async (req) => {
   if (feedUrlOverride) {
     feedUrl = feedUrlOverride;
   } else if (feedFormat === "google_shopping") {
+    await recordImportStatus(supa, retailerId, "error",
+      "Google Shopping (Darwin) format requires config.feed_url to be set");
     return new Response(JSON.stringify({
       error: "Google Shopping (Darwin) format requires config.feed_url to be set",
       retailer_id: retailerId,
@@ -1074,6 +1117,8 @@ serve(async (req) => {
     const withoutScheme = feedUrl.slice("storage://".length);
     const slashIdx = withoutScheme.indexOf("/");
     if (slashIdx < 0) {
+      await recordImportStatus(supa, retailerId, "error",
+        `Invalid storage URL — expected storage://bucket/path, got ${feedUrl}`);
       return new Response(JSON.stringify({
         error: "Invalid storage URL — expected format storage://bucket/path",
         feed_url: feedUrl,
@@ -1085,6 +1130,8 @@ serve(async (req) => {
       .from(bucket)
       .download(objectPath);
     if (storageErr || !storageData) {
+      await recordImportStatus(supa, retailerId, "error",
+        `Storage download failed (${bucket}/${objectPath}): ${storageErr?.message || "no data"}`);
       return new Response(JSON.stringify({
         error: "Failed to download from Supabase Storage",
         details: storageErr?.message || "no data",
@@ -1107,6 +1154,8 @@ serve(async (req) => {
       },
     });
     if (!resp.ok) {
+      await recordImportStatus(supa, retailerId, "error",
+        `Feed download failed: ${resp.status} ${resp.statusText} (fid ${config.awin_feed_id})`);
       return new Response(JSON.stringify({
         error: `Feed download failed: ${resp.status}`,
         status_text: resp.statusText,
@@ -1154,6 +1203,8 @@ serve(async (req) => {
       console.log("GZIP_FAILED", String(gzErr));
       const rawPreview = new TextDecoder("utf-8", { fatal: false }).decode(buf.slice(0, 500));
       console.log("RAW_TEXT_PREVIEW", rawPreview);
+      await recordImportStatus(supa, retailerId, "error",
+        `Gzip decompression failed: ${String(gzErr)}`);
       return new Response(JSON.stringify({
         error: "Gzip decompression failed — see function logs for diagnostic",
         details: String(gzErr),
@@ -1169,6 +1220,8 @@ serve(async (req) => {
 
   const lines = text.split("\n");
   if (lines.length < 50) {
+    await recordImportStatus(supa, retailerId, "error",
+      `Feed returned fewer than 50 rows (${lines.length}) — likely AWIN incident or bad feed ID`);
     return new Response(JSON.stringify({
       error: "Feed returned fewer than 50 rows — aborting (likely AWIN incident or bad feed ID)",
       lines: lines.length,
@@ -1690,6 +1743,8 @@ serve(async (req) => {
 
   // Safeguard: cap on new products created in one run.
   if (countCreateNew > 20000) {
+    await recordImportStatus(supa, retailerId, "error",
+      `Safety cap: would create ${countCreateNew} new products (>20000) — aborted`);
     return new Response(JSON.stringify({
       error: "Would create more than 20000 new products in one run — aborting as a safety cap",
       retailer_id: retailerId,
@@ -1803,33 +1858,45 @@ serve(async (req) => {
   let createsApplied = 0;
   const errors: string[] = [];
 
-  // 1. Updates — single bulk RPC.
+  // Chunk size for every bulk RPC / upsert below. A single statement over the
+  // whole batch (~6,800 rows for Debenhams) exceeds the Postgres statement
+  // timeout and is cancelled, silently dropping the entire batch (v6.18
+  // monitoring surfaced this on bulk_update_product_images; bulk_update_retailer_prices
+  // had the same flaw, dropping most of Boots's daily price writes). Chunking
+  // keeps each statement small and well under the timeout.
+  const INSERT_CHUNK = 500;
+
+  // 1. Updates — chunked price + image backfill RPCs.
   if (updateActions.length > 0) {
     const nowIso = new Date().toISOString();
-    const payload = updateActions.map(u => ({
-      id: u.rp_id,
-      price: u.price,
-      in_stock: u.in_stock,
-      last_updated: nowIso,
-      url: u.url || "",
-      ean: u.ean || "",
-      mpn: u.mpn || "",
-    }));
-    const { data: rpcResult, error: rpcErr } = await supa.rpc("bulk_update_retailer_prices", { updates: payload });
-    if (rpcErr) {
-      errors.push(`bulk_update_retailer_prices: ${rpcErr.message}`);
-    } else {
-      updatesApplied = typeof rpcResult === "number" ? rpcResult : updateActions.length;
+    for (let i = 0; i < updateActions.length; i += INSERT_CHUNK) {
+      const chunk = updateActions.slice(i, i + INSERT_CHUNK);
+      const payload = chunk.map(u => ({
+        id: u.rp_id,
+        price: u.price,
+        in_stock: u.in_stock,
+        last_updated: nowIso,
+        url: u.url || "",
+        ean: u.ean || "",
+        mpn: u.mpn || "",
+      }));
+      const { data: rpcResult, error: rpcErr } = await supa.rpc("bulk_update_retailer_prices", { updates: payload });
+      if (rpcErr) {
+        errors.push(`bulk_update_retailer_prices (chunk at ${i}): ${rpcErr.message}`);
+      } else {
+        updatesApplied += typeof rpcResult === "number" ? rpcResult : chunk.length;
+      }
     }
 
-    // Image backfill on existing products. Single bulk RPC.
+    // Image backfill on existing products — chunked (same timeout risk).
     const imageUpdates = updateActions
       .filter(u => u.image_url)
       .map(u => ({ product_id: u.product_id, image_url: u.image_url }));
-    if (imageUpdates.length > 0) {
-      const { error: imgErr } = await supa.rpc("bulk_update_product_images", { updates: imageUpdates });
+    for (let i = 0; i < imageUpdates.length; i += INSERT_CHUNK) {
+      const chunk = imageUpdates.slice(i, i + INSERT_CHUNK);
+      const { error: imgErr } = await supa.rpc("bulk_update_product_images", { updates: chunk });
       if (imgErr) {
-        errors.push(`bulk_update_product_images (updates): ${imgErr.message}`);
+        errors.push(`bulk_update_product_images (updates chunk at ${i}): ${imgErr.message}`);
       }
     }
   }
@@ -1844,7 +1911,6 @@ serve(async (req) => {
   }
   const dedupedLinkArray = Array.from(dedupedLinks.values());
 
-  const INSERT_CHUNK = 500;
   for (let i = 0; i < dedupedLinkArray.length; i += INSERT_CHUNK) {
     const chunk = dedupedLinkArray.slice(i, i + INSERT_CHUNK);
     const rows = chunk.map(l => ({
@@ -1868,14 +1934,15 @@ serve(async (req) => {
     }
   }
 
-  // 2b. Image backfill on linked products. Single bulk RPC.
+  // 2b. Image backfill on linked products — chunked (same timeout risk).
   const linkImageUpdates = dedupedLinkArray
     .filter(l => l.image_url)
     .map(l => ({ product_id: l.product_id, image_url: l.image_url }));
-  if (linkImageUpdates.length > 0) {
-    const { error: linkImgErr } = await supa.rpc("bulk_update_product_images", { updates: linkImageUpdates });
+  for (let i = 0; i < linkImageUpdates.length; i += INSERT_CHUNK) {
+    const chunk = linkImageUpdates.slice(i, i + INSERT_CHUNK);
+    const { error: linkImgErr } = await supa.rpc("bulk_update_product_images", { updates: chunk });
     if (linkImgErr) {
-      errors.push(`bulk_update_product_images (links): ${linkImgErr.message}`);
+      errors.push(`bulk_update_product_images (links chunk at ${i}): ${linkImgErr.message}`);
     }
   }
 
@@ -1928,10 +1995,19 @@ serve(async (req) => {
     }
   }
 
-  // Update last_imported_at on the config row
+  // Update last_imported_at on the config row, and record the import outcome so
+  // monitor-retailer-feeds can alert on failures immediately. Write-level errors
+  // (rows that failed to upsert) count as an error status even though the feed
+  // itself downloaded fine.
   await supa
     .from("retailer_import_config")
-    .update({ last_imported_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .update({
+      last_imported_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      last_attempt_at: new Date().toISOString(),
+      last_import_status: errors.length > 0 ? "error" : "ok",
+      last_import_error: errors.length > 0 ? errors.slice(0, 5).join("; ").slice(0, 1000) : null,
+    })
     .eq("retailer_id", retailerId);
 
   // Optional: log to scrape_log if the table exists in your schema
