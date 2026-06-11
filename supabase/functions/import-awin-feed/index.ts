@@ -822,6 +822,31 @@ function extractSize(normalised: string): string {
   return "";
 }
 
+// Records the outcome of an import attempt on the retailer's config row so that
+// monitor-retailer-feeds can alert on failures immediately (instead of waiting
+// for the 48h staleness backstop). Best-effort: never throws — a failure to
+// write status must not change the import's own success/failure.
+async function recordImportStatus(
+  supa: any,
+  retailerId: number,
+  status: "ok" | "error",
+  errorMsg: string | null,
+): Promise<void> {
+  try {
+    await supa
+      .from("retailer_import_config")
+      .update({
+        last_attempt_at: new Date().toISOString(),
+        last_import_status: status,
+        last_import_error: errorMsg ? errorMsg.slice(0, 1000) : null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("retailer_id", retailerId);
+  } catch (e) {
+    console.error("recordImportStatus failed", String(e));
+  }
+}
+
 serve(async (req) => {
   const startTime = Date.now();
 
@@ -1052,6 +1077,8 @@ serve(async (req) => {
   if (feedUrlOverride) {
     feedUrl = feedUrlOverride;
   } else if (feedFormat === "google_shopping") {
+    await recordImportStatus(supa, retailerId, "error",
+      "Google Shopping (Darwin) format requires config.feed_url to be set");
     return new Response(JSON.stringify({
       error: "Google Shopping (Darwin) format requires config.feed_url to be set",
       retailer_id: retailerId,
@@ -1074,6 +1101,8 @@ serve(async (req) => {
     const withoutScheme = feedUrl.slice("storage://".length);
     const slashIdx = withoutScheme.indexOf("/");
     if (slashIdx < 0) {
+      await recordImportStatus(supa, retailerId, "error",
+        `Invalid storage URL — expected storage://bucket/path, got ${feedUrl}`);
       return new Response(JSON.stringify({
         error: "Invalid storage URL — expected format storage://bucket/path",
         feed_url: feedUrl,
@@ -1085,6 +1114,8 @@ serve(async (req) => {
       .from(bucket)
       .download(objectPath);
     if (storageErr || !storageData) {
+      await recordImportStatus(supa, retailerId, "error",
+        `Storage download failed (${bucket}/${objectPath}): ${storageErr?.message || "no data"}`);
       return new Response(JSON.stringify({
         error: "Failed to download from Supabase Storage",
         details: storageErr?.message || "no data",
@@ -1107,6 +1138,8 @@ serve(async (req) => {
       },
     });
     if (!resp.ok) {
+      await recordImportStatus(supa, retailerId, "error",
+        `Feed download failed: ${resp.status} ${resp.statusText} (fid ${config.awin_feed_id})`);
       return new Response(JSON.stringify({
         error: `Feed download failed: ${resp.status}`,
         status_text: resp.statusText,
@@ -1154,6 +1187,8 @@ serve(async (req) => {
       console.log("GZIP_FAILED", String(gzErr));
       const rawPreview = new TextDecoder("utf-8", { fatal: false }).decode(buf.slice(0, 500));
       console.log("RAW_TEXT_PREVIEW", rawPreview);
+      await recordImportStatus(supa, retailerId, "error",
+        `Gzip decompression failed: ${String(gzErr)}`);
       return new Response(JSON.stringify({
         error: "Gzip decompression failed — see function logs for diagnostic",
         details: String(gzErr),
@@ -1169,6 +1204,8 @@ serve(async (req) => {
 
   const lines = text.split("\n");
   if (lines.length < 50) {
+    await recordImportStatus(supa, retailerId, "error",
+      `Feed returned fewer than 50 rows (${lines.length}) — likely AWIN incident or bad feed ID`);
     return new Response(JSON.stringify({
       error: "Feed returned fewer than 50 rows — aborting (likely AWIN incident or bad feed ID)",
       lines: lines.length,
@@ -1690,6 +1727,8 @@ serve(async (req) => {
 
   // Safeguard: cap on new products created in one run.
   if (countCreateNew > 20000) {
+    await recordImportStatus(supa, retailerId, "error",
+      `Safety cap: would create ${countCreateNew} new products (>20000) — aborted`);
     return new Response(JSON.stringify({
       error: "Would create more than 20000 new products in one run — aborting as a safety cap",
       retailer_id: retailerId,
@@ -1928,10 +1967,19 @@ serve(async (req) => {
     }
   }
 
-  // Update last_imported_at on the config row
+  // Update last_imported_at on the config row, and record the import outcome so
+  // monitor-retailer-feeds can alert on failures immediately. Write-level errors
+  // (rows that failed to upsert) count as an error status even though the feed
+  // itself downloaded fine.
   await supa
     .from("retailer_import_config")
-    .update({ last_imported_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .update({
+      last_imported_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      last_attempt_at: new Date().toISOString(),
+      last_import_status: errors.length > 0 ? "error" : "ok",
+      last_import_error: errors.length > 0 ? errors.slice(0, 5).join("; ").slice(0, 1000) : null,
+    })
     .eq("retailer_id", retailerId);
 
   // Optional: log to scrape_log if the table exists in your schema
