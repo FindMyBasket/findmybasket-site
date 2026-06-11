@@ -39,8 +39,8 @@
 // Call:
 //   POST /functions/v1/import-shopify-feed
 //   body: {
-//     "retailer_id": 7,
-//     "feed_path": "feeds/skincupid/latest.ndjson.gz",
+//     "retailer_id": 42,
+//     "feed_path": "feeds/example-retailer/latest.ndjson.gz",
 //     "feed_bucket": "shopify-feeds",  // optional
 //     "dry_run": true
 //   }
@@ -361,7 +361,7 @@ function normaliseForMatch(s: string): string {
 }
 // Build a match key from brand + name, deduplicating when name starts with brand.
 // Handles the case where some retailers put the brand in both the brand field
-// AND at the start of the name field (Skin Cupid, Stylevana, some others),
+// AND at the start of the name field (Stylevana and some others),
 // while other retailers only put it in the brand field. Without this, the
 // matcher creates duplicate products because match keys differ:
 //   Retailer A: "mixsoon mixsoon bifida ferment essence 100ml"  (brand in name)

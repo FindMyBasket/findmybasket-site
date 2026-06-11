@@ -361,7 +361,7 @@ function normaliseForMatch(s) {
 }
 // Build a match key from brand + name, deduplicating when name starts with brand.
 // Handles the case where some retailers put the brand in both the brand field
-// AND at the start of the name field (Skin Cupid, Stylevana, some others),
+// AND at the start of the name field (Stylevana and some others),
 // while other retailers only put it in the brand field. Without this, the
 // matcher creates duplicate products because match keys differ:
 //   Retailer A: "mixsoon mixsoon bifida ferment essence 100ml"  (brand in name)
