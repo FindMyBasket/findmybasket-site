@@ -1,6 +1,16 @@
-// Edge function: import-rakuten-feed (v6.16-rakuten.0)
+// Edge function: import-rakuten-feed (v6.19-rakuten.0)
 //
 // Generic, retailer-agnostic Rakuten LinkShare datafeed importer.
+//
+// v6.19-rakuten.0 changes (chunk all bulk-apply RPCs — port of import-awin-feed v6.19):
+//   - bulk_update_retailer_prices and both bulk_update_product_images calls were
+//     each sent as a single statement over the whole batch. On Superdrug
+//     (~21,700 rows) that exceeds the Postgres statement timeout and the
+//     statement is cancelled, silently dropping the entire batch — only ~100
+//     price rows were landing per run and the other ~21k went stale (>14 days).
+//   - All three (prices, update-image, link-image) now chunk at INSERT_CHUNK
+//     (500), matching the link/create paths. updatesApplied accumulates with
+//     += across chunks instead of being overwritten.
 //
 // v6.16-rakuten.0 changes (Stream B — canonical_size):
 //   - New extractCanonicalSize() pulls a size string (e.g. "50ml", "30g",
@@ -1160,37 +1170,48 @@ serve(async (req)=>{
   let linksApplied = 0;
   let createsApplied = 0;
   const errors = [];
-  // 1. Updates — single bulk RPC
+  // Chunk size for every bulk RPC / upsert below. A single statement over the
+  // whole batch (~21,700 rows for Superdrug) exceeds the Postgres statement
+  // timeout and is cancelled, silently dropping the entire batch — that is why
+  // Superdrug's daily price writes were landing on only ~100 rows and the rest
+  // went stale. Chunking keeps each statement small and well under the timeout.
+  // Mirrors import-awin-feed v6.19.
+  const INSERT_CHUNK = 500;
+  // 1. Updates — chunked price + image backfill RPCs.
   if (updateActions.length > 0) {
     const nowIso = new Date().toISOString();
-    const payload = updateActions.map((u)=>({
-        id: u.rp_id,
-        price: u.price,
-        in_stock: u.in_stock,
-        last_updated: nowIso,
-        url: u.url || "",
-        ean: u.ean || "",
-        mpn: u.mpn || ""
-      }));
-    const { data: rpcResult, error: rpcErr } = await supa.rpc("bulk_update_retailer_prices", {
-      updates: payload
-    });
-    if (rpcErr) {
-      errors.push(`bulk_update_retailer_prices: ${rpcErr.message}`);
-    } else {
-      updatesApplied = typeof rpcResult === "number" ? rpcResult : updateActions.length;
+    for(let i = 0; i < updateActions.length; i += INSERT_CHUNK){
+      const chunk = updateActions.slice(i, i + INSERT_CHUNK);
+      const payload = chunk.map((u)=>({
+          id: u.rp_id,
+          price: u.price,
+          in_stock: u.in_stock,
+          last_updated: nowIso,
+          url: u.url || "",
+          ean: u.ean || "",
+          mpn: u.mpn || ""
+        }));
+      const { data: rpcResult, error: rpcErr } = await supa.rpc("bulk_update_retailer_prices", {
+        updates: payload
+      });
+      if (rpcErr) {
+        errors.push(`bulk_update_retailer_prices (chunk at ${i}): ${rpcErr.message}`);
+      } else {
+        updatesApplied += typeof rpcResult === "number" ? rpcResult : chunk.length;
+      }
     }
-    // Image backfill on existing products. Single bulk RPC.
+    // Image backfill on existing products — chunked (same timeout risk).
     const imageUpdates = updateActions.filter((u)=>u.image_url).map((u)=>({
         product_id: u.product_id,
         image_url: u.image_url
       }));
-    if (imageUpdates.length > 0) {
+    for(let i = 0; i < imageUpdates.length; i += INSERT_CHUNK){
+      const chunk = imageUpdates.slice(i, i + INSERT_CHUNK);
       const { error: imgErr } = await supa.rpc("bulk_update_product_images", {
-        updates: imageUpdates
+        updates: chunk
       });
       if (imgErr) {
-        errors.push(`bulk_update_product_images (updates): ${imgErr.message}`);
+        errors.push(`bulk_update_product_images (updates chunk at ${i}): ${imgErr.message}`);
       }
     }
   }
@@ -1203,7 +1224,6 @@ serve(async (req)=>{
     }
   }
   const dedupedLinkArray = Array.from(dedupedLinks.values());
-  const INSERT_CHUNK = 500;
   for(let i = 0; i < dedupedLinkArray.length; i += INSERT_CHUNK){
     const chunk = dedupedLinkArray.slice(i, i + INSERT_CHUNK);
     const rows = chunk.map((l)=>({
@@ -1226,17 +1246,18 @@ serve(async (req)=>{
       linksApplied += chunk.length;
     }
   }
-  // 2b. Image backfill on linked products. Single bulk RPC.
+  // 2b. Image backfill on linked products — chunked (same timeout risk).
   const linkImageUpdates = dedupedLinkArray.filter((l)=>l.image_url).map((l)=>({
       product_id: l.product_id,
       image_url: l.image_url
     }));
-  if (linkImageUpdates.length > 0) {
+  for(let i = 0; i < linkImageUpdates.length; i += INSERT_CHUNK){
+    const chunk = linkImageUpdates.slice(i, i + INSERT_CHUNK);
     const { error: linkImgErr } = await supa.rpc("bulk_update_product_images", {
-      updates: linkImageUpdates
+      updates: chunk
     });
     if (linkImgErr) {
-      errors.push(`bulk_update_product_images (links): ${linkImgErr.message}`);
+      errors.push(`bulk_update_product_images (links chunk at ${i}): ${linkImgErr.message}`);
     }
   }
   // 3. Creates — two-phase bulk insert (v6.16: now writes canonical_size)
