@@ -1,6 +1,29 @@
-// Edge function: import-awin-feed (v6.19)
+// Edge function: import-awin-feed (v6.20)
 //
 // Generic, retailer-agnostic AWIN datafeed importer.
+//
+// v6.20 changes (streaming I/O path, feature-flagged):
+//   - New retailer_import_config.streaming_enabled flag (default false). When
+//     true, the feed is fetched, gzip-inflated and CSV-parsed as a STREAM
+//     (_streaming-fetcher.ts + _streaming-csv.ts) instead of loading the whole
+//     decompressed feed (4.85GB uncompressed for Debenhams) into memory. This
+//     removes the ~256MB edge-runtime OOM ceiling on feed size.
+//   - Memory note: the three action buckets (update/link/create) are NOT the
+//     OOM — they are already bounded (updates <= existing retailer rows, links
+//     deduped to <= catalogue size, creates <= the 20k safety cap). So this
+//     change streams ONLY the I/O; action accumulation and the entire apply
+//     phase are byte-for-byte unchanged. Link price-dedup, the 20k cap, and
+//     dry-run derived stats all keep working exactly as before.
+//   - gzip stays on pako (Deno's DecompressionStream still fails on large feeds,
+//     see v6.5/v6.6) but is now driven incrementally via pako.Inflate push mode.
+//   - The streaming CSV parser is correct for embedded newlines in quoted
+//     fields (legacy split-on-\n shattered those rows); on a feed containing
+//     such rows the streaming action counts can legitimately differ there.
+//   - The <50-row safeguard runs post-stream (pre-apply) on the streaming path
+//     since the row count is not known up front.
+//   - Known floor (separate future spec): the in-memory catalogue lookup maps
+//     (~92k products) are independent of feed size and set the real memory
+//     floor; streaming does not address them.
 //
 // v6.19 changes (chunk all bulk-apply RPCs):
 //   - bulk_update_retailer_prices and bulk_update_product_images were each sent
@@ -201,6 +224,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // with "failed to write whole buffer" on ~1.5MB+ feeds in the edge function
 // runtime. pako handles the same input reliably as a single ungzip() call.
 import pako from "https://esm.sh/pako@2.1.0";
+
+// Streaming I/O pipeline (used when retailer_import_config.streaming_enabled is
+// true). Incremental fetch -> incremental gzip inflate -> streaming CSV parse,
+// so feed size is no longer bounded by the edge runtime memory ceiling. The
+// legacy load-whole-feed path remains the default until a retailer is promoted.
+import { streamFeedRows, FeedFetchError } from "./_streaming-fetcher.ts";
 
 const AWIN_PUBLISHER_ID = "2841268";
 
@@ -918,6 +947,10 @@ serve(async (req) => {
     ? config.category_path_must_contain
     : [];
   const existingBrandsOnly: boolean = config.existing_brands_only === true;
+  // Rollout flag: when true, fetch+decompress+parse the feed as a stream
+  // instead of materialising the whole decompressed feed in memory. Defaults to
+  // false (legacy path) for every retailer until explicitly promoted.
+  const streamingEnabled: boolean = config.streaming_enabled === true;
   // v6: per-retailer top_category override (null/missing = let inference decide)
   const topCategoryDefault: TopCategory | null =
     (config.top_category_default === "skincare" ||
@@ -1105,6 +1138,56 @@ serve(async (req) => {
   }
 
   const fetchT0 = Date.now();
+  // Shared across both fetch paths. The legacy path materialises `lines` and
+  // `columns`; the streaming path produces `columns` from the header row and an
+  // async iterator (`streamRowIter`) over the remaining data rows.
+  let columns: string[] = [];
+  let legacyLines: string[] | null = null;
+  let streamRowIter: AsyncIterator<string[]> | null = null;
+  let fetchMs = 0;
+
+  if (streamingEnabled) {
+    // ── Streaming I/O path ────────────────────────────────────────────────
+    try {
+      const diagnostics = { gzipped: null as boolean | null, firstBytesHex: "", source: "" };
+      const it = streamFeedRows(feedUrl, supa, diagnostics)[Symbol.asyncIterator]();
+      const firstRes = await it.next();
+      if (firstRes.done) {
+        await recordImportStatus(supa, retailerId, "error",
+          "Streaming feed produced no rows (empty body)");
+        return new Response(JSON.stringify({
+          error: "Streaming feed produced no rows (empty body)",
+          feed_format: feedFormat,
+        }), { status: 502, headers: { "Content-Type": "application/json" } });
+      }
+      // First row is the header. The parser already strips a leading BOM; the
+      // per-field quote strip mirrors the legacy header handling.
+      columns = firstRes.value.map((c) => c.replace(/^﻿/, "").replace(/^"|"$/g, ""));
+      streamRowIter = it;
+      fetchMs = Date.now() - fetchT0; // time-to-first-row (header)
+      console.log("FEED_DIAGNOSTIC", JSON.stringify({
+        streaming: true,
+        first_32_bytes_hex: diagnostics.firstBytesHex,
+        gzipped: diagnostics.gzipped,
+        source: diagnostics.source,
+        feed_format: feedFormat,
+      }));
+    } catch (e) {
+      if (e instanceof FeedFetchError) {
+        await recordImportStatus(supa, retailerId, "error", e.message);
+        return new Response(JSON.stringify({
+          error: e.message, ...e.detail, feed_format: feedFormat,
+        }, null, 2), { status: e.status, headers: { "Content-Type": "application/json" } });
+      }
+      await recordImportStatus(supa, retailerId, "error",
+        `Streaming fetch failed: ${String(e)}`);
+      return new Response(JSON.stringify({
+        error: "Streaming fetch failed — see function logs",
+        details: String(e), feed_format: feedFormat,
+      }, null, 2), { status: 502, headers: { "Content-Type": "application/json" } });
+    }
+  } else {
+  // ── Legacy load-whole-feed path ───────────────────────────────────────────
   let buf: ArrayBuffer;
   let respStatus = 200;
   const responseHeaders: Record<string, string> = {};
@@ -1216,7 +1299,7 @@ serve(async (req) => {
   } else {
     text = new TextDecoder("utf-8").decode(buf);
   }
-  const fetchMs = Date.now() - fetchT0;
+  fetchMs = Date.now() - fetchT0;
 
   const lines = text.split("\n");
   if (lines.length < 50) {
@@ -1231,7 +1314,9 @@ serve(async (req) => {
 
   // Strip BOM (Google Shopping CSV files have UTF-8 BOM)
   const headerLine = lines[0].replace(/^\uFEFF/, "");
-  const columns = parseRow(headerLine).map(c => c.replace(/^"|"$/g, ""));
+  columns = parseRow(headerLine).map(c => c.replace(/^"|"$/g, ""));
+  legacyLines = lines;
+  } // \u2500\u2500 end legacy (non-streaming) fetch path \u2500\u2500
 
   // Column index mapping. Two paths:
   //   - 'awin' (legacy): product_name, merchant_product_id, search_price, etc.
@@ -1410,12 +1495,46 @@ serve(async (req) => {
     sample_rows: [] as any[],
   };
 
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim()) continue;
+  // Unified row source. Both paths yield already-parsed, quote-stripped,
+  // non-blank field arrays so the per-row classification body below is
+  // byte-for-byte identical to the pre-streaming version (every `continue`
+  // skips to the next feed row exactly as before).
+  async function* rowSource(): AsyncGenerator<string[]> {
+    if (streamingEnabled && streamRowIter) {
+      const streamT0 = Date.now();
+      let seen = 0;
+      while (true) {
+        const res = await streamRowIter.next();
+        if (res.done) break;
+        const f = res.value.map((x) => x.replace(/^"|"$/g, ""));
+        // Mirror the legacy `!line.trim()` blank-line skip: a blank source line
+        // parses to a single empty field.
+        if (f.length === 1 && !f[0].trim()) continue;
+        // Throughput heartbeat on long imports so we can see progress (and that
+        // a Sephora-sized stream isn't silently stuck) in the logs.
+        if (++seen % 100000 === 0) {
+          const secs = (Date.now() - streamT0) / 1000;
+          console.log("STREAM_PROGRESS", JSON.stringify({
+            rows_parsed: seen,
+            elapsed_s: Math.round(secs),
+            rows_per_s: Math.round(seen / Math.max(secs, 0.001)),
+          }));
+        }
+        yield f;
+      }
+    } else {
+      for (let i = 1; i < legacyLines!.length; i++) {
+        const line = legacyLines![i];
+        if (!line.trim()) continue;
+        yield parseRow(line).map((f) => f.replace(/^"|"$/g, ""));
+      }
+    }
+  }
+
+  try {
+  for await (const fields of rowSource()) {
     feedRows++;
 
-    const fields = parseRow(line).map(f => f.replace(/^"|"$/g, ""));
     const name = fields[idx.product_name] || "";
     const rawBrand = fields[idx.brand_name] || "";
     const brand = lookupCanonicalBrand(rawBrand);   // canonical from here down
@@ -1720,6 +1839,36 @@ serve(async (req) => {
         url: wrappedUrl,
       });
     }
+  }
+  } catch (streamErr) {
+    // A throw during streaming iteration means the fetch/inflate/parse pipeline
+    // failed mid-feed (e.g. gzip corruption surfaced only after the magic-byte
+    // check). Record status and return like the other feed-error paths. The
+    // legacy path's rowSource never throws, so this only fires when streaming.
+    if (streamingEnabled) {
+      const msg = streamErr instanceof FeedFetchError
+        ? streamErr.message
+        : `Streaming parse failed mid-feed: ${String(streamErr)}`;
+      await recordImportStatus(supa, retailerId, "error", msg);
+      return new Response(JSON.stringify({
+        error: msg, rows_processed_before_error: feedRows, feed_format: feedFormat,
+      }, null, 2), { status: 502, headers: { "Content-Type": "application/json" } });
+    }
+    throw streamErr;
+  }
+
+  // Sub-50-row safeguard. The legacy path checks this up front on
+  // lines.length; when streaming we only know the count after draining the
+  // stream. It runs BEFORE any apply below, so a truncated feed still aborts
+  // with zero writes — same outcome as the legacy pre-loop check.
+  if (streamingEnabled && feedRows < 50) {
+    await recordImportStatus(supa, retailerId, "error",
+      `Feed returned fewer than 50 rows (${feedRows}) — likely AWIN incident or bad feed ID`);
+    return new Response(JSON.stringify({
+      error: "Feed returned fewer than 50 rows — aborting (likely AWIN incident or bad feed ID)",
+      rows: feedRows,
+      feed_format: feedFormat,
+    }), { status: 502, headers: { "Content-Type": "application/json" } });
   }
 
   // v6: top_category breakdown of would-create-new
