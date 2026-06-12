@@ -61,10 +61,25 @@ stays legacy. Promote one retailer at a time:
 update retailer_import_config set streaming_enabled = true where retailer_id = <N>;
 ```
 
-Recommended order (smallest feed first): Branded Beauty → Beauty Flash →
-Beauty Bay → Stylevana → YesStyle → The Organic Pharmacy → Escentual → Boots →
-Debenhams (last, simultaneously switching `feed_url` off the `storage://`
-pre-filter back to a direct AWIN feed).
+**Streaming is HTTP-only.** The flag is a no-op for `storage://` feeds — they are
+already fully buffered by `supabase-js` `.download()`, so streaming gains nothing
+and the extra allocations make a memory-marginal import worse. The function gates
+on `streamingActive = streaming_enabled && !feedUrl.startsWith("storage://")`, so
+storage retailers always run the legacy buffered path regardless of the flag.
+
+Recommended order (HTTP retailers, smallest first): The Organic Pharmacy →
+Escentual → Beauty Flash → Beauty Bay → Stylevana → YesStyle → Boots. Then
+**Debenhams last**, switching its `feed_url` off the `storage://` pre-filter back
+to a direct AWIN `fid` — that switch is precisely what makes streaming both apply
+to Debenhams AND give it the memory benefit it needs (4.85GB feed). Branded
+Beauty (storage google_shopping) is NOT a streaming candidate; leave it on legacy.
+
+### Verified reliability (dry-run, 2026-06-12)
+- HTTP path: The Organic Pharmacy 5/5, Beauty Bay (~7.2k rows) 5/5 — solid.
+- storage path (Branded Beauty): flaky ~40–60% on **both** legacy and streaming —
+  a pre-existing memory-marginal condition of storage imports, not caused by
+  streaming. Worth a separate fix (the catalogue memory floor below + the storage
+  download buffering); BB's daily legacy cron is likely silently failing often.
 
 **Per-retailer rollback** (zero downtime):
 ```sql

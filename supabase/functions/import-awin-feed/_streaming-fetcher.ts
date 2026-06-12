@@ -1,20 +1,24 @@
 // Streaming feed reader for import-awin-feed.
 //
-// Exposes a SINGLE flat async generator, streamFeedRows(), that yields parsed
-// CSV rows (string[]) one at a time. Flatness is the whole point: an earlier
-// version chained five async generators (raw -> gzip-detect -> reassemble ->
-// inflate -> parse -> rowSource). Deno's storage Blob.stream() re-chunks the
-// in-memory blob into small pieces, and cost scaled as O(bytes x layers) in
-// async microtasks — a 3MB feed blew the edge CPU budget (WORKER_RESOURCE_LIMIT).
-// Here there is exactly one generator; per-byte and per-row work is synchronous,
-// and there is one await per source read.
+// Exposes a SINGLE flat async generator, streamFeedRowBatches(), that yields
+// BATCHES of parsed CSV rows (string[][]) — one batch per source chunk/slice,
+// not one yield per row. Two flatness rules, both learned the hard way against
+// the Deno edge runtime's resource limits:
+//   1. Shallow nesting. An early version chained five async generators; Deno's
+//      storage Blob.stream() re-chunks the in-memory blob into tiny pieces, so
+//      cost scaled O(bytes x layers) in microtasks and a 3MB feed blew the CPU
+//      budget. There is now exactly one generator.
+//   2. Batch, don't drip. Yielding one row at a time still costs one await per
+//      row (~7.7k for a small feed). That alone was enough to flakily trip
+//      WORKER_RESOURCE_LIMIT (546). Yielding a whole chunk's worth of rows at
+//      once drops the await count to ~one-per-source-chunk; the consumer loops
+//      the batch synchronously.
 //
 // Two source modes:
 //   - storage://bucket/path : supabase-js .download() already buffers the whole
-//     object into a Blob in memory, so "streaming" it gains nothing. We take the
+//     object into a Blob, so "streaming" it gains nothing. We take the
 //     ArrayBuffer, gunzip it whole (pako.ungzip, like the legacy path), and feed
-//     it to the parser in fixed slices. storage:// feeds are pre-filtered and
-//     small, so the buffer is cheap; this avoids the Blob.stream() chunk penalty.
+//     it to the parser in fixed slices. storage:// feeds are pre-filtered/small.
 //   - http(s):// : TRUE streaming via Response.body. Network chunks are normal
 //     (~64KB), gzip is inflated incrementally with pako.Inflate push mode, and
 //     nothing larger than one chunk + one partial row is ever resident. This is
@@ -54,13 +58,14 @@ function isGzip(bytes: Uint8Array): boolean {
   return bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
 }
 
-// Yields parsed CSV rows (including the header row first). Populates `diag` in
-// place once the first bytes have been seen.
-export async function* streamFeedRows(
+// Yields batches of parsed CSV rows (the first batch's first row is the header).
+// Populates `diag` in place once the first bytes have been seen. Empty batches
+// are never yielded.
+export async function* streamFeedRowBatches(
   feedUrl: string,
   supa: StorageLike,
   diag: FeedDiagnostics,
-): AsyncGenerator<string[]> {
+): AsyncGenerator<string[][]> {
   const acc = new CsvLineAccumulator();
   const decoder = new TextDecoder("utf-8");
 
@@ -92,15 +97,20 @@ export async function* streamFeedRows(
         throw new FeedFetchError(`Gzip decompression failed: ${String(e)}`, 502, {});
       }
     }
-    // Feed the buffer to the parser in fixed slices (synchronous; no awaits).
     for (let off = 0; off < buf.length; off += SLICE) {
       const text = decoder.decode(buf.subarray(off, off + SLICE), { stream: true });
-      if (text) for (const row of acc.push(text)) yield row;
+      if (text) {
+        const batch = acc.push(text);
+        if (batch.length) yield batch;
+      }
     }
     const tail = decoder.decode();
-    if (tail) for (const row of acc.push(tail)) yield row;
+    if (tail) {
+      const batch = acc.push(tail);
+      if (batch.length) yield batch;
+    }
     const last = acc.flush();
-    if (last) yield last;
+    if (last) yield [last];
     return;
   }
 
@@ -117,16 +127,14 @@ export async function* streamFeedRows(
   }
   const reader = resp.body.getReader();
 
-  // Gzip is detected from the first chunk's magic bytes. pako.Inflate (push mode)
-  // is set up lazily; its onData pushes decompressed chunks into `inflated`,
-  // which we drain synchronously after every push.
   let inflator: pako.Inflate | null = null;
   let inflated: Uint8Array[] = [];
   let detected = false;
 
-  const handleDecompressed = function* (bytes: Uint8Array): Generator<string[]> {
+  // Decode a decompressed byte chunk and return the rows it completed.
+  const rowsFrom = (bytes: Uint8Array): string[][] => {
     const text = decoder.decode(bytes, { stream: true });
-    if (text) for (const row of acc.push(text)) yield row;
+    return text ? acc.push(text) : [];
   };
 
   while (true) {
@@ -149,12 +157,14 @@ export async function* streamFeedRows(
       if (inflator.err) {
         throw new FeedFetchError(`Gzip decompression failed: ${inflator.msg || inflator.err}`, 502, {});
       }
-      if (inflated.length) {
-        for (const d of inflated) yield* handleDecompressed(d);
-        inflated = [];
-      }
+      // Coalesce every decompressed chunk produced by this push into one batch.
+      const batch: string[][] = [];
+      for (const d of inflated) for (const row of rowsFrom(d)) batch.push(row);
+      inflated = [];
+      if (batch.length) yield batch;
     } else {
-      yield* handleDecompressed(value);
+      const batch = rowsFrom(value);
+      if (batch.length) yield batch;
     }
   }
 
@@ -164,11 +174,16 @@ export async function* streamFeedRows(
     if (inflator.err) {
       throw new FeedFetchError(`Gzip decompression failed at end of stream: ${inflator.msg || inflator.err}`, 502, {});
     }
-    for (const d of inflated) yield* handleDecompressed(d);
+    const batch: string[][] = [];
+    for (const d of inflated) for (const row of rowsFrom(d)) batch.push(row);
     inflated = [];
+    if (batch.length) yield batch;
   }
   const tail = decoder.decode();
-  if (tail) for (const row of acc.push(tail)) yield row;
+  if (tail) {
+    const batch = acc.push(tail);
+    if (batch.length) yield batch;
+  }
   const last = acc.flush();
-  if (last) yield last;
+  if (last) yield [last];
 }

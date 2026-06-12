@@ -16,6 +16,19 @@
 //     dry-run derived stats all keep working exactly as before.
 //   - gzip stays on pako (Deno's DecompressionStream still fails on large feeds,
 //     see v6.5/v6.6) but is now driven incrementally via pako.Inflate push mode.
+//   - STORAGE BYPASS: streaming is gated to HTTP feeds only (streamingActive =
+//     streaming_enabled && !storage://). A storage:// object is already fully
+//     buffered by supabase-js .download(), so streaming it gains no memory
+//     benefit; the flag is a no-op there and the legacy buffered path runs.
+//     (Empirically the HTTP streaming path is 10/10 reliable across retailers;
+//     storage:// imports are memory-marginal and flakily 546 on BOTH legacy and
+//     streaming — a pre-existing condition, not introduced here. Debenhams gets
+//     streaming when its feed_url is switched off storage:// to a direct AWIN
+//     fid, which is exactly when streaming is needed and reliable.)
+//   - PERF: the fetcher yields BATCHES of rows (one per source chunk), not one
+//     row at a time. Per-row async yields (~7.7k awaits) alone flakily tripped
+//     the edge resource limit; batching drops awaits to ~one-per-chunk and the
+//     consumer loops each batch synchronously.
 //   - The streaming CSV parser is correct for embedded newlines in quoted
 //     fields (legacy split-on-\n shattered those rows); on a feed containing
 //     such rows the streaming action counts can legitimately differ there.
@@ -229,7 +242,7 @@ import pako from "https://esm.sh/pako@2.1.0";
 // true). Incremental fetch -> incremental gzip inflate -> streaming CSV parse,
 // so feed size is no longer bounded by the edge runtime memory ceiling. The
 // legacy load-whole-feed path remains the default until a retailer is promoted.
-import { streamFeedRows, FeedFetchError } from "./_streaming-fetcher.ts";
+import { streamFeedRowBatches, FeedFetchError } from "./_streaming-fetcher.ts";
 
 const AWIN_PUBLISHER_ID = "2841268";
 
@@ -1138,21 +1151,32 @@ serve(async (req) => {
   }
 
   const fetchT0 = Date.now();
+  // Streaming only helps — and is only reliable — for HTTP feeds. A storage://
+  // object is already fully buffered into memory by supabase-js .download(), so
+  // streaming it gains NO memory benefit; worse, the extra buffered-slice
+  // allocations on top of the retained buffer intermittently trip the edge
+  // WORKER_RESOURCE_LIMIT (observed: ~33% of storage dry-runs 546'd, while the
+  // identically-sized HTTP feed was 5/5 reliable). So storage:// always uses the
+  // legacy buffered path even when the flag is on. The flag therefore only
+  // changes behaviour for direct-HTTP feeds (the ones big enough to need it,
+  // e.g. Debenhams once switched off its storage:// pre-filter).
+  const streamingActive = streamingEnabled && !feedUrl.startsWith("storage://");
   // Shared across both fetch paths. The legacy path materialises `lines` and
   // `columns`; the streaming path produces `columns` from the header row and an
-  // async iterator (`streamRowIter`) over the remaining data rows.
+  // async iterator (`streamBatchIter`) over the remaining row batches.
   let columns: string[] = [];
   let legacyLines: string[] | null = null;
-  let streamRowIter: AsyncIterator<string[]> | null = null;
+  let streamBatchIter: AsyncIterator<string[][]> | null = null;
+  let pendingFirstRows: string[][] | null = null; // data rows sharing the header's batch
   let fetchMs = 0;
 
-  if (streamingEnabled) {
+  if (streamingActive) {
     // ── Streaming I/O path ────────────────────────────────────────────────
     try {
       const diagnostics = { gzipped: null as boolean | null, firstBytesHex: "", source: "" };
-      const it = streamFeedRows(feedUrl, supa, diagnostics)[Symbol.asyncIterator]();
+      const it = streamFeedRowBatches(feedUrl, supa, diagnostics)[Symbol.asyncIterator]();
       const firstRes = await it.next();
-      if (firstRes.done) {
+      if (firstRes.done || !firstRes.value.length) {
         await recordImportStatus(supa, retailerId, "error",
           "Streaming feed produced no rows (empty body)");
         return new Response(JSON.stringify({
@@ -1160,11 +1184,14 @@ serve(async (req) => {
           feed_format: feedFormat,
         }), { status: 502, headers: { "Content-Type": "application/json" } });
       }
-      // First row is the header. The parser already strips a leading BOM; the
-      // per-field quote strip mirrors the legacy header handling.
-      columns = firstRes.value.map((c) => c.replace(/^﻿/, "").replace(/^"|"$/g, ""));
-      streamRowIter = it;
-      fetchMs = Date.now() - fetchT0; // time-to-first-row (header)
+      // First row of the first batch is the header. The parser already strips a
+      // leading BOM; the per-field quote strip mirrors legacy header handling.
+      // The remaining rows of that batch are real data rows — keep them.
+      const firstBatch = firstRes.value;
+      columns = firstBatch[0].map((c) => c.replace(/^﻿/, "").replace(/^"|"$/g, ""));
+      pendingFirstRows = firstBatch.length > 1 ? [firstBatch.slice(1)] : null;
+      streamBatchIter = it;
+      fetchMs = Date.now() - fetchT0; // time-to-first-batch (header)
       console.log("FEED_DIAGNOSTIC", JSON.stringify({
         streaming: true,
         first_32_bytes_hex: diagnostics.firstBytesHex,
@@ -1495,24 +1522,26 @@ serve(async (req) => {
     sample_rows: [] as any[],
   };
 
-  // Unified row source. Both paths yield already-parsed, quote-stripped,
-  // non-blank field arrays so the per-row classification body below is
-  // byte-for-byte identical to the pre-streaming version (every `continue`
-  // skips to the next feed row exactly as before).
-  async function* rowSource(): AsyncGenerator<string[]> {
-    if (streamingEnabled && streamRowIter) {
+  // Unified row source — yields BATCHES of raw parsed rows (string[][]). The
+  // inner per-row loop below applies the quote-strip and blank-line skip and is
+  // byte-for-byte identical to the pre-streaming classification body (every
+  // `continue` skips to the next row in the batch). Yielding batches rather than
+  // single rows keeps the async/await count to one-per-source-chunk instead of
+  // one-per-row, which is what kept the streaming path under Deno's resource
+  // limit (per-row awaits flakily tripped WORKER_RESOURCE_LIMIT).
+  const LEGACY_BATCH = 2000;
+  async function* batchSource(): AsyncGenerator<string[][]> {
+    if (streamingActive && streamBatchIter) {
       const streamT0 = Date.now();
       let seen = 0;
+      if (pendingFirstRows) for (const b of pendingFirstRows) yield b;
       while (true) {
-        const res = await streamRowIter.next();
+        const res = await streamBatchIter.next();
         if (res.done) break;
-        const f = res.value.map((x) => x.replace(/^"|"$/g, ""));
-        // Mirror the legacy `!line.trim()` blank-line skip: a blank source line
-        // parses to a single empty field.
-        if (f.length === 1 && !f[0].trim()) continue;
-        // Throughput heartbeat on long imports so we can see progress (and that
-        // a Sephora-sized stream isn't silently stuck) in the logs.
-        if (++seen % 100000 === 0) {
+        seen += res.value.length;
+        // Throughput heartbeat each time we cross a 100k-row boundary, so a
+        // Sephora-sized stream visibly makes progress in the logs.
+        if (seen % 100000 < res.value.length) {
           const secs = (Date.now() - streamT0) / 1000;
           console.log("STREAM_PROGRESS", JSON.stringify({
             rows_parsed: seen,
@@ -1520,19 +1549,30 @@ serve(async (req) => {
             rows_per_s: Math.round(seen / Math.max(secs, 0.001)),
           }));
         }
-        yield f;
+        yield res.value;
       }
     } else {
+      // Legacy: emit fixed-size batches so we never materialise an extra
+      // full-feed array (matches legacy memory profile).
+      let batch: string[][] = [];
       for (let i = 1; i < legacyLines!.length; i++) {
         const line = legacyLines![i];
         if (!line.trim()) continue;
-        yield parseRow(line).map((f) => f.replace(/^"|"$/g, ""));
+        batch.push(parseRow(line));
+        if (batch.length >= LEGACY_BATCH) { yield batch; batch = []; }
       }
+      if (batch.length) yield batch;
     }
   }
 
   try {
-  for await (const fields of rowSource()) {
+  for await (const batch of batchSource()) {
+  for (const rawFields of batch) {
+    // Quote-strip mirrors the legacy `parseRow(line).map(...)`; blank-line skip
+    // mirrors the legacy `!line.trim()` (a blank source line parses to one empty
+    // field). `continue` here skips to the next row in the batch.
+    const fields = rawFields.map((x) => x.replace(/^"|"$/g, ""));
+    if (fields.length === 1 && !fields[0].trim()) continue;
     feedRows++;
 
     const name = fields[idx.product_name] || "";
@@ -1840,12 +1880,13 @@ serve(async (req) => {
       });
     }
   }
+  }
   } catch (streamErr) {
     // A throw during streaming iteration means the fetch/inflate/parse pipeline
     // failed mid-feed (e.g. gzip corruption surfaced only after the magic-byte
     // check). Record status and return like the other feed-error paths. The
-    // legacy path's rowSource never throws, so this only fires when streaming.
-    if (streamingEnabled) {
+    // legacy path's batchSource never throws, so this only fires when streaming.
+    if (streamingActive) {
       const msg = streamErr instanceof FeedFetchError
         ? streamErr.message
         : `Streaming parse failed mid-feed: ${String(streamErr)}`;
@@ -1861,7 +1902,7 @@ serve(async (req) => {
   // lines.length; when streaming we only know the count after draining the
   // stream. It runs BEFORE any apply below, so a truncated feed still aborts
   // with zero writes — same outcome as the legacy pre-loop check.
-  if (streamingEnabled && feedRows < 50) {
+  if (streamingActive && feedRows < 50) {
     await recordImportStatus(supa, retailerId, "error",
       `Feed returned fewer than 50 rows (${feedRows}) — likely AWIN incident or bad feed ID`);
     return new Response(JSON.stringify({
