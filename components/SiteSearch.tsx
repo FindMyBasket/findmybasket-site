@@ -109,8 +109,17 @@ export function SiteSearch() {
         </svg>
       </button>
 
+      {/*
+        Search panel positioning. Mobile: pin to the viewport (fixed) with 1rem
+        gutters on both sides, so the panel always spans the screen with breathing
+        room. The previous `absolute right-0` anchored the panel to the search
+        button, which on mobile sits ~84px from the right edge (hamburger + nav
+        px-12), pushing a 361px panel's left edge ~52px off-screen and clipping
+        the placeholder. Desktop (md+): restore the original right-anchored 420px
+        dropdown — the wide viewport has room for it.
+      */}
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-[min(420px,calc(100vw-2rem))] bg-warm-white border border-border rounded-2xl shadow-xl overflow-hidden z-50">
+        <div className="fixed left-4 right-4 top-16 md:absolute md:left-auto md:right-0 md:top-full md:mt-2 md:w-[min(420px,calc(100vw-2rem))] bg-warm-white border border-border rounded-2xl shadow-xl overflow-hidden z-50">
           <div className="p-4 border-b border-border">
             <input
               ref={inputRef}
