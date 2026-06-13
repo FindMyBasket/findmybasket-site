@@ -117,7 +117,9 @@ const CATEGORY_ORDER: string[] = [
   'Skincare', 'Makeup',
 ];
 
-function compareCategories(a: string, b: string): number {
+// Shared product_type chip ordering. Exported so other product_type-driven chip
+// surfaces (e.g. the edit page) order their chips identically.
+export function compareCategories(a: string, b: string): number {
   const ai = CATEGORY_ORDER.indexOf(a);
   const bi = CATEGORY_ORDER.indexOf(b);
   if (ai === -1 && bi === -1) return a.localeCompare(b);
