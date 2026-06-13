@@ -1,6 +1,27 @@
-// Edge function: import-awin-feed (v6.20)
+// Edge function: import-awin-feed (v6.21)
 //
 // Generic, retailer-agnostic AWIN datafeed importer.
+//
+// v6.21 changes (variant-name augmentation + self-healing name backfill):
+//   - Feed URL now requests AWIN Generic 'colour' and 'size' columns. When
+//     populated and not already present in product_name, they are appended to
+//     the name ("<name> - <size> <colour>"). Recovers shade/size suffixes that
+//     advertisers truncate (Beauty Flash cuts product_name at ~70 chars),
+//     improving catalogue variant differentiation. 'description' deliberately
+//     NOT requested — unused by the augmentation and large enough to bloat the
+//     feed materially (works against the v6.20 memory work). One-line add if
+//     ever needed.
+//   - Augmentation has NO length threshold: the case-insensitive inclusion
+//     check alone gates it, so full names that already embed the shade/size
+//     short-circuit and truncations are caught regardless of where the cut fell.
+//   - Self-healing: when an augmented name is strictly longer than the stored
+//     product name, the matched/linked product's name is updated in place
+//     (deduped per product, longest wins). Fixes already-imported truncated
+//     products on the next refresh. Names only ever lengthen, never regress.
+//   - Diagnostics: counts.name_augmented_in_memory (augmentation fired),
+//     counts.name_updates_proposed (rows that would lengthen a stored name),
+//     counts.name_updates_distinct_products (deduped, == rows actually written),
+//     sample_name_augmented, v6_21_variant_fields (colour/size column presence).
 //
 // v6.20 changes (streaming I/O path, feature-flagged):
 //   - New retailer_import_config.streaming_enabled flag (default false). When
@@ -270,6 +291,14 @@ function buildFeedUrl(apiKey: string, feedId: string): string {
     // Image URL - feed includes a merchant-hosted image for the product.
     // Used for catalogue display.
     "merchant_image_url",
+    // v6.21: shade/variant disambiguation. AWIN Generic columns, populated
+    // sporadically by advertisers. Appended to product_name when present and
+    // not already in it — recovers shade/size suffixes that advertisers truncate
+    // (Beauty Flash cuts product_name at ~70 chars). 'description' intentionally
+    // NOT requested here: unused by the augmentation and heavy enough to bloat
+    // the feed (the v6.20 work was about shedding feed memory, not adding it).
+    "colour",
+    "size",
   ].join("%2C");
   return `https://productdata.awin.com/datafeed/download/apikey/${apiKey}/fid/${feedId}/format/csv/language/en/delimiter/%2C/compression/gzip/adultcontent/1/columns/${cols}/`;
 }
@@ -1108,6 +1137,11 @@ serve(async (req) => {
   }
 }
   const sizeByProductId = new Map<number, string>();
+  // v6.21: id → current stored product name. Sourced from allProducts (every
+  // product), so it serves both the existing-row update path (retailer_prices
+  // has no name column) and the cross-retailer matched-link path. Used to gate
+  // self-healing name updates on "augmented name strictly longer than stored".
+  const nameByProductId = new Map<number, string>();
   const existingBrandSet = new Set<string>();
   for (const p of allProducts) {
     const exactKey = buildMatchKey(p.brand || "", p.name);
@@ -1118,6 +1152,7 @@ serve(async (req) => {
       productByStripped.set(strippedKey, p.id);
     }
     sizeByProductId.set(p.id, extractSize(exactKey));
+    nameByProductId.set(p.id, p.name || "");
     if (p.brand) {
       const normBrand = String(p.brand).toLowerCase().trim();
       if (normBrand) existingBrandSet.add(normBrand);
@@ -1367,6 +1402,11 @@ serve(async (req) => {
     // Google Shopping–specific fields used by row-level mapper
     sale_price: number;
     availability: number;
+    // v6.21: dedicated variant fields (AWIN only; -1 in the google_shopping
+    // schema, which has no equivalent columns). 'size' is named size_field to
+    // avoid colliding with the common `size` identifier elsewhere.
+    colour: number;
+    size_field: number;
   };
 
   let idx: ColIdx;
@@ -1390,6 +1430,8 @@ serve(async (req) => {
       image_url: columns.indexOf("image_link"),
       sale_price: columns.indexOf("sale_price"),
       availability: columns.indexOf("availability"),
+      colour: -1,       // no equivalent in the Darwin/Google Shopping schema
+      size_field: -1,
     };
   } else {
     idx = {
@@ -1409,6 +1451,8 @@ serve(async (req) => {
       image_url: columns.indexOf("merchant_image_url"),
       sale_price: -1,
       availability: -1,
+      colour: columns.indexOf("colour"),
+      size_field: columns.indexOf("size"),
     };
   }
 
@@ -1448,6 +1492,24 @@ serve(async (req) => {
   let countCreateNew = 0;
   let countSkippedNewBrand = 0;
   let countSizeMismatchRejected = 0;
+  // v6.21: variant-name augmentation + self-healing name updates.
+  // Two counters, deliberately split: a refresh after the heal will still show
+  // countNameAugmentedInMemory > 0 (the feed name is augmented every run) but
+  // countNameUpdatesProposed should fall toward 0 once the DB names are healed.
+  // Tracking only one would conflate "augmentation working" with "DB still
+  // stale".
+  let countNameAugmentedInMemory = 0;   // rows where augmentation fired (name !== rawName)
+  let countNameUpdatesProposed = 0;     // subset whose stored DB name would be lengthened
+  const sampleNameAugmented: any[] = [];
+  const productNameUpdates: Array<{ product_id: number; new_name: string }> = [];
+  // v6.21 DIAGNOSTIC (measurement-only): how often the feed actually POPULATES
+  // the colour/size columns, independent of whether augmentation fired. Lets us
+  // tell "columns present but empty" from "columns present but value already in
+  // name" when name_augmented_in_memory comes back 0.
+  let countFeedColourPopulated = 0;
+  let countFeedSizePopulated = 0;
+  let countFeedVariantRedundant = 0;  // populated, but value already in name (so no append)
+  const sampleFeedVariantRows: any[] = [];
   // v6 counters
   let countV6Excluded = 0;
   const v6ExclusionBreakdown: Record<string, number> = {};
@@ -1575,7 +1637,54 @@ serve(async (req) => {
     if (fields.length === 1 && !fields[0].trim()) continue;
     feedRows++;
 
-    const name = fields[idx.product_name] || "";
+    const rawName = fields[idx.product_name] || "";
+    // v6.21: append colour/size from dedicated feed fields when present and not
+    // already reflected in product_name. Catches advertiser-side truncations
+    // (Beauty Flash truncates product_name at ~70 chars, dropping shade/size
+    // suffixes) and improves variant differentiation generally. No length
+    // threshold — the case-insensitive inclusion check alone gates it, so full
+    // names that already embed the value short-circuit, and truncations are
+    // caught regardless of where the cut fell. `name` (augmented) flows through
+    // categorisation, match-key building and storage from here down.
+    const feedColour = idx.colour >= 0 ? (fields[idx.colour] || "").trim() : "";
+    const feedSize = idx.size_field >= 0 ? (fields[idx.size_field] || "").trim() : "";
+    // DIAGNOSTIC: measure raw population of the variant columns.
+    if (feedColour) countFeedColourPopulated++;
+    if (feedSize) countFeedSizePopulated++;
+    if (feedColour || feedSize) {
+      const ln = rawName.toLowerCase();
+      const colourRedundant = feedColour ? ln.includes(feedColour.toLowerCase()) : true;
+      const sizeRedundant = feedSize ? ln.includes(feedSize.toLowerCase()) : true;
+      if (colourRedundant && sizeRedundant) countFeedVariantRedundant++;
+      if (sampleFeedVariantRows.length < 25) {
+        sampleFeedVariantRows.push({
+          raw_name: rawName,
+          colour: feedColour || null,
+          size: feedSize || null,
+          colour_already_in_name: feedColour ? colourRedundant : null,
+          size_already_in_name: feedSize ? sizeRedundant : null,
+        });
+      }
+    }
+    let name = rawName;
+    if (feedColour || feedSize) {
+      const parts: string[] = [];
+      const lowerName = rawName.toLowerCase();
+      if (feedSize && !lowerName.includes(feedSize.toLowerCase())) parts.push(feedSize);
+      if (feedColour && !lowerName.includes(feedColour.toLowerCase())) parts.push(feedColour);
+      if (parts.length > 0) name = `${rawName} - ${parts.join(" ")}`;
+    }
+    if (name !== rawName) {
+      countNameAugmentedInMemory++;
+      if (sampleNameAugmented.length < 30) {
+        sampleNameAugmented.push({
+          original_name: rawName,
+          augmented_name: name,
+          colour: feedColour || null,
+          size: feedSize || null,
+        });
+      }
+    }
     const rawBrand = fields[idx.brand_name] || "";
     const brand = lookupCanonicalBrand(rawBrand);   // canonical from here down
     if (rawBrand) {
@@ -1703,6 +1812,16 @@ serve(async (req) => {
       countUpdate++;
       if (isOrdinary) ordinaryDiagnostic.matched_existing++;
       updateActions.push({ rp_id: existing.id, product_id: existing.product_id, price, url: wrappedUrl, in_stock: inStock, ean: rawEan, mpn: rawMpn, image_url: imageUrl });
+      // v6.21: self-heal a truncated stored name on this already-linked product.
+      // Gate on our augmentation having fired AND the augmented name being
+      // strictly longer than what's stored, so names only ever lengthen.
+      if (name !== rawName) {
+        const stored = nameByProductId.get(existing.product_id) || "";
+        if (name.length > stored.length) {
+          productNameUpdates.push({ product_id: existing.product_id, new_name: name });
+          countNameUpdatesProposed++;
+        }
+      }
       continue;
     }
 
@@ -1775,6 +1894,15 @@ serve(async (req) => {
       linkActions.push({ product_id: matchedProductId, ext_id: matchValue, price, url: wrappedUrl, in_stock: inStock, ean: rawEan, mpn: rawMpn, image_url: imageUrl });
       if (normEan && !eanToProductId.has(normEan)) eanToProductId.set(normEan, matchedProductId);
       if (normMpn && !mpnToProductId.has(normMpn)) mpnToProductId.set(normMpn, matchedProductId);
+      // v6.21: self-heal a truncated stored name on the matched product (same
+      // gate as the existing-row path — only ever lengthen).
+      if (name !== rawName) {
+        const stored = nameByProductId.get(matchedProductId) || "";
+        if (name.length > stored.length) {
+          productNameUpdates.push({ product_id: matchedProductId, new_name: name });
+          countNameUpdatesProposed++;
+        }
+      }
       if (sampleLinkExisting.length < 25) {
         sampleLinkExisting.push({ name, brand, matched_product_id: matchedProductId, price, matched_via: matchedVia });
       }
@@ -1925,6 +2053,15 @@ serve(async (req) => {
   // v6.17: shade extraction success on new products
   const v6ShadeExtracted = createActions.filter(a => a.shade != null).length;
 
+  // v6.21: dedupe proposed name updates to one per product (longest wins).
+  // Multiple feed rows (different shades) can map to the same product; the apply
+  // phase writes one update each, so this is the count that actually hits the DB.
+  const dedupedNameUpdates = new Map<number, string>();
+  for (const u of productNameUpdates) {
+    const cur = dedupedNameUpdates.get(u.product_id);
+    if (!cur || u.new_name.length > cur.length) dedupedNameUpdates.set(u.product_id, u.new_name);
+  }
+
   // v6.13: build top-N category paths breakdown (sorted by count desc)
   const categoryPathBreakdown = Array.from(categoryPathCounts.entries())
     .sort((a, b) => b[1] - a[1])
@@ -1959,6 +2096,9 @@ serve(async (req) => {
         would_create_new_product: countCreateNew,
         canonical_size_extracted_on_new: v6CanonicalSizeExtracted,
         shade_extracted_on_new: v6ShadeExtracted,
+        name_augmented_in_memory: countNameAugmentedInMemory,
+        name_updates_proposed: countNameUpdatesProposed,
+        name_updates_distinct_products: dedupedNameUpdates.size,
         rows_with_ean: rowsWithEan,
         rows_with_mpn: rowsWithMpn,
       },
@@ -2020,6 +2160,9 @@ serve(async (req) => {
       would_create_new_product: countCreateNew,
       canonical_size_extracted_on_new: v6CanonicalSizeExtracted,
       shade_extracted_on_new: v6ShadeExtracted,
+      name_augmented_in_memory: countNameAugmentedInMemory,
+      name_updates_proposed: countNameUpdatesProposed,
+      name_updates_distinct_products: dedupedNameUpdates.size,
       rows_with_ean: rowsWithEan,
       rows_with_mpn: rowsWithMpn,
     },
@@ -2035,6 +2178,21 @@ serve(async (req) => {
     category_path_breakdown: categoryPathBreakdown,
     create_new_cat_name_breakdown: createNewCatNameBreakdown,
     sample_create_new_empty_cat_name: sampleCreateNewEmptyCatName,
+    sample_name_augmented: sampleNameAugmented,
+    // v6.21: did the feed actually carry the variant columns? If both indices
+    // are -1, this advertiser doesn't ship colour/size and augmentation is a
+    // no-op for it (fall back to URL-based variant handling).
+    v6_21_variant_fields: {
+      colour_col_index: idx.colour,
+      size_col_index: idx.size_field,
+      colour_present: idx.colour >= 0,
+      size_present: idx.size_field >= 0,
+      // measurement-only: actual population of those columns across the feed
+      rows_with_feed_colour: countFeedColourPopulated,
+      rows_with_feed_size: countFeedSizePopulated,
+      rows_variant_redundant_already_in_name: countFeedVariantRedundant,
+    },
+    sample_feed_variant_rows: sampleFeedVariantRows,
     duration_ms_so_far: Date.now() - startTime,
   };
 
@@ -2185,6 +2343,27 @@ serve(async (req) => {
     }
   }
 
+  // 4. Self-healing product-name updates (v6.21). Augmented names strictly
+  // longer than the stored name, deduped to one per product. Individual updates
+  // (tiny single-row statements, no statement-timeout risk); volume self-limits
+  // — large on the first heal of a truncating retailer, ~0 on later refreshes.
+  // Run in small concurrent batches to keep wall time down without spawning a
+  // per-row await storm (which the v6.20 streaming notes flagged as a resource
+  // risk at ~thousands of awaits; batches of 20 stay well clear).
+  let nameUpdatesApplied = 0;
+  const nameUpdateEntries = Array.from(dedupedNameUpdates.entries());
+  for (let i = 0; i < nameUpdateEntries.length; i += 20) {
+    const chunk = nameUpdateEntries.slice(i, i + 20);
+    const results = await Promise.all(chunk.map(([pid, newName]) =>
+      supa.from("products").update({ name: newName }).eq("id", pid)
+        .then(({ error }) => (error ? { err: `product ${pid}: ${error.message}` } : { ok: true }))
+    ));
+    for (const r of results) {
+      if ("err" in r) errors.push(`name update (${r.err})`);
+      else nameUpdatesApplied++;
+    }
+  }
+
   // Update last_imported_at on the config row, and record the import outcome so
   // monitor-retailer-feeds can alert on failures immediately. Write-level errors
   // (rows that failed to upsert) count as an error status even though the feed
@@ -2216,6 +2395,7 @@ serve(async (req) => {
     updates_applied: updatesApplied,
     links_applied: linksApplied,
     creates_applied: createsApplied,
+    name_updates_applied: nameUpdatesApplied,
     error_count: errors.length,
     sample_errors: errors.slice(0, 10),
   };
