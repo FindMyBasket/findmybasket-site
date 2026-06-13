@@ -559,6 +559,15 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
 
   // ─── Step 3: Makeup detection ────────────────────────────────────────────
   const makeupCheck = (() => {
+    // Cushion foundations are unambiguous makeup, but their names commonly also
+    // contain skincare-trigger keywords (Mask Fit, SPF, Sun Protection) that
+    // would otherwise trip skincare detection (mask/peel/pack, SPF) first. Gate
+    // this before any other makeup check so cushions route to makeup regardless.
+    // Guard against cushion-related ACCESSORIES (pad/case/puff/sponge) — those
+    // are makeup_tools, denylisted in Step 1, not cushion foundations.
+    if (/\bcushion\b/.test(t) && !/\b(cushion (pad|case|puff|sponge)|refill only)\b/.test(t)) {
+      return true;
+    }
     if (/\b(lipstick|lip gloss|lip stain|lip lacquer|lip pencil|lip liner|lip tint|lip plumper|lip cream|lip paint|lip color|lip colour|lip shine|lip crayon|color balm|colour balm|liquid lip|matte lip|cream lip)\b/.test(t)) return true;
     if (/\b(mascara|eyeliner|eye liner|eye shadow|eyeshadow|eyebrows?|brows?)\b/.test(t)) return true;
     // Clinique 'Quickliner For Eye' brand-line pattern
@@ -615,7 +624,13 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
       subcategory = "lips";
     }
     // Face
-    else if (/\b(foundation|bb cream|cc cream|skin tint|tinted moisturiser|tinted moisturizer)\b/.test(t)) {
+    else if (/\bcushion\b/.test(t)) {
+      // Cushion foundations: most don't carry the word "foundation" in the name
+      // (TirTir Mask Fit, Clio Kill Cover, Unleashia, Missha, etc.), so resolve
+      // them to Foundation before the keyword-based Foundation branch below.
+      product_type = "Foundation";
+      subcategory = "face";
+    } else if (/\b(foundation|bb cream|cc cream|skin tint|tinted moisturiser|tinted moisturizer)\b/.test(t)) {
       product_type = "Foundation";
       subcategory = "face";
     } else if (/\b(concealer|colour corrector|color corrector)\b/.test(t)) {

@@ -78,7 +78,9 @@ type Case = {
   // reason (top_category null). Otherwise it asserts top_category === expect
   // and that the product is NOT excluded.
   excluded?: string;
-  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+  // When set, ALSO asserts the resolved product_type (not just top_category).
+  expectType?: string;
+  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
   note?: string;
 };
 
@@ -206,6 +208,23 @@ const CASES: Case[] = [
   { name: "skinChemists professional Men's Vitamin C Trio Anti-Ageing Skincare Kit", brand: "skinChemists professional", expect: "skincare", fixedBy: 0 },
   { name: "Laura Mercier Translucent Loose Setting Powder 29g", brand: "Laura Mercier", expect: "makeup", fixedBy: 0, note: "'loose'/round-ish words must not trip eyewear" },
   { name: "Clinique Square Compact Pressed Powder 10g", brand: "Clinique", expect: "makeup", fixedBy: 0, note: "frame-shape word 'square' without a /S model code stays makeup" },
+
+  // ── Commit 10: K-beauty cushion foundations → makeup/Foundation ────────────
+  // Cushion names commonly carry skincare-trigger keywords (Mask Fit, SPF, Sun)
+  // that previously tripped skincare detection (Mask / SPF) before makeup. The
+  // cushion gate must win at Step 3 and resolve product_type to Foundation.
+  { name: "TIRTIR Mask Fit Red Cushion SPF40 PA++ 18g", brand: "TirTir", expect: "makeup", expectType: "Foundation", fixedBy: 10, note: "'Mask' must not steal it to skincare Mask" },
+  { name: "CLIO Kill Cover Founwear Cushion All New SPF50+", brand: "Clio", expect: "makeup", expectType: "Foundation", fixedBy: 10 },
+  { name: "Unleashia Don't Touch Glass Pink Cushion 02 Dont Care", brand: "Unleashia", expect: "makeup", expectType: "Foundation", fixedBy: 10 },
+  { name: "MISSHA M Magic Cushion Moist Up SPF50+ PA+++", brand: "Missha", expect: "makeup", expectType: "Foundation", fixedBy: 10, note: "SPF must not steal it to skincare SPF" },
+  { name: "LANEIGE Neo Cushion Matte SPF42 PA++ 15g", brand: "Laneige", expect: "makeup", expectType: "Foundation", fixedBy: 10 },
+  // A cushion REFILL is the foundation product itself, not an accessory.
+  { name: "TIRTIR Mask Fit Red Cushion Refill 18g", brand: "TirTir", expect: "makeup", expectType: "Foundation", fixedBy: 10 },
+  // 10-guard: cushion ACCESSORIES (puff/case/pad/sponge) must NOT become a
+  // Foundation — the gate's negative lookahead keeps them out of makeup here.
+  { name: "Innisfree Air Magic Cushion Puff", brand: "Innisfree", expect: "skincare", fixedBy: 10, note: "accessory guard: cushion puff is not a foundation" },
+  // 10-control: a REAL sleeping mask (no 'cushion') must still route skincare/Mask.
+  { name: "LANEIGE Water Sleeping Mask 70ml", brand: "Laneige", expect: "skincare", expectType: "Mask", fixedBy: 0, note: "cushion change must not affect real masks" },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
@@ -225,7 +244,8 @@ for (const c of CASES) {
   const got = r.excluded ? `excl:${r.excluded}` : r.top_category;
   const ok = c.excluded
     ? r.excluded === c.excluded
-    : (r.top_category ?? null) === c.expect && !r.excluded;
+    : (r.top_category ?? null) === c.expect && !r.excluded &&
+      (c.expectType ? r.product_type === c.expectType : true);
   if (ok) pass++;
   else {
     fail++;
