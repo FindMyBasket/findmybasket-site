@@ -1099,15 +1099,19 @@ serve(async (req) => {
   }
 
   // Build lookup maps for fuzzy product matching.
+  // A stripped-key match must be size-verified (Tier 4), so the stripped map
+  // carries the product's canonical size alongside its id rather than keeping a
+  // separate id→size map. Phase 1 prep for shade-aware matching, which will
+  // extend StrippedEntry with a shade field.
+  type StrippedEntry = { id: number; size: string };
   const productByExact = new Map<string, number>();
-  const productByStripped = new Map<string, number>();
+  const productByStripped = new Map<string, StrippedEntry>();
   const urlToProductId = new Map<string, number>();  // URL → product_id (retailer-scoped via existingRows)
   for (const r of existingRows) {
    if (r.url && r.product_id != null) {
     urlToProductId.set(r.url, r.product_id);
   }
 }
-  const sizeByProductId = new Map<number, string>();
   const existingBrandSet = new Set<string>();
   for (const p of allProducts) {
     const exactKey = buildMatchKey(p.brand || "", p.name);
@@ -1115,9 +1119,8 @@ serve(async (req) => {
     if (!productByExact.has(exactKey)) productByExact.set(exactKey, p.id);
     const strippedKey = stripSize(exactKey);
     if (strippedKey && !productByStripped.has(strippedKey)) {
-      productByStripped.set(strippedKey, p.id);
+      productByStripped.set(strippedKey, { id: p.id, size: extractSize(exactKey) });
     }
-    sizeByProductId.set(p.id, extractSize(exactKey));
     if (p.brand) {
       const normBrand = String(p.brand).toLowerCase().trim();
       if (normBrand) existingBrandSet.add(normBrand);
@@ -1736,18 +1739,24 @@ serve(async (req) => {
       }
     }
 
-    // Tier 4: name stripped + size-verified match
+    // Tier 4: name stripped + size-verified match. Candidates now come only from
+    // productByStripped (each entry carries its own size). The former
+    // productByExact.get(strippedMatchKey) candidate is dropped: productByExact
+    // maps key→id with no size, so under the folded structure it can no longer
+    // be size-verified. It was reachable only for a product whose full exact key
+    // already equals strippedMatchKey, in which case that product is normally
+    // also present in productByStripped under the same key — so the same row is
+    // still covered, except in rare stripped-key collisions (verified no counter
+    // drift on the Beauty Bay + Beauty Flash dry-runs).
     if (!matchedProductId) {
-      const candidates: (number | undefined)[] = [
+      const candidates: (StrippedEntry | undefined)[] = [
         productByStripped.get(productMatchKey),
-        productByExact.get(strippedMatchKey),
         productByStripped.get(strippedMatchKey),
       ];
-      for (const candidateId of candidates) {
-        if (!candidateId) continue;
-        const targetSize = sizeByProductId.get(candidateId) || "";
-        if (sourceSize === targetSize) {
-          matchedProductId = candidateId;
+      for (const candidate of candidates) {
+        if (!candidate) continue;
+        if (sourceSize === candidate.size) {
+          matchedProductId = candidate.id;
           matchedVia = "name_stripped";
           countLinkViaNameStripped++; if (isOrdinary) ordinaryDiagnostic.linked_via_name_stripped++;
           break;
