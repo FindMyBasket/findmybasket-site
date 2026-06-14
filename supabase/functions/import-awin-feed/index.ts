@@ -391,7 +391,7 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
     // "...Le Parfum"/"...Parfum Intense" with no adjacent "50ml" — the old
     // size-anchored parfum arm missed them. "parfumed" is unaffected (\b after).
     ["fragrance", /\b(fragrance|perfume|cologne|parfum|eau de (parfum|toilette)|edt|edp|aftershave splash|aftershave spray|aftershave cologne|after.?shave \d+\s*(ml|oz)\b|after.?shave (splash|spray|cologne))\b/],
-    ["supplement", /\b(supplement|vitamin tablet|capsule|gummies|protein shake|meal replacement|powder drink)\b/],
+    ["supplement", /\b(supplement|vitamin tablet|capsule|gummies|protein shake|meal replacement|powder drink|fish oil|cod liver oil|effervescent tablet)\b/],
     ["oral_care", /\b(toothpaste|toothbrush|mouthwash|dental floss|whitening strip)\b/],
     ["period_care", /\b(tampons?|sanitary pads?|menstrual|period care|panty liner|pantyliner)\b/],
     ["deodorant", /\b(deodorant|antiperspirant|body spray)\b/],
@@ -424,6 +424,11 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
     // by descriptor patterns (bristle brush, boar bristle, paddle brush etc.)
     ["hair_tool", /\b(hair dryer|straightener|curling iron|curling wand|hair brush|paddle brush|bristle brush|boar bristle|comb|hair clip|hair tie|scrunchie|mason pearson)\b/],
     ["makeup_tool", /\b(makeup brush|beauty blender|sponge|eyelash curler|brush set|brush cleaner)\b/],
+    // device: electronic skincare appliances that carry the word "mask" (LED /
+    // light-therapy / photon / EMS face masks). They'd otherwise land in the
+    // skincare Mask bucket. Require an LED/therapy signal alongside "mask" so
+    // sheet/clay/sleeping masks are unaffected.
+    ["device", /\b(led|light therapy|photon)\b.*\bmask\b|\bmask\b.*\b(led|light therapy|photon)\b/],
     ["bath_set", /\b(gift set|bath set|body care set|grooming set|skincare set)\b/],
     // 'baby' must NOT match the Maybelline "Baby Lips" line (mainstream lip balm).
     // Match only when 'baby' clearly indicates infant/child product, not when it's
@@ -512,7 +517,7 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
     // Brand-name signals: brands whose entire range is hair (low risk of false
     // positives), so products with no hair keyword in the name still route to
     // hair (e.g. "Forming Cream", "Surf Infusion", "Full Dry Volume Blast").
-    const hairBrand = /\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs|american crew|bumble and bumble|bumble & bumble|living proof|redken|paul mitchell|pureology|color wow|colour wow|sachajuan|label\.?m|tigi|davines|schwarzkopf)\b/;
+    const hairBrand = /\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs|american crew|bumble and bumble|bumble & bumble|living proof|redken|paul mitchell|pureology|color wow|colour wow|sachajuan|label\.?m|tigi|davines|schwarzkopf|amika|lee stafford|tresemm[eé]|ogx|briogeo|umberto giannini)\b/;
     if (hairBrand.test(t)) return true;
     if (hairBrand.test(b)) return true;
     // 'Matrix' is a hair brand but also a common English word, so trust it only
@@ -535,7 +540,10 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
     } else if (/\b(hair colour|hair color|hair dye|hair toner|hair bleach|root touch.?up)\b/.test(t)) {
       product_type = "Hair Colour";
       subcategory = "colour";
-    } else if (/\b(hair (mask|treatment|repair|reconstruct|perfector))|bond builder|olaplex|protein treatment\b/.test(t)) {
+    } else if (/\b(hair (mask|treatment|repair|reconstruct|perfector)|mask|masque|treatment mask|repair mask|bond (builder|repair|maintenance)|protein treatment|deep condition(ing)? treatment)\b/.test(t) || /\bolaplex\b/.test(t)) {
+      // In-context bare "mask"/"masque"/"treatment" → Hair Treatment. We only
+      // reach here for products already routed to hair (Step 2), so a hair brand's
+      // "Repair Mask"/"Toning Treatment Mask" resolves to a treatment, not Hair Care.
       product_type = "Hair Treatment";
       subcategory = "treatment";
     } else if (/\b(hair (oil|serum|tonic))|scalp (oil|tonic|serum|treatment)\b/.test(t)) {
@@ -559,6 +567,15 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
 
   // ─── Step 3: Makeup detection ────────────────────────────────────────────
   const makeupCheck = (() => {
+    // Cushion foundations are unambiguous makeup, but their names commonly also
+    // contain skincare-trigger keywords (Mask Fit, SPF, Sun Protection) that
+    // would otherwise trip skincare detection (mask/peel/pack, SPF) first. Gate
+    // this before any other makeup check so cushions route to makeup regardless.
+    // Guard against cushion-related ACCESSORIES (pad/case/puff/sponge) — those
+    // are makeup_tools, denylisted in Step 1, not cushion foundations.
+    if (/\bcushion\b/.test(t) && !/\b(cushion (pad|case|puff|sponge)|refill only)\b/.test(t)) {
+      return true;
+    }
     if (/\b(lipstick|lip gloss|lip stain|lip lacquer|lip pencil|lip liner|lip tint|lip plumper|lip cream|lip paint|lip color|lip colour|lip shine|lip crayon|color balm|colour balm|liquid lip|matte lip|cream lip)\b/.test(t)) return true;
     if (/\b(mascara|eyeliner|eye liner|eye shadow|eyeshadow|eyebrows?|brows?)\b/.test(t)) return true;
     // Clinique 'Quickliner For Eye' brand-line pattern
@@ -615,7 +632,13 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
       subcategory = "lips";
     }
     // Face
-    else if (/\b(foundation|bb cream|cc cream|skin tint|tinted moisturiser|tinted moisturizer)\b/.test(t)) {
+    else if (/\bcushion\b/.test(t)) {
+      // Cushion foundations: most don't carry the word "foundation" in the name
+      // (TirTir Mask Fit, Clio Kill Cover, Unleashia, Missha, etc.), so resolve
+      // them to Foundation before the keyword-based Foundation branch below.
+      product_type = "Foundation";
+      subcategory = "face";
+    } else if (/\b(foundation|bb cream|cc cream|skin tint|tinted moisturiser|tinted moisturizer)\b/.test(t)) {
       product_type = "Foundation";
       subcategory = "face";
     } else if (/\b(concealer|colour corrector|color corrector)\b/.test(t)) {
@@ -665,10 +688,30 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
   // ─── Step 4: Skincare detection (existing logic, extended) ────────────────
   // Lip detection MUST run before generic balm/cream/lotion match,
   // otherwise "Lip Balm" gets classified as Moisturiser.
+  // Mask over-tagging guard: a coincidental "mask"/"peel"/"pack" token must not
+  // steal a product whose primary type is eye / acne-patch / peel-exfoliant /
+  // cleanser / toner-pad. These gates run BEFORE the Mask classifier, which then
+  // only fires on a genuine face-mask form. (Hair masks are handled upstream in
+  // Step 2 via the hair-brand whitelist.) Same precedence approach as the Step 3
+  // cushion gate.
   let skincare_product_type = "";
+  // Lip first, so "lip mask" → Lip Care not Mask.
   if (/\blip (balm|oil|treatment|mask|scrub|butter|conditioner)\b/.test(t)) skincare_product_type = "Lip Care";
-  else if (/\b(eye cream|eye serum|eye gel|eye mask|eye balm|under.?eye)\b/.test(t)) skincare_product_type = "Eye Care";
-  else if (/\b(mask|peel|pack)\b/.test(t)) skincare_product_type = "Mask";
+  // Eye context — creams/serums AND under-eye gel/hydrogel patches & pads → Eye Care.
+  else if (/\b(eye cream|eye serum|eye gel|eye mask|eye balm|under.?eye|eye (patch|patches|pad|pads)|(gel|hydrogel) (patch|patches))\b/.test(t)) skincare_product_type = "Eye Care";
+  // Acne/blemish hydrocolloid patches (spot stickers) → Treatment, NOT Mask.
+  else if (/\b(spot|acne|pimple|blemish|hydrocolloid|mighty)\b.{0,20}\b(patch|patches|sticker|stickers|dot|dots|star|stars)\b/.test(t) || /\bpimple patch(es)?\b/.test(t)) skincare_product_type = "Treatment";
+  // Peels are exfoliants — but a "peel-off" mask is a mask (caught below).
+  else if (/\b(peel|peeling)\b/.test(t) && !/\bpeel[- ]?off\b/.test(t)) skincare_product_type = "Exfoliator";
+  // Cleanser forms that collide with the Korean "pack" mask token (e.g.
+  // "Pore Pack Foam Cleanser") — claim them as Cleanser before the Mask branch.
+  else if (/\b(foam cleanser|cleansing foam|foaming cleanser|gel cleanser|cleansing gel|oil cleanser|cleansing oil|cleansing balm|cleansing water|micellar|face wash|facial wash|cleansing milk|milk cleanser)\b/.test(t)) skincare_product_type = "Cleanser";
+  // Toner-soaked pads → Toner. Ampoule/essence/serum pads fall through to Serum;
+  // exfoliating/peel pads were already claimed above. (Eye pads handled above.)
+  else if (/\b(toner pad|toning pad)\b/.test(t) || (/\b(pad|pads)\b/.test(t) && !/\b(ampoule|essence|serum|cotton|cushion|exfoliat|scrub|peel)\b/.test(t))) skincare_product_type = "Toner";
+  // Genuine face-mask forms only: the word "mask", or a real Korean "pack" mask.
+  // Bare "peel" and bare quantity "pack" ("3 Pack", "Pack of 100") no longer match.
+  else if (/\bmask\b/.test(t) || /\b(sleeping (gel |water |mask )?pack|wash[- ]?off pack|modell?ing pack|clay pack|nose pack|pore pack|peel[- ]?off pack|rubber (mask|pack)|hydrogel pack|jelly pack|zombie pack)\b/.test(t)) skincare_product_type = "Mask";
   else if (/\b(cleanser|cleansing|wash|foam)\b/.test(t)) skincare_product_type = "Cleanser";
   else if (/\btoner\b/.test(t)) skincare_product_type = "Toner";
   else if (/\b(serum|ampoule|essence)\b/.test(t)) skincare_product_type = "Serum";

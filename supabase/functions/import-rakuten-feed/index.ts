@@ -80,7 +80,7 @@ function inferCategorisation(name, brand = "") {
     ],
     [
       "supplement",
-      /\b(supplement|vitamin tablet|capsule|gummies|protein shake|meal replacement|powder drink)\b/
+      /\b(supplement|vitamin tablet|capsule|gummies|protein shake|meal replacement|powder drink|fish oil|cod liver oil|effervescent tablet)\b/
     ],
     [
       "oral_care",
@@ -105,6 +105,13 @@ function inferCategorisation(name, brand = "") {
     [
       "makeup_tool",
       /\b(makeup brush|beauty blender|sponge|eyelash curler|brush set|brush cleaner)\b/
+    ],
+    [
+      // device: LED / light-therapy / photon face-mask appliances — keep them
+      // out of the skincare Mask bucket. Require an LED/therapy signal alongside
+      // "mask" so sheet/clay/sleeping masks are unaffected.
+      "device",
+      /\b(led|light therapy|photon)\b.*\bmask\b|\bmask\b.*\b(led|light therapy|photon)\b/
     ],
     [
       "bath_set",
@@ -140,8 +147,8 @@ function inferCategorisation(name, brand = "") {
     if (/\b(hair (colour|color|dye|toner|bleach))\b/.test(t)) return true;
     if (/\b(dry shampoo|hair perfume|root touch.?up|heat protect|frizz control)\b/.test(t)) return true;
     if (/\b(hairspray|hair spray|hair lacquer|setting spray hair)\b/.test(t)) return true;
-    if (/\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs)\b/.test(t)) return true;
-    if (/\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs)\b/.test(b)) return true;
+    if (/\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs|amika|lee stafford|tresemm[eé]|ogx|briogeo|umberto giannini)\b/.test(t)) return true;
+    if (/\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs|amika|lee stafford|tresemm[eé]|ogx|briogeo|umberto giannini)\b/.test(b)) return true;
     return false;
   })();
   if (hairCheck) {
@@ -156,7 +163,9 @@ function inferCategorisation(name, brand = "") {
     } else if (/\b(hair colour|hair color|hair dye|hair toner|hair bleach|root touch.?up)\b/.test(t)) {
       product_type = "Hair Colour";
       subcategory = "colour";
-    } else if (/\b(hair (mask|treatment|repair|reconstruct|perfector))|bond builder|olaplex|protein treatment\b/.test(t)) {
+    } else if (/\b(hair (mask|treatment|repair|reconstruct|perfector)|mask|masque|treatment mask|repair mask|bond (builder|repair|maintenance)|protein treatment|deep condition(ing)? treatment)\b/.test(t) || /\bolaplex\b/.test(t)) {
+      // In-context bare "mask"/"masque"/"treatment" → Hair Treatment (we only
+      // reach here for products already routed to hair in Step 2).
       product_type = "Hair Treatment";
       subcategory = "treatment";
     } else if (/\b(hair (oil|serum|tonic))|scalp (oil|tonic|serum|treatment)\b/.test(t)) {
@@ -266,10 +275,19 @@ function inferCategorisation(name, brand = "") {
     };
   }
   // ─── Step 4: Skincare detection (existing logic) ──────────────────────────
+  // Mask over-tagging guard: gates run BEFORE the Mask classifier so a
+  // coincidental "mask"/"peel"/"pack" token doesn't steal a product whose
+  // primary type is eye / acne-patch / peel-exfoliant / cleanser / toner-pad.
+  // The Mask branch then only fires on a genuine face-mask form. (Hair masks
+  // are handled upstream in Step 2 via the hair-brand whitelist.)
   let skincare_product_type = "";
   if (/\blip (balm|oil|treatment|mask|scrub|butter|conditioner)\b/.test(t)) skincare_product_type = "Lip Care";
-  else if (/\b(eye cream|eye serum|eye gel|eye mask|eye balm|under.?eye)\b/.test(t)) skincare_product_type = "Eye Care";
-  else if (/\b(mask|peel|pack)\b/.test(t)) skincare_product_type = "Mask";
+  else if (/\b(eye cream|eye serum|eye gel|eye mask|eye balm|under.?eye|eye (patch|patches|pad|pads)|(gel|hydrogel) (patch|patches))\b/.test(t)) skincare_product_type = "Eye Care";
+  else if (/\b(spot|acne|pimple|blemish|hydrocolloid|mighty)\b.{0,20}\b(patch|patches|sticker|stickers|dot|dots|star|stars)\b/.test(t) || /\bpimple patch(es)?\b/.test(t)) skincare_product_type = "Treatment";
+  else if (/\b(peel|peeling)\b/.test(t) && !/\bpeel[- ]?off\b/.test(t)) skincare_product_type = "Exfoliator";
+  else if (/\b(foam cleanser|cleansing foam|foaming cleanser|gel cleanser|cleansing gel|oil cleanser|cleansing oil|cleansing balm|cleansing water|micellar|face wash|facial wash|cleansing milk|milk cleanser)\b/.test(t)) skincare_product_type = "Cleanser";
+  else if (/\b(toner pad|toning pad)\b/.test(t) || (/\b(pad|pads)\b/.test(t) && !/\b(ampoule|essence|serum|cotton|cushion|exfoliat|scrub|peel)\b/.test(t))) skincare_product_type = "Toner";
+  else if (/\bmask\b/.test(t) || /\b(sleeping (gel |water |mask )?pack|wash[- ]?off pack|modell?ing pack|clay pack|nose pack|pore pack|peel[- ]?off pack|rubber (mask|pack)|hydrogel pack|jelly pack|zombie pack)\b/.test(t)) skincare_product_type = "Mask";
   else if (/\b(cleanser|cleansing|wash|foam)\b/.test(t)) skincare_product_type = "Cleanser";
   else if (/\btoner\b/.test(t)) skincare_product_type = "Toner";
   else if (/\b(serum|ampoule|essence)\b/.test(t)) skincare_product_type = "Serum";

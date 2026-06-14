@@ -6,34 +6,73 @@ import { getEdit, listEdits } from '../../../lib/edits';
 import {
   getEditStats,
   getEditTopBrands,
-  getEditFeaturedProducts,
+  getEditProductTypes,
+  getEditProducts,
 } from '../../../lib/edit-queries';
 
 export const revalidate = 3600;
+
+const PAGE_SIZE = 48;
+
+function buildUrl(slug: string, options: { type?: string | null; page?: number } = {}): string {
+  const params = new URLSearchParams();
+  if (options.type) params.set('type', options.type);
+  if (options.page && options.page > 1) params.set('page', String(options.page));
+  const qs = params.toString();
+  return `/edit/${slug}${qs ? `?${qs}` : ''}`;
+}
 
 // Pre-render edit pages at build time for SEO + performance
 export async function generateStaticParams() {
   return listEdits().map(edit => ({ slug: edit.slug }));
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: { slug: string };
+  searchParams: { type?: string };
+}) {
   const edit = getEdit(params.slug);
   if (!edit) return {};
+  if (searchParams.type) {
+    return {
+      title: `${edit.display_name} ${searchParams.type} best prices UK | FindMyBasket`,
+      description: `Compare ${edit.display_name} ${searchParams.type.toLowerCase()} prices across UK retailers. Find the best deal.`,
+    };
+  }
   return {
     title: edit.meta_title,
     description: edit.meta_description,
   };
 }
 
-export default async function EditPage({ params }: { params: { slug: string } }) {
+export default async function EditPage({
+  params,
+  searchParams,
+}: {
+  params: { slug: string };
+  searchParams: { page?: string; type?: string };
+}) {
   const edit = getEdit(params.slug);
   if (!edit) notFound();
 
-  const [stats, brands, products] = await Promise.all([
+  const page = searchParams.page ? parseInt(searchParams.page, 10) : 1;
+  const productType = searchParams.type;
+
+  const [stats, brands, productTypes, productResult] = await Promise.all([
     getEditStats(edit),
     getEditTopBrands(edit, 16),
-    getEditFeaturedProducts(edit, 24),
+    getEditProductTypes(edit),
+    getEditProducts(edit, page, PAGE_SIZE, productType),
   ]);
+
+  if (productType && productResult.totalCount === 0) {
+    notFound();
+  }
+
+  const totalPages = Math.ceil(productResult.totalCount / PAGE_SIZE);
 
   return (
     <SiteLayout>
@@ -120,21 +159,85 @@ export default async function EditPage({ params }: { params: { slug: string } })
         </section>
       )}
 
+      {productTypes.length > 0 && (
+        <section className="max-w-site mx-auto px-6 py-12">
+          <div className="flex items-baseline justify-between mb-8 flex-wrap gap-4">
+            <h2 className="font-serif text-3xl text-ink">Browse by type</h2>
+            {productType && (
+              <Link
+                href={buildUrl(edit.slug)}
+                className="text-sm text-ink-light hover:text-ink transition-colors"
+              >
+                ✕ Clear filter
+              </Link>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {productTypes.map(pt => {
+              const isActive = pt.product_type === productType;
+              return (
+                <Link
+                  key={pt.product_type}
+                  href={buildUrl(edit.slug, { type: isActive ? null : pt.product_type })}
+                  className={`rounded-full px-5 py-2.5 text-sm transition-colors border ${
+                    isActive
+                      ? 'bg-ink text-cream border-ink hover:bg-gold hover:border-gold'
+                      : 'bg-warm-white text-ink border-border hover:border-gold hover:bg-cream'
+                  }`}
+                >
+                  {pt.product_type}
+                  <span className={`ml-1.5 text-xs ${isActive ? 'text-cream/70' : 'text-ink-light'}`}>
+                    {pt.count}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <section className="max-w-site mx-auto px-6 py-12">
-        <h2 className="font-serif text-3xl text-ink mb-2">Featured products</h2>
+        <h2 className="font-serif text-3xl text-ink mb-2">Products</h2>
         <p className="text-ink-light mb-8">
-          Hand-picked from the {edit.display_name.toLowerCase()} catalogue.
+          {page > 1 ? `Page ${page} of ${totalPages}. ` : ''}
+          {productResult.totalCount.toLocaleString()} {productType ? `${productType.toLowerCase()} ` : ''}product{productResult.totalCount === 1 ? '' : 's'}.
         </p>
-        {products.length === 0 ? (
+        {productResult.products.length === 0 ? (
           <div className="bg-warm-white border border-border rounded-2xl p-12 text-center text-ink-light">
-            No featured products available yet. Check back soon.
+            No products available yet. Check back soon.
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {products.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {productResult.products.map(product => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-12">
+                {page > 1 && (
+                  <Link
+                    href={buildUrl(edit.slug, { type: productType, page: page - 1 })}
+                    className="px-5 py-2.5 bg-warm-white border border-border rounded-full text-sm text-ink hover:border-gold transition-colors"
+                  >
+                    ← Previous
+                  </Link>
+                )}
+                <span className="text-sm text-ink-light px-4">
+                  Page {page} of {totalPages}
+                </span>
+                {page < totalPages && (
+                  <Link
+                    href={buildUrl(edit.slug, { type: productType, page: page + 1 })}
+                    className="px-5 py-2.5 bg-warm-white border border-border rounded-full text-sm text-ink hover:border-gold transition-colors"
+                  >
+                    Next →
+                  </Link>
+                )}
+              </div>
+            )}
+          </>
         )}
       </section>
     </SiteLayout>
