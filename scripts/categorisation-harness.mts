@@ -80,7 +80,7 @@ type Case = {
   excluded?: string;
   // When set, ALSO asserts the resolved product_type (not just top_category).
   expectType?: string;
-  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
   note?: string;
 };
 
@@ -225,6 +225,51 @@ const CASES: Case[] = [
   { name: "Innisfree Air Magic Cushion Puff", brand: "Innisfree", expect: "skincare", fixedBy: 10, note: "accessory guard: cushion puff is not a foundation" },
   // 10-control: a REAL sleeping mask (no 'cushion') must still route skincare/Mask.
   { name: "LANEIGE Water Sleeping Mask 70ml", brand: "Laneige", expect: "skincare", expectType: "Mask", fixedBy: 0, note: "cushion change must not affect real masks" },
+
+  // ── Commit 11: Mask over-tagging — precedence gates before the Mask classifier
+  // The Mask classifier conflated hair masks, acne patches, eye patches, peels,
+  // foam/pack cleansers, toner pads and LED devices into skincare/Mask. Each
+  // class below now routes by its primary product type instead.
+  // 11a. Hair masks from hair-only brands (no "hair" keyword in the name) →
+  //      hair/Hair Treatment, via the Step 2 brand whitelist.
+  { name: "Amika The Kure Intense Bond Repair Mask 250ml", brand: "Amika", expect: "hair", expectType: "Hair Treatment", fixedBy: 11, note: "hair-context beats face Mask" },
+  { name: "Lee Stafford Bleach Blondes Ice White Toning Treatment Mask 200ml", brand: "Lee Stafford", expect: "hair", expectType: "Hair Treatment", fixedBy: 11 },
+  { name: "TRESemmé Repair & Protect Hair Mask 300ml", brand: "TRESemmé", expect: "hair", expectType: "Hair Treatment", fixedBy: 11 },
+  // 11b. Acne / blemish hydrocolloid patches → skincare/Treatment, NOT Mask.
+  { name: "Hero Mighty Patch Original Spot Patches, 24 Hydrocolloid Pimple Patches", brand: "Hero", expect: "skincare", expectType: "Treatment", fixedBy: 11 },
+  { name: "CeraVe Blemish Barrier Patches for Blemishes & Redness 22 Pieces", brand: "CeraVe", expect: "skincare", expectType: "Treatment", fixedBy: 11 },
+  // 11c. Under-eye gel/hydrogel patches & pads → skincare/Eye Care, NOT Mask.
+  { name: "ErthSkin Hyaluronic Acid + Collagen Hydrogel Eye Pads 5 x 2", brand: "Erth Skin London", expect: "skincare", expectType: "Eye Care", fixedBy: 11 },
+  { name: "Thank You Farmer Rice Pure Jelly Hydrogel Brightening Eye Patches 60pc", brand: "Thank You Farmer", expect: "skincare", expectType: "Eye Care", fixedBy: 11 },
+  // 11d. Foam / "pack" cleansers → skincare/Cleanser, NOT Mask ('pack' collision).
+  { name: "MISSHA Amazon Red Clay Pore Pack Foam Cleanser 120ml", brand: "MISSHA", expect: "skincare", expectType: "Cleanser", fixedBy: 11, note: "'pore pack' must not steal it to Mask" },
+  { name: "MISSHA Artemisia Pack Foam Cleanser 150ml", brand: "MISSHA", expect: "skincare", expectType: "Cleanser", fixedBy: 11 },
+  // 11e. Peels are exfoliants → skincare/Exfoliator, even when "mask" co-occurs.
+  { name: "Clinique Clarifying Do-Over Peel 30ml", brand: "Clinique", expect: "skincare", expectType: "Exfoliator", fixedBy: 11 },
+  { name: "Whip&Woo Iced Pineapple Enzyme Peel Face Mask Gel 100ml", brand: "Whip&Woo", expect: "skincare", expectType: "Exfoliator", fixedBy: 11, note: "peel beats co-occurring 'mask'" },
+  // 11f. Toner-soaked pads → skincare/Toner, NOT Mask.
+  { name: "MEDICUBE Zero Pore Madecassoside Pads Mild (70 Pads)", brand: "medicube", expect: "skincare", expectType: "Toner", fixedBy: 11 },
+  { name: "SKINFOOD Carrot Carotene Calming Water Pad (60 pads)", brand: "Skinfood", expect: "skincare", expectType: "Toner", fixedBy: 11 },
+  // 11g. LED / light-therapy face-mask DEVICES → excluded, NOT skincare/Mask.
+  { name: "Theragun Therabody Theraface Mask LED Light Therapy Skincare", brand: "Theragun", expect: null, excluded: "device", fixedBy: 11 },
+  { name: "RIO Facelite Beauty Boosting LED Mask", brand: "RIO", expect: null, excluded: "device", fixedBy: 11 },
+  // 11h. Coincidental quantity "pack" no longer routes to Mask. A real serum in a
+  //      multipack resolves by its true type; out-of-scope packs are excluded.
+  { name: "The Ordinary Niacinamide 10% + Zinc 1% Serum 30ml 2 Pack", brand: "The Ordinary", expect: "skincare", expectType: "Serum", fixedBy: 11, note: "'2 Pack' must not route to Mask" },
+  { name: "Solgar Triple Strength Omega-3 Softgels - Pack of 100", brand: "Solgar", expect: "skincare", fixedBy: 11, note: "out-of-scope, but 'Pack of 100' must not route to Mask (≠ excluded — see multivitamin/softgel guards below)" },
+  // 11i. The denylist must NOT over-reach: "multivitamin" and "soft gel" are
+  //      skincare marketing terms, not just supplements. These stay in-catalogue.
+  { name: "Dermalogica MultiVitamin Power Recovery Masque 75ml", brand: "Dermalogica", expect: "skincare", fixedBy: 11, note: "'multivitamin' must not be excluded as a supplement" },
+  { name: "Drunk Elephant C-Tango Multivitamin Eye Cream 15ml", brand: "Drunk Elephant", expect: "skincare", expectType: "Eye Care", fixedBy: 11 },
+  { name: "2bTanned Watermelon Intensifying Soft Gel 200gr", brand: "2bTanned", expect: "skincare", fixedBy: 11, note: "'soft gel' tanning product must not be excluded as a supplement" },
+
+  // 11-controls: genuine masks must STILL route to skincare/Mask after the gates.
+  { name: "Round Lab Birch Juice Moisturizing Wash Off Pack 80ml", brand: "Round Lab", expect: "skincare", expectType: "Mask", fixedBy: 0, note: "real Korean wash-off pack stays Mask" },
+  { name: "Mediheal Tea Tree Care Solution Essence Mask Sheet", brand: "Mediheal", expect: "skincare", expectType: "Mask", fixedBy: 0, note: "essence sheet mask stays Mask (serum-in-name must not steal)" },
+  { name: "Some By Mi Bye Bye Blackhead Peel Off Mask 100ml", brand: "Some By Mi", expect: "skincare", expectType: "Mask", fixedBy: 0, note: "peel-OFF mask stays Mask, not Exfoliator" },
+  { name: "Clinique Clarifying Charcoal Clay Mask 100ml", brand: "Clinique", expect: "skincare", expectType: "Mask", fixedBy: 0 },
+  // 11-control: an ampoule/essence pad stays Serum (not stolen by the toner-pad gate).
+  { name: "beplain Madecassoside Calming Ampoule Pad 70 pads", brand: "beplain", expect: "skincare", expectType: "Serum", fixedBy: 0, note: "ampoule pad → Serum, not Toner" },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
