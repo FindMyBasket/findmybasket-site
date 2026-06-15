@@ -956,6 +956,11 @@ serve(async (req) => {
 
   const retailerId = body.retailer_id;
   const dryRun = body.dry_run !== false; // default true
+  // Diagnostic probe (PHASE_2_CHUNKED_APPLY big-feed 546 hunt): when body.mem_trace
+  // is true, write a Deno.memoryUsage() + accumulator-size snapshot to
+  // import_memory_trace after every chunk. Rows commit incrementally so the trace
+  // survives the 546 hard-kill and is queryable afterwards. Off for normal runs.
+  const memTrace = body.mem_trace === true;
 
   if (!retailerId || typeof retailerId !== "number") {
     return new Response(JSON.stringify({
@@ -1769,8 +1774,18 @@ serve(async (req) => {
   // body, then flush applied actions once they cross FLUSH_THRESHOLD. Peak memory
   // is bounded by one block's lookup maps + FLUSH_THRESHOLD pending actions,
   // rather than the whole-feed loads + whole-feed action arrays that OOM'd.
+  // NOTE (big-feed 546, diagnosed via import_memory_trace 2026-06-15): on the
+  // streaming path heap stays bounded (~23-33MB), so the chunked apply fixed the
+  // MATCHING/heap memory. The remaining 546 on Stylevana is the per-chunk product
+  // OVER-FETCH: its product-dense brands (Kose 2215, Shiseido 1715, L'Oréal 1837,
+  // …) recur in nearly every chunk, so loadChunkMaps refetches ~19k products via
+  // ~19 paginated queries PER CHUNK — the query/response churn (native/RSS, not
+  // heap) trips the limit. CHUNK_SIZE alone doesn't fix it (dense brands recur at
+  // any size; tried 500, still 546). FIX (next): a cross-chunk lazy per-brand
+  // product cache so each brand is fetched ONCE, not every chunk.
   const CHUNK_SIZE = 2000;
   let chunkRows: string[][] = [];
+  let chunkNo = 0;
   async function runChunk(): Promise<void> {
     if (!chunkRows.length) return;
     await loadChunkMaps(chunkRows);
@@ -2129,6 +2144,21 @@ serve(async (req) => {
         url: wrappedUrl,
       });
     }
+    }
+    chunkNo++;
+    if (memTrace) {
+      const m = (Deno as any).memoryUsage ? (Deno as any).memoryUsage() : { rss: 0, heapTotal: 0, heapUsed: 0, external: 0 };
+      try {
+        await supa.from("import_memory_trace").insert({
+          run_id: runStartedAt, retailer_id: retailerId, chunk_no: chunkNo, rows_seen: feedRows,
+          rss: m.rss, heap_used: m.heapUsed, heap_total: m.heapTotal, external: m.external,
+          seen_ean: seenEanToProductId.size, seen_mpn: seenMpnToProductId.size,
+          created_key: createdByMatchKey.size, created_urls: createdUrls.size,
+          unmatched_brands: unmatchedBrandCounts.size, category_paths: categoryPathCounts.size,
+          chunk_exact: productByExact.size, chunk_stripped: productByStripped.size,
+          chunk_extid: existingByExtId.size, pending: pendingActions(),
+        });
+      } catch (_) { /* never let the probe break the run */ }
     }
     chunkRows = [];
     if (pendingActions() >= FLUSH_THRESHOLD) await flush();
