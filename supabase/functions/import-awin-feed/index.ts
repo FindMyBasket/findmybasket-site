@@ -930,7 +930,7 @@ function extractSize(normalised: string): string {
 async function recordImportStatus(
   supa: any,
   retailerId: number,
-  status: "ok" | "error",
+  status: "ok" | "error" | "running",
   errorMsg: string | null,
 ): Promise<void> {
   try {
@@ -991,6 +991,17 @@ serve(async (req) => {
       error: "Retailer import is disabled (config.enabled = false). Dry-runs (dry_run=true) are permitted for inspection.",
       retailer_id: retailerId,
     }), { status: 400, headers: { "Content-Type": "application/json" } });
+  }
+
+  // §7 silent-staleness fix: stamp 'running' at the very top of a real apply,
+  // before any fetch/decompress/parse work. A hard worker kill (HTTP 546 OOM)
+  // terminates the process before the final status write, so without this the
+  // row would keep the previous run's 'ok' and the failure stays invisible.
+  // Leaving 'running' behind lets monitor-retailer-feeds flag a run that died
+  // mid-flight. Gated to real applies — a dry_run returns before the apply
+  // phase and must not clobber the last real outcome or strand a 'running'.
+  if (!dryRun) {
+    await recordImportStatus(supa, retailerId, "running", null);
   }
 
   const categoryExcludes: string[] = Array.isArray(config.category_excludes)
@@ -1062,6 +1073,7 @@ serve(async (req) => {
       .order("id", { ascending: true })
       .range(from, from + 999);
     if (error) {
+      await recordImportStatus(supa, retailerId, "error", `DB read failed (retailer_prices): ${error.message ?? error}`);
       return new Response(JSON.stringify({ error: "DB read failed (retailer_prices)", details: error }), { status: 500 });
     }
     if (!data || data.length === 0) break;
@@ -1087,6 +1099,7 @@ serve(async (req) => {
         .order("ean", { ascending: true })
         .range(efrom, efrom + 999);
       if (error) {
+        await recordImportStatus(supa, retailerId, "error", `DB read failed (ean_product_index): ${error.message ?? error}`);
         return new Response(JSON.stringify({ error: "DB read failed (ean_product_index)", details: error }), { status: 500 });
       }
       if (!data || data.length === 0) break;
@@ -1109,6 +1122,7 @@ serve(async (req) => {
         .order("mpn", { ascending: true })
         .range(mfrom, mfrom + 999);
       if (error) {
+        await recordImportStatus(supa, retailerId, "error", `DB read failed (mpn_product_index): ${error.message ?? error}`);
         return new Response(JSON.stringify({ error: "DB read failed (mpn_product_index)", details: error }), { status: 500 });
       }
       if (!data || data.length === 0) break;
@@ -1133,6 +1147,7 @@ serve(async (req) => {
       .order("id", { ascending: true })
       .range(from, from + 999);
     if (error) {
+      await recordImportStatus(supa, retailerId, "error", `DB read failed (products): ${error.message ?? error}`);
       return new Response(JSON.stringify({ error: "DB read failed (products)", details: error }), { status: 500 });
     }
     if (!data || data.length === 0) break;

@@ -513,6 +513,7 @@ function extractSize(normalised) {
 // Records the outcome of an import attempt on the retailer's config row so that
 // monitor-retailer-feeds can alert on failures immediately (instead of waiting
 // for the 48h staleness backstop). Best-effort: never throws.
+// status: "ok" | "error" | "running"
 async function recordImportStatus(supa, retailerId, status, errorMsg) {
   try {
     await supa.from("retailer_import_config").update({
@@ -585,6 +586,15 @@ serve(async (req)=>{
       }
     });
   }
+  // §7 silent-staleness fix: stamp 'running' at the very top of a real apply,
+  // before any feed download/parse. A hard worker kill (HTTP 546 OOM) ends the
+  // process before the final status write, so without this the row keeps the
+  // previous run's 'ok' and the failure stays invisible. Leaving 'running'
+  // behind lets monitor-retailer-feeds flag a mid-flight death. Gated to real
+  // applies — a dry_run returns before apply and must not strand a 'running'.
+  if (!dryRun) {
+    await recordImportStatus(supa, retailerId, "running", null);
+  }
   const categoryExcludes = Array.isArray(config.category_excludes) ? config.category_excludes : [];
   const nameExcludes = Array.isArray(config.name_excludes) ? config.name_excludes : [];
   const categoryPathMustContain = Array.isArray(config.category_path_must_contain) ? config.category_path_must_contain : [];
@@ -626,6 +636,7 @@ serve(async (req)=>{
       ascending: true
     }).range(from, from + 999);
     if (error) {
+      await recordImportStatus(supa, retailerId, "error", `DB read failed (retailer_prices): ${error.message ?? error}`);
       return new Response(JSON.stringify({
         error: "DB read failed (retailer_prices)",
         details: error
@@ -652,6 +663,7 @@ serve(async (req)=>{
         ascending: true
       }).range(efrom, efrom + 999);
       if (error) {
+        await recordImportStatus(supa, retailerId, "error", `DB read failed (ean_product_index): ${error.message ?? error}`);
         return new Response(JSON.stringify({
           error: "DB read failed (ean_product_index)",
           details: error
@@ -677,6 +689,7 @@ serve(async (req)=>{
         ascending: true
       }).range(mfrom, mfrom + 999);
       if (error) {
+        await recordImportStatus(supa, retailerId, "error", `DB read failed (mpn_product_index): ${error.message ?? error}`);
         return new Response(JSON.stringify({
           error: "DB read failed (mpn_product_index)",
           details: error
@@ -708,6 +721,7 @@ serve(async (req)=>{
         ascending: true
       }).range(from, from + 999);
       if (error) {
+        await recordImportStatus(supa, retailerId, "error", `DB read failed (products): ${error.message ?? error}`);
         return new Response(JSON.stringify({
           error: "DB read failed (products)",
           details: error
@@ -1082,6 +1096,12 @@ serve(async (req)=>{
   // Safety cap — bumped to 20K (Superdrug-feed-sized).
   // Returns 200 status so Supabase UI shows the breakdown body.
   if (countCreateNew > 20000) {
+    // Clear the 'running' stamp on a real run (a dry-run never set it, and a
+    // cap-hit during inspection is informational, not a failure).
+    if (!dryRun) {
+      await recordImportStatus(supa, retailerId, "error",
+        `Would create more than 20000 new products (${countCreateNew}) in one run — aborting as a safety cap`);
+    }
     return new Response(JSON.stringify({
       error: "Would create more than 20000 new products in one run — aborting as a safety cap",
       retailer_id: retailerId,

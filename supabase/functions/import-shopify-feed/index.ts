@@ -507,6 +507,32 @@ function extractSize(normalised: string): string {
 }
 
 // ============================================================================
+// Records the outcome of an import attempt on the retailer's config row so that
+// monitor-retailer-feeds can alert on failures immediately (instead of waiting
+// for the staleness backstop). Best-effort: never throws — a failure to write
+// status must not change the import's own success/failure. Parity with
+// import-awin-feed / import-rakuten-feed.
+async function recordImportStatus(
+  supa: any,
+  retailerId: number,
+  status: "ok" | "error" | "running",
+  errorMsg: string | null,
+): Promise<void> {
+  try {
+    await supa
+      .from("retailer_import_config")
+      .update({
+        last_attempt_at: new Date().toISOString(),
+        last_import_status: status,
+        last_import_error: errorMsg ? String(errorMsg).slice(0, 1000) : null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("retailer_id", retailerId);
+  } catch (e) {
+    console.error("recordImportStatus failed", String(e));
+  }
+}
+
 // Main handler
 // ============================================================================
 
@@ -588,6 +614,16 @@ serve(async (req) => {
     }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
+  // §7 silent-staleness fix: stamp 'running' at the very top of a real apply,
+  // before any feed download/parse. A hard worker kill (HTTP 546 OOM) ends the
+  // process before the final status write, so without this the row keeps the
+  // previous run's 'ok' and the failure stays invisible. Leaving 'running'
+  // behind lets monitor-retailer-feeds flag a mid-flight death. Gated to real
+  // applies — a dry_run returns before apply and must not strand a 'running'.
+  if (!dryRun) {
+    await recordImportStatus(supa, retailerId, "running", null);
+  }
+
   const categoryExcludes: string[] = Array.isArray(config.category_excludes)
     ? config.category_excludes
     : [];
@@ -610,6 +646,7 @@ serve(async (req) => {
       .order("id", { ascending: true })
       .range(from, from + 999);
     if (error) {
+      await recordImportStatus(supa, retailerId, "error", `DB read failed (retailer_prices): ${error.message ?? error}`);
       return new Response(JSON.stringify({ error: "DB read failed (retailer_prices)", details: error }), { status: 500 });
     }
     if (!data || data.length === 0) break;
@@ -635,6 +672,7 @@ serve(async (req) => {
         .order("ean", { ascending: true })
         .range(efrom, efrom + 999);
       if (error) {
+        await recordImportStatus(supa, retailerId, "error", `DB read failed (ean_product_index): ${error.message ?? error}`);
         return new Response(JSON.stringify({ error: "DB read failed (ean_product_index)", details: error }), { status: 500 });
       }
       if (!data || data.length === 0) break;
@@ -657,6 +695,7 @@ serve(async (req) => {
         .order("mpn", { ascending: true })
         .range(mfrom, mfrom + 999);
       if (error) {
+        await recordImportStatus(supa, retailerId, "error", `DB read failed (mpn_product_index): ${error.message ?? error}`);
         return new Response(JSON.stringify({ error: "DB read failed (mpn_product_index)", details: error }), { status: 500 });
       }
       if (!data || data.length === 0) break;
@@ -686,6 +725,7 @@ serve(async (req) => {
         .order("id", { ascending: true })
         .range(from, from + 999);
       if (error) {
+        await recordImportStatus(supa, retailerId, "error", `DB read failed (products): ${error.message ?? error}`);
         return new Response(JSON.stringify({ error: "DB read failed (products)", details: error }), { status: 500 });
       }
       if (!data || data.length === 0) break;
@@ -721,6 +761,8 @@ serve(async (req) => {
     .download(feedPath);
 
   if (storageErr || !storageBlob) {
+    await recordImportStatus(supa, retailerId, "error",
+      `Failed to download feed from Storage (${feedBucket}/${feedPath}): ${String(storageErr?.message || storageErr || "unknown").substring(0, 500)}`);
     return new Response(JSON.stringify({
       error: "Failed to download feed from Storage",
       bucket: feedBucket,
@@ -1028,6 +1070,7 @@ serve(async (req) => {
       }
     }
   } catch (e) {
+    await recordImportStatus(supa, retailerId, "error", `Stream read failed: ${String(e).substring(0, 500)}`);
     return new Response(JSON.stringify({
       error: "Stream read failed",
       details: String(e).substring(0, 500),
@@ -1037,6 +1080,8 @@ serve(async (req) => {
   const fetchMs = Date.now() - fetchT0;
 
   if (feedRows < 50) {
+    await recordImportStatus(supa, retailerId, "error",
+      `Feed contains fewer than 50 products (${feedRows}) — aborting (likely partial upload or wrong feed)`);
     return new Response(JSON.stringify({
       error: "Feed contains fewer than 50 products — aborting (likely partial upload or wrong feed)",
       products_found: feedRows,
@@ -1052,6 +1097,12 @@ serve(async (req) => {
   // Safety cap — bumped to 20K (Superdrug-feed-sized).
   // Returns 200 status so Supabase UI shows the breakdown body.
   if (countCreateNew > 20000) {
+    // Clear the 'running' stamp on a real run (a dry-run never set it, and a
+    // cap-hit during inspection is informational, not a failure).
+    if (!dryRun) {
+      await recordImportStatus(supa, retailerId, "error",
+        `Would create more than 20000 new products (${countCreateNew}) in one run — aborting as a safety cap`);
+    }
     return new Response(JSON.stringify({
       error: "Would create more than 20000 new products in one run — aborting as a safety cap",
       retailer_id: retailerId,
@@ -1260,9 +1311,18 @@ serve(async (req) => {
     }
   }
 
+  // Record the import outcome (clears the 'running' stamp written at the top).
+  // Write-level errors (rows that failed to upsert) count as 'error' even though
+  // the feed itself downloaded fine.
   await supa
     .from("retailer_import_config")
-    .update({ last_imported_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .update({
+      last_imported_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      last_attempt_at: new Date().toISOString(),
+      last_import_status: errors.length > 0 ? "error" : "ok",
+      last_import_error: errors.length > 0 ? errors.slice(0, 5).join("; ").slice(0, 1000) : null,
+    })
     .eq("retailer_id", retailerId);
 
   try {

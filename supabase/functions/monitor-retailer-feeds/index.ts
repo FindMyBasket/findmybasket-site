@@ -1,13 +1,16 @@
 // FindMyBasket — monitor-retailer-feeds edge function
 //
-// Two complementary alerting mechanisms, one daily email:
+// Three complementary alerting mechanisms, one daily email:
 //   1. Import failures (FAST): any retailer whose most recent import attempt
-//      failed (retailer_import_config.last_import_status = 'error'). Surfaced
-//      immediately with the root-cause error message — no waiting for staleness.
-//      Populated by the import-awin-feed / import-rakuten-feed functions.
+//      failed (retailer_import_config.last_import_status = 'error'), OR is stuck
+//      mid-run (status = 'running' for longer than RUNNING_STUCK_HOURS — the
+//      fingerprint of a hard kill / OOM that died before writing its outcome).
+//      Surfaced immediately with the root-cause error message — no waiting for
+//      staleness. Populated by import-awin-feed / import-rakuten-feed /
+//      import-shopify-feed.
 //   2. Stale feeds (BACKSTOP): any active retailer whose newest
-//      retailer_prices.last_updated is older than 48h. Catches failure modes the
-//      importers can't self-report (crashes, timeouts, cron not firing).
+//      retailer_prices.last_updated is older than STALENESS_HOURS. Catches
+//      failure modes the importers can't self-report (cron not firing, etc.).
 //
 // Scheduled daily via pg_cron at 09:00 UTC.
 //
@@ -21,7 +24,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const RESEND_API = "https://api.resend.com/emails";
 const FROM_ADDRESS = "FindMyBasket Alerts <hello@findmybasket.co.uk>";
 const TO_ADDRESS = "hello@findmybasket.co.uk";
-const STALENESS_HOURS = 48;
+// Lowered 48 → 36 (§7) so a single missed daily run alerts the next morning,
+// instead of tolerating two consecutive misses before surfacing.
+const STALENESS_HOURS = 36;
+// A real apply stamps last_import_status='running' before any work and clears it
+// to 'ok'/'error' on completion. A hard worker kill (HTTP 546 OOM) terminates the
+// process before that final write, stranding the row at 'running'. Any retailer
+// left 'running' longer than this is treated as a crashed/hung import — well past
+// the longest legitimate run (minutes) yet inside the daily attempt gap, so it is
+// caught before the next day's run overwrites the stamp.
+const RUNNING_STUCK_HOURS = 6;
 
 interface RetailerStatus {
   retailer_id: number;
@@ -89,17 +101,44 @@ Deno.serve(async (req: Request) => {
       .from("retailer_import_config")
       .select("retailer_id, last_import_status, last_import_error, last_attempt_at, enabled");
 
-    const failures: ImportFailure[] = (configRows ?? [])
+    const hoursSince = (ts: string | null): number | null =>
+      ts ? (now - new Date(ts).getTime()) / (1000 * 60 * 60) : null;
+
+    // 2a. Most recent attempt explicitly failed.
+    const errorFailures: ImportFailure[] = (configRows ?? [])
       .filter((c) => c.last_import_status === "error" && nameById.has(c.retailer_id))
       .map((c) => ({
         retailer_id: c.retailer_id,
         retailer_name: nameById.get(c.retailer_id) ?? `#${c.retailer_id}`,
         last_import_error: c.last_import_error ?? null,
         last_attempt_at: c.last_attempt_at ?? null,
-        hours_since_attempt: c.last_attempt_at
-          ? (now - new Date(c.last_attempt_at).getTime()) / (1000 * 60 * 60)
-          : null,
-      }))
+        hours_since_attempt: hoursSince(c.last_attempt_at ?? null),
+      }));
+
+    // 2b. Stuck mid-run: status never cleared past 'running'. This is the silent
+    //     hard-kill case — the row keeps no 'error', and last_updated may still be
+    //     fresh from the previous good run, so neither 2a nor the staleness check
+    //     would catch it. Synthesise a failure with a clear cause.
+    const stuckRunning: ImportFailure[] = (configRows ?? [])
+      .filter((c) => {
+        if (c.last_import_status !== "running" || !nameById.has(c.retailer_id)) return false;
+        const h = hoursSince(c.last_attempt_at ?? null);
+        return h !== null && h > RUNNING_STUCK_HOURS;
+      })
+      .map((c) => {
+        const h = hoursSince(c.last_attempt_at ?? null);
+        return {
+          retailer_id: c.retailer_id,
+          retailer_name: nameById.get(c.retailer_id) ?? `#${c.retailer_id}`,
+          last_import_error:
+            `Import started but never completed — stuck in 'running' for ${h === null ? "?" : Math.round(h)}h. ` +
+            `Likely a hard kill / OOM (HTTP 546) that died before recording its outcome.`,
+          last_attempt_at: c.last_attempt_at ?? null,
+          hours_since_attempt: h,
+        };
+      });
+
+    const failures: ImportFailure[] = [...errorFailures, ...stuckRunning]
       .sort((a, b) => a.retailer_name.localeCompare(b.retailer_name));
 
     const failedIds = new Set(failures.map((f) => f.retailer_id));
