@@ -79,6 +79,27 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
+    // 0. Maintenance (Phase 4 sliced import): purge orphaned import_run_state. A
+    //    healthy sliced run deletes its own state at finalize; a run that died
+    //    mid-chain leaves rows + staging files behind. Anything older than 24h is
+    //    well past the longest legitimate sliced import, so reap it (state rows +
+    //    the matching Storage slice files) to stop the table/bucket accumulating.
+    try {
+      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: orphanRuns } = await supabase
+        .from("import_run_state").select("run_id").eq("kind", "meta").lt("created_at", cutoff);
+      const runIds = [...new Set((orphanRuns ?? []).map((r: { run_id: string }) => r.run_id))];
+      for (const rid of runIds) {
+        try {
+          const { data: files } = await supabase.storage.from("import-staging").list(rid);
+          if (files?.length) await supabase.storage.from("import-staging").remove(files.map((f) => `${rid}/${f.name}`));
+        } catch { /* best effort */ }
+      }
+      const { error: delErr } = await supabase.from("import_run_state").delete().lt("created_at", cutoff);
+      if (delErr) console.warn("import_run_state cleanup failed:", delErr.message);
+      else if (runIds.length) console.log(`import_run_state cleanup: purged ${runIds.length} orphaned sliced run(s)`);
+    } catch (e) { console.warn("import_run_state cleanup error:", String(e)); }
+
     // 1. Get all active retailers
     const { data: retailers, error: rErr } = await supabase
       .from("retailers")

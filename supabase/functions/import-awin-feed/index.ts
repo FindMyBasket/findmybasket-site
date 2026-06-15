@@ -1023,6 +1023,39 @@ serve(async (req) => {
   // instead of materialising the whole decompressed feed in memory. Defaults to
   // false (legacy path) for every retailer until explicitly promoted.
   const streamingEnabled: boolean = config.streaming_enabled === true;
+
+  // ── Phase 4 (Option C): sliced / resumable import ──────────────────────────
+  // Big feeds 546 because one invocation can't finish the lookups+writes inside
+  // the worker's variable resource ceiling (see PHASE_4_SLICED_IMPORT_DESIGN.md).
+  // A sliced retailer stages its feed to Storage once, then processes it in
+  // SLICE_ROWS-sized slices, each a fresh short invocation chained via pg_net.
+  //   effectiveMode:
+  //     'process' — a slice invocation (body.mode='process', has run_id/slice_index)
+  //     'stage'   — explicit, OR a fresh real-apply entry on a sliced retailer
+  //     'single'  — everything else (ALL dry-runs, non-sliced retailers): the
+  //                 legacy single-invocation path, byte-for-byte unchanged.
+  // Dry-runs are never sliced: cross-slice state relies on each slice COMMITTING
+  // (the next slice re-derives seen-EAN/MPN and created products from the DB), and
+  // a dry-run commits nothing.
+  const slicedImport: boolean = config.sliced_import === true;
+  const reqMode: string = typeof body.mode === "string" ? body.mode : "";
+  const SLICE_ROWS: number = (typeof body.slice_rows === "number" && body.slice_rows > 0)
+    ? Math.floor(body.slice_rows) : 9000;            // knob: pass slice_rows (e.g. 6000) to shrink
+  const runId: string = typeof body.run_id === "string" && body.run_id
+    ? body.run_id : crypto.randomUUID();
+  const sliceIndex: number = (typeof body.slice_index === "number" && body.slice_index >= 0)
+    ? Math.floor(body.slice_index) : 0;
+  const effectiveMode: "stage" | "process" | "single" =
+    reqMode === "process" ? "process"
+    : (reqMode === "stage" || (slicedImport && !dryRun && !reqMode)) ? "stage"
+    : "single";
+  // Test hook: auto_chain=false stages/processes WITHOUT firing the next slice via
+  // pg_net, so a canary can drive each slice by hand and read its response (incl.
+  // the final aggregate). Default true = production fire-and-forget chaining.
+  const autoChain: boolean = body.auto_chain !== false;
+  const STAGING_BUCKET = "import-staging";
+  const slicePath = (i: number) => `${runId}/slice_${i}.jsonl`;
+
   // v6: per-retailer top_category override (null/missing = let inference decide)
   const topCategoryDefault: TopCategory | null =
     (config.top_category_default === "skincare" ||
@@ -1080,14 +1113,25 @@ serve(async (req) => {
   // follow-up, to be done only if they hit memory pressure. Do NOT "harmonise"
   // the trio without reading PHASE_2_CHUNKED_APPLY.md.
 
-  // Chunk-scoped maps — reassigned by loadChunkMaps() before each chunk's match
-  // pass, then dropped. Same names/shapes the matching body already expects.
+  // Chunk-scoped maps — code-keyed (brand-agnostic, potentially huge), rebuilt
+  // fresh and dropped every chunk to keep peak memory bounded.
   type StrippedEntry = { id: number; size: string };
   let existingByExtId = new Map<string, any>();
   let eanToProductId = new Map<string, number>();
   let mpnToProductId = new Map<string, number>();
-  let productByExact = new Map<string, number>();
-  let productByStripped = new Map<string, StrippedEntry>();
+
+  // PERSISTENT lazy per-brand product cache (Option A, on top of the Option B RPC).
+  // NOT reset per chunk: buildMatchKey is brand-prefixed, so a row of brand B only
+  // matches products of brand B (Tier 3/4) and entries from different brands never
+  // collide — so each brand can be fetched ONCE and retained, and a row sees the
+  // same candidates whether its brand loaded this chunk or earlier (outcome parity,
+  // proven byte-identical on Beauty Bay/Flash). `loadedBrands` lets loadChunkMaps
+  // pass only the NOT-yet-seen brands to the RPC's p_brands, so after warmup the
+  // products payload is ~empty — this kills the per-chunk dense-brand refetch that
+  // kept load_maps at ~15s under B alone.
+  const productByExact = new Map<string, number>();
+  const productByStripped = new Map<string, StrippedEntry>();
+  const loadedBrands = new Set<string>();
 
   // Persistent (whole-import) accumulator — survives chunk boundaries, bounded by
   // links+creates (small). Holds the in-feed mutations that used to live on the
@@ -1177,33 +1221,56 @@ serve(async (req) => {
       const mv = f[matchColumnIdx]; if (mv) extIds.add(mv);
     }
 
+    // EAN/MPN/ext-id maps stay chunk-scoped (brand-agnostic, code-keyed): rebuilt
+    // fresh and dropped every chunk. productByExact/productByStripped are PERSISTENT
+    // (Option A) — never reset; only grown with brands new to this chunk.
     existingByExtId = new Map();
     eanToProductId = new Map();
     mpnToProductId = new Map();
-    productByExact = new Map();
-    productByStripped = new Map();
 
-    // products by match_brand (A1 generated column) → exact + size-verified maps.
-    await eachIn("products", "id, name, brand, match_brand", "match_brand", [...matchBrands], "id", (p) => {
+    // Option A+B: ONE round-trip per chunk via match_chunk_lookups, but p_brands is
+    // only the brands NOT yet cached this run. After warmup that list is ~empty, so
+    // the products section of the payload is tiny — the dense-brand refetch that
+    // kept B-alone's load_maps at ~15s/chunk is gone. EAN/MPN/ext-id are still the
+    // full chunk sets (uncached, code-keyed). The four lookups are independent,
+    // index-supported set scans; no join, no row explosion. Map-build is
+    // byte-identical to v88's per-row callbacks (FIRST-wins products/ean/mpn,
+    // LAST-wins ext-id) and the RPC's ORDER BYs (products→id, ean→ean, mpn→mpn,
+    // extids→id) preserve the order those guards depend on. Persistent product maps
+    // are parity-safe: brand-prefixed keys never collide across brands, and a
+    // colliding key's products share a match_brand so they load together →
+    // first-id-wins is identical to the per-chunk rebuild. Tier 5 stays dead.
+    const missingBrands = [...matchBrands].filter((b) => !loadedBrands.has(b));
+    for (const b of missingBrands) loadedBrands.add(b);
+    const { data: sets, error: rpcErr } = await supa.rpc("match_chunk_lookups", {
+      p_retailer_id: retailerId,
+      p_brands: missingBrands,
+      p_eans: [...eans],
+      p_mpns: [...mpns],
+      p_extids: [...extIds],
+    });
+    if (rpcErr) throw new Error(`match_chunk_lookups RPC: ${rpcErr.message}`);
+
+    for (const p of (sets?.products ?? [])) {
       const exactKey = buildMatchKey(p.brand || "", p.name);
-      if (!exactKey) return;
+      if (!exactKey) continue;
       if (!productByExact.has(exactKey)) productByExact.set(exactKey, p.id);
       const strippedKey = stripSize(exactKey);
       if (strippedKey && !productByStripped.has(strippedKey)) {
         productByStripped.set(strippedKey, { id: p.id, size: extractSize(exactKey) });
       }
-    });
-    await eachIn("ean_product_index", "ean, product_id", "ean", [...eans], "ean", (r) => {
+    }
+    for (const r of (sets?.eans ?? [])) {
       const k = String(r.ean || "").trim();
       if (k && r.product_id != null && !eanToProductId.has(k)) eanToProductId.set(k, r.product_id);
-    });
-    await eachIn("mpn_product_index", "mpn, product_id", "mpn", [...mpns], "mpn", (r) => {
+    }
+    for (const r of (sets?.mpns ?? [])) {
       const k = String(r.mpn || "").trim();
       if (k && r.product_id != null && !mpnToProductId.has(k)) mpnToProductId.set(k, r.product_id);
-    });
-    await eachIn("retailer_prices", "id, product_id, external_product_id", "external_product_id", [...extIds], "id", (r) => {
+    }
+    for (const r of (sets?.extids ?? [])) {
       if (r.external_product_id) existingByExtId.set(r.external_product_id, r);
-    }, { col: "retailer_id", val: retailerId });
+    }
 
     // Overlay the persistent in-feed learning so a product linked/created in an
     // earlier chunk is matchable by EAN/MPN in this one (cross-chunk parity with
@@ -1248,7 +1315,7 @@ serve(async (req) => {
   // legacy buffered path even when the flag is on. The flag therefore only
   // changes behaviour for direct-HTTP feeds (the ones big enough to need it,
   // e.g. Debenhams once switched off its storage:// pre-filter).
-  const streamingActive = streamingEnabled && !feedUrl.startsWith("storage://");
+  const streamingActive = effectiveMode !== "process" && streamingEnabled && !feedUrl.startsWith("storage://");
   // Shared across both fetch paths. The legacy path materialises `lines` and
   // `columns`; the streaming path produces `columns` from the header row and an
   // async iterator (`streamBatchIter`) over the remaining row batches.
@@ -1258,7 +1325,51 @@ serve(async (req) => {
   let pendingFirstRows: string[][] | null = null; // data rows sharing the header's batch
   let fetchMs = 0;
 
-  if (streamingActive) {
+  // Phase 4: process-mode inputs — the header (columns) was captured into
+  // run_state.meta at stage time; this slice's rows come from its Storage file.
+  // Cross-slice state (createdUrls / creates_enqueued / counters / run_started_at)
+  // is seeded from run_state below where each accumulator is declared.
+  let processRows: string[][] = [];
+  let runMeta: any = null;
+  if (effectiveMode === "process") {
+    const { data: metaRow, error: metaErr } = await supa
+      .from("import_run_state")
+      .select("meta").eq("run_id", runId).eq("kind", "meta").eq("key", "").maybeSingle();
+    if (metaErr || !metaRow?.meta) {
+      await recordImportStatus(supa, retailerId, "error",
+        `sliced run_state missing for run_id=${runId} slice=${sliceIndex}: ${metaErr?.message ?? "no meta row"}`);
+      return new Response(JSON.stringify({ error: "run_state meta missing", run_id: runId, slice_index: sliceIndex }),
+        { status: 410, headers: { "Content-Type": "application/json" } });
+    }
+    runMeta = metaRow.meta;
+    columns = Array.isArray(runMeta.columns) ? runMeta.columns : [];
+    const { data: blob, error: dlErr } = await supa.storage.from(STAGING_BUCKET).download(slicePath(sliceIndex));
+    if (dlErr || !blob) {
+      await recordImportStatus(supa, retailerId, "error",
+        `sliced slice file missing: ${slicePath(sliceIndex)}: ${dlErr?.message ?? "no blob"}`);
+      return new Response(JSON.stringify({ error: "slice file missing", path: slicePath(sliceIndex) }),
+        { status: 410, headers: { "Content-Type": "application/json" } });
+    }
+    const text = await blob.text();
+    processRows = text.length ? text.split("\n").filter((l) => l.length).map((l) => JSON.parse(l) as string[]) : [];
+    fetchMs = 0;
+    // Seed Tier-5 createdUrls from prior slices (the one accumulator that isn't
+    // DB-covered: shade variants share a url but differ by name, §5). Paginated —
+    // bounded by creates so far (≈0 for re-imports, larger for first-imports).
+    {
+      let ufrom = 0;
+      while (true) {
+        const { data: urlRows, error: uErr } = await supa
+          .from("import_run_state").select("key")
+          .eq("run_id", runId).eq("kind", "url").order("key", { ascending: true }).range(ufrom, ufrom + 999);
+        if (uErr) { console.warn(`createdUrls load failed (run ${runId}): ${uErr.message}`); break; }
+        if (!urlRows || urlRows.length === 0) break;
+        for (const r of urlRows) if (r.key) createdUrls.add(r.key);
+        if (urlRows.length < 1000) break;
+        ufrom += 1000;
+      }
+    }
+  } else if (streamingActive) {
     // ── Streaming I/O path ────────────────────────────────────────────────
     try {
       const diagnostics = { gzipped: null as boolean | null, firstBytesHex: "", source: "" };
@@ -1587,7 +1698,12 @@ serve(async (req) => {
   let createSkincare = 0, createMakeup = 0, createHair = 0;     // v6 top_category breakdown of creates
   let createCanonicalSizeExtracted = 0, createShadeExtracted = 0;
   let countSuppressedDuplicateCreate = 0;                       // 4A-i: in-feed duplicate creates suppressed
-  let createsEnqueued = 0;                                      // running count of creates pushed (drives the incremental cap)
+  // createsEnqueued is the GLOBAL running create count across slices (drives the
+  // 20k cap), so a slice seeds it from run_state.meta. createdUrlsNew tracks just
+  // the urls a slice creates, to persist back without re-writing the seeded set.
+  let createsEnqueued = (effectiveMode === "process" && runMeta && typeof runMeta.creates_enqueued === "number")
+    ? runMeta.creates_enqueued : 0;
+  const createdUrlsNew: string[] = [];
   let cappedCreates = 0;                                        // creates skipped after the 20k incremental ceiling
   const CREATE_CAP = 20000;                                     // partial-write ceiling (was an abort-before-any-write guard)
   const FLUSH_THRESHOLD = 1000;                                 // flush when total pending actions reach this
@@ -1595,8 +1711,11 @@ serve(async (req) => {
   let updatesApplied = 0, linksApplied = 0, createsApplied = 0;
   const errors: string[] = [];
   // One timestamp captured at the top of the apply, passed to the price-aware
-  // link RPC on every flush so "lowest price wins" is scoped to THIS run.
-  const runStartedAt = new Date().toISOString();
+  // link RPC on every flush so "lowest price wins" is scoped to THIS run. A sliced
+  // run shares ONE run_started_at across all slices (from run_state.meta) so the
+  // cross-slice lowest-price-wins upsert stays correct.
+  const runStartedAt = (effectiveMode === "process" && runMeta && typeof runMeta.run_started_at === "string")
+    ? runMeta.run_started_at : new Date().toISOString();
   const pendingActions = () => updateActions.length + linkActions.length + createActions.length;
 
   // Chunk size for every bulk RPC / upsert. A single statement over a whole large
@@ -1616,6 +1735,7 @@ serve(async (req) => {
     }
 
     // 1. Updates — chunked price + image backfill RPCs.
+    const tUpdate = performance.now();
     if (updateActions.length > 0) {
       const nowIso = new Date().toISOString();
       for (let i = 0; i < updateActions.length; i += INSERT_CHUNK) {
@@ -1624,6 +1744,7 @@ serve(async (req) => {
           id: u.rp_id, price: u.price, in_stock: u.in_stock, last_updated: nowIso,
           url: u.url || "", ean: u.ean || "", mpn: u.mpn || "",
         }));
+        prof.rtUpdate++;
         const { data: rpcResult, error: rpcErr } = await supa.rpc("bulk_update_retailer_prices", { updates: payload });
         if (rpcErr) errors.push(`bulk_update_retailer_prices (chunk at ${i}): ${rpcErr.message}`);
         else updatesApplied += typeof rpcResult === "number" ? rpcResult : chunk.length;
@@ -1631,16 +1752,19 @@ serve(async (req) => {
       const imageUpdates = updateActions.filter(u => u.image_url).map(u => ({ product_id: u.product_id, image_url: u.image_url }));
       for (let i = 0; i < imageUpdates.length; i += INSERT_CHUNK) {
         const chunk = imageUpdates.slice(i, i + INSERT_CHUNK);
+        prof.rtUpdate++;
         const { error: imgErr } = await supa.rpc("bulk_update_product_images", { updates: chunk });
         if (imgErr) errors.push(`bulk_update_product_images (updates chunk at ${i}): ${imgErr.message}`);
       }
     }
     updateActions.length = 0;
+    prof.fUpdate += performance.now() - tUpdate;
 
     // 2. Links — dedupe THIS flush by product_id (lowest price) so one INSERT
     //    never hits the same (product_id, retailer_id) conflict row twice, then
     //    upsert via the run-scoped price-aware RPC (lowest price wins across
     //    flushes regardless of chunk order — see upsert_retailer_prices_lowest).
+    const tLink = performance.now();
     if (linkActions.length > 0) {
       const dedupedLinks = new Map<number, typeof linkActions[number]>();
       for (const l of linkActions) {
@@ -1656,6 +1780,7 @@ serve(async (req) => {
           in_stock: l.in_stock, external_product_id: l.ext_id, ean: l.ean || null, mpn: l.mpn || null,
           last_updated: nowIso,
         }));
+        prof.rtLink++;
         const { error } = await supa.rpc("upsert_retailer_prices_lowest", { p_rows: rows, p_run_started_at: runStartedAt });
         if (error) errors.push(`link flush at ${i}: ${error.message}`);
         else linksApplied += chunk.length;
@@ -1663,13 +1788,16 @@ serve(async (req) => {
       const linkImageUpdates = dedupedLinkArray.filter(l => l.image_url).map(l => ({ product_id: l.product_id, image_url: l.image_url }));
       for (let i = 0; i < linkImageUpdates.length; i += INSERT_CHUNK) {
         const chunk = linkImageUpdates.slice(i, i + INSERT_CHUNK);
+        prof.rtLink++;
         const { error: linkImgErr } = await supa.rpc("bulk_update_product_images", { updates: chunk });
         if (linkImgErr) errors.push(`bulk_update_product_images (links chunk at ${i}): ${linkImgErr.message}`);
       }
     }
     linkActions.length = 0;
+    prof.fLink += performance.now() - tLink;
 
     // 3. Creates — two-phase bulk insert (products → real ids → retailer_prices).
+    const tCreate = performance.now();
     for (let i = 0; i < createActions.length; i += INSERT_CHUNK) {
       const chunk = createActions.slice(i, i + INSERT_CHUNK);
       const productRows = chunk.map(c => ({
@@ -1679,6 +1807,7 @@ serve(async (req) => {
         subcategory: c.subcategory, tags: c.tags, canonical_size: c.canonical_size,
         shade: c.shade, image_url: c.image_url || null,
       }));
+      prof.rtCreate++;
       const { data: insertedProducts, error: pErr } = await supa.from("products").insert(productRows).select("id");
       if (pErr || !insertedProducts || insertedProducts.length !== chunk.length) {
         errors.push(`create products batch at ${i}: ${pErr?.message || "row count mismatch"}`);
@@ -1689,11 +1818,13 @@ serve(async (req) => {
         in_stock: c.in_stock, external_product_id: c.ext_id, ean: c.ean || null, mpn: c.mpn || null,
         last_updated: new Date().toISOString(),
       }));
+      prof.rtCreate++;
       const { error: rpErr } = await supa.from("retailer_prices").insert(priceRows);
       if (rpErr) errors.push(`create rps batch at ${i}: ${rpErr.message}`);
       else createsApplied += chunk.length;
     }
     createActions.length = 0;
+    prof.fCreate += performance.now() - tCreate;
   }
 
   // Counters for the EAN-first matching tier
@@ -1734,6 +1865,12 @@ serve(async (req) => {
   // limit (per-row awaits flakily tripped WORKER_RESOURCE_LIMIT).
   const LEGACY_BATCH = 2000;
   async function* batchSource(): AsyncGenerator<string[][]> {
+    if (effectiveMode === "process") {
+      // Process mode: rows already parsed from this slice's Storage file. One
+      // batch; the chunk driver re-buffers into CHUNK_SIZE blocks as usual.
+      if (processRows.length) yield processRows;
+      return;
+    }
     if (streamingActive && streamBatchIter) {
       const streamT0 = Date.now();
       let seen = 0;
@@ -1786,9 +1923,21 @@ serve(async (req) => {
   const CHUNK_SIZE = 2000;
   let chunkRows: string[][] = [];
   let chunkNo = 0;
+  // CPU/IO-profiling probe (big-feed 546 hunt): cumulative ms per bucket, written
+  // into the trace each chunk. load_maps is now the single match_chunk_lookups RPC
+  // (Option B) — expect it to fall from ~12s (v88's dozens of round-trips) to well
+  // under 1s. buildKey/categ are SUB-buckets of match. Remove with the diag scaffold.
+  const prof = { parse: 0, loadMaps: 0, match: 0, buildKey: 0, categ: 0, flush: 0,
+                 // flush sub-buckets (ms) + per-section round-trip counts. Tells us
+                 // whether flush is round-trip-bound (optimisable like load_maps) or
+                 // write-volume-bound (→ Option C). prof.flush stays the wall total.
+                 fUpdate: 0, fLink: 0, fCreate: 0, rtUpdate: 0, rtLink: 0, rtCreate: 0 };
   async function runChunk(): Promise<void> {
     if (!chunkRows.length) return;
+    const tLoad = performance.now();
     await loadChunkMaps(chunkRows);
+    prof.loadMaps += performance.now() - tLoad;
+    const tMatch = performance.now();
     for (const rawFields of chunkRows) {
     // Quote-strip mirrors the legacy `parseRow(line).map(...)`; blank-line skip
     // mirrors the legacy `!line.trim()` (a blank source line parses to one empty
@@ -1944,7 +2093,9 @@ serve(async (req) => {
       countLinkViaMpn++; if (isOrdinary) ordinaryDiagnostic.linked_via_mpn++;
     }
 
+    const tKey = performance.now();
     const productMatchKey = buildMatchKey(brand, name);
+    prof.buildKey += performance.now() - tKey;
     const strippedMatchKey = stripSize(productMatchKey);
     const sourceSize = extractSize(productMatchKey);
 
@@ -2026,7 +2177,9 @@ serve(async (req) => {
     }
 
     // ─── v6: classify the new product before deciding to create ──────────
+    const tCateg = performance.now();
     const cat = inferCategorisation(name, brand);
+    prof.categ += performance.now() - tCateg;
 
     // Skip products on the v6 denylist (fragrance, period_care, etc.)
     if (cat.excluded) {
@@ -2130,7 +2283,7 @@ serve(async (req) => {
     if (canonicalSize != null) createCanonicalSizeExtracted++;
     if (shade != null) createShadeExtracted++;
     // Track URL for shade-variant detection on subsequent rows in this same import
-    if (wrappedUrl) createdUrls.add(wrappedUrl);
+    if (wrappedUrl && !createdUrls.has(wrappedUrl)) { createdUrls.add(wrappedUrl); createdUrlsNew.push(wrappedUrl); }
     if (sampleCreateNew.length < SAMPLE_LIMIT_CREATE_NEW) {
       sampleCreateNew.push({
         name,
@@ -2145,6 +2298,7 @@ serve(async (req) => {
       });
     }
     }
+    prof.match += performance.now() - tMatch;
     chunkNo++;
     if (memTrace) {
       const m = (Deno as any).memoryUsage ? (Deno as any).memoryUsage() : { rss: 0, heapTotal: 0, heapUsed: 0, external: 0 };
@@ -2157,19 +2311,97 @@ serve(async (req) => {
           unmatched_brands: unmatchedBrandCounts.size, category_paths: categoryPathCounts.size,
           chunk_exact: productByExact.size, chunk_stripped: productByStripped.size,
           chunk_extid: existingByExtId.size, pending: pendingActions(),
+          timings: {
+            parse_ms: Math.round(prof.parse), load_maps_ms: Math.round(prof.loadMaps),
+            match_ms: Math.round(prof.match), build_key_ms: Math.round(prof.buildKey),
+            categ_ms: Math.round(prof.categ), flush_ms: Math.round(prof.flush),
+            f_update_ms: Math.round(prof.fUpdate), f_link_ms: Math.round(prof.fLink),
+            f_create_ms: Math.round(prof.fCreate),
+            rt_update: prof.rtUpdate, rt_link: prof.rtLink, rt_create: prof.rtCreate,
+          },
         });
       } catch (_) { /* never let the probe break the run */ }
     }
     chunkRows = [];
+    const tFlush = performance.now();
     if (pendingActions() >= FLUSH_THRESHOLD) await flush();
+    prof.flush += performance.now() - tFlush;
+  }
+
+  // ── STAGE: stream the feed once, split into Storage slice files, fire slice 0 ─
+  // No matching/lookups/writes here (those are the costs that 546) — just parse +
+  // upload, which fits one invocation even for Boots. Memory stays bounded: at most
+  // one SLICE_ROWS buffer is held before it's uploaded and dropped.
+  if (effectiveMode === "stage") {
+    let sliceBuf: string[][] = [];
+    let sliceIdx = 0;
+    let stagedRows = 0;
+    const uploadSlice = async (i: number, rows: string[][]) => {
+      const bodyText = rows.map((r) => JSON.stringify(r)).join("\n");
+      const { error: upErr } = await supa.storage.from(STAGING_BUCKET)
+        .upload(slicePath(i), new Blob([bodyText], { type: "application/x-ndjson" }), { upsert: true, contentType: "application/x-ndjson" });
+      if (upErr) throw new Error(`stage upload slice ${i}: ${upErr.message}`);
+    };
+    try {
+      for await (const batch of batchSource()) {
+        for (const rawFields of batch) {
+          sliceBuf.push(rawFields);
+          stagedRows++;
+          if (sliceBuf.length >= SLICE_ROWS) { await uploadSlice(sliceIdx, sliceBuf); sliceIdx++; sliceBuf = []; }
+        }
+      }
+      if (sliceBuf.length) { await uploadSlice(sliceIdx, sliceBuf); sliceIdx++; sliceBuf = []; }
+    } catch (e) {
+      const msg = e instanceof FeedFetchError ? e.message : `stage failed: ${String(e instanceof Error ? e.message : e)}`;
+      await recordImportStatus(supa, retailerId, "error", msg);
+      try { const { data: f } = await supa.storage.from(STAGING_BUCKET).list(runId); if (f?.length) await supa.storage.from(STAGING_BUCKET).remove(f.map((x) => `${runId}/${x.name}`)); } catch { /* best effort */ }
+      return new Response(JSON.stringify({ error: msg }, null, 2), { status: 502, headers: { "Content-Type": "application/json" } });
+    }
+    const totalSlices = sliceIdx;
+    // Same <50-row safeguard as the single path (likely AWIN incident / bad id).
+    if (stagedRows < 50) {
+      await recordImportStatus(supa, retailerId, "error", `Feed returned fewer than 50 rows (${stagedRows}) — likely AWIN incident or bad feed ID`);
+      try { const { data: f } = await supa.storage.from(STAGING_BUCKET).list(runId); if (f?.length) await supa.storage.from(STAGING_BUCKET).remove(f.map((x) => `${runId}/${x.name}`)); } catch { /* best effort */ }
+      return new Response(JSON.stringify({ error: "Feed returned fewer than 50 rows — aborting", staged_rows: stagedRows }), { status: 502, headers: { "Content-Type": "application/json" } });
+    }
+    const { error: metaErr } = await supa.from("import_run_state").insert({
+      run_id: runId, retailer_id: retailerId, kind: "meta", key: "",
+      meta: {
+        columns, run_started_at: runStartedAt, total_slices: totalSlices, next_slice: 0,
+        creates_enqueued: 0, slice_rows: SLICE_ROWS, feed_format: feedFormat, staged_rows: stagedRows,
+        counts: {}, applied: { updates: 0, links: 0, creates: 0, capped: 0, errors: [] },
+      },
+    });
+    if (metaErr) {
+      await recordImportStatus(supa, retailerId, "error", `stage run_state init: ${metaErr.message}`);
+      return new Response(JSON.stringify({ error: "run_state init failed", details: metaErr.message }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
+    // Fire slice 0 via pg_net (fire-and-forget; dry_run:false is REQUIRED or the
+    // slice would default to a dry-run and DISCARD all writes).
+    if (autoChain) {
+      const { error: trigErr } = await supa.rpc("fmb_invoke_import_slice", { p_body: { retailer_id: retailerId, run_id: runId, mode: "process", slice_index: 0, dry_run: false, slice_rows: SLICE_ROWS, mem_trace: memTrace } });
+      if (trigErr) {
+        await recordImportStatus(supa, retailerId, "error", `stage: failed to trigger slice 0: ${trigErr.message}`);
+        return new Response(JSON.stringify({ error: "stage trigger failed", run_id: runId, details: trigErr.message }), { status: 500, headers: { "Content-Type": "application/json" } });
+      }
+    }
+    return new Response(JSON.stringify({
+      staged: true, run_id: runId, total_slices: totalSlices, staged_rows: stagedRows,
+      slice_rows: SLICE_ROWS, feed_fetch_ms: fetchMs,
+    }, null, 2), { headers: { "Content-Type": "application/json" } });
   }
 
   try {
+    // prof.parse accumulates the time awaiting each batch from batchSource() —
+    // i.e. the fetch + gzip-inflate + CSV-parse pipeline (it runs between yields).
+    let tParse = performance.now();
     for await (const batch of batchSource()) {
+      prof.parse += performance.now() - tParse;
       for (const rawFields of batch) {
         chunkRows.push(rawFields);
         if (chunkRows.length >= CHUNK_SIZE) await runChunk();
       }
+      tParse = performance.now();
     }
     await runChunk(); // process the final partial block (auto-flushes only if it crosses FLUSH_THRESHOLD)
   } catch (streamErr) {
@@ -2295,6 +2527,67 @@ serve(async (req) => {
   // dry_run returned above, so this is real-run only. updatesApplied /
   // linksApplied / createsApplied / errors were accumulated across all flushes.
   await flush();
+
+  // ── PROCESS: persist cross-slice state, then trigger the next slice or finalize ─
+  if (effectiveMode === "process") {
+    // 1. Persist this slice's NEW createdUrls (Tier-5 shade suppression, §5). The
+    //    seeded set isn't re-written; ON CONFLICT DO NOTHING keeps it idempotent.
+    for (let i = 0; i < createdUrlsNew.length; i += 500) {
+      const rows = createdUrlsNew.slice(i, i + 500).map((u) => ({ run_id: runId, retailer_id: retailerId, kind: "url", key: u }));
+      const { error: uErr } = await supa.from("import_run_state").upsert(rows, { onConflict: "run_id,kind,key", ignoreDuplicates: true });
+      if (uErr) errors.push(`persist createdUrls: ${uErr.message}`);
+    }
+    // 2. Accumulate this slice's counts + applied tallies into the meta row.
+    const prevCounts = (runMeta.counts && typeof runMeta.counts === "object") ? runMeta.counts : {};
+    const sliceCounts = result.counts as Record<string, number>;
+    const mergedCounts: Record<string, number> = { ...prevCounts };
+    for (const k of Object.keys(sliceCounts)) mergedCounts[k] = (mergedCounts[k] || 0) + (sliceCounts[k] || 0);
+    const prevApplied = runMeta.applied || { updates: 0, links: 0, creates: 0, capped: 0, errors: [] };
+    const mergedApplied = {
+      updates: (prevApplied.updates || 0) + updatesApplied,
+      links: (prevApplied.links || 0) + linksApplied,
+      creates: (prevApplied.creates || 0) + createsApplied,
+      capped: (prevApplied.capped || 0) + cappedCreates,
+      errors: [...(prevApplied.errors || []), ...errors.slice(0, 5)].slice(0, 20),
+    };
+    const totalSlices = runMeta.total_slices || 0;
+    const nextSlice = sliceIndex + 1;
+    const isLast = nextSlice >= totalSlices;
+    await supa.from("import_run_state")
+      .update({ meta: { ...runMeta, counts: mergedCounts, applied: mergedApplied, creates_enqueued: createsEnqueued, next_slice: isLast ? totalSlices : nextSlice } })
+      .eq("run_id", runId).eq("kind", "meta").eq("key", "");
+
+    if (!isLast) {
+      // 3a. More slices remain — keep status 'running', fire the next slice.
+      await recordImportStatus(supa, retailerId, "running", `sliced import: starting slice ${nextSlice}/${totalSlices} (run ${runId})`);
+      let nextErr: any = null;
+      if (autoChain) {
+        ({ error: nextErr } = await supa.rpc("fmb_invoke_import_slice", { p_body: { retailer_id: retailerId, run_id: runId, mode: "process", slice_index: nextSlice, dry_run: false, slice_rows: SLICE_ROWS, mem_trace: memTrace } }));
+        if (nextErr) await recordImportStatus(supa, retailerId, "error", `slice ${sliceIndex}: failed to trigger slice ${nextSlice}: ${nextErr.message}`);
+      }
+      result.applied = { slice_index: sliceIndex, updates_applied: updatesApplied, links_applied: linksApplied, creates_applied: createsApplied, error_count: errors.length, next_slice: nextSlice, total_slices: totalSlices, trigger_error: nextErr?.message ?? null };
+      result.duration_ms = Date.now() - startTime;
+      return new Response(JSON.stringify(result, null, 2), { headers: { "Content-Type": "application/json" } });
+    }
+
+    // 3b. Last slice — finalize: write the import outcome, then clean up.
+    const runHadError = mergedApplied.errors.length > 0 || mergedApplied.capped > 0;
+    const finalCapMsg = mergedApplied.capped > 0 ? `create cap hit (partial): ${mergedApplied.capped} create(s) skipped after the ${CREATE_CAP} ceiling` : null;
+    await supa.from("retailer_import_config").update({
+      last_imported_at: new Date().toISOString(), updated_at: new Date().toISOString(), last_attempt_at: new Date().toISOString(),
+      last_import_status: runHadError ? "error" : "ok",
+      last_import_error: runHadError ? [finalCapMsg, ...mergedApplied.errors.slice(0, 5)].filter(Boolean).join("; ").slice(0, 1000) : null,
+    }).eq("retailer_id", retailerId);
+    try {
+      await supa.from("scrape_log").insert({ retailer_id: retailerId, status: runHadError ? "partial_failure" : "success", products_seen: runMeta.staged_rows || 0, products_updated: mergedApplied.updates, products_inserted: mergedApplied.links + mergedApplied.creates, duration_ms: Date.now() - startTime });
+    } catch { /* table may not have these exact columns; ignore */ }
+    // Cleanup: staging slice files + all run_state rows for this run.
+    try { const { data: f } = await supa.storage.from(STAGING_BUCKET).list(runId); if (f?.length) await supa.storage.from(STAGING_BUCKET).remove(f.map((x) => `${runId}/${x.name}`)); } catch { /* best effort */ }
+    await supa.from("import_run_state").delete().eq("run_id", runId);
+    result.applied = { final: true, total_slices: totalSlices, updates_applied: mergedApplied.updates, links_applied: mergedApplied.links, creates_applied: mergedApplied.creates, capped_creates: mergedApplied.capped, error_count: mergedApplied.errors.length, sample_errors: mergedApplied.errors.slice(0, 10) };
+    result.duration_ms = Date.now() - startTime;
+    return new Response(JSON.stringify(result, null, 2), { headers: { "Content-Type": "application/json" } });
+  }
 
   // Partial-write cap: if the incremental ceiling skipped any creates, the run is
   // incomplete even if every write succeeded — flag it 'error' so the monitor and
