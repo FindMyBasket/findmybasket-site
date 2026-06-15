@@ -1061,128 +1061,150 @@ serve(async (req) => {
   let countBrandCanonicalised = 0;
   const unmatchedBrandCounts = new Map<string, number>();
 
-  // Step 2: Load existing retailer_prices rows for this retailer
-  // We fetch in batches because Supabase caps at 1000 per request.
-  const existingRows: any[] = [];
-  let from = 0;
-  while (true) {
-    const { data, error } = await supa
-      .from("retailer_prices")
-      .select("id, product_id, external_product_id, price, in_stock, ean, mpn")
-      .eq("retailer_id", retailerId)
-      .order("id", { ascending: true })
-      .range(from, from + 999);
-    if (error) {
-      await recordImportStatus(supa, retailerId, "error", `DB read failed (retailer_prices): ${error.message ?? error}`);
-      return new Response(JSON.stringify({ error: "DB read failed (retailer_prices)", details: error }), { status: 500 });
-    }
-    if (!data || data.length === 0) break;
-    existingRows.push(...data);
-    if (data.length < 1000) break;
-    from += 1000;
-  }
+  // ── Phase 2 (chunked apply): per-chunk catalogue lookups ───────────────────
+  // The legacy path loaded this retailer's entire price list + the whole product
+  // catalogue + the full EAN/MPN indexes into memory up front, which is what
+  // OOM'd (HTTP 546) large HTTP feeds — see PHASE_2_CHUNKED_APPLY.md. Instead we
+  // now look up only what each streamed chunk needs (keyed on match_brand / ean /
+  // mpn / external_product_id) and apply in flushes. The per-row matching body
+  // further below is UNCHANGED; it just reads chunk-scoped maps (rebuilt per
+  // chunk by loadChunkMaps) plus a small persistent accumulator.
+  //
+  // DELIBERATE DIVERGENCE: import-rakuten-feed / import-shopify-feed still use the
+  // upfront-load pattern. Porting the chunked apply to them is a tracked
+  // follow-up, to be done only if they hit memory pressure. Do NOT "harmonise"
+  // the trio without reading PHASE_2_CHUNKED_APPLY.md.
 
-  const existingByExtId = new Map<string, any>();
-  for (const r of existingRows) {
-    if (r.external_product_id) existingByExtId.set(r.external_product_id, r);
-  }
-
-  // Path 1: cross-retailer EAN/MPN lookup tables.
-  const eanToProductId = new Map<string, number>();
-  const mpnToProductId = new Map<string, number>();
-  {
-    let efrom = 0;
-    while (true) {
-      const { data, error } = await supa
-        .from("ean_product_index")
-        .select("ean, product_id")
-        .order("ean", { ascending: true })
-        .range(efrom, efrom + 999);
-      if (error) {
-        await recordImportStatus(supa, retailerId, "error", `DB read failed (ean_product_index): ${error.message ?? error}`);
-        return new Response(JSON.stringify({ error: "DB read failed (ean_product_index)", details: error }), { status: 500 });
-      }
-      if (!data || data.length === 0) break;
-      for (const r of data) {
-        const k = String(r.ean || "").trim();
-        if (k && r.product_id != null && !eanToProductId.has(k)) {
-          eanToProductId.set(k, r.product_id);
-        }
-      }
-      if (data.length < 1000) break;
-      efrom += 1000;
-    }
-  }
-  {
-    let mfrom = 0;
-    while (true) {
-      const { data, error } = await supa
-        .from("mpn_product_index")
-        .select("mpn, product_id")
-        .order("mpn", { ascending: true })
-        .range(mfrom, mfrom + 999);
-      if (error) {
-        await recordImportStatus(supa, retailerId, "error", `DB read failed (mpn_product_index): ${error.message ?? error}`);
-        return new Response(JSON.stringify({ error: "DB read failed (mpn_product_index)", details: error }), { status: 500 });
-      }
-      if (!data || data.length === 0) break;
-      for (const r of data) {
-        const k = String(r.mpn || "").trim();
-        if (k && r.product_id != null && !mpnToProductId.has(k)) {
-          mpnToProductId.set(k, r.product_id);
-        }
-      }
-      if (data.length < 1000) break;
-      mfrom += 1000;
-    }
-  }
-
-  // Step 3: Load all products in DB for fuzzy name matching
-  const allProducts: any[] = [];
-  from = 0;
-  while (true) {
-    const { data, error } = await supa
-      .from("products")
-      .select("id, name, brand")
-      .order("id", { ascending: true })
-      .range(from, from + 999);
-    if (error) {
-      await recordImportStatus(supa, retailerId, "error", `DB read failed (products): ${error.message ?? error}`);
-      return new Response(JSON.stringify({ error: "DB read failed (products)", details: error }), { status: 500 });
-    }
-    if (!data || data.length === 0) break;
-    allProducts.push(...data);
-    if (data.length < 1000) break;
-    from += 1000;
-  }
-
-  // Build lookup maps for fuzzy product matching.
-  // A stripped-key match must be size-verified (Tier 4), so the stripped map
-  // carries the product's canonical size alongside its id rather than keeping a
-  // separate id→size map. Phase 1 prep for shade-aware matching, which will
-  // extend StrippedEntry with a shade field.
+  // Chunk-scoped maps — reassigned by loadChunkMaps() before each chunk's match
+  // pass, then dropped. Same names/shapes the matching body already expects.
   type StrippedEntry = { id: number; size: string };
-  const productByExact = new Map<string, number>();
-  const productByStripped = new Map<string, StrippedEntry>();
-  const urlToProductId = new Map<string, number>();  // URL → product_id (retailer-scoped via existingRows)
-  for (const r of existingRows) {
-   if (r.url && r.product_id != null) {
-    urlToProductId.set(r.url, r.product_id);
-  }
-}
+  let existingByExtId = new Map<string, any>();
+  let eanToProductId = new Map<string, number>();
+  let mpnToProductId = new Map<string, number>();
+  let productByExact = new Map<string, number>();
+  let productByStripped = new Map<string, StrippedEntry>();
+
+  // Persistent (whole-import) accumulator — survives chunk boundaries, bounded by
+  // links+creates (small). Holds the in-feed mutations that used to live on the
+  // global maps (§2/§4A of the plan).
+  const seenEanToProductId = new Map<string, number>(); // EAN learned via a link this run
+  const seenMpnToProductId = new Map<string, number>(); // MPN learned via a link this run
+  const createdUrls = new Set<string>();                // URLs created this run (Tier 5 shade-variant suppression; replaces the old urlToProductId -1 sentinel)
+  const createdByMatchKey = new Map<string, number>();  // 4A-i: match key → -1 (pending); suppresses duplicate creates only, never links
+
+  // existing_brands_only needs just the distinct set of normalised brands. The
+  // big feeds that actually OOM have existing_brands_only=false, so they SKIP this
+  // entirely; only the (smaller, not memory-bound) restricted retailers pay the
+  // distinct-brand pagination. (Follow-up: replace with an RPC if a large
+  // existing_brands_only retailer ever makes this slow.)
   const existingBrandSet = new Set<string>();
-  for (const p of allProducts) {
-    const exactKey = buildMatchKey(p.brand || "", p.name);
-    if (!exactKey) continue;
-    if (!productByExact.has(exactKey)) productByExact.set(exactKey, p.id);
-    const strippedKey = stripSize(exactKey);
-    if (strippedKey && !productByStripped.has(strippedKey)) {
-      productByStripped.set(strippedKey, { id: p.id, size: extractSize(exactKey) });
+  if (existingBrandsOnly) {
+    let bfrom = 0;
+    while (true) {
+      const { data, error } = await supa
+        .from("products")
+        .select("normalised_brand")
+        .not("normalised_brand", "is", null)
+        .order("normalised_brand", { ascending: true })
+        .range(bfrom, bfrom + 999);
+      if (error) {
+        await recordImportStatus(supa, retailerId, "error", `DB read failed (distinct brands): ${error.message ?? error}`);
+        return new Response(JSON.stringify({ error: "DB read failed (distinct brands)", details: error }), { status: 500 });
+      }
+      if (!data || data.length === 0) break;
+      for (const r of data) {
+        const b = String(r.normalised_brand || "").toLowerCase().trim();
+        if (b) existingBrandSet.add(b);
+      }
+      if (data.length < 1000) break;
+      bfrom += 1000;
     }
-    if (p.brand) {
-      const normBrand = String(p.brand).toLowerCase().trim();
-      if (normBrand) existingBrandSet.add(normBrand);
+  }
+
+  // Run an `.in(filterCol, slice)` query in bounded key-slices AND paginate each
+  // slice past the 1000-row PostgREST cap. CRITICAL: a chunk's brands can match
+  // FAR more than 1000 products (L'Oréal Paris alone has ~1,800), so a single
+  // un-paginated .in() silently truncates and drops match candidates — the exact
+  // bug that made the first canary dry-run lose name matches. Each slice is
+  // .order()'d by a stable column so .range() pages don't skip/duplicate rows.
+  async function eachIn(
+    table: string,
+    cols: string,
+    filterCol: string,
+    keys: string[],
+    orderCol: string,
+    onRow: (r: any) => void,
+    eq?: { col: string; val: any },
+  ): Promise<void> {
+    const IN_CHUNK = 300;
+    for (let i = 0; i < keys.length; i += IN_CHUNK) {
+      const slice = keys.slice(i, i + IN_CHUNK);
+      let from = 0;
+      while (true) {
+        let q = supa.from(table).select(cols);
+        if (eq) q = q.eq(eq.col, eq.val);
+        q = q.in(filterCol, slice).order(orderCol, { ascending: true }).range(from, from + 999);
+        const { data, error } = await q;
+        if (error) throw new Error(`${table} lookup: ${error.message}`);
+        if (!data || data.length === 0) break;
+        for (const r of data) onRow(r);
+        if (data.length < 1000) break;
+        from += 1000;
+      }
     }
+  }
+
+  // Build the chunk-scoped maps for a buffer of raw feed rows. Over-fetch is
+  // intentional and safe: keys are collected from ALL rows in the chunk (even
+  // ones the gates below exclude). Excluded rows never consult the maps, so the
+  // extra entries change nothing — they only spare us a second gating pass.
+  async function loadChunkMaps(rawRows: string[][]): Promise<void> {
+    const matchBrands = new Set<string>();
+    const eans = new Set<string>();
+    const mpns = new Set<string>();
+    const extIds = new Set<string>();
+    for (const rawFields of rawRows) {
+      const f = rawFields.map((x) => x.replace(/^"|"$/g, ""));
+      const mb = normaliseForMatch(lookupCanonicalBrand(f[idx.brand_name] || ""));
+      if (mb) matchBrands.add(mb);
+      if (idx.ean >= 0) { const e = normaliseEan((f[idx.ean] || "").trim()); if (e) eans.add(e); }
+      if (idx.mpn >= 0) { const m = normaliseMpn((f[idx.mpn] || "").trim()); if (m) mpns.add(m); }
+      const mv = f[matchColumnIdx]; if (mv) extIds.add(mv);
+    }
+
+    existingByExtId = new Map();
+    eanToProductId = new Map();
+    mpnToProductId = new Map();
+    productByExact = new Map();
+    productByStripped = new Map();
+
+    // products by match_brand (A1 generated column) → exact + size-verified maps.
+    await eachIn("products", "id, name, brand, match_brand", "match_brand", [...matchBrands], "id", (p) => {
+      const exactKey = buildMatchKey(p.brand || "", p.name);
+      if (!exactKey) return;
+      if (!productByExact.has(exactKey)) productByExact.set(exactKey, p.id);
+      const strippedKey = stripSize(exactKey);
+      if (strippedKey && !productByStripped.has(strippedKey)) {
+        productByStripped.set(strippedKey, { id: p.id, size: extractSize(exactKey) });
+      }
+    });
+    await eachIn("ean_product_index", "ean, product_id", "ean", [...eans], "ean", (r) => {
+      const k = String(r.ean || "").trim();
+      if (k && r.product_id != null && !eanToProductId.has(k)) eanToProductId.set(k, r.product_id);
+    });
+    await eachIn("mpn_product_index", "mpn, product_id", "mpn", [...mpns], "mpn", (r) => {
+      const k = String(r.mpn || "").trim();
+      if (k && r.product_id != null && !mpnToProductId.has(k)) mpnToProductId.set(k, r.product_id);
+    });
+    await eachIn("retailer_prices", "id, product_id, external_product_id", "external_product_id", [...extIds], "id", (r) => {
+      if (r.external_product_id) existingByExtId.set(r.external_product_id, r);
+    }, { col: "retailer_id", val: retailerId });
+
+    // Overlay the persistent in-feed learning so a product linked/created in an
+    // earlier chunk is matchable by EAN/MPN in this one (cross-chunk parity with
+    // the old global maps). Tier 5's createdUrls is consulted directly below.
+    for (const [k, v] of seenEanToProductId) if (!eanToProductId.has(k)) eanToProductId.set(k, v);
+    for (const [k, v] of seenMpnToProductId) if (!mpnToProductId.has(k)) mpnToProductId.set(k, v);
   }
 
   // Step 4: Download feed
@@ -1554,6 +1576,121 @@ serve(async (req) => {
     image_url: string;
   }> = [];
 
+  // ── Phase 2 streamed-apply state ───────────────────────────────────────────
+  // createActions/linkActions/updateActions are flushed and CLEARED mid-run, so
+  // any end-of-run aggregate over them must instead be a running counter.
+  let createSkincare = 0, createMakeup = 0, createHair = 0;     // v6 top_category breakdown of creates
+  let createCanonicalSizeExtracted = 0, createShadeExtracted = 0;
+  let countSuppressedDuplicateCreate = 0;                       // 4A-i: in-feed duplicate creates suppressed
+  let createsEnqueued = 0;                                      // running count of creates pushed (drives the incremental cap)
+  let cappedCreates = 0;                                        // creates skipped after the 20k incremental ceiling
+  const CREATE_CAP = 20000;                                     // partial-write ceiling (was an abort-before-any-write guard)
+  const FLUSH_THRESHOLD = 1000;                                 // flush when total pending actions reach this
+  // Apply tallies + errors (populated by flush()).
+  let updatesApplied = 0, linksApplied = 0, createsApplied = 0;
+  const errors: string[] = [];
+  // One timestamp captured at the top of the apply, passed to the price-aware
+  // link RPC on every flush so "lowest price wins" is scoped to THIS run.
+  const runStartedAt = new Date().toISOString();
+  const pendingActions = () => updateActions.length + linkActions.length + createActions.length;
+
+  // Chunk size for every bulk RPC / upsert. A single statement over a whole large
+  // batch exceeds the Postgres statement timeout and is silently cancelled
+  // (v6.18 monitoring surfaced this). Chunking keeps each statement small.
+  const INSERT_CHUNK = 500;
+
+  // Apply all pending actions, then clear them. On a dry_run we only DISCARD
+  // (the run computes counts, never writes) — which keeps dry-runs memory-bounded
+  // too. Called when pending actions cross FLUSH_THRESHOLD and once at the end.
+  async function flush(): Promise<void> {
+    if (dryRun) {
+      updateActions.length = 0;
+      linkActions.length = 0;
+      createActions.length = 0;
+      return;
+    }
+
+    // 1. Updates — chunked price + image backfill RPCs.
+    if (updateActions.length > 0) {
+      const nowIso = new Date().toISOString();
+      for (let i = 0; i < updateActions.length; i += INSERT_CHUNK) {
+        const chunk = updateActions.slice(i, i + INSERT_CHUNK);
+        const payload = chunk.map(u => ({
+          id: u.rp_id, price: u.price, in_stock: u.in_stock, last_updated: nowIso,
+          url: u.url || "", ean: u.ean || "", mpn: u.mpn || "",
+        }));
+        const { data: rpcResult, error: rpcErr } = await supa.rpc("bulk_update_retailer_prices", { updates: payload });
+        if (rpcErr) errors.push(`bulk_update_retailer_prices (chunk at ${i}): ${rpcErr.message}`);
+        else updatesApplied += typeof rpcResult === "number" ? rpcResult : chunk.length;
+      }
+      const imageUpdates = updateActions.filter(u => u.image_url).map(u => ({ product_id: u.product_id, image_url: u.image_url }));
+      for (let i = 0; i < imageUpdates.length; i += INSERT_CHUNK) {
+        const chunk = imageUpdates.slice(i, i + INSERT_CHUNK);
+        const { error: imgErr } = await supa.rpc("bulk_update_product_images", { updates: chunk });
+        if (imgErr) errors.push(`bulk_update_product_images (updates chunk at ${i}): ${imgErr.message}`);
+      }
+    }
+    updateActions.length = 0;
+
+    // 2. Links — dedupe THIS flush by product_id (lowest price) so one INSERT
+    //    never hits the same (product_id, retailer_id) conflict row twice, then
+    //    upsert via the run-scoped price-aware RPC (lowest price wins across
+    //    flushes regardless of chunk order — see upsert_retailer_prices_lowest).
+    if (linkActions.length > 0) {
+      const dedupedLinks = new Map<number, typeof linkActions[number]>();
+      for (const l of linkActions) {
+        const ex = dedupedLinks.get(l.product_id);
+        if (!ex || l.price < ex.price) dedupedLinks.set(l.product_id, l);
+      }
+      const dedupedLinkArray = Array.from(dedupedLinks.values());
+      const nowIso = new Date().toISOString();
+      for (let i = 0; i < dedupedLinkArray.length; i += INSERT_CHUNK) {
+        const chunk = dedupedLinkArray.slice(i, i + INSERT_CHUNK);
+        const rows = chunk.map(l => ({
+          product_id: l.product_id, retailer_id: retailerId, price: l.price, url: l.url,
+          in_stock: l.in_stock, external_product_id: l.ext_id, ean: l.ean || null, mpn: l.mpn || null,
+          last_updated: nowIso,
+        }));
+        const { error } = await supa.rpc("upsert_retailer_prices_lowest", { p_rows: rows, p_run_started_at: runStartedAt });
+        if (error) errors.push(`link flush at ${i}: ${error.message}`);
+        else linksApplied += chunk.length;
+      }
+      const linkImageUpdates = dedupedLinkArray.filter(l => l.image_url).map(l => ({ product_id: l.product_id, image_url: l.image_url }));
+      for (let i = 0; i < linkImageUpdates.length; i += INSERT_CHUNK) {
+        const chunk = linkImageUpdates.slice(i, i + INSERT_CHUNK);
+        const { error: linkImgErr } = await supa.rpc("bulk_update_product_images", { updates: chunk });
+        if (linkImgErr) errors.push(`bulk_update_product_images (links chunk at ${i}): ${linkImgErr.message}`);
+      }
+    }
+    linkActions.length = 0;
+
+    // 3. Creates — two-phase bulk insert (products → real ids → retailer_prices).
+    for (let i = 0; i < createActions.length; i += INSERT_CHUNK) {
+      const chunk = createActions.slice(i, i + INSERT_CHUNK);
+      const productRows = chunk.map(c => ({
+        name: c.name, brand: c.brand,
+        normalised_brand: c.brand ? String(c.brand).toLowerCase().trim() || null : null,
+        category: c.category, product_type: c.product_type, top_category: c.top_category,
+        subcategory: c.subcategory, tags: c.tags, canonical_size: c.canonical_size,
+        shade: c.shade, image_url: c.image_url || null,
+      }));
+      const { data: insertedProducts, error: pErr } = await supa.from("products").insert(productRows).select("id");
+      if (pErr || !insertedProducts || insertedProducts.length !== chunk.length) {
+        errors.push(`create products batch at ${i}: ${pErr?.message || "row count mismatch"}`);
+        continue;
+      }
+      const priceRows = chunk.map((c, j) => ({
+        product_id: insertedProducts[j].id, retailer_id: retailerId, price: c.price, url: c.url,
+        in_stock: c.in_stock, external_product_id: c.ext_id, ean: c.ean || null, mpn: c.mpn || null,
+        last_updated: new Date().toISOString(),
+      }));
+      const { error: rpErr } = await supa.from("retailer_prices").insert(priceRows);
+      if (rpErr) errors.push(`create rps batch at ${i}: ${rpErr.message}`);
+      else createsApplied += chunk.length;
+    }
+    createActions.length = 0;
+  }
+
   // Counters for the EAN-first matching tier
   let countLinkViaEan = 0;
   let countLinkViaMpn = 0;
@@ -1626,9 +1763,18 @@ serve(async (req) => {
     }
   }
 
-  try {
-  for await (const batch of batchSource()) {
-  for (const rawFields of batch) {
+  // ── Chunked match+apply driver ─────────────────────────────────────────────
+  // Buffer raw rows into ~CHUNK_SIZE blocks; for each block load only the
+  // catalogue rows that block needs (loadChunkMaps), run the unchanged matching
+  // body, then flush applied actions once they cross FLUSH_THRESHOLD. Peak memory
+  // is bounded by one block's lookup maps + FLUSH_THRESHOLD pending actions,
+  // rather than the whole-feed loads + whole-feed action arrays that OOM'd.
+  const CHUNK_SIZE = 2000;
+  let chunkRows: string[][] = [];
+  async function runChunk(): Promise<void> {
+    if (!chunkRows.length) return;
+    await loadChunkMaps(chunkRows);
+    for (const rawFields of chunkRows) {
     // Quote-strip mirrors the legacy `parseRow(line).map(...)`; blank-line skip
     // mirrors the legacy `!line.trim()` (a blank source line parses to one empty
     // field). `continue` here skips to the next row in the batch.
@@ -1827,12 +1973,16 @@ serve(async (req) => {
     // This is the shade-variant case — Boots/Superdrug send one feed row per
     // shade, but the URL points to a single base product page (with a shade
     // dropdown). Skip rather than create a redundant row.
-    if (!matchedProductId && wrappedUrl && urlToProductId.has(wrappedUrl)) {
+    // createdUrls (persistent) replaces the old urlToProductId -1 sentinel — the
+    // map was always empty from the DB anyway (url was never selected), so Tier 5
+    // is, as in prod today, in-feed-created shade variants only. (Follow-up:
+    // restore DB-populated url matching in its own PR.)
+    if (!matchedProductId && wrappedUrl && createdUrls.has(wrappedUrl)) {
       countSkippedShadeVariant++;
       if (sampleSkippedShadeVariant.length < 20) {
         sampleSkippedShadeVariant.push({
           name, brand,
-          existing_product_id: urlToProductId.get(wrappedUrl),
+          existing_product_id: -1,
         });
       }
       continue;
@@ -1840,11 +1990,23 @@ serve(async (req) => {
     if (matchedProductId) {
       countLinkExisting++;
       linkActions.push({ product_id: matchedProductId, ext_id: matchValue, price, url: wrappedUrl, in_stock: inStock, ean: rawEan, mpn: rawMpn, image_url: imageUrl });
-      if (normEan && !eanToProductId.has(normEan)) eanToProductId.set(normEan, matchedProductId);
-      if (normMpn && !mpnToProductId.has(normMpn)) mpnToProductId.set(normMpn, matchedProductId);
+      // In-feed learning: write to BOTH the chunk map (for later rows in this
+      // chunk) and the persistent seen-map (for later chunks).
+      if (normEan && !eanToProductId.has(normEan)) { eanToProductId.set(normEan, matchedProductId); seenEanToProductId.set(normEan, matchedProductId); }
+      if (normMpn && !mpnToProductId.has(normMpn)) { mpnToProductId.set(normMpn, matchedProductId); seenMpnToProductId.set(normMpn, matchedProductId); }
       if (sampleLinkExisting.length < 25) {
         sampleLinkExisting.push({ name, brand, matched_product_id: matchedProductId, price, matched_via: matchedVia });
       }
+      continue;
+    }
+
+    // 4A-i: suppress an in-feed duplicate create — the same NEW product seen
+    // earlier this run (a different row/chunk that didn't match any existing
+    // product). Seeded with -1 (pending id); used only to skip the redundant
+    // create, never to link (true cross-chunk name-linking is a follow-up). This
+    // is the one intentional create→suppress delta vs prod for §6 parity.
+    if (createdByMatchKey.has(productMatchKey)) {
+      countSuppressedDuplicateCreate++;
       continue;
     }
 
@@ -1913,6 +2075,16 @@ serve(async (req) => {
     if (!categoryPath && !categoryName && sampleCreateNewEmptyCatName.length < 40) {
       sampleCreateNewEmptyCatName.push({ name, brand, top_category: finalTopCategory, product_type: cat.product_type });
     }
+
+    // Incremental partial-write cap (replaces the old abort-before-any-write at
+    // >20k). Streamed creates may already be on disk, so we can't unwind — instead
+    // we stop enqueuing further creates, keep doing updates/links, and finish with
+    // an 'error' status flagging the partial run.
+    if (createsEnqueued >= CREATE_CAP) {
+      cappedCreates++;
+      continue;
+    }
+
     createActions.push({
       ext_id: matchValue,
       name,
@@ -1931,8 +2103,19 @@ serve(async (req) => {
       mpn: rawMpn,
       image_url: imageUrl,
     });
+    createsEnqueued++;
+    // 4A-i: remember this new product's key so a later in-feed duplicate is
+    // suppressed (seed -1 = pending; we don't know the real id until flush).
+    createdByMatchKey.set(productMatchKey, -1);
+    // v6 create breakdowns — running counters, because createActions is cleared
+    // on each flush so it can't be filtered at the end any more.
+    if (finalTopCategory === "skincare") createSkincare++;
+    else if (finalTopCategory === "makeup") createMakeup++;
+    else if (finalTopCategory === "hair") createHair++;
+    if (canonicalSize != null) createCanonicalSizeExtracted++;
+    if (shade != null) createShadeExtracted++;
     // Track URL for shade-variant detection on subsequent rows in this same import
-    if (wrappedUrl) urlToProductId.set(wrappedUrl, -1);
+    if (wrappedUrl) createdUrls.add(wrappedUrl);
     if (sampleCreateNew.length < SAMPLE_LIMIT_CREATE_NEW) {
       sampleCreateNew.push({
         name,
@@ -1946,8 +2129,19 @@ serve(async (req) => {
         url: wrappedUrl,
       });
     }
+    }
+    chunkRows = [];
+    if (pendingActions() >= FLUSH_THRESHOLD) await flush();
   }
-  }
+
+  try {
+    for await (const batch of batchSource()) {
+      for (const rawFields of batch) {
+        chunkRows.push(rawFields);
+        if (chunkRows.length >= CHUNK_SIZE) await runChunk();
+      }
+    }
+    await runChunk(); // process the final partial block (auto-flushes only if it crosses FLUSH_THRESHOLD)
   } catch (streamErr) {
     // A throw during streaming iteration means the fetch/inflate/parse pipeline
     // failed mid-feed (e.g. gzip corruption surfaced only after the magic-byte
@@ -1979,18 +2173,11 @@ serve(async (req) => {
     }), { status: 502, headers: { "Content-Type": "application/json" } });
   }
 
-  // v6: top_category breakdown of would-create-new
-  const v6TopCategoryBreakdown = {
-    skincare: createActions.filter(a => a.top_category === "skincare").length,
-    makeup: createActions.filter(a => a.top_category === "makeup").length,
-    hair: createActions.filter(a => a.top_category === "hair").length,
-  };
-
-  // v6.16: canonical_size extraction success on new products
-  const v6CanonicalSizeExtracted = createActions.filter(a => a.canonical_size != null).length;
-  
-  // v6.17: shade extraction success on new products
-  const v6ShadeExtracted = createActions.filter(a => a.shade != null).length;
+  // v6 breakdowns of would-create-new. Running counters (NOT createActions
+  // filters) because createActions is flushed+cleared mid-run.
+  const v6TopCategoryBreakdown = { skincare: createSkincare, makeup: createMakeup, hair: createHair };
+  const v6CanonicalSizeExtracted = createCanonicalSizeExtracted;
+  const v6ShadeExtracted = createShadeExtracted;
 
   // v6.13: build top-N category paths breakdown (sorted by count desc)
   const categoryPathBreakdown = Array.from(categoryPathCounts.entries())
@@ -1998,49 +2185,10 @@ serve(async (req) => {
     .slice(0, 100)
     .map(([path, count]) => ({ path, count }));
 
-  // Safeguard: cap on new products created in one run.
-  if (countCreateNew > 20000) {
-    await recordImportStatus(supa, retailerId, "error",
-      `Safety cap: would create ${countCreateNew} new products (>20000) — aborted`);
-    return new Response(JSON.stringify({
-      error: "Would create more than 20000 new products in one run — aborting as a safety cap",
-      retailer_id: retailerId,
-      feed_id_used: config.awin_feed_id,
-      feed_total_rows: feedRows,
-      counts: {
-        excluded_path_not_in_scope: countExcludedPathNotInScope,
-        excluded_by_category: countExcluded,
-        excluded_no_price: countNoPrice,
-        excluded_no_match_id: countNoMatchId,
-        excluded_out_of_stock: countOOS,
-        skipped_new_brand: countSkippedNewBrand,
-        size_mismatch_rejected: countSizeMismatchRejected,
-        v6_excluded: countV6Excluded,
-        would_update_existing: countUpdate,
-        would_link_to_existing_product: countLinkExisting,
-        skipped_shade_variant: countSkippedShadeVariant,
-        would_link_via_ean: countLinkViaEan,
-        would_link_via_mpn: countLinkViaMpn,
-        would_link_via_name_exact: countLinkViaNameExact,
-        would_link_via_name_stripped: countLinkViaNameStripped,
-        would_create_new_product: countCreateNew,
-        canonical_size_extracted_on_new: v6CanonicalSizeExtracted,
-        shade_extracted_on_new: v6ShadeExtracted,
-        rows_with_ean: rowsWithEan,
-        rows_with_mpn: rowsWithMpn,
-      },
-      v6_top_category_breakdown: v6TopCategoryBreakdown,
-      v6_exclusion_breakdown: v6ExclusionBreakdown,
-      sample_v6_excluded: sampleV6Excluded,
-      sample_excluded_by_category: sampleExcluded,
-      sample_link_to_existing: sampleLinkExisting,
-      sample_create_new: sampleCreateNew,
-      sample_raw_category_data: sampleRawCategoryData,
-      category_path_breakdown: categoryPathBreakdown,
-      create_new_cat_name_breakdown: createNewCatNameBreakdown,
-      sample_create_new_empty_cat_name: sampleCreateNewEmptyCatName,
-    }, null, 2), { status: 200, headers: { "Content-Type": "application/json" } });
-  }
+  // The old abort-before-any-write safety cap (countCreateNew > 20000) is gone:
+  // with streamed creates there's nothing to unwind. It's replaced by the
+  // incremental ceiling in the match loop (CREATE_CAP / createsEnqueued /
+  // cappedCreates) plus a partial-run 'error' status at the bottom.
 
   // Brand canonicalisation diagnostics + low-frequency unmatched brands for review
   const unmatchedLowFreq = Array.from(unmatchedBrandCounts.entries())
@@ -2085,6 +2233,8 @@ serve(async (req) => {
       would_link_via_name_exact: countLinkViaNameExact,
       would_link_via_name_stripped: countLinkViaNameStripped,
       would_create_new_product: countCreateNew,
+      suppressed_duplicate_create: countSuppressedDuplicateCreate,
+      capped_creates: cappedCreates,
       canonical_size_extracted_on_new: v6CanonicalSizeExtracted,
       shade_extracted_on_new: v6ShadeExtracted,
       rows_with_ean: rowsWithEan,
@@ -2110,160 +2260,32 @@ serve(async (req) => {
   }
 
   // ============================ APPLY ============================
-  let updatesApplied = 0;
-  let linksApplied = 0;
-  let createsApplied = 0;
-  const errors: string[] = [];
+  // The match loop already streamed most actions to disk via flush() as the
+  // accumulators crossed FLUSH_THRESHOLD; this applies whatever's still buffered.
+  // dry_run returned above, so this is real-run only. updatesApplied /
+  // linksApplied / createsApplied / errors were accumulated across all flushes.
+  await flush();
 
-  // Chunk size for every bulk RPC / upsert below. A single statement over the
-  // whole batch (~6,800 rows for Debenhams) exceeds the Postgres statement
-  // timeout and is cancelled, silently dropping the entire batch (v6.18
-  // monitoring surfaced this on bulk_update_product_images; bulk_update_retailer_prices
-  // had the same flaw, dropping most of Boots's daily price writes). Chunking
-  // keeps each statement small and well under the timeout.
-  const INSERT_CHUNK = 500;
-
-  // 1. Updates — chunked price + image backfill RPCs.
-  if (updateActions.length > 0) {
-    const nowIso = new Date().toISOString();
-    for (let i = 0; i < updateActions.length; i += INSERT_CHUNK) {
-      const chunk = updateActions.slice(i, i + INSERT_CHUNK);
-      const payload = chunk.map(u => ({
-        id: u.rp_id,
-        price: u.price,
-        in_stock: u.in_stock,
-        last_updated: nowIso,
-        url: u.url || "",
-        ean: u.ean || "",
-        mpn: u.mpn || "",
-      }));
-      const { data: rpcResult, error: rpcErr } = await supa.rpc("bulk_update_retailer_prices", { updates: payload });
-      if (rpcErr) {
-        errors.push(`bulk_update_retailer_prices (chunk at ${i}): ${rpcErr.message}`);
-      } else {
-        updatesApplied += typeof rpcResult === "number" ? rpcResult : chunk.length;
-      }
-    }
-
-    // Image backfill on existing products — chunked (same timeout risk).
-    const imageUpdates = updateActions
-      .filter(u => u.image_url)
-      .map(u => ({ product_id: u.product_id, image_url: u.image_url }));
-    for (let i = 0; i < imageUpdates.length; i += INSERT_CHUNK) {
-      const chunk = imageUpdates.slice(i, i + INSERT_CHUNK);
-      const { error: imgErr } = await supa.rpc("bulk_update_product_images", { updates: chunk });
-      if (imgErr) {
-        errors.push(`bulk_update_product_images (updates chunk at ${i}): ${imgErr.message}`);
-      }
-    }
-  }
-
-  // 2. Links — dedupe and bulk upsert.
-  const dedupedLinks = new Map<number, typeof linkActions[number]>();
-  for (const l of linkActions) {
-    const existing = dedupedLinks.get(l.product_id);
-    if (!existing || l.price < existing.price) {
-      dedupedLinks.set(l.product_id, l);
-    }
-  }
-  const dedupedLinkArray = Array.from(dedupedLinks.values());
-
-  for (let i = 0; i < dedupedLinkArray.length; i += INSERT_CHUNK) {
-    const chunk = dedupedLinkArray.slice(i, i + INSERT_CHUNK);
-    const rows = chunk.map(l => ({
-      product_id: l.product_id,
-      retailer_id: retailerId,
-      price: l.price,
-      url: l.url,
-      in_stock: l.in_stock,
-      external_product_id: l.ext_id,
-      ean: l.ean || null,
-      mpn: l.mpn || null,
-      last_updated: new Date().toISOString(),
-    }));
-    const { error } = await supa
-      .from("retailer_prices")
-      .upsert(rows, { onConflict: "product_id,retailer_id" });
-    if (error) {
-      errors.push(`link batch starting at ${i}: ${error.message}`);
-    } else {
-      linksApplied += chunk.length;
-    }
-  }
-
-  // 2b. Image backfill on linked products — chunked (same timeout risk).
-  const linkImageUpdates = dedupedLinkArray
-    .filter(l => l.image_url)
-    .map(l => ({ product_id: l.product_id, image_url: l.image_url }));
-  for (let i = 0; i < linkImageUpdates.length; i += INSERT_CHUNK) {
-    const chunk = linkImageUpdates.slice(i, i + INSERT_CHUNK);
-    const { error: linkImgErr } = await supa.rpc("bulk_update_product_images", { updates: chunk });
-    if (linkImgErr) {
-      errors.push(`bulk_update_product_images (links chunk at ${i}): ${linkImgErr.message}`);
-    }
-  }
-
-  // 3. Creates — two-phase bulk insert (v6.16: now writes canonical_size)
-  for (let i = 0; i < createActions.length; i += INSERT_CHUNK) {
-    const chunk = createActions.slice(i, i + INSERT_CHUNK);
-    const productRows = chunk.map(c => ({
-      name: c.name,
-      brand: c.brand,
-      // c.brand is already the canonical brand (lookupCanonicalBrand). Store its
-      // lowercased form so brand pages can group by normalised_brand. Mirrors the
-      // backfill COALESCE(LOWER(canonical), LOWER(brand)); without this, new
-      // products land with NULL normalised_brand and never surface on /brands/*.
-      normalised_brand: c.brand ? String(c.brand).toLowerCase().trim() || null : null,
-      category: c.category,
-      product_type: c.product_type,
-      top_category: c.top_category,
-      subcategory: c.subcategory,
-      tags: c.tags,
-      canonical_size: c.canonical_size,
-      shade: c.shade,
-      image_url: c.image_url || null,
-    }));
-    const { data: insertedProducts, error: pErr } = await supa
-      .from("products")
-      .insert(productRows)
-      .select("id");
-
-    if (pErr || !insertedProducts || insertedProducts.length !== chunk.length) {
-      errors.push(`create products batch at ${i}: ${pErr?.message || "row count mismatch"}`);
-      continue;
-    }
-
-    const priceRows = chunk.map((c, idx) => ({
-      product_id: insertedProducts[idx].id,
-      retailer_id: retailerId,
-      price: c.price,
-      url: c.url,
-      in_stock: c.in_stock,
-      external_product_id: c.ext_id,
-      ean: c.ean || null,
-      mpn: c.mpn || null,
-      last_updated: new Date().toISOString(),
-    }));
-    const { error: rpErr } = await supa.from("retailer_prices").insert(priceRows);
-    if (rpErr) {
-      errors.push(`create rps batch at ${i}: ${rpErr.message}`);
-    } else {
-      createsApplied += chunk.length;
-    }
-  }
+  // Partial-write cap: if the incremental ceiling skipped any creates, the run is
+  // incomplete even if every write succeeded — flag it 'error' so the monitor and
+  // the operator see it.
+  const capMsg = cappedCreates > 0
+    ? `create cap hit (partial): ${cappedCreates} create(s) skipped after the ${CREATE_CAP} ceiling`
+    : null;
+  const hadError = errors.length > 0 || cappedCreates > 0;
 
   // Update last_imported_at on the config row, and record the import outcome so
-  // monitor-retailer-feeds can alert on failures immediately. Write-level errors
-  // (rows that failed to upsert) count as an error status even though the feed
-  // itself downloaded fine.
+  // monitor-retailer-feeds can alert immediately.
   await supa
     .from("retailer_import_config")
     .update({
       last_imported_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       last_attempt_at: new Date().toISOString(),
-      last_import_status: errors.length > 0 ? "error" : "ok",
-      last_import_error: errors.length > 0 ? errors.slice(0, 5).join("; ").slice(0, 1000) : null,
+      last_import_status: hadError ? "error" : "ok",
+      last_import_error: hadError
+        ? [capMsg, ...errors.slice(0, 5)].filter(Boolean).join("; ").slice(0, 1000)
+        : null,
     })
     .eq("retailer_id", retailerId);
 
@@ -2283,6 +2305,8 @@ serve(async (req) => {
     updates_applied: updatesApplied,
     links_applied: linksApplied,
     creates_applied: createsApplied,
+    suppressed_duplicate_create: countSuppressedDuplicateCreate,
+    capped_creates: cappedCreates,
     error_count: errors.length,
     sample_errors: errors.slice(0, 10),
   };
