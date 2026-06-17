@@ -1,14 +1,13 @@
 /**
- * Local validation harness for inferCategorisation() in
- *   supabase/functions/import-awin-feed/index.ts
+ * Local validation harness for the SHARED inferCategorisation() in
+ *   supabase/functions/_shared/categorisation.ts
  *
- * It extracts the LIVE function source (plus its TopCategory/Categorisation
- * type defs) directly from index.ts at runtime, transpiles it via tsx, and
- * runs a fixed set of representative product names through it. This means the
- * harness always tests exactly the code we are about to deploy — no drift, no
- * hand-maintained copy of the logic.
+ * As of PR #18 inferCategorisation lives in ONE shared module that all three
+ * importers import. The harness imports that same module directly — so it tests
+ * exactly the code that ships, and because all three importers consume the same
+ * module, passing here means all three behave identically by construction.
  *
- * Run:  npx tsx scripts/categorisation-harness.ts
+ * Run:  npx tsx scripts/categorisation-harness.mts
  *
  * Each case is tagged with `fixedBy`: the commit number that should make it
  * PASS. fixedBy 0 = control (must always pass; regression guard). So before
@@ -16,57 +15,7 @@
  * commit, more cases flip to PASS and NO control may flip to FAIL.
  */
 
-import { readFileSync, writeFileSync } from "node:fs";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { dirname, join } from "node:path";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const SRC = join(__dirname, "..", "supabase", "functions", "import-awin-feed", "index.ts");
-
-// ── Extract type defs + inferCategorisation from the live source ────────────
-function extractFunction(src: string): string {
-  const typeStart = src.indexOf("type TopCategory");
-  if (typeStart === -1) throw new Error("type TopCategory not found in source");
-  const fnSig = src.indexOf("function inferCategorisation", typeStart);
-  if (fnSig === -1) throw new Error("function inferCategorisation not found");
-  const braceOpen = src.indexOf("{", fnSig);
-  let depth = 0;
-  let end = -1;
-  for (let i = braceOpen; i < src.length; i++) {
-    const c = src[i];
-    if (c === "{") depth++;
-    else if (c === "}") {
-      depth--;
-      if (depth === 0) {
-        end = i + 1;
-        break;
-      }
-    }
-  }
-  if (end === -1) throw new Error("could not brace-match inferCategorisation");
-  const body = src.slice(typeStart, end);
-  // Sanity checks against the simple brace-matcher being fooled.
-  if (!body.includes("function inferCategorisation")) throw new Error("extraction missing fn");
-  if (!/return\s*\{/.test(body)) throw new Error("extraction missing return — brace match likely wrong");
-  return body;
-}
-
-const source = readFileSync(SRC, "utf8");
-const extracted = extractFunction(source);
-const tmpModule = join(__dirname, ".categorisation-extracted.gen.ts");
-writeFileSync(tmpModule, extracted + "\n\nexport { inferCategorisation };\n");
-
-type Cat = {
-  top_category: string | null;
-  product_type: string;
-  subcategory: string;
-  tags: string[];
-  excluded?: string;
-};
-const mod = (await import(pathToFileURL(tmpModule).href)) as {
-  inferCategorisation: (name: string, brand?: string) => Cat;
-};
-const inferCategorisation = mod.inferCategorisation;
+import { inferCategorisation } from "../supabase/functions/_shared/categorisation.ts";
 
 // ── Test cases ──────────────────────────────────────────────────────────────
 type Expect = "hair" | "skincare" | "makeup" | null;
@@ -294,6 +243,10 @@ const CASES: Case[] = [
   { name: "Calvin Klein Eternity For Men Hair And Body Wash 150ml", brand: "Calvin Klein", expect: "skincare", fixedBy: 0, note: "2-in-1 'hair & body' wash stays skincare/body" },
   { name: "Nair Ingrown Hair Serum 50ml", brand: "Nair", expect: "skincare", fixedBy: 0, note: "'ingrown hair' is skincare, not haircare" },
   { name: "Skin Doctors Hair No More Inhibitor Spray 120ml", brand: "Skin Doctors", expect: "skincare", fixedBy: 0, note: "depilatory hair-reducer ('inhibitor'/'no more') stays skincare, not haircare" },
+  // 'fudge' as a flavour/shade word must NOT route to hair — only brand=Fudge does.
+  { name: "Sunkissed Heavenly Fudge Face Palette 19.2g", brand: "Sunkissed", expect: "skincare", fixedBy: 0, note: "'Fudge' shade word: must not route to HAIR (brand-only now). Falls to skincare — a separate makeup-detection gap for 'palette', out of scope here." },
+  { name: "Organic Shop Ultra Smooth Pistachio Fudge Body Scrub 250ml", brand: "Organic Shop", expect: "skincare", fixedBy: 0, note: "'Fudge' flavour word: body scrub stays skincare" },
+  { name: "Fudge Professional Clean Blonde Violet Shampoo 250ml", brand: "Fudge", expect: "hair", fixedBy: 0, note: "brand=Fudge still routes hair (brand-field match)" },
   { name: "Clarins Gentle Renewing Cleansing Mousse 150ml", brand: "Clarins", expect: "skincare", fixedBy: 0, note: "face cleansing mousse: no 'styling' qualifier → not hair" },
 ];
 
