@@ -243,6 +243,10 @@ const CASES: Case[] = [
   { name: "Calvin Klein Eternity For Men Hair And Body Wash 150ml", brand: "Calvin Klein", expect: "skincare", fixedBy: 0, note: "2-in-1 'hair & body' wash stays skincare/body" },
   { name: "Nair Ingrown Hair Serum 50ml", brand: "Nair", expect: "skincare", fixedBy: 0, note: "'ingrown hair' is skincare, not haircare" },
   { name: "Skin Doctors Hair No More Inhibitor Spray 120ml", brand: "Skin Doctors", expect: "skincare", fixedBy: 0, note: "depilatory hair-reducer ('inhibitor'/'no more') stays skincare, not haircare" },
+  // 'fudge' as a flavour/shade word must NOT route to hair — only brand=Fudge does.
+  { name: "Sunkissed Heavenly Fudge Face Palette 19.2g", brand: "Sunkissed", expect: "skincare", fixedBy: 0, note: "'Fudge' shade word: must not route to HAIR (brand-only now). Falls to skincare — a separate makeup-detection gap for 'palette', out of scope here." },
+  { name: "Organic Shop Ultra Smooth Pistachio Fudge Body Scrub 250ml", brand: "Organic Shop", expect: "skincare", fixedBy: 0, note: "'Fudge' flavour word: body scrub stays skincare" },
+  { name: "Fudge Professional Clean Blonde Violet Shampoo 250ml", brand: "Fudge", expect: "hair", fixedBy: 0, note: "brand=Fudge still routes hair (brand-field match)" },
   { name: "Clarins Gentle Renewing Cleansing Mousse 150ml", brand: "Clarins", expect: "skincare", fixedBy: 0, note: "face cleansing mousse: no 'styling' qualifier → not hair" },
 ];
 
