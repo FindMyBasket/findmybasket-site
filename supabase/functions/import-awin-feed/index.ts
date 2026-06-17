@@ -1038,6 +1038,17 @@ serve(async (req) => {
   // (the next slice re-derives seen-EAN/MPN and created products from the DB), and
   // a dry-run commits nothing.
   const slicedImport: boolean = config.sliced_import === true;
+  // Phase 4b: how a sliced retailer STAGES its feed into slice files.
+  //   'inline'              — Phase 4 single-pass stage (stream+parse+upload in one
+  //                           invocation). Fits feeds up to ~YesStyle's size.
+  //   'storage_passthrough' — Phase 4b two-step stage for very large gzipped feeds
+  //                           (Boots): Phase A (mode='stage') ungzips once to a
+  //                           single inflated.txt blob; Phase B (mode='split')
+  //                           byte-range-reads that blob in bounded, self-chaining
+  //                           passes and writes the slice files. Neither step does
+  //                           the parse+lookup+write that 546'd the inline stage.
+  const stagingMode: "inline" | "storage_passthrough" =
+    config.staging_mode === "storage_passthrough" ? "storage_passthrough" : "inline";
   const reqMode: string = typeof body.mode === "string" ? body.mode : "";
   const SLICE_ROWS: number = (typeof body.slice_rows === "number" && body.slice_rows > 0)
     ? Math.floor(body.slice_rows) : 9000;            // knob: pass slice_rows (e.g. 6000) to shrink
@@ -1045,8 +1056,9 @@ serve(async (req) => {
     ? body.run_id : crypto.randomUUID();
   const sliceIndex: number = (typeof body.slice_index === "number" && body.slice_index >= 0)
     ? Math.floor(body.slice_index) : 0;
-  const effectiveMode: "stage" | "process" | "single" =
+  const effectiveMode: "stage" | "split" | "process" | "single" =
     reqMode === "process" ? "process"
+    : reqMode === "split" ? "split"
     : (reqMode === "stage" || (slicedImport && !dryRun && !reqMode)) ? "stage"
     : "single";
   // Test hook: auto_chain=false stages/processes WITHOUT firing the next slice via
@@ -1316,6 +1328,230 @@ serve(async (req) => {
   // changes behaviour for direct-HTTP feeds (the ones big enough to need it,
   // e.g. Debenhams once switched off its storage:// pre-filter).
   const streamingActive = effectiveMode !== "process" && streamingEnabled && !feedUrl.startsWith("storage://");
+
+  // ── Phase 4b — STORAGE-PASSTHROUGH STAGE (Phase A): ungzip ONCE → one blob ──
+  // Very large gzipped feeds (Boots) 546 in the inline stage because inflate +
+  // per-row CSV parse + JSON.stringify + many slice uploads all run in ONE
+  // invocation. Phase A does ONLY the cheap, bounded part: fetch the raw feed,
+  // gzip-inflate it in a single pako pass, and upload the inflated bytes as ONE
+  // `inflated.txt` blob. The expensive parse+slice is deferred to Phase B
+  // (mode='split'), which byte-range-reads that blob in bounded, self-chaining
+  // passes. No catalogue lookups and no DB writes here — the two costs that 546.
+  // Returns early, so the streaming/legacy fetch dispatch + inline-stage block
+  // below never run for a passthrough retailer.
+  if (effectiveMode === "stage" && stagingMode === "storage_passthrough") {
+    const stageRunStartedAt = new Date().toISOString();
+    // Fetch the raw (still-gzipped) feed. Mirrors the legacy block's two source
+    // schemes; Boots is a direct-HTTP AWIN feed, storage:// is supported too.
+    let rawBuf: ArrayBuffer;
+    try {
+      if (feedUrl.startsWith("storage://")) {
+        const withoutScheme = feedUrl.slice("storage://".length);
+        const slashIdx = withoutScheme.indexOf("/");
+        const bucket = withoutScheme.slice(0, slashIdx);
+        const objectPath = withoutScheme.slice(slashIdx + 1);
+        const { data, error } = await supa.storage.from(bucket).download(objectPath);
+        if (error || !data) throw new Error(`storage download ${bucket}/${objectPath}: ${error?.message ?? "no data"}`);
+        rawBuf = await data.arrayBuffer();
+      } else {
+        const resp = await fetch(feedUrl, { headers: { "Accept-Encoding": "identity", "User-Agent": "FindMyBasket/1.0 (Supabase Edge Function)" } });
+        if (!resp.ok) throw new Error(`feed download ${resp.status} ${resp.statusText} (fid ${config.awin_feed_id})`);
+        rawBuf = await resp.arrayBuffer();
+      }
+    } catch (e) {
+      const msg = `passthrough stage fetch failed: ${String(e instanceof Error ? e.message : e)}`;
+      await recordImportStatus(supa, retailerId, "error", msg);
+      return new Response(JSON.stringify({ error: msg }), { status: 502, headers: { "Content-Type": "application/json" } });
+    }
+    // Inflate once (the bounded step). pako.ungzip for gzip magic 1f 8b, else raw.
+    let inflated: Uint8Array;
+    try {
+      const input = new Uint8Array(rawBuf);
+      const gz = input.length >= 2 && input[0] === 0x1f && input[1] === 0x8b;
+      inflated = gz ? pako.ungzip(input) : input;
+    } catch (gzErr) {
+      const msg = `passthrough stage gunzip failed: ${String(gzErr)}`;
+      await recordImportStatus(supa, retailerId, "error", msg);
+      return new Response(JSON.stringify({ error: msg }), { status: 502, headers: { "Content-Type": "application/json" } });
+    }
+    const totalBytes = inflated.byteLength;
+    // Header = bytes up to the first \n. Strip BOM + trailing \r, parse columns
+    // exactly like the inline/legacy path. Phase B then starts AFTER the header,
+    // so it only ever sees data rows (parity with batchSource's i=1 start).
+    const firstNl = inflated.indexOf(0x0A);
+    if (firstNl < 0) {
+      await recordImportStatus(supa, retailerId, "error", "passthrough stage: no newline in inflated feed");
+      return new Response(JSON.stringify({ error: "no newline in inflated feed" }), { status: 502, headers: { "Content-Type": "application/json" } });
+    }
+    const headerLine = new TextDecoder("utf-8").decode(inflated.subarray(0, firstNl)).replace(/^﻿/, "").replace(/\r$/, "");
+    const passthroughColumns = parseRow(headerLine).map((c) => c.replace(/^"|"$/g, ""));
+    const postHeaderOffset = firstNl + 1;
+    // Cheap newline scan for the <50-row safeguard (same intent as the other paths).
+    let nlCount = 0;
+    for (let i = 0; i < inflated.length; i++) if (inflated[i] === 0x0A) nlCount++;
+    const stagedRowsEst = Math.max(0, nlCount - 1); // minus the header line
+    if (stagedRowsEst < 50) {
+      await recordImportStatus(supa, retailerId, "error", `Feed returned fewer than 50 rows (${stagedRowsEst}) — likely AWIN incident or bad feed ID`);
+      return new Response(JSON.stringify({ error: "Feed returned fewer than 50 rows — aborting", staged_rows: stagedRowsEst }), { status: 502, headers: { "Content-Type": "application/json" } });
+    }
+    // Upload the inflated feed as ONE blob (bucket file_size_limit was raised for this).
+    const inflatedPath = `${runId}/inflated.txt`;
+    {
+      const { error: upErr } = await supa.storage.from(STAGING_BUCKET)
+        .upload(inflatedPath, new Blob([inflated], { type: "text/plain" }), { upsert: true, contentType: "text/plain" });
+      if (upErr) {
+        await recordImportStatus(supa, retailerId, "error", `passthrough stage: inflated upload failed: ${upErr.message}`);
+        return new Response(JSON.stringify({ error: "inflated upload failed", details: upErr.message }), { status: 502, headers: { "Content-Type": "application/json" } });
+      }
+    }
+    // Init run_state. total_slices is unknown until Phase B finishes → null for now.
+    const { error: metaErr } = await supa.from("import_run_state").insert({
+      run_id: runId, retailer_id: retailerId, kind: "meta", key: "",
+      meta: {
+        columns: passthroughColumns, run_started_at: stageRunStartedAt, total_slices: null, next_slice: 0,
+        creates_enqueued: 0, slice_rows: SLICE_ROWS, feed_format: feedFormat, staged_rows: stagedRowsEst,
+        staging_mode: "storage_passthrough", inflated_blob_path: inflatedPath, inflated_total_bytes: totalBytes,
+        next_byte_offset: postHeaderOffset, next_slice_write: 0,
+        counts: {}, applied: { updates: 0, links: 0, creates: 0, capped: 0, errors: [] },
+      },
+    });
+    if (metaErr) {
+      await recordImportStatus(supa, retailerId, "error", `passthrough stage run_state init: ${metaErr.message}`);
+      return new Response(JSON.stringify({ error: "run_state init failed", details: metaErr.message }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
+    // Trigger Phase B (split) — fire-and-forget via pg_net, like the inline path.
+    if (autoChain) {
+      const { error: trigErr } = await supa.rpc("fmb_invoke_import_slice", { p_body: { retailer_id: retailerId, run_id: runId, mode: "split", dry_run: false, slice_rows: SLICE_ROWS, mem_trace: memTrace } });
+      if (trigErr) {
+        await recordImportStatus(supa, retailerId, "error", `passthrough stage: failed to trigger split: ${trigErr.message}`);
+        return new Response(JSON.stringify({ error: "split trigger failed", run_id: runId, details: trigErr.message }), { status: 500, headers: { "Content-Type": "application/json" } });
+      }
+    }
+    return new Response(JSON.stringify({
+      staged: true, mode: "storage_passthrough", run_id: runId,
+      inflated_total_bytes: totalBytes, staged_rows_est: stagedRowsEst, slice_rows: SLICE_ROWS,
+    }, null, 2), { headers: { "Content-Type": "application/json" } });
+  }
+
+  // ── Phase 4b — SPLIT (Phase B): byte-range-read inflated.txt → slice files ──
+  // Self-chaining. Each invocation reads READ_CHUNK_BYTES from the inflated blob,
+  // CSV-parses the complete lines, and writes them as slice_<j>.jsonl files of up
+  // to SLICE_ROWS rows each (identical format to the inline stage, so Phase C is
+  // unchanged). DESIGN NOTE (deviation from the original plan): instead of a
+  // partial_row_carry string + CsvLineAccumulator, we advance next_byte_offset to
+  // just past the LAST newline in the window. 0x0A never occurs inside a UTF-8
+  // multibyte sequence, so every consumed line is whole and decodes cleanly — no
+  // row is ever cut, and no carry needs persisting. The last slice of a chunk may
+  // be short; that's fine — Phase C tolerates short slices and they stay strictly
+  // UNDER the per-slice ceiling. When the blob is exhausted we set total_slices
+  // and trigger Phase C slice 0.
+  if (effectiveMode === "split") {
+    const READ_CHUNK_BYTES = (typeof body.read_chunk_bytes === "number" && body.read_chunk_bytes > 0)
+      ? Math.floor(body.read_chunk_bytes) : 5 * 1024 * 1024; // 5MB; tune from import_memory_trace
+    const { data: metaRow, error: metaErr } = await supa
+      .from("import_run_state").select("meta").eq("run_id", runId).eq("kind", "meta").eq("key", "").maybeSingle();
+    if (metaErr || !metaRow?.meta) {
+      await recordImportStatus(supa, retailerId, "error", `split: run_state meta missing (run ${runId}): ${metaErr?.message ?? "no meta row"}`);
+      return new Response(JSON.stringify({ error: "run_state meta missing", run_id: runId }), { status: 410, headers: { "Content-Type": "application/json" } });
+    }
+    const sMeta = metaRow.meta;
+    const inflatedPath: string = sMeta.inflated_blob_path;
+    const totalBytes: number = sMeta.inflated_total_bytes;
+    const offset: number = typeof sMeta.next_byte_offset === "number" ? sMeta.next_byte_offset : 0;
+    const sliceRows: number = typeof sMeta.slice_rows === "number" && sMeta.slice_rows > 0 ? sMeta.slice_rows : SLICE_ROWS;
+    let j: number = typeof sMeta.next_slice_write === "number" ? sMeta.next_slice_write : 0;
+
+    // Range-read [offset, end] inclusive. supabase-js .download() can't do ranged
+    // reads, so hit the storage REST object endpoint directly with the service key.
+    // Use the PUBLIC project URL, not env SUPABASE_URL: in the edge runtime the
+    // latter is the internal gateway, which 400s on a ranged object GET (verified),
+    // while the public host serves 206 correctly. Mirrors fmb_invoke_import_slice's
+    // hardcoded public URL.
+    const PUBLIC_STORAGE_BASE = "https://crtrjoescntlcjiwdtrt.supabase.co";
+    const end = Math.min(offset + READ_CHUNK_BYTES, totalBytes) - 1;
+    let bytes: Uint8Array;
+    try {
+      const url = `${PUBLIC_STORAGE_BASE}/storage/v1/object/${STAGING_BUCKET}/${inflatedPath}`;
+      const resp = await fetch(url, { headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey, Range: `bytes=${offset}-${end}` } });
+      if (!resp.ok && resp.status !== 206) {
+        const errBody = await resp.text().catch(() => "");
+        throw new Error(`range fetch ${resp.status} ${resp.statusText} url=${url} body=${errBody.slice(0, 300)}`);
+      }
+      bytes = new Uint8Array(await resp.arrayBuffer());
+    } catch (e) {
+      await recordImportStatus(supa, retailerId, "error", `split: range fetch failed (run ${runId}, offset ${offset}): ${String(e instanceof Error ? e.message : e)}`);
+      return new Response(JSON.stringify({ error: "range fetch failed", run_id: runId, offset }), { status: 502, headers: { "Content-Type": "application/json" } });
+    }
+    const isFinal = offset + bytes.length >= totalBytes;
+    let consumeEnd: number;
+    if (isFinal) {
+      consumeEnd = bytes.length; // last chunk: the final line may have no trailing \n
+    } else {
+      let lastNl = -1;
+      for (let i = bytes.length - 1; i >= 0; i--) { if (bytes[i] === 0x0A) { lastNl = i; break; } }
+      if (lastNl < 0) {
+        await recordImportStatus(supa, retailerId, "error", `split: no newline in ${READ_CHUNK_BYTES}-byte window (run ${runId}, offset ${offset}) — a row exceeds READ_CHUNK_BYTES`);
+        return new Response(JSON.stringify({ error: "row exceeds read window", run_id: runId, offset }), { status: 500, headers: { "Content-Type": "application/json" } });
+      }
+      consumeEnd = lastNl + 1; // next read resumes exactly at a line boundary
+    }
+    const textChunk = new TextDecoder("utf-8").decode(bytes.subarray(0, consumeEnd));
+    // Parse complete lines exactly like the legacy/inline path (split on \n, skip
+    // blank lines, parseRow each). No header here — Phase A advanced past it.
+    const rows: string[][] = [];
+    for (const line of textChunk.split("\n")) { if (line.trim()) rows.push(parseRow(line)); }
+
+    // Write up to SLICE_ROWS rows per slice file, continuing the global index j.
+    try {
+      for (let i = 0; i < rows.length; i += sliceRows) {
+        const slice = rows.slice(i, i + sliceRows);
+        const bodyText = slice.map((r) => JSON.stringify(r)).join("\n");
+        const { error: upErr } = await supa.storage.from(STAGING_BUCKET)
+          .upload(slicePath(j), new Blob([bodyText], { type: "application/x-ndjson" }), { upsert: true, contentType: "application/x-ndjson" });
+        if (upErr) throw new Error(`slice ${j} upload: ${upErr.message}`);
+        j++;
+      }
+    } catch (e) {
+      await recordImportStatus(supa, retailerId, "error", `split: ${String(e instanceof Error ? e.message : e)}`);
+      return new Response(JSON.stringify({ error: "split slice upload failed", run_id: runId }), { status: 502, headers: { "Content-Type": "application/json" } });
+    }
+    const newOffset = offset + consumeEnd;
+    const done = newOffset >= totalBytes;
+    // Persist progress. total_slices becomes known only once the blob is exhausted.
+    await supa.from("import_run_state")
+      .update({ meta: { ...sMeta, next_byte_offset: newOffset, next_slice_write: j, total_slices: done ? j : null } })
+      .eq("run_id", runId).eq("kind", "meta").eq("key", "");
+
+    if (memTrace) {
+      try {
+        const m = (Deno as any).memoryUsage ? (Deno as any).memoryUsage() : { rss: 0, heapUsed: 0, heapTotal: 0, external: 0 };
+        await supa.from("import_memory_trace").insert({
+          run_id: sMeta.run_started_at, retailer_id: retailerId, chunk_no: j, rows_seen: rows.length,
+          rss: m.rss, heap_used: m.heapUsed, heap_total: m.heapTotal, external: m.external,
+          timings: { phase: "split", offset, new_offset: newOffset, consume_bytes: consumeEnd, slices_written_total: j, read_chunk_bytes: READ_CHUNK_BYTES },
+        });
+      } catch { /* never let the probe break the run */ }
+    }
+
+    let trigErr: any = null;
+    if (autoChain) {
+      if (!done) {
+        ({ error: trigErr } = await supa.rpc("fmb_invoke_import_slice", { p_body: { retailer_id: retailerId, run_id: runId, mode: "split", dry_run: false, slice_rows: sliceRows, read_chunk_bytes: READ_CHUNK_BYTES, mem_trace: memTrace } }));
+      } else if (j > 0) {
+        ({ error: trigErr } = await supa.rpc("fmb_invoke_import_slice", { p_body: { retailer_id: retailerId, run_id: runId, mode: "process", slice_index: 0, dry_run: false, slice_rows: sliceRows, mem_trace: memTrace } }));
+      }
+      if (trigErr) await recordImportStatus(supa, retailerId, "error", `split: failed to trigger ${done ? "process slice 0" : "next split"}: ${trigErr.message}`);
+    }
+    if (done && j === 0) {
+      await recordImportStatus(supa, retailerId, "error", "split: produced 0 slices (empty feed after header)");
+    }
+    return new Response(JSON.stringify({
+      split: true, run_id: runId, offset, new_offset: newOffset, consumed_bytes: consumeEnd,
+      rows_this_pass: rows.length, slices_written_total: j, total_bytes: totalBytes, done,
+      next: done ? (j > 0 ? "process_slice_0" : "none") : "split", trigger_error: trigErr?.message ?? null,
+    }, null, 2), { headers: { "Content-Type": "application/json" } });
+  }
+
   // Shared across both fetch paths. The legacy path materialises `lines` and
   // `columns`; the streaming path produces `columns` from the header row and an
   // async iterator (`streamBatchIter`) over the remaining row batches.
@@ -2332,7 +2568,9 @@ serve(async (req) => {
   // No matching/lookups/writes here (those are the costs that 546) — just parse +
   // upload, which fits one invocation even for Boots. Memory stays bounded: at most
   // one SLICE_ROWS buffer is held before it's uploaded and dropped.
-  if (effectiveMode === "stage") {
+  // Guarded to stagingMode==='inline': passthrough retailers stage via Phase A/B
+  // above and return there, so this block is the inline path only.
+  if (effectiveMode === "stage" && stagingMode === "inline") {
     let sliceBuf: string[][] = [];
     let sliceIdx = 0;
     let stagedRows = 0;
