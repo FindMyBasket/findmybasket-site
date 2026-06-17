@@ -498,10 +498,29 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
     // under the Davines brand — keep it skincare, don't let the brand whitelist
     // sweep it into hair.
     if (/\bcomfort zone\b/.test(t) || /\bcomfort zone\b/.test(b)) return false;
+    // Non-haircare uses of the word "hair" — bail BEFORE any hair keyword/bare-
+    // "hair" rule so e.g. "ingrown hair serum" isn't swept up by "hair serum".
+    // Covers depilatories ("hair removal/remover", "depilatory/epilator"),
+    // facial/ingrown hair, 2-in-1 "hair & body" washes (body), and ingestible
+    // "hair, skin & nails" supplements.
+    if (/\b(hair\s*(removal|remover|removing|inhibitor|minimi\w*|reduc\w*)|hair no more|facial\s+hair|ingrown\s+hair|depilat\w*|epilat\w*)\b/.test(t)) return false;
+    if (/\bhair\s*(?:&|and|\+)\s*body\b/.test(t)) return false;
+    if (/\b(?:skin\s*(?:&|and|\+)\s*hair|hair\s*,?\s*(?:&|and|\+)?\s*skin)\b/.test(t)) return false;
     if (/\b(shampoo|conditioner|co-?wash|leave-?in)\b/.test(t)) return true;
     if (/\b(hair (mask|oil|serum|spray|cream|gel|mousse|wax|balm|treatment|tonic|perfector|repair|food|primer))\b/.test(t)) return true;
-    if (/\b(scalp (treatment|serum|oil|scrub|tonic|massage))\b/.test(t)) return true;
+    // Scalp care is unambiguously hair domain (scalp treatments/scrubs/serums/
+    // concentrates). 'scalp' barely ever appears in face skincare, and the
+    // brow/beard/comfort-zone guards above have already run. Broadened from the
+    // old `scalp (treatment|serum|…)` because feeds write "Scalp Peppermint
+    // Treatment", "Scalp Sync Purifying Concentrate" etc. (v6.18 / Beauty Flash).
+    if (/\bscalp\b/.test(t)) return true;
     if (/\b(hair (colour|color|dye|toner|bleach))\b/.test(t)) return true;
+    // Bare "hair" as a haircare signal — catches hair products that carry no
+    // structured "hair X" keyword ("My Hair My Canvas Curl Cleanser", "Hair Loss
+    // Serum", "Miracle Hair Elixir", "Grooming Putty Hair Paste"). The non-haircare
+    // uses of the word ("hair removal", "ingrown hair", "hair & body", supplements)
+    // already returned false in the guard block above.
+    if (/\bhair\b/.test(t)) return true;
     if (/\b(dry shampoo|hair perfume|root touch.?up|heat protect|frizz control)\b/.test(t)) return true;
     if (/\b(hairspray|hair spray|hair lacquer|setting spray hair)\b/.test(t)) return true;
     // Standalone styling keywords: unambiguous hair-styling product types that
@@ -513,11 +532,11 @@ function inferCategorisation(name: string, brand: string = ""): Categorisation {
     //   - 'sculpting' and 'matte' are intentionally NOT qualifiers — they collide
     //     with skincare "(micro-)sculpting cream" and makeup "matte/sculpting powder".
     if (!/\b(brow|eyebrow|concealer)\b/.test(t) &&
-        /\b(pomade|(mo(u)?lding|styling|texturi[sz]ing|texture|grooming) (clay|paste|cream|wax|mud|powder|spray)|sea salt spray|surf spray|edge control)\b/.test(t)) return true;
+        /\b(pomade|(mo(u)?lding|styling|texturi[sz]ing|texture|grooming) (clay|paste|cream|wax|mud|powder|spray|balm|foam|lotion|milk|oil|gel|mist)|blow.?dry|blow.?out|sea salt spray|surf spray|edge control)\b/.test(t)) return true;
     // Brand-name signals: brands whose entire range is hair (low risk of false
     // positives), so products with no hair keyword in the name still route to
     // hair (e.g. "Forming Cream", "Surf Infusion", "Full Dry Volume Blast").
-    const hairBrand = /\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs|american crew|bumble and bumble|bumble & bumble|living proof|redken|paul mitchell|pureology|color wow|colour wow|sachajuan|label\.?m|tigi|davines|schwarzkopf|amika|lee stafford|tresemm[eé]|ogx|briogeo|umberto giannini)\b/;
+    const hairBrand = /\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs|american crew|bumble and bumble|bumble & bumble|living proof|redken|paul mitchell|pureology|color wow|colour wow|sachajuan|label\.?m|tigi|davines|schwarzkopf|amika|lee stafford|tresemm[eé]|ogx|briogeo|umberto giannini|alterna|biolage|fudge)\b/;
     if (hairBrand.test(t)) return true;
     if (hairBrand.test(b)) return true;
     // 'Matrix' is a hair brand but also a common English word, so trust it only
