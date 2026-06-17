@@ -80,7 +80,7 @@ type Case = {
   excluded?: string;
   // When set, ALSO asserts the resolved product_type (not just top_category).
   expectType?: string;
-  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
   note?: string;
 };
 
@@ -270,6 +270,31 @@ const CASES: Case[] = [
   { name: "Clinique Clarifying Charcoal Clay Mask 100ml", brand: "Clinique", expect: "skincare", expectType: "Mask", fixedBy: 0 },
   // 11-control: an ampoule/essence pad stays Serum (not stolen by the toner-pad gate).
   { name: "beplain Madecassoside Calming Ampoule Pad 70 pads", brand: "beplain", expect: "skincare", expectType: "Serum", fixedBy: 0, note: "ampoule pad → Serum, not Toner" },
+
+  // ── Commit 12: Beauty Flash hair products misfiled as skincare ─────────────
+  // inferCategorisation (not category_path) was the gap: hair products with no
+  // structured "hair X" keyword, brand not whitelisted, or "scalp"/styling forms
+  // it didn't recognise fell through to the skincare catch-all.
+  // 12a. bare-"hair" signal (no structured keyword, brand not whitelisted)
+  { name: "Australian Bodycare Tea Tree Hair Loss Serum 250ml", brand: "Australian Bodycare", expect: "hair", fixedBy: 12, note: "bare 'hair' → hair; 'serum' alone must not make it face skincare" },
+  { name: "Coco & Eve Like A Virgin Miracle Hair Elixir 100ml", brand: "Coco & Eve", expect: "hair", fixedBy: 12 },
+  { name: "Fudge Grooming Putty Hair Paste 75g", brand: "Fudge", expect: "hair", fixedBy: 12 },
+  // 12b. scalp care → hair (broadened scalp rule)
+  { name: "Alterna Scalp Peppermint Treatment 74ml", brand: "Alterna", expect: "hair", fixedBy: 12 },
+  { name: "Biolage Scalp Sync Oil-Balancing Serum 50ml", brand: "Biolage", expect: "hair", fixedBy: 12 },
+  // 12c. styling forms without a "hair" prefix (balm/foam/blowout)
+  { name: "Alterna Caviar Professional Styling Satin Rapid Blowout Balm 147ml", brand: "Alterna", expect: "hair", fixedBy: 12 },
+  // 12d. hair-only brand whitelist additions (alterna/biolage/fudge), no keyword
+  { name: "Alterna My Hair My Canvas Begin Again Curl Cleanser 201ml", brand: "Alterna", expect: "hair", fixedBy: 12 },
+  { name: "Biolage HydraSource Daily Leave-In Tonic 87.5ml", brand: "Biolage", expect: "hair", fixedBy: 12 },
+
+  // 12-guards (fixedBy 0): the new bare-"hair"/scalp/styling rules must NOT steal
+  // non-haircare uses of the word "hair" into the hair category.
+  { name: "Veet Hair Removal Cream Sensitive Skin 100ml", brand: "Veet", expect: "skincare", fixedBy: 0, note: "depilatory: 'hair removal' must stay skincare, not hair" },
+  { name: "Calvin Klein Eternity For Men Hair And Body Wash 150ml", brand: "Calvin Klein", expect: "skincare", fixedBy: 0, note: "2-in-1 'hair & body' wash stays skincare/body" },
+  { name: "Nair Ingrown Hair Serum 50ml", brand: "Nair", expect: "skincare", fixedBy: 0, note: "'ingrown hair' is skincare, not haircare" },
+  { name: "Skin Doctors Hair No More Inhibitor Spray 120ml", brand: "Skin Doctors", expect: "skincare", fixedBy: 0, note: "depilatory hair-reducer ('inhibitor'/'no more') stays skincare, not haircare" },
+  { name: "Clarins Gentle Renewing Cleansing Mousse 150ml", brand: "Clarins", expect: "skincare", fixedBy: 0, note: "face cleansing mousse: no 'styling' qualifier → not hair" },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
