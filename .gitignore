@@ -31,3 +31,6 @@ __pycache__/
 # ad-hoc feed import debug dumps
 boots-dryrun.json
 debenhams-feed-*.json
+
+# brand-hub design prototype (embeds base64 brand images; spec only, not shipped)
+ilapothecary_hub_real.html
