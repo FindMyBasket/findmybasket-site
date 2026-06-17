@@ -1,5 +1,7 @@
 import { BrandPage } from '../../../components/BrandPage';
+import { BrandHub } from '../../../components/BrandHub';
 import { findBrandBySlug } from '../../../lib/brand-queries';
+import { getBrandHub } from '../../../lib/brand-hub-queries';
 
 export const revalidate = 3600;
 
@@ -10,6 +12,17 @@ export async function generateMetadata({
   params: { slug: string };
   searchParams: { type?: string };
 }) {
+  // A Brand Spotlight hub takes precedence over the price-comparison page.
+  const hub = await getBrandHub(params.slug);
+  if (hub) {
+    return {
+      title: `${hub.hub.display_name} Brand Spotlight | FindMyBasket`,
+      description:
+        hub.hub.lede ??
+        `Discover the ${hub.hub.display_name} range on FindMyBasket.`,
+    };
+  }
+
   const brand = await findBrandBySlug(params.slug);
   if (!brand) {
     return { title: 'Brand not found | FindMyBasket' };
@@ -33,6 +46,13 @@ export default async function BrandSlugPage({
   params: { slug: string };
   searchParams: { page?: string; type?: string };
 }) {
+  // Hub-first dispatch: if a brand_hubs row exists, render the data-driven
+  // Brand Spotlight hub; otherwise fall back to the price-comparison page.
+  const hub = await getBrandHub(params.slug);
+  if (hub) {
+    return <BrandHub data={hub} />;
+  }
+
   const page = searchParams.page ? parseInt(searchParams.page, 10) : 1;
   return <BrandPage slug={params.slug} page={page} productType={searchParams.type} />;
 }
