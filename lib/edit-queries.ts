@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { brandSlug, type FeaturedProduct, type TopBrand } from './queries';
+import { applyImporterRule, brandSlug, type FeaturedProduct, type TopBrand } from './queries';
 import { compareCategories, type BrandProductTypeChip } from './brand-queries';
 import type { Edit } from './edits';
 
@@ -167,35 +167,23 @@ export async function getEditProducts(
 
   if (!prices) return { products: [], totalCount: totalCount ?? 0 };
 
-  const STYLEVANA_ID = 11;
-  const byProduct = new Map<number, { retailers: Set<number>; prices: number[] }>();
+  const byProduct = new Map<number, { retailer_id: number; price: number }[]>();
   for (const p of prices) {
     if (!p.product_id || !p.price) continue;
-    const entry = byProduct.get(p.product_id) ?? { retailers: new Set(), prices: [] };
-    entry.retailers.add(p.retailer_id);
-    entry.prices.push(Number(p.price));
-    byProduct.set(p.product_id, entry);
-  }
-
-  // Hide Stylevana from products that have UK retailer alternatives. Same
-  // rationale as getBrandProducts / getRetailerOffers.
-  for (const [productId, entry] of byProduct) {
-    if (entry.retailers.has(STYLEVANA_ID) && entry.retailers.size > 1) {
-      const stylevanaPrices = prices
-        .filter(p => p.product_id === productId && p.retailer_id === STYLEVANA_ID)
-        .map(p => Number(p.price));
-      entry.retailers.delete(STYLEVANA_ID);
-      entry.prices = entry.prices.filter(price => !stylevanaPrices.includes(price));
-    }
+    const arr = byProduct.get(p.product_id) ?? [];
+    arr.push({ retailer_id: p.retailer_id, price: Number(p.price) });
+    byProduct.set(p.product_id, arr);
   }
 
   const featured: FeaturedProduct[] = [];
   for (const product of products) {
-    const entry = byProduct.get(product.id);
-    if (!entry || entry.retailers.size === 0) continue;
+    const rows = byProduct.get(product.id);
+    if (!rows) continue;
+    const { retailerCount, prices: priceList } = applyImporterRule(rows);
+    if (retailerCount === 0 || priceList.length === 0) continue;
 
-    const minPrice = Math.min(...entry.prices);
-    const maxPrice = Math.max(...entry.prices);
+    const minPrice = Math.min(...priceList);
+    const maxPrice = Math.max(...priceList);
     const savingPct = maxPrice > 0 ? Math.round(((maxPrice - minPrice) / maxPrice) * 100) : 0;
 
     featured.push({
@@ -206,7 +194,7 @@ export async function getEditProducts(
       product_type: product.product_type,
       subcategory: product.subcategory,
       image_url: product.image_url,
-      retailer_count: entry.retailers.size,
+      retailer_count: retailerCount,
       min_price: minPrice,
       max_price: maxPrice,
       saving_pct: savingPct,

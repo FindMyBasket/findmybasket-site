@@ -24,8 +24,10 @@ export interface FeaturedProduct {
   subcategory: string | null;
   image_url: string | null;
   retailer_count: number;
-  min_price: number;
-  max_price: number;
+  // Null when no in-stock retailer remains after the importer rule — render as
+  // "Out of stock" rather than £Infinity (Math.min([]) === Infinity guard).
+  min_price: number | null;
+  max_price: number | null;
   saving_pct: number;
 }
 
@@ -35,6 +37,33 @@ export function brandSlug(brand: string): string {
     .replace(/['']/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
+}
+
+// Hides specialist K-beauty importers (Stylevana #11, YesStyle #25) when a
+// mainstream UK retailer is in stock. Original justification: Stylevana feed
+// 98661 had unreliable product URLs, so we preferred a more reliable retailer
+// whenever one existed. Pending Stylevana migration to feed 101286 — when that
+// ships and link quality is verified in production, this rule and the constant
+// can be removed entirely (Stylevana shown alongside every other retailer).
+export const IMPORTER_RETAILER_IDS = new Set<number>([11, 25]);
+
+// Apply the importer-hide rule to a product's in-stock price rows. Filters by
+// retailer_id, NOT by price value: the old value-based filter wrongly dropped a
+// non-importer whose price coincided with an importer's, which could empty the
+// price array while a retailer remained → Math.min([]) === Infinity (the
+// £Infinity brand-page bug). Importers are hidden only when at least one
+// non-importer retailer is in stock; otherwise all importers are kept.
+export function applyImporterRule(
+  rows: { retailer_id: number; price: number }[]
+): { retailerCount: number; prices: number[] } {
+  const hasNonImporter = rows.some(r => !IMPORTER_RETAILER_IDS.has(r.retailer_id));
+  const kept = hasNonImporter
+    ? rows.filter(r => !IMPORTER_RETAILER_IDS.has(r.retailer_id))
+    : rows;
+  return {
+    retailerCount: new Set(kept.map(r => r.retailer_id)).size,
+    prices: kept.map(r => r.price),
+  };
 }
 
 const PAGE_SIZE = 1000;
@@ -152,35 +181,24 @@ export async function getFeaturedProducts(
 
   if (!prices) return [];
 
-  const STYLEVANA_ID = 11;
-  const byProduct = new Map<number, { retailers: Set<number>; prices: number[] }>();
+  const byProduct = new Map<number, { retailer_id: number; price: number }[]>();
   for (const p of prices) {
     if (!p.product_id || !p.price) continue;
-    const entry = byProduct.get(p.product_id) ?? { retailers: new Set(), prices: [] };
-    entry.retailers.add(p.retailer_id);
-    entry.prices.push(Number(p.price));
-    byProduct.set(p.product_id, entry);
-  }
-
-  // Hide Stylevana from products that have UK retailer alternatives. Same
-  // rationale as getRetailerOffers in product-queries.ts.
-  for (const [productId, entry] of byProduct) {
-    if (entry.retailers.has(STYLEVANA_ID) && entry.retailers.size > 1) {
-      const stylevanaPrices = prices
-        .filter(p => p.product_id === productId && p.retailer_id === STYLEVANA_ID)
-        .map(p => Number(p.price));
-      entry.retailers.delete(STYLEVANA_ID);
-      entry.prices = entry.prices.filter(price => !stylevanaPrices.includes(price));
-    }
+    const arr = byProduct.get(p.product_id) ?? [];
+    arr.push({ retailer_id: p.retailer_id, price: Number(p.price) });
+    byProduct.set(p.product_id, arr);
   }
 
   const featured: FeaturedProduct[] = [];
   for (const product of products) {
-    const entry = byProduct.get(product.id);
-    if (!entry || entry.retailers.size < 2) continue;
+    const rows = byProduct.get(product.id);
+    if (!rows) continue;
+    const { retailerCount, prices: priceList } = applyImporterRule(rows);
+    // Featured deals require a genuine multi-retailer comparison.
+    if (retailerCount < 2 || priceList.length === 0) continue;
 
-    const minPrice = Math.min(...entry.prices);
-    const maxPrice = Math.max(...entry.prices);
+    const minPrice = Math.min(...priceList);
+    const maxPrice = Math.max(...priceList);
     const savingPct = maxPrice > 0 ? Math.round(((maxPrice - minPrice) / maxPrice) * 100) : 0;
 
     featured.push({
@@ -191,7 +209,7 @@ export async function getFeaturedProducts(
       product_type: product.product_type,
       subcategory: product.subcategory,
       image_url: product.image_url,
-      retailer_count: entry.retailers.size,
+      retailer_count: retailerCount,
       min_price: minPrice,
       max_price: maxPrice,
       saving_pct: savingPct,
