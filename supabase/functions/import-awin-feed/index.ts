@@ -956,11 +956,6 @@ serve(async (req) => {
 
   const retailerId = body.retailer_id;
   const dryRun = body.dry_run !== false; // default true
-  // Diagnostic probe (PHASE_2_CHUNKED_APPLY big-feed 546 hunt): when body.mem_trace
-  // is true, write a Deno.memoryUsage() + accumulator-size snapshot to
-  // import_memory_trace after every chunk. Rows commit incrementally so the trace
-  // survives the 546 hard-kill and is queryable afterwards. Off for normal runs.
-  const memTrace = body.mem_trace === true;
 
   if (!retailerId || typeof retailerId !== "number") {
     return new Response(JSON.stringify({
@@ -1421,7 +1416,7 @@ serve(async (req) => {
     }
     // Trigger Phase B (split) — fire-and-forget via pg_net, like the inline path.
     if (autoChain) {
-      const { error: trigErr } = await supa.rpc("fmb_invoke_import_slice", { p_body: { retailer_id: retailerId, run_id: runId, mode: "split", dry_run: false, slice_rows: SLICE_ROWS, mem_trace: memTrace } });
+      const { error: trigErr } = await supa.rpc("fmb_invoke_import_slice", { p_body: { retailer_id: retailerId, run_id: runId, mode: "split", dry_run: false, slice_rows: SLICE_ROWS } });
       if (trigErr) {
         await recordImportStatus(supa, retailerId, "error", `passthrough stage: failed to trigger split: ${trigErr.message}`);
         return new Response(JSON.stringify({ error: "split trigger failed", run_id: runId, details: trigErr.message }), { status: 500, headers: { "Content-Type": "application/json" } });
@@ -1447,7 +1442,7 @@ serve(async (req) => {
   // and trigger Phase C slice 0.
   if (effectiveMode === "split") {
     const READ_CHUNK_BYTES = (typeof body.read_chunk_bytes === "number" && body.read_chunk_bytes > 0)
-      ? Math.floor(body.read_chunk_bytes) : 5 * 1024 * 1024; // 5MB; tune from import_memory_trace
+      ? Math.floor(body.read_chunk_bytes) : 5 * 1024 * 1024; // 5MB; override per-call via body.read_chunk_bytes
     const { data: metaRow, error: metaErr } = await supa
       .from("import_run_state").select("meta").eq("run_id", runId).eq("kind", "meta").eq("key", "").maybeSingle();
     if (metaErr || !metaRow?.meta) {
@@ -1522,23 +1517,12 @@ serve(async (req) => {
       .update({ meta: { ...sMeta, next_byte_offset: newOffset, next_slice_write: j, total_slices: done ? j : null } })
       .eq("run_id", runId).eq("kind", "meta").eq("key", "");
 
-    if (memTrace) {
-      try {
-        const m = (Deno as any).memoryUsage ? (Deno as any).memoryUsage() : { rss: 0, heapUsed: 0, heapTotal: 0, external: 0 };
-        await supa.from("import_memory_trace").insert({
-          run_id: sMeta.run_started_at, retailer_id: retailerId, chunk_no: j, rows_seen: rows.length,
-          rss: m.rss, heap_used: m.heapUsed, heap_total: m.heapTotal, external: m.external,
-          timings: { phase: "split", offset, new_offset: newOffset, consume_bytes: consumeEnd, slices_written_total: j, read_chunk_bytes: READ_CHUNK_BYTES },
-        });
-      } catch { /* never let the probe break the run */ }
-    }
-
     let trigErr: any = null;
     if (autoChain) {
       if (!done) {
-        ({ error: trigErr } = await supa.rpc("fmb_invoke_import_slice", { p_body: { retailer_id: retailerId, run_id: runId, mode: "split", dry_run: false, slice_rows: sliceRows, read_chunk_bytes: READ_CHUNK_BYTES, mem_trace: memTrace } }));
+        ({ error: trigErr } = await supa.rpc("fmb_invoke_import_slice", { p_body: { retailer_id: retailerId, run_id: runId, mode: "split", dry_run: false, slice_rows: sliceRows, read_chunk_bytes: READ_CHUNK_BYTES } }));
       } else if (j > 0) {
-        ({ error: trigErr } = await supa.rpc("fmb_invoke_import_slice", { p_body: { retailer_id: retailerId, run_id: runId, mode: "process", slice_index: 0, dry_run: false, slice_rows: sliceRows, mem_trace: memTrace } }));
+        ({ error: trigErr } = await supa.rpc("fmb_invoke_import_slice", { p_body: { retailer_id: retailerId, run_id: runId, mode: "process", slice_index: 0, dry_run: false, slice_rows: sliceRows } }));
       }
       if (trigErr) await recordImportStatus(supa, retailerId, "error", `split: failed to trigger ${done ? "process slice 0" : "next split"}: ${trigErr.message}`);
     }
@@ -1971,7 +1955,6 @@ serve(async (req) => {
     }
 
     // 1. Updates — chunked price + image backfill RPCs.
-    const tUpdate = performance.now();
     if (updateActions.length > 0) {
       const nowIso = new Date().toISOString();
       for (let i = 0; i < updateActions.length; i += INSERT_CHUNK) {
@@ -1980,7 +1963,6 @@ serve(async (req) => {
           id: u.rp_id, price: u.price, in_stock: u.in_stock, last_updated: nowIso,
           url: u.url || "", ean: u.ean || "", mpn: u.mpn || "",
         }));
-        prof.rtUpdate++;
         const { data: rpcResult, error: rpcErr } = await supa.rpc("bulk_update_retailer_prices", { updates: payload });
         if (rpcErr) errors.push(`bulk_update_retailer_prices (chunk at ${i}): ${rpcErr.message}`);
         else updatesApplied += typeof rpcResult === "number" ? rpcResult : chunk.length;
@@ -1988,19 +1970,16 @@ serve(async (req) => {
       const imageUpdates = updateActions.filter(u => u.image_url).map(u => ({ product_id: u.product_id, image_url: u.image_url }));
       for (let i = 0; i < imageUpdates.length; i += INSERT_CHUNK) {
         const chunk = imageUpdates.slice(i, i + INSERT_CHUNK);
-        prof.rtUpdate++;
         const { error: imgErr } = await supa.rpc("bulk_update_product_images", { updates: chunk });
         if (imgErr) errors.push(`bulk_update_product_images (updates chunk at ${i}): ${imgErr.message}`);
       }
     }
     updateActions.length = 0;
-    prof.fUpdate += performance.now() - tUpdate;
 
     // 2. Links — dedupe THIS flush by product_id (lowest price) so one INSERT
     //    never hits the same (product_id, retailer_id) conflict row twice, then
     //    upsert via the run-scoped price-aware RPC (lowest price wins across
     //    flushes regardless of chunk order — see upsert_retailer_prices_lowest).
-    const tLink = performance.now();
     if (linkActions.length > 0) {
       const dedupedLinks = new Map<number, typeof linkActions[number]>();
       for (const l of linkActions) {
@@ -2016,7 +1995,6 @@ serve(async (req) => {
           in_stock: l.in_stock, external_product_id: l.ext_id, ean: l.ean || null, mpn: l.mpn || null,
           last_updated: nowIso,
         }));
-        prof.rtLink++;
         const { error } = await supa.rpc("upsert_retailer_prices_lowest", { p_rows: rows, p_run_started_at: runStartedAt });
         if (error) errors.push(`link flush at ${i}: ${error.message}`);
         else linksApplied += chunk.length;
@@ -2024,16 +2002,13 @@ serve(async (req) => {
       const linkImageUpdates = dedupedLinkArray.filter(l => l.image_url).map(l => ({ product_id: l.product_id, image_url: l.image_url }));
       for (let i = 0; i < linkImageUpdates.length; i += INSERT_CHUNK) {
         const chunk = linkImageUpdates.slice(i, i + INSERT_CHUNK);
-        prof.rtLink++;
         const { error: linkImgErr } = await supa.rpc("bulk_update_product_images", { updates: chunk });
         if (linkImgErr) errors.push(`bulk_update_product_images (links chunk at ${i}): ${linkImgErr.message}`);
       }
     }
     linkActions.length = 0;
-    prof.fLink += performance.now() - tLink;
 
     // 3. Creates — two-phase bulk insert (products → real ids → retailer_prices).
-    const tCreate = performance.now();
     for (let i = 0; i < createActions.length; i += INSERT_CHUNK) {
       const chunk = createActions.slice(i, i + INSERT_CHUNK);
       const productRows = chunk.map(c => ({
@@ -2043,7 +2018,6 @@ serve(async (req) => {
         subcategory: c.subcategory, tags: c.tags, canonical_size: c.canonical_size,
         shade: c.shade, image_url: c.image_url || null,
       }));
-      prof.rtCreate++;
       const { data: insertedProducts, error: pErr } = await supa.from("products").insert(productRows).select("id");
       if (pErr || !insertedProducts || insertedProducts.length !== chunk.length) {
         errors.push(`create products batch at ${i}: ${pErr?.message || "row count mismatch"}`);
@@ -2054,13 +2028,11 @@ serve(async (req) => {
         in_stock: c.in_stock, external_product_id: c.ext_id, ean: c.ean || null, mpn: c.mpn || null,
         last_updated: new Date().toISOString(),
       }));
-      prof.rtCreate++;
       const { error: rpErr } = await supa.from("retailer_prices").insert(priceRows);
       if (rpErr) errors.push(`create rps batch at ${i}: ${rpErr.message}`);
       else createsApplied += chunk.length;
     }
     createActions.length = 0;
-    prof.fCreate += performance.now() - tCreate;
   }
 
   // Counters for the EAN-first matching tier
@@ -2147,8 +2119,8 @@ serve(async (req) => {
   // body, then flush applied actions once they cross FLUSH_THRESHOLD. Peak memory
   // is bounded by one block's lookup maps + FLUSH_THRESHOLD pending actions,
   // rather than the whole-feed loads + whole-feed action arrays that OOM'd.
-  // NOTE (big-feed 546, diagnosed via import_memory_trace 2026-06-15): on the
-  // streaming path heap stays bounded (~23-33MB), so the chunked apply fixed the
+  // NOTE (big-feed 546, diagnosed 2026-06-15 via a since-removed memory-trace
+  // probe): on the streaming path heap stays bounded (~23-33MB), so chunked apply fixed the
   // MATCHING/heap memory. The remaining 546 on Stylevana is the per-chunk product
   // OVER-FETCH: its product-dense brands (Kose 2215, Shiseido 1715, L'Oréal 1837,
   // …) recur in nearly every chunk, so loadChunkMaps refetches ~19k products via
@@ -2159,21 +2131,9 @@ serve(async (req) => {
   const CHUNK_SIZE = 2000;
   let chunkRows: string[][] = [];
   let chunkNo = 0;
-  // CPU/IO-profiling probe (big-feed 546 hunt): cumulative ms per bucket, written
-  // into the trace each chunk. load_maps is now the single match_chunk_lookups RPC
-  // (Option B) — expect it to fall from ~12s (v88's dozens of round-trips) to well
-  // under 1s. buildKey/categ are SUB-buckets of match. Remove with the diag scaffold.
-  const prof = { parse: 0, loadMaps: 0, match: 0, buildKey: 0, categ: 0, flush: 0,
-                 // flush sub-buckets (ms) + per-section round-trip counts. Tells us
-                 // whether flush is round-trip-bound (optimisable like load_maps) or
-                 // write-volume-bound (→ Option C). prof.flush stays the wall total.
-                 fUpdate: 0, fLink: 0, fCreate: 0, rtUpdate: 0, rtLink: 0, rtCreate: 0 };
   async function runChunk(): Promise<void> {
     if (!chunkRows.length) return;
-    const tLoad = performance.now();
     await loadChunkMaps(chunkRows);
-    prof.loadMaps += performance.now() - tLoad;
-    const tMatch = performance.now();
     for (const rawFields of chunkRows) {
     // Quote-strip mirrors the legacy `parseRow(line).map(...)`; blank-line skip
     // mirrors the legacy `!line.trim()` (a blank source line parses to one empty
@@ -2329,9 +2289,7 @@ serve(async (req) => {
       countLinkViaMpn++; if (isOrdinary) ordinaryDiagnostic.linked_via_mpn++;
     }
 
-    const tKey = performance.now();
     const productMatchKey = buildMatchKey(brand, name);
-    prof.buildKey += performance.now() - tKey;
     const strippedMatchKey = stripSize(productMatchKey);
     const sourceSize = extractSize(productMatchKey);
 
@@ -2413,9 +2371,7 @@ serve(async (req) => {
     }
 
     // ─── v6: classify the new product before deciding to create ──────────
-    const tCateg = performance.now();
     const cat = inferCategorisation(name, brand);
-    prof.categ += performance.now() - tCateg;
 
     // Skip products on the v6 denylist (fragrance, period_care, etc.)
     if (cat.excluded) {
@@ -2534,34 +2490,9 @@ serve(async (req) => {
       });
     }
     }
-    prof.match += performance.now() - tMatch;
     chunkNo++;
-    if (memTrace) {
-      const m = (Deno as any).memoryUsage ? (Deno as any).memoryUsage() : { rss: 0, heapTotal: 0, heapUsed: 0, external: 0 };
-      try {
-        await supa.from("import_memory_trace").insert({
-          run_id: runStartedAt, retailer_id: retailerId, chunk_no: chunkNo, rows_seen: feedRows,
-          rss: m.rss, heap_used: m.heapUsed, heap_total: m.heapTotal, external: m.external,
-          seen_ean: seenEanToProductId.size, seen_mpn: seenMpnToProductId.size,
-          created_key: createdByMatchKey.size, created_urls: createdUrls.size,
-          unmatched_brands: unmatchedBrandCounts.size, category_paths: categoryPathCounts.size,
-          chunk_exact: productByExact.size, chunk_stripped: productByStripped.size,
-          chunk_extid: existingByExtId.size, pending: pendingActions(),
-          timings: {
-            parse_ms: Math.round(prof.parse), load_maps_ms: Math.round(prof.loadMaps),
-            match_ms: Math.round(prof.match), build_key_ms: Math.round(prof.buildKey),
-            categ_ms: Math.round(prof.categ), flush_ms: Math.round(prof.flush),
-            f_update_ms: Math.round(prof.fUpdate), f_link_ms: Math.round(prof.fLink),
-            f_create_ms: Math.round(prof.fCreate),
-            rt_update: prof.rtUpdate, rt_link: prof.rtLink, rt_create: prof.rtCreate,
-          },
-        });
-      } catch (_) { /* never let the probe break the run */ }
-    }
     chunkRows = [];
-    const tFlush = performance.now();
     if (pendingActions() >= FLUSH_THRESHOLD) await flush();
-    prof.flush += performance.now() - tFlush;
   }
 
   // ── STAGE: stream the feed once, split into Storage slice files, fire slice 0 ─
@@ -2617,7 +2548,7 @@ serve(async (req) => {
     // Fire slice 0 via pg_net (fire-and-forget; dry_run:false is REQUIRED or the
     // slice would default to a dry-run and DISCARD all writes).
     if (autoChain) {
-      const { error: trigErr } = await supa.rpc("fmb_invoke_import_slice", { p_body: { retailer_id: retailerId, run_id: runId, mode: "process", slice_index: 0, dry_run: false, slice_rows: SLICE_ROWS, mem_trace: memTrace } });
+      const { error: trigErr } = await supa.rpc("fmb_invoke_import_slice", { p_body: { retailer_id: retailerId, run_id: runId, mode: "process", slice_index: 0, dry_run: false, slice_rows: SLICE_ROWS } });
       if (trigErr) {
         await recordImportStatus(supa, retailerId, "error", `stage: failed to trigger slice 0: ${trigErr.message}`);
         return new Response(JSON.stringify({ error: "stage trigger failed", run_id: runId, details: trigErr.message }), { status: 500, headers: { "Content-Type": "application/json" } });
@@ -2630,16 +2561,11 @@ serve(async (req) => {
   }
 
   try {
-    // prof.parse accumulates the time awaiting each batch from batchSource() —
-    // i.e. the fetch + gzip-inflate + CSV-parse pipeline (it runs between yields).
-    let tParse = performance.now();
     for await (const batch of batchSource()) {
-      prof.parse += performance.now() - tParse;
       for (const rawFields of batch) {
         chunkRows.push(rawFields);
         if (chunkRows.length >= CHUNK_SIZE) await runChunk();
       }
-      tParse = performance.now();
     }
     await runChunk(); // process the final partial block (auto-flushes only if it crosses FLUSH_THRESHOLD)
   } catch (streamErr) {
@@ -2800,7 +2726,7 @@ serve(async (req) => {
       await recordImportStatus(supa, retailerId, "running", `sliced import: starting slice ${nextSlice}/${totalSlices} (run ${runId})`);
       let nextErr: any = null;
       if (autoChain) {
-        ({ error: nextErr } = await supa.rpc("fmb_invoke_import_slice", { p_body: { retailer_id: retailerId, run_id: runId, mode: "process", slice_index: nextSlice, dry_run: false, slice_rows: SLICE_ROWS, mem_trace: memTrace } }));
+        ({ error: nextErr } = await supa.rpc("fmb_invoke_import_slice", { p_body: { retailer_id: retailerId, run_id: runId, mode: "process", slice_index: nextSlice, dry_run: false, slice_rows: SLICE_ROWS } }));
         if (nextErr) await recordImportStatus(supa, retailerId, "error", `slice ${sliceIndex}: failed to trigger slice ${nextSlice}: ${nextErr.message}`);
       }
       result.applied = { slice_index: sliceIndex, updates_applied: updatesApplied, links_applied: linksApplied, creates_applied: createsApplied, error_count: errors.length, next_slice: nextSlice, total_slices: totalSlices, trigger_error: nextErr?.message ?? null };
