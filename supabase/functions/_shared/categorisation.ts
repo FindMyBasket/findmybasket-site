@@ -191,13 +191,13 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     // Brand-name signals: brands whose entire range is hair (low risk of false
     // positives), so products with no hair keyword in the name still route to
     // hair (e.g. "Forming Cream", "Surf Infusion", "Full Dry Volume Blast").
-    const hairBrand = /\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs|american crew|bumble and bumble|bumble & bumble|living proof|redken|paul mitchell|pureology|color wow|colour wow|sachajuan|label\.?m|tigi|davines|schwarzkopf|amika|lee stafford|tresemm[eé]|ogx|briogeo|umberto giannini|alterna|biolage|fudge)\b/;
+    const hairBrand = /\b(olaplex|kerastase|kérastase|moroccanoil|oribe|virtue labs|american crew|bumble and bumble|bumble & bumble|living proof|redken|paul mitchell|pureology|color wow|colour wow|sachajuan|label\.?m|tigi|davines|schwarzkopf|amika|lee stafford|tresemm[eé]|ogx|briogeo|umberto giannini|alterna|biolage)\b/;
     if (hairBrand.test(t)) return true;
     if (hairBrand.test(b)) return true;
-    // 'Matrix' is a hair brand but also a common English word, so trust it only
-    // in the brand field — never when it merely appears in a product name
-    // (e.g. "Pro-Collagen Overnight Matrix", "Matrix Gel" nail polish).
-    if (/\bmatrix\b/.test(b)) return true;
+    // 'Matrix' and 'Fudge' are hair brands but also common English words (matrix;
+    // fudge as a flavour/shade — "Heavenly Fudge Palette", "Pistachio Fudge Body
+    // Scrub"), so trust them ONLY in the brand field, never as a name word.
+    if (/\b(matrix|fudge)\b/.test(b)) return true;
     return false;
   })();
 
