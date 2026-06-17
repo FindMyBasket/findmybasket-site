@@ -187,32 +187,53 @@ export async function getBrandProducts(
 
   const productIds = products.map(p => p.id);
 
+  // NOTE: unlike the category/subcategory/featured surfaces, the brand page is a
+  // brand catalogue — a fan wants the full range, so we DON'T filter by in_stock
+  // here. Fully out-of-stock products still render (as "Out of stock" cards);
+  // pricing + retailer count are still computed from in-stock rows only.
   const { data: prices } = await supabase
     .from('retailer_prices')
     .select('product_id, retailer_id, price, in_stock')
-    .in('product_id', productIds)
-    .eq('in_stock', true);
+    .in('product_id', productIds);
 
   if (!prices) return { products: [], totalCount: totalCount ?? 0 };
 
-  const byProduct = new Map<number, { retailer_id: number; price: number }[]>();
+  const byProduct = new Map<number, { retailer_id: number; price: number; in_stock: boolean }[]>();
   for (const p of prices) {
     if (!p.product_id || !p.price) continue;
     const arr = byProduct.get(p.product_id) ?? [];
-    arr.push({ retailer_id: p.retailer_id, price: Number(p.price) });
+    arr.push({ retailer_id: p.retailer_id, price: Number(p.price), in_stock: !!p.in_stock });
     byProduct.set(p.product_id, arr);
   }
 
   const featured: FeaturedProduct[] = [];
   for (const product of products) {
     const rows = byProduct.get(product.id);
-    if (!rows) continue;
-    const { retailerCount, prices: priceList } = applyImporterRule(rows);
-    if (retailerCount === 0 || priceList.length === 0) continue;
+    if (!rows || rows.length === 0) continue; // no retailer carries it → nothing to show
 
-    const minPrice = Math.min(...priceList);
-    const maxPrice = Math.max(...priceList);
-    const savingPct = maxPrice > 0 ? Math.round(((maxPrice - minPrice) / maxPrice) * 100) : 0;
+    // Pricing + count from IN-STOCK rows only — unchanged behaviour for products
+    // that are buyable (incl. partially-OOS, where some retailers are in stock).
+    const inStock = applyImporterRule(rows.filter(r => r.in_stock));
+
+    let minPrice: number | null;
+    let maxPrice: number | null;
+    let savingPct: number;
+    let retailerCount: number;
+
+    if (inStock.prices.length > 0) {
+      minPrice = Math.min(...inStock.prices);
+      maxPrice = Math.max(...inStock.prices);
+      savingPct = maxPrice > 0 ? Math.round(((maxPrice - minPrice) / maxPrice) * 100) : 0;
+      retailerCount = inStock.retailerCount;
+    } else {
+      // Fully out of stock: null price → ProductCard renders "Out of stock".
+      // Count the retailers that carry it (importer rule over all rows) so the
+      // card still reads "N retailer(s)".
+      minPrice = null;
+      maxPrice = null;
+      savingPct = 0;
+      retailerCount = applyImporterRule(rows).retailerCount;
+    }
 
     featured.push({
       id: product.id,
@@ -230,6 +251,10 @@ export async function getBrandProducts(
   }
 
   featured.sort((a, b) => {
+    // In-stock products first (no regression to existing ordering), OOS last.
+    const aIn = a.min_price !== null;
+    const bIn = b.min_price !== null;
+    if (aIn !== bIn) return aIn ? -1 : 1;
     if (b.retailer_count !== a.retailer_count) return b.retailer_count - a.retailer_count;
     return b.saving_pct - a.saving_pct;
   });
