@@ -41,17 +41,23 @@ export function ProductCard({ product }: Props) {
         </h3>
         <div className="flex items-baseline justify-between">
           <div>
-            <span className="text-base font-medium text-ink">
-              £{product.min_price.toFixed(2)}
-            </span>
-            {product.max_price > product.min_price && (
-              <span className="text-xs text-ink-light line-through ml-2">
-                £{product.max_price.toFixed(2)}
-              </span>
+            {product.min_price !== null ? (
+              <>
+                <span className="text-base font-medium text-ink">
+                  £{product.min_price.toFixed(2)}
+                </span>
+                {product.max_price !== null && product.max_price > product.min_price && (
+                  <span className="text-xs text-ink-light line-through ml-2">
+                    £{product.max_price.toFixed(2)}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-base font-medium text-ink-light">Out of stock</span>
             )}
           </div>
           <span className="text-xs text-ink-light">
-            {product.retailer_count} retailers
+            {product.retailer_count} {product.retailer_count === 1 ? 'retailer' : 'retailers'}
           </span>
         </div>
       </div>

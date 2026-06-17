@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { brandSlug, type FeaturedProduct } from './queries';
+import { applyImporterRule, brandSlug, IMPORTER_RETAILER_IDS, type FeaturedProduct } from './queries';
 
 export interface ProductDetail {
   id: number;
@@ -112,13 +112,13 @@ const { data: retailers } = await supabase    .from('retailers')
     return a.effective_price - b.effective_price;
   });
 
-  // Stylevana (retailer_id = 11) is a specialist K-beauty importer. Hide it
-  // when other retailers stock the same product, since UK retailers are
-  // cheaper/faster/more trustworthy. Keep it when it's the only option.
-  const STYLEVANA_ID = 11;
-  const hasOtherInStock = offers.some(o => o.retailer_id !== STYLEVANA_ID && o.in_stock);
-  if (hasOtherInStock) {
-    return offers.filter(o => o.retailer_id !== STYLEVANA_ID);
+  // Hide specialist K-beauty importers (Stylevana, YesStyle — see
+  // IMPORTER_RETAILER_IDS) when a mainstream UK retailer stocks the same product,
+  // since UK retailers are cheaper/faster/more trustworthy. Keep importers when
+  // they're the only in-stock option (incl. when ONLY other importers stock it).
+  const hasNonImporterInStock = offers.some(o => !IMPORTER_RETAILER_IDS.has(o.retailer_id) && o.in_stock);
+  if (hasNonImporterInStock) {
+    return offers.filter(o => !IMPORTER_RETAILER_IDS.has(o.retailer_id));
   }
 
   return offers;
@@ -172,21 +172,22 @@ async function fetchRelated(
     .in('product_id', productIds)
     .eq('in_stock', true);
 
-  const byProduct = new Map<number, { retailers: Set<number>; prices: number[] }>();
+  const byProduct = new Map<number, { retailer_id: number; price: number }[]>();
   for (const p of prices ?? []) {
     if (!p.product_id || !p.price) continue;
-    const entry = byProduct.get(p.product_id) ?? { retailers: new Set(), prices: [] };
-    entry.retailers.add(p.retailer_id);
-    entry.prices.push(Number(p.price));
-    byProduct.set(p.product_id, entry);
+    const arr = byProduct.get(p.product_id) ?? [];
+    arr.push({ retailer_id: p.retailer_id, price: Number(p.price) });
+    byProduct.set(p.product_id, arr);
   }
 
   const results: FeaturedProduct[] = [];
   for (const row of rows) {
-    const entry = byProduct.get(row.id);
-    if (!entry || entry.retailers.size === 0) continue;
-    const minPrice = Math.min(...entry.prices);
-    const maxPrice = Math.max(...entry.prices);
+    const priceRows = byProduct.get(row.id);
+    if (!priceRows) continue;
+    const { retailerCount, prices: priceList } = applyImporterRule(priceRows);
+    if (retailerCount === 0 || priceList.length === 0) continue;
+    const minPrice = Math.min(...priceList);
+    const maxPrice = Math.max(...priceList);
     const savingPct = maxPrice > 0 ? Math.round(((maxPrice - minPrice) / maxPrice) * 100) : 0;
     results.push({
       id: row.id,
@@ -196,7 +197,7 @@ async function fetchRelated(
       product_type: row.product_type,
       subcategory: row.subcategory,
       image_url: row.image_url,
-      retailer_count: entry.retailers.size,
+      retailer_count: retailerCount,
       min_price: minPrice,
       max_price: maxPrice,
       saving_pct: savingPct,

@@ -9,6 +9,7 @@ import {
   getRelatedProducts,
 } from '../../../lib/product-queries';
 import { buildBreadcrumbJsonLd } from '../../../lib/breadcrumb';
+import { IMPORTER_RETAILER_IDS } from '../../../lib/queries';
 
 export const revalidate = 3600;
 
@@ -76,9 +77,9 @@ export default async function ProductPage({ params }: { params: { id: string } }
 
   const inStockOffers = offers.filter(o => o.in_stock);
   const outOfStockOffers = offers.filter(o => !o.in_stock);
-  // Stylevana-only products get a "Specialist import" badge to set expectations
-  const STYLEVANA_ID = 11;
-  const isSpecialistOnly = inStockOffers.length > 0 && inStockOffers.every(o => o.retailer_id === STYLEVANA_ID);
+  // Importer-only products (Stylevana/YesStyle — see IMPORTER_RETAILER_IDS) get a
+  // "Specialist import" badge to set delivery/customs expectations.
+  const isSpecialistOnly = inStockOffers.length > 0 && inStockOffers.every(o => IMPORTER_RETAILER_IDS.has(o.retailer_id));
   const lowestPrice = inStockOffers.length > 0 ? inStockOffers[0].effective_price : null;
   const highestPrice = inStockOffers.length > 0
     ? Math.max(...inStockOffers.map(o => o.effective_price))

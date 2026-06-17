@@ -948,6 +948,63 @@ async function recordImportStatus(
   }
 }
 
+// Brand → URL slug. MUST mirror brandSlug() in lib/queries.ts exactly, or the
+// revalidation will miss the cached brand route.
+function brandSlugify(brand: string): string {
+  return brand
+    .toLowerCase()
+    .replace(/['']/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+// On-import ISR revalidation (downstream optimisation — NEVER fails the import).
+// Finds the brands + top categories whose products got a price for this retailer
+// during this run (last_updated >= run start), then POSTs their pathnames to the
+// site's /api/revalidate so the brand/category pages refresh without waiting for
+// the 1h ISR window. Wrapped so any failure is logged and swallowed.
+async function triggerRevalidation(supa: any, retailerId: number, sinceIso: string): Promise<void> {
+  try {
+    const secret = Deno.env.get("REVALIDATE_SECRET");
+    if (!secret) { console.warn("REVALIDATE_SECRET unset — skipping ISR revalidation"); return; }
+    const slugs = new Set<string>();
+    const cats = new Set<string>();
+    let from = 0;
+    while (true) {
+      const { data, error } = await supa
+        .from("retailer_prices")
+        .select("products!inner(normalised_brand, top_category)")
+        .eq("retailer_id", retailerId)
+        .gte("last_updated", sinceIso)
+        .range(from, from + 999);
+      if (error) { console.warn(`revalidation: brand query failed: ${error.message}`); break; }
+      if (!data || data.length === 0) break;
+      for (const r of data) {
+        const nb = (r as any).products?.normalised_brand;
+        const tc = (r as any).products?.top_category;
+        if (nb) slugs.add(brandSlugify(String(nb)));
+        if (tc) cats.add(String(tc).toLowerCase());
+      }
+      if (data.length < 1000) break;
+      from += 1000;
+    }
+    const paths = [
+      ...Array.from(slugs).filter(Boolean).map((s) => `/brands/${s}`),
+      ...Array.from(cats).filter((c) => c === "skincare" || c === "makeup" || c === "hair").map((c) => `/${c}`),
+    ];
+    if (paths.length === 0) return;
+    const resp = await fetch("https://www.findmybasket.co.uk/api/revalidate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-revalidate-secret": secret },
+      body: JSON.stringify({ paths }),
+    });
+    if (!resp.ok) console.warn(`revalidation POST failed: ${resp.status} ${resp.statusText}`);
+    else console.log(`revalidation triggered for ${paths.length} path(s) (retailer ${retailerId})`);
+  } catch (e) {
+    console.warn(`revalidation skipped (error): ${String(e instanceof Error ? e.message : e)}`);
+  }
+}
+
 serve(async (req) => {
   const startTime = Date.now();
 
@@ -2748,6 +2805,8 @@ serve(async (req) => {
     // Cleanup: staging slice files + all run_state rows for this run.
     try { const { data: f } = await supa.storage.from(STAGING_BUCKET).list(runId); if (f?.length) await supa.storage.from(STAGING_BUCKET).remove(f.map((x) => `${runId}/${x.name}`)); } catch { /* best effort */ }
     await supa.from("import_run_state").delete().eq("run_id", runId);
+    // Refresh ISR caches for the brands/categories this run touched (best-effort).
+    await triggerRevalidation(supa, retailerId, runStartedAt);
     result.applied = { final: true, total_slices: totalSlices, updates_applied: mergedApplied.updates, links_applied: mergedApplied.links, creates_applied: mergedApplied.creates, capped_creates: mergedApplied.capped, error_count: mergedApplied.errors.length, sample_errors: mergedApplied.errors.slice(0, 10) };
     result.duration_ms = Date.now() - startTime;
     return new Response(JSON.stringify(result, null, 2), { headers: { "Content-Type": "application/json" } });
@@ -2787,6 +2846,9 @@ serve(async (req) => {
       duration_ms: Date.now() - startTime,
     });
   } catch { /* table may not have these exact columns; ignore */ }
+
+  // Refresh ISR caches for the brands/categories this run touched (best-effort).
+  await triggerRevalidation(supa, retailerId, runStartedAt);
 
   result.applied = {
     updates_applied: updatesApplied,
