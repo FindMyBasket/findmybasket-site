@@ -29,7 +29,9 @@ type Case = {
   excluded?: string;
   // When set, ALSO asserts the resolved product_type (not just top_category).
   expectType?: string;
-  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+  // When set, ALSO asserts the resolved subcategory (face/body/hand/foot/both).
+  expectSub?: string;
+  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13;
   note?: string;
 };
 
@@ -248,6 +250,51 @@ const CASES: Case[] = [
   { name: "Organic Shop Ultra Smooth Pistachio Fudge Body Scrub 250ml", brand: "Organic Shop", expect: "skincare", fixedBy: 0, note: "'Fudge' flavour word: body scrub stays skincare" },
   { name: "Fudge Professional Clean Blonde Violet Shampoo 250ml", brand: "Fudge", expect: "hair", fixedBy: 0, note: "brand=Fudge still routes hair (brand-field match)" },
   { name: "Clarins Gentle Renewing Cleansing Mousse 150ml", brand: "Clarins", expect: "skincare", fixedBy: 0, note: "face cleansing mousse: no 'styling' qualifier → not hair" },
+
+  // ── Commit 13: skincare subcategory upgrade (face/body/hand/foot/both) ──────
+  // The classifier defaulted to 'face' too readily, mis-shelving body products.
+  // New match order: both → hand → foot → FACE signals → body → SA line →
+  // large-format moisturiser → default face. Spot-checked across body-heavy
+  // brands (CeraVe, Aveeno, Eucerin, La Roche-Posay, E45, Nivea, Sanex, Cetaphil).
+  // 13a. FACE — explicit face signals + default.
+  { name: "CeraVe Foaming Facial Cleanser 236ml", brand: "CeraVe", expect: "skincare", expectSub: "face", fixedBy: 13, note: "'facial' → face even though 236ml" },
+  { name: "La Roche-Posay Toleriane Hydrating Gentle Face Wash 200ml", brand: "La Roche-Posay", expect: "skincare", expectSub: "face", fixedBy: 13, note: "'face wash' beats the 200ml large-format body heuristic" },
+  { name: "CeraVe Eye Repair Cream 14ml", brand: "CeraVe", expect: "skincare", expectSub: "face", fixedBy: 13, note: "eye area is on the face" },
+  { name: "Cetaphil Gentle Skin Cleanser 236ml", brand: "Cetaphil", expect: "skincare", expectSub: "face", fixedBy: 13, note: "bare cleanser, no body signal → default face (not large-format body)" },
+  // 13b. BODY — explicit body words.
+  { name: "Aveeno Skin Relief Body Lotion 300ml", brand: "Aveeno", expect: "skincare", expectSub: "body", fixedBy: 13 },
+  { name: "Nivea Nourishing Body Wash 450ml", brand: "Nivea", expect: "skincare", expectSub: "body", fixedBy: 13 },
+  { name: "Sanex Zero% Body Wash 450ml", brand: "Sanex", expect: "skincare", expectSub: "body", fixedBy: 13 },
+  // 13c. BODY — large-format moisturiser heuristic (no explicit body word).
+  { name: "CeraVe Moisturising Lotion 473ml", brand: "CeraVe", expect: "skincare", expectSub: "body", fixedBy: 13, note: "473ml moisturiser, no face word → body, not face" },
+  { name: "E45 Cream 500g", brand: "E45", expect: "skincare", expectSub: "body", fixedBy: 13, note: "large-format cream → body" },
+  { name: "Eucerin UreaRepair Plus Lotion 250ml", brand: "Eucerin", expect: "skincare", expectSub: "body", fixedBy: 13 },
+  { name: "Cetaphil Moisturising Lotion 200ml", brand: "Cetaphil", expect: "skincare", expectSub: "body", fixedBy: 13 },
+  // 13d. BODY — CeraVe-style "SA" (salicylic-acid) body line.
+  { name: "CeraVe SA Smoothing Cream 340g", brand: "CeraVe", expect: "skincare", expectSub: "body", fixedBy: 13, note: "SA line cream → body" },
+  { name: "CeraVe SA Lotion for Rough & Bumpy Skin 237ml", brand: "CeraVe", expect: "skincare", expectSub: "body", fixedBy: 13 },
+  // 13e. HAND.
+  { name: "CeraVe Reparative Hand Cream 50ml", brand: "CeraVe", expect: "skincare", expectSub: "hand", fixedBy: 13 },
+  { name: "Neutrogena Norwegian Formula Hand Cream 75ml", brand: "Neutrogena", expect: "skincare", expectSub: "hand", fixedBy: 13 },
+  { name: "L'Occitane Shea Butter Hand Cream 30ml", brand: "L'Occitane", expect: "skincare", expectSub: "hand", fixedBy: 13 },
+  // 13f. FOOT (must beat the SA + large-format heuristics).
+  { name: "CeraVe SA Renewing Foot Cream 88ml", brand: "CeraVe", expect: "skincare", expectSub: "foot", fixedBy: 13, note: "'foot cream' beats the SA-line body rule" },
+  { name: "Flexitol Heel Balm 112g", brand: "Flexitol", expect: "skincare", expectSub: "foot", fixedBy: 13 },
+  { name: "Scholl Cracked Heel Repair Cream 60ml", brand: "Scholl", expect: "skincare", expectSub: "foot", fixedBy: 13 },
+  // 13g. BOTH — explicit face & body (must beat the large-format body heuristic).
+  { name: "Aveeno Daily Moisturising Face & Body Lotion 300ml", brand: "Aveeno", expect: "skincare", expectSub: "both", fixedBy: 13 },
+  { name: "CeraVe Moisturising Cream for Face and Body 340g", brand: "CeraVe", expect: "skincare", expectSub: "both", fixedBy: 13, note: "'face and body' beats large-format body default" },
+  // 13h. product_type guard: "Oil Control" must NOT become product_type Oil.
+  { name: "La Roche-Posay Effaclar Mat Oil Control Moisturiser 40ml", brand: "La Roche-Posay", expect: "skincare", expectType: "Moisturiser", fixedBy: 13, note: "'oil control' moisturiser, not an Oil" },
+  { name: "Garnier SkinActive Oil Control 50ml", brand: "Garnier", expect: "skincare", expectType: "Skincare", fixedBy: 13, note: "bare 'Oil Control' must not fall through to Oil" },
+  // 13h-guard: a genuine facial oil must STILL be product_type Oil.
+  { name: "Votary Rose Maroc Facial Oil 30ml", brand: "Votary", expect: "skincare", expectType: "Oil", expectSub: "face", fixedBy: 0, note: "oil-control guard must not break real facial oils" },
+  // 13i. product_type guard: makeup removers / micellar waters are Cleansers, not Makeup.
+  { name: "Clinique Take The Day Off Makeup Remover 125ml", brand: "Clinique", expect: "skincare", expectType: "Cleanser", fixedBy: 13, note: "'makeup remover' → Cleanser, not Makeup" },
+  { name: "Garnier Micellar Cleansing Water Removes Makeup 400ml", brand: "Garnier", expect: "skincare", expectType: "Cleanser", fixedBy: 13, note: "'removes makeup' must not route to makeup" },
+  { name: "Bioderma Sensibio H2O Micellar Water 250ml", brand: "Bioderma", expect: "skincare", expectType: "Cleanser", fixedBy: 13 },
+  // 13-control: a real lip balm subcategory stays face (regression guard for reorder).
+  { name: "CeraVe Moisturising Cream 50ml", brand: "CeraVe", expect: "skincare", expectSub: "face", fixedBy: 0, note: "small tub, no body/face/large signal → default face" },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
@@ -258,9 +305,9 @@ const failedControls: string[] = [];
 
 console.log(
   pad("C", 2) + "  " + pad("RESULT", 6) + "  " + pad("got", 9) + "  " + pad("expect", 9) + "  " +
-    pad("product_type", 16) + "  name",
+    pad("product_type", 16) + "  " + pad("sub", 6) + "  name",
 );
-console.log("─".repeat(110));
+console.log("─".repeat(120));
 
 for (const c of CASES) {
   const r = inferCategorisation(c.name, c.brand ?? "");
@@ -268,7 +315,8 @@ for (const c of CASES) {
   const ok = c.excluded
     ? r.excluded === c.excluded
     : (r.top_category ?? null) === c.expect && !r.excluded &&
-      (c.expectType ? r.product_type === c.expectType : true);
+      (c.expectType ? r.product_type === c.expectType : true) &&
+      (c.expectSub ? r.subcategory === c.expectSub : true);
   if (ok) pass++;
   else {
     fail++;
@@ -281,11 +329,12 @@ for (const c of CASES) {
       pad(String(got ?? "null"), 9) + "  " +
       pad(String(c.expect ?? "null"), 9) + "  " +
       pad(r.product_type || "—", 16) + "  " +
+      pad(r.subcategory || "—", 6) + "  " +
       c.name + (c.brand ? `  [${c.brand}]` : ""),
   );
 }
 
-console.log("─".repeat(110));
+console.log("─".repeat(120));
 console.log(`PASS ${pass}  /  FAIL ${fail}  (of ${CASES.length})`);
 if (failedControls.length) {
   console.log(`\n⚠️  REGRESSION: ${failedControls.length} control case(s) now failing:`);
