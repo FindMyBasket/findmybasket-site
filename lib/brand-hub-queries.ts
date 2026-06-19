@@ -51,6 +51,29 @@ export interface BrandHubData {
   products: BrandHubProduct[];
 }
 
+// Lightweight row for the Brand Spotlight index (/brands). Only the fields a
+// card needs, so the index stays cheap as more hubs are seeded.
+export interface BrandHubSummary {
+  slug: string;
+  display_name: string;
+  accent_treatment: string;
+  logo_path: string | null;
+  eyebrow: string | null;
+  lede: string | null;
+}
+
+// Every published hub, ordered for display. The index renders whatever rows
+// exist, so new hubs appear with no code change once their row is added.
+export async function getAllBrandHubs(): Promise<BrandHubSummary[]> {
+  const { data, error } = await supabase
+    .from('brand_hubs')
+    .select('slug, display_name, accent_treatment, logo_path, eyebrow, lede')
+    .order('display_name', { ascending: true });
+
+  if (error || !data) return [];
+  return data as BrandHubSummary[];
+}
+
 // Returns null when no hub row exists for the slug, so the route can fall back to
 // the price-comparison brand page.
 export async function getBrandHub(slug: string): Promise<BrandHubData | null> {
