@@ -74,7 +74,11 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     // don't occur in beauty product names. Deliberately omits collision-prone
     // words: "top"/"coat" (top coat, base coat), "cap" (laser cap, bottle cap),
     // "boots" (Boots the brand/retailer), "shorts" ("short sleeve").
-    ["apparel", /\b(trunks?|boxers|briefs|jockstrap|jumper|hoodie|sweatshirt|sweater|cardigan|joggers?|jeans?|trousers?|chinos?|leggings?|shorts?|pants?|cargo|fleece|shirt|t-shirt|tee|polo|blouse|jacket|blazer|gilet|waistcoat|parka|robe|kimono|pyjamas?|pajamas?|dungarees?|beanie|scarf|belt|sneakers?|trainers?|loafers?|brogues?|espadrilles?|sandals?|flip ?flop|cupsole|lace[-\s]?up|low top|rucksack|backpack|duffle|holdall|satchel|crossbody|commuter|wash ?bag|dopp|wallet|billfold|card holder|cardholder|card case)\b/],
+    // NB 'cargo' is deliberately NOT a bare token — "cargo pants/shorts" are
+    // already caught by pants?/shorts?, and bare 'cargo' false-positives on
+    // colour/shade names (e.g. Rimmel "60 Seconds … Crazy About Cargo" nail
+    // polish), which would wrongly exclude the product from the catalogue.
+    ["apparel", /\b(trunks?|boxers|briefs|jockstrap|jumper|hoodie|sweatshirt|sweater|cardigan|joggers?|jeans?|trousers?|chinos?|leggings?|shorts?|pants?|fleece|shirt|t-shirt|tee|polo|blouse|jacket|blazer|gilet|waistcoat|parka|robe|kimono|pyjamas?|pajamas?|dungarees?|beanie|scarf|belt|sneakers?|trainers?|loafers?|brogues?|espadrilles?|sandals?|flip ?flop|cupsole|lace[-\s]?up|low top|rucksack|backpack|duffle|holdall|satchel|crossbody|commuter|wash ?bag|dopp|wallet|billfold|card holder|cardholder|card case)\b/],
     // hair_tool: extended to catch hair brushes by brand (Mason Pearson) and
     // by descriptor patterns (bristle brush, boar bristle, paddle brush etc.)
     ["hair_tool", /\b(hair dryer|straightener|curling iron|curling wand|hair brush|paddle brush|bristle brush|boar bristle|comb|hair clip|hair tie|scrunchie|mason pearson)\b/],
@@ -360,6 +364,62 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
       subcategory,
       tags: ["makeup", subcategory].filter(Boolean),
     };
+  }
+
+  // ─── Step 3b: Rimmel makeup-line overrides ───────────────────────────────
+  // Rimmel is a makeup-only brand (its sole non-makeup line is Sunshimmer
+  // self/instant tan, which is genuine tanning skincare). Many of its makeup
+  // lines carry no generic makeup keyword in the feed name — "Wonder'swipe",
+  // "Scandaleyes … Eye Definer", "Oh My Gloss", "60 Seconds", "Supergel",
+  // "Lasting Finish Matte Ls", "Better Than Filters", "Blur Booster",
+  // "Turbocharged Glow", "ConcealerCream" (fused, so \bconcealer\b misses) — so
+  // they fell through to the skincare catchall. This block runs ONLY for Rimmel
+  // products that reached Step 4 (i.e. Steps 2-3 already failed to classify
+  // them), so it never re-routes the ~791 Rimmel rows that generic makeup
+  // detection already handles — zero churn on existing makeup. Product types are
+  // mapped to the module's existing makeup vocabulary (Blush/Bronzer covers
+  // highlighter+bronzer; Lip Colour covers gloss/stain) for catalogue
+  // consistency. Sunshimmer tanning is excluded up front and falls through.
+  if (
+    /\brimmel\b/.test(b) &&
+    !/\bsunshimmer\b/.test(t) &&
+    !/\b(self.?tan|instant tan)\b/.test(t)
+  ) {
+    // Ordered: first match wins. Liner→lipstick→gloss order matters; generic
+    // bundle/keyword fallbacks last so specific lines resolve first.
+    const rimmelRules: Array<[RegExp, string, string]> = [
+      // Nails
+      [/\b60 seconds\b|\bsuper ?gel\b|\bsupergel\b|\bjelly nails\b|\bnail (polish|varnish|colour|color)\b/, "Nail Polish", "nails"],
+      [/\bnail nurse\b|\bnail (treatment|care|strengthener)\b/, "Nail Treatment", "nails"],
+      // Eyes
+      [/\bshadow ?stick\b|\bshadowstick\b|\bnude palette\b/, "Eyeshadow", "eyes"],
+      [/\bswipe\b|\bscandaleyes\b|\bexaggerate\b|\beye definer\b|\bkohl\b|\bscandal\b.*\bliner\b/, "Eyeliner", "eyes"],
+      [/\bthrill ?seeker extreme\b|\bextreme\b.*\beye\b/, "Mascara", "eyes"],
+      // Lips — liner/plumper, then lipstick (Lasting Finish "Ls"/"Lip Stick"),
+      // then gloss/colour. "Oh My Plump … Lip Shaper" is a plumping lip liner;
+      // "slip stick" (Oh My Gloss) stays gloss — \b stops "lip stick" matching it.
+      [/\blip ?liner\b|\blipliner\b|\blin ?pen\b|\blinpen\b|\boh my plump\b|\blip shaper\b/, "Lip Liner", "lips"],
+      [/\blasting finish matte ls\b|\blast fin\b.*\bls\b|\bmatte ls\b|\blip stick\b/, "Lipstick", "lips"],
+      [/\boh my gloss\b|\bbutter me up\b|\bglassy gloss\b|\blip latex\b|\bslip stick\b|\bjelly crush\b|\bmulti-?stick\b|\blana jenkins\b|\bst glos\b|\bglos l\/care\b|\bgloss (and|&) liner\b|\blip\b/, "Lip Colour", "lips"],
+      // Mascara — generic Thrill Seeker is a mascara line; runs AFTER lips so
+      // "Thrill Seeker Glassy Gloss"/"Lip Latex" are already claimed as lips.
+      [/\bthrill ?seeker\b|\bthrillseeker\b|\bmascara\b/, "Mascara", "eyes"],
+      // Face
+      [/\bbetter than filters\b|\bbb cream\b|\bcc cream\b|\bskin tint\b|\bperfection\b|\bfoundation\b/, "Foundation", "face"],
+      [/concealer/, "Concealer", "face"],
+      [/\bblur booster\b|\bface prim\b|\bprimer\b|\bprime\b/, "Primer", "face"],
+      [/\bturbocharged glow\b|\bbronzing stick\b|\bradiance brick\b|\bbronz|\bhighlight/, "Blush/Bronzer", "face"],
+      [/\bpowder\b/, "Powder", "face"],
+      // Any remaining Rimmel multi-item set or residual makeup token is makeup
+      // (the only non-makeup Rimmel line, Sunshimmer tanning, is excluded above).
+      [/\b(bundle|combo|kit|set)\b/, "Makeup", "face"],
+      [/\b(stick|polish|mascara|liner|bronzing|concealer|foundation|blush)\b/, "Makeup", "face"],
+    ];
+    for (const [re, pt, sub] of rimmelRules) {
+      if (re.test(t)) {
+        return { top_category: "makeup", product_type: pt, subcategory: sub, tags: ["makeup", sub] };
+      }
+    }
   }
 
   // ─── Step 4: Skincare detection (existing logic, extended) ────────────────
