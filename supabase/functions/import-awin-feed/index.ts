@@ -244,6 +244,7 @@ import pako from "https://esm.sh/pako@2.1.0";
 // legacy load-whole-feed path remains the default until a retailer is promoted.
 import { streamFeedRowBatches, FeedFetchError } from "./_streaming-fetcher.ts";
 import { inferCategorisation, type TopCategory } from "../_shared/categorisation.ts";
+import { reconstructBeautyFlashName, BEAUTY_FLASH_RETAILER_ID } from "./name-reconstruction.ts";
 
 const AWIN_PUBLISHER_ID = "2841268";
 
@@ -1506,6 +1507,9 @@ serve(async (req) => {
   let countCreateNew = 0;
   let countSkippedNewBrand = 0;
   let countSizeMismatchRejected = 0;
+  // Pattern E: Beauty Flash truncated-name reconstructions (retailer 27 only).
+  let countBeautyFlashRebuilt = 0;
+  const sampleBeautyFlashRebuilt: Array<{ truncated: string; rebuilt: string }> = [];
   // v6 counters
   let countV6Excluded = 0;
   const v6ExclusionBreakdown: Record<string, number> = {};
@@ -1781,7 +1785,22 @@ serve(async (req) => {
     if (fields.length === 1 && !fields[0].trim()) continue;
     feedRows++;
 
-    const name = fields[idx.product_name] || "";
+    let name = fields[idx.product_name] || "";
+    // Pattern E: Beauty Flash (retailer 27) truncates product_name at ~64 chars,
+    // breaking match_key generation → silent duplicates. The full name lives in
+    // the merchant URL slug; reconstruct it BEFORE excludes / match_key /
+    // categorisation so every downstream step sees the un-truncated name.
+    // No-op (returns the original) for any name the slug doesn't confirm.
+    if (retailerId === BEAUTY_FLASH_RETAILER_ID) {
+      const rebuilt = reconstructBeautyFlashName(name, fields[idx.merchant_deep_link] || "");
+      if (rebuilt !== name) {
+        countBeautyFlashRebuilt++;
+        if (sampleBeautyFlashRebuilt.length < 50) {
+          sampleBeautyFlashRebuilt.push({ truncated: name, rebuilt });
+        }
+        name = rebuilt;
+      }
+    }
     const rawBrand = fields[idx.brand_name] || "";
     const brand = lookupCanonicalBrand(rawBrand);   // canonical from here down
     if (rawBrand) {
@@ -2304,7 +2323,9 @@ serve(async (req) => {
       shade_extracted_on_new: v6ShadeExtracted,
       rows_with_ean: rowsWithEan,
       rows_with_mpn: rowsWithMpn,
+      beauty_flash_names_rebuilt: countBeautyFlashRebuilt,
     },
+    sample_beauty_flash_rebuilt: sampleBeautyFlashRebuilt,
     v6_top_category_breakdown: v6TopCategoryBreakdown,
     v6_exclusion_breakdown: v6ExclusionBreakdown,
     brand_canonicalisation: brandCanonicalisation,
