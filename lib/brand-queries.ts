@@ -161,7 +161,8 @@ export async function getBrandProducts(
   normalisedBrand: string,
   page = 1,
   pageSize = 48,
-  productType?: string
+  productType?: string,
+  topCategory?: string
 ): Promise<{ products: FeaturedProduct[]; totalCount: number }> {
   const offset = (page - 1) * pageSize;
   const candidateLimit = pageSize * 4;
@@ -174,8 +175,14 @@ export async function getBrandProducts(
     .neq('image_url', '')
     .not('tags', 'cs', '{cleanup_remove}');
 
+  // `productType` filters the fine-grained product_type (e.g. "Lipstick");
+  // `topCategory` filters the coarse top_category (skincare/makeup/hair). They
+  // sit on different axes, so both can apply, but the UI uses one at a time.
   if (productType) {
     query = query.eq('product_type', productType);
+  }
+  if (topCategory) {
+    query = query.eq('top_category', topCategory);
   }
 
   const { data: products, count: totalCount } = await query

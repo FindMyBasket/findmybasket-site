@@ -5,12 +5,20 @@ import { getBrandHub } from '../../../lib/brand-hub-queries';
 
 export const revalidate = 3600;
 
+// Coarse top_category labels for titles/headings (mirrors CATEGORY_DISPLAY in
+// components/BrandPage.tsx).
+const CATEGORY_LABEL: Record<string, string> = {
+  skincare: 'Skincare',
+  makeup: 'Makeup',
+  hair: 'Hair',
+};
+
 export async function generateMetadata({
   params,
   searchParams,
 }: {
   params: { slug: string };
-  searchParams: { type?: string };
+  searchParams: { type?: string; category?: string };
 }) {
   // A Brand Spotlight hub takes precedence over the price-comparison page.
   const hub = await getBrandHub(params.slug);
@@ -27,10 +35,13 @@ export async function generateMetadata({
   if (!brand) {
     return { title: 'Brand not found | FindMyBasket' };
   }
-  if (searchParams.type) {
+  const filterLabel =
+    searchParams.type ??
+    (searchParams.category ? CATEGORY_LABEL[searchParams.category] ?? searchParams.category : undefined);
+  if (filterLabel) {
     return {
-      title: `${brand.display_name} ${searchParams.type} best prices UK | FindMyBasket`,
-      description: `Compare ${brand.display_name} ${searchParams.type.toLowerCase()} prices across UK retailers.`,
+      title: `${brand.display_name} ${filterLabel} best prices UK | FindMyBasket`,
+      description: `Compare ${brand.display_name} ${filterLabel.toLowerCase()} prices across UK retailers.`,
     };
   }
   return {
@@ -44,7 +55,7 @@ export default async function BrandSlugPage({
   searchParams,
 }: {
   params: { slug: string };
-  searchParams: { page?: string; type?: string };
+  searchParams: { page?: string; type?: string; category?: string };
 }) {
   // Hub-first dispatch: if a brand_hubs row exists, render the data-driven
   // Brand Spotlight hub; otherwise fall back to the price-comparison page.
@@ -54,5 +65,12 @@ export default async function BrandSlugPage({
   }
 
   const page = searchParams.page ? parseInt(searchParams.page, 10) : 1;
-  return <BrandPage slug={params.slug} page={page} productType={searchParams.type} />;
+  return (
+    <BrandPage
+      slug={params.slug}
+      page={page}
+      productType={searchParams.type}
+      category={searchParams.category}
+    />
+  );
 }
