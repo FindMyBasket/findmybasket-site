@@ -18,6 +18,11 @@ const NAV_LINKS: { href: string; label: string; static?: boolean }[] = [
   { href: '/savings-hub.html', label: 'Savings Hub', static: true },
 ];
 
+// Brand Spotlight is partnered content sitting beside the neutral comparison, so
+// it is kept deliberately secondary: placed last, behind a subtle separator and
+// in a lighter weight rather than alongside the core category links above.
+const SPOTLIGHT_LINK = { href: '/brands', label: 'Brand Spotlight' };
+
 function NavLink({
   link,
   className,
@@ -94,6 +99,20 @@ export function SiteNav() {
               />
             );
           })}
+          {/* Secondary: subtle divider then the lighter Brand Spotlight link. */}
+          <span className="w-px h-4 bg-border" aria-hidden="true" />
+          {(() => {
+            const active = isActive(SPOTLIGHT_LINK.href);
+            return (
+              <NavLink
+                link={SPOTLIGHT_LINK}
+                active={active}
+                className={`text-[13px] no-underline transition-colors ${
+                  active ? 'text-ink font-medium' : 'text-ink-light/70 hover:text-ink'
+                }`}
+              />
+            );
+          })()}
           <SiteSearch />
           <a
             href="/app.html"
@@ -137,6 +156,20 @@ export function SiteNav() {
               />
             );
           })}
+          {/* Secondary Brand Spotlight link, lighter than the category items. */}
+          {(() => {
+            const active = isActive(SPOTLIGHT_LINK.href);
+            return (
+              <NavLink
+                link={SPOTLIGHT_LINK}
+                active={active}
+                className={`${mobileBase} ${
+                  active ? 'text-ink font-medium' : 'text-ink-light/70 hover:text-ink'
+                }`}
+                onClick={() => setMobileOpen(false)}
+              />
+            );
+          })()}
           <a
             href="/app.html"
             onClick={() => setMobileOpen(false)}
