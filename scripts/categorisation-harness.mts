@@ -31,7 +31,7 @@ type Case = {
   expectType?: string;
   // When set, ALSO asserts the resolved subcategory (face/body/hand/foot/both).
   expectSub?: string;
-  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13;
+  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
   note?: string;
 };
 
@@ -295,6 +295,36 @@ const CASES: Case[] = [
   { name: "Bioderma Sensibio H2O Micellar Water 250ml", brand: "Bioderma", expect: "skincare", expectType: "Cleanser", fixedBy: 13 },
   // 13-control: a real lip balm subcategory stays face (regression guard for reorder).
   { name: "CeraVe Moisturising Cream 50ml", brand: "CeraVe", expect: "skincare", expectSub: "face", fixedBy: 0, note: "small tub, no body/face/large signal → default face" },
+
+  // ── Commit 14: Rimmel makeup-line overrides (Step 3b) ─────────────────────
+  // Rimmel makeup lines whose names carry no generic makeup keyword fell to the
+  // skincare catchall; brand-gated override (only fires when Steps 2-3 miss).
+  { name: "Rimmel Wonder'Last Shadow Stick 001 Starshine Dream", brand: "Rimmel", expect: "makeup", expectType: "Eyeshadow", fixedBy: 14 },
+  { name: "Rimmel Wonder'swipe 2-In-1 Liner To Shadow Slay", brand: "Rimmel", expect: "makeup", expectType: "Eyeliner", fixedBy: 14 },
+  { name: "Rimmel Scandaleyes Exaggerate Eye Definer Intense Black", brand: "Rimmel", expect: "makeup", expectType: "Eyeliner", fixedBy: 14 },
+  { name: "Rimmel 60 Seconds 856 Blue Breeze 8ml", brand: "Rimmel", expect: "makeup", expectType: "Nail Polish", fixedBy: 14 },
+  { name: "Rimmel Super Gel Jelly Nails 015 Gummy Jelly", brand: "Rimmel", expect: "makeup", expectType: "Nail Polish", fixedBy: 14 },
+  { name: "Rimmel Better Than Filters 001 Fair 30ml", brand: "Rimmel", expect: "makeup", expectType: "Foundation", fixedBy: 14 },
+  { name: "Rimmel - The Multi Tasker ConcealerCream 10ml 120 Tiramisu", brand: "Rimmel", expect: "makeup", expectType: "Concealer", fixedBy: 14, note: "fused 'ConcealerCream' — \\bconcealer\\b missed it" },
+  { name: "Rimmel Multi Tasker Blur Booster 040 Ivory 7G", brand: "Rimmel", expect: "makeup", expectType: "Primer", fixedBy: 14 },
+  { name: "Rimmel Multi-Tasker 3 In 1 Bronzing Stick Light", brand: "Rimmel", expect: "makeup", expectType: "Blush/Bronzer", fixedBy: 14 },
+  { name: "Rimmel Multi Tasker Turbocharged Glow 001 Not A Basic B", brand: "Rimmel", expect: "makeup", expectType: "Blush/Bronzer", fixedBy: 14 },
+  // Lips: liner before lipstick before gloss; "Lip Stick" (spaced) → Lipstick,
+  // "Slip Stick" must NOT (the \b guard), "Oh My Plump … Lip Shaper" → Lip Liner.
+  { name: "Rimmel Lasting Finish Matte Ls Hollywood Red", brand: "Rimmel", expect: "makeup", expectType: "Lipstick", fixedBy: 14 },
+  { name: "Rimmel Lasting Finish Lip Stick Candy", brand: "Rimmel", expect: "makeup", expectType: "Lipstick", fixedBy: 14, note: "spaced 'Lip Stick' → Lipstick" },
+  { name: "Rimmel Oh My Gloss! Slip Stick 200 Pouting", brand: "Rimmel", expect: "makeup", expectType: "Lip Colour", fixedBy: 14, note: "'slip stick' must stay gloss, not Lipstick" },
+  { name: "Rimmel Oh My Plump! Lip Shaper 010 Iconic Beige", brand: "Rimmel", expect: "makeup", expectType: "Lip Liner", fixedBy: 14 },
+  // cargo apparel false-positive fix: nail-polish shade "Crazy About Cargo" must
+  // NOT be excluded as apparel; it routes to makeup/Nail Polish.
+  { name: "Rimmel 60 Seconds 882 Crazy About Cargo 8ml", brand: "Rimmel", expect: "makeup", expectType: "Nail Polish", fixedBy: 14 },
+  // Guard: Sunshimmer self/instant tan is genuine tanning — STAYS skincare.
+  { name: "Rimmel Sunshimmer Instant Self Tan Light Matte", brand: "Rimmel", expect: "skincare", fixedBy: 14, note: "tanning, not makeup" },
+  { name: "Rimmel Sunshimmer Water Resist Instant Tan Med Matte 125ml", brand: "Rimmel", expect: "skincare", fixedBy: 14 },
+  // Guard: removing bare 'cargo' must NOT break real apparel exclusion.
+  { name: "Hugo Boss Cargo Trousers 32R", brand: "Hugo Boss", expect: null, excluded: "apparel", fixedBy: 14, note: "'cargo trousers' still excluded via 'trousers'" },
+  // Control: the Rimmel gate must not affect other brands' skincare.
+  { name: "CeraVe SA Smoothing Cream 340g", brand: "CeraVe", expect: "skincare", fixedBy: 0, note: "non-Rimmel brand unaffected by the Rimmel override" },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
