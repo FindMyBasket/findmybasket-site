@@ -268,7 +268,10 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     // Excludes 'makeup remover' (denylisted earlier) and 'makeup brush' (in
     // makeup_tool denylist run before this detector). Must come last so that
     // more specific product-type detection above takes precedence for routing.
-    if (/\bmakeup\b/.test(t) && !/\bmakeup (remover|removal|wipe)\b/.test(t)) return true;
+    // Cleansers that mention makeup ("Removes Makeup", "Makeup Remover",
+    // "Micellar … Makeup") are skincare, not makeup. Exclude the verb form
+    // ("removes makeup") too — the old lookahead only caught "makeup remover".
+    if (/\bmakeup\b/.test(t) && !/\b(makeup (remover|removal|wipe|wipes)|removes? makeup|micellar)\b/.test(t)) return true;
     return false;
   })();
 
@@ -379,7 +382,9 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
   else if (/\b(peel|peeling)\b/.test(t) && !/\bpeel[- ]?off\b/.test(t)) skincare_product_type = "Exfoliator";
   // Cleanser forms that collide with the Korean "pack" mask token (e.g.
   // "Pore Pack Foam Cleanser") — claim them as Cleanser before the Mask branch.
-  else if (/\b(foam cleanser|cleansing foam|foaming cleanser|gel cleanser|cleansing gel|oil cleanser|cleansing oil|cleansing balm|cleansing water|micellar|face wash|facial wash|cleansing milk|milk cleanser)\b/.test(t)) skincare_product_type = "Cleanser";
+  // Makeup removers / micellar waters are cleansers — claim them here so the
+  // "Makeup" branch in Step 3 (and the bare-oil branch below) never wins.
+  else if (/\b(foam cleanser|cleansing foam|foaming cleanser|gel cleanser|cleansing gel|oil cleanser|cleansing oil|cleansing balm|cleansing water|micellar|face wash|facial wash|cleansing milk|milk cleanser|make.?up remover|removes? make.?up|eye make.?up remover)\b/.test(t)) skincare_product_type = "Cleanser";
   // Toner-soaked pads → Toner. Ampoule/essence/serum pads fall through to Serum;
   // exfoliating/peel pads were already claimed above. (Eye pads handled above.)
   else if (/\b(toner pad|toning pad)\b/.test(t) || (/\b(pad|pads)\b/.test(t) && !/\b(ampoule|essence|serum|cotton|cushion|exfoliat|scrub|peel)\b/.test(t))) skincare_product_type = "Toner";
@@ -390,26 +395,76 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
   else if (/\btoner\b/.test(t)) skincare_product_type = "Toner";
   else if (/\b(serum|ampoule|essence)\b/.test(t)) skincare_product_type = "Serum";
   else if (/\b(sun|spf|uv|sunscreen)\b/.test(t)) skincare_product_type = "SPF";
-  else if (/\b(moistur|cream|lotion|emulsion|balm)\b/.test(t)) skincare_product_type = "Moisturiser";
+  // Match the NOUN "moisturiser"/"moisturizer" (a trailing \b after "moistur"
+  // never fires — a letter follows — so the bare word "Moisturiser" used to fall
+  // through to the catchall). Deliberately NOT the adjective "moisturising": a
+  // "Moisturising Mist"/"Moisturising Oil" is a Mist/Oil and must reach those
+  // later branches, not be stolen here.
+  else if (/\b(moisturi[sz]ers?|cream|lotion|emulsion|balm)\b/.test(t)) skincare_product_type = "Moisturiser";
   else if (/\bsalve\b/.test(t)) skincare_product_type = "Moisturiser";
   else if (/\beye\b/.test(t)) skincare_product_type = "Eye Care";
   else if (/\blip\b/.test(t)) skincare_product_type = "Lip Care";
-  else if (/\boil\b/.test(t)) skincare_product_type = "Oil";
+  // "Oil Control" products are moisturisers/serums/cleansers, NOT facial oils —
+  // the moistur/serum/cleanser branches above usually claim them first, but a
+  // bare "Oil Control" with no other type keyword must not fall through to Oil.
+  else if (/\boil\b/.test(t) && !/\boil[- ]?control\b/.test(t)) skincare_product_type = "Oil";
   else if (/\bmist\b/.test(t)) skincare_product_type = "Mist";
   else if (/\b(exfoliat|scrub)\b/.test(t)) skincare_product_type = "Exfoliator";
   else skincare_product_type = "Skincare"; // catchall
 
-  // Skincare subcategory: detect from body location keywords. Default 'face'.
-  let skin_subcategory = "face";
-  if (/\b(hand (cream|lotion|sanit|wash|soap|mask|salve|balm|butter|serum)|hand & nail)\b/.test(t)) {
-    skin_subcategory = "hand";
-  } else if (/\b(foot (cream|lotion|mask|soak|scrub|balm|serum)|heel balm|heel cream|cracked heel)\b/.test(t)) {
-    skin_subcategory = "foot";
-  } else if (/\b(body (lotion|cream|butter|oil|wash|scrub|mask|milk|mist|balm|sunscreen|serum)|after.?sun|tanning lotion|self.?tan|stretch mark)\b/.test(t)) {
-    skin_subcategory = "body";
-  } else if (/\b(face & body|body & face|all over)\b/.test(t)) {
+  // ─── Skincare subcategory: face / body / hand / foot / both ───────────────
+  // Rules run in match order; FIRST match wins. The previous version defaulted
+  // to 'face' too readily and mis-shelved body products (e.g. CeraVe body
+  // moisturisers showed up in the face section). The order below makes explicit
+  // FACE signals beat the generic body fallthrough, and adds two body-leaning
+  // heuristics (CeraVe-style "SA" salicylic line + large-format moisturisers)
+  // so body-heavy brands stop defaulting to face.
+  //
+  // Large-format heuristic inputs (computed once): a moisturiser ≥200ml/200g
+  // with no explicit "facial" qualifier is overwhelmingly a body product.
+  const sizeMatch = t.match(/\b(\d+(?:\.\d+)?)\s*(ml|g|gr|kg)\b/);
+  let isLargeFormat = false;
+  if (sizeMatch) {
+    const sizeVal = parseFloat(sizeMatch[1]);
+    const sizeUnit = sizeMatch[2];
+    if ((sizeUnit === "ml" || sizeUnit === "g" || sizeUnit === "gr") && sizeVal >= 200) isLargeFormat = true;
+    else if (sizeUnit === "kg" && sizeVal >= 0.2) isLargeFormat = true;
+  }
+  const isMoisturiserForm = /\b(moisturi[sz]ers?|cream|lotion|butter|emulsion|body milk)\b/.test(t);
+
+  let skin_subcategory: string;
+  // 1. Explicit whole-body coverage → 'both'
+  if (/\b(face (and|&|\+|\/) body|body (and|&|\+|\/) face|all[ -]?over)\b/.test(t)) {
     skin_subcategory = "both";
-  } else if (/\b(face cream|face wash|face oil|face mask|facial)\b/.test(t)) {
+  }
+  // 2. Hand
+  else if (/\b(hand (cream|lotion|sanit\w*|wash|soap|mask|salve|balm|butter|serum|treatment|scrub|gel)|hand ?(&|and) ?nail|reparative hand|nourishing hand|repairing hand)\b/.test(t)) {
+    skin_subcategory = "hand";
+  }
+  // 3. Foot (before SA/large-format so "SA Renewing Foot Cream" → foot)
+  else if (/\b(foot (cream|lotion|mask|soak|scrub|balm|serum|spray|gel|powder)|heel balm|heel cream|cracked heel|foot ?(&|and) ?nail)\b/.test(t)) {
+    skin_subcategory = "foot";
+  }
+  // 4. Explicit FACE signals — win over the generic body fallthrough below.
+  else if (/\b(facial|am ?\/? ?pm facial|face (wash|serum|cleanser|cream|oil|mask|mist|gel|lotion|moisturiser|moisturizer|cleansing|scrub|balm|cloth)|eye (cream|serum|gel|mask|balm|patch|patches))\b/.test(t)) {
+    skin_subcategory = "face";
+  }
+  // 5. Body
+  else if (/\b(body (lotion|cream|wash|butter|oil|scrub|mask|milk|mist|balm|sunscreen|serum|gel|soap|moisturiser|moisturizer)|after.?sun|tanning (lotion|oil|mist|milk)|self.?tan|stretch mark|shower (gel|cream|oil))\b/.test(t)) {
+    skin_subcategory = "body";
+  }
+  // 6. CeraVe-style "SA" (salicylic-acid) body line — cream/lotion forms with no
+  //    "facial" qualifier are the body products (the SA cleanser stays face via
+  //    the cleanser branch / default below).
+  else if (/\bsa\b/.test(t) && /\b(cream|lotion|moistur)\b/.test(t) && !/\bfacial\b/.test(t)) {
+    skin_subcategory = "body";
+  }
+  // 7. Large-format moisturisers (≥200ml / ≥200g) without a "facial" qualifier.
+  else if (isMoisturiserForm && isLargeFormat && !/\bfacial\b/.test(t)) {
+    skin_subcategory = "body";
+  }
+  // 8. Default: skincare with no body signal → face.
+  else {
     skin_subcategory = "face";
   }
 
