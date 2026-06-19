@@ -20,9 +20,13 @@ const dmSans = DM_Sans({
   display: 'swap',
 });
 
+// Default metadata for any Next-rendered page that doesn't set its own. Pages
+// like /product/[id] and /brands/[slug] override these via generateMetadata.
 export const metadata: Metadata = {
-  title: 'FindMyBasket',
-  description: 'Find the best price on skincare, makeup and hair across UK retailers.',
+  metadataBase: new URL('https://www.findmybasket.co.uk'),
+  title: 'Compare Beauty Prices Across UK Retailers | FindMyBasket',
+  description:
+    'Build your beauty routine and compare prices across multiple UK retailers. Delivery thresholds included. Free to use.',
 };
 
 export default function RootLayout({

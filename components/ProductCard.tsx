@@ -1,6 +1,7 @@
 "use client";
 import Link from 'next/link';
 import type { FeaturedProduct } from '../lib/queries';
+import { stripBrandPrefix } from '../lib/format/product-name';
 
 interface Props {
   product: FeaturedProduct;
@@ -37,7 +38,7 @@ export function ProductCard({ product }: Props) {
           </p>
         )}
         <h3 className="text-sm text-ink mb-3 line-clamp-2 leading-snug">
-          {product.name}
+          {product.brand ? stripBrandPrefix(product.name, product.brand) : product.name}
         </h3>
         <div className="flex items-baseline justify-between">
           <div>

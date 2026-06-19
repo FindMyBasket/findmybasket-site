@@ -10,8 +10,11 @@ import {
 } from '../../../lib/product-queries';
 import { buildBreadcrumbJsonLd } from '../../../lib/breadcrumb';
 import { IMPORTER_RETAILER_IDS } from '../../../lib/queries';
+import { displayProductTitle } from '../../../lib/format/product-name';
 
 export const revalidate = 3600;
+
+const SITE_URL = 'https://www.findmybasket.co.uk';
 
 const CATEGORY_DISPLAY: Record<string, string> = {
   skincare: 'Skincare',
@@ -49,15 +52,15 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   const offers = await getRetailerOffers(id);
   const lowestPrice = offers.length > 0 ? offers[0].effective_price : null;
 
-  const titleBits = [];
-  if (product.brand) titleBits.push(product.brand);
-  titleBits.push(product.name);
-  const baseTitle = titleBits.join(' ');
+  // The catalogue name usually already starts with the brand, so combine them
+  // without doubling it (see lib/format/product-name).
+  const baseTitle = displayProductTitle(product.name, product.brand);
   const priceTag = lowestPrice ? ` from £${lowestPrice.toFixed(2)}` : '';
+  const retailerLabel = offers.length === 1 ? '1 UK retailer' : `${offers.length} UK retailers`;
 
   return {
     title: `${baseTitle}${priceTag} | FindMyBasket`,
-    description: `Compare ${baseTitle} prices across ${offers.length} UK retailers. ${
+    description: `Compare ${baseTitle} prices across ${retailerLabel}. ${
       lowestPrice ? `Best price £${lowestPrice.toFixed(2)}.` : ''
     } Free price comparison.`,
   };
@@ -88,24 +91,32 @@ export default async function ProductPage({ params }: { params: { id: string } }
     ? Math.round(((highestPrice - lowestPrice) / highestPrice) * 100)
     : 0;
 
-  // Product JSON-LD
+  // Product JSON-LD. One Offer per in-stock retailer so Google can render the
+  // multi-retailer price panel; a single OutOfStock offer when nothing is in
+  // stock (never an empty offers array).
+  const jsonLdName = displayProductTitle(product.name, product.brand);
   const productJsonLd = {
-    '@context': 'https://schema.org',
+    '@context': 'https://schema.org/',
     '@type': 'Product',
-    name: product.name,
-    image: product.image_url ?? undefined,
+    name: jsonLdName,
     brand: product.brand ? { '@type': 'Brand', name: product.brand } : undefined,
+    image: product.image_url || undefined,
     sku: product.ean ?? `fmb-${product.id}`,
+    description: `Compare ${jsonLdName} prices across multiple UK retailers.`,
     offers: inStockOffers.length > 0
-      ? {
-          '@type': 'AggregateOffer',
+      ? inStockOffers.map(o => ({
+          '@type': 'Offer',
+          url: `${SITE_URL}/product/${product.id}`,
           priceCurrency: 'GBP',
-          lowPrice: lowestPrice?.toFixed(2),
-          highPrice: highestPrice?.toFixed(2),
-          offerCount: inStockOffers.length,
+          price: o.price.toFixed(2),
           availability: 'https://schema.org/InStock',
-        }
-      : undefined,
+          seller: { '@type': 'Organization', name: o.retailer_name },
+        }))
+      : [{
+          '@type': 'Offer',
+          priceCurrency: 'GBP',
+          availability: 'https://schema.org/OutOfStock',
+        }],
   };
 
   // BreadcrumbList JSON-LD
@@ -125,7 +136,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
     });
   }
   breadcrumbItems.push({
-    name: product.brand ? `${product.brand} ${product.name}` : product.name,
+    name: displayProductTitle(product.name, product.brand),
     url: `/product/${product.id}`,
   });
   const breadcrumbJsonLd = buildBreadcrumbJsonLd(breadcrumbItems);
