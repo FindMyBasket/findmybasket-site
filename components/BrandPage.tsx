@@ -14,6 +14,7 @@ interface Props {
   slug: string;
   page?: number;
   productType?: string;
+  category?: string;
 }
 
 const PAGE_SIZE = 48;
@@ -24,25 +25,36 @@ const CATEGORY_DISPLAY: Record<string, string> = {
   hair: 'Hair',
 };
 
-function buildUrl(slug: string, options: { type?: string | null; page?: number } = {}): string {
+function buildUrl(
+  slug: string,
+  options: { type?: string | null; category?: string | null; page?: number } = {}
+): string {
   const params = new URLSearchParams();
   if (options.type) params.set('type', options.type);
+  if (options.category) params.set('category', options.category);
   if (options.page && options.page > 1) params.set('page', String(options.page));
   const qs = params.toString();
   return `/brands/${slug}${qs ? `?${qs}` : ''}`;
 }
 
-export async function BrandPage({ slug, page = 1, productType }: Props) {
+export async function BrandPage({ slug, page = 1, productType, category }: Props) {
   const brand = await findBrandBySlug(slug);
   if (!brand) notFound();
 
   const [stats, productTypes, productResult] = await Promise.all([
     getBrandStats(brand.normalised_brand),
     getBrandProductTypes(brand.normalised_brand),
-    getBrandProducts(brand.normalised_brand, page, PAGE_SIZE, productType),
+    getBrandProducts(brand.normalised_brand, page, PAGE_SIZE, productType, category),
   ]);
 
-  if (productType && productResult.totalCount === 0) {
+  // A filter is either a fine-grained product_type or a coarse top_category.
+  // `filterLabel` is what the page shows in headings/breadcrumbs; `hasFilter`
+  // toggles the filtered-vs-unfiltered layout.
+  const filterLabel =
+    productType ?? (category ? CATEGORY_DISPLAY[category] ?? category : undefined);
+  const hasFilter = Boolean(filterLabel);
+
+  if (hasFilter && productResult.totalCount === 0) {
     notFound();
   }
 
@@ -58,10 +70,10 @@ export async function BrandPage({ slug, page = 1, productType }: Props) {
     { name: 'Brands', url: '/brands' },
     { name: brand.display_name, url: `/brands/${slug}` },
   ];
-  if (productType) {
+  if (hasFilter) {
     breadcrumbItems.push({
-      name: productType,
-      url: `/brands/${slug}?type=${encodeURIComponent(productType)}`,
+      name: filterLabel!,
+      url: buildUrl(slug, productType ? { type: productType } : { category }),
     });
   }
   const breadcrumbJsonLd = buildBreadcrumbJsonLd(breadcrumbItems);
@@ -79,12 +91,12 @@ export async function BrandPage({ slug, page = 1, productType }: Props) {
           Brand
         </p>
         <h1 className="font-serif text-5xl md:text-7xl text-ink mb-6">
-          {productType ? `${brand.display_name} - ${productType}` : brand.display_name}
+          {hasFilter ? `${brand.display_name} - ${filterLabel}` : brand.display_name}
         </h1>
         <p className="text-base md:text-lg text-ink-light max-w-2xl mx-auto mb-10 leading-relaxed">
-          {productType ? (
+          {hasFilter ? (
             <>
-              Compare {brand.display_name} {productType.toLowerCase()} prices across UK retailers. {productResult.totalCount.toLocaleString()} {productType.toLowerCase()} products.
+              Compare {brand.display_name} {filterLabel!.toLowerCase()} prices across UK retailers. {productResult.totalCount.toLocaleString()} {filterLabel!.toLowerCase()} products.
             </>
           ) : (
             <>
@@ -98,11 +110,11 @@ export async function BrandPage({ slug, page = 1, productType }: Props) {
         <div className="inline-flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-ink-light">
           <span>
             <strong className="text-ink font-semibold">
-              {(productType ? productResult.totalCount : stats.total_products).toLocaleString()}
+              {(hasFilter ? productResult.totalCount : stats.total_products).toLocaleString()}
             </strong>{' '}
             products
           </span>
-          {!productType && (
+          {!hasFilter && (
             <>
               <span className="text-ink-light/40">·</span>
               <span>
@@ -116,18 +128,18 @@ export async function BrandPage({ slug, page = 1, productType }: Props) {
         </div>
       </section>
 
-      {!productType && stats.category_breakdown.length > 1 && (
+      {!hasFilter && stats.category_breakdown.length > 1 && (
         <section className="max-w-site mx-auto px-6 py-12">
           <h2 className="font-serif text-3xl text-ink mb-8">Browse by category</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {stats.category_breakdown.map(({ category, count }) => (
+            {stats.category_breakdown.map(({ category: cat, count }) => (
               <Link
-                key={category}
-                href={`/${category}`}
+                key={cat}
+                href={buildUrl(slug, { category: cat })}
                 className="group bg-warm-white border border-border rounded-2xl p-6 hover:border-gold transition-colors"
               >
                 <div className="font-serif text-2xl text-ink capitalize mb-1 group-hover:text-gold transition-colors">
-                  {CATEGORY_DISPLAY[category] ?? category}
+                  {CATEGORY_DISPLAY[cat] ?? cat}
                 </div>
                 <div className="text-sm text-ink-light">
                   {count.toLocaleString()} products
@@ -142,7 +154,7 @@ export async function BrandPage({ slug, page = 1, productType }: Props) {
         <section className="max-w-site mx-auto px-6 py-12">
           <div className="flex items-baseline justify-between mb-8 flex-wrap gap-4">
             <h2 className="font-serif text-3xl text-ink">Product types</h2>
-            {productType && (
+            {hasFilter && (
               <Link
                 href={buildUrl(slug)}
                 className="text-sm text-ink-light hover:text-ink transition-colors"
@@ -179,7 +191,7 @@ export async function BrandPage({ slug, page = 1, productType }: Props) {
         <h2 className="font-serif text-3xl text-ink mb-2">Products</h2>
         <p className="text-ink-light mb-8">
           {page > 1 ? `Page ${page} of ${totalPages}. ` : ''}
-          {productResult.totalCount.toLocaleString()} {productType ? `${productType.toLowerCase()} ` : ''}{brand.display_name} product{productResult.totalCount === 1 ? '' : 's'}.
+          {productResult.totalCount.toLocaleString()} {hasFilter ? `${filterLabel!.toLowerCase()} ` : ''}{brand.display_name} product{productResult.totalCount === 1 ? '' : 's'}.
         </p>
         {productResult.products.length === 0 ? (
           <div className="bg-warm-white border border-border rounded-2xl p-12 text-center text-ink-light">
