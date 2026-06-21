@@ -31,7 +31,7 @@ type Case = {
   expectType?: string;
   // When set, ALSO asserts the resolved subcategory (face/body/hand/foot/both).
   expectSub?: string;
-  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19;
+  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20;
   note?: string;
 };
 
@@ -444,6 +444,50 @@ const CASES: Case[] = [
   { name: "Philips Lumea 8000 Series IPL Hair Removal Device With Pen Trimmer", brand: "Philips", expect: null, excluded: "appliance", fixedBy: 0, note: "IPL hair removal NOT whitelisted — stays appliance" },
   { name: "Foreo ISSA 3 Electric Toothbrush", brand: "Foreo", expect: null, excluded: "oral_care", fixedBy: 0, note: "brand arm must NOT rescue a toothbrush" },
   { name: "Garnier SkinActive Hydra Bomb Sheet Mask", brand: "Garnier", expect: "skincare", fixedBy: 0, note: "LED-less sheet mask unaffected — not a Device" },
+
+  // ── Commit 20: excluded-bucket false-positive cleanup ─────────────────────
+  // Pre-delete pass: in-scope beauty products wrongly excluded by denylist
+  // collisions must STOP being excluded (route anywhere non-excluded). Out-of-
+  // scope items (perfumes, genuine garments, deodorants, gift sets) must STAY
+  // excluded. Nail/lash rescues land in the skincare catchall by design — the
+  // win is "no longer deleted", not perfect product_type.
+
+  // apparel: plural-only "short"/"trunk", nails? guard, eye serum, anti-chafing
+  { name: "Superdrug Studio London Pink Holographic Jelly Short Oval Nails", brand: "Superdrug Studio London", expect: "skincare", fixedBy: 20, note: "false nails: 'Short' no longer apparel; 'Oval Nails' rescues" },
+  { name: "Elegant Touch Glitter Nails Razzle Dazzle - Short", brand: "Elegant Touch", expect: "skincare", fixedBy: 20 },
+  { name: "House of Amor Crowd Pleaser Length Natural C Curl 10mm Short", brand: "House of Amor", expect: "skincare", fixedBy: 20, note: "lash brand allowlist + plural short" },
+  { name: "Collection Spotlight Shine Gel Effect - Leather Jacket", brand: "Collection", expect: "skincare", fixedBy: 20, note: "nail-shade 'Jacket' via brand allowlist" },
+  { name: "Kiss The New Natural Multipack Nude Blazer", brand: "Kiss", expect: "skincare", fixedBy: 20, note: "lash-shade 'Blazer' via brand allowlist" },
+  { name: "Bluesky Mini Trio Set Sweater Weather - 5ml", brand: "Bluesky", expect: "skincare", fixedBy: 20, note: "gel-polish-shade 'Sweater' via brand allowlist" },
+  { name: "SPA CEYLON White Sandal - Soothing Eye Serum 20ml", brand: "SPA CEYLON", expect: "skincare", expectType: "Eye Care", fixedBy: 20, note: "'Sandal' scent name; eye serum rescues" },
+  { name: "Drunk Elephant Trunk 6.0", brand: "Drunk Elephant", expect: "skincare", fixedBy: 20, note: "DE 'Trunk' kit: trunk→trunks plural-only" },
+  { name: "L'Oreal Men Expert Barber Club Short Beard And Face Soothing Gel Moisturiser 50ml", brand: "L'Oréal Paris", expect: "skincare", fixedBy: 20, note: "'Short Beard' moisturiser" },
+  { name: "DARIYA - Venezel Straight Hair Perm EX For Short Hair 1 set", brand: "Dariya", expect: "hair", fixedBy: 20, note: "'Short Hair' perm → hair" },
+  { name: "Below The Belt Women's Anti Chaffing Cream Fresh Breeze Scent 75ml", brand: "Below the Belt", expect: "skincare", fixedBy: 20, note: "'belt' brand; anti-chafing cream rescues" },
+
+  // fragrance: hair/body scent forms + makeup scent names + "Without Fragrance"
+  { name: "L'Atelier Parfum - Green Crush Hair And Body Mist 50ml", brand: "L'Atelier Parfum", expect: "skincare", fixedBy: 20, note: "brand repeats 'Parfum'; hair & body mist" },
+  { name: "anillO - Rosy Night Parfum Hair Mist - 100ml", brand: "anillO", expect: "hair", fixedBy: 20, note: "hair mist scent descriptor" },
+  { name: "Shiseido - Ma Cherie Fragrance Body Soap - 450ml", brand: "Shiseido", expect: "skincare", fixedBy: 20, note: "body soap, not a fragrance" },
+  { name: "Olay Regenerist Retinol 24 Max Night Serum Without Fragrance 40ml", brand: "Olay", expect: "skincare", expectType: "Serum", fixedBy: 20, note: "'Without Fragrance' serum" },
+  { name: "ISEHAN kiss Crealdi Blush Cheek 03 Guava Parfum", brand: "ISEHAN", expect: "makeup", fixedBy: 20, note: "blush with 'Parfum' shade name" },
+
+  // other buckets: supplement plural concentrate, razor bundle, deodorant kit, mask box
+  { name: "7th Heaven Vitamin C Brightening Capsule Concentrates", brand: "7th Heaven", expect: "skincare", fixedBy: 20, note: "topical 'Capsule Concentrates' (plural)" },
+  { name: "Bulldog Skincare Bundle - Original Moisturiser & Bambo Razor", brand: "Bulldog", expect: "skincare", fixedBy: 20, note: "razor bundled on a skincare product" },
+  { name: "LUNA DAILY The Everywhere Body Minis Kit 3 Step Routine Wash Spray To Wipe Deodorant", brand: "LUNA DAILY", expect: "skincare", fixedBy: 20, note: "body-care kit incl. deodorant component" },
+  { name: "7th Heaven Go Wild Pamper Box - 6 Animal Face Masks and Headband", brand: "7th Heaven", expect: "skincare", fixedBy: 20, note: "face-mask box that bundles a headband" },
+
+  // Commit-20 controls (fixedBy 0): out-of-scope items must STAY excluded.
+  { name: "Jean Paul Gaultier Le Male Elixir 125ml", brand: "Jean Paul Gaultier", expect: null, excluded: "apparel", fixedBy: 0, note: "perfume held excluded via 'jean' — must NOT leak" },
+  { name: "Ralph Lauren Polo Sport Fresh 125ml", brand: "Ralph Lauren", expect: null, excluded: "apparel", fixedBy: 0, note: "perfume held excluded via 'polo' — must NOT leak" },
+  { name: "anillO - Amber528 Parfum Body Mist - 100ml", brand: "anillO", expect: null, excluded: "fragrance", fixedBy: 0, note: "bare 'body mist' deliberately NOT rescued" },
+  { name: "Tom Ford Ombre Leather Parfum Travel Spray 10ml", brand: "Tom Ford", expect: null, excluded: "fragrance", fixedBy: 0, note: "genuine niche perfume stays" },
+  { name: "Nike Mens Cotton Trunks 3 Pack", brand: "Nike", expect: null, excluded: "apparel", fixedBy: 0, note: "real trunks (plural) still excluded" },
+  { name: "Adidas Running Shorts Mens", brand: "Adidas", expect: null, excluded: "apparel", fixedBy: 0, note: "real shorts (plural) still excluded" },
+  { name: "Lynx Indigo Haze 72Hr Premium Body Spray 150ml", brand: "Lynx", expect: null, excluded: "deodorant", fixedBy: 0, note: "standalone body spray stays (no kit framing)" },
+  { name: "Wild Nutrition Beauty & Glow Food-Grown Skin Supplement", brand: "Wild Nutrition", expect: null, excluded: "supplement", fixedBy: 0, note: "ingestible supplement stays — capsuleIsTopical only widened for the plural 'concentrates'" },
+  { name: "CeraVe Skincare Gift Set for Normal / Dry skin", brand: "CeraVe", expect: null, excluded: "bath_set", fixedBy: 0, note: "gift set untouched by Commit 20 (user keeps bath_set)" },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
