@@ -31,7 +31,7 @@ type Case = {
   expectType?: string;
   // When set, ALSO asserts the resolved subcategory (face/body/hand/foot/both).
   expectSub?: string;
-  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
+  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
   note?: string;
 };
 
@@ -353,6 +353,14 @@ const CASES: Case[] = [
   // Guards: genuine generic-makeup products must STILL route to makeup.
   { name: "Clinique Superbalanced Makeup", brand: "Clinique", expect: "makeup", expectType: "Foundation", fixedBy: 0, note: "genuine makeup unaffected by the cleanser guard" },
   { name: "Charlotte Tilbury Airbrush Flawless Setting Spray Makeup", brand: "Charlotte Tilbury", expect: "makeup", expectType: "Setting", fixedBy: 0 },
+
+  // ── Commit 16: intimate_health denylist ──────────────────────────────────
+  // Medical / intimate-care products leaking into skincare via bare cream/moistur.
+  { name: "Canescool Intimate Care Soothing Cream Gel 15g", expect: null, excluded: "intimate_health", fixedBy: 16, note: "'intimate care' + 'canescool' brand anchor" },
+  { name: "Regelle Long Lasting Vaginal Moisturiser", expect: null, excluded: "intimate_health", fixedBy: 16, note: "'vaginal' → excluded" },
+  // Guard: the new pattern's anchored cream/moistur arms must NOT false-positive
+  // on ordinary skincare. Foot cream stays skincare/foot.
+  { name: "Tonymoly Foot Cream", brand: "Tonymoly", expect: "skincare", expectSub: "foot", fixedBy: 0, note: "'foot cream' must NOT hit intimate_health" },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────

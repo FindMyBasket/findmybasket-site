@@ -49,6 +49,16 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     ["supplement", /\b(supplement|vitamin tablet|capsule|gummies|protein shake|meal replacement|powder drink|fish oil|cod liver oil|effervescent tablet)\b/],
     ["oral_care", /\b(toothpaste|toothbrush|mouthwash|dental floss|whitening strip)\b/],
     ["period_care", /\b(tampons?|sanitary pads?|menstrual|period care|panty liner|pantyliner)\b/],
+    // intimate_health: medical / intimate-care products (thrush treatments,
+    // vaginal moisturisers, feminine hygiene, intimate-care kits, sex toys)
+    // that leak into skincare by matching the bare cream/moistur keywords in
+    // the Moisturiser branch. Descriptor words (cream/gel/moistur/wash) are only
+    // matched when anchored to an intimate/feminine/thrush prefix, so generic
+    // skincare ("foot cream", "hand moisturiser") is unaffected. Brand-name
+    // anchors (canescool|canesten|canesfresh|relactagel|menocare) are a safety
+    // net for names where the descriptor is too generic but the brand is
+    // unambiguous.
+    ["intimate_health", /\b(vaginal|vulva|feminine (wash|hygiene|care|moistur|cream|gel)|intimate (wash|care|gel|moistur|cream|treatment|hygiene|cleanser)|thrush (cream|gel|treatment)|\bbv (treatment|relief|gel)\b|menocare|relactagel|canesfresh|canescool|canesten|sex toy|vibrator)\b/],
     ["deodorant", /\b(deodorant|antiperspirant|body spray)\b/],
     ["shaving", /\b(razor|shaving foam|shave gel|shave cream|epilator|wax strip)\b/],
     // appliance: electric grooming devices (men's trimmers, clippers, electric
