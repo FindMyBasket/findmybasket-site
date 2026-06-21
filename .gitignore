@@ -39,3 +39,5 @@ debenhams-feed-*.json
 
 # brand-hub design prototype (embeds base64 brand images; spec only, not shipped)
 ilapothecary_hub_real.html
+
+scripts/.recategorise-preview.gen.json

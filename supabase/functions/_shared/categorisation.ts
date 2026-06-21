@@ -259,10 +259,21 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     // Clinique 'Quickliner For Eye' brand-line pattern
     if (/\b(quickliner|kohl)\b/.test(t)) return true;
     if (/\b(foundation|concealer|colour corrector|color corrector|primer)\b/.test(t)) return true;
-    if (/\b(blush|bronzer|highlighter|highlighting|contour|contouring|illuminator|strobing|strobe)\b/.test(t)) return true;
-    // 'bronze' standalone is risky (skincare body products use it) — only treat
-    // as makeup when paired with a powder/shimmer cosmetic descriptor.
-    if (/\bbronze\b.*\b(powder|palette|stick|shimmer|glow palette)\b/.test(t)) return true;
+    if (/\b(blush|bronzer|highlighter|highlighting|contour|contouring|illuminator|strobing|strobe|lumini[sz](e|er|ed|es|ing)|cheek (colour|color|tint|stick|palette))\b/.test(t)) return true;
+    // 'bronze'/'bronzing' standalone is risky (self-tan body products use them —
+    // "bronzing drops/mousse/water") — only makeup when paired with a powder/
+    // stick/compact cosmetic descriptor. "Bronzing Powder/Stick" → makeup;
+    // "Bronzing Drops" (self-tan) stays skincare.
+    if (/\bbronz(e|ing)\b.*\b(powder|palette|stick|shimmer|glow palette|compact|brick)\b/.test(t)) return true;
+    // 'illuminating' is heavily used in skincare (serums/creams), so only treat
+    // it as makeup when paired with a cosmetic-form noun. (The luminizer family
+    // above is makeup-only vocabulary and needs no such guard.)
+    if (/\billuminating\b.*\b(stick|baton|wand|palette|powder|compact|highlighter)\b/.test(t)) return true;
+    // NARS abbreviated-SKU eye liner: a high-pigment / long-wear modifier on a
+    // liner ("High-Pigment Liner", "High-Pgmnt Lngwr Lnr"). Scoped to the
+    // modifier+liner pair so "High-Wear Foundation" / "longwear foundation" are
+    // unaffected; lip liners excluded (routed in the Lips block).
+    if (/\b(high-?pigment|high-?pgmnt|long-?wear|longwear|lngwr)\b.*\b(eye-?liner|liner|lnr)\b/.test(t) && !/\blip\b/.test(t)) return true;
     if (/\b(setting (spray|powder)|finishing powder|fixing spray|fixing mist)\b/.test(t)) return true;
     // Face powder variants (Clinique Superpowder, Sheer Pressed Powder, etc.)
     if (/\b(face powder|pressed powder|loose powder|compact powder|superpowder|powder makeup)\b/.test(t)) return true;
@@ -275,7 +286,16 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     // Cleansers that mention makeup ("Removes Makeup", "Makeup Remover",
     // "Micellar … Makeup") are skincare, not makeup. Exclude the verb form
     // ("removes makeup") too — the old lookahead only caught "makeup remover".
-    if (/\bmakeup\b/.test(t) && !/\b(makeup (remover|removal|wipe|wipes)|removes? makeup|micellar)\b/.test(t)) return true;
+    // Cleansers/removers that mention "makeup" are skincare, not makeup. The old
+    // guard only caught "makeup remover/removal/wipe"; it missed "makeup removing",
+    // "makeup cleansing", "makeup melting", "removing makeup" and bare cleanser/
+    // cleansing-balm forms — so makeup-removing cleansing balms (CeraVe, e.l.f.,
+    // Shiseido ELIXIR, Haruharu) leaked into makeup. Broadened to fall through to
+    // the Step 4 skincare Cleanser branch instead.
+    if (
+      /\bmakeup\b/.test(t) &&
+      !/\b(makeup\s+(remov\w*|cleans\w*|melt\w*|wipe|wipes)|(remov\w*|cleans\w*|melt\w*)\s+makeup|micellar|cleanser|cleansing (balm|oil|cream|gel|lotion|milk|water|foam))\b/.test(t)
+    ) return true;
     return false;
   })();
 
@@ -287,7 +307,10 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     if (/\b(mascara)\b/.test(t)) {
       product_type = "Mascara";
       subcategory = "eyes";
-    } else if (/\b(eyeliner|eye liner|quickliner|kohl)\b/.test(t)) {
+    } else if (
+      /\b(eyeliner|eye liner|quickliner|kohl)\b/.test(t) ||
+      (/\b(high-?pigment|high-?pgmnt|long-?wear|longwear|lngwr)\b.*\b(eye-?liner|liner|lnr)\b/.test(t) && !/\blip\b/.test(t))
+    ) {
       product_type = "Eyeliner";
       subcategory = "eyes";
     } else if (/\b(eyeshadow|eye shadow)\b/.test(t)) {
@@ -334,10 +357,13 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     } else if (/\b(face powder|pressed powder|loose powder|compact powder|superpowder|powder makeup|sheer.{0,10}powder)\b/.test(t)) {
       product_type = "Powder";
       subcategory = "face";
-    } else if (/\b(blush|bronzer|highlighter|highlighting|contour|contouring|illuminator|strobing|strobe|cheek (colour|color|tint|stick))\b/.test(t)) {
+    } else if (
+      /\b(blush|bronzer|highlighter|highlighting|contour|contouring|illuminator|strobing|strobe|lumini[sz](e|er|ed|es|ing)|cheek (colour|color|tint|stick|palette))\b/.test(t) ||
+      /\billuminating\b.*\b(stick|baton|wand|palette|powder|compact|highlighter)\b/.test(t)
+    ) {
       product_type = "Blush/Bronzer";
       subcategory = "face";
-    } else if (/\bbronze\b.*\b(powder|palette|stick|shimmer)\b/.test(t)) {
+    } else if (/\bbronz(e|ing)\b.*\b(powder|palette|stick|shimmer|compact|brick)\b/.test(t)) {
       product_type = "Blush/Bronzer";
       subcategory = "face";
     }
