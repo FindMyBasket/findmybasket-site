@@ -19,7 +19,13 @@ const nextConfig = {
   // not for Next.js to manage. Vercel handles them as serverless functions
   // independently.
   async rewrites() {
-    return [];
+    // Serve the static homepage at `/` with a 200 (no redirect). `beforeFiles`
+    // runs before Next.js page resolution, so it intercepts `/` and serves the
+    // canonical static index.html in place. Replaces the old app/page.tsx
+    // redirect('/index.html'), which served `/` as a broken 307 (no Location).
+    return {
+      beforeFiles: [{ source: '/', destination: '/index.html' }],
+    };
   },
 };
 

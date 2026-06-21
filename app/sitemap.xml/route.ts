@@ -1,26 +1,35 @@
 import { NextResponse } from 'next/server';
+import { SITE_URL, countSitemapProducts, sitemapPartCount } from '../../lib/sitemap';
 
 // Sitemap index. Lists the sub-sitemaps Google should crawl.
-// We split by content type so each file stays under the 50,000 URL limit
-// and so we can update them independently.
+// We split by content type so each file stays under the 50,000 URL limit.
+// Product URLs span several numbered parts; the count below decides how many.
 
 export const revalidate = 3600;
-
-const SITE_URL = 'https://www.findmybasket.co.uk';
 
 export async function GET() {
   const now = new Date().toISOString();
 
+  const total = await countSitemapProducts();
+  const parts = sitemapPartCount(total);
+
+  const childLocs = [`${SITE_URL}/sitemap-pages.xml`];
+  for (let p = 1; p <= parts; p++) {
+    childLocs.push(`${SITE_URL}/sitemap-products/${p}`);
+  }
+
+  const entries = childLocs
+    .map(
+      loc => `  <sitemap>
+    <loc>${loc}</loc>
+    <lastmod>${now}</lastmod>
+  </sitemap>`
+    )
+    .join('\n');
+
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <sitemap>
-    <loc>${SITE_URL}/sitemap-pages.xml</loc>
-    <lastmod>${now}</lastmod>
-  </sitemap>
-  <sitemap>
-    <loc>${SITE_URL}/sitemap-products.xml</loc>
-    <lastmod>${now}</lastmod>
-  </sitemap>
+${entries}
 </sitemapindex>`;
 
   return new NextResponse(xml, {
