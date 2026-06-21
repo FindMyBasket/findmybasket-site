@@ -32,6 +32,32 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
   const t = String(name || "").toLowerCase().replace(/([a-z])(\d)/g, "$1 $2");
   const b = String(brand || "").toLowerCase();
 
+  // ─── Step 0: Beauty-device whitelist ─────────────────────────────────────
+  // At-home LED / light-therapy / photon / EMS face masks, microcurrent and
+  // cryotherapy tools are skincare appliances we WANT (Foreo, Silk'n, Theragun
+  // Theraface, Shark CryoGlow, Ulike), not exclusions. Without this they'd hit
+  // the device denylist (LED masks) or fall into the skincare Mask bucket. Return
+  // a clean skincare/Device classification BEFORE the denylist runs.
+  // The brand arm is gated by a device signal so non-devices from the same brand
+  // (e.g. a Foreo ISSA electric toothbrush) are NOT rescued and still hit their
+  // own exclusion (oral_care). NB: IPL *hair removal* handsets (Philips Lumea) are
+  // deliberately NOT whitelisted — they stay `appliance`.
+  const isBeautyDevice =
+    /\b(led|light therapy|photon|ems)\b.*\bmask\b/.test(t) ||
+    /\bmask\b.*\b(led|light therapy|photon|ems)\b/.test(t) ||
+    /\bmicrocurrent\b/.test(t) ||
+    /\bcryo(therapy|glow)\b/.test(t) ||
+    ((/\b(foreo|silk'?n|therabody|theragun|ulike)\b/.test(b) || /\bcryoglow\b/.test(t)) &&
+      /\b(led|light therapy|photon|ems|microcurrent|cryo\w*)\b.*\bmask\b/.test(t));
+  if (isBeautyDevice) {
+    return {
+      top_category: "skincare",
+      product_type: "Device",
+      subcategory: "face",
+      tags: ["skincare", "face", "device"],
+    };
+  }
+
   // ─── Step 1: Excluded categories (denylist) ──────────────────────────────
   const excludeChecks: Array<[string, RegExp]> = [
     // Aftershave: tricky — "Aftershave Balm/Lotion/Cream" is skincare we want.
@@ -98,11 +124,9 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     // by descriptor patterns (bristle brush, boar bristle, paddle brush etc.)
     ["hair_tool", /\b(hair dryer|straightener|curling iron|curling wand|hair brush|paddle brush|bristle brush|boar bristle|comb|hair clip|hair tie|scrunchie|mason pearson)\b/],
     ["makeup_tool", /\b(makeup brush|beauty blender|sponge|eyelash curler|brush set|brush cleaner)\b/],
-    // device: electronic skincare appliances that carry the word "mask" (LED /
-    // light-therapy / photon / EMS face masks). They'd otherwise land in the
-    // skincare Mask bucket. Require an LED/therapy signal alongside "mask" so
-    // sheet/clay/sleeping masks are unaffected.
-    ["device", /\b(led|light therapy|photon)\b.*\bmask\b|\bmask\b.*\b(led|light therapy|photon)\b/],
+    // NB: LED / light-therapy / photon / EMS / microcurrent / cryotherapy beauty
+    // devices are handled by the Step 0 beauty-device whitelist above (routed to
+    // skincare/Device), so there is no `device` denylist entry here.
     ["bath_set", /\b(gift set|bath set|body care set|grooming set|skincare set)\b/],
     // 'baby' must NOT match the Maybelline "Baby Lips" line (mainstream lip balm).
     // Match only when 'baby' clearly indicates infant/child product, not when it's
@@ -182,6 +206,18 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     /\b(shav\w*|trimmer|razor|epilat\w*|depilat\w*|pubic|hair removal|wax(ing)?)\b/.test(t) ||
     /\b(lipstick|lip power|eye ?shadow|palette|mascara|nail polish|foundation|edp|edt|eau de)\b/.test(t)
   );
+  // Pre-check: the appliance denylist's 'groomer'/'clipper' tokens over-fire on
+  // manual MAKEUP accessories. "Lash/Brow Groomer", "Brow Groomer & Brush" are
+  // brow tools, and "Nail Polish Protection Clipper Protector" is a nail-polish
+  // accessory — both belong in makeup, not excluded as electric appliances.
+  // Anchor tightly so genuine appliances stay excluded: brow/lash groomers need a
+  // brow/lash word (Braun "Body Groomer", Meridian "Below-The-Belt Groomer" lack
+  // it); the nail accessory needs "nail polish" + protect (generic "Toenail
+  // Clipper"/"Nail Clippers" lack both).
+  const applianceIsBrowLashTool =
+    /\bgroomer\b/.test(t) && (/\b(eye)?brows?\b/.test(t) || /\blash(es)?\b/.test(t));
+  const applianceIsNailPolishAccessory =
+    /\bnail polish\b/.test(t) && /\bprotect/.test(t);
 
   for (const [reason, re] of excludeChecks) {
     // Skip fragrance denylist when the name is clearly haircare/body care and
@@ -197,6 +233,8 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     if (reason === "makeup_tool" && toolIsBundledExtra) continue;
     // Skip intimate_health for intimate-area grooming and shade/edition names.
     if (reason === "intimate_health" && intimateIsGroomingOrMakeup) continue;
+    // Skip appliance for manual brow/lash grooming tools and nail-polish accessories.
+    if (reason === "appliance" && (applianceIsBrowLashTool || applianceIsNailPolishAccessory)) continue;
     if (re.test(t)) {
       return {
         top_category: null,

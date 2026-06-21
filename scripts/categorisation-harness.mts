@@ -31,7 +31,7 @@ type Case = {
   expectType?: string;
   // When set, ALSO asserts the resolved subcategory (face/body/hand/foot/both).
   expectSub?: string;
-  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18;
+  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19;
   note?: string;
 };
 
@@ -201,9 +201,10 @@ const CASES: Case[] = [
   // 11f. Toner-soaked pads → skincare/Toner, NOT Mask.
   { name: "MEDICUBE Zero Pore Madecassoside Pads Mild (70 Pads)", brand: "medicube", expect: "skincare", expectType: "Toner", fixedBy: 11 },
   { name: "SKINFOOD Carrot Carotene Calming Water Pad (60 pads)", brand: "Skinfood", expect: "skincare", expectType: "Toner", fixedBy: 11 },
-  // 11g. LED / light-therapy face-mask DEVICES → excluded, NOT skincare/Mask.
-  { name: "Theragun Therabody Theraface Mask LED Light Therapy Skincare", brand: "Theragun", expect: null, excluded: "device", fixedBy: 11 },
-  { name: "RIO Facelite Beauty Boosting LED Mask", brand: "RIO", expect: null, excluded: "device", fixedBy: 11 },
+  // 11g. LED / light-therapy face-mask DEVICES. Commit 19 reversed the original
+  // decision: these are legitimate at-home beauty devices, reclassified to
+  // skincare/Device (not excluded, not skincare/Mask). See the Commit-19 block.
+  { name: "RIO Facelite Beauty Boosting LED Mask", brand: "RIO", expect: "skincare", expectType: "Device", fixedBy: 19 },
   // 11h. Coincidental quantity "pack" no longer routes to Mask. A real serum in a
   //      multipack resolves by its true type; out-of-scope packs are excluded.
   { name: "The Ordinary Niacinamide 10% + Zinc 1% Serum 30ml 2 Pack", brand: "The Ordinary", expect: "skincare", expectType: "Serum", fixedBy: 11, note: "'2 Pack' must not route to Mask" },
@@ -420,6 +421,29 @@ const CASES: Case[] = [
   { name: "Eylure Lash Tint - Black - Permanent Tint For Lashes", brand: "Eylure", expect: "skincare", fixedBy: 18, note: "lash tint must NOT route to false-lashes" },
   // Guard: genuine false lashes still route to makeup/Lashes.
   { name: "Eylure Volume Lashes No 102", brand: "Eylure", expect: "makeup", expectType: "Lashes", fixedBy: 0, note: "real strip lashes still makeup" },
+
+  // ── Commit 19: beauty-device whitelist + appliance false-positive guards ──
+  // 19a. At-home beauty devices reclassify skincare/Device (were excluded:device).
+  { name: "Foreo FAQ 202 Wireless Silicone 7 LED Light + NIR Anti Aging Face Mask", brand: "Foreo", expect: "skincare", expectType: "Device", fixedBy: 19, note: "LED face mask → skincare/Device" },
+  { name: "Silk'n Facial LED Mask 100 Leds", brand: "Silk'n", expect: "skincare", expectType: "Device", fixedBy: 19 },
+  { name: "Shark CryoGlow Under-Eye Cooling & LED Anti-Ageing Blemish Repair Mask", brand: "Shark", expect: "skincare", expectType: "Device", fixedBy: 19, note: "cryoglow + LED" },
+  { name: "Theragun Therabody TheraFace Mask LED Light Therapy Skincare", brand: "Theragun", expect: "skincare", expectType: "Device", fixedBy: 19 },
+  { name: "Ulike ReGlow LED Light Therapy Mask in White", brand: "Ulike", expect: "skincare", expectType: "Device", fixedBy: 19 },
+  { name: "Boots LED Face Mask", brand: "Boots", expect: "skincare", expectType: "Device", fixedBy: 19, note: "generic LED face mask" },
+  { name: "NuFACE Trinity+ Facial Toning Microcurrent Device", brand: "NuFACE", expect: "skincare", expectType: "Device", fixedBy: 19, note: "microcurrent (no 'mask')" },
+  // 19b. Appliance FPs: manual brow/lash + nail-polish accessories → makeup.
+  { name: "Superdrug Lash/Brow Groomer", brand: "Superdrug", expect: "makeup", expectType: "Brow", fixedBy: 19, note: "brow groomer → makeup, not appliance" },
+  { name: "Superdrug Studio London Brow Groomer & Brush", brand: "Superdrug Studio London", expect: "makeup", expectType: "Brow", fixedBy: 19 },
+  { name: "Envie Nail Polish Protection Clipper Protector Plastic Clip", brand: "Envie", expect: "makeup", expectType: "Nail Polish", fixedBy: 19, note: "nail-polish accessory, not a clipper" },
+
+  // Controls (fixedBy 0): genuine appliances/devices must stay excluded or unaffected.
+  { name: "Philips OneBlade Hybrid Trimmer & Shaver QP2530/30", brand: "Philips", expect: null, excluded: "appliance", fixedBy: 0, note: "real shaver/trimmer stays excluded" },
+  { name: "Braun Body Groomer Series 5, +6 Grooming Tools, Trim & Shave", brand: "Braun", expect: null, excluded: "appliance", fixedBy: 0, note: "generic body groomer (no brow/lash) stays excluded" },
+  { name: "Superdrug Toenail Clipper", brand: "Superdrug", expect: null, excluded: "appliance", fixedBy: 0, note: "generic clipper stays excluded" },
+  { name: "Tweezerman Precision Grip Toenail Clipper", brand: "Tweezerman", expect: null, excluded: "appliance", fixedBy: 0, note: "generic clipper stays excluded" },
+  { name: "Philips Lumea 8000 Series IPL Hair Removal Device With Pen Trimmer", brand: "Philips", expect: null, excluded: "appliance", fixedBy: 0, note: "IPL hair removal NOT whitelisted — stays appliance" },
+  { name: "Foreo ISSA 3 Electric Toothbrush", brand: "Foreo", expect: null, excluded: "oral_care", fixedBy: 0, note: "brand arm must NOT rescue a toothbrush" },
+  { name: "Garnier SkinActive Hydra Bomb Sheet Mask", brand: "Garnier", expect: "skincare", fixedBy: 0, note: "LED-less sheet mask unaffected — not a Device" },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
