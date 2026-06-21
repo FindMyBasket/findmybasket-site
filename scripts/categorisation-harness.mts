@@ -31,7 +31,7 @@ type Case = {
   expectType?: string;
   // When set, ALSO asserts the resolved subcategory (face/body/hand/foot/both).
   expectSub?: string;
-  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
+  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17;
   note?: string;
 };
 
@@ -361,6 +361,57 @@ const CASES: Case[] = [
   // Guard: the new pattern's anchored cream/moistur arms must NOT false-positive
   // on ordinary skincare. Foot cream stays skincare/foot.
   { name: "Tonymoly Foot Cream", brand: "Tonymoly", expect: "skincare", expectSub: "foot", fixedBy: 0, note: "'foot cream' must NOT hit intimate_health" },
+
+  // ── Commit 17: exclusion false-positive cleanup + intimate_health coverage ──
+  // (a) fragrance: "Fragrance Free" is a skincare descriptor, NOT a fragrance.
+  { name: "Bondi Sands Fragrance Free Sunscreen Lotion SPF50+ Face 75ml", brand: "Bondi Sands", expect: "skincare", expectType: "SPF", fixedBy: 17, note: "'fragrance free' SPF must stay skincare" },
+  { name: "Olay Total Effects 7-in-1 Fragrance Free Moisturiser 50ml", brand: "Olay", expect: "skincare", expectType: "Moisturiser", fixedBy: 17 },
+  { name: "haruharu wonder Black Rice Hyaluronic Toner Fragrance Free 150ml", brand: "Haruharu Wonder", expect: "skincare", expectType: "Toner", fixedBy: 17 },
+  // Guard: a genuine fragrance (hard form) is unaffected even if it said free.
+  { name: "Dior Sauvage Eau de Parfum 100ml", brand: "Dior", expect: null, excluded: "fragrance", fixedBy: 0, note: "real EDP still excluded" },
+  // (b) supplement: topical "Capsule" skincare must stay skincare.
+  { name: "Medicube Deep Vita C Capsule Cream 55g", brand: "medicube", expect: "skincare", expectType: "Moisturiser", fixedBy: 17, note: "'capsule cream' is topical, not an ingestible" },
+  { name: "Skin1004 Madagascar Centella Tone Brightening Capsule Ampoule 100ml", brand: "Skin1004", expect: "skincare", expectType: "Serum", fixedBy: 17, note: "capsule ampoule → serum" },
+  { name: "Some By Mi V10 Hyal Hydra Capsule Sunscreen SPF50+ 40ml", brand: "Some By Mi", expect: "skincare", expectType: "SPF", fixedBy: 17 },
+  // Guard: genuine ingestible capsules/supplements stay excluded.
+  { name: "Myvitamins Apple Cider Vinegar Gummies 60 Pack", brand: "Myvitamins", expect: null, excluded: "supplement", fixedBy: 0, note: "ingestible (gummies) still excluded; capsule guard is topical-form-gated" },
+  // (c) apparel: garment WORDS used as cosmetic shade/line names must stay.
+  { name: "Essie Nail Polish - 765 You Know The Espadrille", brand: "Essie", expect: "makeup", expectType: "Nail Polish", fixedBy: 17, note: "'espadrille' is a shade name" },
+  { name: "Maybelline Color Show Nail Polish 442 Business Blouse", brand: "Maybelline", expect: "makeup", expectType: "Nail Polish", fixedBy: 17 },
+  { name: "CHANEL Rouge Coco Lipstick Jean", brand: "Chanel", expect: "makeup", expectType: "Lipstick", fixedBy: 17, note: "'Jean' shade must not hit jeans" },
+  { name: "Bluesky Gel Polish - Satin Robe", brand: "Bluesky", expect: "makeup", expectType: "Nail Polish", fixedBy: 17, note: "'robe' shade on a gel polish" },
+  { name: "Huda Beauty Hoodie Flares Lashes", brand: "Huda Beauty", expect: "makeup", expectType: "Lashes", fixedBy: 17, note: "'hoodie' lash style name" },
+  { name: "Guerlain La Petite Robe Noire Velvet Body Milk 200ml", brand: "Guerlain", expect: "skincare", expectSub: "body", fixedBy: 17, note: "'Robe Noire' body milk → skincare body" },
+  // Guards: genuine apparel/bags must STILL be excluded.
+  { name: "Harry Potter Adult Ravenclaw Scarf", brand: "Harry Potter", expect: null, excluded: "apparel", fixedBy: 0, note: "real scarf still excluded" },
+  { name: "Superdrug Black Wash Bag", brand: "Superdrug", expect: null, excluded: "apparel", fixedBy: 0, note: "real wash bag still excluded" },
+  // (d) accessory: skincare refill / sachet pouches must stay skincare.
+  { name: "Cerave Moisturising Cream Refill Pouch With Hyaluronic Acid 473ml", brand: "CeraVe", expect: "skincare", expectType: "Moisturiser", fixedBy: 17, note: "refill pouch is packaging, not an accessory" },
+  { name: "Mixsoon Bean Essence Stick Pouch Set 1.5ml x 10ea", brand: "mixsoon", expect: "skincare", expectType: "Serum", fixedBy: 17, note: "sachet stick pouch of essence" },
+  // Guard: a real accessory (headband) stays excluded.
+  { name: "So Eco Spa Headband", brand: "So Eco", expect: null, excluded: "accessory", fixedBy: 0, note: "real headband still excluded" },
+  // (e) deodorant: skincare-active body sprays must stay skincare.
+  { name: "Q+A Salicylic Acid Clarifying Body Spray 150ml", brand: "Q+A", expect: "skincare", fixedBy: 17, note: "salicylic/clarifying body spray → skincare" },
+  { name: "La Roche-Posay Thermal Spring Water Face & Body Spray 150ml", brand: "La Roche-Posay", expect: "skincare", fixedBy: 17, note: "thermal spring water spray → skincare" },
+  // Guards: real deodorants / fragrance body sprays stay excluded.
+  { name: "Sol de Janeiro Rio Deo Cheirosa 40 Deodorant 57g", brand: "Sol de Janeiro", expect: null, excluded: "deodorant", fixedBy: 0, note: "real deodorant still excluded" },
+  { name: "Lynx Indigo Haze 72Hr Premium Body Spray 150ml", brand: "Lynx", expect: null, excluded: "deodorant", fixedBy: 0, note: "fragrance body spray still excluded" },
+  // (f) makeup_tool: brush/sponge bundled onto skincare must stay skincare.
+  { name: "Jumiso D-Panthenol Barrier Soothing Cream 80ml + Brush Set", brand: "Jumiso", expect: "skincare", expectType: "Moisturiser", fixedBy: 17, note: "'+ Brush Set' is a bundled extra" },
+  { name: "Givenchy Le Soin Noir Face Cleanser & Face Sponge 175ml", brand: "Givenchy", expect: "skincare", expectType: "Cleanser", fixedBy: 17, note: "'& Face Sponge' bundled extra" },
+  // Guard: a standalone brush/sponge tool stays excluded.
+  { name: "Sigma Beauty Skincare Brush Set", brand: "Sigma", expect: null, excluded: "makeup_tool", fixedBy: 0, note: "real brush set still excluded" },
+  { name: "Tweezy Facial Exfoliator Konjac Sponge", brand: "Tweezy", expect: null, excluded: "makeup_tool", fixedBy: 0, note: "real sponge tool still excluded" },
+  // (g) intimate_health: loosened to catch real "Intimate [adjective] Wash/Care".
+  { name: "Femfresh Intimate Active Wash 250ml", brand: "Femfresh", expect: null, excluded: "intimate_health", fixedBy: 17, note: "'Intimate Active Wash' (adjective gap)" },
+  { name: "Femfresh Intimate Skin Care Soothing Wash 250ml", brand: "Femfresh", expect: null, excluded: "intimate_health", fixedBy: 17, note: "'Intimate Skin Care'" },
+  { name: "YES Cleanse Ultra Gentle Intimate Foam Wash", brand: "YES", expect: null, excluded: "intimate_health", fixedBy: 17, note: "'Intimate Foam Wash'" },
+  // Guards: intimate-area GROOMING stays shaving, NOT intimate_health.
+  { name: "Gillette Venus Intimate 2-In-1 Cleanser + Shave Gel For Pubic Hair 190ml", brand: "Gillette", expect: null, excluded: "shaving", fixedBy: 0, note: "pubic-hair shave → shaving, not intimate_health" },
+  { name: "Gillette Venus Intimate Gentle Trimmer For Pubic Hair", brand: "Gillette", expect: null, excluded: "appliance", fixedBy: 0, note: "intimate trimmer → appliance" },
+  // Guards: "Intimate" as a makeup shade / fragrance edition must NOT exclude.
+  { name: "Armani Lip Power Lipstick Intimate 109", brand: "Armani", expect: "makeup", expectType: "Lipstick", fixedBy: 17, note: "'Intimate' is a lipstick shade" },
+  { name: "MAC Connect In Colour Eyeshadow Palette Intimate Nude 6.25g", brand: "MAC Cosmetics", expect: "makeup", expectType: "Eyeshadow", fixedBy: 17, note: "'Intimate Nude' eyeshadow shade" },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
