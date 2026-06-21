@@ -108,9 +108,19 @@ Deno.serve(async (req: Request) => {
     let excludedFound = 0;
     let excludedDeleted = 0;
     let protectedFromCatchall = 0;
+    let refinementCount = 0; // stale rows where ONLY subcategory/tags changed
     const topChanges: Record<string, number> = {};
     const typeChanges: Record<string, number> = {};
-    const sampleStale: unknown[] = [];
+    const excludedByReason: Record<string, number> = {};
+    const staleByBrand: Record<string, number> = {};
+    const refinementSubChanges: Record<string, number> = {};
+    const sampleRefinements: unknown[] = [];
+    // Bucket MEANINGFUL recategorisations (top_category or product_type changed)
+    // by full transition (old top/type → new top/type), so the cross-type moves
+    // worth eyeballing aren't swamped by same-type subcategory/tags refinements.
+    const transitionCounts: Record<string, number> = {};
+    const transitionSamples: Record<string, unknown[]> = {};
+    const TRANSITION_SAMPLE_CAP = 15;
     const sampleExcluded: unknown[] = [];
     const errors: string[] = [];
     const affectedBrands = new Set<string>();
@@ -140,6 +150,7 @@ Deno.serve(async (req: Request) => {
 
         if (cat.excluded) {
           excludedFound++;
+          excludedByReason[cat.excluded] = (excludedByReason[cat.excluded] ?? 0) + 1;
           if (sampleExcluded.length < 50) {
             sampleExcluded.push({ id: p.id, name: p.name, brand: p.brand, excluded: cat.excluded, old: oldOf(p) });
           }
@@ -173,20 +184,35 @@ Deno.serve(async (req: Request) => {
         }
 
         staleFound++;
-        if ((p.top_category ?? null) !== freshTop) {
+        const topChanged = (p.top_category ?? null) !== freshTop;
+        const typeChanged = (p.product_type ?? "") !== freshType;
+        if (topChanged) {
           const k = `${p.top_category ?? "null"}→${freshTop ?? "null"}`;
           topChanges[k] = (topChanges[k] ?? 0) + 1;
         }
-        if ((p.product_type ?? "") !== freshType) {
+        if (typeChanged) {
           const k = `${p.product_type || "—"}→${freshType || "—"}`;
           typeChanges[k] = (typeChanges[k] ?? 0) + 1;
         }
-        if (sampleStale.length < 50) {
-          sampleStale.push({
-            id: p.id, name: p.name, brand: p.brand,
-            old: oldOf(p),
-            new: { top_category: freshTop, product_type: freshType, subcategory: freshSub, tags: freshTags },
-          });
+        const rec = {
+          id: p.id, name: p.name, brand: p.brand,
+          old: oldOf(p),
+          new: { top_category: freshTop, product_type: freshType, subcategory: freshSub, tags: freshTags },
+        };
+        if (topChanged || typeChanged) {
+          // Meaningful recategorisation — bucket by transition + track brand.
+          const brandKey = (p.brand ?? "").trim() || "(none)";
+          staleByBrand[brandKey] = (staleByBrand[brandKey] ?? 0) + 1;
+          const transition = `${p.top_category ?? "null"}/${p.product_type || "—"} → ${freshTop ?? "null"}/${freshType || "—"}`;
+          transitionCounts[transition] = (transitionCounts[transition] ?? 0) + 1;
+          if (!transitionSamples[transition]) transitionSamples[transition] = [];
+          if (transitionSamples[transition].length < TRANSITION_SAMPLE_CAP) transitionSamples[transition].push(rec);
+        } else {
+          // Same top_category + product_type — only subcategory/tags changed.
+          refinementCount++;
+          const subK = `${p.subcategory || "—"}→${freshSub || "—"}`;
+          refinementSubChanges[subK] = (refinementSubChanges[subK] ?? 0) + 1;
+          if (sampleRefinements.length < 15) sampleRefinements.push(rec);
         }
         const s = brandSlugify(p.brand ?? "");
         if (s) affectedBrands.add(s);
@@ -270,6 +296,17 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    const sortDesc = (o: Record<string, number>) =>
+      Object.fromEntries(Object.entries(o).sort((a, b) => b[1] - a[1]));
+    const sampleStaleByTransition = Object.entries(transitionCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 30)
+      .map(([transition, count]) => ({ transition, count, examples: transitionSamples[transition] ?? [] }));
+    const staleByBrandTop = Object.entries(staleByBrand)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([brand, count]) => ({ brand, count }));
+
     return new Response(JSON.stringify({
       dry_run: dryRun,
       products_scanned: scanned,
@@ -278,9 +315,18 @@ Deno.serve(async (req: Request) => {
       protected_from_catchall: protectedFromCatchall,
       excluded_found: excludedFound,
       excluded_deleted: excludedDeleted,
-      top_category_changes: topChanges,
-      product_type_changes: typeChanges,
-      sample_stale: sampleStale,
+      type_changes_count: staleFound - refinementCount,
+      refinements_count: refinementCount,
+      top_category_changes: sortDesc(topChanges),
+      product_type_changes: sortDesc(typeChanges),
+      excluded_by_reason: sortDesc(excludedByReason),
+      stale_by_brand: staleByBrandTop,
+      sample_stale_by_transition: sampleStaleByTransition,
+      refinements: {
+        count: refinementCount,
+        subcategory_changes: sortDesc(refinementSubChanges),
+        sample: sampleRefinements,
+      },
       sample_excluded: sampleExcluded,
       errors,
       duration_ms: Date.now() - started,

@@ -60,10 +60,16 @@ process.stderr.write(`\rread ${rows.length} products\n`);
 // more specific stored tag. Pass --clobber to preview the raw re-apply instead.
 const clobberWithCatchall = process.argv.includes("--clobber");
 let scanned = 0, staleFound = 0, excludedFound = 0, skippedEmpty = 0, protectedFromCatchall = 0;
+let refinementCount = 0;
 const topChanges: Record<string, number> = {};
 const typeChanges: Record<string, number> = {};
 const excludedByReason: Record<string, number> = {};
-const sampleStale: unknown[] = [];
+const staleByBrand: Record<string, number> = {};
+const refinementSubChanges: Record<string, number> = {};
+const sampleRefinements: unknown[] = [];
+const transitionCounts: Record<string, number> = {};
+const transitionSamples: Record<string, unknown[]> = {};
+const TRANSITION_SAMPLE_CAP = 15;
 const sampleExcluded: unknown[] = [];
 const allStale: unknown[] = [];
 const allExcluded: unknown[] = [];
@@ -96,40 +102,68 @@ for (const p of rows) {
   if (freshIsCatchall && !storedIsCatchall && !clobberWithCatchall) { protectedFromCatchall++; continue; }
 
   staleFound++;
-  if ((p.top_category ?? null) !== freshTop) {
-    const k = `${p.top_category ?? "null"}→${freshTop ?? "null"}`;
-    topChanges[k] = (topChanges[k] ?? 0) + 1;
-  }
-  if ((p.product_type ?? "") !== freshType) {
-    const k = `${p.product_type || "—"}→${freshType || "—"}`;
-    typeChanges[k] = (typeChanges[k] ?? 0) + 1;
-  }
+  const topChanged = (p.top_category ?? null) !== freshTop;
+  const typeChanged = (p.product_type ?? "") !== freshType;
+  if (topChanged) { const k = `${p.top_category ?? "null"}→${freshTop ?? "null"}`; topChanges[k] = (topChanges[k] ?? 0) + 1; }
+  if (typeChanged) { const k = `${p.product_type || "—"}→${freshType || "—"}`; typeChanges[k] = (typeChanges[k] ?? 0) + 1; }
   const rec = { id: p.id, name: p.name, brand: p.brand, old, new: { top_category: freshTop, product_type: freshType, subcategory: freshSub, tags: freshTags } };
   allStale.push(rec);
-  if (sampleStale.length < 50) sampleStale.push(rec);
+  if (topChanged || typeChanged) {
+    const brandKey = (p.brand ?? "").trim() || "(none)";
+    staleByBrand[brandKey] = (staleByBrand[brandKey] ?? 0) + 1;
+    const transition = `${p.top_category ?? "null"}/${p.product_type || "—"} → ${freshTop ?? "null"}/${freshType || "—"}`;
+    transitionCounts[transition] = (transitionCounts[transition] ?? 0) + 1;
+    if (!transitionSamples[transition]) transitionSamples[transition] = [];
+    if (transitionSamples[transition].length < TRANSITION_SAMPLE_CAP) transitionSamples[transition].push(rec);
+  } else {
+    refinementCount++;
+    const subK = `${p.subcategory || "—"}→${freshSub || "—"}`;
+    refinementSubChanges[subK] = (refinementSubChanges[subK] ?? 0) + 1;
+    if (sampleRefinements.length < 15) sampleRefinements.push(rec);
+  }
 }
 
 const sortDesc = (o: Record<string, number>) =>
   Object.fromEntries(Object.entries(o).sort((a, b) => b[1] - a[1]));
 
+const sampleStaleByTransition = Object.entries(transitionCounts)
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 30)
+  .map(([transition, count]) => ({ transition, count, examples: transitionSamples[transition] ?? [] }));
+const staleByBrandTop = Object.entries(staleByBrand)
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 20)
+  .map(([brand, count]) => ({ brand, count }));
+
 const summary = {
   products_scanned: scanned,
   skipped_empty_name: skippedEmpty,
   stale_found: staleFound,
+  type_changes_count: staleFound - refinementCount,
+  refinements_count: refinementCount,
   protected_from_catchall: protectedFromCatchall,
   excluded_found: excludedFound,
   top_category_changes: sortDesc(topChanges),
   product_type_changes: sortDesc(typeChanges),
   excluded_by_reason: sortDesc(excludedByReason),
+  stale_by_brand: staleByBrandTop,
+  refinement_subcategory_changes: sortDesc(refinementSubChanges),
 };
 
 console.log("\n=== recategorise-products DRY RUN preview ===");
 console.log(JSON.stringify(summary, null, 2));
-console.log("\n--- sample_stale (first 15) ---");
-console.log(JSON.stringify(sampleStale.slice(0, 15), null, 2));
+console.log("\n--- MEANINGFUL recategorisations bucketed by transition (top 30, up to 15 each) ---");
+for (const b of sampleStaleByTransition) {
+  console.log(`\n### ${b.transition}  (${b.count})`);
+  for (const e of b.examples as { name: string; brand: string | null }[]) {
+    console.log(`   ${(e.name || "").slice(0, 64).padEnd(64)} | ${e.brand ?? ""}`);
+  }
+}
 console.log("\n--- sample_excluded (first 15) ---");
-console.log(JSON.stringify(sampleExcluded.slice(0, 15), null, 2));
+for (const e of sampleExcluded.slice(0, 15) as { name: string; brand: string | null; excluded: string }[]) {
+  console.log(`   [${e.excluded}] ${(e.name || "").slice(0, 56).padEnd(56)} | ${e.brand ?? ""}`);
+}
 
 const out = join(__dirname, ".recategorise-preview.gen.json");
-writeFileSync(out, JSON.stringify({ summary, sample_stale: sampleStale, sample_excluded: sampleExcluded, all_stale: allStale, all_excluded: allExcluded }, null, 2));
+writeFileSync(out, JSON.stringify({ summary, sample_stale_by_transition: sampleStaleByTransition, refinements: { count: refinementCount, subcategory_changes: sortDesc(refinementSubChanges), sample: sampleRefinements }, sample_excluded: sampleExcluded, all_stale: allStale, all_excluded: allExcluded }, null, 2));
 console.log(`\nFull lists (${allStale.length} stale, ${allExcluded.length} excluded) written to ${out}`);

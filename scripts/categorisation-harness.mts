@@ -346,6 +346,13 @@ const CASES: Case[] = [
   { name: "St Tropez Self Tan Bronzing Drops", brand: "St Tropez", expect: "skincare", fixedBy: 0, note: "'bronzing' without a cosmetic-form noun stays skincare (self-tan)" },
   { name: "The Ordinary Illuminating Vitamin C Serum", brand: "The Ordinary", expect: "skincare", fixedBy: 0, note: "'illuminating' without a cosmetic-form noun stays skincare" },
   { name: "Charlotte Tilbury Long-Wear Lip Liner Pillow Talk", brand: "Charlotte Tilbury", expect: "makeup", expectType: "Lip Liner", expectSub: "lips", fixedBy: 0, note: "long-wear LIP liner must route Lip Liner, not Eyeliner" },
+  // Makeup-removing/cleansing products must stay skincare (broadened guard) —
+  // the old guard only caught "makeup remover/removal/wipe".
+  { name: "CeraVe Makeup Removing Cleansing Balm 36g", brand: "CeraVe", expect: "skincare", expectType: "Cleanser", fixedBy: 15, note: "'makeup removing' must NOT route to makeup" },
+  { name: "Shiseido ELIXIR Makeup Cleansing Oil 150ml", brand: "Shiseido", expect: "skincare", expectType: "Cleanser", fixedBy: 15, note: "'makeup cleansing' → skincare Cleanser" },
+  // Guards: genuine generic-makeup products must STILL route to makeup.
+  { name: "Clinique Superbalanced Makeup", brand: "Clinique", expect: "makeup", expectType: "Foundation", fixedBy: 0, note: "genuine makeup unaffected by the cleanser guard" },
+  { name: "Charlotte Tilbury Airbrush Flawless Setting Spray Makeup", brand: "Charlotte Tilbury", expect: "makeup", expectType: "Setting", fixedBy: 0 },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────

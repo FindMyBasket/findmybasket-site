@@ -286,7 +286,16 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     // Cleansers that mention makeup ("Removes Makeup", "Makeup Remover",
     // "Micellar … Makeup") are skincare, not makeup. Exclude the verb form
     // ("removes makeup") too — the old lookahead only caught "makeup remover".
-    if (/\bmakeup\b/.test(t) && !/\b(makeup (remover|removal|wipe|wipes)|removes? makeup|micellar)\b/.test(t)) return true;
+    // Cleansers/removers that mention "makeup" are skincare, not makeup. The old
+    // guard only caught "makeup remover/removal/wipe"; it missed "makeup removing",
+    // "makeup cleansing", "makeup melting", "removing makeup" and bare cleanser/
+    // cleansing-balm forms — so makeup-removing cleansing balms (CeraVe, e.l.f.,
+    // Shiseido ELIXIR, Haruharu) leaked into makeup. Broadened to fall through to
+    // the Step 4 skincare Cleanser branch instead.
+    if (
+      /\bmakeup\b/.test(t) &&
+      !/\b(makeup\s+(remov\w*|cleans\w*|melt\w*|wipe|wipes)|(remov\w*|cleans\w*|melt\w*)\s+makeup|micellar|cleanser|cleansing (balm|oil|cream|gel|lotion|milk|water|foam))\b/.test(t)
+    ) return true;
     return false;
   })();
 
