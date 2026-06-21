@@ -31,7 +31,7 @@ type Case = {
   expectType?: string;
   // When set, ALSO asserts the resolved subcategory (face/body/hand/foot/both).
   expectSub?: string;
-  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
+  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
   note?: string;
 };
 
@@ -325,6 +325,27 @@ const CASES: Case[] = [
   { name: "Hugo Boss Cargo Trousers 32R", brand: "Hugo Boss", expect: null, excluded: "apparel", fixedBy: 14, note: "'cargo trousers' still excluded via 'trousers'" },
   // Control: the Rimmel gate must not affect other brands' skincare.
   { name: "CeraVe SA Smoothing Cream 340g", brand: "CeraVe", expect: "skincare", fixedBy: 0, note: "non-Rimmel brand unaffected by the Rimmel override" },
+
+  // ── Commit 15: makeup detection for bronzers / luminizers / cheek palettes /
+  //    high-pigment liners (NARS et al. were landing as skincare/Skincare) ────
+  { name: "NARS Laguna Bronzing Powder 01, 8g", brand: "NARS", expect: "makeup", expectType: "Blush/Bronzer", expectSub: "face", fixedBy: 15 },
+  { name: "NARS Light Reflecting Luminizing Stick Heavenly 7g", brand: "NARS", expect: "makeup", expectType: "Blush/Bronzer", expectSub: "face", fixedBy: 15 },
+  { name: "NARS Softmatte Concealer", brand: "NARS", expect: "makeup", expectType: "Concealer", expectSub: "face", fixedBy: 0, note: "already correct — guard" },
+  { name: "NARS Hot Escape Cheek Palette", brand: "NARS", expect: "makeup", expectType: "Blush/Bronzer", expectSub: "face", fixedBy: 15 },
+  { name: "NARS High-Pigment Liner Mambo", brand: "NARS", expect: "makeup", expectType: "Eyeliner", expectSub: "eyes", fixedBy: 15 },
+  { name: "NARS Lip Balm Orgasm", brand: "NARS", expect: "skincare", expectType: "Lip Care", fixedBy: 0, note: "regression guard for the lip-balm hot fix" },
+  { name: "NARS Bronzing Stick", brand: "NARS", expect: "makeup", expectType: "Blush/Bronzer", expectSub: "face", fixedBy: 15 },
+  { name: "NARS Luminizing Cream Stick", brand: "NARS", expect: "makeup", expectType: "Blush/Bronzer", expectSub: "face", fixedBy: 15 },
+  // Non-NARS regression guard for the cheek-palette rule.
+  { name: "Charlotte Tilbury Cheek Palette", brand: "Charlotte Tilbury", expect: "makeup", expectType: "Blush/Bronzer", expectSub: "face", fixedBy: 15 },
+  // NARS abbreviated SKU: high-pigment long-wear liner.
+  { name: "NARS High-Pgmnt Lngwr Lnr Grafton Street", brand: "NARS", expect: "makeup", expectType: "Eyeliner", expectSub: "eyes", fixedBy: 15 },
+  // False-positive guards (must hold both before and after — fixedBy 0):
+  { name: "Eyebright Eye Cream", brand: "Generic", expect: "skincare", fixedBy: 0, note: "'eyebright' must NOT trip eyes/makeup → stays Eye Care" },
+  { name: "Estee Lauder High-Wear Foundation", brand: "Estee Lauder", expect: "makeup", expectType: "Foundation", fixedBy: 0, note: "'high-wear' is not the liner modifier → Foundation, not Eyeliner" },
+  { name: "St Tropez Self Tan Bronzing Drops", brand: "St Tropez", expect: "skincare", fixedBy: 0, note: "'bronzing' without a cosmetic-form noun stays skincare (self-tan)" },
+  { name: "The Ordinary Illuminating Vitamin C Serum", brand: "The Ordinary", expect: "skincare", fixedBy: 0, note: "'illuminating' without a cosmetic-form noun stays skincare" },
+  { name: "Charlotte Tilbury Long-Wear Lip Liner Pillow Talk", brand: "Charlotte Tilbury", expect: "makeup", expectType: "Lip Liner", expectSub: "lips", fixedBy: 0, note: "long-wear LIP liner must route Lip Liner, not Eyeliner" },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
