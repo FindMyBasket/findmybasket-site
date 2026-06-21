@@ -351,8 +351,10 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     if (/\bfalse (lashes|eyelashes)|lash (extension|adhesive|glue)\b/.test(t)) return true;
     // Standalone "Lashes" is almost always false/strip lashes (makeup). \blashes\b
     // does NOT match "eyelashes" (no boundary), so lash-CARE products (eyelash
-    // serum/growth) are unaffected; guard the rare "lashes serum/curler" too.
-    if (/\blashes\b/.test(t) && !/\b(serum|growth|booster?|conditioner|cleanser|curler|comb)\b/.test(t)) return true;
+    // serum/growth) are unaffected. Guard lash-adjacent NON-lashes: lash serum/
+    // curler, lash TINT (colour), and makeup REMOVERS / cleansers that merely
+    // list "lashes" ("Take The Day Off … For Lids, Lashes & Lips" → Cleanser).
+    if (/\blashes\b/.test(t) && !/\b(serum|growth|booster?|conditioner|cleans\w*|curler|comb|remov\w*|micellar|wipe|wipes|tint|take the day)\b/.test(t)) return true;
     // Generic 'makeup' as a noun (Clinique 'Superbalanced Makeup' brand line).
     // Excludes 'makeup remover' (denylisted earlier) and 'makeup brush' (in
     // makeup_tool denylist run before this detector). Must come last so that
@@ -395,7 +397,7 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
       subcategory = "eyes";
     } else if (
       /\bfalse (lashes|eyelashes)|lash (extension|adhesive|glue)\b/.test(t) ||
-      (/\blashes\b/.test(t) && !/\b(serum|growth|booster?|conditioner|cleanser|curler|comb)\b/.test(t))
+      (/\blashes\b/.test(t) && !/\b(serum|growth|booster?|conditioner|cleans\w*|curler|comb|remov\w*|micellar|wipe|wipes|tint|take the day)\b/.test(t))
     ) {
       product_type = "Lashes";
       subcategory = "eyes";

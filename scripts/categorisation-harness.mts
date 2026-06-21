@@ -31,7 +31,7 @@ type Case = {
   expectType?: string;
   // When set, ALSO asserts the resolved subcategory (face/body/hand/foot/both).
   expectSub?: string;
-  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17;
+  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18;
   note?: string;
 };
 
@@ -412,6 +412,14 @@ const CASES: Case[] = [
   // Guards: "Intimate" as a makeup shade / fragrance edition must NOT exclude.
   { name: "Armani Lip Power Lipstick Intimate 109", brand: "Armani", expect: "makeup", expectType: "Lipstick", fixedBy: 17, note: "'Intimate' is a lipstick shade" },
   { name: "MAC Connect In Colour Eyeshadow Palette Intimate Nude 6.25g", brand: "MAC Cosmetics", expect: "makeup", expectType: "Eyeshadow", fixedBy: 17, note: "'Intimate Nude' eyeshadow shade" },
+
+  // ── Commit 18: standalone-lashes guard — makeup removers / lash tints that
+  //    merely mention "lashes" must NOT become makeup/Lashes (regression from 17).
+  { name: "Clinique Take The Day Off Makeup Remover For Lids, Lashes & Lips 125ml", brand: "Clinique", expect: "skincare", expectType: "Cleanser", fixedBy: 18, note: "makeup remover → Cleanser, not Lashes" },
+  { name: "Lola's Lashes Makeup Remover Touch Up Pen", brand: "Lola's Lashes", expect: "skincare", expectType: "Cleanser", fixedBy: 18, note: "remover from a lash brand → Cleanser" },
+  { name: "Eylure Lash Tint - Black - Permanent Tint For Lashes", brand: "Eylure", expect: "skincare", fixedBy: 18, note: "lash tint must NOT route to false-lashes" },
+  // Guard: genuine false lashes still route to makeup/Lashes.
+  { name: "Eylure Volume Lashes No 102", brand: "Eylure", expect: "makeup", expectType: "Lashes", fixedBy: 0, note: "real strip lashes still makeup" },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
