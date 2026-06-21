@@ -114,12 +114,20 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     // leak the same way eyewear does. Match on garment/footwear/bag nouns that
     // don't occur in beauty product names. Deliberately omits collision-prone
     // words: "top"/"coat" (top coat, base coat), "cap" (laser cap, bottle cap),
-    // "boots" (Boots the brand/retailer), "shorts" ("short sleeve").
+    // "boots" (Boots the brand/retailer).
     // NB 'cargo' is deliberately NOT a bare token — "cargo pants/shorts" are
-    // already caught by pants?/shorts?, and bare 'cargo' false-positives on
+    // already caught by pants?/shorts, and bare 'cargo' false-positives on
     // colour/shade names (e.g. Rimmel "60 Seconds … Crazy About Cargo" nail
     // polish), which would wrongly exclude the product from the catalogue.
-    ["apparel", /\b(trunks?|boxers|briefs|jockstrap|jumper|hoodie|sweatshirt|sweater|cardigan|joggers?|jeans?|trousers?|chinos?|leggings?|shorts?|pants?|fleece|shirt|t-shirt|tee|polo|blouse|jacket|blazer|gilet|waistcoat|parka|robe|kimono|pyjamas?|pajamas?|dungarees?|beanie|scarf|belt|sneakers?|trainers?|loafers?|brogues?|espadrilles?|sandals?|flip ?flop|cupsole|lace[-\s]?up|low top|rucksack|backpack|duffle|holdall|satchel|crossbody|commuter|wash ?bag|dopp|wallet|billfold|card holder|cardholder|card case)\b/],
+    // Commit 20: garment words that ONLY ever appear in beauty names in the
+    // SINGULAR are forced to plural — "short" (false-nail/lash length, "Short
+    // Beard" moisturiser, "Short Handle" brush, "Short Hair" perm) and "trunk"
+    // (Drunk Elephant "Trunk" kit) — so only true garments (shorts/trunks)
+    // match. 'jean'/'polo'/'belt' stay singular-matching ON PURPOSE: there they
+    // catch designer-perfume names ("Jean Paul", "Polo", "Below the Belt") which
+    // are out-of-scope and should remain excluded; in-scope beauty uses of those
+    // words are rescued by apparelIsBeautyProduct / the nail-lash brand allowlist.
+    ["apparel", /\b(trunks|boxers|briefs|jockstrap|jumper|hoodie|sweatshirt|sweater|cardigan|joggers?|jeans?|trousers?|chinos?|leggings?|shorts|pants?|fleece|shirt|t-shirt|tee|polo|blouse|jacket|blazer|gilet|waistcoat|parka|robe|kimono|pyjamas?|pajamas?|dungarees?|beanie|scarf|belt|sneakers?|trainers?|loafers?|brogues?|espadrilles?|sandals?|flip ?flop|cupsole|lace[-\s]?up|low top|rucksack|backpack|duffle|holdall|satchel|crossbody|commuter|wash ?bag|dopp|wallet|billfold|card holder|cardholder|card case)\b/],
     // hair_tool: extended to catch hair brushes by brand (Mason Pearson) and
     // by descriptor patterns (bristle brush, boar bristle, paddle brush etc.)
     ["hair_tool", /\b(hair dryer|straightener|curling iron|curling wand|hair brush|paddle brush|bristle brush|boar bristle|comb|hair clip|hair tie|scrunchie|mason pearson)\b/],
@@ -151,8 +159,14 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
   const hasHardFragranceForm = (
     /\b(eau de (parfum|toilette|cologne)|edt|edp|parfum (spray|refill|refillable)|parfum \d+\s*(ml|oz))\b/.test(t)
   );
+  // Commit 20: also covers (a) HAIR scent forms feeds write with "fragrance"/
+  // "parfum" in the title (hair mist, hair & body mist — L'Atelier Parfum,
+  // Kérastase Le Parfum Hair Mist; body soap — Shiseido Ma Cherie) and (b)
+  // MAKEUP named after a scent ("Blush Cheek … Guava Parfum", "Lip Rehab …
+  // Watermelon fragrance", "Lash Clash Mascara & Parfum Set"). Bare "body mist"
+  // is deliberately NOT here — many body mists are genuinely fragrance.
   const fragranceIsScentDescriptor = (
-    /\b(shampoo|conditioner|hair mask|hair oil|hair serum|hair spray|hairspray|dry shampoo|body wash|body lotion|body cream|body butter|hand cream|shower gel|bubble bath)\b/.test(t)
+    /\b(shampoo|conditioner|hair mask|hair oil|hair serum|hair spray|hairspray|hair mist|hair (and|&) body mist|dry shampoo|body wash|body lotion|body cream|body butter|body soap|hand cream|shower gel|bubble bath|lip|blush|cheek|mascara)\b/.test(t)
     && !hasHardFragranceForm
   );
   // Pre-check: "Fragrance Free" / "Fragrance-Free" is, by definition, NOT a
@@ -162,7 +176,10 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
   // them. Skip the fragrance entry for these, unless the name ALSO carries a hard
   // fragrance form (a nonsensical "Eau de Parfum … Fragrance Free" gift set would
   // still be excluded).
-  const fragranceFree = /\bfragrance[\s-]?free\b/.test(t) && !hasHardFragranceForm;
+  // Commit 20: feeds also write "Without Fragrance" / "Non Fragrance" (Olay
+  // Regenerist serums & eye creams) — same sensitive-skin descriptor, not a
+  // fragrance product.
+  const fragranceFree = /\b(fragrance[\s-]?free|without fragrance|non[\s-]?fragrance)\b/.test(t) && !hasHardFragranceForm;
   // Pre-check: "body spray" matches the deodorant denylist, but sunscreen, oil
   // and skincare-active body sprays (SPF, "Salicylic Acid Clarifying Body Spray",
   // "Thermal Spring Water Face & Body Spray", "Sebium … Body Spray") are skincare.
@@ -179,8 +196,11 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
   // Medicube, …), not an ingestible supplement. Skip the supplement entry when
   // 'capsule' sits alongside a topical form. Genuine ingestibles ("… Capsules
   // 60", collagen capsules) carry no topical form and stay excluded.
+  // Commit 20: 'concentrate' must match the plural feeds actually use ("Capsule
+  // Concentrates" — 7th Heaven Vitamin C / Retinol topical capsules); the bare
+  // \b form missed the trailing 's'.
   const capsuleIsTopical = /\bcapsule\b/.test(t) &&
-    /\b(cream|serum|ampoule|toner|essence|cleans\w*|foam|sunscreen|spf|mask|moistur|lotion|drop|gel|concentrate)\b/.test(t);
+    /\b(cream|serum|ampoule|toner|essence|cleans\w*|foam|sunscreen|spf|mask|moistur|lotion|drop|gel|concentrate\w*)\b/.test(t);
   // Pre-check: apparel/footwear/bag denylist over-fires on garment WORDS used as
   // cosmetic shade / line names (Essie "Espadrille", Maybelline "Business
   // Blouse", Chanel "Rouge Coco … Jean", Guerlain "Robe Noire" lip/body, Bluesky
@@ -188,7 +208,11 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
   // fragrance lines. A product naming a clear beauty product-form is not a
   // garment — skip apparel for those. Genuine garments/bags (scarves, wash bags,
   // robe sets, duvets) carry no beauty-form token and stay excluded.
-  const apparelIsBeautyProduct = /\b(nail|gel polish|lipstick|lip (gloss|colour|color|paint|lacquer|shine|kit|liner|tint|balm|crayon|stick)|eyeliner|eye (definer|pencil)|eye ?shadow|shadow palette|mascara|brow|lash|lashes|blush|bronzer|highlighter|foundation|concealer|body (milk|mist|lotion|cream|scrub|wash|butter|oil)|shower (gel|cream)|scrub|soap|after ?shave (balm|lotion)|perfumed (soap|body|shower))\b/.test(t);
+  // Commit 20: 'nail' → 'nails?' (feeds write "Oval Nails"; the bare \b missed
+  // the plural and let false nails fall to apparel via "Short"); added eye
+  // serum/cream ("White Sandal … Eye Serum"), anti-chafing body care ("Below
+  // the Belt Anti Chaffing Cream") and body powder.
+  const apparelIsBeautyProduct = /\b(nails?|gel polish|lipstick|lip (gloss|colour|color|paint|lacquer|shine|kit|liner|tint|balm|crayon|stick)|eyeliner|eye (definer|pencil|serum|cream)|eye ?shadow|shadow palette|mascara|brow|lash|lashes|blush|bronzer|highlighter|foundation|concealer|anti.?chaf\w*|body (milk|mist|lotion|cream|scrub|wash|butter|oil|powder)|shower (gel|cream)|scrub|soap|after ?shave (balm|lotion)|perfumed (soap|body|shower))\b/.test(t);
   // Pre-check: makeup_tool over-fires when a brush/sponge is a BUNDLED extra on a
   // skincare product ("Soothing Cream + Brush Set", "Night … with Brush Set",
   // "Face Cleanser & Face Sponge"). A tool introduced by with/plus/+/& is a
@@ -218,17 +242,46 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     /\bgroomer\b/.test(t) && (/\b(eye)?brows?\b/.test(t) || /\blash(es)?\b/.test(t));
   const applianceIsNailPolishAccessory =
     /\bnail polish\b/.test(t) && /\bprotect/.test(t);
+  // Pre-check (Commit 20): nail/lash SHADE names collide with garment tokens
+  // (Collection "Leather Jacket", Kiss "Nude Blazer", Bluesky "Sweater Weather",
+  // House of Amor lash lengths) and carry no beauty-form word the apparel
+  // beauty-guard recognises. These brands are cosmetics-only, so skip the
+  // apparel denylist for them entirely — the nail/lash detectors route them.
+  const isNailLashShadeBrand =
+    /\b(collection|kiss|bluesky|elegant touch|house of amor)\b/.test(b);
+  // Pre-check (Commit 20): a razor bundled as a freebie on a skincare product
+  // ("Skincare Bundle - … Moisturiser & Bambo Razor") is not a wet-shave
+  // product. Standalone razors carry no skincare anchor and stay excluded.
+  const shaveIsBundledExtra =
+    (/\b(with|plus)\b[^|]*\brazor\b/.test(t) || /[+&][^|]*\brazor\b/.test(t)) &&
+    /\b(moisturiser|moisturizer|skincare|serum|cleanser|cream)\b/.test(t);
+  // Pre-check (Commit 20): a multi-step body-care KIT that lists a deodorant as
+  // one component ("Everywhere Body Minis Kit … Wash Spray To Wipe & Deodorant",
+  // LUNA DAILY) is body care, not a standalone deodorant. Require 'kit' plus a
+  // non-deodorant body form so genuine "Deodorant Kit" travel packs stay out.
+  const deodorantIsKitComponent =
+    /\bkit\b/.test(t) && /\b(wash|wipe|cleanser|serum|routine|minis|moistur)\b/.test(t);
+  // Pre-check (Commit 20): a face-mask gift box that bundles a headband ("6
+  // Animal Face Masks and Headband", 7th Heaven) is a mask set, not a headband
+  // accessory — skip accessory so it routes as a mask/skincare product.
+  const accessoryIsMaskSet = /\bmasks?\b/.test(t);
 
   for (const [reason, re] of excludeChecks) {
     // Skip fragrance denylist when the name is clearly haircare/body care and
     // 'fragrance' appears as a scent descriptor, or it's a "Fragrance Free" product.
     if (reason === "fragrance" && (fragranceIsScentDescriptor || fragranceFree)) continue;
-    // Skip deodorant denylist for sunscreen/oil/skincare-active body sprays.
-    if (reason === "deodorant" && bodySprayIsSkincare) continue;
+    // Skip deodorant denylist for sunscreen/oil/skincare-active body sprays and
+    // multi-step body-care kits that merely include a deodorant.
+    if (reason === "deodorant" && (bodySprayIsSkincare || deodorantIsKitComponent)) continue;
     // Skip supplement denylist for topical "capsule" skincare.
     if (reason === "supplement" && capsuleIsTopical) continue;
-    // Skip apparel denylist for cosmetics named after a garment shade/line.
-    if (reason === "apparel" && apparelIsBeautyProduct) continue;
+    // Skip shaving denylist for a razor bundled as a freebie on a skincare product.
+    if (reason === "shaving" && shaveIsBundledExtra) continue;
+    // Skip accessory denylist for face-mask boxes that bundle a headband.
+    if (reason === "accessory" && accessoryIsMaskSet) continue;
+    // Skip apparel denylist for cosmetics named after a garment shade/line and
+    // for cosmetics-only nail/lash brands whose shade names collide with garments.
+    if (reason === "apparel" && (apparelIsBeautyProduct || isNailLashShadeBrand)) continue;
     // Skip makeup_tool denylist when the brush/sponge is a bundled extra.
     if (reason === "makeup_tool" && toolIsBundledExtra) continue;
     // Skip intimate_health for intimate-area grooming and shade/edition names.
