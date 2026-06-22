@@ -127,6 +127,18 @@ jobs:
                       upc = (p.findtext("upc", "") or "").strip()
                       mpn = (p.findtext("mpn", "") or "").strip()
 
+                      # Description. Rakuten cmp XML nests <description><short>
+                      # and <description><long>. Prefer the long form; the
+                      # importer cleans HTML/entities and applies priority logic.
+                      desc_elem = p.find("description")
+                      if desc_elem is not None:
+                          desc_long = (desc_elem.findtext("long", "") or "").strip()
+                          desc_short = (desc_elem.findtext("short", "") or "").strip()
+                      else:
+                          desc_long = (p.findtext("description", "") or "").strip()
+                          desc_short = ""
+                      description = desc_long or desc_short
+
                       # Image URL extraction. Rakuten cmp XML format for
                       # Superdrug uses <URL><productImage> alongside the
                       # <URL><product> link we already extract.
@@ -173,6 +185,7 @@ jobs:
                           "upc": upc,
                           "mpn": mpn,
                           "image_url": image_url,
+                          "description": description,
                       }
                       f_out.write(json.dumps(record, ensure_ascii=False) + "\n")
                       count += 1

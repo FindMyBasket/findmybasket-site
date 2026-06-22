@@ -244,6 +244,7 @@ import pako from "https://esm.sh/pako@2.1.0";
 // legacy load-whole-feed path remains the default until a retailer is promoted.
 import { streamFeedRowBatches, FeedFetchError } from "./_streaming-fetcher.ts";
 import { inferCategorisation, type TopCategory } from "../_shared/categorisation.ts";
+import { pickDescription } from "../_shared/description.ts";
 import { reconstructBeautyFlashName, BEAUTY_FLASH_RETAILER_ID } from "./name-reconstruction.ts";
 
 const AWIN_PUBLISHER_ID = "2841268";
@@ -272,6 +273,10 @@ function buildFeedUrl(apiKey: string, feedId: string): string {
     // Image URL - feed includes a merchant-hosted image for the product.
     // Used for catalogue display.
     "merchant_image_url",
+    // Description - long form (`description`) preferred, short form as fallback.
+    // Used for the "About this product" section + SEO meta/JSON-LD.
+    "description",
+    "product_short_description",
   ].join("%2C");
   return `https://productdata.awin.com/datafeed/download/apikey/${apiKey}/fid/${feedId}/format/csv/language/en/delimiter/%2C/compression/gzip/adultcontent/1/columns/${cols}/`;
 }
@@ -1423,6 +1428,8 @@ serve(async (req) => {
     ean: number;
     mpn: number;
     image_url: number;
+    description: number;
+    short_description: number;
     // Google Shopping–specific fields used by row-level mapper
     sale_price: number;
     availability: number;
@@ -1447,6 +1454,8 @@ serve(async (req) => {
       ean: columns.indexOf("gtin"),
       mpn: columns.indexOf("mpn"),
       image_url: columns.indexOf("image_link"),
+      description: columns.indexOf("description"),
+      short_description: -1,
       sale_price: columns.indexOf("sale_price"),
       availability: columns.indexOf("availability"),
     };
@@ -1466,6 +1475,8 @@ serve(async (req) => {
       ean: columns.indexOf("ean"),
       mpn: columns.indexOf("mpn"),
       image_url: columns.indexOf("merchant_image_url"),
+      description: columns.indexOf("description"),
+      short_description: columns.indexOf("product_short_description"),
       sale_price: -1,
       availability: -1,
     };
@@ -1533,8 +1544,8 @@ serve(async (req) => {
   const createNewCatNameBreakdown: Record<string, number> = {};
   const sampleCreateNewEmptyCatName: any[] = [];
 
-  const updateActions: Array<{ rp_id: number; product_id: number; price: number; url: string; in_stock: boolean; ean: string; mpn: string; image_url: string }> = [];
-  const linkActions: Array<{ product_id: number; ext_id: string; price: number; url: string; in_stock: boolean; ean: string; mpn: string; image_url: string }> = [];
+  const updateActions: Array<{ rp_id: number; product_id: number; price: number; url: string; in_stock: boolean; ean: string; mpn: string; image_url: string; description: string }> = [];
+  const linkActions: Array<{ product_id: number; ext_id: string; price: number; url: string; in_stock: boolean; ean: string; mpn: string; image_url: string; description: string }> = [];
   // v6.16: createActions now carries canonical_size + image_url
   const createActions: Array<{
     ext_id: string;
@@ -1553,6 +1564,7 @@ serve(async (req) => {
     ean: string;
     mpn: string;
     image_url: string;
+    description: string;
   }> = [];
 
   // ── Phase 2 streamed-apply state ───────────────────────────────────────────
@@ -1616,6 +1628,14 @@ serve(async (req) => {
         const { error: imgErr } = await supa.rpc("bulk_update_product_images", { updates: chunk });
         if (imgErr) errors.push(`bulk_update_product_images (updates chunk at ${i}): ${imgErr.message}`);
       }
+      // Description backfill — priority-guarded (only overwrites a lower-priority
+      // source; see bulk_update_product_descriptions).
+      const descUpdates = updateActions.filter(u => u.description).map(u => ({ product_id: u.product_id, description: u.description, source_retailer_id: retailerId }));
+      for (let i = 0; i < descUpdates.length; i += INSERT_CHUNK) {
+        const chunk = descUpdates.slice(i, i + INSERT_CHUNK);
+        const { error: descErr } = await supa.rpc("bulk_update_product_descriptions", { updates: chunk });
+        if (descErr) errors.push(`bulk_update_product_descriptions (updates chunk at ${i}): ${descErr.message}`);
+      }
     }
     updateActions.length = 0;
 
@@ -1648,6 +1668,12 @@ serve(async (req) => {
         const { error: linkImgErr } = await supa.rpc("bulk_update_product_images", { updates: chunk });
         if (linkImgErr) errors.push(`bulk_update_product_images (links chunk at ${i}): ${linkImgErr.message}`);
       }
+      const linkDescUpdates = dedupedLinkArray.filter(l => l.description).map(l => ({ product_id: l.product_id, description: l.description, source_retailer_id: retailerId }));
+      for (let i = 0; i < linkDescUpdates.length; i += INSERT_CHUNK) {
+        const chunk = linkDescUpdates.slice(i, i + INSERT_CHUNK);
+        const { error: linkDescErr } = await supa.rpc("bulk_update_product_descriptions", { updates: chunk });
+        if (linkDescErr) errors.push(`bulk_update_product_descriptions (links chunk at ${i}): ${linkDescErr.message}`);
+      }
     }
     linkActions.length = 0;
 
@@ -1660,6 +1686,8 @@ serve(async (req) => {
         category: c.category, product_type: c.product_type, top_category: c.top_category,
         subcategory: c.subcategory, tags: c.tags, canonical_size: c.canonical_size,
         shade: c.shade, image_url: c.image_url || null,
+        description: c.description || null,
+        description_source_retailer_id: c.description ? retailerId : null,
       }));
       const { data: insertedProducts, error: pErr } = await supa.from("products").insert(productRows).select("id");
       if (pErr || !insertedProducts || insertedProducts.length !== chunk.length) {
@@ -1922,12 +1950,18 @@ serve(async (req) => {
     // Image URL - feed-provided product image. Used for catalogue display.
     const imageUrl = idx.image_url >= 0 ? (fields[idx.image_url] || "").trim() : "";
 
+    // Description - prefer long form, fall back to short. Cleaned (HTML stripped,
+    // entities decoded), capped, and nulled if empty / identical to the name.
+    const rawLongDesc = idx.description >= 0 ? (fields[idx.description] || "") : "";
+    const rawShortDesc = idx.short_description >= 0 ? (fields[idx.short_description] || "") : "";
+    const description = pickDescription(rawLongDesc, rawShortDesc, name) || "";
+
     // Decision tree (tiered).
    const existing = existingByExtId.get(matchValue);
     if (existing) {
       countUpdate++;
       if (isOrdinary) ordinaryDiagnostic.matched_existing++;
-      updateActions.push({ rp_id: existing.id, product_id: existing.product_id, price, url: wrappedUrl, in_stock: inStock, ean: rawEan, mpn: rawMpn, image_url: imageUrl });
+      updateActions.push({ rp_id: existing.id, product_id: existing.product_id, price, url: wrappedUrl, in_stock: inStock, ean: rawEan, mpn: rawMpn, image_url: imageUrl, description });
       continue;
     }
 
@@ -2007,7 +2041,7 @@ serve(async (req) => {
     }
     if (matchedProductId) {
       countLinkExisting++;
-      linkActions.push({ product_id: matchedProductId, ext_id: matchValue, price, url: wrappedUrl, in_stock: inStock, ean: rawEan, mpn: rawMpn, image_url: imageUrl });
+      linkActions.push({ product_id: matchedProductId, ext_id: matchValue, price, url: wrappedUrl, in_stock: inStock, ean: rawEan, mpn: rawMpn, image_url: imageUrl, description });
       // In-feed learning: write to BOTH the chunk map (for later rows in this
       // chunk) and the persistent seen-map (for later chunks).
       if (normEan && !eanToProductId.has(normEan)) { eanToProductId.set(normEan, matchedProductId); seenEanToProductId.set(normEan, matchedProductId); }
@@ -2120,6 +2154,7 @@ serve(async (req) => {
       ean: rawEan,
       mpn: rawMpn,
       image_url: imageUrl,
+      description,
     });
     createsEnqueued++;
     // 4A-i: remember this new product's key so a later in-feed duplicate is

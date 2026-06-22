@@ -11,6 +11,7 @@ import {
 import { buildBreadcrumbJsonLd } from '../../../lib/breadcrumb';
 import { IMPORTER_RETAILER_IDS } from '../../../lib/queries';
 import { displayProductTitle } from '../../../lib/format/product-name';
+import { ProductDescription } from '../../../components/ProductDescription';
 
 export const revalidate = 3600;
 
@@ -42,6 +43,29 @@ function displaySub(sub: string | null): string {
   return sub.charAt(0).toUpperCase() + sub.slice(1);
 }
 
+function truncate(s: string, cap: number): string {
+  if (s.length <= cap) return s;
+  return s.slice(0, cap - 1).trimEnd() + '…';
+}
+
+// Build an SEO description from the real product description when available,
+// falling back to the generated template. When the description is short there's
+// room to append the brand + product name for keyword coverage.
+function buildSeoDescription(
+  description: string | null,
+  title: string,
+  fallback: string,
+  cap: number,
+): string {
+  const base = description?.trim();
+  if (!base) return truncate(fallback, cap);
+  const suffix = ` ${title}`;
+  if (base.length + suffix.length <= cap && !base.toLowerCase().includes(title.toLowerCase())) {
+    return base + suffix;
+  }
+  return truncate(base, cap);
+}
+
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const id = parseInt(params.id, 10);
   if (Number.isNaN(id)) return { title: 'Product not found | FindMyBasket' };
@@ -58,11 +82,26 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   const priceTag = lowestPrice ? ` from £${lowestPrice.toFixed(2)}` : '';
   const retailerLabel = offers.length === 1 ? '1 UK retailer' : `${offers.length} UK retailers`;
 
+  const fallbackDescription = `Compare ${baseTitle} prices across ${retailerLabel}. ${
+    lowestPrice ? `Best price £${lowestPrice.toFixed(2)}.` : ''
+  } Free price comparison.`;
+  const metaDescription = buildSeoDescription(product.description, baseTitle, fallbackDescription, 155);
+  const socialDescription = buildSeoDescription(product.description, baseTitle, fallbackDescription, 200);
+  const title = `${baseTitle}${priceTag} | FindMyBasket`;
+
   return {
-    title: `${baseTitle}${priceTag} | FindMyBasket`,
-    description: `Compare ${baseTitle} prices across ${retailerLabel}. ${
-      lowestPrice ? `Best price £${lowestPrice.toFixed(2)}.` : ''
-    } Free price comparison.`,
+    title,
+    description: metaDescription,
+    openGraph: {
+      title,
+      description: socialDescription,
+      images: product.image_url ? [product.image_url] : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      description: socialDescription,
+      images: product.image_url ? [product.image_url] : undefined,
+    },
   };
 }
 
@@ -102,7 +141,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
     brand: product.brand ? { '@type': 'Brand', name: product.brand } : undefined,
     image: product.image_url || undefined,
     sku: product.ean ?? `fmb-${product.id}`,
-    description: `Compare ${jsonLdName} prices across multiple UK retailers.`,
+    description: product.description?.trim() || `Compare ${jsonLdName} prices across multiple UK retailers.`,
     offers: inStockOffers.length > 0
       ? inStockOffers.map(o => ({
           '@type': 'Offer',
@@ -305,6 +344,8 @@ export default async function ProductPage({ params }: { params: { id: string } }
           </div>
         )}
       </section>
+
+      {product.description && <ProductDescription description={product.description} />}
 
       <section className="max-w-site mx-auto px-6 py-12">
         <h2 className="font-serif text-3xl text-ink mb-2">Also try</h2>
