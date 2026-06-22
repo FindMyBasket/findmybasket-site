@@ -962,6 +962,9 @@ serve(async (req)=>{
   // went stale. Chunking keeps each statement small and well under the timeout.
   // Mirrors import-awin-feed v6.19.
   const INSERT_CHUNK = 500;
+  // Descriptions go in smaller RPC batches than price/image rows (#36): the text
+  // is multi-KB, so smaller statements keep memory + statement size down.
+  const DESC_CHUNK = 150;
   // 1. Updates — chunked price + image backfill RPCs.
   if (updateActions.length > 0) {
     const nowIso = new Date().toISOString();
@@ -1005,8 +1008,8 @@ serve(async (req)=>{
         description: u.description,
         source_retailer_id: retailerId
       }));
-    for(let i = 0; i < descUpdates.length; i += INSERT_CHUNK){
-      const chunk = descUpdates.slice(i, i + INSERT_CHUNK);
+    for(let i = 0; i < descUpdates.length; i += DESC_CHUNK){
+      const chunk = descUpdates.slice(i, i + DESC_CHUNK);
       const { error: descErr } = await supa.rpc("bulk_update_product_descriptions", {
         updates: chunk
       });
@@ -1066,8 +1069,8 @@ serve(async (req)=>{
       description: l.description,
       source_retailer_id: retailerId
     }));
-  for(let i = 0; i < linkDescUpdates.length; i += INSERT_CHUNK){
-    const chunk = linkDescUpdates.slice(i, i + INSERT_CHUNK);
+  for(let i = 0; i < linkDescUpdates.length; i += DESC_CHUNK){
+    const chunk = linkDescUpdates.slice(i, i + DESC_CHUNK);
     const { error: linkDescErr } = await supa.rpc("bulk_update_product_descriptions", {
       updates: chunk
     });
