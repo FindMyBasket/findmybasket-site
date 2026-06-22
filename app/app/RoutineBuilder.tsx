@@ -11,6 +11,21 @@ import {
   onRoutineChange,
   type RoutineItem,
 } from '@/lib/routine-store';
+import { displayProductTitle } from '@/lib/format/product-name';
+import { trackAffiliateClickOut } from '@/lib/analytics';
+
+// Affiliate tags — reused exactly from the previous bottom-of-basket links.
+const AMAZON_TAG = 'findmybasket-21';
+
+function amazonSearchUrl(p: RoutineItem): string {
+  const q = encodeURIComponent(displayProductTitle(p.name, p.brand).replace(/\s+/g, ' ').trim());
+  return `https://www.amazon.co.uk/s?k=${q}&tag=${AMAZON_TAG}`;
+}
+
+function ebaySearchUrl(p: RoutineItem): string {
+  const q = encodeURIComponent(displayProductTitle(p.name, p.brand).replace(/\s+/g, ' ').trim());
+  return `https://www.ebay.co.uk/sch/i.html?_nkw=${q}&_sacat=26396&mkrid=710-53481-19255-0&campid=7221119&customid=findmybasket&toolid=10001`;
+}
 
 // ── TYPES ──────────────────────────────────────────────────────────────────
 
@@ -61,7 +76,6 @@ export default function RoutineBuilder() {
   const [savings, setSavings] = useState<number>(0);
   const [showSavings, setShowSavings] = useState(false);
   const [showSaveCard, setShowSaveCard] = useState(false);
-  const [showAmazon, setShowAmazon] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Save routine state
@@ -151,7 +165,6 @@ export default function RoutineBuilder() {
     setResults(null);
     setShowSavings(false);
     setShowSaveCard(false);
-    setShowAmazon(false);
     setErrorMsg(null);
   }, []);
 
@@ -386,10 +399,7 @@ export default function RoutineBuilder() {
             product,
             price: null,
             retailerName: 'Not tracked yet',
-            url:
-              'https://www.amazon.co.uk/s?k=' +
-              encodeURIComponent(product.brand + ' ' + product.name) +
-              '&tag=findmybasket-21',
+            url: amazonSearchUrl(product),
           });
         } else {
           const cheapest = Object.values(productPrices).sort(
@@ -471,7 +481,6 @@ export default function RoutineBuilder() {
     setSavings(saving);
     setShowSavings(saving > 0.01 && !suspect);
     setShowSaveCard(true);
-    setShowAmazon(true);
     setResults(options);
   };
 
@@ -630,6 +639,24 @@ export default function RoutineBuilder() {
                     <div className="rb-routine-info">
                       <div className="rb-routine-name">{p.name}</div>
                       <div className="rb-routine-brand">{p.brand}</div>
+                      <div className="rb-routine-also">
+                        <a
+                          href={amazonSearchUrl(p)}
+                          target="_blank"
+                          rel="nofollow sponsored noopener"
+                          onClick={() => trackAffiliateClickOut('amazon', p.id)}
+                        >
+                          Also check Amazon ↗
+                        </a>
+                        <a
+                          href={ebaySearchUrl(p)}
+                          target="_blank"
+                          rel="nofollow sponsored noopener"
+                          onClick={() => trackAffiliateClickOut('ebay', p.id)}
+                        >
+                          eBay ↗
+                        </a>
+                      </div>
                     </div>
                     <button
                       className="rb-remove-btn"
@@ -831,70 +858,8 @@ export default function RoutineBuilder() {
               </div>
             )}
 
-            {/* Amazon / eBay fallback */}
-            {showAmazon && routine.length > 0 && (
-              <div className="rb-amazon-section">
-                <div className="rb-amazon-label">Also worth checking</div>
-                <div className="rb-amazon-buttons">
-                  {routine.map(p => (
-                    <a
-                      key={`amz-${p.id}`}
-                      href={`https://www.amazon.co.uk/s?k=${encodeURIComponent(
-                        p.brand + ' ' + p.name,
-                      )}&tag=findmybasket-21`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rb-amazon-btn"
-                    >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="#FF9900"
-                        style={{ flexShrink: 0 }}
-                      >
-                        <path d="M.045 18.02c.072-.116.187-.124.348-.022 3.636 2.11 7.594 3.166 11.87 3.166 2.852 0 5.668-.533 8.447-1.595l.315-.14c.226-.088.39-.046.525.13.12.174.09.336-.12.48-.256.19-.6.41-1.006.67-1.747 1.07-3.65 1.85-5.71 2.34-2.065.49-4.11.73-6.15.73-4.6 0-8.71-1.09-12.33-3.28-.21-.13-.27-.29-.18-.48z" />
-                      </svg>
-                      Check {p.brand} {p.name} on Amazon
-                    </a>
-                  ))}
-                </div>
-                <div className="rb-ebay-buttons">
-                  {routine.map(p => (
-                    <a
-                      key={`ebay-${p.id}`}
-                      href={`https://www.ebay.co.uk/sch/i.html?_nkw=${encodeURIComponent(
-                        p.brand + ' ' + p.name,
-                      )}&_sacat=26396&mkrid=710-53481-19255-0&campid=7221119&customid=findmybasket&toolid=10001`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rb-ebay-btn"
-                    >
-                      <svg
-                        width="32"
-                        height="14"
-                        viewBox="0 0 100 40"
-                        style={{ flexShrink: 0 }}
-                      >
-                        <text
-                          x="0"
-                          y="30"
-                          fontFamily="Arial,sans-serif"
-                          fontWeight="bold"
-                          fontSize="32"
-                        >
-                          <tspan fill="#E53238">e</tspan>
-                          <tspan fill="#0064D2">b</tspan>
-                          <tspan fill="#F5AF02">a</tspan>
-                          <tspan fill="#86B817">y</tspan>
-                        </text>
-                      </svg>
-                      Check {p.brand} {p.name} on eBay
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Per-item "Also check Amazon / eBay" links now live inline with
+                each routine item above (more discoverable, honest cross-check). */}
           </>
         )}
       </div>
