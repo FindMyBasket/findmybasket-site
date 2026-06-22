@@ -70,6 +70,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { inferCategorisation } from "../_shared/categorisation.ts";
+import { normaliseDescription } from "../_shared/description.ts";
 // ============================================================================
 // Helpers
 // ============================================================================
@@ -634,6 +635,9 @@ serve(async (req)=>{
     if (normMpn) rowsWithMpn++;
     // Image URL - feed-provided product image. Used for catalogue display.
     const imageUrl = String(product.image_url || "").trim();
+    // Description - the feed converter emits a single `description` field
+    // (long form preferred, short fallback). Cleaned + nulled if empty/name.
+    const description = normaliseDescription(String(product.description || ""), name) || "";
     const existing = existingByExtId.get(matchValue);
     if (existing) {
       countUpdate++;
@@ -645,7 +649,8 @@ serve(async (req)=>{
         in_stock: inStock,
         ean: rawEan,
         mpn: rawMpn,
-        image_url: imageUrl
+        image_url: imageUrl,
+        description
       });
       return;
     }
@@ -700,7 +705,8 @@ serve(async (req)=>{
         in_stock: inStock,
         ean: rawEan,
         mpn: rawMpn,
-        image_url: imageUrl
+        image_url: imageUrl,
+        description
       });
       if (normEan && !eanToProductId.has(normEan)) eanToProductId.set(normEan, matchedProductId);
       if (normMpn && !mpnToProductId.has(normMpn)) mpnToProductId.set(normMpn, matchedProductId);
@@ -759,7 +765,8 @@ serve(async (req)=>{
       in_stock: inStock,
       ean: rawEan,
       mpn: rawMpn,
-      image_url: imageUrl
+      image_url: imageUrl,
+      description
     });
     if (sampleCreateNew.length < SAMPLE_LIMIT_CREATE_NEW) {
       sampleCreateNew.push({
@@ -992,6 +999,21 @@ serve(async (req)=>{
         errors.push(`bulk_update_product_images (updates chunk at ${i}): ${imgErr.message}`);
       }
     }
+    // Description backfill — priority-guarded (see bulk_update_product_descriptions).
+    const descUpdates = updateActions.filter((u)=>u.description).map((u)=>({
+        product_id: u.product_id,
+        description: u.description,
+        source_retailer_id: retailerId
+      }));
+    for(let i = 0; i < descUpdates.length; i += INSERT_CHUNK){
+      const chunk = descUpdates.slice(i, i + INSERT_CHUNK);
+      const { error: descErr } = await supa.rpc("bulk_update_product_descriptions", {
+        updates: chunk
+      });
+      if (descErr) {
+        errors.push(`bulk_update_product_descriptions (updates chunk at ${i}): ${descErr.message}`);
+      }
+    }
   }
   // 2. Links — dedupe and bulk upsert
   const dedupedLinks = new Map();
@@ -1038,6 +1060,21 @@ serve(async (req)=>{
       errors.push(`bulk_update_product_images (links chunk at ${i}): ${linkImgErr.message}`);
     }
   }
+  // 2c. Description backfill on linked products — priority-guarded.
+  const linkDescUpdates = dedupedLinkArray.filter((l)=>l.description).map((l)=>({
+      product_id: l.product_id,
+      description: l.description,
+      source_retailer_id: retailerId
+    }));
+  for(let i = 0; i < linkDescUpdates.length; i += INSERT_CHUNK){
+    const chunk = linkDescUpdates.slice(i, i + INSERT_CHUNK);
+    const { error: linkDescErr } = await supa.rpc("bulk_update_product_descriptions", {
+      updates: chunk
+    });
+    if (linkDescErr) {
+      errors.push(`bulk_update_product_descriptions (links chunk at ${i}): ${linkDescErr.message}`);
+    }
+  }
   // 3. Creates — two-phase bulk insert (v6.16: now writes canonical_size)
   for(let i = 0; i < createActions.length; i += INSERT_CHUNK){
     const chunk = createActions.slice(i, i + INSERT_CHUNK);
@@ -1056,7 +1093,9 @@ serve(async (req)=>{
         tags: c.tags,
         canonical_size: c.canonical_size,
         shade: c.shade,
-        image_url: c.image_url || null
+        image_url: c.image_url || null,
+        description: c.description || null,
+        description_source_retailer_id: c.description ? retailerId : null
       }));
     const { data: insertedProducts, error: pErr } = await supa.from("products").insert(productRows).select("id");
     if (pErr || !insertedProducts || insertedProducts.length !== chunk.length) {
