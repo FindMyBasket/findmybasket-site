@@ -319,6 +319,8 @@ export default async function ProductPage({ params }: { params: { id: string } }
         </div>
       </section>
 
+      {product.description && <ProductDescription description={product.description} />}
+
       <section className="max-w-site mx-auto px-6 py-12">
         <h2 className="font-serif text-3xl text-ink mb-2">Compare prices</h2>
         <p className="text-ink-light mb-8">
@@ -365,8 +367,6 @@ export default async function ProductPage({ params }: { params: { id: string } }
           </div>
         </div>
       </section>
-
-      {product.description && <ProductDescription description={product.description} />}
 
       <section className="max-w-site mx-auto px-6 py-12">
         <h2 className="font-serif text-3xl text-ink mb-2">Also try</h2>
