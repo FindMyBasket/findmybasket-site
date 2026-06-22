@@ -253,6 +253,27 @@
   margin-top: 2px;
 }
 
+/* Per-item "Also check Amazon / eBay" cross-check links. */
+.rb-routine-also {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.rb-routine-also a {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-light, #4A4845);
+  text-decoration: none;
+  opacity: 0.85;
+  transition: color 0.15s, opacity 0.15s;
+}
+
+.rb-routine-also a:hover {
+  color: #8A6A30;
+  opacity: 1;
+}
+
 .rb-remove-btn {
   width: 28px;
   height: 28px;
@@ -676,53 +697,6 @@
   color: var(--ink-light, #4A4845);
   opacity: 0.75;
   margin-top: 10px;
-}
-
-/* ── AMAZON / EBAY FALLBACK ──────────────────────────────────────── */
-
-.rb-amazon-section {
-  margin-top: 28px;
-  padding-top: 24px;
-  border-top: 1px solid rgba(28, 26, 24, 0.08);
-}
-
-.rb-amazon-label {
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink-light, #4A4845);
-  font-weight: 500;
-  margin-bottom: 14px;
-  text-align: center;
-}
-
-.rb-amazon-buttons,
-.rb-ebay-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.rb-amazon-btn,
-.rb-ebay-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background: #fff;
-  border: 1px solid rgba(28, 26, 24, 0.1);
-  border-radius: 10px;
-  text-decoration: none;
-  color: var(--ink, #1C1A18);
-  font-size: 13px;
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.rb-amazon-btn:hover,
-.rb-ebay-btn:hover {
-  border-color: #8A6A30;
-  background: var(--cream, #FAF8F4);
 }
 
 /* ── MODAL ───────────────────────────────────────────────────────── */
