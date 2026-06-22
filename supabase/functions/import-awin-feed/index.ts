@@ -1544,8 +1544,8 @@ serve(async (req) => {
   const createNewCatNameBreakdown: Record<string, number> = {};
   const sampleCreateNewEmptyCatName: any[] = [];
 
-  const updateActions: Array<{ rp_id: number; product_id: number; price: number; url: string; in_stock: boolean; ean: string; mpn: string; image_url: string; description: string }> = [];
-  const linkActions: Array<{ product_id: number; ext_id: string; price: number; url: string; in_stock: boolean; ean: string; mpn: string; image_url: string; description: string }> = [];
+  const updateActions: Array<{ rp_id: number; product_id: number; price: number; url: string; in_stock: boolean; ean: string; mpn: string; image_url: string }> = [];
+  const linkActions: Array<{ product_id: number; ext_id: string; price: number; url: string; in_stock: boolean; ean: string; mpn: string; image_url: string }> = [];
   // v6.16: createActions now carries canonical_size + image_url
   const createActions: Array<{
     ext_id: string;
@@ -1593,6 +1593,27 @@ serve(async (req) => {
     ? runMeta.run_started_at : new Date().toISOString();
   const pendingActions = () => updateActions.length + linkActions.length + createActions.length;
 
+  // Descriptions are buffered and flushed on their OWN small batches, decoupled
+  // from the price-action FLUSH_THRESHOLD. Holding multi-KB description text in
+  // the large update/link arrays until the 1,000-action threshold was the v119
+  // inline-path memory regression (#36); this keeps at most DESC_FLUSH
+  // descriptions resident at once. Creates still carry their description inline
+  // because it goes in the products INSERT row.
+  const DESC_FLUSH = 150;
+  const descBuffer: Array<{ product_id: number; description: string }> = [];
+  async function flushDescriptions(): Promise<void> {
+    if (descBuffer.length === 0) return;
+    if (dryRun) { descBuffer.length = 0; return; }
+    const batch = descBuffer.splice(0, descBuffer.length);
+    for (let i = 0; i < batch.length; i += DESC_FLUSH) {
+      const chunk = batch.slice(i, i + DESC_FLUSH).map(d => ({
+        product_id: d.product_id, description: d.description, source_retailer_id: retailerId,
+      }));
+      const { error: descErr } = await supa.rpc("bulk_update_product_descriptions", { updates: chunk });
+      if (descErr) errors.push(`bulk_update_product_descriptions (batch at ${i}): ${descErr.message}`);
+    }
+  }
+
   // Chunk size for every bulk RPC / upsert. A single statement over a whole large
   // batch exceeds the Postgres statement timeout and is silently cancelled
   // (v6.18 monitoring surfaced this). Chunking keeps each statement small.
@@ -1628,14 +1649,8 @@ serve(async (req) => {
         const { error: imgErr } = await supa.rpc("bulk_update_product_images", { updates: chunk });
         if (imgErr) errors.push(`bulk_update_product_images (updates chunk at ${i}): ${imgErr.message}`);
       }
-      // Description backfill — priority-guarded (only overwrites a lower-priority
-      // source; see bulk_update_product_descriptions).
-      const descUpdates = updateActions.filter(u => u.description).map(u => ({ product_id: u.product_id, description: u.description, source_retailer_id: retailerId }));
-      for (let i = 0; i < descUpdates.length; i += INSERT_CHUNK) {
-        const chunk = descUpdates.slice(i, i + INSERT_CHUNK);
-        const { error: descErr } = await supa.rpc("bulk_update_product_descriptions", { updates: chunk });
-        if (descErr) errors.push(`bulk_update_product_descriptions (updates chunk at ${i}): ${descErr.message}`);
-      }
+      // Descriptions are applied separately via flushDescriptions() (#36) — not
+      // batched here, so the description text never rides in updateActions.
     }
     updateActions.length = 0;
 
@@ -1668,12 +1683,7 @@ serve(async (req) => {
         const { error: linkImgErr } = await supa.rpc("bulk_update_product_images", { updates: chunk });
         if (linkImgErr) errors.push(`bulk_update_product_images (links chunk at ${i}): ${linkImgErr.message}`);
       }
-      const linkDescUpdates = dedupedLinkArray.filter(l => l.description).map(l => ({ product_id: l.product_id, description: l.description, source_retailer_id: retailerId }));
-      for (let i = 0; i < linkDescUpdates.length; i += INSERT_CHUNK) {
-        const chunk = linkDescUpdates.slice(i, i + INSERT_CHUNK);
-        const { error: linkDescErr } = await supa.rpc("bulk_update_product_descriptions", { updates: chunk });
-        if (linkDescErr) errors.push(`bulk_update_product_descriptions (links chunk at ${i}): ${linkDescErr.message}`);
-      }
+      // Descriptions applied separately via flushDescriptions() (#36).
     }
     linkActions.length = 0;
 
@@ -1961,7 +1971,8 @@ serve(async (req) => {
     if (existing) {
       countUpdate++;
       if (isOrdinary) ordinaryDiagnostic.matched_existing++;
-      updateActions.push({ rp_id: existing.id, product_id: existing.product_id, price, url: wrappedUrl, in_stock: inStock, ean: rawEan, mpn: rawMpn, image_url: imageUrl, description });
+      updateActions.push({ rp_id: existing.id, product_id: existing.product_id, price, url: wrappedUrl, in_stock: inStock, ean: rawEan, mpn: rawMpn, image_url: imageUrl });
+      if (description) { descBuffer.push({ product_id: existing.product_id, description }); if (descBuffer.length >= DESC_FLUSH) await flushDescriptions(); }
       continue;
     }
 
@@ -2041,7 +2052,8 @@ serve(async (req) => {
     }
     if (matchedProductId) {
       countLinkExisting++;
-      linkActions.push({ product_id: matchedProductId, ext_id: matchValue, price, url: wrappedUrl, in_stock: inStock, ean: rawEan, mpn: rawMpn, image_url: imageUrl, description });
+      linkActions.push({ product_id: matchedProductId, ext_id: matchValue, price, url: wrappedUrl, in_stock: inStock, ean: rawEan, mpn: rawMpn, image_url: imageUrl });
+      if (description) { descBuffer.push({ product_id: matchedProductId, description }); if (descBuffer.length >= DESC_FLUSH) await flushDescriptions(); }
       // In-feed learning: write to BOTH the chunk map (for later rows in this
       // chunk) and the persistent seen-map (for later chunks).
       if (normEan && !eanToProductId.has(normEan)) { eanToProductId.set(normEan, matchedProductId); seenEanToProductId.set(normEan, matchedProductId); }
@@ -2386,6 +2398,7 @@ serve(async (req) => {
   // dry_run returned above, so this is real-run only. updatesApplied /
   // linksApplied / createsApplied / errors were accumulated across all flushes.
   await flush();
+  await flushDescriptions(); // flush any description tail below the DESC_FLUSH threshold
 
   // ── PROCESS: persist cross-slice state, then trigger the next slice or finalize ─
   if (effectiveMode === "process") {

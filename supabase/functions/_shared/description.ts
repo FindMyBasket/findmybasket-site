@@ -11,7 +11,10 @@
 
 import { stripHtml } from "./strip-html.ts";
 
-export const DESCRIPTION_MAX_CHARS = 4000;
+// Lowered 4000 -> 2000 (#36): cuts peak memory on the inline import path where
+// description text is held alongside the full cross-retailer index. Small SEO
+// trade-off; 2000 chars is still well beyond what meta/JSON-LD surface.
+export const DESCRIPTION_MAX_CHARS = 2000;
 
 // Lower number = higher priority. Boots / Beauty Flash have editorial UK-English
 // copy; Stylevana / YesStyle are machine-translated and awkward. Retailer ids
