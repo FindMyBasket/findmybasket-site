@@ -36,15 +36,19 @@ export async function generateMetadata({
 }) {
   const edit = getEdit(params.slug);
   if (!edit) return {};
+  // Consolidate ?type=/?page= variants to the clean edit URL.
+  const canonical = `https://www.findmybasket.co.uk/edit/${params.slug}`;
   if (searchParams.type) {
     return {
       title: `${edit.display_name} ${searchParams.type} best prices UK | FindMyBasket`,
       description: `Compare ${edit.display_name} ${searchParams.type.toLowerCase()} prices across UK retailers. Find the best deal.`,
+      alternates: { canonical },
     };
   }
   return {
     title: edit.meta_title,
     description: edit.meta_description,
+    alternates: { canonical },
   };
 }
 

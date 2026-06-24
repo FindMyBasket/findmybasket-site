@@ -76,28 +76,28 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   const product = await getProductById(id);
   if (!product) return { title: 'Product not found | FindMyBasket' };
 
-  const offers = await getRetailerOffers(id);
-  const lowestPrice = offers.length > 0 ? offers[0].effective_price : null;
-
   // The catalogue name usually already starts with the brand, so combine them
   // without doubling it (see lib/format/product-name).
   const baseTitle = displayProductTitle(product.name, product.brand);
-  const priceTag = lowestPrice ? ` from £${lowestPrice.toFixed(2)}` : '';
-  const retailerLabel = offers.length === 1 ? '1 UK retailer' : `${offers.length} UK retailers`;
+  const canonical = `${SITE_URL}/product/${id}`;
 
-  const fallbackDescription = `Compare ${baseTitle} prices across ${retailerLabel}. ${
-    lowestPrice ? `Best price £${lowestPrice.toFixed(2)}.` : ''
-  } Free price comparison.`;
+  // Durable language only: no point-in-time prices or retailer counts baked into
+  // ISR-cached metadata, which would serve stale to crawlers. Range-based value
+  // language per the copy standing rules (no "cheapest", no specific prices).
+  const fallbackDescription =
+    `Compare ${baseTitle} prices across multiple UK retailers, with delivery factored in. Find the best value for your routine on FindMyBasket.`;
   const metaDescription = buildSeoDescription(product.description, baseTitle, fallbackDescription, 155);
   const socialDescription = buildSeoDescription(product.description, baseTitle, fallbackDescription, 200);
-  const title = `${baseTitle}${priceTag} | FindMyBasket`;
+  const title = `${baseTitle} | Compare prices | FindMyBasket`;
 
   return {
     title,
     description: metaDescription,
+    alternates: { canonical },
     openGraph: {
       title,
       description: socialDescription,
+      url: canonical,
       images: product.image_url ? [product.image_url] : undefined,
     },
     twitter: {
@@ -133,10 +133,12 @@ export default async function ProductPage({ params }: { params: { id: string } }
     ? Math.round(((highestPrice - lowestPrice) / highestPrice) * 100)
     : 0;
 
-  // Product JSON-LD. One Offer per in-stock retailer so Google can render the
-  // multi-retailer price panel; a single OutOfStock offer when nothing is in
-  // stock (never an empty offers array).
+  // Product JSON-LD. An AggregateOffer (price range + count) so Google can render
+  // the "£X to £Y" shopping snippet, followed by one Offer per in-stock retailer
+  // so the named multi-retailer panel still resolves. A single OutOfStock offer
+  // when nothing is in stock (never an empty offers array, never Math.min on []).
   const jsonLdName = displayProductTitle(product.name, product.brand);
+  const inStockPrices = inStockOffers.map(o => o.price);
   const productJsonLd = {
     '@context': 'https://schema.org/',
     '@type': 'Product',
@@ -146,14 +148,24 @@ export default async function ProductPage({ params }: { params: { id: string } }
     sku: product.ean ?? `fmb-${product.id}`,
     description: product.description?.trim() || `Compare ${jsonLdName} prices across multiple UK retailers.`,
     offers: inStockOffers.length > 0
-      ? inStockOffers.map(o => ({
-          '@type': 'Offer',
-          url: `${SITE_URL}/product/${product.id}`,
-          priceCurrency: 'GBP',
-          price: o.price.toFixed(2),
-          availability: 'https://schema.org/InStock',
-          seller: { '@type': 'Organization', name: o.retailer_name },
-        }))
+      ? [
+          {
+            '@type': 'AggregateOffer',
+            priceCurrency: 'GBP',
+            lowPrice: Math.min(...inStockPrices).toFixed(2),
+            highPrice: Math.max(...inStockPrices).toFixed(2),
+            offerCount: inStockOffers.length,
+            availability: 'https://schema.org/InStock',
+          },
+          ...inStockOffers.map(o => ({
+            '@type': 'Offer',
+            url: `${SITE_URL}/product/${product.id}`,
+            priceCurrency: 'GBP',
+            price: o.price.toFixed(2),
+            availability: 'https://schema.org/InStock',
+            seller: { '@type': 'Organization', name: o.retailer_name },
+          })),
+        ]
       : [{
           '@type': 'Offer',
           priceCurrency: 'GBP',
@@ -449,6 +461,7 @@ function RetailerRow({
           <ClickOutLink
             href={offer.url}
             retailer={offer.retailer_name}
+            retailerId={offer.retailer_id}
             productId={productId}
             className="bg-ink text-cream px-5 py-2.5 rounded-full text-sm font-medium hover:bg-gold transition-colors whitespace-nowrap inline-block"
           >

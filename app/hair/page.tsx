@@ -6,6 +6,7 @@ export const metadata = {
   title: 'Hair care best prices | FindMyBasket',
   description:
     'Compare hair care prices across UK retailers. Shampoo, conditioner, treatments and styling. Olaplex, Living Proof, Christophe Robin, Aveda and more.',
+  alternates: { canonical: 'https://www.findmybasket.co.uk/hair' },
 };
 
 export default async function HairPage() {
