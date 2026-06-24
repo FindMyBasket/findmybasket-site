@@ -6,6 +6,7 @@ export const metadata = {
   title: 'Skincare best prices | FindMyBasket',
   description:
     'Compare skincare prices across UK retailers including Boots, Superdrug, Escentual, Cult Beauty and more. Find the best deal on cleansers, serums, moisturisers, SPF and more.',
+  alternates: { canonical: 'https://www.findmybasket.co.uk/skincare' },
 };
 
 export default async function SkincarePage() {

@@ -11,15 +11,19 @@ export async function generateMetadata({
 }) {
   const sub = params.subcategory;
   const display = sub.charAt(0).toUpperCase() + sub.slice(1);
+  // Consolidate ?type=/?page= variants to the clean subcategory URL.
+  const canonical = `https://www.findmybasket.co.uk/makeup/${sub}`;
   if (searchParams.type) {
     return {
       title: `${searchParams.type} - ${display} makeup best prices | FindMyBasket`,
       description: `Compare ${searchParams.type.toLowerCase()} prices in ${sub} makeup across UK retailers.`,
+      alternates: { canonical },
     };
   }
   return {
     title: `${display} makeup best prices | FindMyBasket`,
     description: `Compare ${sub} makeup prices across UK retailers. Find the best deal on ${sub} foundation, lipstick, mascara and more.`,
+    alternates: { canonical },
   };
 }
 

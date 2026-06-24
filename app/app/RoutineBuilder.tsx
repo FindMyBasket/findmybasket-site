@@ -12,7 +12,7 @@ import {
   type RoutineItem,
 } from '@/lib/routine-store';
 import { displayProductTitle } from '@/lib/format/product-name';
-import { trackAffiliateClickOut } from '@/lib/analytics';
+import { trackAffiliateClickOut, trackRetailerClick, affiliateNetworkFromUrl } from '@/lib/analytics';
 
 // Affiliate tags — reused exactly from the previous bottom-of-basket links.
 const AMAZON_TAG = 'findmybasket-21';
@@ -644,7 +644,14 @@ export default function RoutineBuilder() {
                           href={amazonSearchUrl(p)}
                           target="_blank"
                           rel="nofollow sponsored noopener"
-                          onClick={() => trackAffiliateClickOut('amazon', p.id)}
+                          onClick={() => {
+                            trackAffiliateClickOut('amazon', p.id);
+                            trackRetailerClick({
+                              retailerName: 'amazon',
+                              affiliateNetwork: affiliateNetworkFromUrl(amazonSearchUrl(p)),
+                              productCount: routine.length,
+                            });
+                          }}
                         >
                           Also check Amazon ↗
                         </a>
@@ -652,7 +659,14 @@ export default function RoutineBuilder() {
                           href={ebaySearchUrl(p)}
                           target="_blank"
                           rel="nofollow sponsored noopener"
-                          onClick={() => trackAffiliateClickOut('ebay', p.id)}
+                          onClick={() => {
+                            trackAffiliateClickOut('ebay', p.id);
+                            trackRetailerClick({
+                              retailerName: 'ebay',
+                              affiliateNetwork: affiliateNetworkFromUrl(ebaySearchUrl(p)),
+                              productCount: routine.length,
+                            });
+                          }}
                         >
                           eBay ↗
                         </a>

@@ -11,15 +11,19 @@ export async function generateMetadata({
 }) {
   const sub = params.subcategory;
   const display = sub.charAt(0).toUpperCase() + sub.slice(1);
+  // Consolidate ?type=/?page= variants to the clean subcategory URL.
+  const canonical = `https://www.findmybasket.co.uk/hair/${sub}`;
   if (searchParams.type) {
     return {
       title: `${searchParams.type} - ${display} hair care best prices | FindMyBasket`,
       description: `Compare ${searchParams.type.toLowerCase()} prices in ${sub} hair care across UK retailers.`,
+      alternates: { canonical },
     };
   }
   return {
     title: `${display} hair care best prices | FindMyBasket`,
     description: `Compare ${sub} hair care prices across UK retailers. Find the best deal on ${sub} shampoo, conditioner, treatments and styling products.`,
+    alternates: { canonical },
   };
 }
 

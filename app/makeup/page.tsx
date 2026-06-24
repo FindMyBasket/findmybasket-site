@@ -6,6 +6,7 @@ export const metadata = {
   title: 'Makeup best prices | FindMyBasket',
   description:
     'Compare makeup prices across UK retailers. From foundation and concealer to lipstick, mascara and eyeshadow. NYX, Maybelline, Revolution, Charlotte Tilbury and more.',
+  alternates: { canonical: 'https://www.findmybasket.co.uk/makeup' },
 };
 
 export default async function MakeupPage() {

@@ -5,6 +5,8 @@ import { getBrandHub } from '../../../lib/brand-hub-queries';
 
 export const revalidate = 3600;
 
+const SITE_URL = 'https://www.findmybasket.co.uk';
+
 // Coarse top_category labels for titles/headings (mirrors CATEGORY_DISPLAY in
 // components/BrandPage.tsx).
 const CATEGORY_LABEL: Record<string, string> = {
@@ -20,6 +22,10 @@ export async function generateMetadata({
   params: { slug: string };
   searchParams: { type?: string; category?: string };
 }) {
+  // Self-referencing canonical pointing at the clean brand URL, so ?type=,
+  // ?category= and ?page= filter variants consolidate to one indexed page.
+  const canonical = `${SITE_URL}/brands/${params.slug}`;
+
   // A Brand Spotlight hub takes precedence over the price-comparison page.
   const hub = await getBrandHub(params.slug);
   if (hub) {
@@ -28,6 +34,7 @@ export async function generateMetadata({
       description:
         hub.hub.lede ??
         `Discover the ${hub.hub.display_name} range on FindMyBasket.`,
+      alternates: { canonical },
     };
   }
 
@@ -42,11 +49,13 @@ export async function generateMetadata({
     return {
       title: `${brand.display_name} ${filterLabel} best prices UK | FindMyBasket`,
       description: `Compare ${brand.display_name} ${filterLabel.toLowerCase()} prices across UK retailers.`,
+      alternates: { canonical },
     };
   }
   return {
     title: `${brand.display_name} best prices UK | FindMyBasket`,
     description: `Compare ${brand.display_name} prices across UK retailers including Boots, Superdrug, Escentual, Cult Beauty and more. Find the best deal.`,
+    alternates: { canonical },
   };
 }
 
