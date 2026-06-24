@@ -965,6 +965,10 @@ serve(async (req)=>{
   // Descriptions go in smaller RPC batches than price/image rows (#36): the text
   // is multi-KB, so smaller statements keep memory + statement size down.
   const DESC_CHUNK = 150;
+  // Image UPDATEs are PK-keyed and, via service_role, ran past the 8s
+  // statement_timeout under DB I/O pressure. Scoped to bulk_update_product_images
+  // only; price/insert/link flushes stay at INSERT_CHUNK. Mirrors import-awin-feed.
+  const IMAGE_UPDATE_CHUNK = 150;
   // 1. Updates — chunked price + image backfill RPCs.
   if (updateActions.length > 0) {
     const nowIso = new Date().toISOString();
@@ -993,8 +997,8 @@ serve(async (req)=>{
         product_id: u.product_id,
         image_url: u.image_url
       }));
-    for(let i = 0; i < imageUpdates.length; i += INSERT_CHUNK){
-      const chunk = imageUpdates.slice(i, i + INSERT_CHUNK);
+    for(let i = 0; i < imageUpdates.length; i += IMAGE_UPDATE_CHUNK){
+      const chunk = imageUpdates.slice(i, i + IMAGE_UPDATE_CHUNK);
       const { error: imgErr } = await supa.rpc("bulk_update_product_images", {
         updates: chunk
       });
@@ -1054,8 +1058,8 @@ serve(async (req)=>{
       product_id: l.product_id,
       image_url: l.image_url
     }));
-  for(let i = 0; i < linkImageUpdates.length; i += INSERT_CHUNK){
-    const chunk = linkImageUpdates.slice(i, i + INSERT_CHUNK);
+  for(let i = 0; i < linkImageUpdates.length; i += IMAGE_UPDATE_CHUNK){
+    const chunk = linkImageUpdates.slice(i, i + IMAGE_UPDATE_CHUNK);
     const { error: linkImgErr } = await supa.rpc("bulk_update_product_images", {
       updates: chunk
     });

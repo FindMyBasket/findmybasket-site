@@ -1618,6 +1618,12 @@ serve(async (req) => {
   // batch exceeds the Postgres statement timeout and is silently cancelled
   // (v6.18 monitoring surfaced this). Chunking keeps each statement small.
   const INSERT_CHUNK = 500;
+  // Image UPDATEs are PK-keyed and, via service_role, ran past the 8s
+  // statement_timeout under DB I/O pressure (reliably reproduced under
+  // multi-slice). A smaller chunk keeps each statement well under the cap.
+  // Scoped to bulk_update_product_images only — price/insert/link flushes stay
+  // at INSERT_CHUNK to avoid extra round-trips.
+  const IMAGE_UPDATE_CHUNK = 150;
 
   // Apply all pending actions, then clear them. On a dry_run we only DISCARD
   // (the run computes counts, never writes) — which keeps dry-runs memory-bounded
@@ -1644,8 +1650,8 @@ serve(async (req) => {
         else updatesApplied += typeof rpcResult === "number" ? rpcResult : chunk.length;
       }
       const imageUpdates = updateActions.filter(u => u.image_url).map(u => ({ product_id: u.product_id, image_url: u.image_url }));
-      for (let i = 0; i < imageUpdates.length; i += INSERT_CHUNK) {
-        const chunk = imageUpdates.slice(i, i + INSERT_CHUNK);
+      for (let i = 0; i < imageUpdates.length; i += IMAGE_UPDATE_CHUNK) {
+        const chunk = imageUpdates.slice(i, i + IMAGE_UPDATE_CHUNK);
         const { error: imgErr } = await supa.rpc("bulk_update_product_images", { updates: chunk });
         if (imgErr) errors.push(`bulk_update_product_images (updates chunk at ${i}): ${imgErr.message}`);
       }
@@ -1678,8 +1684,8 @@ serve(async (req) => {
         else linksApplied += chunk.length;
       }
       const linkImageUpdates = dedupedLinkArray.filter(l => l.image_url).map(l => ({ product_id: l.product_id, image_url: l.image_url }));
-      for (let i = 0; i < linkImageUpdates.length; i += INSERT_CHUNK) {
-        const chunk = linkImageUpdates.slice(i, i + INSERT_CHUNK);
+      for (let i = 0; i < linkImageUpdates.length; i += IMAGE_UPDATE_CHUNK) {
+        const chunk = linkImageUpdates.slice(i, i + IMAGE_UPDATE_CHUNK);
         const { error: linkImgErr } = await supa.rpc("bulk_update_product_images", { updates: chunk });
         if (linkImgErr) errors.push(`bulk_update_product_images (links chunk at ${i}): ${linkImgErr.message}`);
       }
