@@ -102,15 +102,26 @@ export async function getCategoryStats(category: TopCategory): Promise<CategoryS
 
   const distinctBrands = new Set(brandRows.map(r => r.normalised_brand).filter(Boolean));
 
-  const retailerRows = await fetchAllRows<{ retailer_id: number }>(offset =>
+  // Inverted embed (perf): drive from the filtered products resource and embed
+  // retailer_prices, instead of driving from retailer_prices and filtering the
+  // embedded products (which forced a full retailer_prices scan). PR #38 canary
+  // 2. Note: top categories are always large, so this is the weakest beneficiary
+  // of the inversion and the prime candidate for the parked caching follow-up.
+  const productRetailerRows = await fetchAllRows<{ retailer_prices: { retailer_id: number }[] | null }>(offset =>
     supabase
-      .from('retailer_prices')
-      .select('retailer_id, products!inner(top_category)')
-      .eq('products.top_category', category)
+      .from('products')
+      .select('retailer_prices(retailer_id)')
+      .eq('top_category', category)
+      .is('merged_into', null)
+      .is('parent_product_id', null)
       .range(offset, offset + PAGE_SIZE - 1),
   );
 
-  const totalRetailers = new Set(retailerRows.map(r => r.retailer_id)).size;
+  const retailerIdSet = new Set<number>();
+  for (const p of productRetailerRows) {
+    for (const rp of p.retailer_prices ?? []) retailerIdSet.add(rp.retailer_id);
+  }
+  const totalRetailers = retailerIdSet.size;
 
   return {
     total_products: totalProducts ?? 0,

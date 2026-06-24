@@ -82,12 +82,23 @@ export async function getBrandStats(normalisedBrand: string): Promise<BrandStats
     .map(([category, count]) => ({ category: category as TopCategory, count }))
     .sort((a, b) => b.count - a.count);
 
-  const { data: retailerRows } = await supabase
-    .from('retailer_prices')
-    .select('retailer_id, products!inner(normalised_brand)')
-    .eq('products.normalised_brand', normalisedBrand);
+  // Inverted embed (perf): drive from the filtered products resource (indexed on
+  // normalised_brand) and embed retailer_prices, instead of driving from
+  // retailer_prices and filtering the embedded products. The old shape forced a
+  // full retailer_prices scan (~71k rows / ~2GB buffers for a 2.2k-product brand)
+  // because the selective filter sat on the embedded side. See PR #38 canary 2.
+  const { data: productRetailerRows } = await supabase
+    .from('products')
+    .select('retailer_prices(retailer_id)')
+    .eq('normalised_brand', normalisedBrand)
+    .is('merged_into', null)
+    .is('parent_product_id', null);
 
-  const totalRetailers = new Set((retailerRows ?? []).map(r => r.retailer_id)).size;
+  const retailerIdSet = new Set<number>();
+  for (const p of (productRetailerRows ?? []) as { retailer_prices: { retailer_id: number }[] | null }[]) {
+    for (const rp of p.retailer_prices ?? []) retailerIdSet.add(rp.retailer_id);
+  }
+  const totalRetailers = retailerIdSet.size;
 
   return {
     total_products: totalProducts ?? 0,

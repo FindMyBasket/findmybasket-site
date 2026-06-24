@@ -64,17 +64,26 @@ export async function getSubcategoryStats(
 
   const distinctBrands = new Set(brandRows.map(r => r.normalised_brand).filter(Boolean));
 
-  // Distinct retailers — paginated row fetch
-  const retailerRows = await fetchAllRows<{ retailer_id: number }>(offset =>
+  // Distinct retailers — inverted embed (perf): drive from the filtered products
+  // resource (indexed on (top_category, subcategory)) and embed retailer_prices,
+  // instead of driving from retailer_prices and filtering the embedded products
+  // (which forced a full retailer_prices scan). PR #38 canary 2.
+  const productRetailerRows = await fetchAllRows<{ retailer_prices: { retailer_id: number }[] | null }>(offset =>
     supabase
-      .from('retailer_prices')
-      .select('retailer_id, products!inner(top_category, subcategory)')
-      .eq('products.top_category', category)
-      .eq('products.subcategory', subcategory)
+      .from('products')
+      .select('retailer_prices(retailer_id)')
+      .eq('top_category', category)
+      .eq('subcategory', subcategory)
+      .is('merged_into', null)
+      .is('parent_product_id', null)
       .range(offset, offset + PAGE_SIZE - 1),
   );
 
-  const totalRetailers = new Set(retailerRows.map(r => r.retailer_id)).size;
+  const retailerIdSet = new Set<number>();
+  for (const p of productRetailerRows) {
+    for (const rp of p.retailer_prices ?? []) retailerIdSet.add(rp.retailer_id);
+  }
+  const totalRetailers = retailerIdSet.size;
 
   return {
     total_products: totalProducts ?? 0,
