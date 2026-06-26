@@ -218,8 +218,8 @@ export default async function ProductPage({ params }: { params: { id: string } }
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
 
-      <section className="max-w-site mx-auto px-6 py-12">
-        <nav className="text-sm text-ink-light mb-8 flex flex-wrap gap-1.5 items-center">
+      <section className="max-w-site mx-auto px-6 py-8">
+        <nav className="text-sm text-ink-light mb-6 flex flex-wrap gap-1.5 items-center">
           {product.top_category && (
             <>
               <Link href={`/${product.top_category}`} className="hover:text-ink transition-colors">
@@ -249,8 +249,8 @@ export default async function ProductPage({ params }: { params: { id: string } }
           )}
         </nav>
 
-        <div className="grid md:grid-cols-2 gap-12 mb-12">
-          <div className="bg-warm-white border border-border rounded-2xl aspect-square flex items-center justify-center overflow-hidden">
+        <div className="grid md:grid-cols-2 gap-8 mb-8 items-start">
+          <div className="bg-warm-white border border-border rounded-2xl h-64 md:h-auto md:aspect-square flex items-center justify-center overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={product.image_url || '/placeholder-product.svg'}
@@ -271,17 +271,17 @@ export default async function ProductPage({ params }: { params: { id: string } }
                 )}
               </p>
             )}
-            <h1 className="font-serif text-4xl md:text-5xl text-ink mb-6 leading-tight">
+            <h1 className="font-serif text-3xl md:text-4xl text-ink mb-4 leading-tight">
               {product.name}
             </h1>
             {isSpecialistOnly && (
-              <div className="inline-flex items-center gap-2 bg-cream border border-border rounded-full px-4 py-1.5 mb-6 text-xs text-ink-light">
+              <div className="inline-flex items-center gap-2 bg-cream border border-border rounded-full px-4 py-1.5 mb-4 text-xs text-ink-light">
                 <span>✦ Specialist import · longer delivery times may apply</span>
               </div>
             )}
 
             {(product.product_type || product.canonical_size || product.shade) && (
-              <div className="flex flex-wrap gap-2 mb-8">
+              <div className="flex flex-wrap gap-2 mb-6">
                 {product.product_type && (
                   <span className="bg-warm-white border border-border rounded-full px-4 py-1.5 text-xs text-ink-light">
                     {product.product_type}
@@ -331,11 +331,9 @@ export default async function ProductPage({ params }: { params: { id: string } }
         </div>
       </section>
 
-      {product.description && <ProductDescription description={product.description} />}
-
-      <section className="max-w-site mx-auto px-6 py-12">
+      <section className="max-w-site mx-auto px-6 py-8">
         <h2 className="font-serif text-3xl text-ink mb-2">Compare prices</h2>
-        <p className="text-ink-light mb-8">
+        <p className="text-ink-light mb-6">
           Best basket across UK retailers. Also check Amazon for its current price. Click through to buy.
         </p>
 
@@ -380,9 +378,9 @@ export default async function ProductPage({ params }: { params: { id: string } }
         </div>
       </section>
 
-      <section className="max-w-site mx-auto px-6 py-12">
+      <section className="max-w-site mx-auto px-6 py-8">
         <h2 className="font-serif text-3xl text-ink mb-2">Also try</h2>
-        <p className="text-ink-light mb-8">
+        <p className="text-ink-light mb-6">
           Search for this product on eBay. Prices not compared.
         </p>
         <div className="grid md:grid-cols-2 gap-4">
@@ -401,10 +399,12 @@ export default async function ProductPage({ params }: { params: { id: string } }
         </div>
       </section>
 
+      {product.description && <ProductDescription description={product.description} />}
+
       {related.length > 0 && (
-        <section className="max-w-site mx-auto px-6 py-12">
+        <section className="max-w-site mx-auto px-6 py-8">
           <h2 className="font-serif text-3xl text-ink mb-2">Related products</h2>
-          <p className="text-ink-light mb-8">
+          <p className="text-ink-light mb-6">
             More from {product.brand ?? 'this category'}.
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

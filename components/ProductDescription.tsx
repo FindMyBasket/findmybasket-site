@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 
-// "About this product" section. Renders the feed-sourced description below the
-// price comparison table. Long copy collapses behind a "Read more" toggle.
-// The parent only mounts this when a description exists, so `description` here
-// is always non-empty.
+// "About this product" section. Editorial, so it renders below the price
+// comparison and the eBay block (transaction leads, editorial follows). Long
+// copy collapses behind a "Read more" toggle. The parent only mounts this when
+// a description exists, so `description` here is always non-empty.
 
 // Roughly 3-4 lines of body text. Above this we collapse by default.
 const COLLAPSE_THRESHOLD = 280;
