@@ -327,53 +327,54 @@ export default async function ProductPage({ params }: { params: { id: string } }
                 </p>
               </div>
             )}
-          </div>
-        </div>
-      </section>
 
-      <section className="max-w-site mx-auto px-6 py-8">
-        <h2 className="font-serif text-3xl text-ink mb-2">Compare prices</h2>
-        <p className="text-ink-light mb-6">
-          Best basket across UK retailers. Also check Amazon for its current price. Click through to buy.
-        </p>
-
-        <div className="bg-warm-white border border-border rounded-2xl overflow-hidden">
-          {offers.length === 0 ? (
-            <div className="p-12 text-center text-ink-light">
-              No retailer prices available for this product yet.
-            </div>
-          ) : (
-            <>
-              {inStockOffers.map((offer, idx) => (
-                <RetailerRow key={`${offer.retailer_id}-${idx}`} offer={offer} isBestPrice={idx === 0} productId={product.id} />
-              ))}
-              {outOfStockOffers.length > 0 && (
+            {/* Comparison lifted into the buy column, below the action, so the
+                real retailer prices sit above the fold (was a full-width section
+                below). Logic, prices and savings are unchanged. */}
+            <h2 className="font-serif text-2xl text-ink mt-8 mb-3">Compare prices</h2>
+            <p className="text-sm text-ink-light mb-4">
+              Best basket across UK retailers. Also check Amazon for its current price. Click through to buy.
+            </p>
+            <div className="bg-warm-white border border-border rounded-2xl overflow-hidden">
+              {offers.length === 0 ? (
+                <div className="p-8 text-center text-ink-light">
+                  No retailer prices available for this product yet.
+                </div>
+              ) : (
                 <>
-                  <div className="bg-cream px-6 py-3 border-y border-border text-xs uppercase tracking-widest text-ink-light">
-                    Out of stock
-                  </div>
-                  {outOfStockOffers.map((offer, idx) => (
-                    <RetailerRow key={`oos-${offer.retailer_id}-${idx}`} offer={offer} isBestPrice={false} productId={product.id} />
+                  {inStockOffers.map((offer, idx) => (
+                    <RetailerRow key={`${offer.retailer_id}-${idx}`} offer={offer} isBestPrice={idx === 0} productId={product.id} />
                   ))}
+                  {outOfStockOffers.length > 0 && (
+                    <>
+                      <div className="bg-cream px-6 py-3 border-y border-border text-xs uppercase tracking-widest text-ink-light">
+                        Out of stock
+                      </div>
+                      {outOfStockOffers.map((offer, idx) => (
+                        <RetailerRow key={`oos-${offer.retailer_id}-${idx}`} offer={offer} isBestPrice={false} productId={product.id} />
+                      ))}
+                    </>
+                  )}
                 </>
               )}
-            </>
-          )}
-          {/* Amazon is an honest cross-check, not a compared price: muted row,
-              no price column, no Best price badge, opens an Amazon search. */}
-          <div className="flex items-center justify-between px-6 py-5 border-t border-border bg-cream/60">
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-ink-light italic mb-1">Also check on Amazon</p>
-              <p className="text-xs text-ink-light">Live price varies, not compared</p>
+              {/* Amazon is an honest cross-check, not a compared price. */}
+              <div className="flex items-center justify-between px-6 py-5 border-t border-border bg-cream/60">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-ink-light italic mb-1">Also check on Amazon</p>
+                  <p className="text-xs text-ink-light">Live price varies, not compared</p>
+                </div>
+                <ClickOutLink
+                  href={amazonUrl}
+                  retailer="amazon"
+                  productId={product.id}
+                  className="border border-border text-ink-light px-5 py-2.5 rounded-full text-sm font-medium hover:border-gold hover:text-ink transition-colors whitespace-nowrap"
+                >
+                  Search Amazon →
+                </ClickOutLink>
+              </div>
             </div>
-            <ClickOutLink
-              href={amazonUrl}
-              retailer="amazon"
-              productId={product.id}
-              className="border border-border text-ink-light px-5 py-2.5 rounded-full text-sm font-medium hover:border-gold hover:text-ink transition-colors whitespace-nowrap"
-            >
-              Search Amazon →
-            </ClickOutLink>
+
+            {product.description && <ProductDescription description={product.description} />}
           </div>
         </div>
       </section>
@@ -398,8 +399,6 @@ export default async function ProductPage({ params }: { params: { id: string } }
           </ClickOutLink>
         </div>
       </section>
-
-      {product.description && <ProductDescription description={product.description} />}
 
       {related.length > 0 && (
         <section className="max-w-site mx-auto px-6 py-8">

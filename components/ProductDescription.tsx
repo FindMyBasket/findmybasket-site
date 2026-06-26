@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 
-// "About this product" section. Editorial, so it renders below the price
-// comparison and the eBay block (transaction leads, editorial follows). Long
-// copy collapses behind a "Read more" toggle. The parent only mounts this when
-// a description exists, so `description` here is always non-empty.
+// "About this product". Embeddable block (no own section wrapper) so the parent
+// can place it inside the buy column, below the price comparison. Renders only
+// when a description exists, so thin/missing descriptions collapse to nothing
+// rather than an empty labelled section. Long copy collapses behind "Read more".
 
 // Roughly 3-4 lines of body text. Above this we collapse by default.
 const COLLAPSE_THRESHOLD = 280;
@@ -15,27 +15,25 @@ export function ProductDescription({ description }: { description: string }) {
   const isLong = description.length > COLLAPSE_THRESHOLD;
 
   return (
-    <section className="max-w-site mx-auto px-6 py-12">
-      <h2 className="font-serif text-3xl text-ink mb-6">About this product</h2>
-      <div className="max-w-3xl">
-        <p
-          className={`text-ink-light leading-relaxed whitespace-pre-line ${
-            isLong && !expanded ? 'line-clamp-4' : ''
-          }`}
+    <div className="mt-8">
+      <h2 className="font-serif text-2xl text-ink mb-3">About this product</h2>
+      <p
+        className={`text-ink-light leading-relaxed whitespace-pre-line ${
+          isLong && !expanded ? 'line-clamp-4' : ''
+        }`}
+      >
+        {description}
+      </p>
+      {isLong && (
+        <button
+          type="button"
+          onClick={() => setExpanded(e => !e)}
+          className="mt-3 text-sm font-medium text-gold hover:text-ink transition-colors"
+          aria-expanded={expanded}
         >
-          {description}
-        </p>
-        {isLong && (
-          <button
-            type="button"
-            onClick={() => setExpanded(e => !e)}
-            className="mt-3 text-sm font-medium text-gold hover:text-ink transition-colors"
-            aria-expanded={expanded}
-          >
-            {expanded ? 'Read less' : 'Read more'}
-          </button>
-        )}
-      </div>
-    </section>
+          {expanded ? 'Read less' : 'Read more'}
+        </button>
+      )}
+    </div>
   );
 }
