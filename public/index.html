@@ -20,7 +20,7 @@
   <meta name="twitter:description" content="Your beauty routine, optimised. FindMyBasket compares skincare, makeup and hair prices across the UK's leading beauty retailers. Free to use."/>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="alternate icon" href="/favicon.ico"/>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"FindMyBasket","url":"https://www.findmybasket.co.uk","description":"UK beauty price comparison tool. Compares skincare, makeup and hair prices across major retailers to find the best way to buy your whole routine.","potentialAction":{"@type":"SearchAction","target":"https://www.findmybasket.co.uk/app?q={search_term_string}","query-input":"required name=search_term_string"}}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"FindMyBasket","url":"https://www.findmybasket.co.uk","description":"UK beauty price comparison tool. Compares skincare, makeup and hair prices across major retailers to find the best way to buy your whole routine.","potentialAction":{"@type":"SearchAction","target":"https://www.findmybasket.co.uk/search?q={search_term_string}","query-input":"required name=search_term_string"}}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" />
@@ -98,6 +98,10 @@
     .hero-form input { padding: 16px 24px; border: 1px solid var(--border); border-radius: 100px; background: var(--warm-white); font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--ink); width: 300px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
     .hero-form input:focus { border-color: var(--gold); box-shadow: 0 0 0 4px rgba(201,169,110,0.12); }
     .hero-form input::placeholder { color: #AAA8A4; }
+    .hero-search { display: flex; gap: 10px; width: 100%; max-width: 520px; margin: 44px auto 0; position: relative; z-index: 1; animation: fadeUp 0.8s 0.25s ease both; flex-wrap: wrap; justify-content: center; }
+    .hero-search input { flex: 1 1 240px; padding: 16px 24px; border: 1px solid var(--border); border-radius: 100px; background: var(--warm-white); font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--ink); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .hero-search input:focus { border-color: var(--gold); box-shadow: 0 0 0 4px rgba(201,169,110,0.12); }
+    .hero-search input::placeholder { color: #AAA8A4; }
     .btn-primary { padding: 16px 32px; background: var(--ink); color: var(--cream); border: none; border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background 0.2s, transform 0.15s; }
     .btn-primary:hover { background: var(--gold); transform: translateY(-2px); }
     .hero-note { font-size: 12px; color: #AAA8A4; margin-top: 16px; position: relative; z-index: 1; animation: fadeUp 0.8s 0.4s ease both; }
@@ -251,6 +255,10 @@
     <div class="hero-badge" style="background:rgba(122,158,135,0.15); color:var(--sage-text); border-color:rgba(122,158,135,0.3);">✓ Live now · 20% median saving across 5,000+ comparisons</div>
     <h1>Your beauty<br/>routine. <em>Optimised.</em></h1>
     <p class="hero-sub">Honest comparison across the UK's leading beauty retailers. Save your routine and we'll email you the best price each month.</p>
+    <form action="/search" method="get" role="search" class="hero-search">
+      <input type="search" name="q" placeholder="Search a product or brand..." aria-label="Search products and brands" minlength="2" required/>
+      <button type="submit" class="btn-primary">Search</button>
+    </form>
     <div class="hero-form" style="display:flex; flex-direction:column; gap:12px; align-items:center;">
       <button onclick="window.location.href='/app'" class="btn-primary" style="padding:16px 36px; font-size:15px;">Find my basket →</button>
       <a href="/savings-hub.html" style="font-family:'DM Sans',sans-serif; font-size:13px; color:var(--ink-light); text-decoration:underline; text-underline-offset:3px;">or browse the Savings Hub</a>
