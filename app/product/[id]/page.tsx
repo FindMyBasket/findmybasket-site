@@ -28,7 +28,7 @@ const AMAZON_TAG = 'findmybasket-21';
 const EBAY_CAMPID = '7221119';
 
 // Use displayProductTitle so the search query carries the brand exactly once
-// (most catalogue names already start with the brand — see lib/format/product-name).
+// (most catalogue names already start with the brand, see lib/format/product-name).
 function buildAmazonSearchUrl(productName: string, brand: string | null): string {
   const query = displayProductTitle(productName, brand);
   const encoded = encodeURIComponent(query.replace(/\s+/g, ' ').trim());
@@ -122,7 +122,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
 
   const inStockOffers = offers.filter(o => o.in_stock);
   const outOfStockOffers = offers.filter(o => !o.in_stock);
-  // Importer-only products (Stylevana/YesStyle — see IMPORTER_RETAILER_IDS) get a
+  // Importer-only products (Stylevana/YesStyle, see IMPORTER_RETAILER_IDS) get a
   // "Specialist import" badge to set delivery/customs expectations.
   const isSpecialistOnly = inStockOffers.length > 0 && inStockOffers.every(o => IMPORTER_RETAILER_IDS.has(o.retailer_id));
   const lowestPrice = inStockOffers.length > 0 ? inStockOffers[0].effective_price : null;
