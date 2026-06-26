@@ -108,7 +108,11 @@ jobs:
             -d '{"retailer_id": 28, "dry_run": false}')
           echo "$RESPONSE" | head -c 4000
           echo ""
-          echo "$RESPONSE" | grep -q '"feed_total_rows"' || {
+          # Accept both response shapes. Inline mode returns "feed_total_rows".
+          # storage_passthrough mode (retailer 28 since the 23 Jun canary 2-6
+          # migration) returns "staged":true from Phase A on success, then runs
+          # Phase B/C asynchronously. Either is a successful trigger.
+          echo "$RESPONSE" | grep -qE '"feed_total_rows"|"staged"[[:space:]]*:[[:space:]]*true' || {
             echo "::error::Import function did not return a successful result"
             exit 1
           }
