@@ -40,11 +40,11 @@ export function SaveToRoutineButton({ product }: Props) {
             : 'bg-warm-white text-ink border-ink hover:bg-ink hover:text-cream'
         }`}
       >
-        {inRoutine ? '✓ Added to routine' : 'Save to routine'}
+        {inRoutine ? '✓ Added to basket' : 'Add to basket'}
       </button>
       {showToast && (
         <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-ink text-cream text-xs px-4 py-2 rounded-full shadow-lg whitespace-nowrap pointer-events-none">
-          Added to your routine
+          Added to your basket
         </div>
       )}
     </div>
