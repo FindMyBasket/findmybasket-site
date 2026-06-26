@@ -10,7 +10,7 @@ export function AffiliateDisclosure({ variant = 'inline' }: { variant?: 'inline'
           <div className="text-sm leading-relaxed">
             <strong className="text-ink font-semibold">Heads up on how we make money: </strong>
             <span className="text-ink-light">
-              FindMyBasket earns a commission when you click through and buy at a partner retailer. The commission does not affect the price you pay, and it does not influence which retailer we recommend. The &ldquo;best basket&rdquo; is genuinely the cheapest option across our partner retailers.
+              FindMyBasket earns a commission when you click through and buy at a partner retailer. The commission does not affect the price you pay, and it does not influence which retailer we recommend. The &ldquo;best basket&rdquo; is genuinely the best value option across our partner retailers.
               {' '}
               <a href="/privacy" className="text-gold-text underline">Full details</a>.
             </span>
