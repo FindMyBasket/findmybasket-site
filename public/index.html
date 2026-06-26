@@ -105,11 +105,11 @@
     .btn-primary { padding: 16px 32px; background: var(--ink); color: var(--cream); border: none; border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background 0.2s, transform 0.15s; }
     .btn-primary:hover { background: var(--gold); transform: translateY(-2px); }
     .hero-note { font-size: 12px; color: #AAA8A4; margin-top: 16px; position: relative; z-index: 1; animation: fadeUp 0.8s 0.4s ease both; }
-    .hero-trust { margin: 22px auto 0; max-width: 860px; width: 100%; position: relative; z-index: 1; animation: fadeUp 0.8s 0.45s ease both; }
-    .hero-trust-label { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-light); font-weight: 500; margin: 0 0 14px; }
-    .hero-trust-logos { display: flex; flex-wrap: nowrap; align-items: center; justify-content: space-between; gap: 10px; }
-    .hero-trust-logos img { height: 18px; width: auto; object-fit: contain; filter: grayscale(100%); opacity: 0.72; mix-blend-mode: multiply; transition: opacity 0.2s, filter 0.2s; flex: 0 0 auto; }
-    .hero-trust-logos img:hover { filter: none; opacity: 1; }
+    .hero-trust { margin: 22px auto 0; max-width: 1060px; width: 100%; position: relative; z-index: 1; animation: fadeUp 0.8s 0.45s ease both; }
+    .hero-trust-label { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-light); font-weight: 500; margin: 0 0 16px; }
+    .hero-trust-logos { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
+    .hero-trust-card { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 14px; background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 1px 2px rgba(28,26,24,0.05); }
+    .hero-trust-card img { height: 20px; width: auto; object-fit: contain; display: block; }
     .hero-retailers { display: flex; align-items: center; justify-content: center; margin-top: 48px; position: relative; z-index: 1; animation: fadeUp 0.8s 0.5s ease both; }
     .hero-retailers span { font-size: 13px; letter-spacing: 0.06em; color: #AAA8A4; font-weight: 400; border: 1px solid rgba(170,168,164,0.3); padding: 10px 24px; border-radius: 100px; }
 
@@ -216,10 +216,8 @@
           url('/images/hero-bottles-mobile.jpg');
         background-position: center top, center 70%;
       }
-      /* Mobile: compact the hero so the retailer trust strip lands above the
-         fold. Content-height hero (no forced 100vh), tightened spacing, smaller
-         headline, and a single horizontally-scrollable logo row (ten wordmark
-         logos cannot be legible in one static phone-width row). */
+      /* Mobile: compact the hero (content height, tightened spacing, smaller
+         headline). The logo cards wrap to multiple centred rows at smaller size. */
       .hero { min-height: auto; padding: 86px 20px 24px; }
       .hero-badge { margin-bottom: 14px; }
       .hero h1 { font-size: clamp(30px, 8vw, 40px); line-height: 1.04; }
@@ -228,9 +226,9 @@
       .hero-trust { margin-top: 18px; }
       .hero-form { margin-top: 18px; }
       .hero-note { margin-top: 10px; }
-      .hero-trust-logos { justify-content: flex-start; gap: 24px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-      .hero-trust-logos::-webkit-scrollbar { display: none; }
-      .hero-trust-logos img { height: 17px; }
+      .hero-trust-logos { gap: 8px; }
+      .hero-trust-card { height: 36px; padding: 0 12px; }
+      .hero-trust-card img { height: 17px; }
     }
     @media (max-width: 900px) {
       .steps { grid-template-columns: 1fr; }
@@ -282,16 +280,16 @@
     <div class="hero-trust">
       <p class="hero-trust-label">Comparing prices across UK retailers</p>
       <div class="hero-trust-logos">
-        <img src="/logos/boots.webp" alt="Boots" decoding="async"/>
-        <img src="/logos/superdrug.webp" alt="Superdrug" decoding="async"/>
-        <img src="/logos/beauty-bay.webp" alt="Beauty Bay" decoding="async"/>
-        <img src="/logos/escentual.webp" alt="Escentual" decoding="async"/>
-        <img src="/logos/stylevana.webp" alt="Stylevana" decoding="async"/>
-        <img src="/logos/yesstyle.png" alt="YesStyle" decoding="async"/>
-        <img src="/logos/debenhams.png" alt="Debenhams" decoding="async"/>
-        <img src="/logos/branded-beauty.webp" alt="Branded Beauty" decoding="async"/>
-        <img src="/logos/beauty-flash.png" alt="Beauty Flash" decoding="async"/>
-        <img src="/logos/the-organic-pharmacy.webp" alt="The Organic Pharmacy" decoding="async"/>
+        <span class="hero-trust-card"><img src="/logos/boots.webp" alt="Boots" decoding="async"/></span>
+        <span class="hero-trust-card"><img src="/logos/superdrug.webp" alt="Superdrug" decoding="async"/></span>
+        <span class="hero-trust-card"><img src="/logos/beauty-bay.webp" alt="Beauty Bay" decoding="async"/></span>
+        <span class="hero-trust-card"><img src="/logos/escentual.webp" alt="Escentual" decoding="async"/></span>
+        <span class="hero-trust-card"><img src="/logos/stylevana.webp" alt="Stylevana" decoding="async"/></span>
+        <span class="hero-trust-card"><img src="/logos/yesstyle.png" alt="YesStyle" decoding="async"/></span>
+        <span class="hero-trust-card"><img src="/logos/debenhams.png" alt="Debenhams" decoding="async"/></span>
+        <span class="hero-trust-card"><img src="/logos/branded-beauty.webp" alt="Branded Beauty" decoding="async"/></span>
+        <span class="hero-trust-card"><img src="/logos/beauty-flash.png" alt="Beauty Flash" decoding="async"/></span>
+        <span class="hero-trust-card"><img src="/logos/the-organic-pharmacy.webp" alt="The Organic Pharmacy" decoding="async"/></span>
       </div>
     </div>
     <div class="hero-form" style="display:flex; flex-direction:column; gap:12px; align-items:center;">
