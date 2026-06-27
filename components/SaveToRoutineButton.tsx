@@ -5,9 +5,12 @@ import { addToRoutine, isInRoutine, onRoutineChange, type RoutineItem } from '..
 
 interface Props {
   product: RoutineItem;
+  // Drops the trailing margin so the button sits flush inside a container such
+  // as the mobile pinned buy bar. Default keeps the left-column spacing.
+  compact?: boolean;
 }
 
-export function SaveToRoutineButton({ product }: Props) {
+export function SaveToRoutineButton({ product, compact = false }: Props) {
   const [inRoutine, setInRoutine] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
@@ -34,7 +37,7 @@ export function SaveToRoutineButton({ product }: Props) {
         type="button"
         onClick={handleClick}
         disabled={inRoutine}
-        className={`block w-full text-center rounded-full px-6 py-3 text-sm font-medium transition-colors mb-4 border-2 ${
+        className={`block w-full text-center rounded-full px-6 py-3 text-sm font-medium transition-colors border-2 ${compact ? '' : 'mb-4'} ${
           inRoutine
             ? 'bg-sage-light text-ink border-sage cursor-default'
             : 'bg-warm-white text-ink border-ink hover:bg-ink hover:text-cream'
