@@ -250,7 +250,11 @@ export default async function ProductPage({ params }: { params: { id: string } }
         </nav>
 
         <div className="grid md:grid-cols-2 gap-8 mb-8 items-start">
-          <div className="bg-warm-white border border-border rounded-2xl h-64 md:h-auto md:aspect-square flex items-center justify-center overflow-hidden">
+          {/* Left column: pinned on desktop (md:sticky) so the product image,
+              price and "Add to basket" stay in view while the comparison and
+              description scroll on the right. Static normal flow on mobile. */}
+          <div className="md:sticky md:top-24 md:self-start">
+          <div className="bg-warm-white border border-border rounded-2xl h-56 md:h-[20vh] flex items-center justify-center overflow-hidden mb-6">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={product.image_url || '/placeholder-product.svg'}
@@ -259,8 +263,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
             />
           </div>
 
-          <div>
-            {product.brand && (
+          {product.brand && (
               <p className="text-xs uppercase tracking-widest text-gold font-medium mb-3">
                 {product.brand_slug ? (
                   <Link href={`/brands/${product.brand_slug}`} className="hover:text-ink transition-colors">
@@ -271,9 +274,37 @@ export default async function ProductPage({ params }: { params: { id: string } }
                 )}
               </p>
             )}
-            <h1 className="font-serif text-3xl md:text-4xl text-ink mb-4 leading-tight">
+            <h1 className="font-serif text-2xl md:text-3xl text-ink mb-4 leading-tight">
               {product.name}
             </h1>
+            {/* Price and the primary action sit directly under the title so they
+                clear the fold on a laptop without scrolling. Secondary metadata
+                (specialist note, product chips) follows below the button. */}
+            {lowestPrice !== null && (
+              <div className="bg-cream border border-border rounded-2xl p-6 mb-4">
+                <p className="text-xs uppercase tracking-widest text-ink-light mb-1.5">
+                  Best price across {inStockOffers.length} retailer{inStockOffers.length === 1 ? '' : 's'}
+                </p>
+                <p className="font-serif text-4xl text-ink mb-1">
+                  £{lowestPrice.toFixed(2)}
+                </p>
+                {savingPct >= 5 && highestPrice && (
+                  <p className="text-sm text-sage">
+                    Save {savingPct}% vs highest price (£{highestPrice.toFixed(2)})
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Desktop uses this in-column button, which is above the fold in
+                the sticky column. Mobile uses the pinned bottom bar instead, so
+                this one is hidden below md to avoid a duplicate beside the bar. */}
+            {inStockOffers.length > 0 && (
+              <div className="hidden md:block">
+                <SaveToRoutineButton product={routineItem} />
+              </div>
+            )}
+
             {isSpecialistOnly && (
               <div className="inline-flex items-center gap-2 bg-cream border border-border rounded-full px-4 py-1.5 mb-4 text-xs text-ink-light">
                 <span>✦ Specialist import · longer delivery times may apply</span>
@@ -300,26 +331,6 @@ export default async function ProductPage({ params }: { params: { id: string } }
               </div>
             )}
 
-            {lowestPrice !== null && (
-              <div className="bg-cream border border-border rounded-2xl p-6 mb-4">
-                <p className="text-xs uppercase tracking-widest text-ink-light mb-1.5">
-                  Best price across {inStockOffers.length} retailer{inStockOffers.length === 1 ? '' : 's'}
-                </p>
-                <p className="font-serif text-4xl text-ink mb-1">
-                  £{lowestPrice.toFixed(2)}
-                </p>
-                {savingPct >= 5 && highestPrice && (
-                  <p className="text-sm text-sage">
-                    Save {savingPct}% vs highest price (£{highestPrice.toFixed(2)})
-                  </p>
-                )}
-              </div>
-            )}
-
-            {inStockOffers.length > 0 && (
-              <SaveToRoutineButton product={routineItem} />
-            )}
-
             {inStockOffers.length === 0 && offers.length > 0 && (
               <div className="bg-cream border border-border rounded-2xl p-6 mb-6">
                 <p className="text-sm text-ink-light">
@@ -327,11 +338,12 @@ export default async function ProductPage({ params }: { params: { id: string } }
                 </p>
               </div>
             )}
+          </div>
 
-            {/* Comparison lifted into the buy column, below the action, so the
-                real retailer prices sit above the fold (was a full-width section
-                below). Logic, prices and savings are unchanged. */}
-            <h2 className="font-serif text-2xl text-ink mt-8 mb-3">Compare prices</h2>
+          {/* Right column: scrolls past the pinned left column. Comparison and
+              description. Logic, prices and savings are unchanged. */}
+          <div>
+            <h2 className="font-serif text-2xl text-ink mb-3">Compare prices</h2>
             <p className="text-sm text-ink-light mb-4">
               Best basket across UK retailers. Also check Amazon for its current price. Click through to buy.
             </p>
@@ -413,6 +425,33 @@ export default async function ProductPage({ params }: { params: { id: string } }
           </div>
         </section>
       )}
+
+      {/* Mobile only: a persistent buy bar pinned to the bottom of the viewport
+          so the core action stays on screen while the visitor scrolls the
+          comparison. Reuses SaveToRoutineButton, so it mirrors the same add
+          action and "Added to basket" state as the in-column button via the
+          shared routine store. Desktop keeps the sticky left column instead. */}
+      {inStockOffers.length > 0 && (
+        <>
+          {/* Spacer so the fixed bar never hides the last of the page content. */}
+          <div className="h-24 md:hidden" aria-hidden="true" />
+          <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-warm-white/95 backdrop-blur border-t border-border px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+            <div className="max-w-site mx-auto flex items-center gap-4">
+              {lowestPrice !== null && (
+                <div className="shrink-0 leading-none">
+                  <p className="text-[10px] uppercase tracking-widest text-ink-light mb-1">
+                    Best price
+                  </p>
+                  <p className="font-serif text-xl text-ink">£{lowestPrice.toFixed(2)}</p>
+                </div>
+              )}
+              <div className="flex-1">
+                <SaveToRoutineButton product={routineItem} compact />
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </SiteLayout>
   );
 }
@@ -436,8 +475,13 @@ function RetailerRow({
               Best price
             </span>
           )}
+          {isBestPrice && offer.in_stock && offer.delivery_cost !== null && offer.delivery_threshold !== null && (offer.delivery_cost === 0 || offer.price >= offer.delivery_threshold) && (
+            <span className="bg-sage-light text-ink border border-sage text-xs font-medium px-2 py-0.5 rounded-full">
+              Free delivery
+            </span>
+          )}
         </div>
-        {offer.delivery_cost !== null && offer.delivery_threshold !== null && (
+        {offer.delivery_cost !== null && offer.delivery_threshold !== null && !(isBestPrice && offer.in_stock && (offer.delivery_cost === 0 || offer.price >= offer.delivery_threshold)) && (
           <p className="text-xs text-ink-light">
             {offer.delivery_cost === 0
               ? 'Free delivery'
