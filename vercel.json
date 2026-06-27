@@ -6,6 +6,10 @@
     { "source": "/terms", "destination": "/terms.html" }
   ],
   "redirects": [
+    { "source": "/articles/cerave-cheapest-uk.html", "destination": "/articles/cerave-best-value-uk.html", "statusCode": 301 },
+    { "source": "/articles/the-ordinary-cheapest-uk.html", "destination": "/articles/the-ordinary-best-value-uk.html", "statusCode": 301 },
+    { "source": "/cerave-cheapest-uk.html", "destination": "/articles/cerave-best-value-uk.html", "statusCode": 301 },
+    { "source": "/clarins-best-price-uk.html", "destination": "/articles/clarins-best-price-uk.html", "statusCode": 301 },
     { "source": "/privacy-policy.html", "destination": "/privacy", "permanent": true },
     { "source": "/partners.html", "destination": "/work-with-us", "permanent": true },
     { "source": "/partners", "destination": "/work-with-us", "permanent": true },

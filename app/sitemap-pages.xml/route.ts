@@ -27,14 +27,18 @@ const STATIC_PAGES: UrlEntry[] = [
   { loc: '/about.html', changefreq: 'monthly', priority: 0.4 },
   { loc: '/privacy-policy.html', changefreq: 'yearly', priority: 0.2 },
   { loc: '/terms.html', changefreq: 'yearly', priority: 0.2 },
-  { loc: '/cerave-cheapest-uk.html', changefreq: 'monthly', priority: 0.7 },
-  { loc: '/the-ordinary-cheapest-uk.html', changefreq: 'monthly', priority: 0.7 },
-  { loc: '/clarins-best-price-uk.html', changefreq: 'monthly', priority: 0.7 },
-  { loc: '/cosrx-best-price-uk.html', changefreq: 'monthly', priority: 0.7 },
-  { loc: '/elemis-best-price-uk.html', changefreq: 'monthly', priority: 0.7 },
-  { loc: '/lookfantastic-vs-boots.html', changefreq: 'monthly', priority: 0.6 },
-  { loc: '/overpaying-for-skincare.html', changefreq: 'monthly', priority: 0.6 },
-  { loc: '/skincare-routine-under-40.html', changefreq: 'monthly', priority: 0.6 },
+  // Articles live under /articles/ (their canonical path). These entries
+  // previously pointed at bare root paths that 404 for most articles; they
+  // now match the real files and canonicals.
+  { loc: '/articles/cerave-best-value-uk.html', changefreq: 'monthly', priority: 0.7 },
+  { loc: '/articles/the-ordinary-best-value-uk.html', changefreq: 'monthly', priority: 0.7 },
+  { loc: '/articles/clarins-best-price-uk.html', changefreq: 'monthly', priority: 0.7 },
+  { loc: '/articles/cosrx-best-price-uk.html', changefreq: 'monthly', priority: 0.7 },
+  { loc: '/articles/elemis-best-price-uk.html', changefreq: 'monthly', priority: 0.7 },
+  { loc: '/articles/k-beauty-uk-best-prices.html', changefreq: 'monthly', priority: 0.7 },
+  { loc: '/articles/lookfantastic-vs-boots.html', changefreq: 'monthly', priority: 0.6 },
+  { loc: '/articles/overpaying-for-skincare.html', changefreq: 'monthly', priority: 0.6 },
+  { loc: '/articles/skincare-routine-under-40.html', changefreq: 'monthly', priority: 0.6 },
 ];
 
 const CATEGORIES = ['skincare', 'makeup', 'hair'];
