@@ -27,6 +27,47 @@
   }
 }
 
+/* ── TWO-COLUMN LAYOUT ─────────────────────────────────────────────── */
+/* Default (and mobile) is a single stack in source order: routine list,
+ * then the primary action, savings, results and email capture. The grid
+ * only splits into two columns at the desktop breakpoint, so there are no
+ * order overrides to keep the mobile flow honest. */
+
+.rb-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 880px) {
+  /* Widen the container so two columns have room without cramping the
+     basket breakdown on the right. */
+  .rb-page {
+    max-width: 1080px;
+  }
+
+  .rb-layout {
+    grid-template-columns: minmax(300px, 360px) 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+
+  /* Routine list stays in view while the right column scrolls. Top offset
+     clears the fixed site nav, matching the product page's sticky column.
+     align-self: start so the column does not stretch to the row height. */
+  .rb-col-left {
+    position: sticky;
+    top: 96px;
+    align-self: start;
+  }
+}
+
+/* The routine section already carries its own bottom margin; inside the
+   grid the gap handles spacing, so drop it to avoid a double gap. */
+.rb-col-left .rb-routine-section {
+  margin-bottom: 0;
+}
+
 /* ── HEADER ────────────────────────────────────────────────────────── */
 
 .rb-header {

@@ -621,7 +621,11 @@ export default function RoutineBuilder() {
             </div>
           </div>
         ) : (
-          <>
+          <div className="rb-layout">
+            {/* LEFT column: the routine itself. Sticky on desktop so it stays
+                in view while the actions and results scroll on the right.
+                Collapses into the single mobile stack below the breakpoint. */}
+            <div className="rb-col-left">
             <div className="rb-routine-section">
               <div className="rb-routine-header">
                 <span className="rb-routine-label">Your routine</span>
@@ -690,7 +694,12 @@ export default function RoutineBuilder() {
                 <Link href="/hair">hair</Link>
               </div>
             </div>
+            </div>
 
+            {/* RIGHT column: primary action, then savings, results and the
+                email capture, in source order. On mobile this stacks straight
+                after the routine list. */}
+            <div className="rb-col-right">
             <button
               className={`rb-optimise-btn ${isOptimising ? 'loading' : ''}`}
               disabled={routine.length === 0 || isOptimising}
@@ -709,6 +718,61 @@ export default function RoutineBuilder() {
                   vs paying full price at a single retailer. Checkout prices may be lower with active
                   sales or member discounts.
                 </div>
+              </div>
+            )}
+
+            {/* Save routine card — surfaced here, directly under the savings
+                figure and above the basket options, so the email capture is
+                visible at the most engaged moment rather than buried at the
+                foot of a long results list. Email only, one action, shared
+                store/logic unchanged. */}
+            {showSaveCard && (
+              <div className="rb-save-card">
+                <div className="rb-save-title">Save your routine ✨</div>
+                <p className="rb-save-desc">
+                  Get the best prices for your routine emailed to you each month. Free,
+                  and you can unsubscribe anytime.
+                </p>
+                <div className="rb-save-form">
+                  <input
+                    type="email"
+                    className="rb-save-input"
+                    placeholder="your@email.com"
+                    value={saveEmail}
+                    disabled={emailDisabled}
+                    onChange={e => setSaveEmail(e.target.value)}
+                  />
+                  <button
+                    className="rb-save-btn"
+                    onClick={saveRoutine}
+                    disabled={
+                      saveStatus === 'saving' ||
+                      saveStatus === 'success-new' ||
+                      saveStatus === 'success-update'
+                    }
+                  >
+                    {saveStatus === 'saving'
+                      ? 'Saving...'
+                      : saveStatus === 'success-new' || saveStatus === 'success-update'
+                      ? 'Saved ✓'
+                      : 'Save routine'}
+                  </button>
+                </div>
+                {(saveStatus === 'success-new' || saveStatus === 'success-update') && (
+                  <p className="rb-save-success">
+                    {saveStatus === 'success-update'
+                      ? "✓ Routine updated. We'll email you with this month's best prices."
+                      : "✓ Saved. We'll email you with this month's best prices."}
+                  </p>
+                )}
+                {saveStatus === 'error' && (
+                  <p className="rb-save-error">
+                    {saveError || 'Something went wrong. Please try again.'}
+                  </p>
+                )}
+                <p className="rb-save-fineprint">
+                  No account needed. Unsubscribe link in every email.
+                </p>
               </div>
             )}
 
@@ -821,60 +885,10 @@ export default function RoutineBuilder() {
               </div>
             )}
 
-            {/* Save routine card */}
-            {showSaveCard && (
-              <div className="rb-save-card">
-                <div className="rb-save-title">Save your routine ✨</div>
-                <p className="rb-save-desc">
-                  Get the best prices for your routine emailed to you each month. Free,
-                  and you can unsubscribe anytime.
-                </p>
-                <div className="rb-save-form">
-                  <input
-                    type="email"
-                    className="rb-save-input"
-                    placeholder="your@email.com"
-                    value={saveEmail}
-                    disabled={emailDisabled}
-                    onChange={e => setSaveEmail(e.target.value)}
-                  />
-                  <button
-                    className="rb-save-btn"
-                    onClick={saveRoutine}
-                    disabled={
-                      saveStatus === 'saving' ||
-                      saveStatus === 'success-new' ||
-                      saveStatus === 'success-update'
-                    }
-                  >
-                    {saveStatus === 'saving'
-                      ? 'Saving...'
-                      : saveStatus === 'success-new' || saveStatus === 'success-update'
-                      ? 'Saved ✓'
-                      : 'Save routine'}
-                  </button>
-                </div>
-                {(saveStatus === 'success-new' || saveStatus === 'success-update') && (
-                  <p className="rb-save-success">
-                    {saveStatus === 'success-update'
-                      ? "✓ Routine updated. We'll email you with this month's best prices."
-                      : "✓ Saved. We'll email you with this month's best prices."}
-                  </p>
-                )}
-                {saveStatus === 'error' && (
-                  <p className="rb-save-error">
-                    {saveError || 'Something went wrong. Please try again.'}
-                  </p>
-                )}
-                <p className="rb-save-fineprint">
-                  No account needed. Unsubscribe link in every email.
-                </p>
-              </div>
-            )}
-
             {/* Per-item "Also check Amazon / eBay" links now live inline with
                 each routine item above (more discoverable, honest cross-check). */}
-          </>
+            </div>
+          </div>
         )}
       </div>
 
