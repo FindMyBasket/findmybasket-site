@@ -47,14 +47,18 @@ export async function generateMetadata({
     (searchParams.category ? CATEGORY_LABEL[searchParams.category] ?? searchParams.category : undefined);
   if (filterLabel) {
     return {
-      title: `${brand.display_name} ${filterLabel} best prices UK | FindMyBasket`,
-      description: `Compare ${brand.display_name} ${filterLabel.toLowerCase()} prices across UK retailers.`,
+      title: `${brand.display_name} ${filterLabel} prices across UK retailers | FindMyBasket`,
+      description: `Compare ${brand.display_name} ${filterLabel.toLowerCase()} prices across multiple UK retailers, delivery included, to find the best value.`,
       alternates: { canonical },
     };
   }
+  // Title matches "{brand} prices" search intent and stays under ~60 chars for
+  // most brand names. Description is durable and range-based: no point-in-time
+  // prices, no named retailers (a brand may not stock at any given shop), and
+  // "multiple UK retailers" per the copy standing rules.
   return {
-    title: `${brand.display_name} best prices UK | FindMyBasket`,
-    description: `Compare ${brand.display_name} prices across UK retailers including Boots, Superdrug, Escentual, Cult Beauty and more. Find the best deal.`,
+    title: `${brand.display_name} prices across UK retailers | FindMyBasket`,
+    description: `Compare ${brand.display_name} prices across multiple UK retailers, delivery included, to find the best value. Honest price comparison on FindMyBasket.`,
     alternates: { canonical },
   };
 }
