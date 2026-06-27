@@ -254,7 +254,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
               price and "Add to basket" stay in view while the comparison and
               description scroll on the right. Static normal flow on mobile. */}
           <div className="md:sticky md:top-24 md:self-start">
-          <div className="bg-warm-white border border-border rounded-2xl h-64 md:h-[34vh] flex items-center justify-center overflow-hidden mb-6">
+          <div className="bg-warm-white border border-border rounded-2xl h-56 md:h-[22vh] flex items-center justify-center overflow-hidden mb-6">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={product.image_url || '/placeholder-product.svg'}
@@ -416,6 +416,33 @@ export default async function ProductPage({ params }: { params: { id: string } }
             ))}
           </div>
         </section>
+      )}
+
+      {/* Mobile only: a persistent buy bar pinned to the bottom of the viewport
+          so the core action stays on screen while the visitor scrolls the
+          comparison. Reuses SaveToRoutineButton, so it mirrors the same add
+          action and "Added to basket" state as the in-column button via the
+          shared routine store. Desktop keeps the sticky left column instead. */}
+      {inStockOffers.length > 0 && (
+        <>
+          {/* Spacer so the fixed bar never hides the last of the page content. */}
+          <div className="h-24 md:hidden" aria-hidden="true" />
+          <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-warm-white/95 backdrop-blur border-t border-border px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+            <div className="max-w-site mx-auto flex items-center gap-4">
+              {lowestPrice !== null && (
+                <div className="shrink-0 leading-none">
+                  <p className="text-[10px] uppercase tracking-widest text-ink-light mb-1">
+                    Best price
+                  </p>
+                  <p className="font-serif text-xl text-ink">£{lowestPrice.toFixed(2)}</p>
+                </div>
+              )}
+              <div className="flex-1">
+                <SaveToRoutineButton product={routineItem} compact />
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </SiteLayout>
   );
