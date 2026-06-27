@@ -296,8 +296,13 @@ export default async function ProductPage({ params }: { params: { id: string } }
               </div>
             )}
 
+            {/* Desktop uses this in-column button, which is above the fold in
+                the sticky column. Mobile uses the pinned bottom bar instead, so
+                this one is hidden below md to avoid a duplicate beside the bar. */}
             {inStockOffers.length > 0 && (
-              <SaveToRoutineButton product={routineItem} />
+              <div className="hidden md:block">
+                <SaveToRoutineButton product={routineItem} />
+              </div>
             )}
 
             {isSpecialistOnly && (
