@@ -254,7 +254,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
               price and "Add to basket" stay in view while the comparison and
               description scroll on the right. Static normal flow on mobile. */}
           <div className="md:sticky md:top-24 md:self-start">
-          <div className="bg-warm-white border border-border rounded-2xl h-56 md:h-[22vh] flex items-center justify-center overflow-hidden mb-6">
+          <div className="bg-warm-white border border-border rounded-2xl h-56 md:h-[20vh] flex items-center justify-center overflow-hidden mb-6">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={product.image_url || '/placeholder-product.svg'}
@@ -277,6 +277,29 @@ export default async function ProductPage({ params }: { params: { id: string } }
             <h1 className="font-serif text-2xl md:text-3xl text-ink mb-4 leading-tight">
               {product.name}
             </h1>
+            {/* Price and the primary action sit directly under the title so they
+                clear the fold on a laptop without scrolling. Secondary metadata
+                (specialist note, product chips) follows below the button. */}
+            {lowestPrice !== null && (
+              <div className="bg-cream border border-border rounded-2xl p-6 mb-4">
+                <p className="text-xs uppercase tracking-widest text-ink-light mb-1.5">
+                  Best price across {inStockOffers.length} retailer{inStockOffers.length === 1 ? '' : 's'}
+                </p>
+                <p className="font-serif text-4xl text-ink mb-1">
+                  £{lowestPrice.toFixed(2)}
+                </p>
+                {savingPct >= 5 && highestPrice && (
+                  <p className="text-sm text-sage">
+                    Save {savingPct}% vs highest price (£{highestPrice.toFixed(2)})
+                  </p>
+                )}
+              </div>
+            )}
+
+            {inStockOffers.length > 0 && (
+              <SaveToRoutineButton product={routineItem} />
+            )}
+
             {isSpecialistOnly && (
               <div className="inline-flex items-center gap-2 bg-cream border border-border rounded-full px-4 py-1.5 mb-4 text-xs text-ink-light">
                 <span>✦ Specialist import · longer delivery times may apply</span>
@@ -301,26 +324,6 @@ export default async function ProductPage({ params }: { params: { id: string } }
                   </span>
                 )}
               </div>
-            )}
-
-            {lowestPrice !== null && (
-              <div className="bg-cream border border-border rounded-2xl p-6 mb-4">
-                <p className="text-xs uppercase tracking-widest text-ink-light mb-1.5">
-                  Best price across {inStockOffers.length} retailer{inStockOffers.length === 1 ? '' : 's'}
-                </p>
-                <p className="font-serif text-4xl text-ink mb-1">
-                  £{lowestPrice.toFixed(2)}
-                </p>
-                {savingPct >= 5 && highestPrice && (
-                  <p className="text-sm text-sage">
-                    Save {savingPct}% vs highest price (£{highestPrice.toFixed(2)})
-                  </p>
-                )}
-              </div>
-            )}
-
-            {inStockOffers.length > 0 && (
-              <SaveToRoutineButton product={routineItem} />
             )}
 
             {inStockOffers.length === 0 && offers.length > 0 && (
