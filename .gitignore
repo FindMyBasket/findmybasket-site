@@ -41,6 +41,7 @@ debenhams-feed-*.json
 ilapothecary_hub_real.html
 
 scripts/.recategorise-preview.gen.json
+scripts/.fragrance-personalcare-preview.gen.json
 scripts/.excluded-buckets.gen.csv
 scripts/.excluded-buckets.gen.md
 scripts/.excluded-annotated.gen.md
