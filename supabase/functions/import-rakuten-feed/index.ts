@@ -69,7 +69,7 @@
 //   }
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { inferCategorisation } from "../_shared/categorisation.ts";
+import { inferCategorisationForImport } from "../_shared/categorisation.ts";
 import { normaliseDescription } from "../_shared/description.ts";
 // ============================================================================
 // Helpers
@@ -722,7 +722,7 @@ serve(async (req)=>{
       return;
     }
     // V6 INFERENCE
-    const cat = inferCategorisation(name, brand);
+    const cat = inferCategorisationForImport(name, brand);
     if (cat.excluded) {
       countV6Excluded++;
       v6ExclusionBreakdown[cat.excluded] = (v6ExclusionBreakdown[cat.excluded] || 0) + 1;

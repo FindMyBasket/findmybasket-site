@@ -31,7 +31,7 @@ type Case = {
   expectType?: string;
   // When set, ALSO asserts the resolved subcategory (face/body/hand/foot/both).
   expectSub?: string;
-  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20;
+  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21;
   note?: string;
 };
 
@@ -488,6 +488,16 @@ const CASES: Case[] = [
   { name: "Lynx Indigo Haze 72Hr Premium Body Spray 150ml", brand: "Lynx", expect: null, excluded: "deodorant", fixedBy: 0, note: "standalone body spray stays (no kit framing)" },
   { name: "Wild Nutrition Beauty & Glow Food-Grown Skin Supplement", brand: "Wild Nutrition", expect: null, excluded: "supplement", fixedBy: 0, note: "ingestible supplement stays — capsuleIsTopical only widened for the plural 'concentrates'" },
   { name: "CeraVe Skincare Gift Set for Normal / Dry skin", brand: "CeraVe", expect: null, excluded: "bath_set", fixedBy: 0, note: "gift set untouched by Commit 20 (user keeps bath_set)" },
+
+  // ── Commit 21: 'zero fragrance' added to the fragrance-free guard ──────────
+  // The bare 'fragrance' token in the denylist was excluding sensitive-skin
+  // products labelled "Zero Fragrance". Added to RE_FRAGRANCE_FREE so they stay
+  // skincare, matching the existing fragrance-free / without / non handling.
+  { name: "Olay Regenerist Zero Fragrance Day Cream 50ml", brand: "Olay", expect: "skincare", expectType: "Moisturiser", fixedBy: 21, note: "'zero fragrance' must stay skincare" },
+  { name: "CeraVe Zero Fragrance Moisturising Lotion 236ml", brand: "CeraVe", expect: "skincare", fixedBy: 21 },
+  // Guards: the other fragrance-free phrasings still hold; a real EDP still excluded.
+  { name: "Olay Total Effects 7-in-1 Fragrance Free Moisturiser 50ml", brand: "Olay", expect: "skincare", expectType: "Moisturiser", fixedBy: 0 },
+  { name: "Chanel No.5 Eau de Parfum 100ml", brand: "Chanel", expect: null, excluded: "fragrance", fixedBy: 0, note: "real EDP unaffected by the new guard token" },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────

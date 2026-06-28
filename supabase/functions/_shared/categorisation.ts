@@ -23,6 +23,23 @@ export type Categorisation = {
   excluded?: string;
 };
 
+// ─── Shared fragrance signal regexes (single source of truth) ───────────────
+// Reused by inferCategorisation()'s denylist guards AND by the Stage-2
+// classifyFragranceOrPersonalCare() detector at the bottom of this file, so the
+// "what counts as a hard fragrance form" and "what counts as fragrance-free"
+// definitions can never drift apart.
+//
+// A HARD fragrance form (eau de parfum/toilette/cologne, EDT, EDP, parfum
+// spray/refill/Nml) is unambiguously a fragrance product, even inside a gift set
+// that also lists a shower gel / aftershave balm.
+const RE_HARD_FRAGRANCE_FORM =
+  /\b(eau de (parfum|toilette|cologne)|edt|edp|parfum (spray|refill|refillable)|parfum \d+\s*(ml|oz))\b/;
+// A "fragrance free / fragrance-free / without fragrance / non fragrance / zero
+// fragrance" claim marks a sensitive-skin skincare (or fragrance-free body)
+// product, NOT a fragrance. 'zero fragrance' added in Commit 21.
+const RE_FRAGRANCE_FREE =
+  /\b(fragrance[\s-]?free|without fragrance|non[\s-]?fragrance|zero fragrance)\b/;
+
 export function inferCategorisation(name: string, brand: string = ""): Categorisation {
   // Insert a space between a letter and an adjacent digit so size/qualifier
   // tokens fused onto a keyword still tokenise, e.g. "Shampoo250ml" →
@@ -156,9 +173,7 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
   // when the name also bundles a shower gel / aftershave balm (gift sets like
   // "...Eau de Toilette Spray 125ml After Shave Balm 100ml Shower Gel 100ml").
   // Don't let the body-care descriptor bypass rescue those — keep excluding.
-  const hasHardFragranceForm = (
-    /\b(eau de (parfum|toilette|cologne)|edt|edp|parfum (spray|refill|refillable)|parfum \d+\s*(ml|oz))\b/.test(t)
-  );
+  const hasHardFragranceForm = RE_HARD_FRAGRANCE_FORM.test(t);
   // Commit 20: also covers (a) HAIR scent forms feeds write with "fragrance"/
   // "parfum" in the title (hair mist, hair & body mist — L'Atelier Parfum,
   // Kérastase Le Parfum Hair Mist; body soap — Shiseido Ma Cherie) and (b)
@@ -179,7 +194,7 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
   // Commit 20: feeds also write "Without Fragrance" / "Non Fragrance" (Olay
   // Regenerist serums & eye creams) — same sensitive-skin descriptor, not a
   // fragrance product.
-  const fragranceFree = /\b(fragrance[\s-]?free|without fragrance|non[\s-]?fragrance)\b/.test(t) && !hasHardFragranceForm;
+  const fragranceFree = RE_FRAGRANCE_FREE.test(t) && !hasHardFragranceForm;
   // Pre-check: "body spray" matches the deodorant denylist, but sunscreen, oil
   // and skincare-active body sprays (SPF, "Salicylic Acid Clarifying Body Spray",
   // "Thermal Spring Water Face & Body Spray", "Sebium … Body Spray") are skincare.
@@ -740,5 +755,225 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     product_type: skincare_product_type,
     subcategory: skin_subcategory,
     tags: skin_tags,
+  };
+}
+
+// ============================================================================
+// STAGE 2 — EXTENDED detection: FRAGRANCE and PERSONAL CARE.
+//
+// IMPORTANT: this is DETECTION ONLY. It is NOT called by inferCategorisation()
+// and changes NO live classification — inferCategorisation() still returns only
+// skincare / makeup / hair (plus the denylist), and the importers are untouched.
+// This pure function is the building block for the future personal-care /
+// fragrance enablement phase, when the new top_category values and the importer
+// routing are switched on in a separate, reviewed step.
+//
+// It answers one question for a product that inferCategorisation would otherwise
+// route to SKINCARE (or that currently hits the fragrance / deodorant denylist):
+// is it really a FRAGRANCE, a PERSONAL CARE product, or neither (leave as-is)?
+//
+// PRECEDENCE (first match wins, so a product can never be double-claimed; a
+// product that matches nothing returns null and stays where it was):
+//   1. Fragrance-free guard. A "fragrance free / without fragrance / non
+//      fragrance / zero fragrance" claim DISABLES the fragrance branch (the
+//      product is sensitive-skin skincare, or a fragrance-free body product). It
+//      does NOT block personal care — a fragrance-free body wash is still
+//      personal care.
+//   2. FRAGRANCE beats personal care when a perfume signal is present:
+//        a. a hard fragrance form (eau de parfum/toilette/cologne, EDT, EDP,
+//           parfum spray/refill/Nml) — even in a gift set listing a shower gel;
+//        b. a PERFUMED bath/body/hand product (the word "perfumed", or a
+//           fragrance-house brand making a body/bath/hand product) — Jo Malone
+//           bath salts, Diptyque hand cream resolve to fragrance, NOT personal
+//           care;
+//        c. a bare fragrance NOUN (perfume / cologne / parfum / extrait) used as
+//           the product type, i.e. not merely a scent descriptor on a functional
+//           wash or hair product.
+//   3. PERSONAL CARE: functional body/bath/hand/deodorant forms with no perfume
+//      signal — plain body wash, shower gel, body lotion/cream/butter, hand
+//      wash/cream, body scrub/oil, bath salts/oil, shower oil, deodorant /
+//      antiperspirant.
+//   4. Otherwise null — out of scope, leave the product as skincare/makeup/hair.
+// ============================================================================
+
+export type ExtendedTopCategory = "fragrance" | "personal_care";
+
+export type ExtendedClassification = {
+  top_category: ExtendedTopCategory;
+  product_type: string;
+  subcategory: string;
+  tags: string[];
+  rule: string; // which precedence rule fired (audit aid for the preview)
+};
+
+// Fragrance houses whose bath/body/hand lines are fragrance-led, so a body form
+// from them resolves to FRAGRANCE (the perfumed-body precedence). Kept tight to
+// avoid pulling functional body care from mixed skincare/body brands. Tunable in
+// the enablement phase.
+const RE_FRAGRANCE_HOUSE =
+  /\b(jo malone|diptyque|byredo|le labo|creed|penhaligon'?s|maison francis kurkdjian|frederic malle|acqua di parma|amouage|xerjoff|maison margiela)\b/;
+
+// Personal-care functional forms (module-level so the detector and any future
+// caller share one definition).
+const RE_PC_DEODORANT = /\b(deodorant|antiperspirant|anti-?perspirant)\b/;
+const RE_PC_HAND = /\bhand (wash|cream|lotion|soap|balm|butter|scrub)\b/;
+const RE_PC_BATH_SHOWER =
+  /\b(body wash|shower gel|shower cream|shower foam|shower oil|bath foam|bubble bath|bath salts?|bath oil|bath soak|bath milk|bath bomb)\b/;
+const RE_PC_BODY_MOIST =
+  /\b(body (lotion|cream|butter|milk|moisturiser|moisturizer)|hand (and|&) body (lotion|cream))\b/;
+const RE_PC_BODY_SCRUB = /\bbody (scrub|polish|exfoliant)\b/;
+const RE_PC_BODY_OIL = /\bbody oil\b/;
+// NB: "cleansing bar" deliberately omitted — "facial cleansing bar" is a face
+// cleanser (skincare), not a body soap. Only true soap-bar / body-soap forms.
+const RE_PC_SOAP = /\b(bar soap|soap bar|hand soap|body soap)\b/;
+
+function frag(t: string, rule: string): ExtendedClassification {
+  let product_type: string;
+  if (/\beau de parfum\b|\bedp\b/.test(t)) product_type = "Eau de Parfum";
+  else if (/\beau de toilette\b|\bedt\b/.test(t)) product_type = "Eau de Toilette";
+  else if (/\beau de cologne\b|\bcologne\b/.test(t)) product_type = "Cologne";
+  else if (/\bextrait\b|\bparfum\b/.test(t)) product_type = "Parfum";
+  else if (rule === "perfumed_body") product_type = "Body Fragrance";
+  else product_type = "Fragrance";
+  const subcategory = rule === "perfumed_body" ? "body" : "scent";
+  return { top_category: "fragrance", product_type, subcategory, tags: ["fragrance", subcategory], rule };
+}
+
+function pc(product_type: string, subcategory: string, rule: string): ExtendedClassification {
+  return { top_category: "personal_care", product_type, subcategory, tags: ["personal_care", subcategory], rule };
+}
+
+export function classifyFragranceOrPersonalCare(
+  name: string,
+  brand: string = "",
+): ExtendedClassification | null {
+  // Same normalisation as inferCategorisation (letter↔digit split + lowercase).
+  const t = String(name || "").toLowerCase().replace(/([a-z])(\d)/g, "$1 $2");
+  const b = String(brand || "").toLowerCase();
+
+  // ── Personal-care functional-form flags ──────────────────────────────────
+  const hasPersonalCareForm =
+    RE_PC_DEODORANT.test(t) || RE_PC_HAND.test(t) || RE_PC_BATH_SHOWER.test(t) ||
+    RE_PC_BODY_MOIST.test(t) || RE_PC_BODY_SCRUB.test(t) || RE_PC_BODY_OIL.test(t) ||
+    RE_PC_SOAP.test(t);
+  // Body/bath/hand form (deodorant excluded — a deodorant is never "perfumed body").
+  const hasBodyOrBathForm =
+    RE_PC_HAND.test(t) || RE_PC_BATH_SHOWER.test(t) || RE_PC_BODY_MOIST.test(t) ||
+    RE_PC_BODY_SCRUB.test(t) || RE_PC_BODY_OIL.test(t) || RE_PC_SOAP.test(t);
+
+  // ── Fragrance signal flags ───────────────────────────────────────────────
+  const hardForm = RE_HARD_FRAGRANCE_FORM.test(t);
+  // 1. Fragrance-free guard — disables the fragrance branch only.
+  const fragFree = RE_FRAGRANCE_FREE.test(t) && !hardForm;
+  // Bare fragrance NOUN as the product type. "fragrance" is deliberately excluded
+  // (it is overwhelmingly a scent descriptor on functional products, e.g.
+  // "... Fragrance Shower Gel"); only perfume / cologne / parfum / extrait read as
+  // the product itself.
+  const fragranceNoun = /\b(perfume|cologne|eau de cologne|parfum|extrait de parfum|extrait)\b/.test(t);
+  // A hair / 2-in-1 scent form means the fragrance word is a descriptor, not the
+  // product — defer (hair mist, hair & body mist, dry shampoo, …).
+  const isHairOrTwoInOneScent =
+    /\b(shampoo|conditioner|hair (mask|oil|serum|spray|mist)|hair (and|&) body|dry shampoo)\b/.test(t);
+  const perfumed = /\bperfumed\b/.test(t);
+  const fragranceHouseBody = (RE_FRAGRANCE_HOUSE.test(b) || RE_FRAGRANCE_HOUSE.test(t)) && hasBodyOrBathForm;
+
+  // ── 2. FRAGRANCE branch (only when not fragrance-free) ───────────────────
+  if (!fragFree) {
+    // 2a. Hard fragrance form — wins even over body-care in a gift set.
+    if (hardForm) return frag(t, "hard_form");
+    // 2b. Perfumed bath/body/hand product, or a fragrance-house body product.
+    if ((perfumed && hasBodyOrBathForm) || fragranceHouseBody) return frag(t, "perfumed_body");
+    // 2c. Bare fragrance noun as the product type — but if it ALSO carries a
+    //     functional personal-care form with no perfumed/house signal, the
+    //     fragrance word is a descriptor: fall through to personal care.
+    if (fragranceNoun && !isHairOrTwoInOneScent && !hasPersonalCareForm) {
+      return frag(t, "fragrance_noun");
+    }
+  }
+
+  // ── 3. PERSONAL CARE branch ──────────────────────────────────────────────
+  // Face / skincare-active guard: a product carrying a clear FACE-cleanser or
+  // SPF signal belongs in skincare even if it also names a body form (face & body
+  // 2-in-1 cleansers, "Face & Body Lotion SPF50"). Defer those — do not claim
+  // them as personal care.
+  const faceOrActiveSignal =
+    /\bfacial\b/.test(t) ||
+    /\bface (wash|cleanser|cream|gel|scrub)\b/.test(t) ||
+    /\b(spf|sunscreen|sun cream|sun protector)\b/.test(t);
+  if (hasPersonalCareForm && !faceOrActiveSignal) {
+    if (RE_PC_DEODORANT.test(t)) return pc("Deodorant", "body", "deodorant");
+    if (RE_PC_HAND.test(t)) return pc("Hand Care", "hand", "hand_care");
+    if (RE_PC_BODY_SCRUB.test(t)) return pc("Body Scrub", "body", "body_scrub");
+    if (RE_PC_BATH_SHOWER.test(t) || RE_PC_SOAP.test(t)) return pc("Bath & Shower", "body", "bath_shower");
+    if (RE_PC_BODY_OIL.test(t)) return pc("Body Oil", "body", "body_oil");
+    if (RE_PC_BODY_MOIST.test(t)) return pc("Body Moisturiser", "body", "body_moisturiser");
+  }
+
+  // ── 4. Out of scope — leave as skincare/makeup/hair. ─────────────────────
+  return null;
+}
+
+// ============================================================================
+// STAGE 3 — gated import classification.
+//
+// inferCategorisationForImport() is the function the importers call. Until the
+// fragrance / personal-care categories are enabled it returns inferCategorisation()
+// UNCHANGED, so NEW imports behave exactly as they do today (fragrance / deodorant
+// still excluded, personal-care body products still skincare/body). It is the ONE
+// switch point for the enablement phase.
+//
+// EXTENDED_CATEGORIES_ENABLED is a code-level flag, OFF by default — flipping it
+// is a separate reviewed step that goes together with widening the live
+// top_category set (nav / filters), and, for deodorants, the
+// retailer_import_config change. No config or DB change happens here.
+//
+// When enabled, the extended detector takes precedence over the fragrance &
+// deodorant DENYLIST exclusions and over the skincare catchall — but NEVER over
+// makeup / hair, and NEVER over a fragrance-free skincare product (the detector
+// returns null for those, so they stay skincare).
+// ============================================================================
+
+export const EXTENDED_CATEGORIES_ENABLED = false;
+
+// Import-only category set. Deliberately a SEPARATE type from the canonical
+// TopCategory so the live categoriser's enum is left untouched (no new enum
+// values added to inferCategorisation's contract).
+export type ImportTopCategory = TopCategory | ExtendedTopCategory;
+
+export type ImportCategorisation = {
+  top_category: ImportTopCategory | null;
+  product_type: string;
+  subcategory: string;
+  tags: string[];
+  excluded?: string;
+};
+
+export function inferCategorisationForImport(
+  name: string,
+  brand: string = "",
+  enabled: boolean = EXTENDED_CATEGORIES_ENABLED,
+): ImportCategorisation {
+  const base = inferCategorisation(name, brand);
+  if (!enabled) return base;
+
+  // Eligible to be reclassified: products the denylist drops as fragrance or
+  // deodorant, and products that land in the skincare catchall. Makeup, hair and
+  // every other exclusion are left exactly as inferCategorisation decided.
+  const eligible =
+    base.excluded === "fragrance" ||
+    base.excluded === "deodorant" ||
+    base.top_category === "skincare";
+  if (!eligible) return base;
+
+  const ext = classifyFragranceOrPersonalCare(name, brand);
+  if (!ext) return base; // not fragrance / personal care (e.g. fragrance-free skincare)
+
+  // Emit the extended classification, dropping any `excluded` flag so the
+  // importer creates the row instead of skipping it.
+  return {
+    top_category: ext.top_category,
+    product_type: ext.product_type,
+    subcategory: ext.subcategory,
+    tags: ext.tags,
   };
 }

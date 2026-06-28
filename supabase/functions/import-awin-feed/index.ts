@@ -243,7 +243,7 @@ import pako from "https://esm.sh/pako@2.1.0";
 // so feed size is no longer bounded by the edge runtime memory ceiling. The
 // legacy load-whole-feed path remains the default until a retailer is promoted.
 import { streamFeedRowBatches, FeedFetchError } from "./_streaming-fetcher.ts";
-import { inferCategorisation, type TopCategory } from "../_shared/categorisation.ts";
+import { inferCategorisationForImport, type TopCategory, type ImportTopCategory } from "../_shared/categorisation.ts";
 import { pickDescription } from "../_shared/description.ts";
 import { reconstructBeautyFlashName, BEAUTY_FLASH_RETAILER_ID } from "./name-reconstruction.ts";
 
@@ -1553,7 +1553,7 @@ serve(async (req) => {
     brand: string;
     category: string;
     product_type: string;
-    top_category: TopCategory;
+    top_category: ImportTopCategory;
     subcategory: string;
     tags: string[];
     canonical_size: string | null;
@@ -2081,7 +2081,7 @@ serve(async (req) => {
     }
 
     // ─── v6: classify the new product before deciding to create ──────────
-    const cat = inferCategorisation(name, brand);
+    const cat = inferCategorisationForImport(name, brand);
 
     // Skip products on the v6 denylist (fragrance, period_care, etc.)
     if (cat.excluded) {
@@ -2110,7 +2110,7 @@ serve(async (req) => {
 
     // Apply per-retailer top_category override if config has one set.
     // Keeps inferred product_type and subcategory, just retags the top.
-    let finalTopCategory: TopCategory = cat.top_category;
+    let finalTopCategory: ImportTopCategory = cat.top_category;
     let finalTags: string[] = cat.tags;
     if (topCategoryDefault) {
       finalTopCategory = topCategoryDefault;
