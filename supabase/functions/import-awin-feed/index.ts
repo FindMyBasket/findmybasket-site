@@ -355,6 +355,25 @@ function normaliseForMatch(s: string): string {
     .trim()
     .replace(/\s+/g, " ");
 }
+// Flash-sale promo tags YesStyle/Stylevana prepend, e.g. "[Deal]", "[DEAL]Kose",
+// "[Sale]". Removed before normalisation so two retailers' rows for the same
+// product produce the same key. Only the explicit bracketed form is stripped, so
+// an unbracketed word ("new", "gift set") is left intact.
+const PROMO_TAG_RE = /\[\s*(?:deal|sale|new|hot|clearance|limited|gift|exclusive)\s*\]/gi;
+function stripPromoTags(raw: string): string {
+  return String(raw || "").replace(PROMO_TAG_RE, " ");
+}
+
+// Packaging/container nouns appended to a name ("Cream Tube 100g", "Jar 60ml",
+// "Bottle 30ml", "Cleanser Pump"). They describe the vessel, not the product, so a
+// retailer that omits them must still match. Deliberately NOT pack/set: in this
+// catalogue "Pack" is usually a product type (Sleeping Pack, Wash-Off Pack) and
+// "Set" a bundle (8pcs Set), so stripping them would cause false merges.
+const CONTAINER_NOUN_RE = /\b(?:tube|bottle|jar|pump)\b/g;
+function stripContainerNouns(normalised: string): string {
+  return normalised.replace(CONTAINER_NOUN_RE, " ").replace(/\s+/g, " ").trim();
+}
+
 // Build a match key from brand + name, deduplicating when name starts with brand.
 // Handles the case where some retailers put the brand in both the brand field
 // AND at the start of the name field (Stylevana and some others),
@@ -362,9 +381,13 @@ function normaliseForMatch(s: string): string {
 // matcher creates duplicate products because match keys differ:
 //   Retailer A: "mixsoon mixsoon bifida ferment essence 100ml"  (brand in name)
 //   Retailer B: "mixsoon bifida ferment essence 100ml"          (brand not in name)
+// The name is run through stripPromoTags + stripContainerNouns first so promo
+// prefixes and packaging nouns do not split otherwise-identical products. The
+// brand path stays on bare normaliseForMatch (kept aligned with the DB-generated
+// match_brand column used by the per-chunk lookup).
 function buildMatchKey(brand: string, name: string): string {
   const normBrand = normaliseForMatch(brand);
-  const normName = normaliseForMatch(name);
+  const normName = stripContainerNouns(normaliseForMatch(stripPromoTags(name)));
   if (normBrand && normName.startsWith(normBrand + " ")) {
     return normName;  // Brand already at start of name; don't prepend
   }
@@ -1558,6 +1581,7 @@ serve(async (req) => {
     tags: string[];
     canonical_size: string | null;
     shade: string | null;
+    match_key: string;
     price: number;
     url: string;
     in_stock: boolean;
@@ -1701,7 +1725,7 @@ serve(async (req) => {
         normalised_brand: c.brand ? String(c.brand).toLowerCase().trim() || null : null,
         category: c.category, product_type: c.product_type, top_category: c.top_category,
         subcategory: c.subcategory, tags: c.tags, canonical_size: c.canonical_size,
-        shade: c.shade, image_url: c.image_url || null,
+        shade: c.shade, match_key: c.match_key, image_url: c.image_url || null,
         description: c.description || null,
         description_source_retailer_id: c.description ? retailerId : null,
       }));
@@ -2166,6 +2190,7 @@ serve(async (req) => {
       tags: finalTags,
       canonical_size: canonicalSize,
       shade: shade,
+      match_key: productMatchKey,
       price,
       url: wrappedUrl,
       in_stock: inStock,

@@ -113,6 +113,19 @@ function normaliseForMatch(s: string): string {
     .trim()
     .replace(/\s+/g, " ");
 }
+// Flash-sale promo tags YesStyle/Stylevana prepend, e.g. "[Deal]", "[DEAL]Kose".
+// Stripped before normalisation; only the explicit bracketed form, so an
+// unbracketed word ("new", "gift set") is left intact.
+const PROMO_TAG_RE = /\[\s*(?:deal|sale|new|hot|clearance|limited|gift|exclusive)\s*\]/gi;
+function stripPromoTags(raw: string): string {
+  return String(raw || "").replace(PROMO_TAG_RE, " ");
+}
+// Packaging/container nouns ("Cream Tube 100g", "Jar 60ml"). NOT pack/set, which
+// in this catalogue denote a product type (Sleeping Pack) or a bundle (8pcs Set).
+const CONTAINER_NOUN_RE = /\b(?:tube|bottle|jar|pump)\b/g;
+function stripContainerNouns(normalised: string): string {
+  return normalised.replace(CONTAINER_NOUN_RE, " ").replace(/\s+/g, " ").trim();
+}
 // Build a match key from brand + name, deduplicating when name starts with brand.
 // Handles the case where some retailers put the brand in both the brand field
 // AND at the start of the name field (Stylevana and some others),
@@ -122,7 +135,7 @@ function normaliseForMatch(s: string): string {
 //   Retailer B: "mixsoon bifida ferment essence 100ml"          (brand not in name)
 function buildMatchKey(brand: string, name: string): string {
   const normBrand = normaliseForMatch(brand);
-  const normName = normaliseForMatch(name);
+  const normName = stripContainerNouns(normaliseForMatch(stripPromoTags(name)));
   if (normBrand && normName.startsWith(normBrand + " ")) {
     return normName;  // Brand already at start of name; don't prepend
   }
@@ -551,6 +564,7 @@ serve(async (req) => {
     top_category: string; product_type: string; subcategory: string; tags: string[];
     canonical_size: string | null;
     shade: string | null;
+    match_key: string;
     price: number; url: string; in_stock: boolean; ean: string; mpn: string;
     image_url: string;
   }> = [];
@@ -761,6 +775,7 @@ serve(async (req) => {
       tags: cat.tags,
       canonical_size: canonicalSize,
       shade: shade,
+      match_key: productMatchKey,
       price,
       url: wrappedUrl,
       in_stock: inStock,
@@ -1019,6 +1034,7 @@ serve(async (req) => {
       tags: c.tags,
       canonical_size: c.canonical_size,
       shade: c.shade,
+      match_key: c.match_key,
       image_url: c.image_url || null,
     }));
     const { data: insertedProducts, error: pErr } = await supa
