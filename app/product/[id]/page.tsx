@@ -9,7 +9,7 @@ import {
   getRelatedProducts,
 } from '../../../lib/product-queries';
 import { buildBreadcrumbJsonLd } from '../../../lib/breadcrumb';
-import { IMPORTER_RETAILER_IDS } from '../../../lib/queries';
+import { IMPORTER_RETAILER_IDS, categoryToSlug } from '../../../lib/queries';
 import { displayProductTitle } from '../../../lib/format/product-name';
 import { ProductDescription } from '../../../components/ProductDescription';
 import { ClickOutLink } from '../../../components/ClickOutLink';
@@ -22,6 +22,8 @@ const CATEGORY_DISPLAY: Record<string, string> = {
   skincare: 'Skincare',
   makeup: 'Makeup',
   hair: 'Hair',
+  fragrance: 'Fragrance',
+  personal_care: 'Personal Care',
 };
 
 const AMAZON_TAG = 'findmybasket-21';
@@ -180,13 +182,13 @@ export default async function ProductPage({ params }: { params: { id: string } }
   if (product.top_category) {
     breadcrumbItems.push({
       name: CATEGORY_DISPLAY[product.top_category] ?? product.top_category,
-      url: `/${product.top_category}`,
+      url: `/${categoryToSlug(product.top_category)}`,
     });
   }
   if (product.subcategory && product.top_category) {
     breadcrumbItems.push({
       name: displaySub(product.subcategory),
-      url: `/${product.top_category}/${product.subcategory}`,
+      url: `/${categoryToSlug(product.top_category)}/${product.subcategory}`,
     });
   }
   breadcrumbItems.push({
@@ -222,7 +224,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
         <nav className="text-sm text-ink-light mb-6 flex flex-wrap gap-1.5 items-center">
           {product.top_category && (
             <>
-              <Link href={`/${product.top_category}`} className="hover:text-ink transition-colors">
+              <Link href={`/${categoryToSlug(product.top_category)}`} className="hover:text-ink transition-colors">
                 {CATEGORY_DISPLAY[product.top_category] ?? product.top_category}
               </Link>
               <span>›</span>
@@ -231,7 +233,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
           {product.subcategory && product.top_category && (
             <>
               <Link
-                href={`/${product.top_category}/${product.subcategory}`}
+                href={`/${categoryToSlug(product.top_category)}/${product.subcategory}`}
                 className="hover:text-ink transition-colors capitalize"
               >
                 {product.subcategory}

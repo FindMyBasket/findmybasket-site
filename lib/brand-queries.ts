@@ -154,7 +154,7 @@ export async function getBrandProductTypes(
 
   if (!data) return [];
 
-  const JUNK_TYPES = new Set(['Skincare', 'Makeup', 'Hair']);
+  const JUNK_TYPES = new Set(['Skincare', 'Makeup', 'Hair', 'Fragrance']);
 
   const counts = new Map<string, number>();
   for (const row of data) {

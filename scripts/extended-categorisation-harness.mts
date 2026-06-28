@@ -153,8 +153,8 @@ const check = (label: string, cond: boolean) => {
   console.log(`   ${cond ? "PASS " : "FAIL✗"}  ${label}`);
 };
 
-// (a) flag is OFF in the committed code.
-check("EXTENDED_CATEGORIES_ENABLED is false (committed default)", EXTENDED_CATEGORIES_ENABLED === false);
+// (a) flag is ON: fragrance + personal-care categories are enabled (2026-06-28).
+check("EXTENDED_CATEGORIES_ENABLED is true (categories enabled)", EXTENDED_CATEGORIES_ENABLED === true);
 
 // (b) flag OFF → identical to inferCategorisation for representative inputs.
 const offSamples: Array<[string, string]> = [

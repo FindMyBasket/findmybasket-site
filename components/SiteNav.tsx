@@ -14,6 +14,8 @@ const NAV_LINKS: { href: string; label: string; static?: boolean }[] = [
   { href: '/skincare', label: 'Skincare' },
   { href: '/makeup', label: 'Makeup' },
   { href: '/hair', label: 'Hair' },
+  { href: '/fragrance', label: 'Fragrance' },
+  { href: '/personal-care', label: 'Personal Care' },
   { href: '/edit/k-beauty', label: 'K-Beauty' },
   { href: '/savings-hub.html', label: 'Savings Hub', static: true },
 ];

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '../../lib/supabase';
-import { brandSlug } from '../../lib/queries';
+import { brandSlug, categoryToSlug } from '../../lib/queries';
 import { listEdits } from '../../lib/edits';
 
 // Sitemap for non-product pages: static HTML, categories, subcategories,
@@ -41,7 +41,9 @@ const STATIC_PAGES: UrlEntry[] = [
   { loc: '/articles/skincare-routine-under-40.html', changefreq: 'monthly', priority: 0.6 },
 ];
 
-const CATEGORIES = ['skincare', 'makeup', 'hair'];
+// DB top_category values. Route slugs are derived via categoryToSlug (identity
+// except personal_care -> personal-care); queries filter on the raw value.
+const CATEGORIES = ['skincare', 'makeup', 'hair', 'fragrance', 'personal_care'];
 
 function escapeXml(s: string): string {
   return s
@@ -64,10 +66,10 @@ function urlToXml(entry: UrlEntry): string {
 export async function GET() {
   const entries: UrlEntry[] = [...STATIC_PAGES];
 
-  // Categories: /skincare, /makeup, /hair
+  // Categories: /skincare, /makeup, /hair, /fragrance, /personal-care
   for (const cat of CATEGORIES) {
     entries.push({
-      loc: `/${cat}`,
+      loc: `/${categoryToSlug(cat)}`,
       changefreq: 'daily',
       priority: 0.95,
     });
@@ -87,7 +89,7 @@ export async function GET() {
         if (row.subcategory && !seen.has(row.subcategory)) {
           seen.add(row.subcategory);
           entries.push({
-            loc: `/${cat}/${row.subcategory}`,
+            loc: `/${categoryToSlug(cat)}/${row.subcategory}`,
             changefreq: 'daily',
             priority: 0.85,
           });

@@ -13,6 +13,8 @@ const CATEGORY_LABEL: Record<string, string> = {
   skincare: 'Skincare',
   makeup: 'Makeup',
   hair: 'Hair',
+  fragrance: 'Fragrance',
+  personal_care: 'Personal Care',
 };
 
 export async function generateMetadata({

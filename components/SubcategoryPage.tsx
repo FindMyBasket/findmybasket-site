@@ -10,7 +10,7 @@ import {
   getValidSubcategories,
 } from '../lib/subcategory-queries';
 import { buildBreadcrumbJsonLd } from '../lib/breadcrumb';
-import type { TopCategory } from '../lib/queries';
+import { categoryToSlug, type TopCategory } from '../lib/queries';
 
 interface Props {
   category: TopCategory;
@@ -62,17 +62,20 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
 
   const totalPages = Math.ceil(productResult.totalCount / PAGE_SIZE);
   const subDisplay = displaySub(subcategory);
+  // URL slug for the category (identity except personal_care -> personal-care).
+  // Queries above use the raw `category` DB value; all links below use `slug`.
+  const slug = categoryToSlug(category);
 
   // BreadcrumbList structured data
   const breadcrumbItems = [
     { name: 'Home', url: '/' },
-    { name: categoryDisplay, url: `/${category}` },
-    { name: subDisplay, url: `/${category}/${subcategory}` },
+    { name: categoryDisplay, url: `/${slug}` },
+    { name: subDisplay, url: `/${slug}/${subcategory}` },
   ];
   if (productType) {
     breadcrumbItems.push({
       name: productType,
-      url: `/${category}/${subcategory}?type=${encodeURIComponent(productType)}`,
+      url: `/${slug}/${subcategory}?type=${encodeURIComponent(productType)}`,
     });
   }
   const breadcrumbJsonLd = buildBreadcrumbJsonLd(breadcrumbItems);
@@ -87,7 +90,7 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
 
       <section className="max-w-site mx-auto px-6 py-16 md:py-24 text-center">
         <p className="text-xs uppercase tracking-widest text-gold font-medium mb-4">
-          <Link href={`/${category}`} className="hover:text-ink transition-colors">
+          <Link href={`/${slug}`} className="hover:text-ink transition-colors">
             {categoryDisplay}
           </Link>
         </p>
@@ -139,7 +142,7 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
             <h2 className="font-serif text-3xl text-ink">Browse by type</h2>
             {productType && (
               <Link
-                href={buildUrl(category, subcategory)}
+                href={buildUrl(slug, subcategory)}
                 className="text-sm text-ink-light hover:text-ink transition-colors"
               >
                 ✕ Clear filter
@@ -152,7 +155,7 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
               return (
                 <Link
                   key={pt.product_type}
-                  href={buildUrl(category, subcategory, {
+                  href={buildUrl(slug, subcategory, {
                     type: isActive ? null : pt.product_type,
                   })}
                   className={`rounded-full px-5 py-2.5 text-sm transition-colors border ${
@@ -217,7 +220,7 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
               <div className="flex justify-center items-center gap-2 mt-12">
                 {page > 1 && (
                   <Link
-                    href={buildUrl(category, subcategory, { type: productType, page: page - 1 })}
+                    href={buildUrl(slug, subcategory, { type: productType, page: page - 1 })}
                     className="px-5 py-2.5 bg-warm-white border border-border rounded-full text-sm text-ink hover:border-gold transition-colors"
                   >
                     ← Previous
@@ -228,7 +231,7 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
                 </span>
                 {page < totalPages && (
                   <Link
-                    href={buildUrl(category, subcategory, { type: productType, page: page + 1 })}
+                    href={buildUrl(slug, subcategory, { type: productType, page: page + 1 })}
                     className="px-5 py-2.5 bg-warm-white border border-border rounded-full text-sm text-ink hover:border-gold transition-colors"
                   >
                     Next →

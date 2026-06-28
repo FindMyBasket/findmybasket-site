@@ -933,7 +933,10 @@ export function classifyFragranceOrPersonalCare(
 // returns null for those, so they stay skincare).
 // ============================================================================
 
-export const EXTENDED_CATEGORIES_ENABLED = false;
+// Enabled 2026-06-28: fragrance + personal-care categories are live (nav,
+// routes, filters added; existing rows migrated). New imports now route
+// fragrance / personal care; fragrance-free stays skincare.
+export const EXTENDED_CATEGORIES_ENABLED = true;
 
 // Import-only category set. Deliberately a SEPARATE type from the canonical
 // TopCategory so the live categoriser's enum is left untouched (no new enum

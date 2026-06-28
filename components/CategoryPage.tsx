@@ -6,6 +6,7 @@ import {
   getTopBrands,
   getFeaturedProducts,
   getSubcategories,
+  categoryToSlug,
   type TopCategory,
 } from '../lib/queries';
 
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export async function CategoryPage({ category, displayName, intro }: Props) {
+  const slug = categoryToSlug(category);
   const [stats, brands, products, subcategories] = await Promise.all([
     getCategoryStats(category),
     getTopBrands(category, 16),
@@ -30,14 +32,14 @@ export async function CategoryPage({ category, displayName, intro }: Props) {
         <div
           className="absolute inset-0 z-0 hidden md:block bg-cover bg-[center_bottom]"
           style={{
-            backgroundImage: `url('/images/category-hero/${category}-desktop.jpg')`,
+            backgroundImage: `url('/images/category-hero/${slug}-desktop.jpg')`,
           }}
         />
         {/* Hero photo — mobile (portrait) crop */}
         <div
           className="absolute inset-0 z-0 md:hidden bg-cover bg-[center_bottom]"
           style={{
-            backgroundImage: `url('/images/category-hero/${category}-mobile.jpg')`,
+            backgroundImage: `url('/images/category-hero/${slug}-mobile.jpg')`,
           }}
         />
         {/* Cream-fade overlay painted on top of the photo — matches homepage hero */}
@@ -90,7 +92,7 @@ export async function CategoryPage({ category, displayName, intro }: Props) {
             {subcategories.map(sub => (
               <Link
                 key={sub.name}
-                href={`/${category}/${sub.name}`}
+                href={`/${slug}/${sub.name}`}
                 className="group bg-warm-white border border-border rounded-2xl p-6 hover:border-gold transition-colors"
               >
                 <div className="font-serif text-2xl text-ink capitalize mb-1 group-hover:text-gold transition-colors">
