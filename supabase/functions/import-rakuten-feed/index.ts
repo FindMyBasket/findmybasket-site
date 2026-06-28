@@ -135,9 +135,22 @@ function normaliseForMatch(s) {
 // matcher creates duplicate products because match keys differ:
 //   Retailer A: "mixsoon mixsoon bifida ferment essence 100ml"  (brand in name)
 //   Retailer B: "mixsoon bifida ferment essence 100ml"          (brand not in name)
+// Flash-sale promo tags YesStyle/Stylevana prepend, e.g. "[Deal]", "[DEAL]Kose".
+// Stripped before normalisation; only the explicit bracketed form, so an
+// unbracketed word ("new", "gift set") is left intact.
+const PROMO_TAG_RE = /\[\s*(?:deal|sale|new|hot|clearance|limited|gift|exclusive)\s*\]/gi;
+function stripPromoTags(raw) {
+  return String(raw || "").replace(PROMO_TAG_RE, " ");
+}
+// Packaging/container nouns ("Cream Tube 100g", "Jar 60ml"). NOT pack/set, which
+// in this catalogue denote a product type (Sleeping Pack) or a bundle (8pcs Set).
+const CONTAINER_NOUN_RE = /\b(?:tube|bottle|jar|pump)\b/g;
+function stripContainerNouns(normalised) {
+  return normalised.replace(CONTAINER_NOUN_RE, " ").replace(/\s+/g, " ").trim();
+}
 function buildMatchKey(brand, name) {
   const normBrand = normaliseForMatch(brand);
-  const normName = normaliseForMatch(name);
+  const normName = stripContainerNouns(normaliseForMatch(stripPromoTags(name)));
   if (normBrand && normName.startsWith(normBrand + " ")) {
     return normName; // Brand already at start of name; don't prepend
   }
@@ -760,6 +773,7 @@ serve(async (req)=>{
       tags: cat.tags,
       canonical_size: canonicalSize,
       shade: shade,
+      match_key: productMatchKey,
       price,
       url: wrappedUrl,
       in_stock: inStock,
@@ -1100,6 +1114,7 @@ serve(async (req)=>{
         tags: c.tags,
         canonical_size: c.canonical_size,
         shade: c.shade,
+        match_key: c.match_key,
         image_url: c.image_url || null,
         description: c.description || null,
         description_source_retailer_id: c.description ? retailerId : null
