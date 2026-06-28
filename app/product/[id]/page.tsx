@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { SiteLayout } from '../../../components/SiteLayout';
 import { ProductCard } from '../../../components/ProductCard';
 import { SaveToRoutineButton } from '../../../components/SaveToRoutineButton';
@@ -7,6 +7,7 @@ import {
   getProductById,
   getRetailerOffers,
   getRelatedProducts,
+  resolveMergedKeeper,
 } from '../../../lib/product-queries';
 import { buildBreadcrumbJsonLd } from '../../../lib/breadcrumb';
 import { IMPORTER_RETAILER_IDS } from '../../../lib/queries';
@@ -113,7 +114,17 @@ export default async function ProductPage({ params }: { params: { id: string } }
   if (Number.isNaN(id)) notFound();
 
   const product = await getProductById(id);
-  if (!product) notFound();
+  if (!product) {
+    // A soft-merged product is hidden from products_active. Send its indexed
+    // links and bookmarks to the surviving keeper (which now carries more
+    // retailers) with a permanent redirect so the SEO equity flows there.
+    // permanentRedirect emits a 308, which Google consolidates identically to
+    // a 301. parent_product_id shade-variant children resolve to null here and
+    // keep their 404 by design; they belong with the shade-variant project.
+    const keeper = await resolveMergedKeeper(id);
+    if (keeper !== null) permanentRedirect(`/product/${keeper}`);
+    notFound();
+  }
 
   const [offers, related] = await Promise.all([
     getRetailerOffers(id),

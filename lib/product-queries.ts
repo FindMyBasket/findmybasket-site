@@ -58,6 +58,35 @@ export async function getProductById(id: number): Promise<ProductDetail | null> 
   };
 }
 
+// Resolve a requested product id to its final live keeper when it was
+// soft-merged (merged_into set). products_active hides merged rows, so this
+// reads the base products table directly. Chain-safe: follows merged_into to
+// the final non-merged row, with a hop cap as a loop guard. Returns null when
+// the id is unknown, the row is not merged, or the keeper is not itself a live
+// page (e.g. a parent_product_id shade-variant child, which products_active
+// hides and /product/[id] 404s — redirecting there would just be a dead-end,
+// so we 404 directly instead and leave it to the shade-variant project).
+export async function resolveMergedKeeper(id: number): Promise<number | null> {
+  let current = id;
+  for (let hops = 0; hops < 8; hops++) {
+    const { data } = await supabase
+      .from('products')
+      .select('merged_into, parent_product_id')
+      .eq('id', current)
+      .maybeSingle();
+    if (!data) return null;                       // unknown id
+    if (data.merged_into === null) {
+      // Reached a non-merged row. Only redirect if we moved off the requested
+      // id AND the keeper is a live page (products_active also hides shade
+      // children); otherwise the row is hidden for another reason — 404.
+      if (current === id || data.parent_product_id !== null) return null;
+      return current;
+    }
+    current = data.merged_into;
+  }
+  return null;                                     // hop-cap safety: don't redirect into an unresolved chain
+}
+
 export async function getRetailerOffers(productId: number): Promise<RetailerOffer[]> {
   const { data: prices } = await supabase
     .from('retailer_prices')
