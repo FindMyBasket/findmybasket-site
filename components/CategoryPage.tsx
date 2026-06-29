@@ -89,7 +89,7 @@ export async function CategoryPage({ category, displayName, intro }: Props) {
         </div>
       </section>
 
-      {subcategories.length > 0 && (
+      {subcategories.length > 1 && (
         <section className="max-w-site mx-auto px-6 py-12">
           <h2 className="font-serif text-3xl text-ink mb-8">Browse by area</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
