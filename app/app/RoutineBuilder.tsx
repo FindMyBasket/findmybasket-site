@@ -233,17 +233,6 @@ export default function RoutineBuilder() {
 
     const allRetailerIds = [...new Set(prices.map(p => p.retailer_id))];
 
-    // Worst case: highest price per product + paid delivery for every order
-    const uniqueRetailerCount = allRetailerIds.length || 1;
-    const worstDelivery = uniqueRetailerCount * 3.95;
-    const worstCaseProducts = current.reduce((sum, product) => {
-      const productPrices = priceMap[product.id];
-      if (!productPrices) return sum;
-      const maxPrice = Math.max(...Object.values(productPrices).map(p => p.price));
-      return sum + maxPrice;
-    }, 0);
-    const worstCaseTotal = worstCaseProducts + worstDelivery;
-
     // Single-retailer options
     const singleOptions: BasketOption[] = [];
     for (const rid of allRetailerIds) {
@@ -282,6 +271,15 @@ export default function RoutineBuilder() {
         });
       }
     }
+
+    // Worst-case anchor: the whole basket bought at the single most expensive
+    // retailer that stocks every item, with that one retailer's delivery applied
+    // once (singleOptions already enforce full coverage + threshold logic). A real
+    // basket a shopper could assemble — no multi-retailer delivery stacking — so
+    // the headline saving reconciles if anyone checks it. Zero when no single shop
+    // stocks the whole basket, in which case no single-shop saving is shown.
+    const worstSingleShopTotal =
+      singleOptions.length > 0 ? Math.max(...singleOptions.map(o => o.total)) : 0;
 
     // Two-retailer combinations
     const twoOptions: BasketOption[] = [];
@@ -438,20 +436,20 @@ export default function RoutineBuilder() {
             partial: true,
           },
         ],
-        worstCaseTotal,
+        worstSingleShopTotal,
       );
       return;
     }
 
-    finishRender(allOptions, worstCaseTotal);
+    finishRender(allOptions, worstSingleShopTotal);
   }, []);
 
-  const finishRender = (options: BasketOption[], worstCaseTotal: number) => {
+  const finishRender = (options: BasketOption[], worstSingleShopTotal: number) => {
     let saving = 0;
     let suspect = false;
 
-    if (options.length >= 1 && worstCaseTotal > options[0].total) {
-      saving = worstCaseTotal - options[0].total;
+    if (options.length >= 1 && worstSingleShopTotal > options[0].total) {
+      saving = worstSingleShopTotal - options[0].total;
     }
 
     if (options[0]?.breakdown) {
@@ -715,8 +713,9 @@ export default function RoutineBuilder() {
                 <div className="rb-savings-label">YOU COULD SAVE</div>
                 <div className="rb-savings-amount">£{savings.toFixed(2)}</div>
                 <div className="rb-savings-desc">
-                  vs paying full price at a single retailer. Checkout prices may be lower with active
-                  sales or member discounts.
+                  this basket at its best-value split across retailers, versus buying the whole basket
+                  at the most expensive single shop. Checkout prices may be lower with active sales or
+                  member discounts.
                 </div>
               </div>
             )}

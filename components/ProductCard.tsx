@@ -25,7 +25,7 @@ export function ProductCard({ product }: Props) {
            e.currentTarget.onerror = null;
          }}
         />
-        {product.saving_pct >= 10 && (
+        {product.saving_pct !== null && product.saving_pct >= 10 && (
           <span className="absolute top-3 right-3 bg-gold text-white text-xs font-medium px-2 py-1 rounded-full">
             Save {product.saving_pct}%
           </span>
@@ -47,9 +47,9 @@ export function ProductCard({ product }: Props) {
                 <span className="text-base font-medium text-ink">
                   £{product.min_price.toFixed(2)}
                 </span>
-                {product.max_price !== null && product.max_price > product.min_price && (
+                {product.next_best_price !== null && product.next_best_price > product.min_price && (
                   <span className="text-xs text-ink-light line-through ml-2">
-                    £{product.max_price.toFixed(2)}
+                    £{product.next_best_price.toFixed(2)}
                   </span>
                 )}
               </>

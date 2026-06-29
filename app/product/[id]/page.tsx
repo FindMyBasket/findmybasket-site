@@ -137,13 +137,14 @@ export default async function ProductPage({ params }: { params: { id: string } }
   // Importer-only products (Stylevana/YesStyle, see IMPORTER_RETAILER_IDS) get a
   // "Specialist import" badge to set delivery/customs expectations.
   const isSpecialistOnly = inStockOffers.length > 0 && inStockOffers.every(o => IMPORTER_RETAILER_IDS.has(o.retailer_id));
+  // Offers are sorted in-stock-first then ascending by effective_price, so [0] is
+  // the best price and [1] is the next-best. Anchor the saving to the next-best
+  // price (not the most expensive) so one outlier high price cannot inflate it.
   const lowestPrice = inStockOffers.length > 0 ? inStockOffers[0].effective_price : null;
-  const highestPrice = inStockOffers.length > 0
-    ? Math.max(...inStockOffers.map(o => o.effective_price))
+  const nextBestPrice = inStockOffers.length > 1 ? inStockOffers[1].effective_price : null;
+  const savingPct = lowestPrice && nextBestPrice && nextBestPrice > lowestPrice
+    ? Math.round(((nextBestPrice - lowestPrice) / nextBestPrice) * 100)
     : null;
-  const savingPct = lowestPrice && highestPrice && highestPrice > lowestPrice
-    ? Math.round(((highestPrice - lowestPrice) / highestPrice) * 100)
-    : 0;
 
   // Product JSON-LD. An AggregateOffer (price range + count) so Google can render
   // the "£X to £Y" shopping snippet, followed by one Offer per in-stock retailer
@@ -300,9 +301,9 @@ export default async function ProductPage({ params }: { params: { id: string } }
                 <p className="font-serif text-4xl text-ink mb-1">
                   £{lowestPrice.toFixed(2)}
                 </p>
-                {savingPct >= 5 && highestPrice && (
+                {savingPct !== null && savingPct >= 5 && (
                   <p className="text-sm text-sage">
-                    Save {savingPct}% vs highest price (£{highestPrice.toFixed(2)})
+                    Save {savingPct}% vs the next-best retailer
                   </p>
                 )}
               </div>
