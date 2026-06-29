@@ -160,9 +160,9 @@ const check = (label: string, cond: boolean) => {
   console.log(`   ${cond ? "PASS " : "FAIL✗"}  ${label}`);
 };
 
-// (a) flag is ON: the extended detector runs at import (2026-06-29). Fragrance is
-// the only LIVE extended category for now — bath_body is gated until Bath &
-// Body (Task 4), proven by the gated cases in (c).
+// (a) flag is ON: the extended detector runs at import. Both fragrance and
+// bath_body are now LIVE (Bath & Body launch, Phase B), proven by the routing
+// cases in (c).
 check("EXTENDED_CATEGORIES_ENABLED is true (extended detector live)", EXTENDED_CATEGORIES_ENABLED === true);
 
 // (b) flag OFF → identical to inferCategorisation for representative inputs.
@@ -185,14 +185,14 @@ for (const [n, b] of offSamples) {
 const onCases: Array<{ name: string; brand?: string; top: string | null; note: string }> = [
   { name: "Chanel No.5 Eau de Parfum 100ml", brand: "Chanel", top: "fragrance", note: "fragrance (was excluded)" },
   { name: "Hugo Boss Bottled EDT 125ml After Shave Balm Shower Gel Gift Set", brand: "Hugo Boss", top: "fragrance", note: "fragrance gift set (was excluded)" },
-  // bath_body is GATED (until Bath & Body / Task 4): the detector still
-  // matches these, but inferCategorisationForImport suppresses them, so they fall
-  // back to their base classification — body/hand forms stay skincare, deodorant
-  // stays excluded. These flip to bath_body once it joins the live set.
-  { name: "Imperial Leather Shower Gel Body Wash 200ml", brand: "Imperial Leather", top: "skincare", note: "bath_body gated -> stays skincare" },
-  { name: "Soap & Glory Hand Cream 125ml", brand: "Soap & Glory", top: "skincare", note: "bath_body gated -> hand stays skincare" },
-  { name: "Sol de Janeiro Rio Deo Deodorant 57g", brand: "Sol de Janeiro", top: null, note: "bath_body gated -> deodorant stays excluded" },
-  { name: "Bulldog Original Shave Gel 175ml", brand: "Bulldog", top: null, note: "bath_body gated -> shave prep stays excluded" },
+  // bath_body is now LIVE (Bath & Body launch, Phase B): the detector matches
+  // these and inferCategorisationForImport emits them — body/hand forms that used
+  // to default to skincare and deodorant/shave-prep that used to be excluded now
+  // route into bath_body.
+  { name: "Imperial Leather Shower Gel Body Wash 200ml", brand: "Imperial Leather", top: "bath_body", note: "bath_body live -> body wash routes in" },
+  { name: "Soap & Glory Hand Cream 125ml", brand: "Soap & Glory", top: "bath_body", note: "bath_body live -> hand care routes in" },
+  { name: "Sol de Janeiro Rio Deo Deodorant 57g", brand: "Sol de Janeiro", top: "bath_body", note: "bath_body live -> deodorant routes in (was excluded)" },
+  { name: "Bulldog Original Shave Gel 175ml", brand: "Bulldog", top: "bath_body", note: "bath_body live -> shave prep routes in (was excluded)" },
   { name: "Bondi Sands Fragrance Free Sunscreen SPF50+ Face 75ml", brand: "Bondi Sands", top: "skincare", note: "fragrance-free stays skincare" },
   { name: "CeraVe Foaming Facial Cleanser 236ml", brand: "CeraVe", top: "skincare", note: "face cleanser stays skincare" },
   { name: "Maybelline Lash Sensational Mascara", brand: "Maybelline", top: "makeup", note: "makeup untouched" },

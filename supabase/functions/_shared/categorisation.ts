@@ -942,13 +942,11 @@ export function classifyFragranceOrPersonalCare(
 export const EXTENDED_CATEGORIES_ENABLED = true;
 
 // Of the extended categories the detector can return, which are actually LIVE at
-// import. Fragrance goes live first (Task 1); bath_body stays gated until the
-// Bath & Body launch (Task 4) so the two large expansions never run at the same
-// time. A bath_body match while it is gated falls back to the base
-// classification (skincare, or the original fragrance/deodorant/shaving exclusion),
-// so no bath_body rows are created until "bath_body" is added to this set.
+// import. Fragrance went live first (Task 1); bath_body joins it at the Bath &
+// Body launch (Task 4, Phase B). Both are now open: imports route fragrance and
+// bath & body products instead of excluding/skincare-defaulting them.
 export const ENABLED_EXTENDED_CATEGORIES: ReadonlySet<ExtendedTopCategory> =
-  new Set<ExtendedTopCategory>(["fragrance"]);
+  new Set<ExtendedTopCategory>(["fragrance", "bath_body"]);
 
 // Import-only category set. Deliberately a SEPARATE type from the canonical
 // TopCategory so the live categoriser's enum is left untouched (no new enum
