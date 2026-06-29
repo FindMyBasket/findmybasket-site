@@ -933,7 +933,16 @@ export function classifyFragranceOrPersonalCare(
 // returns null for those, so they stay skincare).
 // ============================================================================
 
-export const EXTENDED_CATEGORIES_ENABLED = false;
+export const EXTENDED_CATEGORIES_ENABLED = true;
+
+// Of the extended categories the detector can return, which are actually LIVE at
+// import. Fragrance goes live first (Task 1); personal_care stays gated until the
+// Bath & Body launch (Task 4) so the two large expansions never run at the same
+// time. A personal_care match while it is gated falls back to the base
+// classification (skincare, or the original fragrance/deodorant exclusion), so no
+// personal-care rows are created until "personal_care" is added to this set.
+export const ENABLED_EXTENDED_CATEGORIES: ReadonlySet<ExtendedTopCategory> =
+  new Set<ExtendedTopCategory>(["fragrance"]);
 
 // Import-only category set. Deliberately a SEPARATE type from the canonical
 // TopCategory so the live categoriser's enum is left untouched (no new enum
@@ -967,6 +976,12 @@ export function inferCategorisationForImport(
 
   const ext = classifyFragranceOrPersonalCare(name, brand);
   if (!ext) return base; // not fragrance / personal care (e.g. fragrance-free skincare)
+
+  // Only emit extended categories that are currently LIVE. While personal_care is
+  // gated (until the Bath & Body launch), a personal_care match falls back to the
+  // base classification — a deodorant stays excluded, a body wash stays skincare —
+  // so flipping fragrance on never quietly starts creating personal-care rows.
+  if (!ENABLED_EXTENDED_CATEGORIES.has(ext.top_category)) return base;
 
   // Emit the extended classification, dropping any `excluded` flag so the
   // importer creates the row instead of skipping it.

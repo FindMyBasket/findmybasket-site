@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-export type TopCategory = 'skincare' | 'makeup' | 'hair';
+export type TopCategory = 'skincare' | 'makeup' | 'hair' | 'fragrance';
 
 export interface CategoryStats {
   total_products: number;

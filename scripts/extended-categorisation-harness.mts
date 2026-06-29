@@ -153,8 +153,10 @@ const check = (label: string, cond: boolean) => {
   console.log(`   ${cond ? "PASS " : "FAIL✗"}  ${label}`);
 };
 
-// (a) flag is OFF in the committed code.
-check("EXTENDED_CATEGORIES_ENABLED is false (committed default)", EXTENDED_CATEGORIES_ENABLED === false);
+// (a) flag is ON: the extended detector runs at import (2026-06-29). Fragrance is
+// the only LIVE extended category for now — personal_care is gated until Bath &
+// Body (Task 4), proven by the gated cases in (c).
+check("EXTENDED_CATEGORIES_ENABLED is true (extended detector live)", EXTENDED_CATEGORIES_ENABLED === true);
 
 // (b) flag OFF → identical to inferCategorisation for representative inputs.
 const offSamples: Array<[string, string]> = [
@@ -176,9 +178,13 @@ for (const [n, b] of offSamples) {
 const onCases: Array<{ name: string; brand?: string; top: string | null; note: string }> = [
   { name: "Chanel No.5 Eau de Parfum 100ml", brand: "Chanel", top: "fragrance", note: "fragrance (was excluded)" },
   { name: "Hugo Boss Bottled EDT 125ml After Shave Balm Shower Gel Gift Set", brand: "Hugo Boss", top: "fragrance", note: "fragrance gift set (was excluded)" },
-  { name: "Imperial Leather Shower Gel Body Wash 200ml", brand: "Imperial Leather", top: "personal_care", note: "personal care (was skincare)" },
-  { name: "Soap & Glory Hand Cream 125ml", brand: "Soap & Glory", top: "personal_care", note: "personal care hand" },
-  { name: "Sol de Janeiro Rio Deo Deodorant 57g", brand: "Sol de Janeiro", top: "personal_care", note: "deodorant routes personal care (was excluded)" },
+  // personal_care is GATED (until Bath & Body / Task 4): the detector still
+  // matches these, but inferCategorisationForImport suppresses them, so they fall
+  // back to their base classification — body/hand forms stay skincare, deodorant
+  // stays excluded. These flip to personal_care once it joins the live set.
+  { name: "Imperial Leather Shower Gel Body Wash 200ml", brand: "Imperial Leather", top: "skincare", note: "personal_care gated -> stays skincare" },
+  { name: "Soap & Glory Hand Cream 125ml", brand: "Soap & Glory", top: "skincare", note: "personal_care gated -> hand stays skincare" },
+  { name: "Sol de Janeiro Rio Deo Deodorant 57g", brand: "Sol de Janeiro", top: null, note: "personal_care gated -> deodorant stays excluded" },
   { name: "Bondi Sands Fragrance Free Sunscreen SPF50+ Face 75ml", brand: "Bondi Sands", top: "skincare", note: "fragrance-free stays skincare" },
   { name: "CeraVe Foaming Facial Cleanser 236ml", brand: "CeraVe", top: "skincare", note: "face cleanser stays skincare" },
   { name: "Maybelline Lash Sensational Mascara", brand: "Maybelline", top: "makeup", note: "makeup untouched" },
