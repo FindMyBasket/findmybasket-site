@@ -27,8 +27,40 @@ export interface FeaturedProduct {
   // Null when no in-stock retailer remains after the importer rule — render as
   // "Out of stock" rather than £Infinity (Math.min([]) === Infinity guard).
   min_price: number | null;
-  max_price: number | null;
-  saving_pct: number;
+  // The next-best (second-lowest) in-stock price — a real reference price shown
+  // struck through on the card, consistent with saving_pct. Null when there is
+  // no second price. (Replaces the former max_price, which struck through the
+  // most-expensive price and overstated the saving.)
+  next_best_price: number | null;
+  // Null when there is no genuine comparison to show (fewer than two in-stock
+  // prices). Anchored to the next-best price, not the most expensive — see
+  // nextBestSavingPct.
+  saving_pct: number | null;
+}
+
+/**
+ * Saving anchored to the NEXT-BEST price, not the most expensive in-stock price.
+ * saving = (second-lowest - lowest) / second-lowest, over the supplied in-stock
+ * prices, so a single outlier high price can no longer set the percentage.
+ * Returns null when fewer than two prices exist (no genuine comparison to show)
+ * or when the two best prices are equal.
+ */
+export function nextBestSavingPct(prices: number[]): number | null {
+  if (prices.length < 2) return null;
+  const sorted = [...prices].sort((a, b) => a - b);
+  const lowest = sorted[0];
+  const nextBest = sorted[1];
+  if (!(nextBest > lowest)) return null;
+  return Math.round(((nextBest - lowest) / nextBest) * 100);
+}
+
+/**
+ * The next-best (second-lowest) price — the real reference price shown struck
+ * through on a product card. Null when fewer than two prices exist.
+ */
+export function nextBestPrice(prices: number[]): number | null {
+  if (prices.length < 2) return null;
+  return [...prices].sort((a, b) => a - b)[1];
 }
 
 export function brandSlug(brand: string): string {
@@ -209,8 +241,7 @@ export async function getFeaturedProducts(
     if (retailerCount < 2 || priceList.length === 0) continue;
 
     const minPrice = Math.min(...priceList);
-    const maxPrice = Math.max(...priceList);
-    const savingPct = maxPrice > 0 ? Math.round(((maxPrice - minPrice) / maxPrice) * 100) : 0;
+    const savingPct = nextBestSavingPct(priceList);
 
     featured.push({
       id: product.id,
@@ -222,14 +253,14 @@ export async function getFeaturedProducts(
       image_url: product.image_url,
       retailer_count: retailerCount,
       min_price: minPrice,
-      max_price: maxPrice,
+      next_best_price: nextBestPrice(priceList),
       saving_pct: savingPct,
     });
   }
 
   featured.sort((a, b) => {
     if (b.retailer_count !== a.retailer_count) return b.retailer_count - a.retailer_count;
-    return b.saving_pct - a.saving_pct;
+    return (b.saving_pct ?? 0) - (a.saving_pct ?? 0);
   });
 
   return featured.slice(0, limit);

@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { applyImporterRule, brandSlug, type FeaturedProduct, type TopBrand, type TopCategory } from './queries';
+import { applyImporterRule, brandSlug, nextBestSavingPct, nextBestPrice, type FeaturedProduct, type TopBrand, type TopCategory } from './queries';
 
 export interface SubcategoryStats {
   total_products: number;
@@ -228,8 +228,7 @@ export async function getSubcategoryProducts(
     if (retailerCount === 0 || priceList.length === 0) continue;
 
     const minPrice = Math.min(...priceList);
-    const maxPrice = Math.max(...priceList);
-    const savingPct = maxPrice > 0 ? Math.round(((maxPrice - minPrice) / maxPrice) * 100) : 0;
+    const savingPct = nextBestSavingPct(priceList);
 
     featured.push({
       id: product.id,
@@ -241,14 +240,14 @@ export async function getSubcategoryProducts(
       image_url: product.image_url,
       retailer_count: retailerCount,
       min_price: minPrice,
-      max_price: maxPrice,
+      next_best_price: nextBestPrice(priceList),
       saving_pct: savingPct,
     });
   }
 
   featured.sort((a, b) => {
     if (b.retailer_count !== a.retailer_count) return b.retailer_count - a.retailer_count;
-    return b.saving_pct - a.saving_pct;
+    return (b.saving_pct ?? 0) - (a.saving_pct ?? 0);
   });
 
   return {

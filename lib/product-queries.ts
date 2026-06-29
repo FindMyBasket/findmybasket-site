@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { applyImporterRule, brandSlug, IMPORTER_RETAILER_IDS, type FeaturedProduct } from './queries';
+import { applyImporterRule, brandSlug, nextBestSavingPct, nextBestPrice, IMPORTER_RETAILER_IDS, type FeaturedProduct } from './queries';
 
 export interface ProductDetail {
   id: number;
@@ -218,8 +218,7 @@ async function fetchRelated(
     const { retailerCount, prices: priceList } = applyImporterRule(priceRows);
     if (retailerCount === 0 || priceList.length === 0) continue;
     const minPrice = Math.min(...priceList);
-    const maxPrice = Math.max(...priceList);
-    const savingPct = maxPrice > 0 ? Math.round(((maxPrice - minPrice) / maxPrice) * 100) : 0;
+    const savingPct = nextBestSavingPct(priceList);
     results.push({
       id: row.id,
       name: row.name,
@@ -230,7 +229,7 @@ async function fetchRelated(
       image_url: row.image_url,
       retailer_count: retailerCount,
       min_price: minPrice,
-      max_price: maxPrice,
+      next_best_price: nextBestPrice(priceList),
       saving_pct: savingPct,
     });
   }

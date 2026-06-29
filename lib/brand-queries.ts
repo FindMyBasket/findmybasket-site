@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { applyImporterRule, brandSlug, type FeaturedProduct, type TopCategory } from './queries';
+import { applyImporterRule, brandSlug, nextBestSavingPct, nextBestPrice, type FeaturedProduct, type TopCategory } from './queries';
 
 export interface BrandLookup {
   normalised_brand: string;
@@ -234,22 +234,22 @@ export async function getBrandProducts(
     const inStock = applyImporterRule(rows.filter(r => r.in_stock));
 
     let minPrice: number | null;
-    let maxPrice: number | null;
-    let savingPct: number;
+    let nextBestPriceVal: number | null;
+    let savingPct: number | null;
     let retailerCount: number;
 
     if (inStock.prices.length > 0) {
       minPrice = Math.min(...inStock.prices);
-      maxPrice = Math.max(...inStock.prices);
-      savingPct = maxPrice > 0 ? Math.round(((maxPrice - minPrice) / maxPrice) * 100) : 0;
+      nextBestPriceVal = nextBestPrice(inStock.prices);
+      savingPct = nextBestSavingPct(inStock.prices);
       retailerCount = inStock.retailerCount;
     } else {
       // Fully out of stock: null price → ProductCard renders "Out of stock".
       // Count the retailers that carry it (importer rule over all rows) so the
       // card still reads "N retailer(s)".
       minPrice = null;
-      maxPrice = null;
-      savingPct = 0;
+      nextBestPriceVal = null;
+      savingPct = null;
       retailerCount = applyImporterRule(rows).retailerCount;
     }
 
@@ -263,7 +263,7 @@ export async function getBrandProducts(
       image_url: product.image_url,
       retailer_count: retailerCount,
       min_price: minPrice,
-      max_price: maxPrice,
+      next_best_price: nextBestPriceVal,
       saving_pct: savingPct,
     });
   }
@@ -274,7 +274,7 @@ export async function getBrandProducts(
     const bIn = b.min_price !== null;
     if (aIn !== bIn) return aIn ? -1 : 1;
     if (b.retailer_count !== a.retailer_count) return b.retailer_count - a.retailer_count;
-    return b.saving_pct - a.saving_pct;
+    return (b.saving_pct ?? 0) - (a.saving_pct ?? 0);
   });
 
   return {
