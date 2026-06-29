@@ -21,7 +21,7 @@ import {
   EXTENDED_CATEGORIES_ENABLED,
 } from "../supabase/functions/_shared/categorisation.ts";
 
-type Expect = "fragrance" | "personal_care" | null;
+type Expect = "fragrance" | "bath_body" | null;
 type Case = {
   name: string;
   brand?: string;
@@ -55,29 +55,36 @@ const CASES: Case[] = [
   { name: "Acme Perfumed Body Lotion 200ml", brand: "Acme", expect: "fragrance", expectType: "Body Fragrance", expectSub: "body", note: "'perfumed' + body form → fragrance" },
 
   // ── PERSONAL CARE: functional forms (no perfume signal) ───────────────────
-  { name: "Imperial Leather Blackcurrant & Passionfruit Shower Gel Body Wash 200ml", brand: "Imperial Leather", expect: "personal_care", expectType: "Bath & Shower", expectSub: "body" },
-  { name: "Palmolive Thermal Spa Silky Oil Shower Gel Body Wash 400ml", brand: "Palmolive", expect: "personal_care", expectType: "Bath & Shower", expectSub: "body" },
-  { name: "Aveeno Skin Relief Body Lotion 300ml", brand: "Aveeno", expect: "personal_care", expectType: "Body Moisturiser", expectSub: "body" },
-  { name: "Clarins Eau des Jardins Uplifting Body Lotion 200ml", brand: "Clarins", expect: "personal_care", expectType: "Body Moisturiser", expectSub: "body", note: "non-house body lotion → personal care" },
-  { name: "Soap & Glory Call Of Fruity Hand Cream 125ml", brand: "Soap & Glory", expect: "personal_care", expectType: "Hand Care", expectSub: "hand" },
-  { name: "Scottish Fine Soaps Coriander & Lime Leaf Hand Wash 300ml", brand: "Scottish Fine Soaps", expect: "personal_care", expectType: "Hand Care", expectSub: "hand" },
-  { name: "Organic Shop Gingerbread Body Scrub Ginger & Orange 250ml", brand: "Organic Shop", expect: "personal_care", expectType: "Body Scrub", expectSub: "body" },
-  { name: "Tisserand Total De-Stress Massage & Body Oil 100ml", brand: "Tisserand", expect: "personal_care", expectType: "Body Oil", expectSub: "body" },
-  { name: "Givenchy L'Interdit The Shower Oil 200ml", brand: "Givenchy", expect: "personal_care", expectType: "Bath & Shower", expectSub: "body", note: "shower oil, no house/perfumed signal → personal care" },
-  { name: "Westlab Mindful Magnesium Bath Salts 1kg", brand: "Westlab", expect: "personal_care", expectType: "Bath & Shower", expectSub: "body" },
+  { name: "Imperial Leather Blackcurrant & Passionfruit Shower Gel Body Wash 200ml", brand: "Imperial Leather", expect: "bath_body", expectType: "Bath & Shower", expectSub: "body" },
+  { name: "Palmolive Thermal Spa Silky Oil Shower Gel Body Wash 400ml", brand: "Palmolive", expect: "bath_body", expectType: "Bath & Shower", expectSub: "body" },
+  { name: "Aveeno Skin Relief Body Lotion 300ml", brand: "Aveeno", expect: "bath_body", expectType: "Body Moisturiser", expectSub: "body" },
+  { name: "Clarins Eau des Jardins Uplifting Body Lotion 200ml", brand: "Clarins", expect: "bath_body", expectType: "Body Moisturiser", expectSub: "body", note: "non-house body lotion → personal care" },
+  { name: "Soap & Glory Call Of Fruity Hand Cream 125ml", brand: "Soap & Glory", expect: "bath_body", expectType: "Hand Care", expectSub: "hand" },
+  { name: "Scottish Fine Soaps Coriander & Lime Leaf Hand Wash 300ml", brand: "Scottish Fine Soaps", expect: "bath_body", expectType: "Hand Care", expectSub: "hand" },
+  { name: "Organic Shop Gingerbread Body Scrub Ginger & Orange 250ml", brand: "Organic Shop", expect: "bath_body", expectType: "Body Scrub", expectSub: "body" },
+  { name: "Tisserand Total De-Stress Massage & Body Oil 100ml", brand: "Tisserand", expect: "bath_body", expectType: "Body Oil", expectSub: "body" },
+  { name: "Givenchy L'Interdit The Shower Oil 200ml", brand: "Givenchy", expect: "bath_body", expectType: "Bath & Shower", expectSub: "body", note: "shower oil, no house/perfumed signal → personal care" },
+  { name: "Westlab Mindful Magnesium Bath Salts 1kg", brand: "Westlab", expect: "bath_body", expectType: "Bath & Shower", expectSub: "body" },
   // deodorant routes to personal care (it is currently EXCLUDED at import; this
   // proves it WOULD route correctly once the category + config exist).
-  { name: "Sol de Janeiro Rio Deo Cheirosa '40 Aluminum-Free Deodorant 57g", brand: "Sol de Janeiro", expect: "personal_care", expectType: "Deodorant", expectSub: "body" },
-  { name: "Rituals Homme 24h Anti-Perspirant Spray", brand: "Rituals", expect: "personal_care", expectType: "Deodorant", expectSub: "body" },
-  { name: "Dove Original Antiperspirant Roll-On 50ml", brand: "Dove", expect: "personal_care", expectType: "Deodorant", expectSub: "body" },
+  { name: "Sol de Janeiro Rio Deo Cheirosa '40 Aluminum-Free Deodorant 57g", brand: "Sol de Janeiro", expect: "bath_body", expectType: "Deodorant", expectSub: "body" },
+  { name: "Rituals Homme 24h Anti-Perspirant Spray", brand: "Rituals", expect: "bath_body", expectType: "Deodorant", expectSub: "body" },
+  { name: "Dove Original Antiperspirant Roll-On 50ml", brand: "Dove", expect: "bath_body", expectType: "Deodorant", expectSub: "body" },
+
+  // shave PREP consumables (foam/gel/cream/...) route to bath & body; razors,
+  // blades and epilators (hardware) do not — the detector returns null and they
+  // keep their existing "shaving" exclusion.
+  { name: "Bulldog Original Shave Gel 175ml", brand: "Bulldog", expect: "bath_body", expectType: "Shaving", expectSub: "body" },
+  { name: "King C. Gillette Shaving Cream 100ml", brand: "Gillette", expect: "bath_body", expectType: "Shaving", expectSub: "body" },
+  { name: "Gillette Fusion5 Razor Blades 8 Pack", brand: "Gillette", expect: null, note: "razor hardware → not bath & body (stays excluded)" },
 
   // ── BOUNDARY: perfumed-vs-functional, no double-claim ─────────────────────
   // A fragrance-house brand's FUNCTIONAL body wash still → fragrance (house rule);
   // a high-street body wash → personal care. Both resolve to exactly one bucket.
-  { name: "Floris White Rose Moisturising Bath & Shower Gel 250ml", brand: "Floris", expect: "personal_care", expectSub: "body", note: "Floris not on the tight house list → personal care (tunable)" },
+  { name: "Floris White Rose Moisturising Bath & Shower Gel 250ml", brand: "Floris", expect: "bath_body", expectSub: "body", note: "Floris not on the tight house list → personal care (tunable)" },
   // "Fragrance" as a scent descriptor on a functional wash → NOT fragrance.
-  { name: "Original Source Mint & Tea Tree Fragrance Shower Gel 250ml", brand: "Original Source", expect: "personal_care", expectType: "Bath & Shower", note: "'fragrance' is a descriptor here, not the product" },
-  { name: "Shiseido Ma Cherie Fragrance Body Soap 450ml", brand: "Shiseido", expect: "personal_care", expectType: "Bath & Shower", note: "body soap with 'fragrance' descriptor → personal care" },
+  { name: "Original Source Mint & Tea Tree Fragrance Shower Gel 250ml", brand: "Original Source", expect: "bath_body", expectType: "Bath & Shower", note: "'fragrance' is a descriptor here, not the product" },
+  { name: "Shiseido Ma Cherie Fragrance Body Soap 450ml", brand: "Shiseido", expect: "bath_body", expectType: "Bath & Shower", note: "body soap with 'fragrance' descriptor → personal care" },
 
   // ── FRAGRANCE-FREE GUARD: must NEVER be fragrance ─────────────────────────
   // Plain sensitive-skin skincare → null (stays skincare).
@@ -88,8 +95,8 @@ const CASES: Case[] = [
   { name: "Generic Zero Fragrance Day Cream 50ml", brand: "Generic", expect: null, note: "'zero fragrance' guarded" },
   // Fragrance-free BODY product → personal care (guard blocks fragrance, NOT
   // personal care).
-  { name: "LUNA DAILY The Fragrance-Free Everywhere Body Wash 400ml", brand: "LUNA DAILY", expect: "personal_care", expectType: "Bath & Shower", note: "fragrance-free body wash → personal care, never fragrance" },
-  { name: "skybottle Blue Agave Fragrance-Free Hand Cream 50ml", brand: "skybottle", expect: "personal_care", expectType: "Hand Care", expectSub: "hand" },
+  { name: "LUNA DAILY The Fragrance-Free Everywhere Body Wash 400ml", brand: "LUNA DAILY", expect: "bath_body", expectType: "Bath & Shower", note: "fragrance-free body wash → personal care, never fragrance" },
+  { name: "skybottle Blue Agave Fragrance-Free Hand Cream 50ml", brand: "skybottle", expect: "bath_body", expectType: "Hand Care", expectSub: "hand" },
 
   // ── DEFER / NULL: hair & 2-in-1 scent forms, and genuine face skincare ────
   { name: "L'Atelier Parfum - Green Crush Hair And Body Mist 50ml", brand: "L'Atelier Parfum", expect: null, note: "hair & body mist: 'parfum' is a descriptor → leave to inferCategorisation" },
@@ -102,7 +109,7 @@ const CASES: Case[] = [
   { name: "Cetaphil Gentle Skin Cleanser Face Wash & Body Wash 236ml", brand: "Cetaphil", expect: null, note: "face+body 2-in-1 cleanser → skincare (face guard)" },
   { name: "Shiseido Expert Sun Protector Face & Body Lotion SPF50+ 150ml", brand: "Shiseido", expect: null, note: "SPF face & body lotion → skincare, not personal care" },
   // Guard must NOT over-reach: a plain body soap bar is still personal care.
-  { name: "Dove Original Body Soap Bar 100g", brand: "Dove", expect: "personal_care", expectType: "Bath & Shower", note: "body soap bar still personal care" },
+  { name: "Dove Original Body Soap Bar 100g", brand: "Dove", expect: "bath_body", expectType: "Bath & Shower", note: "body soap bar still personal care" },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
@@ -154,7 +161,7 @@ const check = (label: string, cond: boolean) => {
 };
 
 // (a) flag is ON: the extended detector runs at import (2026-06-29). Fragrance is
-// the only LIVE extended category for now — personal_care is gated until Bath &
+// the only LIVE extended category for now — bath_body is gated until Bath &
 // Body (Task 4), proven by the gated cases in (c).
 check("EXTENDED_CATEGORIES_ENABLED is true (extended detector live)", EXTENDED_CATEGORIES_ENABLED === true);
 
@@ -178,13 +185,14 @@ for (const [n, b] of offSamples) {
 const onCases: Array<{ name: string; brand?: string; top: string | null; note: string }> = [
   { name: "Chanel No.5 Eau de Parfum 100ml", brand: "Chanel", top: "fragrance", note: "fragrance (was excluded)" },
   { name: "Hugo Boss Bottled EDT 125ml After Shave Balm Shower Gel Gift Set", brand: "Hugo Boss", top: "fragrance", note: "fragrance gift set (was excluded)" },
-  // personal_care is GATED (until Bath & Body / Task 4): the detector still
+  // bath_body is GATED (until Bath & Body / Task 4): the detector still
   // matches these, but inferCategorisationForImport suppresses them, so they fall
   // back to their base classification — body/hand forms stay skincare, deodorant
-  // stays excluded. These flip to personal_care once it joins the live set.
-  { name: "Imperial Leather Shower Gel Body Wash 200ml", brand: "Imperial Leather", top: "skincare", note: "personal_care gated -> stays skincare" },
-  { name: "Soap & Glory Hand Cream 125ml", brand: "Soap & Glory", top: "skincare", note: "personal_care gated -> hand stays skincare" },
-  { name: "Sol de Janeiro Rio Deo Deodorant 57g", brand: "Sol de Janeiro", top: null, note: "personal_care gated -> deodorant stays excluded" },
+  // stays excluded. These flip to bath_body once it joins the live set.
+  { name: "Imperial Leather Shower Gel Body Wash 200ml", brand: "Imperial Leather", top: "skincare", note: "bath_body gated -> stays skincare" },
+  { name: "Soap & Glory Hand Cream 125ml", brand: "Soap & Glory", top: "skincare", note: "bath_body gated -> hand stays skincare" },
+  { name: "Sol de Janeiro Rio Deo Deodorant 57g", brand: "Sol de Janeiro", top: null, note: "bath_body gated -> deodorant stays excluded" },
+  { name: "Bulldog Original Shave Gel 175ml", brand: "Bulldog", top: null, note: "bath_body gated -> shave prep stays excluded" },
   { name: "Bondi Sands Fragrance Free Sunscreen SPF50+ Face 75ml", brand: "Bondi Sands", top: "skincare", note: "fragrance-free stays skincare" },
   { name: "CeraVe Foaming Facial Cleanser 236ml", brand: "CeraVe", top: "skincare", note: "face cleanser stays skincare" },
   { name: "Maybelline Lash Sensational Mascara", brand: "Maybelline", top: "makeup", note: "makeup untouched" },

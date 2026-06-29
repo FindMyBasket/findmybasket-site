@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '../../lib/supabase';
-import { brandSlug } from '../../lib/queries';
+import { brandSlug, categoryToSlug } from '../../lib/queries';
 import { listEdits } from '../../lib/edits';
 
 // Sitemap for non-product pages: static HTML, categories, subcategories,
@@ -41,6 +41,11 @@ const STATIC_PAGES: UrlEntry[] = [
   { loc: '/articles/skincare-routine-under-40.html', changefreq: 'monthly', priority: 0.6 },
 ];
 
+// DB top_category values. Route slugs are derived via categoryToSlug (identity
+// except bath_body -> bath-and-body); queries filter on the raw value.
+// NB: bath_body is deliberately omitted here until the Phase B go-live, so the
+// empty pre-backfill category is never exposed in the sitemap. It is added in the
+// same follow-up that wires the nav links.
 const CATEGORIES = ['skincare', 'makeup', 'hair', 'fragrance'];
 
 function escapeXml(s: string): string {
@@ -64,10 +69,10 @@ function urlToXml(entry: UrlEntry): string {
 export async function GET() {
   const entries: UrlEntry[] = [...STATIC_PAGES];
 
-  // Categories: /skincare, /makeup, /hair
+  // Categories: /skincare, /makeup, /hair, /fragrance
   for (const cat of CATEGORIES) {
     entries.push({
-      loc: `/${cat}`,
+      loc: `/${categoryToSlug(cat)}`,
       changefreq: 'daily',
       priority: 0.95,
     });
@@ -87,7 +92,7 @@ export async function GET() {
         if (row.subcategory && !seen.has(row.subcategory)) {
           seen.add(row.subcategory);
           entries.push({
-            loc: `/${cat}/${row.subcategory}`,
+            loc: `/${categoryToSlug(cat)}/${row.subcategory}`,
             changefreq: 'daily',
             priority: 0.85,
           });

@@ -24,6 +24,7 @@ const CATEGORY_DISPLAY: Record<string, string> = {
   makeup: 'Makeup',
   hair: 'Hair',
   fragrance: 'Fragrance',
+  bath_body: 'Bath & Body',
 };
 
 function buildUrl(

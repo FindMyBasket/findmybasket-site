@@ -796,7 +796,7 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
 //   4. Otherwise null — out of scope, leave the product as skincare/makeup/hair.
 // ============================================================================
 
-export type ExtendedTopCategory = "fragrance" | "personal_care";
+export type ExtendedTopCategory = "fragrance" | "bath_body";
 
 export type ExtendedClassification = {
   top_category: ExtendedTopCategory;
@@ -826,6 +826,11 @@ const RE_PC_BODY_OIL = /\bbody oil\b/;
 // NB: "cleansing bar" deliberately omitted — "facial cleansing bar" is a face
 // cleanser (skincare), not a body soap. Only true soap-bar / body-soap forms.
 const RE_PC_SOAP = /\b(bar soap|soap bar|hand soap|body soap)\b/;
+// Shave PREP consumables only (foam/gel/cream/oil/soap/balm). Razors, epilators
+// and wax strips stay excluded (they match neither this nor any other PC form,
+// so the detector returns null and they keep their "shaving" exclusion). \bshav
+// won't match inside "aftershave" (a fragrance form), so colognes are unaffected.
+const RE_PC_SHAVING = /\bshav(?:e|ing) (?:cream|gel|foam|oil|soap|balm)\b/;
 
 function frag(t: string, rule: string): ExtendedClassification {
   let product_type: string;
@@ -840,7 +845,7 @@ function frag(t: string, rule: string): ExtendedClassification {
 }
 
 function pc(product_type: string, subcategory: string, rule: string): ExtendedClassification {
-  return { top_category: "personal_care", product_type, subcategory, tags: ["personal_care", subcategory], rule };
+  return { top_category: "bath_body", product_type, subcategory, tags: ["bath_body", subcategory], rule };
 }
 
 export function classifyFragranceOrPersonalCare(
@@ -855,7 +860,7 @@ export function classifyFragranceOrPersonalCare(
   const hasPersonalCareForm =
     RE_PC_DEODORANT.test(t) || RE_PC_HAND.test(t) || RE_PC_BATH_SHOWER.test(t) ||
     RE_PC_BODY_MOIST.test(t) || RE_PC_BODY_SCRUB.test(t) || RE_PC_BODY_OIL.test(t) ||
-    RE_PC_SOAP.test(t);
+    RE_PC_SOAP.test(t) || RE_PC_SHAVING.test(t);
   // Body/bath/hand form (deodorant excluded — a deodorant is never "perfumed body").
   const hasBodyOrBathForm =
     RE_PC_HAND.test(t) || RE_PC_BATH_SHOWER.test(t) || RE_PC_BODY_MOIST.test(t) ||
@@ -902,6 +907,7 @@ export function classifyFragranceOrPersonalCare(
     /\b(spf|sunscreen|sun cream|sun protector)\b/.test(t);
   if (hasPersonalCareForm && !faceOrActiveSignal) {
     if (RE_PC_DEODORANT.test(t)) return pc("Deodorant", "body", "deodorant");
+    if (RE_PC_SHAVING.test(t)) return pc("Shaving", "body", "shaving");
     if (RE_PC_HAND.test(t)) return pc("Hand Care", "hand", "hand_care");
     if (RE_PC_BODY_SCRUB.test(t)) return pc("Body Scrub", "body", "body_scrub");
     if (RE_PC_BATH_SHOWER.test(t) || RE_PC_SOAP.test(t)) return pc("Bath & Shower", "body", "bath_shower");
@@ -936,11 +942,11 @@ export function classifyFragranceOrPersonalCare(
 export const EXTENDED_CATEGORIES_ENABLED = true;
 
 // Of the extended categories the detector can return, which are actually LIVE at
-// import. Fragrance goes live first (Task 1); personal_care stays gated until the
+// import. Fragrance goes live first (Task 1); bath_body stays gated until the
 // Bath & Body launch (Task 4) so the two large expansions never run at the same
-// time. A personal_care match while it is gated falls back to the base
-// classification (skincare, or the original fragrance/deodorant exclusion), so no
-// personal-care rows are created until "personal_care" is added to this set.
+// time. A bath_body match while it is gated falls back to the base
+// classification (skincare, or the original fragrance/deodorant/shaving exclusion),
+// so no bath_body rows are created until "bath_body" is added to this set.
 export const ENABLED_EXTENDED_CATEGORIES: ReadonlySet<ExtendedTopCategory> =
   new Set<ExtendedTopCategory>(["fragrance"]);
 
@@ -971,16 +977,17 @@ export function inferCategorisationForImport(
   const eligible =
     base.excluded === "fragrance" ||
     base.excluded === "deodorant" ||
+    base.excluded === "shaving" ||
     base.top_category === "skincare";
   if (!eligible) return base;
 
   const ext = classifyFragranceOrPersonalCare(name, brand);
-  if (!ext) return base; // not fragrance / personal care (e.g. fragrance-free skincare)
+  if (!ext) return base; // not fragrance / bath & body (e.g. fragrance-free skincare)
 
-  // Only emit extended categories that are currently LIVE. While personal_care is
-  // gated (until the Bath & Body launch), a personal_care match falls back to the
+  // Only emit extended categories that are currently LIVE. While bath_body is
+  // gated (until the Bath & Body launch), a bath_body match falls back to the
   // base classification — a deodorant stays excluded, a body wash stays skincare —
-  // so flipping fragrance on never quietly starts creating personal-care rows.
+  // so flipping fragrance on never quietly starts creating bath & body rows.
   if (!ENABLED_EXTENDED_CATEGORIES.has(ext.top_category)) return base;
 
   // Emit the extended classification, dropping any `excluded` flag so the
