@@ -95,7 +95,7 @@ const SUPABASE_PAGE = 1000; // Supabase per-request row cap
 export async function getEditProductTypes(edit: Edit): Promise<BrandProductTypeChip[]> {
   if (edit.brand_slugs.length === 0) return [];
 
-  const JUNK_TYPES = new Set(['Skincare', 'Makeup', 'Hair']);
+  const JUNK_TYPES = new Set(['Skincare', 'Makeup', 'Hair', 'Fragrance']);
   const counts = new Map<string, number>();
 
   let from = 0;
