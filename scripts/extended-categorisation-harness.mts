@@ -110,6 +110,44 @@ const CASES: Case[] = [
   { name: "Shiseido Expert Sun Protector Face & Body Lotion SPF50+ 150ml", brand: "Shiseido", expect: null, note: "SPF face & body lotion → skincare, not personal care" },
   // Guard must NOT over-reach: a plain body soap bar is still personal care.
   { name: "Dove Original Body Soap Bar 100g", brand: "Dove", expect: "bath_body", expectType: "Bath & Shower", note: "body soap bar still personal care" },
+
+  // ── HOME FRAGRANCE (brand-agnostic) → bath & body ─────────────────────────
+  { name: "Price's Candles Medium Jar Calming Green Tea", brand: "Price's Candles", expect: "bath_body", expectType: "Home Fragrance", expectSub: "body" },
+  { name: "Psychic Sisters Gemstone Wax Melt Aventurine", brand: "Psychic Sisters", expect: "bath_body", expectType: "Home Fragrance", expectSub: "body" },
+  { name: "NEOM Perfect Nights Sleep Reed Diffuser 100ml", brand: "NEOM", expect: "bath_body", expectType: "Home Fragrance", expectSub: "body" },
+  { name: "Tisserand - Energy Boost Diffuser Oil - 9ml", brand: "Tisserand", expect: "bath_body", expectType: "Home Fragrance", expectSub: "body" },
+  { name: "Superdrug Home Linen Reed Diffuser 100ml", brand: "Superdrug", expect: "bath_body", expectType: "Home Fragrance", expectSub: "body" },
+  { name: "Shiseido - BAUM Aromatic Room Spray Forest Embrace 100ml Refill", brand: "Shiseido", expect: "bath_body", expectType: "Home Fragrance", expectSub: "body" },
+  { name: "Sanctuary Spa Wellness Solutions Sleep Mist 100ml", brand: "Sanctuary Spa", expect: "bath_body", expectType: "Home Fragrance", expectSub: "body" },
+  { name: "Acqua di Parma Insieme Reed Diffuser 180ml", brand: "Acqua di Parma", expect: "bath_body", expectType: "Home Fragrance", expectSub: "body", note: "fragrance house's diffuser is home fragrance, not a wearable scent" },
+  { name: "NEOM Real Luxury Intensive Skin Treatment Candle", brand: "NEOM", expect: "bath_body", expectType: "Home Fragrance", expectSub: "body", note: "candle form wins over a stray 'skin' token" },
+
+  // ── AROMATHERAPY / WELLNESS BRANDS → bath & body ──────────────────────────
+  { name: "Tisserand Lavender Organic Essential Oil 10ml", brand: "Tisserand", expect: "bath_body", expectType: "Aromatherapy", expectSub: "body" },
+  { name: "Tisserand - Energy Boost Pulse Point Roller Ball Essential Oil - 10ml", brand: "Tisserand", expect: "bath_body", expectType: "Aromatherapy", expectSub: "body", note: "pulse-point roller stays in bath & body" },
+  { name: "Amphora Aromatics Lavender 10ml Roll-on", brand: "Amphora Aromatics", expect: "bath_body", expectType: "Aromatherapy", expectSub: "body" },
+  { name: "Amphora Aromatics Muscle & Joint Rub 10ml Roll-on", brand: "Amphora Aromatics", expect: "bath_body", expectType: "Aromatherapy", expectSub: "body" },
+  { name: "Tisserand Happy Vibes MoodFix Mist 100ml", brand: "Tisserand", expect: "bath_body", expectType: "Aromatherapy", expectSub: "body" },
+  { name: "The Aromatherapy Co . Relax Therapy Diffuser 250ml - Lavender And Clary Sage", brand: "The Aromatherapy Co", expect: "bath_body", expectType: "Aromatherapy", expectSub: "body", note: "bare 'diffuser' caught via the aromatherapy brand rule, not the home-fragrance form" },
+  { name: "Celtic Wellbeing Relax Aromatherapy Blend 10ml", brand: "Celtic Wellbeing", expect: "bath_body", expectType: "Aromatherapy", expectSub: "body" },
+
+  // ── AROMATHERAPY BRANDS: genuine face skincare must STAY skincare (null) ───
+  { name: "Amphora Aromatics Sea Buckthorn Face Oil 30ml", brand: "Amphora Aromatics", expect: null, note: "face oil → stays skincare" },
+  { name: "Amphora Aromatics Frankincense & Rose Face Cream 60ml", brand: "Amphora Aromatics", expect: null },
+  { name: "Amphora Aromatics Frankincense Bakuchiol Serum 25ml", brand: "Amphora Aromatics", expect: null, note: "serum → stays skincare" },
+  { name: "Amphora Aromatics Cedarwood Face Wash Men Organic 120ml", brand: "Amphora Aromatics", expect: null },
+  { name: "Amphora Aromatics Mandarin Fix All Eye Cream Organic 30ml", brand: "Amphora Aromatics", expect: null },
+  { name: "Amphora Aromatics Chamomile Cream 60ml", brand: "Amphora Aromatics", expect: null, note: "bare therapeutic cream → kept skincare" },
+  { name: "Amphora Aromatics Organic Rose Water (Hydrolate) 250ml", brand: "Amphora Aromatics", expect: null, note: "toner/hydrolate → stays skincare" },
+  // STEM-guard regression: the skincare signal uses word stems (cleans/moisturis)
+  // — these inflected forms must still be caught, or face skincare leaks to bath_body.
+  { name: "Amphora Aromatics Cedarwood Face Moisturiser Men ORG 60ml", brand: "Amphora Aromatics", expect: null, note: "'moisturiser' stem → stays skincare" },
+  { name: "Amphora Aromatics Mandarin Cleansing Balm Organic 60ml", brand: "Amphora Aromatics", expect: null, note: "'cleansing' stem → stays skincare" },
+  { name: "Amphora Aromatics Frankincense Facial Cleanser 100ml", brand: "Amphora Aromatics", expect: null, note: "'cleanser' stem → stays skincare" },
+
+  // ── Plural-form coverage (the 29-Jun blind spot) ──────────────────────────
+  { name: "Sanctuary Spa Bath Bombs Gift Set 3 x 100g", brand: "Sanctuary Spa", expect: "bath_body", expectType: "Bath & Shower", expectSub: "body", note: "plural 'bath bombs' matches" },
+  { name: "Tisserand Restore Balance Bath & Shower Wash 400ml", brand: "Tisserand", expect: "bath_body", expectType: "Bath & Shower", expectSub: "body", note: "'bath & shower wash' form now matched" },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────

@@ -856,22 +856,54 @@ const RE_FRAGRANCE_HOUSE =
 
 // Personal-care functional forms (module-level so the detector and any future
 // caller share one definition).
-const RE_PC_DEODORANT = /\b(deodorant|antiperspirant|anti-?perspirant)\b/;
-const RE_PC_HAND = /\bhand (wash|cream|lotion|soap|balm|butter|scrub)\b/;
+// Plural form (s? / (?:es)?) is allowed on every noun where a plural listing is
+// plausible (gift sets, multipacks) — a 29-Jun fix missed "bathing rituals"
+// because the pattern was singular-only, so the whole bath/body library now
+// carries plural coverage.
+const RE_PC_DEODORANT = /\b(deodorants?|antiperspirants?|anti-?perspirants?)\b/;
+const RE_PC_HAND = /\bhand (wash(?:es)?|creams?|lotions?|soaps?|balms?|butters?|scrubs?)\b/;
 const RE_PC_BATH_SHOWER =
-  /\b(body wash|shower gel|shower cream|shower foam|shower oil|bath foam|bubble bath|bath salts?|bath oil|bath soak|bath milk|bath bomb)\b/;
+  /\b(body wash(?:es)?|shower gels?|shower creams?|shower foams?|shower oils?|shower wash(?:es)?|bath (?:and|&) shower wash(?:es)?|bath foams?|bubble baths?|bath salts?|bath oils?|bath soaks?|bath milks?|bath bombs?)\b/;
 const RE_PC_BODY_MOIST =
-  /\b(body (lotion|cream|butter|milk|moisturiser|moisturizer)|hand (and|&) body (lotion|cream))\b/;
-const RE_PC_BODY_SCRUB = /\bbody (scrub|polish|exfoliant)\b/;
-const RE_PC_BODY_OIL = /\bbody oil\b/;
+  /\b(body (lotions?|creams?|butters?|milks?|moisturisers?|moisturizers?)|hand (and|&) body (lotions?|creams?))\b/;
+const RE_PC_BODY_SCRUB = /\bbody (scrubs?|polish(?:es)?|exfoliants?)\b/;
+const RE_PC_BODY_OIL = /\bbody oils?\b/;
 // NB: "cleansing bar" deliberately omitted — "facial cleansing bar" is a face
 // cleanser (skincare), not a body soap. Only true soap-bar / body-soap forms.
-const RE_PC_SOAP = /\b(bar soap|soap bar|hand soap|body soap)\b/;
+const RE_PC_SOAP = /\b(bar soaps?|soap bars?|hand soaps?|body soaps?)\b/;
 // Shave PREP consumables only (foam/gel/cream/oil/soap/balm). Razors, epilators
 // and wax strips stay excluded (they match neither this nor any other PC form,
 // so the detector returns null and they keep their "shaving" exclusion). \bshav
 // won't match inside "aftershave" (a fragrance form), so colognes are unaffected.
-const RE_PC_SHAVING = /\bshav(?:e|ing) (?:cream|gel|foam|oil|soap|balm)\b/;
+const RE_PC_SHAVING = /\bshav(?:e|ing) (?:creams?|gels?|foams?|oils?|soaps?|balms?)\b/;
+
+// ── Home fragrance & aromatherapy / wellness ──────────────────────────────────
+// Home-fragrance FORMS (brand-agnostic): candles, diffusers and ambient sprays
+// are bath & body regardless of brand. "diffuser" alone is deliberately NOT
+// matched (it collides with a hair-dryer diffuser) — only the unambiguous
+// reed/aroma/oil/refill diffuser forms and the spray/mist forms.
+const RE_HOME_FRAGRANCE =
+  /\b(candles?|wax melts?|reed diffusers?|diffuser oils?|diffuser refills?|aroma diffusers?|room sprays?|room mists?|linen sprays?|linen mists?|pillow (mists?|sprays?)|sleep (mists?|sprays?))\b/;
+// Dedicated aromatherapy / wellness brands. Their essential oils, blends,
+// pulse-point rollers, roll-ons and mood mists are wellness products that belong
+// in bath & body, NOT skincare. Kept to brands with no significant skincare
+// range so the skincare-signal guard below has only true face products to catch.
+// (Neom / ESPA / Wanderflower deliberately excluded — large/mixed skincare and
+// gift-set ranges that need per-row review, not a brand-wide default.)
+const RE_AROMATHERAPY_BRAND =
+  /\b(amphora aromatics|tisserand|celtic wellbeing|the aromatherapy co)\b/;
+// A genuine FACE / skincare signal keeps an aromatherapy-brand product in
+// skincare (Amphora makes real face creams, serums, cleansers, face oils). Only
+// consulted inside the aromatherapy-brand branch, so a bare "cream" reaching it
+// (body/hand creams are already claimed earlier) reads as a face/therapeutic
+// cream and is left as skincare.
+// NB: NO trailing \b — several alternatives are word STEMS ("cleans" must catch
+// "cleanser"/"cleansing"; "moisturis" must catch "moisturiser"). A trailing
+// boundary would require the stem to end the word and silently break those,
+// letting a face moisturiser / cleansing balm leak into bath & body. Leading \b
+// is kept so a stem never matches mid-word.
+const RE_SKINCARE_SIGNAL =
+  /\b(?:facial|face (?:wash|cleanser|cream|gel|scrub|serum|oil|mask|elixir|spray)|cleans|moisturis|moisturiz|serum|toner|hydrolate|rose water|eye (?:cream|gel|serum|care)|day cream|night cream|bakuchiol|squalane|micellar|spf|sunscreen|cream)/;
 
 function frag(t: string, rule: string): ExtendedClassification {
   let product_type: string;
@@ -937,6 +969,14 @@ export function classifyFragranceOrPersonalCare(
     }
   }
 
+  // ── 2.5 HOME FRAGRANCE (brand-agnostic) ──────────────────────────────────
+  // Candles, reed/aroma diffusers and ambient room/linen/pillow/sleep sprays are
+  // bath & body whatever the brand — including a fragrance house's candle (it is
+  // not a wearable scent). Runs after the wearable-fragrance branch so an EDP
+  // still wins, before the functional branch so the home form is not mistaken for
+  // a body product.
+  if (RE_HOME_FRAGRANCE.test(t)) return pc("Home Fragrance", "body", "home_fragrance");
+
   // ── 3. PERSONAL CARE branch ──────────────────────────────────────────────
   // Face / skincare-active guard: a product carrying a clear FACE-cleanser or
   // SPF signal belongs in skincare even if it also names a body form (face & body
@@ -954,6 +994,18 @@ export function classifyFragranceOrPersonalCare(
     if (RE_PC_BATH_SHOWER.test(t) || RE_PC_SOAP.test(t)) return pc("Bath & Shower", "body", "bath_shower");
     if (RE_PC_BODY_OIL.test(t)) return pc("Body Oil", "body", "body_oil");
     if (RE_PC_BODY_MOIST.test(t)) return pc("Body Moisturiser", "body", "body_moisturiser");
+  }
+
+  // ── 3.5 AROMATHERAPY / WELLNESS BRANDS ───────────────────────────────────
+  // A dedicated aromatherapy brand's essential oils, blends, pulse-point rollers,
+  // roll-ons and mood mists are wellness products → bath & body. Brand-gated
+  // (matched on the brand field only), and skipped when the NAME carries a
+  // genuine face/skincare signal so the brand's real skincare (Amphora face
+  // creams, serums, cleansers, face oils) stays in skincare. Pulse-point rollers
+  // route here too (worn for scent but kept in bath & body, not split into the
+  // fragrance subcategory structure — see the fragrance workstream).
+  if (RE_AROMATHERAPY_BRAND.test(b) && !RE_SKINCARE_SIGNAL.test(t)) {
+    return pc("Aromatherapy", "body", "aromatherapy_brand");
   }
 
   // ── 4. Out of scope — leave as skincare/makeup/hair. ─────────────────────
