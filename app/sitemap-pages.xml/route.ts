@@ -75,27 +75,23 @@ export async function GET() {
     });
   }
 
-  // Subcategories: /skincare/face etc.
-  for (const cat of CATEGORIES) {
-    const { data } = await supabase
-      .from('products_active')
-      .select('subcategory')
-      .eq('top_category', cat)
-      .not('subcategory', 'is', null);
+  // Subcategories: /skincare/face etc. Read the DISTINCT (top_category,
+  // subcategory) pairs from the active_category_subcategories view — only a
+  // handful of rows, so (unlike an un-paginated products_active query) PostgREST's
+  // 1,000-row cap can never hide a subcategory.
+  const liveCategories = new Set(CATEGORIES);
+  const { data: catSubs } = await supabase
+    .from('active_category_subcategories')
+    .select('top_category, subcategory');
 
-    if (data) {
-      const seen = new Set<string>();
-      for (const row of data) {
-        if (row.subcategory && !seen.has(row.subcategory)) {
-          seen.add(row.subcategory);
-          entries.push({
-            loc: `/${categoryToSlug(cat)}/${row.subcategory}`,
-            changefreq: 'daily',
-            priority: 0.85,
-          });
-        }
-      }
-    }
+  for (const row of catSubs ?? []) {
+    if (!row.top_category || !row.subcategory) continue;
+    if (!liveCategories.has(row.top_category)) continue;
+    entries.push({
+      loc: `/${categoryToSlug(row.top_category)}/${row.subcategory}`,
+      changefreq: 'daily',
+      priority: 0.85,
+    });
   }
 
   // Edits: /edit/k-beauty etc.
