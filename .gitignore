@@ -37,6 +37,9 @@ __pycache__/
 boots-dryrun.json
 debenhams-feed-*.json
 
+# category-hero source artwork (large; only the derived -desktop/-mobile.jpg crops ship)
+public/images/category-hero/*-source.png
+
 # brand-hub design prototype (embeds base64 brand images; spec only, not shipped)
 ilapothecary_hub_real.html
 
