@@ -106,7 +106,12 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     // "Intimate Skin Care … Wash" (Femfresh), "Intimate Foam Wash" (YES). The
     // grooming/makeup guard (intimateIsGroomingOrMakeup) keeps pubic-hair shave
     // products and "Intimate" shade/edition names out.
-    ["intimate_health", /\b(vaginal|vulva|feminine(?:\s+\w+){0,2}\s+(wash|hygiene|care|cleanser|moistur)|intimate(?:\s+\w+){0,2}\s+(wash|hygiene|care|cleanser|moistur)|thrush (cream|gel|treatment)|bv (treatment|relief|gel)|menocare|relactagel|canesfresh|canescool|canesten|sex toy|vibrator)\b/],
+    // intimate/feminine descriptors are matched by PROXIMITY ([\s\S]{0,24}) rather
+    // than a strict word-gap, so comma- and punctuation-phrased names are caught
+    // ("Intimate, 2-In-1 Cleanser", "Intimate Moisturising Shower Cream", "Body And
+    // Intimate Shave Cream"). 'pubic' and intimate+shav* are included so intimate-area
+    // GROOMING is excluded here rather than leaking into bath_body via the shaving arm.
+    ["intimate_health", /\b(vaginal|vulva|pubic|thrush (cream|gel|treatment)|bv (treatment|relief|gel)|menocare|relactagel|canesfresh|canescool|canesten|sex toy|vibrator)\b|\b(intimate|feminine)\b[\s\S]{0,24}\b(wash|hygiene|care|cleanser|cleansing|wipes?|shav\w*|moisturis\w*|moisturiz\w*|hair)\b/],
     ["deodorant", /\b(deodorant|antiperspirant|body spray)\b/],
     ["shaving", /\b(razor|shaving foam|shave gel|shave cream|epilator|wax strip)\b/],
     // appliance: electric grooming devices (men's trimmers, clippers, electric
@@ -236,13 +241,16 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
   // stay excluded.
   const toolIsBundledExtra = /\b(with|plus)\b[^|]*\b(brush|sponge)\b/.test(t) ||
     /[+&][^|]*\b(brush|sponge)\b/.test(t);
-  // Pre-check: intimate_health must NOT steal intimate-area GROOMING (pubic-hair
-  // shave/trim/wax/depilatory — Gillette/Philips/Veet/WooWoo: those are
-  // shaving/appliance) nor MAKEUP/FRAGRANCE that merely use "Intimate" as a shade
-  // or edition name (Armani "Lipstick Intimate", MAC "Intimate Nude" palette,
-  // Britney "EDP Intimate Edition"). Skip intimate_health for those.
+  // Pre-check: intimate_health must NOT steal MAKEUP/FRAGRANCE that merely use
+  // "Intimate" as a shade or edition name (Armani "Lipstick Intimate", MAC
+  // "Intimate Nude" palette, Britney "EDP Intimate Edition"). Generic grooming
+  // (non-intimate shave/trim/wax/depilatory — Veet, men's body groomers) is also
+  // skipped so it stays shaving/appliance. BUT intimate-AREA grooming (intimate/
+  // feminine/vaginal/vulva/pubic + shave etc.) is deliberately NOT skipped: it must
+  // be excluded as intimate_health, not leak into bath_body via the shaving arm.
+  const intimateAreaSignal = /\b(intimate|feminine|vaginal|vulva|pubic)\b/.test(t);
   const intimateIsGroomingOrMakeup = (
-    /\b(shav\w*|trimmer|razor|epilat\w*|depilat\w*|pubic|hair removal|wax(ing)?)\b/.test(t) ||
+    (/\b(shav\w*|trimmer|razor|epilat\w*|depilat\w*|hair removal|wax(ing)?)\b/.test(t) && !intimateAreaSignal) ||
     /\b(lipstick|lip power|eye ?shadow|palette|mascara|nail polish|foundation|edp|edt|eau de)\b/.test(t)
   );
   // Pre-check: the appliance denylist's 'groomer'/'clipper' tokens over-fire on
