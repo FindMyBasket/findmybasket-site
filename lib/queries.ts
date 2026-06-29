@@ -155,11 +155,21 @@ export async function getCategoryStats(category: TopCategory): Promise<CategoryS
   }
   const totalRetailers = retailerIdSet.size;
 
+  // Catalogue-wide next-best average saving, precomputed and stored by
+  // fmb_refresh_category_savings (weekly via pg_cron). Falls back to null if the
+  // row or table is absent, so category pages never break on a missing aggregate.
+  const { data: savingRow } = await supabase
+    .from('category_savings')
+    .select('avg_saving_pct')
+    .eq('top_category', category)
+    .maybeSingle();
+
   return {
     total_products: totalProducts ?? 0,
     total_brands: distinctBrands.size,
     total_retailers: totalRetailers,
-    avg_saving_pct: null,
+    avg_saving_pct:
+      savingRow?.avg_saving_pct != null ? Number(savingRow.avg_saving_pct) : null,
   };
 }
 
