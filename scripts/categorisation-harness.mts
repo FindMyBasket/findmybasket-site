@@ -408,8 +408,8 @@ const CASES: Case[] = [
   { name: "Femfresh Intimate Skin Care Soothing Wash 250ml", brand: "Femfresh", expect: null, excluded: "intimate_health", fixedBy: 17, note: "'Intimate Skin Care'" },
   { name: "YES Cleanse Ultra Gentle Intimate Foam Wash", brand: "YES", expect: null, excluded: "intimate_health", fixedBy: 17, note: "'Intimate Foam Wash'" },
   // Guards: intimate-area GROOMING stays shaving, NOT intimate_health.
-  { name: "Gillette Venus Intimate 2-In-1 Cleanser + Shave Gel For Pubic Hair 190ml", brand: "Gillette", expect: null, excluded: "shaving", fixedBy: 0, note: "pubic-hair shave → shaving, not intimate_health" },
-  { name: "Gillette Venus Intimate Gentle Trimmer For Pubic Hair", brand: "Gillette", expect: null, excluded: "appliance", fixedBy: 0, note: "intimate trimmer → appliance" },
+  { name: "Gillette Venus Intimate 2-In-1 Cleanser + Shave Gel For Pubic Hair 190ml", brand: "Gillette", expect: null, excluded: "intimate_health", fixedBy: 0, note: "intimate-area shave → intimate_health (kept out of bath_body), not the shaving arm" },
+  { name: "Gillette Venus Intimate Gentle Trimmer For Pubic Hair", brand: "Gillette", expect: null, excluded: "intimate_health", fixedBy: 0, note: "intimate-area trimmer → intimate_health (kept out of bath_body)" },
   // Guards: "Intimate" as a makeup shade / fragrance edition must NOT exclude.
   { name: "Armani Lip Power Lipstick Intimate 109", brand: "Armani", expect: "makeup", expectType: "Lipstick", fixedBy: 17, note: "'Intimate' is a lipstick shade" },
   { name: "MAC Connect In Colour Eyeshadow Palette Intimate Nude 6.25g", brand: "MAC Cosmetics", expect: "makeup", expectType: "Eyeshadow", fixedBy: 17, note: "'Intimate Nude' eyeshadow shade" },
