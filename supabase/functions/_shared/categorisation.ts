@@ -437,11 +437,21 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
   // on their own rules (and which the earlier "removers stay skincare" ruling and
   // the lash-care guards must keep out).
   const isLashBrand = /\b(house of amor|elegant touch)\b/.test(b);
+  const isHouseOfAmor = /\bhouse of amor\b/.test(b);
+  // House of Amor's MAIN lash range is named "<style> Length <C/D> Curl <mm>
+  // Short/Medium/Long" (e.g. "Crowd Pleaser Length Natural C Curl 10mm Short"),
+  // plus "Budget Box … with Mini Bond" sets, "Bond & Seal" / "Glue Strips"
+  // adhesives, "… Collection" and "Map It Out" — none carry a generic lash word.
+  // Add HoA-scoped tokens. For these lash brands a bond / glue / seal IS a lash
+  // product (lash adhesive → Lashes, per P1), so they are TOKENS, not guards.
   const brandLashLineToken =
-    /\b(lash(es)?|quicklash(es)?|eyelashes?|cluster(s)?|pre[\s-]?mapped|multipack|wispy|fluff(y|iest)?|flutter|volume\s*\d+)\b/.test(t);
+    /\b(lash(es)?|quicklash(es)?|eyelashes?|cluster(s)?|pre[\s-]?mapped|multipack|wispy|fluff(y|iest)?|flutter|flare|volume\s*\d+)\b/.test(t)
+    || (isHouseOfAmor && /\b(curl|length|budget box|bond|seal|glue|collection|map it out)\b/.test(t));
+  // Keep lash-CARE and clearly-non-lash items out: removers/serums/growth/tonic/
+  // essence (skincare), nail/press-on (nails), brow (brow), brushes (accessory).
   const isBrandLash =
     isLashBrand && brandLashLineToken &&
-    !/\b(nail|press[\s-]?on|brow|eyebrow|bond|glue|adhesive|remov\w*|cleans\w*|applicator|curler|brush|tint|serum|tonic|essence)\b/.test(t);
+    !/\b(nail|press[\s-]?on|brow|eyebrow|remov\w*|cleans\w*|applicator|brush|tint|serum|growth|tonic|essence)\b/.test(t);
   const makeupCheck = (() => {
     // Cushion foundations are unambiguous makeup, but their names commonly also
     // contain skincare-trigger keywords (Mask Fit, SPF, Sun Protection) that
