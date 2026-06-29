@@ -455,7 +455,20 @@ const CASES: Case[] = [
   // apparel: plural-only "short"/"trunk", nails? guard, eye serum, anti-chafing
   { name: "Superdrug Studio London Pink Holographic Jelly Short Oval Nails", brand: "Superdrug Studio London", expect: "skincare", fixedBy: 20, note: "false nails: 'Short' no longer apparel; 'Oval Nails' rescues" },
   { name: "Elegant Touch Glitter Nails Razzle Dazzle - Short", brand: "Elegant Touch", expect: "skincare", fixedBy: 20 },
-  { name: "House of Amor Crowd Pleaser Length Natural C Curl 10mm Short", brand: "House of Amor", expect: "skincare", fixedBy: 20, note: "lash brand allowlist + plural short" },
+  { name: "House of Amor Crowd Pleaser Length Natural C Curl 10mm Short", brand: "House of Amor", expect: "makeup", expectType: "Lashes", expectSub: "eyes", fixedBy: 21, note: "HoA lash 'Length … C Curl' naming now routes to makeup/Lashes (was skincare catchall at fix 20)" },
+
+  // fix 21 — lash detector broadening (one-word compounds + HoA line names) and
+  // body-spray/pack subcategory. Lash-CARE (serum/growth/tonic/remover) must STAY
+  // skincare; cosmetics-only lash brand line names route to makeup/Lashes.
+  { name: "House of Amor Showstopper Pre Mapped DIY QuickLashes", brand: "House of Amor", expect: "makeup", expectType: "Lashes", expectSub: "eyes", fixedBy: 21, note: "one-word 'QuickLashes'" },
+  { name: "House of Amor Volume 6 - Pre Mapped Multipack", brand: "House of Amor", expect: "makeup", expectType: "Lashes", expectSub: "eyes", fixedBy: 21, note: "no lash word — brand line name" },
+  { name: "House of Amor Budget Box \"FLUTTER\" with Mini Bond", brand: "House of Amor", expect: "makeup", expectType: "Lashes", expectSub: "eyes", fixedBy: 21, note: "lash set; 'bond' is a lash adhesive for lash brands" },
+  { name: "Oh My Lash Women's Signature Eyelashes in Black", brand: "Oh My Lash", expect: "makeup", expectType: "Lashes", expectSub: "eyes", fixedBy: 21, note: "generic one-word 'Eyelashes'" },
+  { name: "DHC - Extra Beauty Eyelash Tonic (Essence for Eyelashes) - 6.5ml", brand: "DHC", expect: "skincare", fixedBy: 21, note: "lash TONIC/essence stays skincare (not a false lash)" },
+  { name: "House of Amor QuickLash Growth Serum", brand: "House of Amor", expect: "skincare", fixedBy: 21, note: "lash growth serum stays skincare" },
+  { name: "House of Amor - QuickLash DIY Lash Remover 5ml", brand: "House of Amor", expect: "skincare", fixedBy: 21, note: "remover stays skincare" },
+  { name: "PETITFEE - Koelf - Madecassoside Clarifying Body Spray - 150ml", brand: "PETITFEE", expect: "skincare", expectSub: "body", fixedBy: 21, note: "'body spray' → subcategory body (skincare-active, not deodorant)" },
+  { name: "PETITFEE - Dry Essence Foot Pack", brand: "PETITFEE", expect: "skincare", expectSub: "foot", fixedBy: 21, note: "'foot pack' → subcategory foot (was defaulting to face)" },
   { name: "Collection Spotlight Shine Gel Effect - Leather Jacket", brand: "Collection", expect: "skincare", fixedBy: 20, note: "nail-shade 'Jacket' via brand allowlist" },
   { name: "Kiss The New Natural Multipack Nude Blazer", brand: "Kiss", expect: "skincare", fixedBy: 20, note: "lash-shade 'Blazer' via brand allowlist" },
   { name: "Bluesky Mini Trio Set Sweater Weather - 5ml", brand: "Bluesky", expect: "skincare", fixedBy: 20, note: "gel-polish-shade 'Sweater' via brand allowlist" },
