@@ -1,6 +1,22 @@
 import { supabase } from './supabase';
 
-export type TopCategory = 'skincare' | 'makeup' | 'hair' | 'fragrance';
+export type TopCategory = 'skincare' | 'makeup' | 'hair' | 'fragrance' | 'bath_body';
+
+// User-facing route slug for each top_category. Identity for all except
+// bath_body, whose DB value carries an underscore but whose route is the
+// hyphenated /bath-and-body. Use categoryToSlug() everywhere a category value is
+// turned into a landing-page URL; queries always filter on the raw DB value.
+export const CATEGORY_SLUGS: Record<TopCategory, string> = {
+  skincare: 'skincare',
+  makeup: 'makeup',
+  hair: 'hair',
+  fragrance: 'fragrance',
+  bath_body: 'bath-and-body',
+};
+
+export function categoryToSlug(cat: string): string {
+  return CATEGORY_SLUGS[cat as TopCategory] ?? cat;
+}
 
 export interface CategoryStats {
   total_products: number;

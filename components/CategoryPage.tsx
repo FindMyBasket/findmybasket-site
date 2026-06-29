@@ -6,6 +6,7 @@ import {
   getTopBrands,
   getFeaturedProducts,
   getSubcategories,
+  categoryToSlug,
   type TopCategory,
 } from '../lib/queries';
 
@@ -16,6 +17,11 @@ interface Props {
 }
 
 export async function CategoryPage({ category, displayName, intro }: Props) {
+  // Route slug (identity except bath_body -> bath-and-body). Queries use the raw
+  // `category` DB value; links/canonicals use `slug`. The hero-image filenames are
+  // keyed by the raw `category` value (e.g. bath_body-desktop.jpg), so the hero
+  // <div> below deliberately keeps `${category}`, not `${slug}`.
+  const slug = categoryToSlug(category);
   const [stats, brands, products, subcategories] = await Promise.all([
     getCategoryStats(category),
     getTopBrands(category, 16),
@@ -90,7 +96,7 @@ export async function CategoryPage({ category, displayName, intro }: Props) {
             {subcategories.map(sub => (
               <Link
                 key={sub.name}
-                href={`/${category}/${sub.name}`}
+                href={`/${slug}/${sub.name}`}
                 className="group bg-warm-white border border-border rounded-2xl p-6 hover:border-gold transition-colors"
               >
                 <div className="font-serif text-2xl text-ink capitalize mb-1 group-hover:text-gold transition-colors">
