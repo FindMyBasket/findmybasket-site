@@ -428,6 +428,20 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
   }
 
   // ─── Step 3: Makeup detection ────────────────────────────────────────────
+  // Cosmetics-only lash brands (House of Amor, Elegant Touch) ship false/strip/
+  // cluster lashes under line names that carry no generic lash word ("Volume 6 -
+  // Pre Mapped Multipack", "Mixed Length Clusters", "Design The Lash You Love",
+  // "What The Fluff! QuickLashes"). Route these to makeup Lashes when the lash
+  // brand is paired with a lash-line token — but NOT for the brand's nail / brow /
+  // glue-bond / applicator / curler / cleanser-remover / serum items, which route
+  // on their own rules (and which the earlier "removers stay skincare" ruling and
+  // the lash-care guards must keep out).
+  const isLashBrand = /\b(house of amor|elegant touch)\b/.test(b);
+  const brandLashLineToken =
+    /\b(lash(es)?|quicklash(es)?|eyelashes?|cluster(s)?|pre[\s-]?mapped|multipack|wispy|fluff(y|iest)?|flutter|volume\s*\d+)\b/.test(t);
+  const isBrandLash =
+    isLashBrand && brandLashLineToken &&
+    !/\b(nail|press[\s-]?on|brow|eyebrow|bond|glue|adhesive|remov\w*|cleans\w*|applicator|curler|brush|tint|serum|tonic|essence)\b/.test(t);
   const makeupCheck = (() => {
     // Cushion foundations are unambiguous makeup, but their names commonly also
     // contain skincare-trigger keywords (Mask Fit, SPF, Sun Protection) that
@@ -463,12 +477,18 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     if (/\b(face powder|pressed powder|loose powder|compact powder|superpowder|powder makeup)\b/.test(t)) return true;
     if (/\b(nail (polish|colour|color|lacquer|varnish|enamel)|gel polish|gel nail|nail (treatment|strengthener)|cuticle (oil|cream)|nail base|base coat|top coat|nail file)\b/.test(t)) return true;
     if (/\bfalse (lashes|eyelashes)|lash (extension|adhesive|glue)\b/.test(t)) return true;
-    // Standalone "Lashes" is almost always false/strip lashes (makeup). \blashes\b
-    // does NOT match "eyelashes" (no boundary), so lash-CARE products (eyelash
-    // serum/growth) are unaffected. Guard lash-adjacent NON-lashes: lash serum/
-    // curler, lash TINT (colour), and makeup REMOVERS / cleansers that merely
-    // list "lashes" ("Take The Day Off … For Lids, Lashes & Lips" → Cleanser).
-    if (/\blashes\b/.test(t) && !/\b(serum|growth|booster?|conditioner|cleans\w*|curler|comb|remov\w*|micellar|wipe|wipes|tint|take the day)\b/.test(t)) return true;
+    // Standalone "Lashes" is almost always false/strip lashes (makeup). The bare
+    // \blashes\b missed one-word compounds the feeds use ("eyelashes",
+    // "QuickLashes" — no word boundary before "lashes"), so broaden to
+    // (eye)?lashes and quicklash(es). The same guard keeps lash-CARE out: lash
+    // serum/growth/curler, lash TINT (colour), and makeup REMOVERS / cleansers
+    // that merely list "lashes" ("Take The Day Off … For Lids, Lashes & Lips" →
+    // Cleanser). isBrandLash adds the cosmetics-only lash brands' line-name
+    // products (cluster/pre-mapped/multipack) and is already guarded above.
+    if (
+      (/\b(?:eye)?lashes\b|\bquicklash(?:es)?\b/.test(t) || isBrandLash) &&
+      !/\b(serum|growth|tonic|essence|booster?|conditioner|cleans\w*|curler|comb|remov\w*|micellar|wipe|wipes|tint|take the day)\b/.test(t)
+    ) return true;
     // Generic 'makeup' as a noun (Clinique 'Superbalanced Makeup' brand line).
     // Excludes 'makeup remover' (denylisted earlier) and 'makeup brush' (in
     // makeup_tool denylist run before this detector). Must come last so that
@@ -511,7 +531,8 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
       subcategory = "eyes";
     } else if (
       /\bfalse (lashes|eyelashes)|lash (extension|adhesive|glue)\b/.test(t) ||
-      (/\blashes\b/.test(t) && !/\b(serum|growth|booster?|conditioner|cleans\w*|curler|comb|remov\w*|micellar|wipe|wipes|tint|take the day)\b/.test(t))
+      isBrandLash ||
+      (/\b(?:eye)?lashes\b|\bquicklash(?:es)?\b/.test(t) && !/\b(serum|growth|tonic|essence|booster?|conditioner|cleans\w*|curler|comb|remov\w*|micellar|wipe|wipes|tint|take the day)\b/.test(t))
     ) {
       product_type = "Lashes";
       subcategory = "eyes";
@@ -717,11 +738,13 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     skin_subcategory = "both";
   }
   // 2. Hand
-  else if (/\b(hand (cream|lotion|sanit\w*|wash|soap|mask|salve|balm|butter|serum|treatment|scrub|gel)|hand ?(&|and) ?nail|reparative hand|nourishing hand|repairing hand)\b/.test(t)) {
+  else if (/\b(hand (cream|lotion|sanit\w*|wash|soap|mask|salve|balm|butter|serum|treatment|scrub|gel|pack)|hand ?(&|and) ?nail|reparative hand|nourishing hand|repairing hand)\b/.test(t)) {
     skin_subcategory = "hand";
   }
-  // 3. Foot (before SA/large-format so "SA Renewing Foot Cream" → foot)
-  else if (/\b(foot (cream|lotion|mask|soak|scrub|balm|serum|spray|gel|powder)|heel balm|heel cream|cracked heel|foot ?(&|and) ?nail)\b/.test(t)) {
+  // 3. Foot (before SA/large-format so "SA Renewing Foot Cream" → foot). "foot
+  //    pack"/"hand pack" are the K-beauty essence packs (Petitfee/Koelf) that
+  //    otherwise default to face.
+  else if (/\b(foot (cream|lotion|mask|soak|scrub|balm|serum|spray|gel|powder|pack)|heel balm|heel cream|cracked heel|foot ?(&|and) ?nail)\b/.test(t)) {
     skin_subcategory = "foot";
   }
   // 4. Explicit FACE signals — win over the generic body fallthrough below.
@@ -729,7 +752,7 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     skin_subcategory = "face";
   }
   // 5. Body
-  else if (/\b(body (lotion|cream|wash|butter|oil|scrub|mask|milk|mist|balm|sunscreen|serum|gel|soap|moisturiser|moisturizer)|after.?sun|tanning (lotion|oil|mist|milk)|self.?tan|stretch mark|shower (gel|cream|oil))\b/.test(t)) {
+  else if (/\b(body (lotion|cream|wash|butter|oil|scrub|mask|milk|mist|balm|sunscreen|serum|gel|soap|moisturiser|moisturizer|spray)|after.?sun|tanning (lotion|oil|mist|milk)|self.?tan|stretch mark|shower (gel|cream|oil))\b/.test(t)) {
     skin_subcategory = "body";
   }
   // 6. CeraVe-style "SA" (salicylic-acid) body line — cream/lotion forms with no
