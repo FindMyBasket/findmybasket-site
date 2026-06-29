@@ -41,7 +41,7 @@ const STATIC_PAGES: UrlEntry[] = [
   { loc: '/articles/skincare-routine-under-40.html', changefreq: 'monthly', priority: 0.6 },
 ];
 
-const CATEGORIES = ['skincare', 'makeup', 'hair'];
+const CATEGORIES = ['skincare', 'makeup', 'hair', 'fragrance'];
 
 function escapeXml(s: string): string {
   return s
