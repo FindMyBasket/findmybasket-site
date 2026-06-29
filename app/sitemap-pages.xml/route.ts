@@ -43,10 +43,7 @@ const STATIC_PAGES: UrlEntry[] = [
 
 // DB top_category values. Route slugs are derived via categoryToSlug (identity
 // except bath_body -> bath-and-body); queries filter on the raw value.
-// NB: bath_body is deliberately omitted here until the Phase B go-live, so the
-// empty pre-backfill category is never exposed in the sitemap. It is added in the
-// same follow-up that wires the nav links.
-const CATEGORIES = ['skincare', 'makeup', 'hair', 'fragrance'];
+const CATEGORIES = ['skincare', 'makeup', 'hair', 'fragrance', 'bath_body'];
 
 function escapeXml(s: string): string {
   return s
@@ -69,7 +66,7 @@ function urlToXml(entry: UrlEntry): string {
 export async function GET() {
   const entries: UrlEntry[] = [...STATIC_PAGES];
 
-  // Categories: /skincare, /makeup, /hair, /fragrance
+  // Categories: /skincare, /makeup, /hair, /fragrance, /bath-and-body
   for (const cat of CATEGORIES) {
     entries.push({
       loc: `/${categoryToSlug(cat)}`,
