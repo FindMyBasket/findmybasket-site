@@ -23,29 +23,43 @@ export interface ProductMatch {
 export interface SearchResults {
   brands: BrandMatch[];
   products: ProductMatch[];
+  // Total full-text product matches (>= products.length). Lets the results page
+  // show "top N of M". The typeahead ignores it.
+  productTotal: number;
   query: string;
 }
 
 export const SEARCH_MIN_QUERY_LEN = 2;
+// Typeahead default; the /search results page asks for more (SEARCH_PAGE_LIMIT).
 const PRODUCT_LIMIT = 10;
+export const SEARCH_PAGE_LIMIT = 30;
 const BRAND_LIMIT = 5;
 
 // Returns brand and product matches for a free-text query. A query shorter than
 // SEARCH_MIN_QUERY_LEN yields empty arrays without touching the database, so
-// callers can render an empty/prompt state cheaply.
-export async function runSearch(rawQuery: string): Promise<SearchResults> {
+// callers can render an empty/prompt state cheaply. `productLimit` caps the
+// product list (typeahead asks for fewer than the results page).
+export async function runSearch(
+  rawQuery: string,
+  productLimit: number = PRODUCT_LIMIT
+): Promise<SearchResults> {
   const query = (rawQuery ?? '').trim();
 
   if (query.length < SEARCH_MIN_QUERY_LEN) {
-    return { brands: [], products: [], query };
+    return { brands: [], products: [], productTotal: 0, query };
   }
 
-  const [brands, products] = await Promise.all([
+  const [brands, productResult] = await Promise.all([
     searchBrands(query),
-    searchProducts(query),
+    searchProducts(query, productLimit),
   ]);
 
-  return { brands, products, query };
+  return {
+    brands,
+    products: productResult.products,
+    productTotal: productResult.total,
+    query,
+  };
 }
 
 async function searchBrands(query: string): Promise<BrandMatch[]> {
@@ -91,51 +105,43 @@ async function searchBrands(query: string): Promise<BrandMatch[]> {
   return matches.slice(0, BRAND_LIMIT);
 }
 
-async function searchProducts(query: string): Promise<ProductMatch[]> {
-  const { data } = await supabase
-    .from('products_active')
-    .select('id, name, brand, product_type, image_url')
-    .or(`name.ilike.%${query}%,brand.ilike.%${query}%`)
-    .not('image_url', 'is', null)
-    .neq('image_url', '')
-    .not('tags', 'cs', '{cleanup_remove}')
-    .limit(40);
+// Full-text product search (Product Finder Stage 1). Delegates ranking + the
+// total match count to the fmb_search_products RPC, which searches across name,
+// brand, product_type and description (weighted) and applies the name/brand
+// substring boosts. This unlocks ingredient/concern queries ("niacinamide",
+// "anti-ageing") that the old name-only ILIKE missed. Brand partials are still
+// covered by searchBrands above, which keeps the typeahead responsive mid-type.
+async function searchProducts(
+  query: string,
+  limit: number
+): Promise<{ products: ProductMatch[]; total: number }> {
+  const { data, error } = await supabase.rpc('fmb_search_products', {
+    search_query: query,
+    category_filter: null,
+    limit_count: limit,
+  });
 
-  if (!data || data.length === 0) {
-    const words = query.split(/\s+/).filter(w => w.length >= 2);
-    if (words.length > 1) {
-      let fallbackQuery = supabase
-        .from('products_active')
-        .select('id, name, brand, product_type, image_url');
-      for (const w of words) {
-        fallbackQuery = fallbackQuery.or(`name.ilike.%${w}%,brand.ilike.%${w}%`);
-      }
-      const { data: fallback } = await fallbackQuery
-        .not('image_url', 'is', null)
-        .neq('image_url', '')
-        .not('tags', 'cs', '{cleanup_remove}')
-        .limit(40);
-      if (fallback) return rankProducts(fallback, query).slice(0, PRODUCT_LIMIT);
-    }
-    return [];
+  const rows = (data ?? []) as {
+    id: number;
+    name: string;
+    brand: string | null;
+    product_type: string | null;
+    image_url: string | null;
+    total_count: number | null;
+  }[];
+
+  if (error || rows.length === 0) {
+    return { products: [], total: 0 };
   }
 
-  return rankProducts(data, query).slice(0, PRODUCT_LIMIT);
-}
-
-function rankProducts(rows: ProductMatch[], query: string): ProductMatch[] {
-  const qLower = query.toLowerCase();
-  return [...rows].sort((a, b) => {
-    const aBrand = (a.brand ?? '').toLowerCase();
-    const bBrand = (b.brand ?? '').toLowerCase();
-    const aName = (a.name ?? '').toLowerCase();
-    const bName = (b.name ?? '').toLowerCase();
-    const aBrandStarts = aBrand.startsWith(qLower) ? 0 : 1;
-    const bBrandStarts = bBrand.startsWith(qLower) ? 0 : 1;
-    if (aBrandStarts !== bBrandStarts) return aBrandStarts - bBrandStarts;
-    const aNameStarts = aName.startsWith(qLower) ? 0 : 1;
-    const bNameStarts = bName.startsWith(qLower) ? 0 : 1;
-    if (aNameStarts !== bNameStarts) return aNameStarts - bNameStarts;
-    return aName.localeCompare(bName);
-  });
+  return {
+    products: rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      brand: r.brand,
+      product_type: r.product_type,
+      image_url: r.image_url,
+    })),
+    total: Number(rows[0].total_count ?? rows.length),
+  };
 }

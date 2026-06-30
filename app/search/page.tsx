@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { SiteLayout } from '../../components/SiteLayout';
-import { runSearch, SEARCH_MIN_QUERY_LEN } from '../../lib/search';
+import { runSearch, SEARCH_MIN_QUERY_LEN, SEARCH_PAGE_LIMIT } from '../../lib/search';
 
 // A search-results page should not be indexed; it is a utility surface, not a
 // canonical landing page. The homepage JSON-LD SearchAction still targets it.
@@ -19,7 +19,7 @@ export default async function SearchPage({
   searchParams: { q?: string };
 }) {
   const query = (searchParams.q ?? '').trim();
-  const { brands, products } = await runSearch(query);
+  const { brands, products, productTotal } = await runSearch(query, SEARCH_PAGE_LIMIT);
 
   const hasResults = brands.length > 0 || products.length > 0;
   const tooShort = query.length > 0 && query.length < SEARCH_MIN_QUERY_LEN;
@@ -60,7 +60,8 @@ export default async function SearchPage({
 
         {noMatches && (
           <p className="text-sm text-ink-light">
-            No matches for &ldquo;{query}&rdquo;. Try a different product or brand.
+            No products found for &ldquo;{query}&rdquo;. Try an ingredient or concern, like
+            niacinamide, hyaluronic acid, anti-ageing, acne or brightening.
           </p>
         )}
 
@@ -92,9 +93,16 @@ export default async function SearchPage({
 
             {products.length > 0 && (
               <section>
-                <h2 className="text-xs uppercase tracking-widest text-ink-light font-medium mb-3">
-                  Products
-                </h2>
+                <div className="flex items-baseline justify-between gap-3 mb-3">
+                  <h2 className="text-xs uppercase tracking-widest text-ink-light font-medium">
+                    Products
+                  </h2>
+                  {productTotal > products.length && (
+                    <span className="text-xs text-ink-light">
+                      Showing top {products.length} of {productTotal.toLocaleString()} results
+                    </span>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {products.map(product => (
                     <a
