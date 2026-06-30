@@ -25,6 +25,11 @@ const NAV_LINKS: { href: string; label: string; static?: boolean }[] = [
 // in a lighter weight rather than alongside the core category links above.
 const SPOTLIGHT_LINK = { href: '/brands', label: 'Brand Spotlight' };
 
+// Product Finder: ingredient/concern discovery surface. A core feature, so it
+// sits at normal weight just before the search icon (not in the faint Spotlight
+// treatment).
+const FINDER_LINK = { href: '/finder', label: 'Find' };
+
 function NavLink({
   link,
   className,
@@ -115,6 +120,16 @@ export function SiteNav() {
               />
             );
           })()}
+          {(() => {
+            const active = isActive(FINDER_LINK.href);
+            return (
+              <NavLink
+                link={FINDER_LINK}
+                active={active}
+                className={`${desktopBase} ${stateCls(active)}`}
+              />
+            );
+          })()}
           <SiteSearch />
           <a
             href="/app.html"
@@ -168,6 +183,17 @@ export function SiteNav() {
                 className={`${mobileBase} ${
                   active ? 'text-ink font-medium' : 'text-ink-light/70 hover:text-ink'
                 }`}
+                onClick={() => setMobileOpen(false)}
+              />
+            );
+          })()}
+          {(() => {
+            const active = isActive(FINDER_LINK.href);
+            return (
+              <NavLink
+                link={FINDER_LINK}
+                active={active}
+                className={`${mobileBase} ${stateCls(active)}`}
                 onClick={() => setMobileOpen(false)}
               />
             );
