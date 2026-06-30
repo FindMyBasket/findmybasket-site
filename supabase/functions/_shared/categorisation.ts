@@ -868,6 +868,15 @@ const RE_PC_BODY_MOIST =
   /\b(body (lotions?|creams?|butters?|milks?|moisturisers?|moisturizers?)|hand (and|&) body (lotions?|creams?))\b/;
 const RE_PC_BODY_SCRUB = /\bbody (scrubs?|polish(?:es)?|exfoliants?)\b/;
 const RE_PC_BODY_OIL = /\bbody oils?\b/;
+// Bath gift sets / ritual / collection / kit / edit forms. These read as bath &
+// body even with no other functional form word. Mirrors the importer SQL safety
+// net's Rule 4 (run_categoriser_safety_net) so new imports route them straight to
+// bath & body instead of defaulting to skincare/face and waiting for the 09:30
+// backfill. "bath set"/"bath gift set"/"… gift set" are deliberately omitted —
+// inferCategorisation's bath_set denylist already excludes those before the
+// detector runs, so they never reach here as skincare.
+const RE_PC_BATH_SET =
+  /\b(bathing rituals?|bath rituals?|bath collections?|bath kits?|bath edits?)\b/;
 // NB: "cleansing bar" deliberately omitted — "facial cleansing bar" is a face
 // cleanser (skincare), not a body soap. Only true soap-bar / body-soap forms.
 const RE_PC_SOAP = /\b(bar soaps?|soap bars?|hand soaps?|body soaps?)\b/;
@@ -933,11 +942,12 @@ export function classifyFragranceOrPersonalCare(
   const hasPersonalCareForm =
     RE_PC_DEODORANT.test(t) || RE_PC_HAND.test(t) || RE_PC_BATH_SHOWER.test(t) ||
     RE_PC_BODY_MOIST.test(t) || RE_PC_BODY_SCRUB.test(t) || RE_PC_BODY_OIL.test(t) ||
-    RE_PC_SOAP.test(t) || RE_PC_SHAVING.test(t);
+    RE_PC_SOAP.test(t) || RE_PC_SHAVING.test(t) || RE_PC_BATH_SET.test(t);
   // Body/bath/hand form (deodorant excluded — a deodorant is never "perfumed body").
   const hasBodyOrBathForm =
     RE_PC_HAND.test(t) || RE_PC_BATH_SHOWER.test(t) || RE_PC_BODY_MOIST.test(t) ||
-    RE_PC_BODY_SCRUB.test(t) || RE_PC_BODY_OIL.test(t) || RE_PC_SOAP.test(t);
+    RE_PC_BODY_SCRUB.test(t) || RE_PC_BODY_OIL.test(t) || RE_PC_SOAP.test(t) ||
+    RE_PC_BATH_SET.test(t);
 
   // ── Fragrance signal flags ───────────────────────────────────────────────
   const hardForm = RE_HARD_FRAGRANCE_FORM.test(t);
@@ -992,6 +1002,7 @@ export function classifyFragranceOrPersonalCare(
     if (RE_PC_HAND.test(t)) return pc("Hand Care", "hand", "hand_care");
     if (RE_PC_BODY_SCRUB.test(t)) return pc("Body Scrub", "body", "body_scrub");
     if (RE_PC_BATH_SHOWER.test(t) || RE_PC_SOAP.test(t)) return pc("Bath & Shower", "body", "bath_shower");
+    if (RE_PC_BATH_SET.test(t)) return pc("Bath & Shower", "body", "bath_set");
     if (RE_PC_BODY_OIL.test(t)) return pc("Body Oil", "body", "body_oil");
     if (RE_PC_BODY_MOIST.test(t)) return pc("Body Moisturiser", "body", "body_moisturiser");
   }
@@ -1062,31 +1073,99 @@ export function inferCategorisationForImport(
   const base = inferCategorisation(name, brand);
   if (!enabled) return base;
 
-  // Eligible to be reclassified: products the denylist drops as fragrance or
-  // deodorant, and products that land in the skincare catchall. Makeup, hair and
-  // every other exclusion are left exactly as inferCategorisation decided.
-  const eligible =
-    base.excluded === "fragrance" ||
-    base.excluded === "deodorant" ||
-    base.excluded === "shaving" ||
-    base.top_category === "skincare";
-  if (!eligible) return base;
+  // Resolve the import classification: the base, or the extended detector's
+  // verdict when it claims the product as fragrance / bath & body.
+  const result = ((): ImportCategorisation => {
+    // Eligible to be reclassified: products the denylist drops as fragrance or
+    // deodorant, and products that land in the skincare catchall. Makeup, hair and
+    // every other exclusion are left exactly as inferCategorisation decided.
+    const eligible =
+      base.excluded === "fragrance" ||
+      base.excluded === "deodorant" ||
+      base.excluded === "shaving" ||
+      base.top_category === "skincare";
+    if (!eligible) return base;
 
-  const ext = classifyFragranceOrPersonalCare(name, brand);
-  if (!ext) return base; // not fragrance / bath & body (e.g. fragrance-free skincare)
+    const ext = classifyFragranceOrPersonalCare(name, brand);
+    if (!ext) return base; // not fragrance / bath & body (e.g. fragrance-free skincare)
 
-  // Only emit extended categories that are currently LIVE. While bath_body is
-  // gated (until the Bath & Body launch), a bath_body match falls back to the
-  // base classification — a deodorant stays excluded, a body wash stays skincare —
-  // so flipping fragrance on never quietly starts creating bath & body rows.
-  if (!ENABLED_EXTENDED_CATEGORIES.has(ext.top_category)) return base;
+    // Only emit extended categories that are currently LIVE. While bath_body is
+    // gated (until the Bath & Body launch), a bath_body match falls back to the
+    // base classification — a deodorant stays excluded, a body wash stays skincare —
+    // so flipping fragrance on never quietly starts creating bath & body rows.
+    if (!ENABLED_EXTENDED_CATEGORIES.has(ext.top_category)) return base;
 
-  // Emit the extended classification, dropping any `excluded` flag so the
-  // importer creates the row instead of skipping it.
-  return {
-    top_category: ext.top_category,
-    product_type: ext.product_type,
-    subcategory: ext.subcategory,
-    tags: ext.tags,
-  };
+    // Emit the extended classification, dropping any `excluded` flag so the
+    // importer creates the row instead of skipping it.
+    return {
+      top_category: ext.top_category,
+      product_type: ext.product_type,
+      subcategory: ext.subcategory,
+      tags: ext.tags,
+    };
+  })();
+
+  // Final safety net: route any residual skincare body/hand/foot/both product to
+  // bath_body (and perfumed body mists to fragrance) before the row is upserted.
+  return applyDefensiveRouting(result, name);
+}
+
+// ============================================================================
+// Defensive subcategory → top_category routing (importer parity with the
+// run_categoriser_safety_net SQL cron).
+//
+// inferCategorisation can legitimately leave a product as top_category
+// 'skincare' with a body/hand/foot/both subcategory — large-format (≥200ml) and
+// CeraVe "SA"-line heuristics, sunscreen body lotions, and hand/foot masks that
+// the personal-care detector DEFERS on because they also carry a face/SPF signal.
+// Those belong in bath_body, not on the skincare page. The 09:30 UTC SQL cron
+// rewrites them daily after the fact; this pass makes the same correction at
+// IMPORT time so the bleed never lands in the DB and the cron finds zero work.
+//
+//   • Rule 1 (mirrors the cron exactly): skincare + subcategory in
+//     (body, hand, foot, both) → bath_body, with 'both' collapsing to 'body'
+//     (bath_body has no 'both' subcategory). Gated on bath_body being a live
+//     extended category, so it never creates bath_body rows while that category
+//     is switched off.
+//   • Perfumed-mist rule (the cron does NOT cover this): a PERFUMED / scented
+//     body mist — including a "hair & body mist" — is a wearable scent, not body
+//     care, so it routes to fragrance/body. Runs first; a plain unscented body
+//     mist still falls through to the bath_body flip.
+//
+// Only ever touches products still sitting in 'skincare' — fragrance, bath_body,
+// makeup, hair and excluded rows are returned untouched.
+// ============================================================================
+function applyDefensiveRouting(
+  result: ImportCategorisation,
+  name: string,
+): ImportCategorisation {
+  if (result.top_category !== "skincare") return result;
+  // Same normalisation as inferCategorisation (letter↔digit split + lowercase).
+  const t = String(name || "").toLowerCase().replace(/([a-z])(\d)/g, "$1 $2");
+
+  // Perfumed / scented body (or hair & body) mist → fragrance, not body care.
+  if (
+    ENABLED_EXTENDED_CATEGORIES.has("fragrance") &&
+    /\b(hair\s*&?\s*body\s*mist|perfumed\s*body\s*mist|body\s*mist)\b/.test(t) &&
+    /\b(perfumed|fragranced|scented|eau de)\b/.test(t)
+  ) {
+    return { top_category: "fragrance", product_type: "Body Fragrance", subcategory: "body", tags: ["fragrance", "body"] };
+  }
+
+  // Body / hand / foot / both subcategory must live in bath_body, not skincare.
+  if (
+    ENABLED_EXTENDED_CATEGORIES.has("bath_body") &&
+    (result.subcategory === "body" || result.subcategory === "hand" ||
+      result.subcategory === "foot" || result.subcategory === "both")
+  ) {
+    const subcategory = result.subcategory === "both" ? "body" : result.subcategory;
+    return {
+      top_category: "bath_body",
+      product_type: result.product_type,
+      subcategory,
+      tags: ["bath_body", subcategory],
+    };
+  }
+
+  return result;
 }
