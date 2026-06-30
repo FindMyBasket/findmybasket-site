@@ -7,6 +7,7 @@ import {
   getProductById,
   getRetailerOffers,
   getRelatedProducts,
+  getMoreFromBrand,
   resolveMergedKeeper,
 } from '../../../lib/product-queries';
 import { buildBreadcrumbJsonLd } from '../../../lib/breadcrumb';
@@ -128,10 +129,18 @@ export default async function ProductPage({ params }: { params: { id: string } }
     notFound();
   }
 
-  const [offers, related] = await Promise.all([
+  const [offers, related, moreFromBrandRaw] = await Promise.all([
     getRetailerOffers(id),
     getRelatedProducts(product, 6),
+    product.normalised_brand
+      ? getMoreFromBrand(product.normalised_brand, product.id, product.top_category, 12)
+      : Promise.resolve([]),
   ]);
+
+  // Dedupe the brand block against "Related products" (which can overlap on
+  // same-brand same-type items) so a product never shows twice, then cap at 8.
+  const relatedIds = new Set(related.map(p => p.id));
+  const moreFromBrand = moreFromBrandRaw.filter(p => !relatedIds.has(p.id)).slice(0, 8);
 
   const inStockOffers = offers.filter(o => o.in_stock);
   const outOfStockOffers = offers.filter(o => !o.in_stock);
@@ -434,6 +443,28 @@ export default async function ProductPage({ params }: { params: { id: string } }
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {related.map(p => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {product.brand && product.brand_slug && moreFromBrand.length > 0 && (
+        <section className="max-w-site mx-auto px-6 py-8">
+          <div className="flex items-baseline justify-between mb-2 flex-wrap gap-x-4">
+            <h2 className="font-serif text-3xl text-ink">More from {product.brand}</h2>
+            <Link
+              href={`/brands/${product.brand_slug}`}
+              className="text-sm text-ink-light hover:text-ink transition-colors"
+            >
+              View all {product.brand} →
+            </Link>
+          </div>
+          <p className="text-ink-light mb-6">
+            Explore the rest of the {product.brand} range across categories.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {moreFromBrand.map(p => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>

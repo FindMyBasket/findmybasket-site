@@ -6,6 +6,7 @@ export interface ProductDetail {
   name: string;
   brand: string | null;
   brand_slug: string | null;
+  normalised_brand: string | null;
   top_category: string | null;
   subcategory: string | null;
   product_type: string | null;
@@ -45,6 +46,7 @@ export async function getProductById(id: number): Promise<ProductDetail | null> 
     name: data.name,
     brand: data.brand,
     brand_slug: data.normalised_brand ? brandSlug(data.normalised_brand) : null,
+    normalised_brand: data.normalised_brand,
     top_category: data.top_category,
     subcategory: data.subcategory,
     product_type: data.product_type,
@@ -171,6 +173,89 @@ export async function getRelatedProducts(product: ProductDetail, limit = 6): Pro
   }
 
   return candidates.slice(0, limit);
+}
+
+// "More from {Brand}" (Change 3). Other products from the same brand, with
+// products in a DIFFERENT top_category surfaced first — that cross-category jump
+// (e.g. a Clarins skincare page showing Clarins bath products) is the whole
+// point. Driven off normalised_brand (hits idx_products_brand_producttype).
+// Deterministic ordering (no RANDOM) so the ISR-cached page stays stable.
+export async function getMoreFromBrand(
+  normalisedBrand: string,
+  currentId: number,
+  currentCategory: string | null,
+  limit = 12
+): Promise<FeaturedProduct[]> {
+  const base = () =>
+    supabase
+      .from('products_active')
+      .select('id, name, brand, normalised_brand, product_type, subcategory, image_url, top_category')
+      .eq('normalised_brand', normalisedBrand)
+      .neq('id', currentId)
+      .not('image_url', 'is', null)
+      .neq('image_url', '')
+      .not('tags', 'cs', '{cleanup_remove}');
+
+  // Fetch the different-category and same-category pools separately so the
+  // different-category candidates are guaranteed in hand (a single capped fetch
+  // could return only same-category rows for a brand with a huge catalogue).
+  let rows: { id: number; name: string; brand: string | null; normalised_brand: string | null; product_type: string | null; subcategory: string | null; image_url: string | null; top_category: string | null }[] = [];
+  if (currentCategory) {
+    const [diff, same] = await Promise.all([
+      base().neq('top_category', currentCategory).limit(40),
+      base().eq('top_category', currentCategory).limit(40),
+    ]);
+    rows = [...(diff.data ?? []), ...(same.data ?? [])];
+  } else {
+    const { data } = await base().limit(60);
+    rows = data ?? [];
+  }
+  if (rows.length === 0) return [];
+
+  const productIds = rows.map(r => r.id);
+  const { data: prices } = await supabase
+    .from('retailer_prices')
+    .select('product_id, retailer_id, price, in_stock')
+    .in('product_id', productIds)
+    .eq('in_stock', true);
+
+  const byProduct = new Map<number, { retailer_id: number; price: number }[]>();
+  for (const p of prices ?? []) {
+    if (!p.product_id || !p.price) continue;
+    const arr = byProduct.get(p.product_id) ?? [];
+    arr.push({ retailer_id: p.retailer_id, price: Number(p.price) });
+    byProduct.set(p.product_id, arr);
+  }
+
+  const scored: (FeaturedProduct & { _diff: boolean })[] = [];
+  for (const row of rows) {
+    const priceRows = byProduct.get(row.id);
+    if (!priceRows) continue;
+    const { retailerCount, prices: priceList } = applyImporterRule(priceRows);
+    if (retailerCount === 0 || priceList.length === 0) continue;
+    scored.push({
+      id: row.id,
+      name: row.name,
+      brand: row.brand,
+      brand_slug: row.normalised_brand ? brandSlug(row.normalised_brand) : null,
+      product_type: row.product_type,
+      subcategory: row.subcategory,
+      image_url: row.image_url,
+      retailer_count: retailerCount,
+      min_price: Math.min(...priceList),
+      next_best_price: nextBestPrice(priceList),
+      saving_pct: nextBestSavingPct(priceList),
+      _diff: currentCategory ? row.top_category !== currentCategory : true,
+    });
+  }
+
+  scored.sort((a, b) => {
+    if (a._diff !== b._diff) return a._diff ? -1 : 1; // different category first
+    if (b.retailer_count !== a.retailer_count) return b.retailer_count - a.retailer_count;
+    return a.id - b.id; // stable, deterministic tiebreak
+  });
+
+  return scored.slice(0, limit).map(({ _diff, ...p }) => p);
 }
 
 async function fetchRelated(
