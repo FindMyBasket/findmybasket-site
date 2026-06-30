@@ -18,6 +18,32 @@ export function categoryToSlug(cat: string): string {
   return CATEGORY_SLUGS[cat as TopCategory] ?? cat;
 }
 
+// Display labels for each top_category. Shared by the cross-category surfaces
+// (category chips, brand "Available in" line) so the wording stays in one place.
+export const CATEGORY_DISPLAY: Record<TopCategory, string> = {
+  skincare: 'Skincare',
+  makeup: 'Makeup',
+  hair: 'Hair',
+  fragrance: 'Fragrance',
+  bath_body: 'Bath & Body',
+};
+
+// Routine order for rendering a set of categories (e.g. "also in Skincare,
+// Makeup, Hair"). Unknown values sort to the end in their original order.
+const CATEGORY_DISPLAY_ORDER: TopCategory[] = ['skincare', 'makeup', 'hair', 'fragrance', 'bath_body'];
+
+export function sortCategories(cats: string[]): string[] {
+  return [...cats].sort((a, b) => {
+    const ai = CATEGORY_DISPLAY_ORDER.indexOf(a as TopCategory);
+    const bi = CATEGORY_DISPLAY_ORDER.indexOf(b as TopCategory);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+}
+
+export function categoryDisplay(cat: string): string {
+  return CATEGORY_DISPLAY[cat as TopCategory] ?? cat;
+}
+
 export interface CategoryStats {
   total_products: number;
   total_brands: number;
@@ -223,6 +249,62 @@ export async function getTopBrands(category: TopCategory, limit = 16): Promise<T
     }))
     .sort((a, b) => b.product_count - a.product_count)
     .slice(0, limit);
+}
+
+export interface CrossCategoryBrand {
+  name: string;            // display brand
+  slug: string;            // /brands/[slug]
+  in_this: number;         // products in the current category
+  other_categories: string[]; // raw top_category values, routine-ordered
+}
+
+// Brands that genuinely sit in more than one top_category but which we do NOT
+// want to surface as "discovery" chips: retailer own-brands (Superdrug, Boots,
+// the truncated "perfume shop s") and mislabeled feed dumps whose cross-category
+// counts are an artefact, not a real range (Kose/Cosy). Keyed on normalised_brand
+// (lowercase). Extend here if another own-brand/noise entry crowds the chips.
+const CROSS_CATEGORY_BRAND_DENYLIST = new Set<string>([
+  'superdrug',
+  'boots',
+  'perfume shop s',
+  'kose',
+  'cosy',
+]);
+
+// Cross-category brand chips (Change 1). Brands with meaningful inventory in BOTH
+// `category` and at least one other top_category, ranked by their presence in
+// this category, for the "Brands also available in other categories" section.
+// Heavy aggregation runs in the fmb_cross_category_brands RPC; here we just drop
+// denylisted noise and take the top `limit`. Cached hourly via the page's ISR.
+export async function getCrossCategoryBrands(
+  category: TopCategory,
+  limit = 13
+): Promise<CrossCategoryBrand[]> {
+  const { data, error } = await supabase.rpc('fmb_cross_category_brands', {
+    p_category: category,
+    p_min_this: 5,
+    p_min_other: 5,
+    p_limit: 40,
+  });
+
+  if (error || !data) return [];
+
+  const rows = data as {
+    normalised_brand: string;
+    brand: string | null;
+    in_this: number;
+    other_categories: string[] | null;
+  }[];
+
+  return rows
+    .filter(r => r.normalised_brand && !CROSS_CATEGORY_BRAND_DENYLIST.has(r.normalised_brand))
+    .slice(0, limit)
+    .map(r => ({
+      name: r.brand ?? r.normalised_brand,
+      slug: brandSlug(r.normalised_brand),
+      in_this: Number(r.in_this),
+      other_categories: sortCategories(r.other_categories ?? []),
+    }));
 }
 
 export async function getFeaturedProducts(

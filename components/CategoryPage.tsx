@@ -7,7 +7,9 @@ import {
   getTopBrands,
   getFeaturedProducts,
   getSubcategories,
+  getCrossCategoryBrands,
   categoryToSlug,
+  categoryDisplay,
   type TopCategory,
 } from '../lib/queries';
 
@@ -25,11 +27,12 @@ export async function CategoryPage({ category, displayName, intro }: Props) {
   // keyed by the raw `category` value (e.g. bath_body-desktop.jpg), so the hero
   // <div> below deliberately keeps `${category}`, not `${slug}`.
   const slug = categoryToSlug(category);
-  const [stats, brands, products, subcategories] = await Promise.all([
+  const [stats, brands, products, subcategories, crossBrands] = await Promise.all([
     getCategoryStats(category),
     getTopBrands(category, 16),
     getFeaturedProducts(category, 24),
     getSubcategories(category),
+    getCrossCategoryBrands(category, 13),
   ]);
 
   // Structured data. BreadcrumbList (Home > Category) matches SubcategoryPage;
@@ -120,6 +123,31 @@ export async function CategoryPage({ category, displayName, intro }: Props) {
           </div>
         </div>
       </section>
+
+      {crossBrands.length > 0 && (
+        <section className="max-w-site mx-auto px-6 py-12">
+          <h2 className="font-serif text-3xl text-ink mb-2">Brands also in other categories</h2>
+          <p className="text-ink-light mb-8">
+            Stocked in {displayName.toLowerCase()} and beyond. Explore their full range.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {crossBrands.map(brand => (
+              <Link
+                key={brand.slug}
+                href={`/brands/${brand.slug}`}
+                className="group bg-warm-white border border-border rounded-full pl-5 pr-4 py-2.5 text-sm text-ink hover:border-gold hover:bg-cream transition-colors"
+              >
+                <span className="font-medium">{brand.name}</span>
+                {brand.other_categories.length > 0 && (
+                  <span className="text-ink-light ml-2 text-xs">
+                    also in {brand.other_categories.map(categoryDisplay).join(', ')}
+                  </span>
+                )}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {subcategories.length > 1 && (
         <section className="max-w-site mx-auto px-6 py-12">

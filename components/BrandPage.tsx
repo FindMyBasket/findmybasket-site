@@ -9,6 +9,7 @@ import {
   getBrandProducts,
 } from '../lib/brand-queries';
 import { buildBreadcrumbJsonLd } from '../lib/breadcrumb';
+import { categoryToSlug } from '../lib/queries';
 
 interface Props {
   slug: string;
@@ -128,6 +129,26 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
             </>
           )}
         </div>
+
+        {/* Cross-category signal: which top categories this brand sits in, each
+            linking to that category landing (strengthens category <-> brand
+            internal linking). Only on the unfiltered brand page. */}
+        {!hasFilter && stats.category_breakdown.length > 0 && (
+          <p className="mt-6 text-sm text-ink-light">
+            Available in{' '}
+            {stats.category_breakdown.map(({ category: cat }, idx) => (
+              <span key={cat}>
+                {idx > 0 && ', '}
+                <Link
+                  href={`/${categoryToSlug(cat)}`}
+                  className="text-ink underline decoration-border underline-offset-4 hover:decoration-gold transition-colors"
+                >
+                  {CATEGORY_DISPLAY[cat] ?? cat}
+                </Link>
+              </span>
+            ))}
+          </p>
+        )}
       </section>
 
       {!hasFilter && stats.category_breakdown.length > 1 && (
