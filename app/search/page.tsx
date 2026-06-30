@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { SiteLayout } from '../../components/SiteLayout';
 import { runSearch, SEARCH_MIN_QUERY_LEN, SEARCH_PAGE_LIMIT } from '../../lib/search';
+import { matchTaxonomy } from '../../lib/finder/taxonomy';
 
 // A search-results page should not be indexed; it is a utility surface, not a
 // canonical landing page. The homepage JSON-LD SearchAction still targets it.
@@ -16,10 +17,15 @@ export const dynamic = 'force-dynamic';
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: { q?: string };
+  searchParams: { q?: string; from?: string };
 }) {
   const query = (searchParams.q ?? '').trim();
   const { brands, products, productTotal } = await runSearch(query, SEARCH_PAGE_LIMIT);
+
+  // When the query is a curated Product Finder term (arrived via a /finder chip
+  // or typed directly), frame the results as an intentional discovery rather than
+  // a generic search.
+  const taxonomyMatch = matchTaxonomy(query);
 
   const hasResults = brands.length > 0 || products.length > 0;
   const tooShort = query.length > 0 && query.length < SEARCH_MIN_QUERY_LEN;
@@ -67,9 +73,23 @@ export default async function SearchPage({
 
         {hasResults && (
           <>
-            <h1 className="font-serif text-2xl text-ink mb-6">
-              Results for &ldquo;{query}&rdquo;
-            </h1>
+            {taxonomyMatch ? (
+              <div className="mb-6">
+                <p className="text-xs uppercase tracking-widest text-gold font-medium mb-2">
+                  Find by {taxonomyMatch.kind}
+                </p>
+                <h1 className="font-serif text-3xl text-ink mb-1">
+                  {taxonomyMatch.label}
+                </h1>
+                <p className="text-sm text-ink-light">
+                  {productTotal.toLocaleString()} product{productTotal === 1 ? '' : 's'} across multiple UK retailers
+                </p>
+              </div>
+            ) : (
+              <h1 className="font-serif text-2xl text-ink mb-6">
+                Results for &ldquo;{query}&rdquo;
+              </h1>
+            )}
 
             {brands.length > 0 && (
               <section className="mb-10">

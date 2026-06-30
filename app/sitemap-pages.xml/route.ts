@@ -20,6 +20,7 @@ interface UrlEntry {
 // Static HTML pages still served from /public
 const STATIC_PAGES: UrlEntry[] = [
   { loc: '/', changefreq: 'daily', priority: 1.0 },
+  { loc: '/finder', changefreq: 'weekly', priority: 0.7 },
   { loc: '/savings-hub.html', changefreq: 'daily', priority: 0.9 },
   { loc: '/app.html', changefreq: 'weekly', priority: 0.9 },
   { loc: '/product-finder.html', changefreq: 'weekly', priority: 0.7 },
