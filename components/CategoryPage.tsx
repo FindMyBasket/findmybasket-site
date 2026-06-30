@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { SiteLayout } from './SiteLayout';
 import { ProductCard } from './ProductCard';
+import { buildBreadcrumbJsonLd } from '../lib/breadcrumb';
 import {
   getCategoryStats,
   getTopBrands,
@@ -9,6 +10,8 @@ import {
   categoryToSlug,
   type TopCategory,
 } from '../lib/queries';
+
+const SITE_URL = 'https://www.findmybasket.co.uk';
 
 interface Props {
   category: TopCategory;
@@ -29,8 +32,37 @@ export async function CategoryPage({ category, displayName, intro }: Props) {
     getSubcategories(category),
   ]);
 
+  // Structured data. BreadcrumbList (Home > Category) matches SubcategoryPage;
+  // CollectionPage marks this as a category listing for the catalogue.
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+    { name: 'Home', url: '/' },
+    { name: displayName, url: `/${slug}` },
+  ]);
+  const collectionJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `${displayName} | FindMyBasket`,
+    description: intro,
+    url: `${SITE_URL}/${slug}`,
+    isPartOf: {
+      '@type': 'WebSite',
+      name: 'FindMyBasket',
+      url: SITE_URL,
+    },
+  };
+
   return (
     <SiteLayout>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
+      />
       <section className="relative overflow-hidden">
         {/* Hero photo — desktop crop */}
         <div
