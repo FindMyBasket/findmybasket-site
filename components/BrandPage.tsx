@@ -67,6 +67,18 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
     .map(({ category, count }) => `${CATEGORY_DISPLAY[category] ?? category} (${count})`)
     .join(', ');
 
+  // "Available in" categories. Apply the same >= 5 threshold as the cross-category
+  // chip selection (PR #74 Change 1) so the same brand-category signal is surfaced
+  // consistently and thin presence (e.g. The Ordinary's 3 makeup products) is
+  // suppressed. category_breakdown is pre-sorted by count desc. Fallback: a niche
+  // brand whose every category is below the threshold still shows its top 1-2, so
+  // the line is never empty when the brand has any products.
+  const AVAILABILITY_MIN = 5;
+  const availableCategories =
+    stats.category_breakdown.filter(c => c.count >= AVAILABILITY_MIN).length > 0
+      ? stats.category_breakdown.filter(c => c.count >= AVAILABILITY_MIN)
+      : stats.category_breakdown.slice(0, 2);
+
   // BreadcrumbList structured data
   const breadcrumbItems = [
     { name: 'Home', url: '/' },
@@ -133,10 +145,10 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
         {/* Cross-category signal: which top categories this brand sits in, each
             linking to that category landing (strengthens category <-> brand
             internal linking). Only on the unfiltered brand page. */}
-        {!hasFilter && stats.category_breakdown.length > 0 && (
+        {!hasFilter && availableCategories.length > 0 && (
           <p className="mt-6 text-sm text-ink-light">
             Available in{' '}
-            {stats.category_breakdown.map(({ category: cat }, idx) => (
+            {availableCategories.map(({ category: cat }, idx) => (
               <span key={cat}>
                 {idx > 0 && ', '}
                 <Link
