@@ -110,6 +110,51 @@ const CASES: Case[] = [
   { name: "Shiseido Expert Sun Protector Face & Body Lotion SPF50+ 150ml", brand: "Shiseido", expect: null, note: "SPF face & body lotion → skincare, not personal care" },
   // Guard must NOT over-reach: a plain body soap bar is still personal care.
   { name: "Dove Original Body Soap Bar 100g", brand: "Dove", expect: "bath_body", expectType: "Bath & Shower", note: "body soap bar still personal care" },
+
+  // ── HOME FRAGRANCE (brand-agnostic) → bath & body ─────────────────────────
+  { name: "Price's Candles Medium Jar Calming Green Tea", brand: "Price's Candles", expect: "bath_body", expectType: "Home Fragrance", expectSub: "body" },
+  { name: "Psychic Sisters Gemstone Wax Melt Aventurine", brand: "Psychic Sisters", expect: "bath_body", expectType: "Home Fragrance", expectSub: "body" },
+  { name: "NEOM Perfect Nights Sleep Reed Diffuser 100ml", brand: "NEOM", expect: "bath_body", expectType: "Home Fragrance", expectSub: "body" },
+  { name: "Tisserand - Energy Boost Diffuser Oil - 9ml", brand: "Tisserand", expect: "bath_body", expectType: "Home Fragrance", expectSub: "body" },
+  { name: "Superdrug Home Linen Reed Diffuser 100ml", brand: "Superdrug", expect: "bath_body", expectType: "Home Fragrance", expectSub: "body" },
+  { name: "Shiseido - BAUM Aromatic Room Spray Forest Embrace 100ml Refill", brand: "Shiseido", expect: "bath_body", expectType: "Home Fragrance", expectSub: "body" },
+  { name: "Sanctuary Spa Wellness Solutions Sleep Mist 100ml", brand: "Sanctuary Spa", expect: "bath_body", expectType: "Home Fragrance", expectSub: "body" },
+  { name: "Acqua di Parma Insieme Reed Diffuser 180ml", brand: "Acqua di Parma", expect: "bath_body", expectType: "Home Fragrance", expectSub: "body", note: "fragrance house's diffuser is home fragrance, not a wearable scent" },
+  { name: "NEOM Real Luxury Intensive Skin Treatment Candle", brand: "NEOM", expect: "bath_body", expectType: "Home Fragrance", expectSub: "body", note: "candle form wins over a stray 'skin' token" },
+
+  // ── AROMATHERAPY / WELLNESS BRANDS → bath & body ──────────────────────────
+  { name: "Tisserand Lavender Organic Essential Oil 10ml", brand: "Tisserand", expect: "bath_body", expectType: "Aromatherapy", expectSub: "body" },
+  { name: "Tisserand - Energy Boost Pulse Point Roller Ball Essential Oil - 10ml", brand: "Tisserand", expect: "bath_body", expectType: "Aromatherapy", expectSub: "body", note: "pulse-point roller stays in bath & body" },
+  { name: "Amphora Aromatics Lavender 10ml Roll-on", brand: "Amphora Aromatics", expect: "bath_body", expectType: "Aromatherapy", expectSub: "body" },
+  { name: "Amphora Aromatics Muscle & Joint Rub 10ml Roll-on", brand: "Amphora Aromatics", expect: "bath_body", expectType: "Aromatherapy", expectSub: "body" },
+  { name: "Tisserand Happy Vibes MoodFix Mist 100ml", brand: "Tisserand", expect: "bath_body", expectType: "Aromatherapy", expectSub: "body" },
+  { name: "The Aromatherapy Co . Relax Therapy Diffuser 250ml - Lavender And Clary Sage", brand: "The Aromatherapy Co", expect: "bath_body", expectType: "Aromatherapy", expectSub: "body", note: "bare 'diffuser' caught via the aromatherapy brand rule, not the home-fragrance form" },
+  { name: "Celtic Wellbeing Relax Aromatherapy Blend 10ml", brand: "Celtic Wellbeing", expect: "bath_body", expectType: "Aromatherapy", expectSub: "body" },
+
+  // ── AROMATHERAPY BRANDS: genuine face skincare must STAY skincare (null) ───
+  { name: "Amphora Aromatics Sea Buckthorn Face Oil 30ml", brand: "Amphora Aromatics", expect: null, note: "face oil → stays skincare" },
+  { name: "Amphora Aromatics Frankincense & Rose Face Cream 60ml", brand: "Amphora Aromatics", expect: null },
+  { name: "Amphora Aromatics Frankincense Bakuchiol Serum 25ml", brand: "Amphora Aromatics", expect: null, note: "serum → stays skincare" },
+  { name: "Amphora Aromatics Cedarwood Face Wash Men Organic 120ml", brand: "Amphora Aromatics", expect: null },
+  { name: "Amphora Aromatics Mandarin Fix All Eye Cream Organic 30ml", brand: "Amphora Aromatics", expect: null },
+  { name: "Amphora Aromatics Chamomile Cream 60ml", brand: "Amphora Aromatics", expect: null, note: "bare therapeutic cream → kept skincare" },
+  { name: "Amphora Aromatics Organic Rose Water (Hydrolate) 250ml", brand: "Amphora Aromatics", expect: null, note: "toner/hydrolate → stays skincare" },
+  // STEM-guard regression: the skincare signal uses word stems (cleans/moisturis)
+  // — these inflected forms must still be caught, or face skincare leaks to bath_body.
+  { name: "Amphora Aromatics Cedarwood Face Moisturiser Men ORG 60ml", brand: "Amphora Aromatics", expect: null, note: "'moisturiser' stem → stays skincare" },
+  { name: "Amphora Aromatics Mandarin Cleansing Balm Organic 60ml", brand: "Amphora Aromatics", expect: null, note: "'cleansing' stem → stays skincare" },
+  { name: "Amphora Aromatics Frankincense Facial Cleanser 100ml", brand: "Amphora Aromatics", expect: null, note: "'cleanser' stem → stays skincare" },
+
+  // ── Plural-form coverage (the 29-Jun blind spot) ──────────────────────────
+  { name: "Sanctuary Spa Bath Bombs Gift Set 3 x 100g", brand: "Sanctuary Spa", expect: "bath_body", expectType: "Bath & Shower", expectSub: "body", note: "plural 'bath bombs' matches" },
+  { name: "Tisserand Restore Balance Bath & Shower Wash 400ml", brand: "Tisserand", expect: "bath_body", expectType: "Bath & Shower", expectSub: "body", note: "'bath & shower wash' form now matched" },
+
+  // ── Bath gift sets / rituals / collections (safety-net Rule 4 parity) ──────
+  // These carry no functional form word, so the detector used to return null and
+  // they defaulted to skincare/face until the 09:30 backfill flipped them. Now
+  // recognised here as a bath form → bath & body at import.
+  { name: "Wanderflower Bathing Rituals Set", brand: "Wanderflower", expect: "bath_body", expectType: "Bath & Shower", expectSub: "body", note: "bathing rituals set → bath & body" },
+  { name: "Champneys Sleep Bath Ritual Collection", brand: "Champneys", expect: "bath_body", expectType: "Bath & Shower", expectSub: "body", note: "bath ritual collection → bath & body" },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
@@ -182,7 +227,7 @@ for (const [n, b] of offSamples) {
 }
 
 // (c) flag ON → correct routing.
-const onCases: Array<{ name: string; brand?: string; top: string | null; note: string }> = [
+const onCases: Array<{ name: string; brand?: string; top: string | null; sub?: string; note: string }> = [
   { name: "Chanel No.5 Eau de Parfum 100ml", brand: "Chanel", top: "fragrance", note: "fragrance (was excluded)" },
   { name: "Hugo Boss Bottled EDT 125ml After Shave Balm Shower Gel Gift Set", brand: "Hugo Boss", top: "fragrance", note: "fragrance gift set (was excluded)" },
   // bath_body is now LIVE (Bath & Body launch, Phase B): the detector matches
@@ -198,11 +243,29 @@ const onCases: Array<{ name: string; brand?: string; top: string | null; note: s
   { name: "Maybelline Lash Sensational Mascara", brand: "Maybelline", top: "makeup", note: "makeup untouched" },
   { name: "Olaplex No.4 Bond Maintenance Shampoo 250ml", brand: "Olaplex", top: "hair", note: "hair untouched" },
   { name: "Lynx Africa Body Spray 150ml", brand: "Lynx", top: null, note: "body-spray deodorant stays excluded (no PC form)" },
+
+  // ── Defensive subcategory→top_category routing (run_categoriser_safety_net
+  // parity). These reach Step 4 as top_category 'skincare' with a body/hand/foot
+  // subcategory (sunscreen body lotion, hand/foot mask, barrier lotion) where the
+  // detector defers, or skincare/face for a bath ritual set; the import pass now
+  // routes them to bath_body so the 09:30 cron finds zero work. (Fixtures from the
+  // PR brief.)
+  { name: "APLB Glutathione Niacinamide Sunscreen Body Lotion 150ml", brand: "", top: "bath_body", sub: "body", note: "sunscreen body lotion: detector defers on SPF -> guard routes to bath_body" },
+  { name: "The Saem Pure Natural Hand Treatment Mask", brand: "The Saem", top: "bath_body", sub: "hand", note: "hand treatment mask -> bath_body/hand" },
+  { name: "iUNIK Beta-Glucan All In One Barrier Lotion 300ml", brand: "iUNIK", top: "bath_body", sub: "body", note: "large-format barrier lotion -> bath_body/body" },
+  { name: "Wanderflower Bathing Rituals Set", brand: "Wanderflower", top: "bath_body", sub: "body", note: "bath ritual set (Rule 4) -> bath_body/body" },
+  // 'both' collapses to 'body' (bath_body has no 'both').
+  { name: "The Saem Eco Earth Face & Body Waterproof Sun Cream 100g", brand: "The Saem", top: "bath_body", sub: "body", note: "face & body sun cream: 'both' collapses to body (edge-2 face rescue intentionally skipped)" },
+  // Perfumed body / hair-&-body mist routes to fragrance, not bath_body.
+  { name: "Skybottle Perfumed Hair & Body Mist Vanilla Sky", brand: "Skybottle", top: "fragrance", sub: "body", note: "perfumed hair & body mist -> fragrance/body" },
+  // Control: a genuine face product is never touched by the routing pass.
+  { name: "The Ordinary Niacinamide 10% + Zinc 1% Serum 30ml", brand: "The Ordinary", top: "skincare", sub: "face", note: "control: face serum stays skincare/face" },
 ];
 for (const c of onCases) {
   const on = inferCategorisationForImport(c.name, c.brand ?? "", true);
   const got = on.excluded ? null : on.top_category;
-  check(`ON ${c.note}: got ${on.excluded ? `excl:${on.excluded}` : on.top_category}`, got === c.top);
+  const ok = got === c.top && (c.sub ? on.subcategory === c.sub : true);
+  check(`ON ${c.note}: got ${on.excluded ? `excl:${on.excluded}` : `${on.top_category}/${on.subcategory}`}`, ok);
 }
 
 console.log(`\nGATING PASS ${opass}  /  FAIL ${ofail}`);

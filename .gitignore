@@ -48,3 +48,4 @@ scripts/.fragrance-personalcare-preview.gen.json
 scripts/.excluded-buckets.gen.csv
 scripts/.excluded-buckets.gen.md
 scripts/.excluded-annotated.gen.md
+scripts/.detector-widen-scope.gen.json
