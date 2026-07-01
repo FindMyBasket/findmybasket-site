@@ -246,6 +246,7 @@ import { streamFeedRowBatches, FeedFetchError } from "./_streaming-fetcher.ts";
 import { inferCategorisationForImport, type TopCategory, type ImportTopCategory } from "../_shared/categorisation.ts";
 import { pickDescription } from "../_shared/description.ts";
 import { reconstructBeautyFlashName, BEAUTY_FLASH_RETAILER_ID } from "./name-reconstruction.ts";
+import { cleanDebenhamsName, DEBENHAMS_RETAILER_ID } from "./name-hygiene.ts";
 
 const AWIN_PUBLISHER_ID = "2841268";
 
@@ -1544,6 +1545,11 @@ serve(async (req) => {
   // Pattern E: Beauty Flash truncated-name reconstructions (retailer 27 only).
   let countBeautyFlashRebuilt = 0;
   const sampleBeautyFlashRebuilt: Array<{ truncated: string; rebuilt: string }> = [];
+  // Debenhams (retailer 28 only): name-hygiene rewrites — gender + "| Size:" +
+  // " in {variant}" attribute stripped out of product_name.
+  let countDebenhamsCleaned = 0;
+  let countDebenhamsShadeRouted = 0;
+  const sampleDebenhamsCleaned: Array<{ raw: string; cleaned: string; shade: string | null }> = [];
   // v6 counters
   let countV6Excluded = 0;
   const v6ExclusionBreakdown: Record<string, number> = {};
@@ -1854,6 +1860,29 @@ serve(async (req) => {
     feedRows++;
 
     let name = fields[idx.product_name] || "";
+    // Debenhams (retailer 28) only: the AWIN feed's product_name field ships
+    // pre-polluted with gender tags ("Men's"/"Mens"), a trailing " in {variant}"
+    // colour/shade attribute, and a " | Size:" clause. This is a feed defect, not
+    // an importer one, so hygiene is gated to this retailer rather than applied
+    // feed-wide. Strip the junk out of the name BEFORE excludes / match_key /
+    // categorisation so downstream sees a clean base name, and route the attribute
+    // values to their proper columns (size -> canonical_size, real makeup shade ->
+    // products.shade). No-op for any name without the pattern.
+    let debenhamsSizeClause: string | null = null;
+    let debenhamsShade: string | null = null;
+    if (retailerId === DEBENHAMS_RETAILER_ID) {
+      const hy = cleanDebenhamsName(name);
+      debenhamsSizeClause = hy.sizeClause;
+      debenhamsShade = hy.shade;
+      if (hy.changed) {
+        countDebenhamsCleaned++;
+        if (hy.shade) countDebenhamsShadeRouted++;
+        if (sampleDebenhamsCleaned.length < 50) {
+          sampleDebenhamsCleaned.push({ raw: name, cleaned: hy.name, shade: hy.shade });
+        }
+        name = hy.name;
+      }
+    }
     // Pattern E: Beauty Flash (retailer 27) truncates product_name at ~64 chars,
     // breaking match_key generation → silent duplicates. The full name lives in
     // the merchant URL slug; reconstruct it BEFORE excludes / match_key /
@@ -2155,10 +2184,15 @@ serve(async (req) => {
       }
     }
 
-// v6.16: extract canonical_size from raw product name for the new product
-    const canonicalSize = extractCanonicalSize(name);
-    // v6.17: extract shade from raw product name for the new product
-    const shade = extractShade(name, brand);
+// v6.16: extract canonical_size from raw product name for the new product.
+    // Debenhams (r28): prefer the size lifted from the "| Size:" attribute; fall
+    // back to name extraction if that clause held no parseable size.
+    const canonicalSize =
+      (debenhamsSizeClause ? extractCanonicalSize(debenhamsSizeClause) : null) ??
+      extractCanonicalSize(name);
+    // v6.17: extract shade from raw product name for the new product. Debenhams
+    // (r28): prefer the shade routed from the " in {shade}" attribute.
+    const shade = debenhamsShade ?? extractShade(name, brand);
 
     if (isOrdinary) ordinaryDiagnostic.would_create_new++;
     // DIAGNOSTIC (measurement-only): bucket this create-new row by category_name.
@@ -2402,8 +2436,11 @@ serve(async (req) => {
       rows_with_ean: rowsWithEan,
       rows_with_mpn: rowsWithMpn,
       beauty_flash_names_rebuilt: countBeautyFlashRebuilt,
+      debenhams_names_cleaned: countDebenhamsCleaned,
+      debenhams_shades_routed: countDebenhamsShadeRouted,
     },
     sample_beauty_flash_rebuilt: sampleBeautyFlashRebuilt,
+    sample_debenhams_cleaned: sampleDebenhamsCleaned,
     v6_top_category_breakdown: v6TopCategoryBreakdown,
     v6_exclusion_breakdown: v6ExclusionBreakdown,
     brand_canonicalisation: brandCanonicalisation,
