@@ -453,6 +453,19 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     isLashBrand && brandLashLineToken &&
     !/\b(nail|press[\s-]?on|brow|eyebrow|remov\w*|cleans\w*|applicator|brush|tint|serum|growth|tonic|essence)\b/.test(t);
   const makeupCheck = (() => {
+    // Semi-permanent BROW / LASH DYE KITS are grooming skincare, not makeup —
+    // symmetric with the lash-tint guard in the standalone-lashes branch below
+    // (which already keeps "Eylure Lash Tint" in skincare). The bare "brow"
+    // makeup trigger would otherwise claim "Eylure Brow Tint … Permanent 45 Day"
+    // as Brow makeup. Scope tightly to dye-kit signals (dye / permanent tint /
+    // "NN day" tint) so ordinary brow makeup ("Brow Tint Pen", "Tinted Brow Gel")
+    // is untouched. These fall through to Step 4 (and Step 3c keeps them skincare).
+    if (
+      /\b(brow|eyebrow|lash|lashes|eyelash|eyelashes)\b/.test(t) &&
+      /\b(dye|(permanent|semi.?permanent)\b.*\btint|tint\b.*\b(permanent|semi.?permanent)|\d+\s*day\b.*\btint|tint\b.*\b\d+\s*day)\b/.test(t)
+    ) {
+      return false;
+    }
     // Cushion foundations are unambiguous makeup, but their names commonly also
     // contain skincare-trigger keywords (Mask Fit, SPF, Sun Protection) that
     // would otherwise trip skincare detection (mask/peel/pack, SPF) first. Gate
@@ -669,6 +682,108 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
       if (re.test(t)) {
         return { top_category: "makeup", product_type: pt, subcategory: sub, tags: ["makeup", sub] };
       }
+    }
+  }
+
+  // ─── Step 3c: Colour-cosmetics decontamination ───────────────────────────
+  // Reached only when Steps 2–3b did NOT claim the product (it is about to fall
+  // into Step 4 skincare). Feeds mis-shelve colour cosmetics as skincare —
+  // Korean lip tints, tinted complexion/suncare, eye pencils/kajal, cheek tints,
+  // hair-colour tints. This block is ADDITIVE and EXPLICIT: every route is a
+  // named pattern (authoritative source: the 2026-07-01 skincare-decontam
+  // review), never a catch-all default, and it fires only when a tint/colour
+  // signal is present, so genuine skincare with no such signal is untouched.
+  //
+  // Rule order is load-bearing:
+  //   (0) KEEP guards first — tinted lip balm, lip-care mask, lash/brow dye and
+  //       self-tan carry a tint token but are genuine skincare; fall through.
+  //   (1) hair-colour tints (Dariya) → hair.
+  //   (2) LIP colour/tint BEFORE complexion — so a lip tint that also names
+  //       serum/essence/ampoule (HOUSE OF HUR "Glow Ampoule Tint", Kose "Lip
+  //       Essence Tint") routes to LIPS, not swallowed by the complexion guard.
+  //   (5) complexion (incl. "Tone-Up Sun" / tinted suncare) BEFORE the bare-tint
+  //       fallback — so tinted suncare lands as Foundation, not Lip Colour.
+  //   (6) any remaining bare tint (Korean colour tints) → Lip Colour.
+  const hasTint = /\btint(ed)?\b/.test(t);
+  // A complexion PRODUCT signal. Bare "complexion" is a very common skincare
+  // benefit word ("clear complexion toner", "even complexion serum", set/duo
+  // names), so it only counts as a complexion product when NOT paired with a
+  // cleanser/toner/mist/serum form or multi-item set framing. BB/CC, skin tint
+  // and skin perfector are unambiguous complexion products on their own.
+  const complexionProduct =
+    /\b(bb cream|cc cream|skin tint|skin perfector)\b/.test(t) ||
+    (/\bcomplexion\b/.test(t) &&
+      !/\b(toner|cleanser|cleansing|foam|foaming|face wash|facial wash|micellar|mist|serum|essence|water|duo|couple|essentials|heroes|kit|set|routine|bundle)\b/.test(t));
+  // Sunscreen-first boundary: a tinted product whose HEAD NOUN is sun protection
+  // (sunscreen / sun / UV, incl. "tone-up sun") and which carries NO complexion
+  // noun stays skincare/SPF — the SPF is the point, the tint is incidental
+  // (Ultrasun, Supergoop, Avène/Bioderma/Beauty of Joseon sun fluids, Korean
+  // tone-up suns). By contrast a tinted MOISTURISER / BB-CC / skin-tint /
+  // complexion product moves to Foundation even with SPF or "tone-up" in the
+  // name (there "tone-up" is benefit copy, not the sun category). Boundary per
+  // the 2026-07-01 review.
+  const complexionNoun =
+    /\b(tinted moisturi[sz]er|bb cream|cc cream|bb tint|cc tint|skin tint|skin perfector|skin illusion|complexion rescue|complexion touch|cushion|face colou?r|day cream)\b/.test(t);
+  const sunscreenFirst =
+    /\b(spf|sunscreen|sun|uv|photoderm|anthelios|sunsilk)\b/.test(t) &&
+    !complexionNoun &&
+    !/\blip\b/.test(t) &&   // lip tints with UV/SPF still route to lips, not kept as skincare
+    hasTint;
+  const keepSkincareColour =
+    sunscreenFirst ||                                                                                  // sunscreen-first tinted SPF stays skincare
+    (hasTint && /\b(balm|butter)\b/.test(t)) ||                                                        // tinted lip balm/butter
+    (/\blip\b/.test(t) && /\b(mask|nourish\w*)\b/.test(t)) ||                                          // lip-care mask (Barry M)
+    (/\b(lash|lashes|eyelash|eyelashes|brow|eyebrow|dybrow)\b/.test(t) && /\b(tint|dye)\b/.test(t)) || // lash/brow dye (Eylure)
+    /\b(self.?tan|self.?tanning|fake tan|gradual tan|tan(ning)? (mousse|water|lotion|oil|milk|drops|foam|spray))\b/.test(t); // tinted self-tan stays skincare
+
+  if (
+    !keepSkincareColour &&
+    (hasTint || complexionProduct || /\btone.?up sun\b/.test(t) ||
+      /\b(eye pencil|eyepencil|kajal|lip glaze|lip lacquer|lip power|lip maximi[sz]er|lip potion)\b/.test(t))
+  ) {
+    // (1) Hair-colour tints (Dariya and generic hair dye) → hair.
+    if (
+      /\bdariya\b/.test(b) || /\bdariya\b/.test(t) ||
+      (hasTint && /\b(hair colou?r|hair dye|hair colou?rant)\b/.test(t))
+    ) {
+      return { top_category: "hair", product_type: "Hair Colour", subcategory: "colour", tags: ["hair", "colour"] };
+    }
+    // (2) LIP colour/tint — BEFORE complexion so a lip tint that also names
+    //     serum/essence/ampoule routes to LIPS. Bare lip balm/oil (no colour
+    //     signal) is NOT matched here and stays skincare Lip Care.
+    if (
+      (/\blip\b/.test(t) && (hasTint || /\b(gloss|glaze|lacquer|stain|maximi[sz]er|potion|power)\b/.test(t))) ||
+      /\b(lip glaze|lip lacquer|lip stain)\b/.test(t)
+    ) {
+      return { top_category: "makeup", product_type: "Lip Colour", subcategory: "lips", tags: ["makeup", "lips"] };
+    }
+    // (3) Eye pencils / kajal (makeup detection misses these tokens), and
+    //     Armani-style cream "Eye Tint" shadows.
+    if (/\b(eye pencil|eyepencil|kajal)\b/.test(t)) {
+      return { top_category: "makeup", product_type: "Eyeliner", subcategory: "eyes", tags: ["makeup", "eyes"] };
+    }
+    if (/\beye\b/.test(t) && hasTint && !/\beye (cream|serum|gel|balm|care|patch|patches)\b/.test(t)) {
+      return { top_category: "makeup", product_type: "Eyeshadow", subcategory: "eyes", tags: ["makeup", "eyes"] };
+    }
+    // (4) Cheek / blush tints (most caught in Step 3; this is the residue).
+    if (/\b(cheek|blush)\b/.test(t) && hasTint) {
+      return { top_category: "makeup", product_type: "Blush/Bronzer", subcategory: "face", tags: ["makeup", "face"] };
+    }
+    // (5) Complexion — BB/CC, skin tint/perfector, tinted moisturiser/serum/
+    //     fluid/cushion/hydrator. Sunscreen-first tinted SPF/sun/UV products
+    //     (incl. tone-up suns) were already kept in skincare by the
+    //     sunscreenFirst guard above; anything with a complexion noun reaching
+    //     here is genuine complexion. Runs BEFORE the bare-tint fallback so a
+    //     tinted complexion product lands as Foundation, not Lip Colour.
+    if (
+      complexionProduct ||
+      (hasTint && /\b(moisturi[sz]er|cream|fluid|serum|spf|sunscreen|sun|cushion|hydrator|hydrating|perfector|day cream|primer)\b/.test(t))
+    ) {
+      return { top_category: "makeup", product_type: "Foundation", subcategory: "face", tags: ["makeup", "face"] };
+    }
+    // (6) Any remaining bare tint (Korean colour tints, oil tints) → Lip Colour.
+    if (hasTint) {
+      return { top_category: "makeup", product_type: "Lip Colour", subcategory: "lips", tags: ["makeup", "lips"] };
     }
   }
 
