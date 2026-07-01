@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { SiteLayout } from '../../components/SiteLayout';
 import { runSearch, SEARCH_MIN_QUERY_LEN, SEARCH_PAGE_LIMIT } from '../../lib/search';
 import { matchTaxonomy } from '../../lib/finder/taxonomy';
+import { logSearch } from '../../lib/events';
+import { getSessionId } from '../../lib/session';
 
 // A search-results page should not be indexed; it is a utility surface, not a
 // canonical landing page. The homepage JSON-LD SearchAction still targets it.
@@ -26,6 +28,23 @@ export default async function SearchPage({
   // or typed directly), frame the results as an intentional discovery rather than
   // a generic search.
   const taxonomyMatch = matchTaxonomy(query);
+
+  // Server-side search logging (requirement: capture the committed search, not the
+  // per-keystroke typeahead). Only real searches (>= min length) are recorded,
+  // including zero-result ones, since result_count = 0 is a key funnel signal.
+  // logSearch is fire-and-forget internally (swallows its own errors); we await it
+  // so the write reliably flushes in the serverless runtime. sessionId is null until
+  // the fmb_sid cookie is introduced behind consent (see lib/session.ts).
+  if (query.length >= SEARCH_MIN_QUERY_LEN) {
+    await logSearch({
+      query,
+      category: taxonomyMatch?.label ?? null,
+      resultCount: productTotal + brands.length,
+      source: searchParams.from ?? 'search_page',
+      sessionId: getSessionId(),
+      path: '/search',
+    });
+  }
 
   const hasResults = brands.length > 0 || products.length > 0;
   const tooShort = query.length > 0 && query.length < SEARCH_MIN_QUERY_LEN;

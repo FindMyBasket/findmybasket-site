@@ -402,6 +402,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
                   href={amazonUrl}
                   retailer="amazon"
                   productId={product.id}
+                  source="amazon_crosscheck"
                   className="border border-border text-ink-light px-5 py-2.5 rounded-full text-sm font-medium hover:border-gold hover:text-ink transition-colors whitespace-nowrap"
                 >
                   Search Amazon →
@@ -424,6 +425,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
             href={ebayUrl}
             retailer="ebay"
             productId={product.id}
+            source="ebay_search"
             className="group bg-warm-white border border-border rounded-2xl p-6 hover:border-gold transition-colors flex items-center justify-between"
           >
             <div>
@@ -551,6 +553,8 @@ function RetailerRow({
             retailer={offer.retailer_name}
             retailerId={offer.retailer_id}
             productId={productId}
+            price={offer.price}
+            source="product_page"
             className="bg-ink text-cream px-5 py-2.5 rounded-full text-sm font-medium hover:bg-gold transition-colors whitespace-nowrap inline-block"
           >
             Buy at {offer.retailer_name}
