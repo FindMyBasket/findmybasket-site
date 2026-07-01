@@ -31,7 +31,7 @@ type Case = {
   expectType?: string;
   // When set, ALSO asserts the resolved subcategory (face/body/hand/foot/both).
   expectSub?: string;
-  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21;
+  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22;
   note?: string;
 };
 
@@ -511,6 +511,51 @@ const CASES: Case[] = [
   // Guards: the other fragrance-free phrasings still hold; a real EDP still excluded.
   { name: "Olay Total Effects 7-in-1 Fragrance Free Moisturiser 50ml", brand: "Olay", expect: "skincare", expectType: "Moisturiser", fixedBy: 0 },
   { name: "Chanel No.5 Eau de Parfum 100ml", brand: "Chanel", expect: null, excluded: "fragrance", fixedBy: 0, note: "real EDP unaffected by the new guard token" },
+
+  // ── Commit 22: Step 3c colour-cosmetics decontamination ───────────────────
+  // Colour cosmetics mis-shelved as skincare by the feeds are rescued to makeup
+  // (or hair) via explicit per-pattern routes that run AFTER makeup/Rimmel
+  // detection and only when a tint/colour signal is present.
+  //
+  // (5) complexion — tinted suncare "Tone-Up Sun" / "Sun" (not "SPF") must land
+  //     as Foundation, not Lip Colour (the review's headline fix).
+  { name: "MISSHA Glow Skin Tinted Tone-Up Sun 30ml", brand: "MISSHA", expect: "skincare", expectType: "SPF", fixedBy: 0, note: "Tone-Up Sun is suncare (noun=sun) → stays skincare/SPF, not lips" },
+  { name: "Some Brand Tone-Up Tinted Moisturiser SPF30", brand: "Some Brand", expect: "makeup", expectType: "Foundation", expectSub: "face", fixedBy: 22, note: "'tone-up' as benefit copy on a tinted moisturiser still moves to complexion" },
+  { name: "Erborian CC Cream Sun SPF25 45ml", brand: "Erborian", expect: "makeup", expectType: "Foundation", expectSub: "face", fixedBy: 22, note: "bare CC cream leaked to skincare pre-3c — now complexion" },
+  { name: "Clarins Skin Illusion Tinted Serum 30ml", brand: "Clarins", expect: "makeup", expectType: "Foundation", expectSub: "face", fixedBy: 22, note: "Skin Illusion complexion line → Foundation" },
+
+  // (5) sunscreen-first boundary — tinted SPF whose noun is sun/UV stays
+  //     skincare/SPF; tinted MOISTURISER/BB/CC/skin-tint/complexion moves.
+  { name: "Bioderma Photoderm Tinted SPF50+ 40ml", brand: "Bioderma", expect: "skincare", expectType: "SPF", fixedBy: 0, note: "sunscreen-first (Photoderm) stays skincare" },
+  { name: "Beauty of Joseon Daily Tinted Fluid Sunscreen SPF50+ 50ml", brand: "Beauty of Joseon", expect: "skincare", expectType: "SPF", fixedBy: 0, note: "sunscreen-first (fluid sunscreen) stays skincare" },
+  { name: "PURITO Cica Clearing Tinted Sun SPF Cream 50ml", brand: "PURITO", expect: "skincare", expectType: "SPF", fixedBy: 0, note: "tinted sun (noun=sun) stays skincare, not complexion" },
+  { name: "Laura Mercier Tinted Moisturizer Natural Skin Perfector SPF30 Nude", brand: "Laura Mercier", expect: "makeup", expectType: "Foundation", expectSub: "face", fixedBy: 22, note: "tinted moisturiser (complexion noun) → Foundation despite SPF" },
+  { name: "bareMinerals Complexion Rescue Tinted Moisturiser SPF30 Opal", brand: "bareMinerals", expect: "makeup", expectType: "Foundation", expectSub: "face", fixedBy: 22, note: "Complexion Rescue tinted moisturiser → Foundation despite SPF" },
+
+  // (2) lip serum/essence/ampoule tints must still route to LIPS, not be
+  //     swallowed by the complexion serum guard.
+  { name: "HOUSE OF HUR Glow Ampoule Tint 03 Rose", brand: "HOUSE OF HUR", expect: "makeup", expectType: "Lip Colour", expectSub: "lips", fixedBy: 22, note: "lip ampoule tint → lips, not complexion" },
+  { name: "Kose Visee Lip Essence Tint PK810", brand: "Kose", expect: "makeup", expectType: "Lip Colour", expectSub: "lips", fixedBy: 22, note: "lip essence tint → lips" },
+
+  // (6) bare/Korean colour lip tints → lips.
+  { name: "peripera Ink Mood Glowy Tint 04", brand: "peripera", expect: "makeup", expectType: "Lip Colour", expectSub: "lips", fixedBy: 22, note: "Korean lip tint → lips" },
+  { name: "The Saem Crema Velvet Tint 01", brand: "The Saem", expect: "makeup", expectType: "Lip Colour", expectSub: "lips", fixedBy: 22, note: "velvet tint → lips despite wrong stored product_type (Cleanser)" },
+  { name: "Catrice Tinted Lip Oil 010", brand: "Catrice", expect: "makeup", expectType: "Lip Colour", expectSub: "lips", fixedBy: 22, note: "tinted lip oil → lips" },
+
+  // (3) eye pencils / kajal / eye tint.
+  { name: "Milani Eye Pencil Black 01", brand: "Milani", expect: "makeup", expectType: "Eyeliner", expectSub: "eyes", fixedBy: 22, note: "eye pencil → eyeliner" },
+  { name: "Lakme Eyeconic Kajal Deep Black 0.35g", brand: "Lakme", expect: "makeup", expectType: "Eyeliner", expectSub: "eyes", fixedBy: 22, note: "kajal → eyeliner" },
+  { name: "Armani Eye Tint 12 Rose Ashes", brand: "Armani", expect: "makeup", expectType: "Eyeshadow", expectSub: "eyes", fixedBy: 22, note: "Armani Eye Tint (no 'eyeshadow' word) → eyeshadow via 3c" },
+
+  // (1) hair-colour tints → hair.
+  { name: "Dariya Palty Trend Color Tint 90g", brand: "Dariya", expect: "hair", expectType: "Hair Colour", expectSub: "colour", fixedBy: 22, note: "Dariya hair-dye tint → hair" },
+
+  // KEEP guards (must STAY skincare / unchanged) — regression tests.
+  { name: "Barry M Lip Mask Overnight Nourishing Treatment", brand: "Barry M", expect: "skincare", fixedBy: 0, note: "lip-care mask stays skincare" },
+  { name: "Burt's Bees Tinted Lip Balm Rose 4.25g", brand: "Burt's Bees", expect: "skincare", fixedBy: 0, note: "tinted lip balm stays skincare" },
+  { name: "Eylure Brow Tint Dark Brown Permanent 45 Day", brand: "Eylure", expect: "skincare", fixedBy: 0, note: "brow dye stays skincare" },
+  { name: "Bondi Sands Self Tan Tinted Foam Dark 200ml", brand: "Bondi Sands", expect: "skincare", fixedBy: 0, note: "tinted self-tan stays skincare (body/tanning)" },
+  { name: "The Ordinary Hyaluronic Acid 2% + B5 Serum 30ml", brand: "The Ordinary", expect: "skincare", expectType: "Serum", fixedBy: 0, note: "plain serum (no tint) untouched by Step 3c" },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
