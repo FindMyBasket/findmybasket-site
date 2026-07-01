@@ -12,6 +12,7 @@ import {
   categoryDisplay,
   type TopCategory,
 } from '../lib/queries';
+import { getProductTypes } from '../lib/subcategory-queries';
 
 const SITE_URL = 'https://www.findmybasket.co.uk';
 
@@ -34,6 +35,14 @@ export async function CategoryPage({ category, displayName, intro }: Props) {
     getSubcategories(category),
     getCrossCategoryBrands(category, 13),
   ]);
+
+  // A category that has collapsed to a single subcategory (skincare -> 'face'
+  // after the face-only programme) can't browse by area, so surface product_type
+  // as the browse facet instead. Reads product_type, NOT subcategory (which is now
+  // uniform for skincare). Links into the single subcategory with ?type=, which the
+  // subcategory page already handles. Extra query runs only for single-sub categories.
+  const singleSub = subcategories.length === 1 ? subcategories[0].name : null;
+  const productTypes = singleSub ? await getProductTypes(category, singleSub, 13) : [];
 
   // Structured data. BreadcrumbList (Home > Category) matches SubcategoryPage;
   // CollectionPage marks this as a category listing for the catalogue.
@@ -164,6 +173,28 @@ export async function CategoryPage({ category, displayName, intro }: Props) {
                 </div>
                 <div className="text-sm text-ink-light">
                   {sub.count.toLocaleString()} products
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {singleSub && productTypes.length > 0 && (
+        <section className="max-w-site mx-auto px-6 py-12">
+          <h2 className="font-serif text-3xl text-ink mb-8">Browse by type</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {productTypes.map(pt => (
+              <Link
+                key={pt.product_type}
+                href={`/${slug}/${singleSub}?type=${encodeURIComponent(pt.product_type)}`}
+                className="group bg-warm-white border border-border rounded-2xl p-6 hover:border-gold transition-colors"
+              >
+                <div className="font-serif text-2xl text-ink capitalize mb-1 group-hover:text-gold transition-colors">
+                  {pt.product_type}
+                </div>
+                <div className="text-sm text-ink-light">
+                  {pt.count.toLocaleString()} products
                 </div>
               </Link>
             ))}
