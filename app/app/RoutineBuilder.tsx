@@ -81,7 +81,7 @@ export default function RoutineBuilder() {
   // Save routine state
   const [saveEmail, setSaveEmail] = useState('');
   const [saveStatus, setSaveStatus] = useState<
-    'idle' | 'saving' | 'success-new' | 'success-update' | 'error'
+    'idle' | 'saving' | 'success' | 'error'
   >('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [emailDisabled, setEmailDisabled] = useState(false);
@@ -503,37 +503,30 @@ export default function RoutineBuilder() {
     const productIds = routine.map(p => p.id);
 
     try {
-      const insertResult = await db.from('saved_routines').insert({
-        email,
-        routine: productIds,
-        last_emailed_at: null,
-        active: true,
+      // Save via the fmb_save_routine RPC (SECURITY DEFINER) rather than writing
+      // saved_routines directly. An upsert-by-email must read the conflicting
+      // row, which for an anon client would require a SELECT policy that exposes
+      // every stored email/routine; the RPC keeps the table locked while doing
+      // the upsert server-side. It returns the saved row id — a null id (or a
+      // thrown error) means the save did NOT persist, so we never show success
+      // without a real id. (The old code inferred success from the mere absence
+      // of an error, which is how a silently-filtered 0-row write reported
+      // "Saved ✓" while nothing landed.)
+      const { data: savedId, error } = await db.rpc('fmb_save_routine', {
+        p_email: email,
+        p_routine: productIds,
       });
 
-      let mode: 'inserted' | 'updated' = 'inserted';
-      if (insertResult.error) {
-        if ((insertResult.error as any).code === '23505') {
-          const updateResult = await db
-            .from('saved_routines')
-            .update({
-              routine: productIds,
-              last_emailed_at: null,
-              active: true,
-            })
-            .eq('email', email);
-          if (updateResult.error) throw updateResult.error;
-          mode = 'updated';
-        } else {
-          throw insertResult.error;
-        }
+      if (error) throw error;
+      if (savedId == null) {
+        throw new Error('Save did not return a routine id — nothing persisted');
       }
 
-      setSaveStatus(mode === 'updated' ? 'success-update' : 'success-new');
+      setSaveStatus('success');
       setEmailDisabled(true);
 
       if (typeof window !== 'undefined' && typeof (window as any).gtag === 'function') {
         (window as any).gtag('event', 'save_routine', {
-          mode,
           routine_size: productIds.length,
         });
       }
@@ -746,22 +739,19 @@ export default function RoutineBuilder() {
                     onClick={saveRoutine}
                     disabled={
                       saveStatus === 'saving' ||
-                      saveStatus === 'success-new' ||
-                      saveStatus === 'success-update'
+                      saveStatus === 'success'
                     }
                   >
                     {saveStatus === 'saving'
                       ? 'Saving...'
-                      : saveStatus === 'success-new' || saveStatus === 'success-update'
+                      : saveStatus === 'success'
                       ? 'Saved ✓'
                       : 'Save routine'}
                   </button>
                 </div>
-                {(saveStatus === 'success-new' || saveStatus === 'success-update') && (
+                {saveStatus === 'success' && (
                   <p className="rb-save-success">
-                    {saveStatus === 'success-update'
-                      ? "✓ Routine updated. We'll email you with this month's best prices."
-                      : "✓ Saved. We'll email you with this month's best prices."}
+                    ✓ Saved. We&apos;ll email you with this month&apos;s best prices.
                   </p>
                 )}
                 {saveStatus === 'error' && (
