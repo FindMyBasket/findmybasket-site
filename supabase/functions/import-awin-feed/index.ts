@@ -245,6 +245,17 @@ import pako from "https://esm.sh/pako@2.1.0";
 import { streamFeedRowBatches, FeedFetchError } from "./_streaming-fetcher.ts";
 import { inferCategorisationForImport, type TopCategory, type ImportTopCategory } from "../_shared/categorisation.ts";
 import { pickDescription } from "../_shared/description.ts";
+import {
+  normaliseForMatch,
+  buildMatchKey,
+  normaliseEan,
+  normaliseMpn,
+  stripSize,
+  extractSize,
+  extractNameNumbers,
+  extractCanonicalSize,
+  extractShade,
+} from "../_shared/match-key.ts";
 import { reconstructBeautyFlashName, BEAUTY_FLASH_RETAILER_ID } from "./name-reconstruction.ts";
 import { cleanDebenhamsName, DEBENHAMS_RETAILER_ID } from "./name-hygiene.ts";
 
@@ -347,193 +358,9 @@ function isExcludedName(name: string, excludes: string[]): { excluded: boolean; 
 }
 
 
-// Normalised name for fuzzy matching (lowercase, alphanumeric only, single spaces)
-function normaliseForMatch(s: string): string {
-  return String(s || "")
-    .toLowerCase()
-    .replace(/[\u2018\u2019\u201C\u201D]/g, "'")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim()
-    .replace(/\s+/g, " ");
-}
-// Flash-sale promo tags YesStyle/Stylevana prepend, e.g. "[Deal]", "[DEAL]Kose",
-// "[Sale]". Removed before normalisation so two retailers' rows for the same
-// product produce the same key. Only the explicit bracketed form is stripped, so
-// an unbracketed word ("new", "gift set") is left intact.
-const PROMO_TAG_RE = /\[\s*(?:deal|sale|new|hot|clearance|limited|gift|exclusive)\s*\]/gi;
-function stripPromoTags(raw: string): string {
-  return String(raw || "").replace(PROMO_TAG_RE, " ");
-}
-
-// Packaging/container nouns appended to a name ("Cream Tube 100g", "Jar 60ml",
-// "Bottle 30ml", "Cleanser Pump"). They describe the vessel, not the product, so a
-// retailer that omits them must still match. Deliberately NOT pack/set: in this
-// catalogue "Pack" is usually a product type (Sleeping Pack, Wash-Off Pack) and
-// "Set" a bundle (8pcs Set), so stripping them would cause false merges.
-const CONTAINER_NOUN_RE = /\b(?:tube|bottle|jar|pump)\b/g;
-function stripContainerNouns(normalised: string): string {
-  return normalised.replace(CONTAINER_NOUN_RE, " ").replace(/\s+/g, " ").trim();
-}
-
-// Build a match key from brand + name, deduplicating when name starts with brand.
-// Handles the case where some retailers put the brand in both the brand field
-// AND at the start of the name field (Stylevana and some others),
-// while other retailers only put it in the brand field. Without this, the
-// matcher creates duplicate products because match keys differ:
-//   Retailer A: "mixsoon mixsoon bifida ferment essence 100ml"  (brand in name)
-//   Retailer B: "mixsoon bifida ferment essence 100ml"          (brand not in name)
-// The name is run through stripPromoTags + stripContainerNouns first so promo
-// prefixes and packaging nouns do not split otherwise-identical products. The
-// brand path stays on bare normaliseForMatch (kept aligned with the DB-generated
-// match_brand column used by the per-chunk lookup).
-function buildMatchKey(brand: string, name: string): string {
-  const normBrand = normaliseForMatch(brand);
-  const normName = stripContainerNouns(normaliseForMatch(stripPromoTags(name)));
-  if (normBrand && normName.startsWith(normBrand + " ")) {
-    return normName;  // Brand already at start of name; don't prepend
-  }
-  if (normBrand && normName === normBrand) {
-    return normBrand;  // Name IS the brand (rare)
-  }
-  return `${normBrand} ${normName}`.trim();
-}
-// Normalise EAN/GTIN/UPC for matching: strip non-digits, strip leading zeros.
-// Same logic as the SQL generated column ean_normalised on retailer_prices.
-// Returns null if the result is shorter than 8 digits (rejects junk codes
-// like Superdrug's internal "00000001164169" which strips to "1164169").
-// This guarantees JS-side lookups produce keys that match the view's
-// normalised values 1:1.
-function normaliseEan(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  const digitsOnly = String(raw).replace(/[^0-9]/g, "");
-  const stripped = digitsOnly.replace(/^0+/, "");
-  if (stripped.length < 8) return null;
-  return stripped;
-}
-
-// Normalise MPN: trim + uppercase. Same logic as the SQL generated column.
-function normaliseMpn(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  const trimmed = String(raw).trim().toUpperCase();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-// Strip trailing size/count tokens like "100ml", "30 ml", "x 24", "(24pcs)" so
-// "cosrx pimple patch 24pcs" and "cosrx pimple patch" can match.
-function stripSize(normalised: string): string {
-  return normalised
-    .replace(/\b\d+\s*(ml|g|kg|oz|pcs|pc|ea|pack|count|ct|sheets?)\b.*$/g, "")
-    .replace(/\bx\s*\d+\s*$/g, "")
-    .trim();
-}
-
-// Extract a canonical size string ("50ml", "30g", "1.5oz") from a raw product
-// name. Returns null if no confident size found. Used to populate the
-// canonical_size field on new product rows.
-//
-// Differs from extractSize(): operates on the raw name (precision-preserving,
-// decimals intact) and is conservative — requires a clear unit suffix to avoid
-// false positives like shade numbers, SPF values, model numbers.
-function extractCanonicalSize(rawName: string): string | null {
-  if (!rawName) return null;
-  const s = String(rawName);
-  // Match: optional decimal + optional whitespace + unit (ml/g/kg/oz)
-  // (?<!\w) before the digits prevents matching "SPF30ml" (preceded by F)
-  // \b after the unit prevents matching "ml" inside other tokens
-  const SIZE_REGEX = /(?<!\w)(\d+(?:\.\d+)?)\s*(ml|g|kg|oz|fl\.?\s*oz)\b/gi;
-  const matches = [...s.matchAll(SIZE_REGEX)];
-  if (matches.length === 0) return null;
-  // Take the LAST match — sizes usually appear at end of name, after shade,
-  // SPF, model number etc. "Foundation SPF15 30ml" → "30ml".
-  const last = matches[matches.length - 1];
-  const value = last[1];
-  const unitRaw = last[2].toLowerCase().replace(/\s+/g, "").replace("floz", "fl oz");
-  return `${value}${unitRaw}`;
-}
-
-// Extract a shade name from a raw product name. Returns null if no confident
-// shade found. Conservative: ~12% hit rate with ~95% precision.
-//
-// Patterns matched:
-//   1. "... - <Shade>" at end of string (e.g. "Lipstick 3.5g - Cypher")
-//   2. "... <Shade>, <size>" (e.g. "NYX Lip Cream Cabo, 14g")
-//
-// Guards:
-//   - Strip trailing size unit from candidate
-//   - Length 2-35 chars, must contain a letter, no commas
-//   - Max 4 words
-//   - Reject product types (Eyeliner, Foundation, Cream, etc.)
-//   - Reject skin types (Dry Skin, Oily Skin, etc.)
-//   - Reject pack/promo terms (Mini, Set, Kit, etc.)
-const SHADE_DENYLIST_EXACT = /^(eyeliner|eyeshadow|mascara|lipstick|lip gloss|lip balm|lip liner|foundation|concealer|powder|blush|bronzer|highlighter|primer|setting spray|setting powder|cleanser|toner|serum|moisturiser|moisturizer|cream|lotion|oil|mask|mist|sunscreen|body wash|shampoo|conditioner|treatment|refill|spray|stick|pen|pencil|brush|sponge|set|mini|travel|sample|trial|gift|bundle|duo|trio|kit|dry skin|oily skin|combination skin|sensitive skin|dehydrated skin|normal skin|mature skin|all skin types)$/i;
-const SHADE_DENYLIST_SUFFIX = /\s(eyeliner|eyeshadow|mascara|lipstick|lip gloss|lip balm|lip liner|foundation|concealer|cream|lotion|serum|mask|skin|mist|set|mini|kit|cleanser|toner|essence|ampoule|balm|foam|wash|oil|tissue|pad|patch|sheet|tonic|treatment|fluid|gel|jelly|spray|stick|powder|emulsion|solution|complex|booster|primer|moisturiser|moisturizer|sunscreen|sun cream|hand cream|eye cream|body cream|night cream|day cream|face cream|toothpaste|shampoo|conditioner|deodorant|antiperspirant|fragrance|perfume|tincture|water|milk|drops?|elixir|essence water|mineral water|toner mist|setting mist|face mist|hair mist|body mist)\s*$/i;
-function extractShade(rawName: string): string | null {
-  if (!rawName) return null;
-  const s = String(rawName);
-
-  const cleanCandidate = (raw: string): string | null => {
-    let candidate = raw.trim();
-    candidate = candidate.replace(/\s+\d+(?:\.\d+)?\s*(ml|g|kg|oz|pcs?|fl\s*oz)\s*$/i, "").trim();
-    if (!candidate) return null;
-    if (candidate.length < 2 || candidate.length > 35) return null;
-    if (!/[A-Za-z]/.test(candidate)) return null;
-    if (candidate.includes(",")) return null;
-    // Allow up to 6 words if candidate contains a numeric or hash signal (coded shade names),
-    // otherwise stick to 4 words max
-    const wordCount = candidate.split(/\s+/).length;
-    if (wordCount > 6) return null;
-    if (wordCount > 4 && !/[#\d]/.test(candidate)) return null;
-    if (/^\d+(?:\.\d+)?\s*(ml|g|kg|oz|pcs?|fl\s*oz)?\s*$/i.test(candidate)) return null;
-    if (/^(ml|g|kg|oz|pcs|fl\s*oz)$/i.test(candidate)) return null;
-    if (SHADE_DENYLIST_EXACT.test(candidate)) return null;
-    if (SHADE_DENYLIST_SUFFIX.test(candidate)) return null;
-    // Reject pack-quantity patterns like "20g x 10 sheets", "1.5ml x 6 sticks"
-    if (/\d+\s*(?:ml|g|kg|oz|pcs?)\s*x\s*\d+/i.test(candidate)) return null;
-    // Reject candidate starting with quantity-like patterns "5 sheets", "30 pcs", etc.
-    if (/^\d+\s*(?:sheets?|sticks?|pads?|patches|pcs?|tablets?|capsules?|wipes?|sachets?)\b/i.test(candidate)) return null;
-    return candidate;
-  };
-
-  // Pattern 1: trailing " - <Shade>" at end of string
-  const dashMatch = s.match(/\s-\s([^-]+?)\s*$/);
-  if (dashMatch) {
-    const result = cleanCandidate(dashMatch[1]);
-    if (result) return result;
-  }
-
-  // Pattern 2: "<Shade>, <size>" where size is at the end
-  const commaMatch = s.match(/\b([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)*)\s*,\s*\d+(?:\.\d+)?\s*(?:ml|g|kg|oz|pcs?)\b/);
-  if (commaMatch) {
-    const result = cleanCandidate(commaMatch[1]);
-    if (result) return result;
-  }
-
-  return null;
-}
-// Extract a canonical size token from a normalised name.
-// Returns "50ml", "10pcs", "65g", or "" if no size detectable.
-// Used to verify that two products being matched via stripped key actually share
-// the same size — preventing 7ml samples being matched to 50ml full-size products,
-// or 1pc masks being matched to 10pc multi-packs.
-function extractSize(normalised: string): string {
-  // Volume/weight units: 50ml, 30 ml, 65g, 1.7oz, 1kg
-  const volMatch = normalised.match(/\b(\d+(?:\.\d+)?)\s*(ml|g|kg|oz)\b/);
-  if (volMatch) return `${volMatch[1]}${volMatch[2]}`;
-  // Count units: 10pcs, 1pc, 4ea, 24 sheets, 30 ct
-  const countMatch = normalised.match(/\b(\d+)\s*(pcs|pc|ea|count|ct|sheets?|pack)\b/);
-  if (countMatch) {
-    let unit = countMatch[2];
-    if (unit === "sheet" || unit === "sheets") unit = "pcs";
-    if (unit === "pc") unit = "pcs";
-    if (unit === "count" || unit === "ct") unit = "pcs";
-    if (unit === "pack") unit = "pcs";
-    return `${countMatch[1]}${unit}`;
-  }
-  // x-multiplier: "x 24" -> "24pcs"
-  const xMatch = normalised.match(/\bx\s*(\d+)\s*$/);
-  if (xMatch) return `${xMatch[1]}pcs`;
-  return "";
-}
+// ── match-key normalisation, size/shade extraction, EAN/MPN normalisation ──
+// These now live in the shared single-source module _shared/match-key.ts
+// (imported above) so the three importers and the dedup backfill cannot drift.
 
 // Records the outcome of an import attempt on the retailer's config row so that
 // monitor-retailer-feeds can alert on failures immediately (instead of waiting
@@ -791,7 +618,7 @@ serve(async (req) => {
 
   // Chunk-scoped maps — code-keyed (brand-agnostic, potentially huge), rebuilt
   // fresh and dropped every chunk to keep peak memory bounded.
-  type StrippedEntry = { id: number; size: string };
+  type StrippedEntry = { id: number; size: string; numbers: string };
   let existingByExtId = new Map<string, any>();
   let eanToProductId = new Map<string, number>();
   let mpnToProductId = new Map<string, number>();
@@ -933,7 +760,7 @@ serve(async (req) => {
       if (!productByExact.has(exactKey)) productByExact.set(exactKey, p.id);
       const strippedKey = stripSize(exactKey);
       if (strippedKey && !productByStripped.has(strippedKey)) {
-        productByStripped.set(strippedKey, { id: p.id, size: extractSize(exactKey) });
+        productByStripped.set(strippedKey, { id: p.id, size: extractSize(exactKey), numbers: extractNameNumbers(p.name) });
       }
     }
     for (const r of (sets?.eans ?? [])) {
@@ -2054,6 +1881,11 @@ serve(async (req) => {
     const productMatchKey = buildMatchKey(brand, name);
     const strippedMatchKey = stripSize(productMatchKey);
     const sourceSize = extractSize(productMatchKey);
+    // Hard distinctness backstop: the full set of numbers in the raw name must
+    // also match. Guards the bare-count cases stripSize/extractSize miss ("40S"
+    // vs "20S", counts embedded mid-name) so different packs/sizes never merge
+    // via the fuzzy stripped tier.
+    const sourceNumbers = extractNameNumbers(name);
 
     // Tier 3: name exact match
     if (!matchedProductId) {
@@ -2081,7 +1913,7 @@ serve(async (req) => {
       ];
       for (const candidate of candidates) {
         if (!candidate) continue;
-        if (sourceSize === candidate.size) {
+        if (sourceSize === candidate.size && sourceNumbers === candidate.numbers) {
           matchedProductId = candidate.id;
           matchedVia = "name_stripped";
           countLinkViaNameStripped++; if (isOrdinary) ordinaryDiagnostic.linked_via_name_stripped++;
