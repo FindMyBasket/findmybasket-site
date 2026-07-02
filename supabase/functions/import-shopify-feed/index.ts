@@ -471,9 +471,14 @@ serve(async (req) => {
   if (!skipNameMatch) {
     from = 0;
     while (true) {
+      // Redirect soft-merged rows to their keeper: select merged_into and index
+      // the dead row's match_key against the KEEPER id (mergedTargetId below), so a
+      // re-imported feed row that matches a merged product's name links to the
+      // keeper, never to the hidden dead row. Parity: non-merged rows have
+      // merged_into IS NULL, so the id used is unchanged.
       const { data, error } = await supa
         .from("products")
-        .select("id, name, brand")
+        .select("id, name, brand, merged_into")
         .order("id", { ascending: true })
         .range(from, from + 999);
       if (error) {
@@ -494,11 +499,16 @@ serve(async (req) => {
   for (const p of allProducts) {
     const exactKey = buildMatchKey(p.brand || "", p.name);
     if (!exactKey) continue;
-    if (!productByExact.has(exactKey)) productByExact.set(exactKey, p.id);
+    // Soft-merged rows resolve to their keeper so links never land on a dead row.
+    const mergedTargetId = p.merged_into ?? p.id;
+    if (!productByExact.has(exactKey)) productByExact.set(exactKey, mergedTargetId);
     const strippedKey = stripSize(exactKey);
     if (strippedKey && !productByStripped.has(strippedKey)) {
-      productByStripped.set(strippedKey, p.id);
+      productByStripped.set(strippedKey, mergedTargetId);
     }
+    // Keyed by the TRUE row id (not mergedTargetId): the size map is read by the
+    // stripped-tier via the candidate id, and keying by keeper id would collide a
+    // dead row's size with its keeper's. Non-merged rows: mergedTargetId === p.id.
     sizeByProductId.set(p.id, extractSize(exactKey));
     if (p.brand) {
       const normBrand = String(p.brand).toLowerCase().trim();
