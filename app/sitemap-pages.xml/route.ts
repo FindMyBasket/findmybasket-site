@@ -40,6 +40,7 @@ const STATIC_PAGES: UrlEntry[] = [
   { loc: '/articles/lookfantastic-vs-boots.html', changefreq: 'monthly', priority: 0.6 },
   { loc: '/articles/overpaying-for-skincare.html', changefreq: 'monthly', priority: 0.6 },
   { loc: '/articles/skincare-routine-under-40.html', changefreq: 'monthly', priority: 0.6 },
+  { loc: '/articles/skincare-routine-cost-uk.html', changefreq: 'monthly', priority: 0.7 },
 ];
 
 // DB top_category values. Route slugs are derived via categoryToSlug (identity
