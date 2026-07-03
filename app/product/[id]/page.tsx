@@ -8,7 +8,7 @@ import {
   getRetailerOffers,
   getRelatedProducts,
   getMoreFromBrand,
-  resolveMergedKeeper,
+  resolveCanonicalKeeper,
 } from '../../../lib/product-queries';
 import { buildBreadcrumbJsonLd } from '../../../lib/breadcrumb';
 import { IMPORTER_RETAILER_IDS, categoryToSlug } from '../../../lib/queries';
@@ -125,13 +125,14 @@ export default async function ProductPage({ params }: { params: { id: string } }
 
   const product = await getProductById(id);
   if (!product) {
-    // A soft-merged product is hidden from products_active. Send its indexed
-    // links and bookmarks to the surviving keeper (which now carries more
-    // retailers) with a permanent redirect so the SEO equity flows there.
-    // permanentRedirect emits a 308, which Google consolidates identically to
-    // a 301. parent_product_id shade-variant children resolve to null here and
-    // keep their 404 by design; they belong with the shade-variant project.
-    const keeper = await resolveMergedKeeper(id);
+    // The requested product is hidden from products_active — either soft-merged
+    // (send its equity to the surviving keeper) or a shade-variant child (send it
+    // to the parent, which is now the canonical page). Redirect to the live target
+    // so indexed links, bookmarks and ranking signal consolidate there instead of
+    // 404ing. permanentRedirect emits a 308, which Google treats like a 301.
+    // Genuinely-thin rows (no image / no live price) resolve to null and keep their
+    // correct 404.
+    const keeper = await resolveCanonicalKeeper(id);
     if (keeper !== null) permanentRedirect(`/product/${keeper}`);
     notFound();
   }

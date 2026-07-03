@@ -62,33 +62,52 @@ export async function getProductById(id: number): Promise<ProductDetail | null> 
   };
 }
 
-// Resolve a requested product id to its final live keeper when it was
-// soft-merged (merged_into set). products_active hides merged rows, so this
-// reads the base products table directly. Chain-safe: follows merged_into to
-// the final non-merged row, with a hop cap as a loop guard. Returns null when
-// the id is unknown, the row is not merged, or the keeper is not itself a live
-// page (e.g. a parent_product_id shade-variant child, which products_active
-// hides and /product/[id] 404s — redirecting there would just be a dead-end,
-// so we 404 directly instead and leave it to the shade-variant project).
-export async function resolveMergedKeeper(id: number): Promise<number | null> {
+// Resolve a requested product id to the live, indexable page that should carry
+// its SEO equity when the requested row is hidden from products_active. Two ways
+// a row gets hidden, both redirected here to the surviving canonical:
+//   - soft-merged (merged_into set)         -> follow to the keeper
+//   - shade-variant child (parent set)      -> follow to the parent
+// Both are followed TRANSITIVELY and interleaved: a shade child whose parent was
+// later merged resolves child -> parent -> keeper, and nested parents (a parent
+// that is itself a child) resolve all the way up. At each hop merged_into takes
+// priority over parent_product_id (a row should not have both; if it did, the
+// merge wins). Loop-safe via a visited set plus a hop cap.
+//
+// Returns null (caller 404s) when: the id is unknown; the requested id is itself
+// the terminal non-hidden row (caller already tried products_active); the chain
+// does not resolve within the hop cap; OR the resolved target is NOT in
+// products_active. That last guard is deliberate — it keeps the genuinely-thin
+// rows (no image, no live price) as a correct 404 and, crucially, never redirects
+// to a page that would itself 404.
+export async function resolveCanonicalKeeper(id: number): Promise<number | null> {
   let current = id;
-  for (let hops = 0; hops < 8; hops++) {
+  const seen = new Set<number>();
+  let resolved = false;
+  for (let hops = 0; hops < 12; hops++) {
+    if (seen.has(current)) return null;           // cycle guard
+    seen.add(current);
     const { data } = await supabase
       .from('products')
       .select('merged_into, parent_product_id')
       .eq('id', current)
       .maybeSingle();
-    if (!data) return null;                       // unknown id
-    if (data.merged_into === null) {
-      // Reached a non-merged row. Only redirect if we moved off the requested
-      // id AND the keeper is a live page (products_active also hides shade
-      // children); otherwise the row is hidden for another reason — 404.
-      if (current === id || data.parent_product_id !== null) return null;
-      return current;
-    }
-    current = data.merged_into;
+    if (!data) return null;                        // unknown id
+    const next = data.merged_into ?? data.parent_product_id;
+    if (next === null) { resolved = true; break; } // reached the terminal non-merged, non-child row
+    current = next;
   }
-  return null;                                     // hop-cap safety: don't redirect into an unresolved chain
+  if (!resolved) return null;                      // hop-cap safety: don't redirect into an unresolved chain
+  if (current === id) return null;                 // requested id is itself terminal (hidden for another reason)
+
+  // Only redirect to a genuinely live, indexable page. A no-image / no-price
+  // ancestor is not in products_active, so we return null and let the requested
+  // url stay a legitimate 404 rather than redirect into a dead end.
+  const { data: live } = await supabase
+    .from('products_active')
+    .select('id')
+    .eq('id', current)
+    .maybeSingle();
+  return live ? current : null;
 }
 
 export async function getRetailerOffers(productId: number): Promise<RetailerOffer[]> {
