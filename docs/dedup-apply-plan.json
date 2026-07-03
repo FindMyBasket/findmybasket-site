@@ -1,0 +1,862 @@
+{
+  "generated": "high_confidence minus VT",
+  "groups": 93,
+  "rowsCollapse": 111,
+  "plan": [
+    {
+      "keeper": 70511,
+      "keeperName": "Active Era Adventure Mosquito Repellent Bands - 18 Pack",
+      "removed": [
+        123580
+      ],
+      "brand": "Active Era",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 52928,
+      "keeperName": "Al Rehab Zahrat Hawaii 6ml Roll-On Oil",
+      "removed": [
+        123593
+      ],
+      "brand": "Al-Rehab",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 52940,
+      "keeperName": "Al Rehab Golden 6ml Roll-On Oil",
+      "removed": [
+        123595
+      ],
+      "brand": "Al-Rehab",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 44838,
+      "keeperName": "Billie EIlish Your Turn 50ml",
+      "removed": [
+        123495
+      ],
+      "brand": "BILLIE EILISH",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 53911,
+      "keeperName": "Cuccio Naturale - Cuticle Revitalizing Oil - 75ml",
+      "removed": [
+        123613
+      ],
+      "brand": "Cuccio Naturale",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 52555,
+      "keeperName": "Danielle Creations 3-in-1 Soft Touch Handheld Folding Beauty Dual Side",
+      "removed": [
+        123586
+      ],
+      "brand": "Danielle Creations",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 52557,
+      "keeperName": "Danielle Creations Bright LED Pocket Magnification Mirror",
+      "removed": [
+        123587
+      ],
+      "brand": "Danielle Creations",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 110671,
+      "keeperName": "Danielle Creations 3-in-1 Handheld Folding Dual Sided x 10 Mag Mirror",
+      "removed": [
+        123648,
+        123649
+      ],
+      "brand": "Danielle Creations",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 1046,
+      "keeperName": "Dr.Althea Vitamin C Boosting Serum (30ml)",
+      "removed": [
+        13427
+      ],
+      "brand": "Dr. Althea",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 1047,
+      "keeperName": "Dr.Althea 147 Barrier Cream (50ml)",
+      "removed": [
+        64336
+      ],
+      "brand": "Dr. Althea",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 1549,
+      "keeperName": "DR.ALTHEA Green Tea Fresh Sunscreen (45ml)",
+      "removed": [
+        109367
+      ],
+      "brand": "Dr. Althea",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 1550,
+      "keeperName": "DR.ALTHEA Rapid Firm Sculpting Cream (45ml)",
+      "removed": [
+        13426
+      ],
+      "brand": "Dr. Althea",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 1551,
+      "keeperName": "DR.ALTHEA Aqua Glowing Sunscreen (45ml)",
+      "removed": [
+        109368
+      ],
+      "brand": "Dr. Althea",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 53102,
+      "keeperName": "Dr. Althea 345 Relief Cream Mist 60ml",
+      "removed": [
+        109370
+      ],
+      "brand": "Dr. Althea",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 70281,
+      "keeperName": "Dr. Althea - Retinol Flat Iron Eye Roller 25ml",
+      "removed": [
+        109365
+      ],
+      "brand": "Dr. Althea",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 70321,
+      "keeperName": "Dr. Althea - Melaclear Cream 20g",
+      "removed": [
+        109366
+      ],
+      "brand": "Dr. Althea",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 84493,
+      "keeperName": "Dr. Althea - 345 Relief Serum 30ml",
+      "removed": [
+        109369
+      ],
+      "brand": "Dr. Althea",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 3648,
+      "keeperName": "Elemis Pro-Collagen Energising Marine Cleanser 150ml",
+      "removed": [
+        123590,
+        123636
+      ],
+      "brand": "Elemis",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 110262,
+      "keeperName": "FULLY - Lemon Vita Capsule Cream 90g",
+      "removed": [
+        109860
+      ],
+      "brand": "FULLY",
+      "overrodeFrom": 109860
+    },
+    {
+      "keeper": 3896,
+      "keeperName": "Garnier Vitamin C Glow Duo",
+      "removed": [
+        123546
+      ],
+      "brand": "Garnier",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 3907,
+      "keeperName": "Givenchy L'intemporel Global Youth Essence Serum 30ml",
+      "removed": [
+        123589
+      ],
+      "brand": "Givenchy",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 3963,
+      "keeperName": "Goodal Green Tangerine Vita C Dark Spot Care Serum",
+      "removed": [
+        123500
+      ],
+      "brand": "Goodal",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 92051,
+      "keeperName": "Goodal - Green Tangerine Vita-C Dark Spot Care Cream - 50ml",
+      "removed": [
+        7208
+      ],
+      "brand": "Goodal",
+      "overrodeFrom": 7208
+    },
+    {
+      "keeper": 92501,
+      "keeperName": "Goodal - Green Tangerine Vita-C Dark Spot Care Serum - 40ml",
+      "removed": [
+        7209
+      ],
+      "brand": "Goodal",
+      "overrodeFrom": 7209
+    },
+    {
+      "keeper": 2426,
+      "keeperName": "GUERLAIN Abeille Royale Double R Renew & Repair Advanced Serum - 50ml",
+      "removed": [
+        123641
+      ],
+      "brand": "Guerlain",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 3993,
+      "keeperName": "HaruHaru Black Rice Hyaluronic Anti-Wrinkle Serum 50ml",
+      "removed": [
+        55145
+      ],
+      "brand": "Haruharu Wonder",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 65309,
+      "keeperName": "HaruHaru Wonder Black Rice Probiotics Barrier Nad+ Serum Mist 80ml",
+      "removed": [
+        70977
+      ],
+      "brand": "Haruharu Wonder",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 90808,
+      "keeperName": "House of Hur Moist Ampoule Blusher #04 Lavender Flush",
+      "removed": [
+        123531
+      ],
+      "brand": "House of Hur",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 6021,
+      "keeperName": "ILLIYOON Ceramide Ato Concentrate Cream 75ml",
+      "removed": [
+        123588
+      ],
+      "brand": "Illiyoon",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 40765,
+      "keeperName": "Kiss Glam Jewel Nails Serendipity Awaits",
+      "removed": [
+        123501
+      ],
+      "brand": "Kiss",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 46909,
+      "keeperName": "Kiss Impress Nails - Chills",
+      "removed": [
+        123502
+      ],
+      "brand": "Kiss",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 46910,
+      "keeperName": "Kiss Impress Nails - Fearless",
+      "removed": [
+        123503
+      ],
+      "brand": "Kiss",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 46911,
+      "keeperName": "Kiss Impress Toenails - Blanc Chic",
+      "removed": [
+        123504
+      ],
+      "brand": "Kiss",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 46912,
+      "keeperName": "Kiss Impress Color - Frosting",
+      "removed": [
+        123505
+      ],
+      "brand": "Kiss",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 46913,
+      "keeperName": "Kiss 140 Count Nails - Earthly",
+      "removed": [
+        123506
+      ],
+      "brand": "Kiss",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 46914,
+      "keeperName": "Kiss Glam Shimmer Toenails - Twinkle Toes",
+      "removed": [
+        123507
+      ],
+      "brand": "Kiss",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 46915,
+      "keeperName": "Kiss Glam Jewel Nails - Breeze Of Bliss",
+      "removed": [
+        123508
+      ],
+      "brand": "Kiss",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 46916,
+      "keeperName": "Kiss Impress Nails - Happy World",
+      "removed": [
+        123509
+      ],
+      "brand": "Kiss",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 512,
+      "keeperName": "La Roche-Posay Toleriane Rosaliac AR Concentrate 40ml",
+      "removed": [
+        10874
+      ],
+      "brand": "La Roche-Posay",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 516,
+      "keeperName": "La Roche-Posay Hyalu B5 Suractivated Cream 50ml",
+      "removed": [
+        14058
+      ],
+      "brand": "La Roche-Posay",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 4156,
+      "keeperName": "La Roche-Posay Effaclar H Iso-biome Soothing Moisturising Cream 40ml",
+      "removed": [
+        10650
+      ],
+      "brand": "La Roche-Posay",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 108287,
+      "keeperName": "La Roche-Posay Lipikar Lait Urea 10% 400ml",
+      "removed": [
+        31775
+      ],
+      "brand": "La Roche-Posay",
+      "overrodeFrom": 31775
+    },
+    {
+      "keeper": 53114,
+      "keeperName": "Leaper Complete Set of Professional Nail Art Tools",
+      "removed": [
+        123601,
+        123602
+      ],
+      "brand": "Leaper",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 111572,
+      "keeperName": "Leaper Cold Compress Face and Eye Mask Set",
+      "removed": [
+        123656,
+        123657,
+        123658,
+        123659
+      ],
+      "brand": "Leaper",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 18207,
+      "keeperName": "Livingandhome Face Neck Sculpting Tool Tri-Light Therapy",
+      "removed": [
+        123604,
+        123605
+      ],
+      "brand": "Living and Home",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 50618,
+      "keeperName": "Livingandhome Contemporary Vanity Mirror with LED Lights",
+      "removed": [
+        123557
+      ],
+      "brand": "Living and Home",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 50765,
+      "keeperName": "Livingandhome Drawer-Style Stationery Cosmetic Storage Box",
+      "removed": [
+        123559,
+        123560
+      ],
+      "brand": "Living and Home",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 52258,
+      "keeperName": "Livingandhome Tabletop Rotating Cosmetic Storage Organizer",
+      "removed": [
+        123584
+      ],
+      "brand": "Living and Home",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 52979,
+      "keeperName": "Livingandhome Modern Multi-Compartment Cosmetic Storage",
+      "removed": [
+        123596
+      ],
+      "brand": "Living and Home",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 53042,
+      "keeperName": "Livingandhome Clear Desktop Cosmetic Organiser",
+      "removed": [
+        123597
+      ],
+      "brand": "Living and Home",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 53056,
+      "keeperName": "Livingandhome Desktop Storage Organiser",
+      "removed": [
+        123599
+      ],
+      "brand": "Living and Home",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 94741,
+      "keeperName": "Livingandhome 3 Pcs Jade Facial Set with Gua Sha & Rollers",
+      "removed": [
+        123581
+      ],
+      "brand": "Living and Home",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 109020,
+      "keeperName": "Livingandhome Gua Sha and Jade Roller Set for Facial Massage",
+      "removed": [
+        123639
+      ],
+      "brand": "Living and Home",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 111532,
+      "keeperName": "Livingandhome Portable PU Travel Cosmetic Toiletry Bag",
+      "removed": [
+        123630,
+        123631,
+        123632,
+        123638
+      ],
+      "brand": "Living and Home",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 111536,
+      "keeperName": "Livingandhome Double Layer Travel Cosmetic Toiletry Bag",
+      "removed": [
+        123633,
+        123634,
+        123635
+      ],
+      "brand": "Living and Home",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 16632,
+      "keeperName": "Love My Skin Pore Refiner",
+      "removed": [
+        123547
+      ],
+      "brand": "Love My Skin",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 4320,
+      "keeperName": "Medik8 Press & Clear Cleanser Duo",
+      "removed": [
+        123611
+      ],
+      "brand": "Medik8",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 4322,
+      "keeperName": "Medik8 Ultimate Recovery Mask Pack",
+      "removed": [
+        123612
+      ],
+      "brand": "Medik8",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 17430,
+      "keeperName": "Pure Derma London Medical Grade 0.75mm Derma Roller - 540",
+      "removed": [
+        123569
+      ],
+      "brand": "Pure Derma London",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 17433,
+      "keeperName": "Pure Derma London Small Cryo Sticks - Built-In Cooling Gel",
+      "removed": [
+        123576
+      ],
+      "brand": "Pure Derma London",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 17436,
+      "keeperName": "Pure Derma London Medical Grade 0.25mm Derma Roller - 540",
+      "removed": [
+        123570
+      ],
+      "brand": "Pure Derma London",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 17438,
+      "keeperName": "Pure Derma London Medical Grade 0.5mm Derma Roller - 540",
+      "removed": [
+        123571
+      ],
+      "brand": "Pure Derma London",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 17442,
+      "keeperName": "Pure Derma London Ultrasonic Silicone Facial Cleansing Brush",
+      "removed": [
+        123572,
+        123573,
+        123574,
+        123575
+      ],
+      "brand": "Pure Derma London",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 941,
+      "keeperName": "Purito Wonder Releaf Centella Toner Unscented (200ml)",
+      "removed": [
+        100247
+      ],
+      "brand": "Purito Seoul",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 943,
+      "keeperName": "Purito Daily Soft Touch Sunscreen SPF50+ PA++++ (60ml)",
+      "removed": [
+        100242
+      ],
+      "brand": "Purito Seoul",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 1449,
+      "keeperName": "PURITO Mighty Bamboo Panthenol Cream (100ml)",
+      "removed": [
+        100306
+      ],
+      "brand": "Purito Seoul",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 1450,
+      "keeperName": "PURITO Wonder Releaf Centella Cream Unscented (50ml)",
+      "removed": [
+        100222
+      ],
+      "brand": "Purito Seoul",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 1452,
+      "keeperName": "PURITO Wonder Releaf Centella Serum Unscented (60ml)",
+      "removed": [
+        100238
+      ],
+      "brand": "Purito Seoul",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 1454,
+      "keeperName": "PURITO Mighty Bamboo Panthenol Cleanser (150ml)",
+      "removed": [
+        100305
+      ],
+      "brand": "Purito Seoul",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 1456,
+      "keeperName": "PURITO Pure Vitamin C Serum (60ml)",
+      "removed": [
+        100237
+      ],
+      "brand": "Purito Seoul",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 1457,
+      "keeperName": "PURITO From Green Cleansing Oil (200ml)",
+      "removed": [
+        100205
+      ],
+      "brand": "Purito Seoul",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 1460,
+      "keeperName": "PURITO Mighty Bamboo Panthenol Serum (30ml)",
+      "removed": [
+        100291
+      ],
+      "brand": "Purito Seoul",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 1461,
+      "keeperName": "PURITO From Green Avocado Cleansing Balm (100ml)",
+      "removed": [
+        100201
+      ],
+      "brand": "Purito Seoul",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 4749,
+      "keeperName": "Purito From Green Deep Foaming Cleanser 150ml",
+      "removed": [
+        100202
+      ],
+      "brand": "Purito Seoul",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 4755,
+      "keeperName": "Purito Wonder Releaf Centella Eye Cream Unscented 30ml",
+      "removed": [
+        100224
+      ],
+      "brand": "Purito Seoul",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 6312,
+      "keeperName": "PURITO Hydro Wave Deep Sea Cream 50ml",
+      "removed": [
+        100308
+      ],
+      "brand": "Purito Seoul",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 6315,
+      "keeperName": "PURITO Wonder Releaf Centella Cream 50ml",
+      "removed": [
+        100220
+      ],
+      "brand": "Purito Seoul",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 13987,
+      "keeperName": "Purito Timeless Bloom Bakuchiol Serum 30ml",
+      "removed": [
+        100211
+      ],
+      "brand": "Purito Seoul",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 42480,
+      "keeperName": "Revolution Superfix Misting Spray",
+      "removed": [
+        123496
+      ],
+      "brand": "Revolution",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 4824,
+      "keeperName": "Revuele TS Hyaluronic Acid Calming Tonic",
+      "removed": [
+        123558
+      ],
+      "brand": "Revuele",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 18006,
+      "keeperName": "Scottish Fine Soaps Apple & Spice Duo",
+      "removed": [
+        123598
+      ],
+      "brand": "Scottish Fine Soaps",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 52732,
+      "keeperName": "Scottish Fine Soaps Breathe Wrapped Soap 100g",
+      "removed": [
+        98081
+      ],
+      "brand": "Scottish Fine Soaps",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 108977,
+      "keeperName": "Shiseido Vital Perfection White Revitalizing Emulsion 100ml",
+      "removed": [
+        123629,
+        123646
+      ],
+      "brand": "Shiseido",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 84561,
+      "keeperName": "Sigma Beauty Soft Coverage Brush",
+      "removed": [
+        97833
+      ],
+      "brand": "Sigma Beauty",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 99042,
+      "keeperName": "St. Tropez Ultimate Tan Body Brush",
+      "removed": [
+        14979
+      ],
+      "brand": "St Tropez",
+      "overrodeFrom": 14979
+    },
+    {
+      "keeper": 5243,
+      "keeperName": "SVR SEBIACLEAR Cleansing Micellar Water for Oily Skin 400ml",
+      "removed": [
+        123562
+      ],
+      "brand": "SVR Laboratoires",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 5252,
+      "keeperName": "SVR SENSIFINE AR Rich Hydrating Rosacea Face Cream 40ml",
+      "removed": [
+        123561
+      ],
+      "brand": "SVR Laboratoires",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 5510,
+      "keeperName": "Vitamin E Hot cloth cleansing Duo",
+      "removed": [
+        123544
+      ],
+      "brand": "Vitamin E",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 16299,
+      "keeperName": "Vitamin E travel Bundle",
+      "removed": [
+        123545
+      ],
+      "brand": "Vitamin E",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 5525,
+      "keeperName": "WARDA Collagen Eye Serum + Boost Oil Serum",
+      "removed": [
+        123548
+      ],
+      "brand": "WARDA",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 100130,
+      "keeperName": "White Lotus 100% Mulberry Silk Eye Mask Cruelty Free",
+      "removed": [
+        123618,
+        123619
+      ],
+      "brand": "White Lotus Beauty",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 100131,
+      "keeperName": "White Lotus 100% Mulberry Silk Pillowcase Eye Mask Set Cruelty Free",
+      "removed": [
+        123617
+      ],
+      "brand": "White Lotus Beauty",
+      "overrodeFrom": null
+    },
+    {
+      "keeper": 80514,
+      "keeperName": "Woods Of Windsor Lily Of The Valley Dusting Powder 100g",
+      "removed": [
+        123652
+      ],
+      "brand": "Woods of Windsor",
+      "overrodeFrom": null
+    }
+  ]
+}
