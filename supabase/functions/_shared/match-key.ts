@@ -62,6 +62,33 @@ export function stripContainerNouns(normalised: string): string {
   return normalised.replace(CONTAINER_NOUN_RE, " ").replace(/\s+/g, " ").trim();
 }
 
+// Count-unit / pluralisation normalisation. A product split ONLY by the count
+// unit-word on the SAME number ("70pcs" vs "70 pads" vs "70 Pieces" vs "70S") is
+// one product; without this each unit spelling makes a different key. We canonise
+// the unit WORD when it is attached to a number, and singularise the standalone
+// nouns pad(s)/patch(es)/piece(s)/sheet(s).
+//
+// SAFETY — the number is NEVER touched, only the unit word attached to it. So
+// "70 pads" and "70 pcs" collapse, but "70 pads" and "30 pads" stay distinct
+// (different number → different key). This cannot weaken the number-distinctness
+// guard: extractNameNumbers() reads the RAW name and is unaffected, and the number
+// remains in the key, so different counts never share a key. Runs on the already-
+// normalised (lowercased, single-spaced) string.
+//   COUNT_UNIT_RE: <number><opt space><unit-word>  ->  <number>pcs
+//   PLURAL_NOUN_RE: standalone pads/patches/pieces/sheets -> singular
+// "ea" and bare "s" (the "40S" wax-strip / "18S" patch style) are included as unit
+// words; longer alternatives precede shorter so "pieces" wins over "piece".
+export const COUNT_UNIT_RE =
+  /\b(\d+(?:\.\d+)?)\s*(?:pcs|pc|pieces|piece|pads|pad|patches|patch|sheets|sheet|ea|s)\b/g;
+export const PLURAL_NOUN_RE = /\b(pad|patch|piece|sheet)(?:e?s)\b/g;
+export function normaliseCountUnits(normalised: string): string {
+  return String(normalised || "")
+    .replace(COUNT_UNIT_RE, "$1pcs")
+    .replace(PLURAL_NOUN_RE, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 // Strip leading brand-name REPETITION from an already-normalised product name,
 // so that once buildMatchKey re-prepends the canonical brand the key is not
 // doubled. Two real shapes, both learned from live K-beauty data:
@@ -92,7 +119,7 @@ export function stripContainerNouns(normalised: string): string {
 // also a common possessive stem ("Charlotte's" under brand "Charlotte Tilbury");
 // it does not manufacture false merges, because the full canonical brand is always
 // re-prepended, so a corrupted stem simply keys to its own bucket.
-function stripLeadingBrandRepetition(normName: string, normBrand: string): string {
+export function stripLeadingBrandRepetition(normName: string, normBrand: string): string {
   if (!normBrand || !normName) return normName;
   const brandTokens = normBrand.split(" ");
   const nameTokens = normName.split(" ");
@@ -134,7 +161,7 @@ function stripLeadingBrandRepetition(normName: string, normBrand: string): strin
 // the stored key.
 export function buildMatchKey(brand: string, name: string): string {
   const normBrand = normaliseForMatch(brand);
-  const normNameRaw = stripContainerNouns(normaliseForMatch(stripPromoTags(name)));
+  const normNameRaw = normaliseCountUnits(stripContainerNouns(normaliseForMatch(stripPromoTags(name))));
   const normName = stripLeadingBrandRepetition(normNameRaw, normBrand);
   if (!normBrand) return normName;
   if (normName === normBrand) return normBrand;             // name IS the brand (rare)
