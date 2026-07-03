@@ -80,6 +80,63 @@ const CASES: Case[] = [
     ok: () => key("mixsoon", "Mixsoon Bifida Ferment Essence 100ml") ===
               key("mixsoon", "Bifida Ferment Essence 100ml"),
   },
+
+  // ── NORMALISE AWAY — brand-word REPETITION (leading/doubled brand token) ─────
+  {
+    cls: "brand-word-repeat",
+    desc: "Purito partial-brand prefix: 'PURITO …' (brand 'Purito Seoul') == 'Purito SEOUL - …'  [1448 vs keeper]",
+    // The name carries only the brand's FIRST word; without the strip the key
+    // doubles to 'purito seoul purito …' and never matches the SEOUL-form sibling.
+    ok: () => key("Purito Seoul", "PURITO Oat-In Calming Gel Cream (100ml)") ===
+              key("Purito Seoul", "Purito SEOUL - Oat In Calming Gel Cream - 100ml"),
+  },
+  {
+    cls: "brand-word-repeat",
+    desc: "Goodal doubled full brand: 'Goodal - Goodal Green Tangerine …' == 'Goodal - Green Tangerine …'  [7208 vs 92051]",
+    ok: () => key("Goodal", "Goodal - Goodal Green Tangerine Vita-C Dark Spot Care Cream - 50ml") ===
+              key("Goodal", "Goodal - Green Tangerine Vita-C Dark Spot Care Cream - 50ml"),
+  },
+  {
+    cls: "brand-word-repeat",
+    desc: "FULLY doubled brand: 'FULLY - Fully Lemon Vita …' == 'FULLY Lemon Vita …'  [109860]",
+    ok: () => key("FULLY", "FULLY - Fully Lemon Vita Capsule Cream - 90g") ===
+              key("FULLY", "FULLY Lemon Vita Capsule Cream 90g"),
+  },
+  {
+    cls: "brand-word-repeat",
+    desc: "Dr. Althea doubled full brand: 'Dr. Althea Dr Althea 147 …' == 'Dr. Althea - 147 …'  [64336]",
+    ok: () => key("Dr. Althea", "Dr. Althea Dr Althea 147 Barrier Cream 50ml") ===
+              key("Dr. Althea", "Dr. Althea - 147 Barrier Cream - 50ml"),
+  },
+
+  // ── KEEP DISTINCT — brand-word strip must NOT over-collapse ─────────────────
+  {
+    cls: "brand-word-repeat",
+    desc: "Douvall's over-strip guard: name IS the brand → not stripped to empty  [~20 distinct rows]",
+    // buildMatchKey must keep a stable non-empty key for a row literally named
+    // "Douvall's"; and a real product ("Douvall's Soap Saver") is unaffected.
+    ok: () => key("Douvall's", "Douvall's") === "douvall s" &&
+              key("Douvall's", "Douvall's Soap Saver") === "douvall s soap saver",
+  },
+  {
+    cls: "brand-word-repeat",
+    desc: "Bondi Babe guard: product line reusing a brand word AFTER the full brand is kept distinct  [103006]",
+    // "Bondi Sands Bondi Babe Clay Mask": shape (1) consumes ONE real brand copy;
+    // the product-line "Bondi" survives, so it does NOT collapse into a bare
+    // "Bondi Sands Babe Clay Mask" product.
+    ok: () => key("Bondi Sands", "Bondi Sands Bondi Babe Clay Mask") ===
+              "bondi sands bondi babe clay mask" &&
+              key("Bondi Sands", "Bondi Sands Bondi Babe Clay Mask") !==
+              key("Bondi Sands", "Bondi Sands Babe Clay Mask"),
+  },
+  {
+    cls: "brand-word-repeat",
+    desc: "fwee shades stay distinct: brand strip leaves shade tokens, 2 shades do NOT merge & line is held  [56410/56411]",
+    ok: () => key("Fwee", "Fwee - 3D Changing Gloss - 5.6g - 00 Clear") !==
+              key("Fwee", "Fwee - 3D Changing Gloss - 5.6g - 01 Scene Black") &&
+              isShadeBearingLine("Fwee - Lip & Cheek Blurry Pudding Pot + Pendant Keyring (Random...", "Lip Care") === true &&
+              hasUncertainTail("Fwee - Lip & Cheek Blurry Pudding Pot + Pendant Keyring (Random...") === true,
+  },
   {
     cls: "null-vs-present-size",
     desc: "identical name, size only in canonical_size column → same key (Double Serum) [100476/104657]",

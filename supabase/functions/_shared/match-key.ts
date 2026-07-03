@@ -62,15 +62,69 @@ export function stripContainerNouns(normalised: string): string {
   return normalised.replace(CONTAINER_NOUN_RE, " ").replace(/\s+/g, " ").trim();
 }
 
-// Build a match key from brand + name, deduplicating when name starts with
-// brand. Handles retailers that put the brand in both the brand field AND at the
-// start of the name field (Stylevana and others), while other retailers only put
-// it in the brand field. Without this, the matcher creates duplicate products
-// because match keys differ:
+// Strip leading brand-name REPETITION from an already-normalised product name,
+// so that once buildMatchKey re-prepends the canonical brand the key is not
+// doubled. Two real shapes, both learned from live K-beauty data:
+//
+//   (1) whole-brand repeats — the name restates the FULL brand, sometimes twice:
+//         "goodal goodal green tangerine …"            (brand "goodal")
+//         "dr althea dr althea 147 barrier cream …"    (brand "dr althea")
+//       Every consecutive copy of the full brand token-sequence is consumed.
+//
+//   (2) partial-brand prefix on a MULTI-WORD brand — the name carries only the
+//       brand's leading word(s), the rest of the brand is absent:
+//         name "purito oat in calming gel cream …"     (brand "purito seoul")
+//       Without this the key becomes "purito seoul purito oat in …" and never
+//       matches the sibling row named "Purito SEOUL - Oat In …" which keys to
+//       "purito seoul oat in …". The leading run that equals a PROPER prefix of
+//       the brand is stripped.
+//
+// GUARDS (all FP-prone, all covered by the harness):
+//   (a) NEVER strip to empty. ~20 Douvall's rows are literally named "Douvall's";
+//       their whole name IS the brand, so stripping would collapse them — instead
+//       the original name is kept (key stays "douvall s").
+//   (b) shape (2) fires ONLY when the FULL brand is absent from the front. A
+//       product line that legitimately reuses a brand word AFTER the full brand
+//       ("Bondi Sands Bondi Babe …") is safe: shape (1) consumes the one real
+//       brand copy and the second "bondi" is left as product text, so the key is
+//       unchanged and two different products never collapse.
+// Shape (2) can at worst MISS a merge (false negative) if a brand's first word is
+// also a common possessive stem ("Charlotte's" under brand "Charlotte Tilbury");
+// it does not manufacture false merges, because the full canonical brand is always
+// re-prepended, so a corrupted stem simply keys to its own bucket.
+function stripLeadingBrandRepetition(normName: string, normBrand: string): string {
+  if (!normBrand || !normName) return normName;
+  const brandTokens = normBrand.split(" ");
+  const nameTokens = normName.split(" ");
+  const n = brandTokens.length;
+  const brandMatchesAt = (pos: number): boolean => {
+    if (pos + n > nameTokens.length) return false;
+    for (let j = 0; j < n; j++) if (nameTokens[pos + j] !== brandTokens[j]) return false;
+    return true;
+  };
+  let i = 0;
+  while (brandMatchesAt(i)) i += n;          // (1) consume consecutive full-brand copies
+  if (i === 0 && n >= 2) {                    // (2) full brand absent → allow one proper-prefix strip
+    let k = 0;
+    while (k < n && k < nameTokens.length && nameTokens[k] === brandTokens[k]) k++;
+    if (k >= 1 && k < n) i = k;               // proper prefix only (k===n is impossible here)
+  }
+  if (i === 0) return normName;
+  const remaining = nameTokens.slice(i).join(" ");
+  return remaining === "" ? normName : remaining;   // guard (a): never strip to empty
+}
+
+// Build a match key from brand + name, deduplicating when name repeats the brand.
+// Handles retailers that put the brand in both the brand field AND at the start of
+// the name field (Stylevana and others), while other retailers only put it in the
+// brand field. Without this, the matcher creates duplicate products because match
+// keys differ:
 //   Retailer A: "mixsoon mixsoon bifida ferment essence 100ml"  (brand in name)
 //   Retailer B: "mixsoon bifida ferment essence 100ml"          (brand not in name)
 // The name is run through stripPromoTags + stripContainerNouns first so promo
-// prefixes and packaging nouns do not split otherwise-identical products.
+// prefixes and packaging nouns do not split otherwise-identical products, then
+// through stripLeadingBrandRepetition so a doubled / partial brand token in the
+// name (Goodal, Dr. Althea, Purito Seoul) does not split it either.
 //
 // IMPORTANT: sizes, pack counts, shade tokens, fragrance-concentration words and
 // version markers are deliberately KEPT in the key. Two products that differ by
@@ -80,13 +134,11 @@ export function stripContainerNouns(normalised: string): string {
 // the stored key.
 export function buildMatchKey(brand: string, name: string): string {
   const normBrand = normaliseForMatch(brand);
-  const normName = stripContainerNouns(normaliseForMatch(stripPromoTags(name)));
-  if (normBrand && normName.startsWith(normBrand + " ")) {
-    return normName; // Brand already at start of name; don't prepend
-  }
-  if (normBrand && normName === normBrand) {
-    return normBrand; // Name IS the brand (rare)
-  }
+  const normNameRaw = stripContainerNouns(normaliseForMatch(stripPromoTags(name)));
+  const normName = stripLeadingBrandRepetition(normNameRaw, normBrand);
+  if (!normBrand) return normName;
+  if (normName === normBrand) return normBrand;             // name IS the brand (rare)
+  if (normName.startsWith(normBrand + " ")) return normName; // brand already at start; don't prepend
   return `${normBrand} ${normName}`.trim();
 }
 
