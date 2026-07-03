@@ -17,6 +17,7 @@ export interface ProductDetail {
   canonical_size: string | null;
   shade: string | null;
   description: string | null;
+  amazon_asin: string | null;
 }
 
 export interface RetailerOffer {
@@ -35,7 +36,7 @@ export interface RetailerOffer {
 export async function getProductById(id: number): Promise<ProductDetail | null> {
   const { data, error } = await supabase
     .from('products_active')
-    .select('id, name, brand, normalised_brand, top_category, subcategory, product_type, image_url, ingredients, concerns, ean, canonical_size, shade, description')
+    .select('id, name, brand, normalised_brand, top_category, subcategory, product_type, image_url, ingredients, concerns, ean, canonical_size, shade, description, amazon_asin')
     .eq('id', id)
     .single();
 
@@ -57,6 +58,7 @@ export async function getProductById(id: number): Promise<ProductDetail | null> 
     canonical_size: data.canonical_size,
     shade: data.shade,
     description: data.description ?? null,
+    amazon_asin: data.amazon_asin ?? null,
   };
 }
 

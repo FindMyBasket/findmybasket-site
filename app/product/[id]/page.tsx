@@ -40,6 +40,12 @@ function buildAmazonSearchUrl(productName: string, brand: string | null): string
   return `https://www.amazon.co.uk/s?k=${encoded}&tag=${AMAZON_TAG}`;
 }
 
+// Direct product hard-link for the products with a verified ASIN. The associate
+// tag MUST be on every Amazon link (it is how we earn), so it is appended here too.
+function buildAmazonProductUrl(asin: string): string {
+  return `https://www.amazon.co.uk/dp/${encodeURIComponent(asin)}/?tag=${AMAZON_TAG}`;
+}
+
 function buildEbaySearchUrl(productName: string, brand: string | null): string {
   const query = displayProductTitle(productName, brand);
   const encoded = encodeURIComponent(query.replace(/\s+/g, ' ').trim());
@@ -226,7 +232,10 @@ export default async function ProductPage({ params }: { params: { id: string } }
     category: product.product_type ?? '',
   };
 
-  const amazonUrl = buildAmazonSearchUrl(product.name, product.brand);
+  // Verified ASIN -> direct product link; otherwise fall back to the tagged search.
+  const amazonUrl = product.amazon_asin
+    ? buildAmazonProductUrl(product.amazon_asin)
+    : buildAmazonSearchUrl(product.name, product.brand);
   const ebayUrl = buildEbaySearchUrl(product.name, product.brand);
 
   return (
