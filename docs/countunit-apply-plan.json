@@ -1,0 +1,303 @@
+{
+  "groups": 21,
+  "plan": [
+    {
+      "brand": "A'pieu",
+      "key": "a pieu juicy pang heart puff 1pcs",
+      "keeper": 66679,
+      "keeperName": "A'PIEU - Juicy-Pang Heart Puff 1 pc",
+      "removed": [
+        {
+          "id": 94066,
+          "name": "A'PIEU - Juicy-Pang Heart Puff - 1ea"
+        }
+      ],
+      "numbers": "1",
+      "cleanShade": true
+    },
+    {
+      "brand": "AOU",
+      "key": "aou pencil brush 1pcs",
+      "keeper": 94136,
+      "keeperName": "AOU - Pencil Brush - 1ea",
+      "removed": [
+        {
+          "id": 95408,
+          "name": "AOU Pencil Brush (1pc)"
+        }
+      ],
+      "numbers": "1",
+      "cleanShade": true
+    },
+    {
+      "brand": "AOU",
+      "key": "aou lip brush 1pcs",
+      "keeper": 94137,
+      "keeperName": "AOU - Lip Brush - 1ea",
+      "removed": [
+        {
+          "id": 95407,
+          "name": "AOU Lip Brush (1pc)"
+        }
+      ],
+      "numbers": "1",
+      "cleanShade": true
+    },
+    {
+      "brand": "APLB",
+      "key": "aplb glutathione niacinamide 4 in 1 sachet pack 5pcs set",
+      "keeper": 9059,
+      "keeperName": "APLB - Glutathione Niacinamide 4-in-1 Sachet Pack - 5pcs Set",
+      "removed": [
+        {
+          "id": 93533,
+          "name": "APLB - Glutathione Niacinamide 4-in-1 Sachet Pack (5ea) Set"
+        }
+      ],
+      "numbers": "1,4,5",
+      "cleanShade": true
+    },
+    {
+      "brand": "APLB",
+      "key": "aplb glutathione niacinamide body lotion wash sachet pack 5pcs set",
+      "keeper": 92888,
+      "keeperName": "APLB - Glutathione Niacinamide Body Lotion & Wash Sachet Pack - 5pcs Set",
+      "removed": [
+        {
+          "id": 93531,
+          "name": "APLB - Glutathione Niacinamide Body Lotion & Wash Sachet Pack (5ea) Set"
+        }
+      ],
+      "numbers": "5",
+      "cleanShade": true
+    },
+    {
+      "brand": "Arencia",
+      "key": "arencia pdrn hyaluronic deep hydration pad 90pcs",
+      "keeper": 84031,
+      "keeperName": "Arencia - PDRN Hyaluronic Deep Hydration Pad 90 pads",
+      "removed": [
+        {
+          "id": 93943,
+          "name": "Arencia - PDRN Hyaluronic Deep Hydration Pad - 90pcs"
+        }
+      ],
+      "numbers": "90",
+      "cleanShade": true
+    },
+    {
+      "brand": "Cell Fusion C",
+      "key": "cell fusion c pore tox pad 60pcs",
+      "keeper": 18392,
+      "keeperName": "Cell Fusion C - Pore Tox Pad - 60pads",
+      "removed": [
+        {
+          "id": 68473,
+          "name": "Cell Fusion C - Pore Tox Pad 60 pads"
+        }
+      ],
+      "numbers": "60",
+      "cleanShade": true
+    },
+    {
+      "brand": "Clio",
+      "key": "clio kill cover founwear cushion puff 1pcs",
+      "keeper": 83799,
+      "keeperName": "CLIO - Kill Cover Founwear Cushion Puff 1 pc",
+      "removed": [
+        {
+          "id": 93959,
+          "name": "CLIO - Kill Cover Founwear Cushion Puff - 1ea"
+        }
+      ],
+      "numbers": "1",
+      "cleanShade": true
+    },
+    {
+      "brand": "Dr. Althea",
+      "key": "dr althea aqua blue hydration mask 28g 4pcs",
+      "keeper": 14815,
+      "keeperName": "Dr. Althea Dr.althea Aqua Blue Hydration Mask 28G 4S",
+      "removed": [
+        {
+          "id": 93061,
+          "name": "Dr. Althea - Aqua Blue Hydration Mask - 28g*4ea"
+        }
+      ],
+      "numbers": "4,28",
+      "cleanShade": true
+    },
+    {
+      "brand": "fillimilli",
+      "key": "fillimilli dual end ear pick 1pcs",
+      "keeper": 66370,
+      "keeperName": "fillimilli - Dual End Ear Pick 1 pc",
+      "removed": [
+        {
+          "id": 93909,
+          "name": "fillimilli - Dual End Ear Pick - 1ea"
+        }
+      ],
+      "numbers": "1",
+      "cleanShade": false
+    },
+    {
+      "brand": "fillimilli",
+      "key": "fillimilli skin corrector brush 829 1pcs",
+      "keeper": 70323,
+      "keeperName": "fillimilli - Skin Corrector Brush 829 1 pc",
+      "removed": [
+        {
+          "id": 94146,
+          "name": "fillimilli - Skin Corrector Brush 829 - 1ea"
+        }
+      ],
+      "numbers": "1,829",
+      "cleanShade": false
+    },
+    {
+      "brand": "fillimilli",
+      "key": "fillimilli spot corrector brush 813 1pcs",
+      "keeper": 70324,
+      "keeperName": "fillimilli - Spot Corrector Brush 813 1 pc",
+      "removed": [
+        {
+          "id": 94145,
+          "name": "fillimilli - Spot Corrector Brush 813 - 1ea"
+        }
+      ],
+      "numbers": "1,813",
+      "cleanShade": false
+    },
+    {
+      "brand": "HEVEBLUE",
+      "key": "heveblue one drop slim skin pad 160pcs",
+      "keeper": 83032,
+      "keeperName": "HEVEBLUE - One Drop Slim Skin Pad 160 pads",
+      "removed": [
+        {
+          "id": 93964,
+          "name": "HEVEBLUE - One Drop Slim Skin Pad - 160pcs"
+        }
+      ],
+      "numbers": "160",
+      "cleanShade": true
+    },
+    {
+      "brand": "HEVEBLUE",
+      "key": "heveblue penta berry panthenol repair peel pad 70pcs",
+      "keeper": 83045,
+      "keeperName": "HEVEBLUE - Penta Berry Panthenol Repair Peel Pad 70 pads",
+      "removed": [
+        {
+          "id": 93947,
+          "name": "HEVEBLUE - Penta Berry Panthenol Repair Peel Pad - 70pcs"
+        }
+      ],
+      "numbers": "70",
+      "cleanShade": true
+    },
+    {
+      "brand": "Kose",
+      "key": "kose clear turn premium royal jelly mask vitamin c mask 4pcs",
+      "keeper": 56548,
+      "keeperName": "Kose - Clear Turn Premium Royal Jelly Mask - Vitamin C Mask - 4pcs",
+      "removed": [
+        {
+          "id": 93719,
+          "name": "Kose  - Clear Turn Premium Royal Jelly Mask  -  Vitamin C Mask (4ea)"
+        }
+      ],
+      "numbers": "4",
+      "cleanShade": true
+    },
+    {
+      "brand": "Mario Badescu",
+      "key": "mario badescu drying patch",
+      "keeper": 63912,
+      "keeperName": "Mario Badescu Drying Patches",
+      "removed": [
+        {
+          "id": 86544,
+          "name": "Mario Badescu Drying Patch"
+        }
+      ],
+      "numbers": "",
+      "cleanShade": true
+    },
+    {
+      "brand": "Purito Seoul",
+      "key": "purito seoul wonder releaf centella spot patch 51pcs",
+      "keeper": 1453,
+      "keeperName": "PURITO Wonder Releaf Centella Spot Patch (51 pcs)",
+      "removed": [
+        {
+          "id": 100312,
+          "name": "Purito SEOUL - Wonder Releaf Centella Spot Patch - 51ea"
+        }
+      ],
+      "numbers": "51",
+      "cleanShade": true
+    },
+    {
+      "brand": "Rohto Mentholatum",
+      "key": "rohto mentholatum hada labo brightening aqua mask 8pcs",
+      "keeper": 57333,
+      "keeperName": "Rohto Mentholatum  - Hada Labo - Brightening Aqua Mask - 8pcs",
+      "removed": [
+        {
+          "id": 93749,
+          "name": "Rohto Mentholatum - Hada Labo Brightening Aqua Mask (8ea)"
+        }
+      ],
+      "numbers": "8",
+      "cleanShade": true
+    },
+    {
+      "brand": "Skinfood",
+      "key": "skinfood carrot carotene calming water pad 60pcs",
+      "keeper": 1579,
+      "keeperName": "SKINFOOD Carrot Carotene Calming Water Pad (60 pads)",
+      "removed": [
+        {
+          "id": 80545,
+          "name": "SKINFOOD - Carrot Carotene Calming Water Pad - 60pcs"
+        }
+      ],
+      "numbers": "60",
+      "cleanShade": true
+    },
+    {
+      "brand": "VT",
+      "key": "vt cica mild toner pad 60pcs",
+      "keeper": 1440,
+      "keeperName": "VT Cica Mild Toner Pad (60pcs)",
+      "removed": [
+        {
+          "id": 69857,
+          "name": "VT - Cica Mild Toner Pad 60 pads"
+        },
+        {
+          "id": 92286,
+          "name": "VT - Cica Mild Toner Pad - 60pcs"
+        }
+      ],
+      "numbers": "60",
+      "cleanShade": true
+    },
+    {
+      "brand": "VT",
+      "key": "vt cica collagen mask 30pcs",
+      "keeper": 81572,
+      "keeperName": "VT - Cica Collagen Mask 30 sheets",
+      "removed": [
+        {
+          "id": 92456,
+          "name": "VT - Cica Collagen Mask - 30pcs"
+        }
+      ],
+      "numbers": "30",
+      "cleanShade": true
+    }
+  ]
+}

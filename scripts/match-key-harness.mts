@@ -22,6 +22,7 @@ import {
   extractNameNumbers,
   extractCanonicalSize,
   extractSize,
+  normaliseCountUnits,
   isShadeBearingLine,
   fragranceConcentration,
   versionMarker,
@@ -79,6 +80,86 @@ const CASES: Case[] = [
     desc: "brand duplicated in name field (Stylevana pattern)",
     ok: () => key("mixsoon", "Mixsoon Bifida Ferment Essence 100ml") ===
               key("mixsoon", "Bifida Ferment Essence 100ml"),
+  },
+
+  // ── NORMALISE AWAY — count UNIT-WORD / pluralisation (same number) ───────────
+  {
+    cls: "count-unit",
+    desc: "pcs == pads == pieces on same count (Zero Pore Pad 70pcs/70 pads/70 Pieces)",
+    ok: () => {
+      const a = key("Medicube", "Zero Pore Pad 70pcs");
+      const b = key("Medicube", "Zero Pore Pad 70 pads");
+      const c = key("Medicube", "Zero Pore Pad 70 Pieces");
+      return a === b && b === c;
+    },
+  },
+  {
+    cls: "count-unit",
+    desc: "pads == ea on same count (Cleansing Pad 60 pads vs 60ea)",
+    ok: () => key("Numbuzin", "No.3 Cleansing Pad 60 pads") ===
+              key("Numbuzin", "No.3 Cleansing Pad 60ea"),
+  },
+  {
+    cls: "count-unit",
+    desc: "pcs == bare S on same count (Clear Spot Patch 18pcs vs 18S)",
+    ok: () => key("COSRX", "Clear Fit Spot Patch 18pcs") ===
+              key("COSRX", "Clear Fit Spot Patch 18S"),
+  },
+  {
+    cls: "count-unit",
+    desc: "patches == Pieces on same count (Master Patch 36 patches vs 36 Pieces)",
+    ok: () => key("COSRX", "Acne Pimple Master Patch 36 patches") ===
+              key("COSRX", "Acne Pimple Master Patch 36 Pieces"),
+  },
+  {
+    cls: "count-unit",
+    desc: "singular/plural standalone noun (Toner Pad vs Toner Pads; Master Patch vs Patches)",
+    ok: () => key("Anua", "Heartleaf 77 Toner Pad") === key("Anua", "Heartleaf 77 Toner Pads") &&
+              key("COSRX", "Acne Pimple Master Patch") === key("COSRX", "Acne Pimple Master Patches"),
+  },
+  {
+    cls: "count-unit",
+    desc: "normaliseCountUnits collapses unit spellings on identical number, direct",
+    ok: () => normaliseCountUnits("zero pore pad 70 pads") === normaliseCountUnits("zero pore pad 70pcs") &&
+              normaliseCountUnits("spot patch 18s") === normaliseCountUnits("spot patch 18 pieces"),
+  },
+
+  // ── KEEP DISTINCT — count guards (different number → different product) ───────
+  {
+    cls: "count-unit",
+    desc: "GUARD 70 pads vs 30 pads → DISTINCT (different count)",
+    ok: () => key("Medicube", "Zero Pore Pad 70 pads") !== key("Medicube", "Zero Pore Pad 30 pads") &&
+              extractNameNumbers("Zero Pore Pad 70 pads") !== extractNameNumbers("Zero Pore Pad 30 pads"),
+  },
+  {
+    cls: "count-unit",
+    desc: "GUARD 1pc vs 10pcs → DISTINCT (unit collapse must not merge different counts)",
+    ok: () => key("Abib", "Gummy Sheet Mask 1pc") !== key("Abib", "Gummy Sheet Mask 10pcs"),
+  },
+  {
+    cls: "count-unit",
+    desc: "GUARD COSRX sheet-mask 1/2/4/8/10pcs → all 5 DISTINCT",
+    ok: () => new Set([1, 2, 4, 8, 10].map((n) => key("COSRX", `Acne Pimple Master Patch ${n}pcs`))).size === 5,
+  },
+  {
+    cls: "count-unit",
+    desc: "GUARD 60ml vs 60ml (4ea) multipack → DISTINCT (one is a bundle)",
+    ok: () => key("Purito Seoul", "Pure Vitamin C Serum 60ml") !==
+              key("Purito Seoul", "Pure Vitamin C Serum 60ml (4ea)") &&
+              extractNameNumbers("Pure Vitamin C Serum 60ml") !== extractNameNumbers("Pure Vitamin C Serum 60ml (4ea)"),
+  },
+  {
+    cls: "count-unit",
+    desc: "GUARD shade variants unaffected by unit normalisation (cushion #21 vs #23)",
+    ok: () => key("TIRTIR", "Mask Fit Cushion 18g 21 Ivory") !== key("TIRTIR", "Mask Fit Cushion 18g 23 Natural") &&
+              isShadeBearingLine("TIRTIR Mask Fit Cushion 18g", "Cushion") === true,
+  },
+  {
+    cls: "count-unit",
+    desc: "GUARD bare-S shade codes stay distinct by number (Joli Rouge 706S vs 707S → DISTINCT)",
+    // The bare-S rule canonicalises the unit WORD but preserves the number, so a
+    // shade code like "706S" (→706pcs) never collapses into a different shade "707S".
+    ok: () => key("Clarins", "Joli Rouge Lipstick 706S 3.5g") !== key("Clarins", "Joli Rouge Lipstick 707S 3.5g"),
   },
 
   // ── NORMALISE AWAY — brand-word REPETITION (leading/doubled brand token) ─────
