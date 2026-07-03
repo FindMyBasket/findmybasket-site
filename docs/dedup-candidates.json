@@ -1,0 +1,4625 @@
+{
+  "generated_from": "_shared/match-key.ts",
+  "scanned": 95140,
+  "tier_totals": {
+    "high_confidence": {
+      "groups": 94,
+      "rows": 206
+    },
+    "review_sizevariant": {
+      "groups": 98,
+      "rows": 204
+    },
+    "review_truncated": {
+      "groups": 35,
+      "rows": 87
+    },
+    "review_nodescriptor": {
+      "groups": 1,
+      "rows": 20
+    },
+    "review_shade_unknown": {
+      "groups": 15,
+      "rows": 81
+    },
+    "review_shade": {
+      "groups": 19,
+      "rows": 38
+    },
+    "review_largegroup": {
+      "groups": 1,
+      "rows": 7
+    }
+  },
+  "high_confidence_rows_collapsed": 112,
+  "groups": [
+    {
+      "brand": "La Roche-Posay",
+      "mk": "la roche posay toleriane rosaliac ar concentrate 40ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 512,
+      "ids": [
+        512,
+        10874
+      ],
+      "sampleName": "La Roche-Posay Toleriane Rosaliac AR Concentrate 40ml",
+      "size": "40ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "La Roche-Posay",
+      "mk": "la roche posay hyalu b5 suractivated cream 50ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 516,
+      "ids": [
+        516,
+        14058
+      ],
+      "sampleName": "La Roche-Posay Hyalu B5 Suractivated Cream 50ml",
+      "size": "50ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Purito Seoul",
+      "mk": "purito seoul wonder releaf centella toner unscented 200ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 941,
+      "ids": [
+        941,
+        100247
+      ],
+      "sampleName": "Purito Wonder Releaf Centella Toner Unscented (200ml)",
+      "size": "200ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Purito Seoul",
+      "mk": "purito seoul daily soft touch sunscreen spf50 pa 60ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 943,
+      "ids": [
+        943,
+        100242
+      ],
+      "sampleName": "Purito Daily Soft Touch Sunscreen SPF50+ PA++++ (60ml)",
+      "size": "60ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Dr. Althea",
+      "mk": "dr althea vitamin c boosting serum 30ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 1046,
+      "ids": [
+        1046,
+        13427
+      ],
+      "sampleName": "Dr.Althea Vitamin C Boosting Serum (30ml)",
+      "size": "30ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Dr. Althea",
+      "mk": "dr althea 147 barrier cream 50ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 1047,
+      "ids": [
+        1047,
+        64336
+      ],
+      "sampleName": "Dr.Althea 147 Barrier Cream (50ml)",
+      "size": "50ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "VT",
+      "mk": "vt cica mild toner pad 60pcs",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 1440,
+      "ids": [
+        1440,
+        92286
+      ],
+      "sampleName": "VT Cica Mild Toner Pad (60pcs)",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Purito Seoul",
+      "mk": "purito seoul mighty bamboo panthenol cream 100ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 1449,
+      "ids": [
+        1449,
+        100306
+      ],
+      "sampleName": "PURITO Mighty Bamboo Panthenol Cream (100ml)",
+      "size": "100ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Purito Seoul",
+      "mk": "purito seoul wonder releaf centella cream unscented 50ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 1450,
+      "ids": [
+        1450,
+        100222
+      ],
+      "sampleName": "PURITO Wonder Releaf Centella Cream Unscented (50ml)",
+      "size": "50ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Purito Seoul",
+      "mk": "purito seoul wonder releaf centella serum unscented 60ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 1452,
+      "ids": [
+        1452,
+        100238
+      ],
+      "sampleName": "PURITO Wonder Releaf Centella Serum Unscented (60ml)",
+      "size": "60ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Purito Seoul",
+      "mk": "purito seoul mighty bamboo panthenol cleanser 150ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 1454,
+      "ids": [
+        1454,
+        100305
+      ],
+      "sampleName": "PURITO Mighty Bamboo Panthenol Cleanser (150ml)",
+      "size": "150ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Purito Seoul",
+      "mk": "purito seoul pure vitamin c serum 60ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 1456,
+      "ids": [
+        1456,
+        100237
+      ],
+      "sampleName": "PURITO Pure Vitamin C Serum (60ml)",
+      "size": "60ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Purito Seoul",
+      "mk": "purito seoul from green cleansing oil 200ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 1457,
+      "ids": [
+        1457,
+        100205
+      ],
+      "sampleName": "PURITO From Green Cleansing Oil (200ml)",
+      "size": "200ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Purito Seoul",
+      "mk": "purito seoul mighty bamboo panthenol serum 30ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 1460,
+      "ids": [
+        1460,
+        100291
+      ],
+      "sampleName": "PURITO Mighty Bamboo Panthenol Serum (30ml)",
+      "size": "30ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Purito Seoul",
+      "mk": "purito seoul from green avocado cleansing balm 100ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 1461,
+      "ids": [
+        1461,
+        100201
+      ],
+      "sampleName": "PURITO From Green Avocado Cleansing Balm (100ml)",
+      "size": "100ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Dr. Althea",
+      "mk": "dr althea green tea fresh sunscreen 45ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 1549,
+      "ids": [
+        1549,
+        109367
+      ],
+      "sampleName": "DR.ALTHEA Green Tea Fresh Sunscreen (45ml)",
+      "size": "45ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Dr. Althea",
+      "mk": "dr althea rapid firm sculpting cream 45ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 1550,
+      "ids": [
+        1550,
+        13426
+      ],
+      "sampleName": "DR.ALTHEA Rapid Firm Sculpting Cream (45ml)",
+      "size": "45ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Dr. Althea",
+      "mk": "dr althea aqua glowing sunscreen 45ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 1551,
+      "ids": [
+        1551,
+        109368
+      ],
+      "sampleName": "DR.ALTHEA Aqua Glowing Sunscreen (45ml)",
+      "size": "45ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Estee Lauder",
+      "mk": "estee lauder advanced night repair serum synchronized",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 1861,
+      "ids": [
+        1861,
+        1870
+      ],
+      "sampleName": "Estee Lauder Advanced Night Repair Serum Synchronized...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Shiseido",
+      "mk": "shiseido uno uv perfection gel 80g",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 2001,
+      "ids": [
+        2001,
+        92124
+      ],
+      "sampleName": "Shiseido UNO - UV Perfection Gel 80g",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Guerlain",
+      "mk": "guerlain abeille royale double r renew repair advanced serum 50ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 2426,
+      "ids": [
+        2426,
+        123641
+      ],
+      "sampleName": "GUERLAIN Abeille Royale Double R Renew & Repair Advanced Serum - 50ml",
+      "size": "50ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Douvall's",
+      "mk": "douvall s",
+      "tier": "review_nodescriptor",
+      "reason": "name is only the brand (no descriptor) — 20 rows, likely distinct feed rows with missing names",
+      "keeper": 3459,
+      "ids": [
+        3459,
+        47866,
+        47869,
+        47872,
+        48641,
+        48642,
+        48643,
+        48744,
+        48745,
+        51431,
+        51432,
+        51433,
+        51434,
+        51453,
+        53549,
+        53550,
+        53551,
+        53553,
+        53554,
+        53555
+      ],
+      "sampleName": "Douvall's",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Elemis",
+      "mk": "elemis pro collagen energising marine cleanser 150ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 3648,
+      "ids": [
+        3648,
+        123590,
+        123636
+      ],
+      "sampleName": "Elemis Pro-Collagen Energising Marine Cleanser 150ml",
+      "size": "150ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Eqqualberry",
+      "mk": "eqqualberry collagen pore tight up hydrogel mask 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 3671,
+      "ids": [
+        3671,
+        51728
+      ],
+      "sampleName": "EQQUALBERRY Collagen Pore-tight up Hydrogel Mask 1PC",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Erase Your Face",
+      "mk": "erase your face reusable makeup removing face cloth",
+      "tier": "review_shade_unknown",
+      "reason": "shade-bearing line with shade unpopulated — cannot confirm same shade",
+      "keeper": 3683,
+      "ids": [
+        3683,
+        53768
+      ],
+      "sampleName": "Erase Your Face Reusable Makeup Removing Face Cloth",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Garnier",
+      "mk": "garnier vitamin c glow duo",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 3896,
+      "ids": [
+        3896,
+        123546
+      ],
+      "sampleName": "Garnier Vitamin C Glow Duo",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Givenchy",
+      "mk": "givenchy l intemporel global youth essence serum 30ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 3907,
+      "ids": [
+        3907,
+        123589
+      ],
+      "sampleName": "Givenchy L'intemporel Global Youth Essence Serum 30ml",
+      "size": "30ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Goodal",
+      "mk": "goodal green tangerine vita c dark spot care serum",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 3963,
+      "ids": [
+        3963,
+        123500
+      ],
+      "sampleName": "Goodal Green Tangerine Vita C Dark Spot Care Serum",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Haruharu Wonder",
+      "mk": "haruharu wonder black rice hyaluronic anti wrinkle serum 50ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 3993,
+      "ids": [
+        3993,
+        55145
+      ],
+      "sampleName": "HaruHaru Black Rice Hyaluronic Anti-Wrinkle Serum 50ml",
+      "size": "50ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "La Roche-Posay",
+      "mk": "la roche posay effaclar a i breakout corrector 15ml",
+      "tier": "review_shade_unknown",
+      "reason": "shade-bearing line with shade unpopulated — cannot confirm same shade",
+      "keeper": 4152,
+      "ids": [
+        4152,
+        9424
+      ],
+      "sampleName": "La Roche-Posay Effaclar A. I Breakout Corrector 15ml",
+      "size": "15ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "La Roche-Posay",
+      "mk": "la roche posay effaclar h iso biome soothing moisturising cream 40ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 4156,
+      "ids": [
+        4156,
+        10650
+      ],
+      "sampleName": "La Roche-Posay Effaclar H Iso-biome Soothing Moisturising Cream 40ml",
+      "size": "40ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Medik8",
+      "mk": "medik8 press clear cleanser duo",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 4320,
+      "ids": [
+        4320,
+        123611
+      ],
+      "sampleName": "Medik8 Press & Clear Cleanser Duo",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Medik8",
+      "mk": "medik8 ultimate recovery mask pack",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 4322,
+      "ids": [
+        4322,
+        123612
+      ],
+      "sampleName": "Medik8 Ultimate Recovery Mask Pack",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Purito Seoul",
+      "mk": "purito seoul from green deep foaming cleanser 150ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 4749,
+      "ids": [
+        4749,
+        100202
+      ],
+      "sampleName": "Purito From Green Deep Foaming Cleanser 150ml",
+      "size": "150ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Purito Seoul",
+      "mk": "purito seoul wonder releaf centella eye cream unscented 30ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 4755,
+      "ids": [
+        4755,
+        100224
+      ],
+      "sampleName": "Purito Wonder Releaf Centella Eye Cream Unscented 30ml",
+      "size": "30ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Revuele",
+      "mk": "revuele ts hyaluronic acid calming tonic",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 4824,
+      "ids": [
+        4824,
+        123558
+      ],
+      "sampleName": "Revuele TS Hyaluronic Acid Calming Tonic",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "SVR Laboratoires",
+      "mk": "svr laboratoires sebiaclear cleansing micellar water for oily skin 400ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 5243,
+      "ids": [
+        5243,
+        123562
+      ],
+      "sampleName": "SVR SEBIACLEAR Cleansing Micellar Water for Oily Skin 400ml",
+      "size": "400ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "SVR Laboratoires",
+      "mk": "svr laboratoires sensifine ar rich hydrating rosacea face cream 40ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 5252,
+      "ids": [
+        5252,
+        123561
+      ],
+      "sampleName": "SVR SENSIFINE AR Rich Hydrating Rosacea Face Cream 40ml",
+      "size": "40ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Vitamin E",
+      "mk": "vitamin e hot cloth cleansing duo",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 5510,
+      "ids": [
+        5510,
+        123544
+      ],
+      "sampleName": "Vitamin E Hot cloth cleansing Duo",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "WARDA",
+      "mk": "warda collagen eye serum boost oil serum",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 5525,
+      "ids": [
+        5525,
+        123548
+      ],
+      "sampleName": "WARDA Collagen Eye Serum + Boost Oil Serum",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Yes Studio",
+      "mk": "yes studio lip balm 3 5g",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 5571,
+      "ids": [
+        5571,
+        51551
+      ],
+      "sampleName": "Yes Studio Lip Balm 3.5g",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Illiyoon",
+      "mk": "illiyoon ceramide ato concentrate cream 75ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 6021,
+      "ids": [
+        6021,
+        123588
+      ],
+      "sampleName": "ILLIYOON Ceramide Ato Concentrate Cream 75ml",
+      "size": "75ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Purito Seoul",
+      "mk": "purito seoul hydro wave deep sea cream 50ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 6312,
+      "ids": [
+        6312,
+        100308
+      ],
+      "sampleName": "PURITO Hydro Wave Deep Sea Cream 50ml",
+      "size": "50ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Purito Seoul",
+      "mk": "purito seoul wonder releaf centella cream 50ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 6315,
+      "ids": [
+        6315,
+        100220
+      ],
+      "sampleName": "PURITO Wonder Releaf Centella Cream 50ml",
+      "size": "50ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha speedy solution anti trouble patch 8pcs",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6607,
+      "ids": [
+        6607,
+        107551
+      ],
+      "sampleName": "MISSHA - Speedy Solution Anti-Trouble Patch 8pcs",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha mascure solution sheet mask saline water 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6636,
+      "ids": [
+        6636,
+        107446
+      ],
+      "sampleName": "MISSHA - Mascure Solution Sheet Mask - Saline Water - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha mascure solution sheet mask pha 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6637,
+      "ids": [
+        6637,
+        107445
+      ],
+      "sampleName": "MISSHA - Mascure Solution Sheet Mask - PHA - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha mascure solution sheet mask madecassoside 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6638,
+      "ids": [
+        6638,
+        107452
+      ],
+      "sampleName": "MISSHA - Mascure Solution Sheet Mask - Madecassoside - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha mascure solution sheet mask hyaluronic acid 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6639,
+      "ids": [
+        6639,
+        107458
+      ],
+      "sampleName": "MISSHA - Mascure Solution Sheet Mask - Hyaluronic Acid - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha mascure solution sheet mask guaiazulene 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6640,
+      "ids": [
+        6640,
+        107443
+      ],
+      "sampleName": "MISSHA - Mascure Solution Sheet Mask - Guaiazulene - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha airy fit sheet mask tea tree 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6642,
+      "ids": [
+        6642,
+        107444
+      ],
+      "sampleName": "MISSHA - Airy Fit Sheet Mask - Tea Tree - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha airy fit sheet mask shea butter 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6643,
+      "ids": [
+        6643,
+        107451
+      ],
+      "sampleName": "MISSHA - Airy Fit Sheet Mask - Shea Butter - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha airy fit sheet mask red ginseng 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6644,
+      "ids": [
+        6644,
+        107460
+      ],
+      "sampleName": "MISSHA - Airy Fit Sheet Mask - Red Ginseng - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha airy fit sheet mask potato 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6645,
+      "ids": [
+        6645,
+        107449
+      ],
+      "sampleName": "MISSHA - Airy Fit Sheet Mask - Potato - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha airy fit sheet mask pomegranate 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6646,
+      "ids": [
+        6646,
+        107448
+      ],
+      "sampleName": "MISSHA - Airy Fit Sheet Mask - Pomegranate - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha airy fit sheet mask pearl 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6647,
+      "ids": [
+        6647,
+        107457
+      ],
+      "sampleName": "MISSHA - Airy Fit Sheet Mask - Pearl - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha airy fit sheet mask lemon 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6648,
+      "ids": [
+        6648,
+        107456
+      ],
+      "sampleName": "MISSHA - Airy Fit Sheet Mask - Lemon - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha airy fit sheet mask honey 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6649,
+      "ids": [
+        6649,
+        107459
+      ],
+      "sampleName": "MISSHA - Airy Fit Sheet Mask - Honey - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha airy fit sheet mask green tea 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6650,
+      "ids": [
+        6650,
+        107455
+      ],
+      "sampleName": "MISSHA - Airy Fit Sheet Mask - Green Tea - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha airy fit sheet mask cucumber 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6651,
+      "ids": [
+        6651,
+        107454
+      ],
+      "sampleName": "MISSHA - Airy Fit Sheet Mask - Cucumber - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha airy fit sheet mask aloe 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6652,
+      "ids": [
+        6652,
+        107453
+      ],
+      "sampleName": "MISSHA - Airy Fit Sheet Mask - Aloe - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha speedy solution face up patch 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6653,
+      "ids": [
+        6653,
+        107447
+      ],
+      "sampleName": "MISSHA - Speedy Solution Face Up Patch - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Etude",
+      "mk": "etude soon jung panthensoside sheet mask 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6654,
+      "ids": [
+        6654,
+        107418
+      ],
+      "sampleName": "ETUDE - Soon Jung Panthensoside Sheet Mask - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Etude",
+      "mk": "etude proof 10 gel pencil liner no 02 dark cacao",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6656,
+      "ids": [
+        6656,
+        107086
+      ],
+      "sampleName": "ETUDE - Proof 10 Gel Pencil Liner - No.02 Dark Cacao",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha smudge proof wood brow no 04 gray brown 1pc",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 6674,
+      "ids": [
+        6674,
+        107083
+      ],
+      "sampleName": "MISSHA - Smudge Proof Wood Brow - No.04 Gray Brown - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha smudge proof wood brow no 02 brown 1pc",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 6675,
+      "ids": [
+        6675,
+        107082
+      ],
+      "sampleName": "MISSHA - Smudge Proof Wood Brow - No.02 Brown - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha smudge proof wood brow no 01 dark brown 1pc",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 6676,
+      "ids": [
+        6676,
+        107081
+      ],
+      "sampleName": "MISSHA - Smudge Proof Wood Brow - No.01 Dark Brown - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha modern shadow glitter prism no blossom",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6683,
+      "ids": [
+        6683,
+        107089
+      ],
+      "sampleName": "MISSHA - Modern Shadow Glitter Prism - No.Blossom",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Benton",
+      "mk": "benton centella cica mask pack 10pcs",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6790,
+      "ids": [
+        6790,
+        110368
+      ],
+      "sampleName": "Benton - Centella Cica Mask Pack - 10pcs",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Benton",
+      "mk": "benton snail bee high content mask pack 10pcs",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6791,
+      "ids": [
+        6791,
+        107416
+      ],
+      "sampleName": "Benton - Snail Bee High Content Mask Pack - 10pcs",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Benton",
+      "mk": "benton fermentation mask pack 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6853,
+      "ids": [
+        6853,
+        107415
+      ],
+      "sampleName": "Benton - Fermentation Mask Pack - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Skin1004",
+      "mk": "skin1004 madagascar centella travel kit 5items 5items",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6880,
+      "ids": [
+        6880,
+        107655
+      ],
+      "sampleName": "SKIN1004 - Madagascar Centella Travel Kit 5items - 5items",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "VT",
+      "mk": "vt cica mild cleansing tissue 50pcs",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6891,
+      "ids": [
+        6891,
+        107384
+      ],
+      "sampleName": "VT - Cica Mild Cleansing Tissue - 50pcs",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "VT",
+      "mk": "vt cica care spot patch 1pack 48 patches",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 6922,
+      "ids": [
+        6922,
+        107559
+      ],
+      "sampleName": "VT - Cica Care Spot Patch - 1pack(48 patches)",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "AXIS-Y",
+      "mk": "axis y the mini glow set 1set 4items",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7007,
+      "ids": [
+        7007,
+        107644
+      ],
+      "sampleName": "AXIS-Y - The Mini Glow Set - 1set(4items)",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Etude",
+      "mk": "etude 0 2 therapy air mask 1pc green tea",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7025,
+      "ids": [
+        7025,
+        92355
+      ],
+      "sampleName": "ETUDE - - 0.2 Therapy Air Mask (New) - 1pc - Green Tea",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": "0.2",
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Etude",
+      "mk": "etude 0 2 therapy air mask 1pc manuka honey",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7026,
+      "ids": [
+        7026,
+        92353
+      ],
+      "sampleName": "ETUDE - - 0.2 Therapy Air Mask (New) - 1pc - Manuka Honey",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": "0.2",
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Etude",
+      "mk": "etude 0 2 therapy air mask 1pc hyaluronic acid",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7027,
+      "ids": [
+        7027,
+        107421
+      ],
+      "sampleName": "ETUDE - 0.2 Therapy Air Mask (New) - 1pc - Hyaluronic Acid",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": "0.2",
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Etude",
+      "mk": "etude 0 2 therapy air mask 1pc collagen",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7028,
+      "ids": [
+        7028,
+        107422
+      ],
+      "sampleName": "ETUDE - 0.2 Therapy Air Mask (New) - 1pc - Collagen",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": "0.2",
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Etude",
+      "mk": "etude 0 2 therapy air mask 1pc aloe",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7030,
+      "ids": [
+        7030,
+        107423
+      ],
+      "sampleName": "ETUDE - 0.2 Therapy Air Mask (New) - 1pc - Aloe",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": "0.2",
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Etude",
+      "mk": "etude 0 2 therapy air mask 1pc tea tree",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7031,
+      "ids": [
+        7031,
+        107419
+      ],
+      "sampleName": "ETUDE - 0.2 Therapy Air Mask (New) - 1pc - Tea Tree",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": "0.2",
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Etude",
+      "mk": "etude 0 2 therapy air mask 1pc snail",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7040,
+      "ids": [
+        7040,
+        107420
+      ],
+      "sampleName": "ETUDE - 0.2 Therapy Air Mask (New) - 1pc - Snail",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": "0.2",
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Etude",
+      "mk": "etude bare edge slim brow 0 1g 01 dark brown",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 7073,
+      "ids": [
+        7073,
+        107080
+      ],
+      "sampleName": "ETUDE - Bare Edge Slim Brow - 0.1g - 01 Dark Brown",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Goodal",
+      "mk": "goodal green tangerine vita c dark spot care cream 50ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 7208,
+      "ids": [
+        7208,
+        92051
+      ],
+      "sampleName": "Goodal - Goodal Green Tangerine Vita-C Dark Spot Care Cream - 50ml",
+      "size": "50ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Goodal",
+      "mk": "goodal green tangerine vita c dark spot care serum 40ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 7209,
+      "ids": [
+        7209,
+        92501
+      ],
+      "sampleName": "Goodal - Goodal Green Tangerine Vita-C Dark Spot Care Serum - 40ml",
+      "size": "40ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "numbuzin",
+      "mk": "numbuzin no 3 tingle pore softening sheet mask 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7345,
+      "ids": [
+        7345,
+        107464
+      ],
+      "sampleName": "numbuzin - No.3 Tingle-Pore Softening Sheet Mask - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Tocobo",
+      "mk": "tocobo powder cream lip balm 3 5g 031 rose burn",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 7355,
+      "ids": [
+        7355,
+        107105
+      ],
+      "sampleName": "TOCOBO - Powder Cream Lip Balm - 3.5g - 031 Rose Burn",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Tocobo",
+      "mk": "tocobo glass tinted lip balm 3 5g 013 tangerine red",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 7356,
+      "ids": [
+        7356,
+        107106
+      ],
+      "sampleName": "TOCOBO - Glass Tinted Lip Balm - 3.5g - 013 Tangerine Red",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Tocobo",
+      "mk": "tocobo glass tinted lip balm 3 5g 012 better pink",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 7357,
+      "ids": [
+        7357,
+        107107
+      ],
+      "sampleName": "TOCOBO - Glass Tinted Lip Balm - 3.5g - 012 Better Pink",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Tocobo",
+      "mk": "tocobo glass tinted lip balm 3 5g 011 flush cherry",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 7358,
+      "ids": [
+        7358,
+        107103
+      ],
+      "sampleName": "TOCOBO - Glass Tinted Lip Balm - 3.5g - 011 Flush Cherry",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Tocobo",
+      "mk": "tocobo glow ritual lip balm 3 5g 001 coral water",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 7359,
+      "ids": [
+        7359,
+        107104
+      ],
+      "sampleName": "TOCOBO - Glow Ritual Lip Balm - 3.5g - 001 Coral Water",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Shiseido",
+      "mk": "shiseido uno whip wash moist 130 2pcs set",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7394,
+      "ids": [
+        7394,
+        107787
+      ],
+      "sampleName": "Shiseido - Uno Whip Wash - Moist - 130 2pcs Set",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Some By Mi",
+      "mk": "some by mi sun protection set c",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7531,
+      "ids": [
+        7531,
+        107710
+      ],
+      "sampleName": "SOME BY MI - Sun Protection Set C",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Some By Mi",
+      "mk": "some by mi sun protection set a",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7533,
+      "ids": [
+        7533,
+        107711
+      ],
+      "sampleName": "SOME BY MI - Sun Protection Set A",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Haruharu Wonder",
+      "mk": "haruharu wonder moisture set c",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7570,
+      "ids": [
+        7570,
+        107678
+      ],
+      "sampleName": "haruharu wonder - Moisture Set C",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Haruharu Wonder",
+      "mk": "haruharu wonder moisture set b",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7571,
+      "ids": [
+        7571,
+        107679
+      ],
+      "sampleName": "haruharu wonder - Moisture Set B",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Haruharu Wonder",
+      "mk": "haruharu wonder moisture set a",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7572,
+      "ids": [
+        7572,
+        107680
+      ],
+      "sampleName": "haruharu wonder - Moisture Set A",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Some By Mi",
+      "mk": "some by mi yuja niacin anti blemish starter kit edition 4 items",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7574,
+      "ids": [
+        7574,
+        107652
+      ],
+      "sampleName": "SOME BY MI - Yuja Niacin Anti Blemish Starter Kit Edition - 4 items",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Etude",
+      "mk": "etude glow fixing tint 3 8g 05 mauvement",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 7589,
+      "ids": [
+        7589,
+        107128
+      ],
+      "sampleName": "ETUDE - Glow Fixing Tint - 3.8g - 05 Mauvement",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Etude",
+      "mk": "etude glow fixing tint 3 8g 02 mellow pink",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 7590,
+      "ids": [
+        7590,
+        107129
+      ],
+      "sampleName": "ETUDE - Glow Fixing Tint - 3.8g - 02 Mellow Pink",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Benton",
+      "mk": "benton portable toner pad case 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7761,
+      "ids": [
+        7761,
+        107638
+      ],
+      "sampleName": "Benton - Portable Toner Pad Case - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Some By Mi",
+      "mk": "some by mi beta panthenol repair starter kit 1 set 4 items",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7810,
+      "ids": [
+        7810,
+        107651
+      ],
+      "sampleName": "SOME BY MI - Beta Panthenol Repair Starter Kit - 1 set (4 items)",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Etude",
+      "mk": "etude glow fixing tint 3 8g 08 red sangria",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 7880,
+      "ids": [
+        7880,
+        107126
+      ],
+      "sampleName": "ETUDE - Glow Fixing Tint - 3.8g - 08 Red Sangria",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Etude",
+      "mk": "etude glow fixing tint 3 8g 06 peach blended",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 7882,
+      "ids": [
+        7882,
+        107127
+      ],
+      "sampleName": "ETUDE - Glow Fixing Tint - 3.8g - 06 Peach Blended",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Etude",
+      "mk": "etude dear darling oil tint 4 2g 05 red oil",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 7980,
+      "ids": [
+        7980,
+        107132
+      ],
+      "sampleName": "Etude - Dear Darling Oil Tint - 4.2g - 05 Red Oil",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Etude",
+      "mk": "etude dear darling oil tint 4 2g 06 pink oil",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 7982,
+      "ids": [
+        7982,
+        107133
+      ],
+      "sampleName": "Etude - Dear Darling Oil Tint - 4.2g - 06 Pink Oil",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Etude",
+      "mk": "etude dear darling oil tint 4 2g 02 plum berry",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 7983,
+      "ids": [
+        7983,
+        107134
+      ],
+      "sampleName": "Etude - Dear Darling Oil Tint - 4.2g - 02 Plum Berry",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Etude",
+      "mk": "etude dear darling oil tint 4 2g 01 real cherry",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 7984,
+      "ids": [
+        7984,
+        107135
+      ],
+      "sampleName": "Etude - Dear Darling Oil Tint - 4.2g - 01 Real Cherry",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "numbuzin",
+      "mk": "numbuzin no 5 glutathione vitamin concentrated mask 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 7987,
+      "ids": [
+        7987,
+        107463
+      ],
+      "sampleName": "numbuzin - No.5+ Glutathione Vitamin Concentrated Mask - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "KSECRET",
+      "mk": "ksecret advanced regenerating eye gel patches retinol 102g",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 8458,
+      "ids": [
+        8458,
+        8460
+      ],
+      "sampleName": "KSECRET - Advanced Regenerating Eye Gel Patches - RETINOL - 102g +",
+      "size": "102g",
+      "shade": "102g +",
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Round Lab",
+      "mk": "round lab 1025 collection bundle",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 8088,
+      "ids": [
+        8088,
+        107703
+      ],
+      "sampleName": "Round Lab - 1025 Collection Bundle",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Unleashia",
+      "mk": "unleashia satin wear healthy green cushion re feel spf30 pa",
+      "tier": "review_shade_unknown",
+      "reason": "shade-bearing line with shade unpopulated — cannot confirm same shade",
+      "keeper": 8603,
+      "ids": [
+        8603,
+        8604,
+        8605,
+        8606,
+        8607,
+        8608,
+        8609,
+        8610,
+        8611,
+        8612,
+        8613,
+        8614,
+        8615,
+        8616,
+        8617,
+        8618,
+        8619,
+        8620,
+        8621,
+        8622,
+        8623
+      ],
+      "sampleName": "Unleashia - Satin Wear Healthy-Green Cushion RE-FEEL SPF30 PA++ (+",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "APLB",
+      "mk": "aplb glutathione niacinamide facial cleanser 80ml cleansing",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 8955,
+      "ids": [
+        8955,
+        8956,
+        8957
+      ],
+      "sampleName": "APLB - Glutathione Niacinamide Facial Cleanser - 80ml & Cleansing...",
+      "size": "80ml",
+      "shade": "80ml & cleansing...",
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Arencia",
+      "mk": "arencia holy hyssop serum 30 50ml hyssop fume balm 30g set",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 9033,
+      "ids": [
+        9033,
+        107817
+      ],
+      "sampleName": "Arencia - Holy Hyssop Serum 30 - 50ml & Hyssop Fume Balm - 30g Set",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Arencia",
+      "mk": "arencia holy hyssop serum 12 30ml hyssop fume balm 30g set",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 9034,
+      "ids": [
+        9034,
+        107818
+      ],
+      "sampleName": "Arencia - Holy Hyssop Serum 12 - 30ml & Hyssop Fume Balm - 30g Set",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Arencia",
+      "mk": "arencia fresh royal blue rice mochi cleanser 120g holy",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 9035,
+      "ids": [
+        9035,
+        9036
+      ],
+      "sampleName": "Arencia - Fresh Royal Blue Rice Mochi Cleanser - 120g & Holy...",
+      "size": "120g",
+      "shade": "120g & holy...",
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha dare tint lip balm 4 8g coral look",
+      "tier": "review_shade",
+      "reason": "same product line, members differ by shade",
+      "keeper": 9184,
+      "ids": [
+        9184,
+        107101
+      ],
+      "sampleName": "MISSHA - Dare Tint Lip Balm - 4.8g - Coral Look",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Clarins",
+      "mk": "clarins sun spray lotion very high protection spf50",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 12260,
+      "ids": [
+        12260,
+        104276
+      ],
+      "sampleName": "Clarins Sun Spray Lotion Very High Protection Spf50",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Purito Seoul",
+      "mk": "purito seoul timeless bloom bakuchiol serum 30ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 13987,
+      "ids": [
+        13987,
+        100211
+      ],
+      "sampleName": "Purito Timeless Bloom Bakuchiol Serum 30ml",
+      "size": "30ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "St Tropez",
+      "mk": "st tropez ultimate tan body brush",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 14979,
+      "ids": [
+        14979,
+        99042
+      ],
+      "sampleName": "St Tropez St. Tropez Ultimate Tan Body Brush",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Vitamin E",
+      "mk": "vitamin e travel bundle",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 16299,
+      "ids": [
+        16299,
+        123545
+      ],
+      "sampleName": "Vitamin E travel Bundle",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Love My Skin",
+      "mk": "love my skin pore refiner",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 16632,
+      "ids": [
+        16632,
+        123547
+      ],
+      "sampleName": "Love My Skin Pore Refiner",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Active Era",
+      "mk": "active era adventure mosquito repellent bands 12 pack",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 17056,
+      "ids": [
+        17056,
+        70513
+      ],
+      "sampleName": "Active Era Adventure Mosquito Repellent Bands - 12 Pack",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Active Era",
+      "mk": "active era explorer mosquito repellent bands 18 pack",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 17057,
+      "ids": [
+        17057,
+        123555
+      ],
+      "sampleName": "Active Era Explorer Mosquito Repellent Bands - 18 Pack",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Pure Derma London",
+      "mk": "pure derma london medical grade 0 75mm derma roller 540",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 17430,
+      "ids": [
+        17430,
+        123569
+      ],
+      "sampleName": "Pure Derma London Medical Grade 0.75mm Derma Roller - 540",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Pure Derma London",
+      "mk": "pure derma london small cryo sticks built in cooling gel",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 17433,
+      "ids": [
+        17433,
+        123576
+      ],
+      "sampleName": "Pure Derma London Small Cryo Sticks - Built-In Cooling Gel",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Pure Derma London",
+      "mk": "pure derma london medical grade 0 25mm derma roller 540",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 17436,
+      "ids": [
+        17436,
+        123570
+      ],
+      "sampleName": "Pure Derma London Medical Grade 0.25mm Derma Roller - 540",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Pure Derma London",
+      "mk": "pure derma london medical grade 0 5mm derma roller 540",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 17438,
+      "ids": [
+        17438,
+        123571
+      ],
+      "sampleName": "Pure Derma London Medical Grade 0.5mm Derma Roller - 540",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Pure Derma London",
+      "mk": "pure derma london ultrasonic silicone facial cleansing brush",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 17442,
+      "ids": [
+        17442,
+        123572,
+        123573,
+        123574,
+        123575
+      ],
+      "sampleName": "Pure Derma London Ultrasonic Silicone Facial Cleansing Brush",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Active Era",
+      "mk": "active era explorer mosquito repellent bands 12 pack",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 17657,
+      "ids": [
+        17657,
+        70510
+      ],
+      "sampleName": "Active Era Explorer Mosquito Repellent Bands - 12 Pack",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Active Era",
+      "mk": "active era adventure mosquito repellent bands 18 pack",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 70511,
+      "ids": [
+        70511,
+        123580
+      ],
+      "sampleName": "Active Era Adventure Mosquito Repellent Bands - 18 Pack",
+      "size": null,
+      "shade": "18 pack",
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Scottish Fine Soaps",
+      "mk": "scottish fine soaps apple spice duo",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 18006,
+      "ids": [
+        18006,
+        123598
+      ],
+      "sampleName": "Scottish Fine Soaps Apple & Spice Duo",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Living and Home",
+      "mk": "living and home livingandhome face neck sculpting tool tri light therapy",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 18207,
+      "ids": [
+        18207,
+        123604,
+        123605
+      ],
+      "sampleName": "Livingandhome Face Neck Sculpting Tool Tri-Light Therapy",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Mediheal",
+      "mk": "mediheal the n m f ampoule mask 10pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 18334,
+      "ids": [
+        18334,
+        107441
+      ],
+      "sampleName": "Mediheal - The N.M.F Ampoule Mask - 10pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Abib",
+      "mk": "abib gummy sheet mask heartleaf sticker 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 18357,
+      "ids": [
+        18357,
+        107409
+      ],
+      "sampleName": "Abib - Gummy Sheet Mask - Heartleaf Sticker - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Real Barrier",
+      "mk": "real barrier aqua soothing ampoule mask 1pc",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 18378,
+      "ids": [
+        18378,
+        106734
+      ],
+      "sampleName": "Real Barrier - Aqua Soothing Ampoule Mask (New) - 1pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "KSECRET",
+      "mk": "ksecret seoul 1988 serum retinal liposome 2 black ginseng",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 18749,
+      "ids": [
+        18749,
+        18750
+      ],
+      "sampleName": "KSECRET - SEOUL 1988 Serum : Retinal Liposome 2% + Black Ginseng -",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Genabelle",
+      "mk": "genabelle pdrn vita toning ampoule jumbo 70ml pdrn",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 18840,
+      "ids": [
+        18840,
+        18841
+      ],
+      "sampleName": "Genabelle - PDRN VITA Toning Ampoule JUMBO - 70ml & PDRN...",
+      "size": "70ml",
+      "shade": "70ml & pdrn...",
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "La Roche-Posay",
+      "mk": "la roche posay lipikar lait urea 10 400ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 31775,
+      "ids": [
+        31775,
+        108287
+      ],
+      "sampleName": "La Roche Posay La Roche-Posay Lipikar Lait Urea 10% 400ml",
+      "size": "400ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Elegant Touch",
+      "mk": "elegant touch soap nails bubble bliss",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 37863,
+      "ids": [
+        37863,
+        104061
+      ],
+      "sampleName": "Elegant Touch Soap Nails - Bubble Bliss",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Kiss",
+      "mk": "kiss glam jewel nails serendipity awaits",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 40765,
+      "ids": [
+        40765,
+        123501
+      ],
+      "sampleName": "Kiss Glam Jewel Nails Serendipity Awaits",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Made By Mitchell",
+      "mk": "made by mitchell lip kit that s delicious",
+      "tier": "review_shade_unknown",
+      "reason": "shade-bearing line with shade unpopulated — cannot confirm same shade",
+      "keeper": 41046,
+      "ids": [
+        41046,
+        46739
+      ],
+      "sampleName": "Made By Mitchell Lip Kit That's Delicious",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Revolution",
+      "mk": "revolution superfix misting spray",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 42480,
+      "ids": [
+        42480,
+        123496
+      ],
+      "sampleName": "Revolution Superfix Misting Spray",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Revolution",
+      "mk": "revolution pout lip oil lychee clear",
+      "tier": "review_shade_unknown",
+      "reason": "shade-bearing line with shade unpopulated — cannot confirm same shade",
+      "keeper": 44599,
+      "ids": [
+        44599,
+        44988
+      ],
+      "sampleName": "Revolution Pout Lip Oil Lychee Clear",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "BILLIE EILISH",
+      "mk": "billie eilish your turn 50ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 44838,
+      "ids": [
+        44838,
+        123495
+      ],
+      "sampleName": "Billie EIlish Your Turn 50ml",
+      "size": "50ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Kiss",
+      "mk": "kiss impress nails chills",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 46909,
+      "ids": [
+        46909,
+        123502
+      ],
+      "sampleName": "Kiss Impress Nails - Chills",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Kiss",
+      "mk": "kiss impress nails fearless",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 46910,
+      "ids": [
+        46910,
+        123503
+      ],
+      "sampleName": "Kiss Impress Nails - Fearless",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Kiss",
+      "mk": "kiss impress toenails blanc chic",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 46911,
+      "ids": [
+        46911,
+        123504
+      ],
+      "sampleName": "Kiss Impress Toenails - Blanc Chic",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Kiss",
+      "mk": "kiss impress color frosting",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 46912,
+      "ids": [
+        46912,
+        123505
+      ],
+      "sampleName": "Kiss Impress Color - Frosting",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Kiss",
+      "mk": "kiss 140 count nails earthly",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 46913,
+      "ids": [
+        46913,
+        123506
+      ],
+      "sampleName": "Kiss 140 Count Nails - Earthly",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Kiss",
+      "mk": "kiss glam shimmer toenails twinkle toes",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 46914,
+      "ids": [
+        46914,
+        123507
+      ],
+      "sampleName": "Kiss Glam Shimmer Toenails - Twinkle Toes",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Kiss",
+      "mk": "kiss glam jewel nails breeze of bliss",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 46915,
+      "ids": [
+        46915,
+        123508
+      ],
+      "sampleName": "Kiss Glam Jewel Nails - Breeze Of Bliss",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Kiss",
+      "mk": "kiss impress nails happy world",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 46916,
+      "ids": [
+        46916,
+        123509
+      ],
+      "sampleName": "Kiss Impress Nails - Happy World",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Wild & Stone",
+      "mk": "wild stone organic cotton hand towels",
+      "tier": "review_largegroup",
+      "reason": "7 rows share size+shade — unusually large, eyeball before merge",
+      "keeper": 47906,
+      "ids": [
+        47906,
+        47907,
+        47908,
+        47909,
+        47910,
+        47911,
+        47912
+      ],
+      "sampleName": "Wild & Stone Organic Cotton Hand Towels",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Living and Home",
+      "mk": "living and home livingandhome contemporary vanity mirror with led lights",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 50618,
+      "ids": [
+        50618,
+        123557
+      ],
+      "sampleName": "Livingandhome Contemporary Vanity Mirror with LED Lights",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Living and Home",
+      "mk": "living and home livingandhome drawer style stationery cosmetic storage box",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 50765,
+      "ids": [
+        50765,
+        123559,
+        123560
+      ],
+      "sampleName": "Livingandhome Drawer-Style Stationery Cosmetic Storage Box",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Clarins",
+      "mk": "clarins joli rouge lacquer intense lip balm 3g",
+      "tier": "review_shade_unknown",
+      "reason": "shade-bearing line with shade unpopulated — cannot confirm same shade",
+      "keeper": 51516,
+      "ids": [
+        51516,
+        123578
+      ],
+      "sampleName": "Clarins Joli Rouge Lacquer Intense Lip Balm 3g",
+      "size": "3g",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Living and Home",
+      "mk": "living and home livingandhome tabletop rotating cosmetic storage organizer",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 52258,
+      "ids": [
+        52258,
+        123584
+      ],
+      "sampleName": "Livingandhome Tabletop Rotating Cosmetic Storage Organizer",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Danielle Creations",
+      "mk": "danielle creations 3 in 1 soft touch handheld folding beauty dual side",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 52555,
+      "ids": [
+        52555,
+        123586
+      ],
+      "sampleName": "Danielle Creations 3-in-1 Soft Touch Handheld Folding Beauty Dual Side",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Danielle Creations",
+      "mk": "danielle creations bright led pocket magnification mirror",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 52557,
+      "ids": [
+        52557,
+        123587
+      ],
+      "sampleName": "Danielle Creations Bright LED Pocket Magnification Mirror",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Scottish Fine Soaps",
+      "mk": "scottish fine soaps breathe wrapped soap 100g",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 52732,
+      "ids": [
+        52732,
+        98081
+      ],
+      "sampleName": "Scottish Fine Soaps Breathe Wrapped Soap 100g",
+      "size": "100g",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Al-Rehab",
+      "mk": "al rehab zahrat hawaii 6ml roll on oil",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 52928,
+      "ids": [
+        52928,
+        123593
+      ],
+      "sampleName": "Al Rehab Zahrat Hawaii 6ml Roll-On Oil",
+      "size": "6ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Al-Rehab",
+      "mk": "al rehab golden 6ml roll on oil",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 52940,
+      "ids": [
+        52940,
+        123595
+      ],
+      "sampleName": "Al Rehab Golden 6ml Roll-On Oil",
+      "size": "6ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Living and Home",
+      "mk": "living and home livingandhome modern multi compartment cosmetic storage",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 52979,
+      "ids": [
+        52979,
+        123596
+      ],
+      "sampleName": "Livingandhome Modern Multi-Compartment Cosmetic Storage",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Living and Home",
+      "mk": "living and home livingandhome clear desktop cosmetic organiser",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 53042,
+      "ids": [
+        53042,
+        123597
+      ],
+      "sampleName": "Livingandhome Clear Desktop Cosmetic Organiser",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Living and Home",
+      "mk": "living and home livingandhome desktop storage organiser",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 53056,
+      "ids": [
+        53056,
+        123599
+      ],
+      "sampleName": "Livingandhome Desktop Storage Organiser",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Dr. Althea",
+      "mk": "dr althea 345 relief cream mist 60ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 53102,
+      "ids": [
+        53102,
+        109370
+      ],
+      "sampleName": "Dr. Althea 345 Relief Cream Mist 60ml",
+      "size": "60ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Leaper",
+      "mk": "leaper complete set of professional nail art tools",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 53114,
+      "ids": [
+        53114,
+        123601,
+        123602
+      ],
+      "sampleName": "Leaper Complete Set of Professional Nail Art Tools",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Cuccio Naturale",
+      "mk": "cuccio naturale cuticle revitalizing oil 75ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 53911,
+      "ids": [
+        53911,
+        123613
+      ],
+      "sampleName": "Cuccio Naturale - Cuticle Revitalizing Oil - 75ml",
+      "size": "75ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Direct Cosmetics",
+      "mk": "direct cosmetics bellapierre bellapierre kiss proof lip creme 3 8g",
+      "tier": "review_shade_unknown",
+      "reason": "shade-bearing line with shade unpopulated — cannot confirm same shade",
+      "keeper": 55710,
+      "ids": [
+        55710,
+        70496
+      ],
+      "sampleName": "Bellapierre - Bellapierre Kiss Proof Lip Creme 3.8g",
+      "size": "3.8g",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "A'pieu",
+      "mk": "a pieu pure block natural daily sun cream spf45 pa 100ml",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 55957,
+      "ids": [
+        55957,
+        55958,
+        55959
+      ],
+      "sampleName": "A'PIEU - Pure Block Natural Daily Sun Cream SPF45 PA+++ - 100ml...",
+      "size": "100ml",
+      "shade": "100ml...",
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "A'pieu",
+      "mk": "a pieu milk one pack sheet mask banana 5pcs pure block",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 55989,
+      "ids": [
+        55989,
+        55991
+      ],
+      "sampleName": "A'PIEU - Milk One Pack Sheet Mask - Banana - 5pcs + Pure Block...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "ISEHAN",
+      "mk": "isehan kiss me sunkiller perfect water essence spf50 pa",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 56017,
+      "ids": [
+        56017,
+        56020
+      ],
+      "sampleName": "ISEHAN - Kiss Me Sunkiller Perfect Water Essence SPF50+ PA++++ -...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "ISEHAN",
+      "mk": "isehan kiss me mommy uv mild gel spf33 pa 100ml x apieu",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 56018,
+      "ids": [
+        56018,
+        56019
+      ],
+      "sampleName": "ISEHAN - Kiss Me Mommy UV Mild Gel SPF33 PA+++ - 100ml X APIEU...",
+      "size": "100ml",
+      "shade": "100ml x apieu...",
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "A'pieu",
+      "mk": "a pieu raspberry vinegar hair mist 105ml x a pieu",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 56083,
+      "ids": [
+        56083,
+        56084
+      ],
+      "sampleName": "A'PIEU - Raspberry Vinegar Hair Mist - 105ml X A'PIEU -...",
+      "size": "105ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Clio",
+      "mk": "clio kill cover skin fixer cushion spf50 pa refill only",
+      "tier": "review_shade_unknown",
+      "reason": "shade-bearing line with shade unpopulated — cannot confirm same shade",
+      "keeper": 56173,
+      "ids": [
+        56173,
+        56174,
+        56175
+      ],
+      "sampleName": "CLIO - Kill Cover Skin Fixer Cushion SPF50+ PA+++ (Refill Only) -...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": "Refill",
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Dariya",
+      "mk": "dariya cleodite cleary hair color for gray hair 1 set",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 56240,
+      "ids": [
+        56240,
+        56251
+      ],
+      "sampleName": "Dariya - Cleodite Cleary Hair Color For Gray Hair - 1 set -...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Clio",
+      "mk": "clio kill cover skin fixer cushion spf50 pa luxury koshort",
+      "tier": "review_shade_unknown",
+      "reason": "shade-bearing line with shade unpopulated — cannot confirm same shade",
+      "keeper": 56499,
+      "ids": [
+        56499,
+        56500,
+        56501
+      ],
+      "sampleName": "CLIO - Kill Cover Skin Fixer Cushion SPF50+ PA+++ (Luxury Koshort...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "dasique",
+      "mk": "dasique mood painting lip cheek palette my bear collection",
+      "tier": "review_shade_unknown",
+      "reason": "shade-bearing line with shade unpopulated — cannot confirm same shade",
+      "keeper": 56691,
+      "ids": [
+        56691,
+        56692
+      ],
+      "sampleName": "Dasique - Mood Painting Lip & Cheek Palette My Bear Collection -...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "peripera",
+      "mk": "peripera ink mood glowy balm cardcaptor sakura edition 3 4g",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 56708,
+      "ids": [
+        56708,
+        56709,
+        56710
+      ],
+      "sampleName": "peripera - Ink Mood Glowy Balm (Cardcaptor Sakura Edition) - 3.4g...",
+      "size": "3.4g",
+      "shade": "3.4g...",
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "fwee",
+      "mk": "fwee lip cheek blurry pudding pot pendant keyring random",
+      "tier": "review_shade_unknown",
+      "reason": "shade-bearing line with shade unpopulated — cannot confirm same shade",
+      "keeper": 56718,
+      "ids": [
+        56718,
+        56719,
+        56720,
+        56721,
+        56722,
+        56723,
+        56724,
+        56725,
+        56726,
+        56727,
+        56728,
+        56729,
+        56730,
+        56731,
+        56732,
+        56733,
+        56735,
+        56736,
+        56738,
+        56739,
+        56740,
+        56741,
+        56742,
+        56743,
+        56744,
+        56745,
+        56746,
+        56748,
+        56749,
+        56750,
+        56751
+      ],
+      "sampleName": "Fwee - Lip & Cheek Blurry Pudding Pot + Pendant Keyring (Random...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Rohto Mentholatum",
+      "mk": "rohto mentholatum hada labo gokujyun super hyaluronic acid",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 57037,
+      "ids": [
+        57037,
+        57329
+      ],
+      "sampleName": "Rohto Mentholatum  - Hada Labo - Gokujyun - Super Hyaluronic Acid...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Dariya",
+      "mk": "dariya salon de pro hair color cream 1set 5 natural brown",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 57063,
+      "ids": [
+        57063,
+        57382
+      ],
+      "sampleName": "Dariya - Salon de Pro Hair Color Cream - 1set - #5 Natural Brown",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Rohto Mentholatum",
+      "mk": "rohto mentholatum skin aqua sunscreen super moisture gel",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 57071,
+      "ids": [
+        57071,
+        57203,
+        57204,
+        57205
+      ],
+      "sampleName": "Rohto Mentholatum  - Skin Aqua Sunscreen Super Moisture Gel Pump...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Rohto Mentholatum",
+      "mk": "rohto mentholatum skin aqua super moisture essence sunscreen",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 57075,
+      "ids": [
+        57075,
+        57206
+      ],
+      "sampleName": "Rohto Mentholatum  - Skin Aqua Super Moisture Essence Sunscreen...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Rohto Mentholatum",
+      "mk": "rohto mentholatum skin aqua uv super moisture gel hydrating",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 57077,
+      "ids": [
+        57077,
+        57207,
+        57208,
+        57209
+      ],
+      "sampleName": "Rohto Mentholatum  - Skin Aqua UV Super Moisture Gel Hydrating...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Dariya",
+      "mk": "dariya salon de pro hair color cream 1box 4a ash brown",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 57080,
+      "ids": [
+        57080,
+        57373
+      ],
+      "sampleName": "Dariya - Salon De Pro - Hair Color Cream - 1box - 4A Ash Brown",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Dariya",
+      "mk": "dariya salon de pro hair color cream 1box 7 deep dark brown",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 57081,
+      "ids": [
+        57081,
+        57377,
+        57378,
+        57379
+      ],
+      "sampleName": "Dariya - Salon De Pro - Hair Color Cream - 1box - 7 Deep dark brown",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Dariya",
+      "mk": "dariya salon de pro hair color cream 1box 5k chestnut",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 57083,
+      "ids": [
+        57083,
+        57380,
+        57386,
+        57387
+      ],
+      "sampleName": "Dariya - Salon De Pro - Hair Color Cream - 1box - 5K Chestnut...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Dariya",
+      "mk": "dariya salon de pro hair color cream 1box 5a deep assy",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 57087,
+      "ids": [
+        57087,
+        57381
+      ],
+      "sampleName": "Dariya - Salon De Pro - Hair Color Cream - 1box - 5A Deep Assy",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Rohto Mentholatum",
+      "mk": "rohto mentholatum hada labo gokujyun hyaluronic acid lotion",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 57104,
+      "ids": [
+        57104,
+        57175
+      ],
+      "sampleName": "Rohto Mentholatum  - Hada Labo - Gokujyun Hyaluronic Acid Lotion...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Rohto Mentholatum",
+      "mk": "rohto mentholatum hada labo gokujyun premium lotion 170ml",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 57123,
+      "ids": [
+        57123,
+        57218
+      ],
+      "sampleName": "Rohto Mentholatum - Hada Labo Gokujyun Premium Lotion - 170ml",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Rohto Mentholatum",
+      "mk": "rohto mentholatum hada labo shirojyun arbutin whitening milky",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 57154,
+      "ids": [
+        57154,
+        57199
+      ],
+      "sampleName": "Rohto Mentholatum  - Hada Labo Shirojyun Arbutin Whitening Milky...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Rohto Mentholatum",
+      "mk": "rohto mentholatum hada labo shirojyun premium whitening",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 57178,
+      "ids": [
+        57178,
+        57179,
+        57202
+      ],
+      "sampleName": "Rohto Mentholatum  - Hada Labo - Shirojyun Premium Whitening...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Rohto Mentholatum",
+      "mk": "rohto mentholatum rohto melano cc concentration measures essence",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 57181,
+      "ids": [
+        57181,
+        57228,
+        57229,
+        57230
+      ],
+      "sampleName": "Rohto Mentholatum - Rohto Melano CC Concentration Measures Essence",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Rohto Mentholatum",
+      "mk": "rohto mentholatum melano cc premium brightening essence japan",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 57187,
+      "ids": [
+        57187,
+        57225,
+        57226,
+        57227
+      ],
+      "sampleName": "Rohto Mentholatum  - Melano CC Premium Brightening Essence (Japan...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Rohto Mentholatum",
+      "mk": "rohto mentholatum hada labo shirojyun premium whitening lotion",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 57241,
+      "ids": [
+        57241,
+        57242
+      ],
+      "sampleName": "Rohto Mentholatum  - Hada Labo Shirojyun Premium Whitening Lotion...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Dariya",
+      "mk": "dariya salon de pro hair color cream 1box 3 bright light",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 57374,
+      "ids": [
+        57374,
+        57375,
+        57376
+      ],
+      "sampleName": "Dariya Salon De Pro - Hair Color Cream - 1box - 3 Bright light...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Bobbi Brown",
+      "mk": "bobbi brown extra plump lip serum 6ml",
+      "tier": "review_shade_unknown",
+      "reason": "shade-bearing line with shade unpopulated — cannot confirm same shade",
+      "keeper": 61999,
+      "ids": [
+        61999,
+        63320
+      ],
+      "sampleName": "Bobbi Brown Extra Plump Lip Serum 6ml",
+      "size": "6ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Haruharu Wonder",
+      "mk": "haruharu wonder black rice probiotics barrier nad serum mist 80ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 65309,
+      "ids": [
+        65309,
+        70977
+      ],
+      "sampleName": "HaruHaru Wonder Black Rice Probiotics Barrier Nad+ Serum Mist 80ml",
+      "size": "80ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Dr. Althea",
+      "mk": "dr althea retinol flat iron eye roller 25ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 70281,
+      "ids": [
+        70281,
+        109365
+      ],
+      "sampleName": "Dr. Althea - Retinol Flat Iron Eye Roller 25ml",
+      "size": "25ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Dr. Althea",
+      "mk": "dr althea melaclear cream 20g",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 70321,
+      "ids": [
+        70321,
+        109366
+      ],
+      "sampleName": "Dr. Althea - Melaclear Cream 20g",
+      "size": "20g",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Woods of Windsor",
+      "mk": "woods of windsor lily of the valley dusting powder 100g",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 80514,
+      "ids": [
+        80514,
+        123652
+      ],
+      "sampleName": "Woods Of Windsor Lily Of The Valley Dusting Powder 100g",
+      "size": "100g",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "CNP Laboratory",
+      "mk": "cnp laboratory anti pore black head clear kit 1pack 10pc",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 80540,
+      "ids": [
+        80540,
+        80641
+      ],
+      "sampleName": "CNP LABORATORY - Anti Pore Black Head Clear Kit - 1pack - 10pc",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Dr. Althea",
+      "mk": "dr althea 345 relief serum 30ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 84493,
+      "ids": [
+        84493,
+        109369
+      ],
+      "sampleName": "Dr. Althea - 345 Relief Serum 30ml",
+      "size": "30ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Sigma Beauty",
+      "mk": "sigma beauty soft coverage brush",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 84561,
+      "ids": [
+        84561,
+        97833
+      ],
+      "sampleName": "Sigma Beauty Soft Coverage Brush",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Ultrasun",
+      "mk": "ultrasun extreme spf50",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 85717,
+      "ids": [
+        85717,
+        85718
+      ],
+      "sampleName": "Ultrasun Extreme SPF50+",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Estee Lauder",
+      "mk": "estee lauder est e lauder micro essence treatment lotion with bio ferment",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 86808,
+      "ids": [
+        86808,
+        100454
+      ],
+      "sampleName": "Estée Lauder Micro Essence Treatment Lotion with Bio-Ferment",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Estee Lauder",
+      "mk": "estee lauder est e lauder revitalizing supreme night power bounce cr me moisturiser",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 88683,
+      "ids": [
+        88683,
+        101380
+      ],
+      "sampleName": "Estée Lauder Revitalizing Supreme+ Night Power Bounce Crème Moisturiser",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "House of Hur",
+      "mk": "house of hur moist ampoule blusher 04 lavender flush",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 90808,
+      "ids": [
+        90808,
+        123531
+      ],
+      "sampleName": "House of Hur Moist Ampoule Blusher #04 Lavender Flush",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "MISSHA",
+      "mk": "missha all around safe block aqua sun spf50 pa new version of all around safe block aqua sun gel 50ml x missha",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 91459,
+      "ids": [
+        91459,
+        91462
+      ],
+      "sampleName": "MISSHA - All-Around Safe Block Aqua Sun SPF50+ PA++++ (New version of All-Around Safe Block Aqua Sun Gel ) - 50ml X MISSHA -...",
+      "size": "50ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Rohto Mentholatum",
+      "mk": "rohto mentholatum water lip balm spf20 pa 4 5g moisture milk",
+      "tier": "review_shade_unknown",
+      "reason": "shade-bearing line with shade unpopulated — cannot confirm same shade",
+      "keeper": 91484,
+      "ids": [
+        91484,
+        91800
+      ],
+      "sampleName": "Rohto Mentholatum  - Water Lip Balm SPF20 PA++ - 4.5g - Moisture Milk",
+      "size": "4.5g",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "numbuzin",
+      "mk": "numbuzin no 5 glutathione vitamin trial kit for brightening stylevana exclusive 1 set 4 items no 9 nad bio",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 94208,
+      "ids": [
+        94208,
+        94209
+      ],
+      "sampleName": "numbuzin - No.5+ Glutathione Vitamin Trial Kit for Brightening (Stylevana Exclusive) - 1 Set (4 Items) & No.9 NAD+ BIO...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "numbuzin",
+      "mk": "numbuzin no 9 nad trial kit for anti aging firming stylevana exclusive 1 set 6items no 9 nad bio lifting sil",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 94215,
+      "ids": [
+        94215,
+        94216
+      ],
+      "sampleName": "numbuzin - No.9 NAD+ Trial Kit for Anti-Aging & Firming (Stylevana Exclusive) - 1 Set (6Items) & No.9 NAD+ BIO Lifting-sil...",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Living and Home",
+      "mk": "living and home livingandhome 3 pcs jade facial set with gua sha rollers",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 94741,
+      "ids": [
+        94741,
+        123581
+      ],
+      "sampleName": "Livingandhome 3 Pcs Jade Facial Set with Gua Sha & Rollers",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "L'Oréal Professionnel",
+      "mk": "l or al professionnel serie expert curl expression clarifying anti",
+      "tier": "review_truncated",
+      "reason": "name truncated / trailing '+' — a distinguishing detail may be hidden",
+      "keeper": 97051,
+      "ids": [
+        97051,
+        97060
+      ],
+      "sampleName": "L'Oréal Professionnel Serie Expert Curl Expression Clarifying & Anti-",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Bondi Sands",
+      "mk": "bondi sands spf 50 lip balm coconut 10g",
+      "tier": "review_shade_unknown",
+      "reason": "shade-bearing line with shade unpopulated — cannot confirm same shade",
+      "keeper": 98685,
+      "ids": [
+        98685,
+        102582
+      ],
+      "sampleName": "Bondi Sands SPF 50+ Lip Balm Coconut 10g",
+      "size": "10g",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "White Lotus Beauty",
+      "mk": "white lotus beauty 100 mulberry silk eye mask cruelty free",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 100130,
+      "ids": [
+        100130,
+        123618,
+        123619
+      ],
+      "sampleName": "White Lotus 100% Mulberry Silk Eye Mask Cruelty Free",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "White Lotus Beauty",
+      "mk": "white lotus beauty 100 mulberry silk pillowcase eye mask set cruelty free",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 100131,
+      "ids": [
+        100131,
+        123617
+      ],
+      "sampleName": "White Lotus 100% Mulberry Silk Pillowcase Eye Mask Set Cruelty Free",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Davidoff",
+      "mk": "davidoff cool elixir for men",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 100384,
+      "ids": [
+        100384,
+        104685
+      ],
+      "sampleName": "Davidoff Cool Elixir for Men",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Shiseido",
+      "mk": "shiseido benefiance wrinkle smoothing cream",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 100445,
+      "ids": [
+        100445,
+        104652
+      ],
+      "sampleName": "Shiseido Benefiance Wrinkle Smoothing Cream",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Lancôme",
+      "mk": "lanc me renergie h p n 300 peptide cream",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 100449,
+      "ids": [
+        100449,
+        104653
+      ],
+      "sampleName": "Lancôme Renergie H.P.N 300-Peptide Cream",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Estee Lauder",
+      "mk": "estee lauder est e lauder revitalizing supreme youth power creme",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 100457,
+      "ids": [
+        100457,
+        104654
+      ],
+      "sampleName": "Estée Lauder Revitalizing Supreme+ Youth Power Creme",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Calvin Klein",
+      "mk": "calvin klein eternity aromatic essence for women",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 100474,
+      "ids": [
+        100474,
+        104655
+      ],
+      "sampleName": "Calvin Klein Eternity Aromatic Essence for Women",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Lancôme",
+      "mk": "lanc me la vie est belle l elixir",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 100475,
+      "ids": [
+        100475,
+        104656,
+        105976
+      ],
+      "sampleName": "Lancôme La Vie est Belle L'Elixir",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 2
+    },
+    {
+      "brand": "Clarins",
+      "mk": "clarins double serum",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 100476,
+      "ids": [
+        100476,
+        104657,
+        105977
+      ],
+      "sampleName": "Clarins Double Serum",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 2
+    },
+    {
+      "brand": "Lancôme",
+      "mk": "lanc me r nergie c r x triple serum retinol",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 100490,
+      "ids": [
+        100490,
+        104658
+      ],
+      "sampleName": "Lancôme Rénergie C.R.x. Triple Serum Retinol",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Lancôme",
+      "mk": "lanc me r nergie h p n uvmune spf50 cream",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 100491,
+      "ids": [
+        100491,
+        104659,
+        110502
+      ],
+      "sampleName": "Lancôme Rénergie H.P.N. UVMUNE SPF50 Cream",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 2
+    },
+    {
+      "brand": "Lancôme",
+      "mk": "lanc me absloue soft cream",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 100492,
+      "ids": [
+        100492,
+        104660
+      ],
+      "sampleName": "Lancôme Absloue Soft Cream",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Mugler",
+      "mk": "mugler alien extraintense eau de pafum",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 100493,
+      "ids": [
+        100493,
+        104661,
+        105978
+      ],
+      "sampleName": "Mugler Alien Extraintense Eau De Pafum",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 2
+    },
+    {
+      "brand": "Yves Saint Laurent",
+      "mk": "yves saint laurent libre l eau nue",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 100500,
+      "ids": [
+        100500,
+        104662
+      ],
+      "sampleName": "Yves Saint Laurent Libre L Eau Nue",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Lancôme",
+      "mk": "lanc me galat e confort comforting cleansing milk",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 101362,
+      "ids": [
+        101362,
+        104877
+      ],
+      "sampleName": "Lancôme Galatée Confort Comforting Cleansing Milk",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Lancôme",
+      "mk": "lanc me genifique ultimate serum",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 101371,
+      "ids": [
+        101371,
+        104680,
+        105995
+      ],
+      "sampleName": "Lancôme Genifique Ultimate Serum",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 2
+    },
+    {
+      "brand": "Kiehl's",
+      "mk": "kiehl s creme de corps",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 101375,
+      "ids": [
+        101375,
+        104886,
+        110510
+      ],
+      "sampleName": "Kiehl's Creme de Corps",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 2
+    },
+    {
+      "brand": "Kiehl's",
+      "mk": "kiehl s facial fuel moisturiser",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 101376,
+      "ids": [
+        101376,
+        104887,
+        106180
+      ],
+      "sampleName": "Kiehl's Facial Fuel Moisturiser",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 2
+    },
+    {
+      "brand": "Kiehl's",
+      "mk": "kiehl s midnight recovery concentrate",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 101377,
+      "ids": [
+        101377,
+        110512
+      ],
+      "sampleName": "Kiehl's Midnight Recovery Concentrate",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Clarins",
+      "mk": "clarins double serum light",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 101402,
+      "ids": [
+        101402,
+        104682
+      ],
+      "sampleName": "Clarins Double Serum Light",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Edeniste",
+      "mk": "edeniste jasmin cruel",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 101428,
+      "ids": [
+        101428,
+        104683
+      ],
+      "sampleName": "Edeniste Jasmin Cruel",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Edeniste",
+      "mk": "edeniste vetiver imaginaire",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 101431,
+      "ids": [
+        101431,
+        109632
+      ],
+      "sampleName": "Edeniste Vetiver Imaginaire",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Daimon Barber",
+      "mk": "daimon barber fixing gel in grooming",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 101495,
+      "ids": [
+        101495,
+        101497
+      ],
+      "sampleName": "Daimon Barber Fixing Gel in Grooming",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Daimon Barber",
+      "mk": "daimon barber yuzu paste in grooming",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 101496,
+      "ids": [
+        101496,
+        101498
+      ],
+      "sampleName": "Daimon Barber Yuzu Paste in Grooming",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Afnan",
+      "mk": "afnan supremacy not only intense",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 101635,
+      "ids": [
+        101635,
+        108142
+      ],
+      "sampleName": "Afnan Supremacy Not Only Intense",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "WooWoo",
+      "mk": "woowoo tame it natural intimate hair removal cream in white",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 101996,
+      "ids": [
+        101996,
+        104693,
+        106039
+      ],
+      "sampleName": "WooWoo Tame It Natural Intimate Hair Removal Cream in White",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 2
+    },
+    {
+      "brand": "Christina Aguilera",
+      "mk": "christina aguilera signature",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 102641,
+      "ids": [
+        102641,
+        108528
+      ],
+      "sampleName": "Christina Aguilera Signature",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Kiehl's",
+      "mk": "kiehl s ultra facial barrier hydrating cleanser",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 103371,
+      "ids": [
+        103371,
+        108048
+      ],
+      "sampleName": "Kiehl's Ultra Facial Barrier-Hydrating Cleanser",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "PIXI Beauty",
+      "mk": "pixi beauty antioxidant tonic",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 103493,
+      "ids": [
+        103493,
+        104814
+      ],
+      "sampleName": "PIXI Beauty Antioxidant Tonic",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "PIXI Beauty",
+      "mk": "pixi beauty vitamin c tonic",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 103601,
+      "ids": [
+        103601,
+        104819
+      ],
+      "sampleName": "PIXI Beauty Vitamin-C Tonic",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Kiehl's",
+      "mk": "kiehl s ultra facial meltdown recovery cream",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 103686,
+      "ids": [
+        103686,
+        104821
+      ],
+      "sampleName": "Kiehl's Ultra Facial Meltdown Recovery Cream",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Tangle Teezer",
+      "mk": "tangle teezer the ultimate detangler fresh purple",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 103738,
+      "ids": [
+        103738,
+        105735
+      ],
+      "sampleName": "Tangle Teezer The Ultimate Detangler Fresh Purple",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Tangle Teezer",
+      "mk": "tangle teezer the ultimate detangler transformative teal",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 103739,
+      "ids": [
+        103739,
+        105736
+      ],
+      "sampleName": "Tangle Teezer The Ultimate Detangler Transformative Teal",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Kiehl's",
+      "mk": "kiehl s ultra facial moisturiser",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 104385,
+      "ids": [
+        104385,
+        104888
+      ],
+      "sampleName": "Kiehl's Ultra Facial Moisturiser",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Kiehl's",
+      "mk": "kiehl s ultra light daily uv defense spf 50 pa",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 104388,
+      "ids": [
+        104388,
+        104889
+      ],
+      "sampleName": "Kiehl's Ultra Light Daily UV Defense SPF 50 PA++++",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Daimon Barber",
+      "mk": "daimon barber forming cream in grooming",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 106009,
+      "ids": [
+        106009,
+        106016
+      ],
+      "sampleName": "Daimon Barber Forming Cream in Grooming",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "e.l.f.",
+      "mk": "e l f cosmetics glow reviver melting lip balm",
+      "tier": "review_shade_unknown",
+      "reason": "shade-bearing line with shade unpopulated — cannot confirm same shade",
+      "keeper": 106957,
+      "ids": [
+        106957,
+        106958,
+        106959
+      ],
+      "sampleName": "e. l.f. Cosmetics Glow Reviver Melting Lip Balm",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Dermalogica",
+      "mk": "dermalogica special cleansing gel duo in clear",
+      "tier": "review_sizevariant",
+      "reason": "same product line, members differ by size (incl. null-vs-present)",
+      "keeper": 108654,
+      "ids": [
+        108654,
+        108655
+      ],
+      "sampleName": "Dermalogica Special Cleansing Gel Duo in Clear",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 1
+    },
+    {
+      "brand": "Shiseido",
+      "mk": "shiseido vital perfection white revitalizing emulsion 100ml",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 108977,
+      "ids": [
+        108977,
+        123629,
+        123646
+      ],
+      "sampleName": "Shiseido Vital Perfection White Revitalizing Emulsion 100ml",
+      "size": "100ml",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Living and Home",
+      "mk": "living and home livingandhome gua sha and jade roller set for facial massage",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 109020,
+      "ids": [
+        109020,
+        123639
+      ],
+      "sampleName": "Livingandhome Gua Sha and Jade Roller Set for Facial Massage",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "FULLY",
+      "mk": "fully lemon vita capsule cream 90g",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 109860,
+      "ids": [
+        109860,
+        110262
+      ],
+      "sampleName": "FULLY - Fully Lemon Vita Capsule Cream - 90g",
+      "size": "90g",
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Danielle Creations",
+      "mk": "danielle creations 3 in 1 handheld folding dual sided x 10 mag mirror",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 110671,
+      "ids": [
+        110671,
+        123648,
+        123649
+      ],
+      "sampleName": "Danielle Creations 3-in-1 Handheld Folding Dual Sided x 10 Mag Mirror",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "VT",
+      "mk": "vt it cosmetics celebration foundation powder 9g rich",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 110955,
+      "ids": [
+        110955,
+        123650
+      ],
+      "sampleName": "IT Cosmetics Celebration Foundation Powder 9g - Rich",
+      "size": "9g",
+      "shade": "rich",
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Living and Home",
+      "mk": "living and home livingandhome portable pu travel cosmetic toiletry bag",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 111532,
+      "ids": [
+        111532,
+        123630,
+        123631,
+        123632,
+        123638
+      ],
+      "sampleName": "Livingandhome Portable PU Travel Cosmetic Toiletry Bag",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Living and Home",
+      "mk": "living and home livingandhome double layer travel cosmetic toiletry bag",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 111536,
+      "ids": [
+        111536,
+        123633,
+        123634,
+        123635
+      ],
+      "sampleName": "Livingandhome Double Layer Travel Cosmetic Toiletry Bag",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    },
+    {
+      "brand": "Leaper",
+      "mk": "leaper cold compress face and eye mask set",
+      "tier": "high_confidence",
+      "reason": "identical product, same size & shade",
+      "keeper": 111572,
+      "ids": [
+        111572,
+        123656,
+        123657,
+        123658,
+        123659
+      ],
+      "sampleName": "Leaper Cold Compress Face and Eye Mask Set",
+      "size": null,
+      "shade": null,
+      "frag": null,
+      "ver": null,
+      "siblingVariants": 0
+    }
+  ]
+}
