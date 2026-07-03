@@ -64,7 +64,7 @@ export function SiteFooter() {
           <CookieSettingsButton className={footerLinkCls} />
         </div>
         <p className="text-[12px] text-cream/25 max-w-[640px] leading-relaxed mb-3">
-          FindMyBasket may earn a small affiliate commission when you shop through our links, at no extra cost to you.
+          FindMyBasket may earn a small affiliate commission when you shop through our links, at no extra cost to you. As an Amazon Associate I earn from qualifying purchases.
         </p>
         <p className="text-[12px] text-cream/20">© 2026 FindMyBasket. All rights reserved.</p>
       </div>

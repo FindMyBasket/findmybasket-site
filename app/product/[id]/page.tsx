@@ -15,6 +15,7 @@ import { IMPORTER_RETAILER_IDS, categoryToSlug } from '../../../lib/queries';
 import { displayProductTitle } from '../../../lib/format/product-name';
 import { ProductDescription } from '../../../components/ProductDescription';
 import { ClickOutLink } from '../../../components/ClickOutLink';
+import { AmazonLink } from '../../../components/AmazonLink';
 
 export const revalidate = 3600;
 
@@ -398,15 +399,12 @@ export default async function ProductPage({ params }: { params: { id: string } }
                   <p className="font-medium text-ink-light italic mb-1">Also check on Amazon</p>
                   <p className="text-xs text-ink-light">Live price varies, not compared</p>
                 </div>
-                <ClickOutLink
+                <AmazonLink
                   href={amazonUrl}
-                  retailer="amazon"
                   productId={product.id}
                   source="amazon_crosscheck"
                   className="border border-border text-ink-light px-5 py-2.5 rounded-full text-sm font-medium hover:border-gold hover:text-ink transition-colors whitespace-nowrap"
-                >
-                  Search Amazon →
-                </ClickOutLink>
+                />
               </div>
             </div>
 
