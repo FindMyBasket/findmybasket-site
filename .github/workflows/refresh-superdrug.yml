@@ -225,6 +225,12 @@ jobs:
           PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
+          # retailer 12 runs sliced_import: this call STAGES the feed (splits it
+          # into slice files) and fires slice 0 via pg_net, returning {"staged":true}
+          # in a few seconds. The slices then self-chain to completion in the
+          # background (each well under the 150s edge wall-clock), and the
+          # fmb-import-watchdog cron re-fires any stalled slice. A non-sliced
+          # retailer or an explicit dry_run instead returns {"applied":...}.
           RESPONSE=$(curl -fsSL -X POST \
             "https://${PROJECT_REF}.supabase.co/functions/v1/import-rakuten-feed" \
             -H "Authorization: Bearer ${SERVICE_KEY}" \
@@ -233,7 +239,7 @@ jobs:
             -d '{"retailer_id": 12, "feed_path": "feeds/superdrug/latest.ndjson.gz", "dry_run": false}')
           echo "$RESPONSE" | head -c 4000
           echo ""
-          echo "$RESPONSE" | grep -q '"applied"' || {
-            echo "::error::Import function did not return success"
+          echo "$RESPONSE" | grep -qE '"staged"|"applied"' || {
+            echo "::error::Import function did not return success (expected staged or applied)"
             exit 1
           }
