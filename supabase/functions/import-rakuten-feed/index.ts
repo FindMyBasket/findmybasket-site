@@ -112,6 +112,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { inferCategorisationForImport } from "../_shared/categorisation.ts";
 import { normaliseDescription } from "../_shared/description.ts";
 import {
+  normaliseForMatch,
   buildMatchKey,
   normaliseEan,
   normaliseMpn,
@@ -368,7 +369,7 @@ async function buildContext(supa, config, retailerId) {
     sizeByProductId.set(p.id, extractSize(exactKey));
     numbersByProductId.set(p.id, extractNameNumbers(p.name));
     if (p.brand) {
-      const normBrand = String(p.brand).toLowerCase().trim();
+      const normBrand = normaliseForMatch(p.brand);   // match_brand parity (fold punctuation/accents)
       if (normBrand) existingBrandSet.add(normBrand);
     }
   }
@@ -534,7 +535,7 @@ function classify(product, ctx, acc) {
     return;
   }
   if (ctx.existingBrandsOnly) {
-    const normBrand = brand.toLowerCase().trim();
+    const normBrand = normaliseForMatch(brand);   // match_brand parity (brand is already alias-canonicalised)
     if (!normBrand || !ctx.existingBrandSet.has(normBrand)) {
       acc.countSkippedNewBrand++;
       return;
