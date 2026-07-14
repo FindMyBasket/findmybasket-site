@@ -69,6 +69,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { inferCategorisationForImport } from "../_shared/categorisation.ts";
 import {
+  normaliseForMatch,
   buildMatchKey,
   normaliseEan,
   normaliseMpn,
@@ -373,7 +374,7 @@ serve(async (req) => {
     sizeByProductId.set(p.id, extractSize(exactKey));
     numbersByProductId.set(p.id, extractNameNumbers(p.name));
     if (p.brand) {
-      const normBrand = String(p.brand).toLowerCase().trim();
+      const normBrand = normaliseForMatch(p.brand);   // match_brand parity (fold punctuation/accents)
       if (normBrand) existingBrandSet.add(normBrand);
     }
   }
@@ -624,7 +625,7 @@ serve(async (req) => {
     }
 
     if (existingBrandsOnly) {
-      const normBrand = brand.toLowerCase().trim();
+      const normBrand = normaliseForMatch(brand);   // match_brand parity (brand is already alias-canonicalised)
       if (!normBrand || !existingBrandSet.has(normBrand)) {
         countSkippedNewBrand++;
         return;

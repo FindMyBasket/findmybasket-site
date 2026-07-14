@@ -644,20 +644,25 @@ serve(async (req) => {
   const createdUrls = new Set<string>();                // URLs created this run (Tier 5 shade-variant suppression; replaces the old urlToProductId -1 sentinel)
   const createdByMatchKey = new Map<string, number>();  // 4A-i: match key → -1 (pending); suppresses duplicate creates only, never links
 
-  // existing_brands_only needs just the distinct set of normalised brands. The
+  // existing_brands_only needs just the distinct set of match_brand keys. The
   // big feeds that actually OOM have existing_brands_only=false, so they SKIP this
   // entirely; only the (smaller, not memory-bound) restricted retailers pay the
   // distinct-brand pagination. (Follow-up: replace with an RPC if a large
   // existing_brands_only retailer ever makes this slow.)
+  //
+  // MODE GUARD: the brand filter runs ONLY in the apply path (process/single).
+  // stage (Phase-A ungzip) and split (byte-range slicing) never read this set, so
+  // building the ~96k-row set during them just wastes memory in the exact phase
+  // that intermittently 546s on YesStyle. Build it only where it's used.
   const existingBrandSet = new Set<string>();
-  if (existingBrandsOnly) {
+  if (existingBrandsOnly && (effectiveMode === "process" || effectiveMode === "single")) {
     let bfrom = 0;
     while (true) {
       const { data, error } = await supa
         .from("products")
-        .select("normalised_brand")
-        .not("normalised_brand", "is", null)
-        .order("normalised_brand", { ascending: true })
+        .select("match_brand")
+        .neq("match_brand", "")
+        .order("match_brand", { ascending: true })
         .range(bfrom, bfrom + 999);
       if (error) {
         await recordImportStatus(supa, retailerId, "error", `DB read failed (distinct brands): ${error.message ?? error}`);
@@ -665,7 +670,12 @@ serve(async (req) => {
       }
       if (!data || data.length === 0) break;
       for (const r of data) {
-        const b = String(r.normalised_brand || "").toLowerCase().trim();
+        // match_brand is fmb_match_brand(brand): lower + non-alnum→space + trim,
+        // already punctuation/accent-folded. Compared against normaliseForMatch(brand)
+        // on the feed side (exact parity) so casing/punctuation variants of a brand
+        // we carry (rom&nd vs "romand" needs an alias; Lord&Berry vs "Lord & Berry"
+        // matches here) are no longer silently dropped by existing_brands_only.
+        const b = String(r.match_brand || "");
         if (b) existingBrandSet.add(b);
       }
       if (data.length < 1000) break;
@@ -2007,7 +2017,7 @@ serve(async (req) => {
     // Brand restriction: if existing_brands_only is on, skip products from
     // brands we don't already track.
     if (existingBrandsOnly) {
-      const normBrand = brand.toLowerCase().trim();
+      const normBrand = normaliseForMatch(brand);   // match_brand parity (brand is already alias-canonicalised)
       if (!normBrand || !existingBrandSet.has(normBrand)) {
         countCreateNew--;
         countSkippedNewBrand++;
