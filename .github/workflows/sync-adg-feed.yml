@@ -1,0 +1,73 @@
+name: Sync Atelier De Glow feed to Supabase Storage
+
+# Mirrors sync-bb-feed.yml. Atelier De Glow (retailer 29) is an AWIN Darwin
+# (Google-Shopping) feed — fid 119037 / Darwin identifier F1207. The edge runtime
+# can't reliably gunzip the Darwin feed, so (as with Branded Beauty) we download +
+# decompress here and stage the plain CSV to Supabase Storage; the importer then
+# reads feed_url = storage://awin-feeds/atelier-de-glow.csv.
+#
+# Runs daily at 02:37 UTC (before BB's 03:00 sync and before the retailer-29 import
+# cron) + on demand from the Actions tab. Off-minute by house convention.
+on:
+  schedule:
+    - cron: '37 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync-adg-feed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download ADG feed from AWIN
+        run: |
+          set -euo pipefail
+          echo "Downloading Atelier De Glow feed..."
+          curl -sSf -o adg-feed.csv.gz "${DARWIN_FEED_URL_ADG}"
+          ls -la adg-feed.csv.gz
+          # Verify it's actually gzip
+          file adg-feed.csv.gz | grep -q "gzip compressed" || (echo "Not a gzip file"; exit 1)
+        env:
+          DARWIN_FEED_URL_ADG: ${{ secrets.DARWIN_FEED_URL_ADG }}
+
+      - name: Decompress
+        run: |
+          set -euo pipefail
+          gunzip adg-feed.csv.gz
+          ls -la adg-feed.csv
+          # Check it has a reasonable number of rows (feed is ~690 products)
+          rows=$(wc -l < adg-feed.csv)
+          echo "Decompressed feed has $rows rows"
+          if [ "$rows" -lt 100 ]; then
+            echo "Feed has fewer than 100 rows — aborting"
+            exit 1
+          fi
+
+      - name: Upload to Supabase Storage
+        run: |
+          set -euo pipefail
+          # POST /storage/v1/object/{bucket}/{path}, upsert to overwrite.
+          response=$(curl -sS -w "\n%{http_code}" -X POST \
+            "${SUPABASE_URL}/storage/v1/object/awin-feeds/atelier-de-glow.csv" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_KEY}" \
+            -H "Content-Type: text/csv" \
+            -H "x-upsert: true" \
+            --data-binary @adg-feed.csv)
+
+          body=$(echo "$response" | head -n -1)
+          status=$(echo "$response" | tail -n 1)
+          echo "Upload status: $status"
+          echo "Upload response: $body"
+
+          if [ "$status" != "200" ] && [ "$status" != "201" ]; then
+            echo "Upload failed with status $status"
+            exit 1
+          fi
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      - name: Summary
+        run: |
+          echo "Atelier De Glow feed synced successfully to Supabase Storage"
+          echo "Bucket: awin-feeds"
+          echo "Path: atelier-de-glow.csv"
+          echo "Edge function imports via feed_url = storage://awin-feeds/atelier-de-glow.csv"
