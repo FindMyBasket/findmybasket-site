@@ -166,8 +166,10 @@ export default async function ProductPage({ params }: { params: { id: string } }
 
   // Product JSON-LD. An AggregateOffer (price range + count) so Google can render
   // the "£X to £Y" shopping snippet, followed by one Offer per in-stock retailer
-  // so the named multi-retailer panel still resolves. A single OutOfStock offer
-  // when nothing is in stock (never an empty offers array, never Math.min on []).
+  // so the named multi-retailer panel still resolves. When nothing is in stock we
+  // have no valid price to publish, so we omit the offers block entirely (an Offer
+  // requires price/priceSpecification; a priceless OutOfStock offer is invalid and
+  // Google flags it). Product schema permits a Product with no offers.
   const jsonLdName = displayProductTitle(product.name, product.brand);
   const inStockPrices = inStockOffers.map(o => o.price);
   const productJsonLd = {
@@ -197,11 +199,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
             seller: { '@type': 'Organization', name: o.retailer_name },
           })),
         ]
-      : [{
-          '@type': 'Offer',
-          priceCurrency: 'GBP',
-          availability: 'https://schema.org/OutOfStock',
-        }],
+      : undefined,
   };
 
   // BreadcrumbList JSON-LD
