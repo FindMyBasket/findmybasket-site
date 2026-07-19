@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { getActiveRetailerIds } from './retailers';
 
 export type TopCategory = 'skincare' | 'makeup' | 'hair' | 'fragrance' | 'bath_body';
 
@@ -191,9 +192,12 @@ export async function getCategoryStats(category: TopCategory): Promise<CategoryS
       .range(offset, offset + PAGE_SIZE - 1),
   );
 
+  const activeRetailerIds = await getActiveRetailerIds();
   const retailerIdSet = new Set<number>();
   for (const p of productRetailerRows) {
-    for (const rp of p.retailer_prices ?? []) retailerIdSet.add(rp.retailer_id);
+    for (const rp of p.retailer_prices ?? []) {
+      if (activeRetailerIds.has(rp.retailer_id)) retailerIdSet.add(rp.retailer_id);
+    }
   }
   const totalRetailers = retailerIdSet.size;
 
@@ -324,10 +328,12 @@ export async function getFeaturedProducts(
 
   const productIds = products.map(p => p.id);
 
+  const activeRetailerIds = await getActiveRetailerIds();
   const { data: prices } = await supabase
     .from('retailer_prices')
     .select('product_id, retailer_id, price, in_stock')
     .in('product_id', productIds)
+    .in('retailer_id', [...activeRetailerIds])
     .eq('in_stock', true);
 
   if (!prices) return [];
