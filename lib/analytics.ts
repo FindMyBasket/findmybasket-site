@@ -16,6 +16,24 @@ export function trackAffiliateClickOut(retailer: string, productId?: number): vo
   });
 }
 
+// Rakuten (LinkShare) deep links wrap the real destination in a click.linksynergy.com
+// redirect that carries Rakuten's affiliate tracking (id / offerid / murl). Per Rakuten's
+// request we no longer route Superdrug (retailer 12) click-outs through their tracking, so
+// we send the user straight to the decoded destination (the `murl` param). Non-linksynergy
+// urls (AWIN, Amazon, eBay, direct) pass through untouched. Falls back to the original url
+// if no destination param is present, so a malformed link can never become a dead click-out.
+export function directDestinationUrl(url: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return url;
+  }
+  if (!parsed.hostname.toLowerCase().includes('linksynergy.com')) return url;
+  const dest = parsed.searchParams.get('murl') || parsed.searchParams.get('RD_PARM1');
+  return dest || url;
+}
+
 export type AffiliateNetwork = 'awin' | 'rakuten' | 'amazon' | 'ebay' | 'other';
 
 // AWIN retailers all pool into awin1.com and Rakuten into click.linksynergy.com,
