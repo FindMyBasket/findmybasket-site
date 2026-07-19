@@ -57,9 +57,10 @@ const prev = new Set<number>((prevMatch?.[1] ?? "").split(",").filter(Boolean).m
 const added = gone.filter(id => !prev.has(id));
 const removed = [...prev].filter(id => !gone.includes(id));
 
+if (!prevMatch) throw new Error("Could not find GONE_IDS_RAW literal to replace (format mismatch).");
 const next = src.replace(/const GONE_IDS_RAW =\s*'[^']*';/, `const GONE_IDS_RAW =\n  '${gone.join(",")}';`);
-if (next === src) throw new Error("Could not find GONE_IDS_RAW literal to replace.");
 writeFileSync(MODULE, next);
+if (next === src) console.log("(no drift — regenerated set is identical to the committed one)");
 
 console.log("active retailers:", [...active].sort((a, b) => a - b).join(","));
 console.log("authoritative GONE (drops at flip):", gone.length);

@@ -1,12 +1,31 @@
 # Superdrug (retailer 12) removal — orphan-handling plan
 
-**Status (2026-07-19):** Step A APPLIED + verified no-op (100,231 unchanged; post-flip
-preview 75,747 = 24,484 drop; EXPLAIN 154ms worst-case, no regression). Steps C (#105)
-and D (#106) MERGED to main, both deploy inert. Compliance fix (Rakuten strip, #103)
-shipped separately. HELD for go on Step B (the flip). Remaining before B: Edge Config
-store + `superdrug_removed:false` key (user), regenerate GONE_IDS from the authoritative
-drop set at flip time (`scripts/regen-superdrug-gone-ids.mts`), populate curated
-REDIRECTS from GSC.
+**Status (2026-07-19): FLIP COMPLETE — verified green.** All steps executed:
+A (view flip, applied), C (#105), D (#106), gate observability (#107), curated 301s
+(#108), Edge Config `superdrug_removed:true`, and `UPDATE retailers SET active=false
+WHERE id=12`. products_active 100,231 -> 75,760 (24,471 orphans dropped). Post-flip
+verification all green: orphans 410, curated 301 to brand pages, survivors 200 (Superdrug
+dropped from comparison), merged/shade 308, bad id 404, listing pages 200. Compliance fix
+(Rakuten strip, #103) shipped separately. Remaining: Step E ISR revalidation (SQL below,
+service_role) and GSC monitoring of the 410 de-index over the coming weeks. Rollback if
+ever needed: Edge Config `superdrug_removed:false` + `active=true` (active=true alone
+restores the catalogue even without the flag).
+
+## Reusable pattern for the NEXT retailer departure
+
+Step A permanently changed `products_active` to require an offer from an ACTIVE retailer,
+which **fixed the thin-page bug for ANY future inactive retailer** — not just Superdrug.
+So the next departure is far simpler:
+1. Flip `retailers.active = false` for the departing id -> its sole-retailer products
+   drop out of `products_active` automatically (out of sitemap, out of listing counts).
+2. Regenerate the orphan id set for that retailer and point the middleware's GONE_IDS /
+   REDIRECTS at it (the middleware + Edge Config kill-switch are already in place; reuse
+   `scripts/regen-superdrug-gone-ids.mts` with the retailer id parameterised).
+3. Curate 301s from GSC for the traffic tail; everything else 410s.
+4. Step E revalidation + monitor.
+No view change, no query-filtering work, no new infra needed — those were one-time and
+are now permanent. The listing-query active filtering (Step C) also already covers every
+future inactive retailer.
 
 ## Verified state (live DB, r29 active)
 
