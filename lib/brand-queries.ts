@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { getActiveRetailerIds } from './retailers';
 import { applyImporterRule, brandSlug, nextBestSavingPct, nextBestPrice, type FeaturedProduct, type TopCategory } from './queries';
 
 export interface BrandLookup {
@@ -94,9 +95,12 @@ export async function getBrandStats(normalisedBrand: string): Promise<BrandStats
     .is('merged_into', null)
     .is('parent_product_id', null);
 
+  const activeRetailerIds = await getActiveRetailerIds();
   const retailerIdSet = new Set<number>();
   for (const p of (productRetailerRows ?? []) as { retailer_prices: { retailer_id: number }[] | null }[]) {
-    for (const rp of p.retailer_prices ?? []) retailerIdSet.add(rp.retailer_id);
+    for (const rp of p.retailer_prices ?? []) {
+      if (activeRetailerIds.has(rp.retailer_id)) retailerIdSet.add(rp.retailer_id);
+    }
   }
   const totalRetailers = retailerIdSet.size;
 
@@ -209,10 +213,12 @@ export async function getBrandProducts(
   // brand catalogue — a fan wants the full range, so we DON'T filter by in_stock
   // here. Fully out-of-stock products still render (as "Out of stock" cards);
   // pricing + retailer count are still computed from in-stock rows only.
+  const activeRetailerIds = await getActiveRetailerIds();
   const { data: prices } = await supabase
     .from('retailer_prices')
     .select('product_id, retailer_id, price, in_stock')
-    .in('product_id', productIds);
+    .in('product_id', productIds)
+    .in('retailer_id', [...activeRetailerIds]);
 
   if (!prices) return { products: [], totalCount: totalCount ?? 0 };
 

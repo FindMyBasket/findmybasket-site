@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { getActiveRetailerIds } from './retailers';
 import { applyImporterRule, brandSlug, nextBestSavingPct, nextBestPrice, IMPORTER_RETAILER_IDS, type FeaturedProduct } from './queries';
 
 export interface ProductDetail {
@@ -234,10 +235,12 @@ export async function getMoreFromBrand(
   if (rows.length === 0) return [];
 
   const productIds = rows.map(r => r.id);
+  const activeRetailerIds = await getActiveRetailerIds();
   const { data: prices } = await supabase
     .from('retailer_prices')
     .select('product_id, retailer_id, price, in_stock')
     .in('product_id', productIds)
+    .in('retailer_id', [...activeRetailerIds])
     .eq('in_stock', true);
 
   const byProduct = new Map<number, { retailer_id: number; price: number }[]>();
@@ -303,10 +306,12 @@ async function fetchRelated(
   if (!rows || rows.length === 0) return [];
 
   const productIds = rows.map(r => r.id);
+  const activeRetailerIds = await getActiveRetailerIds();
   const { data: prices } = await supabase
     .from('retailer_prices')
     .select('product_id, retailer_id, price, in_stock')
     .in('product_id', productIds)
+    .in('retailer_id', [...activeRetailerIds])
     .eq('in_stock', true);
 
   const byProduct = new Map<number, { retailer_id: number; price: number }[]>();
