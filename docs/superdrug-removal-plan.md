@@ -1,7 +1,12 @@
 # Superdrug (retailer 12) removal — orphan-handling plan
 
-**Status:** FOR REVIEW. Nothing in here has been executed. The compliance fix
-(Rakuten tracking strip, PR #103) shipped separately and is unrelated to this.
+**Status (2026-07-19):** Step A APPLIED + verified no-op (100,231 unchanged; post-flip
+preview 75,747 = 24,484 drop; EXPLAIN 154ms worst-case, no regression). Steps C (#105)
+and D (#106) MERGED to main, both deploy inert. Compliance fix (Rakuten strip, #103)
+shipped separately. HELD for go on Step B (the flip). Remaining before B: Edge Config
+store + `superdrug_removed:false` key (user), regenerate GONE_IDS from the authoritative
+drop set at flip time (`scripts/regen-superdrug-gone-ids.mts`), populate curated
+REDIRECTS from GSC.
 
 ## Verified state (live DB, r29 active)
 
@@ -77,17 +82,26 @@ active), so it can be applied and verified first with zero user-visible change.
 ## Step B — Snapshot orphans, then flip the flag
 
 ```sql
--- Auditable backup of the exact orphan set + brand/category + the murl destination.
-CREATE TABLE superdrug_orphan_snapshot_20260719 AS
-SELECT p.id, p.brand, p.normalised_brand, p.top_category, p.subcategory, rp.url
+-- Auditable backup of the AUTHORITATIVE drop set: products that leave products_active
+-- when r12 goes inactive = live now via an active retailer, but Superdrug is their ONLY
+-- active retailer. Active-qualified on purpose: a product with r12 + an inactive
+-- secondary (Amazon 9 / eBay 10) still drops and must be captured. Run while r12 active.
+CREATE TABLE superdrug_orphan_snapshot_<date> AS
+SELECT p.id, p.brand, p.normalised_brand, p.top_category, p.subcategory,
+       (SELECT rp.url FROM retailer_prices rp
+        WHERE rp.product_id = p.id AND rp.retailer_id = 12 LIMIT 1) AS superdrug_url
 FROM products p
-JOIN retailer_prices rp ON rp.product_id = p.id AND rp.retailer_id = 12
 WHERE p.merged_into IS NULL AND p.parent_product_id IS NULL
   AND p.image_url IS NOT NULL AND p.image_url <> ''
-  AND NOT EXISTS (SELECT 1 FROM retailer_prices x
-                  WHERE x.product_id = p.id AND x.retailer_id <> 12);
--- expect ~24,484 rows
+  AND EXISTS (SELECT 1 FROM retailer_prices rp JOIN retailers r ON r.id = rp.retailer_id
+              WHERE rp.product_id = p.id AND r.active)                       -- live now
+  AND NOT EXISTS (SELECT 1 FROM retailer_prices rp JOIN retailers r ON r.id = rp.retailer_id
+                  WHERE rp.product_id = p.id AND r.active AND r.id <> 12);   -- no OTHER active retailer
+-- expect ~24,484 rows; this count MUST equal (pre-flip products_active) - (post-flip products_active)
 ```
+`scripts/regen-superdrug-gone-ids.mts` computes this same set and rewrites `GONE_IDS`
+in `lib/superdrug-removed.ts` (preserving the curated REDIRECTS + GONE_HTML). Run it,
+commit the diff, and deploy BEFORE flipping.
 
 Then the go-dark trigger (do this when ready to start monitoring):
 ```sql
@@ -174,16 +188,35 @@ Batch the `fmb_revalidate_paths` calls (POSTs to `/api/revalidate`).
 
 ## Execution order (over several days, monitored)
 
-1. Apply Step A view change + run pre-flight/EXPLAIN. Verify `products_active`
-   count unchanged (~100,231). **No user-visible change yet.**
-2. Ship Step C query filtering (PR) — harmless while r12 active.
-3. Take Step B snapshot. Generate `lib/superdrug-removed.ts` + curated redirects.
-   Ship Step D middleware (PR). Still no change until the flag flips.
-4. Flip `retailers.active=false WHERE id=12`. Orphans go 410 (middleware) +
-   leave `products_active` (sitemap/counts). Fire Step E revalidation.
-5. Monitor GSC Coverage / soft-404 / Crawl stats over the following weeks.
-   Roll back instantly via `active=true` if anything spikes.
-6. (Later, optional) hard-delete r12 `retailer_prices` for data hygiene.
+1. **[DONE]** Apply Step A view change + pre-flight/EXPLAIN. `products_active` = 100,231 unchanged.
+2. **[DONE]** Ship Step C (#105) + Step D (#106) — both inert on main.
+3. **[TODO — user]** Create a Vercel Edge Config store, connect to project (sets `EDGE_CONFIG`),
+   add key `superdrug_removed: false`. Confirm C+D are live and inert (see runbook).
+4. **[TODO]** Regenerate GONE_IDS from the authoritative drop set
+   (`scripts/regen-superdrug-gone-ids.mts`), populate curated REDIRECTS from GSC, commit + deploy.
+5. **[TODO — the flip]** See runbook below.
+6. Monitor GSC Coverage / soft-404 / Crawl stats for weeks. Roll back instantly (Edge Config
+   false + `active=true`).
+7. (Later, optional) hard-delete r12 `retailer_prices` for data hygiene.
+
+## Flip runbook (Step B — zero-gap)
+
+Pre-flip verify (C+D live, inert):
+- A Superdrug-orphan `/product/{id}` still returns **200** with its offer (flag false).
+- A merged id still **308**s to keeper; a shade child still **308**s to parent; a bad id **404**s.
+
+Flip (do the two together — the zero-gap moment):
+1. `UPDATE retailers SET active = false WHERE id = 12;`
+2. Set Edge Config `superdrug_removed = true`.
+
+Post-flip verify:
+- Orphan `/product/{id}` → **410** (or **301** to brand page if curated).
+- Survivor (e.g. an r29-rescued id) → **200**, Superdrug absent from its comparison.
+- Merged → **308** keeper, shade child → **308** parent, bad id → **404** (all unchanged).
+- Category/brand/subcategory retailer counts + featured savings no longer count Superdrug.
+- Sitemap parts drop the orphan ids (1h `revalidate` or forced).
+
+Then Step E revalidation, then monitor. Rollback = Edge Config false + `active=true` (both instant).
 
 ## Open checks before executing step 4+
 - Pre-flight count (Step A) is small and expected.
