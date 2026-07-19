@@ -19,8 +19,66 @@ export const GONE_IDS: ReadonlySet<number> = new Set(
 );
 
 // product id -> destination path (e.g. '/brands/some-brand'). Curated, NOT blanket.
+// Curated from GSC (Superdrug-orphan URLs with real clicks/impressions). Each target
+// is /brands/{brandSlug(normalised_brand)} and was verified to be a page that SURVIVES
+// the removal (the brand has >=1 product still in products_active post-flip) and to
+// return 200 today — so these are never soft-404 redirects. REDIRECTS override GONE_IDS
+// in the middleware, so a 301 here wins over the 410 tail. NOT a blanket map.
 export const REDIRECTS: Readonly<Record<number, string>> = {
-  // 12345: '/brands/example-brand',
+  3308: '/brands/clearasil',
+  3523: '/brands/dr-h',
+  3683: '/brands/erase-your-face',
+  3922: '/brands/glowcocktail',
+  4018: '/brands/hismile',
+  4140: '/brands/lor-al-paris',
+  4376: '/brands/minimalist',
+  4905: '/brands/simple',
+  4922: '/brands/simple',
+  5425: '/brands/varenya-elixir',
+  5486: '/brands/vichy',
+  5500: '/brands/vichy',
+  5539: '/brands/warda',
+  6282: '/brands/olay',
+  15394: '/brands/e45',
+  15405: '/brands/e45',
+  15590: '/brands/nivea',
+  15595: '/brands/e45',
+  15832: '/brands/e45',
+  15850: '/brands/e-l-f',
+  16266: '/brands/cerave',
+  17337: '/brands/perky-pear',
+  17851: '/brands/spa-ceylon',
+  17857: '/brands/erth-skin-london',
+  17999: '/brands/nougat-london',
+  41648: '/brands/barry-m',
+  41653: '/brands/barry-m',
+  42256: '/brands/e-l-f',
+  43186: '/brands/nyx-professional-makeup',
+  43831: '/brands/e-l-f',
+  44870: '/brands/original-source',
+  45100: '/brands/e-l-f',
+  45215: '/brands/morphe',
+  45282: '/brands/morphe',
+  45290: '/brands/morphe',
+  45292: '/brands/morphe',
+  45297: '/brands/morphe',
+  45299: '/brands/morphe',
+  45301: '/brands/morphe',
+  45302: '/brands/morphe',
+  45415: '/brands/mylee',
+  46307: '/brands/made-by-mitchell',
+  46442: '/brands/lor-al-paris',
+  46621: '/brands/collection',
+  46910: '/brands/kiss',
+  48045: '/brands/glisten-cosmetics',
+  49002: '/brands/plump-it',
+  49142: '/brands/anastasia-beverly-hills',
+  52576: '/brands/ann-summers',
+  53602: '/brands/living-and-home',
+  55685: '/brands/i-heart-revolution',
+  80889: '/brands/simple',
+  84832: '/brands/collection',
+  95286: '/brands/amuse',
 };
 
 export const GONE_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
