@@ -12,7 +12,7 @@ import {
   type RoutineItem,
 } from '@/lib/routine-store';
 import { displayProductTitle } from '@/lib/format/product-name';
-import { trackAffiliateClickOut, trackRetailerClick, affiliateNetworkFromUrl } from '@/lib/analytics';
+import { trackAffiliateClickOut, trackRetailerClick, affiliateNetworkFromUrl, directDestinationUrl } from '@/lib/analytics';
 
 // Affiliate tags — reused exactly from the previous bottom-of-basket links.
 const AMAZON_TAG = 'findmybasket-21';
@@ -546,7 +546,7 @@ export default function RoutineBuilder() {
 
     const blocked: typeof products = [];
     products.forEach(p => {
-      const win = window.open(p.url, '_blank', 'noopener,noreferrer');
+      const win = window.open(directDestinationUrl(p.url), '_blank', 'noopener,noreferrer');
       if (!win || win.closed || typeof win.closed === 'undefined') {
         blocked.push(p);
       }
@@ -853,7 +853,7 @@ export default function RoutineBuilder() {
                             Object.entries(retailerUrls).map(([name, url]) => (
                               <a
                                 key={name}
-                                href={url}
+                                href={directDestinationUrl(url)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="rb-shop-retailer-btn"
@@ -899,7 +899,7 @@ export default function RoutineBuilder() {
               {blockedLinks.map((p, i) => (
                 <a
                   key={i}
-                  href={p.url}
+                  href={directDestinationUrl(p.url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rb-modal-link"

@@ -1,6 +1,6 @@
 'use client';
 
-import { trackAffiliateClickOut, trackRetailerClick, affiliateNetworkFromUrl } from '../lib/analytics';
+import { trackAffiliateClickOut, trackRetailerClick, affiliateNetworkFromUrl, directDestinationUrl } from '../lib/analytics';
 
 // Pull the AWIN merchant id out of a cread.php url (awinmid=NNNN) for attribution.
 // Returns null for non-AWIN hrefs (Amazon/eBay cross-checks etc.).
@@ -43,9 +43,13 @@ export function ClickOutLink({
   rel?: string;
   target?: string;
 }) {
+  // Navigate to the unwrapped destination (strips Rakuten/linksynergy tracking for
+  // Superdrug; all other hrefs pass through unchanged). Analytics keep reading the
+  // ORIGINAL href so retailer/network attribution in GA4 stays continuous.
+  const destHref = directDestinationUrl(href);
   return (
     <a
-      href={href}
+      href={destHref}
       target={target}
       rel={rel}
       className={className}
