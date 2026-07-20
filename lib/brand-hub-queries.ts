@@ -31,6 +31,14 @@ export interface BrandHub {
   disclosure: string | null;
   zone_note: string | null;
   range_sub: string | null;
+  // Optional long-form editorial. Never render this raw: it goes through
+  // sanitizeBrandHubBody() in lib/brand-hub-body.ts.
+  body_html: string | null;
+  // Per-hub overrides. Null means "use the derived value" (see the migration),
+  // so hubs seeded before these columns existed are unaffected.
+  seo_title: string | null;
+  meta_description: string | null;
+  headline: string | null;
 }
 
 export interface BrandHubProduct {
@@ -80,7 +88,7 @@ export async function getBrandHub(slug: string): Promise<BrandHubData | null> {
   const { data: hub, error } = await supabase
     .from('brand_hubs')
     .select(
-      'slug, display_name, accent_treatment, logo_path, eyebrow, lede, pillars, show_comparison, single_path_note, offer, disclosure, zone_note, range_sub'
+      'slug, display_name, accent_treatment, logo_path, eyebrow, lede, pillars, show_comparison, single_path_note, offer, disclosure, zone_note, range_sub, body_html, seo_title, meta_description, headline'
     )
     .eq('slug', slug)
     .maybeSingle();

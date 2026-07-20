@@ -70,7 +70,9 @@
 .brand-hub-scope .bh-hero-logo { height: 30px; width: auto; margin-bottom: 26px; }
 .brand-hub-scope .bh-hero--dark-wellness .bh-hero-logo { filter: invert(1) brightness(2); }
 .brand-hub-scope .bh-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); margin-bottom: 14px; }
-.brand-hub-scope .bh-hero h1 { font-size: 58px; line-height: 1; font-weight: 500; letter-spacing: .01em; margin: 0 0 18px; }
+/* max-width matters once a hub uses an editorial headline rather than a
+   one-word brand name, so a long H1 wraps to a readable measure. */
+.brand-hub-scope .bh-hero h1 { font-size: 58px; line-height: 1.04; font-weight: 500; letter-spacing: .01em; margin: 0 0 18px; max-width: 22ch; }
 .brand-hub-scope .bh-lede { font-size: 18px; max-width: 46ch; margin-bottom: 32px; font-family: var(--font-cormorant), Georgia, serif; font-style: italic; }
 .brand-hub-scope .bh-hero--dark-wellness .bh-lede { color: rgba(250, 248, 244, .82); }
 .brand-hub-scope .bh-hero--light-apothecary .bh-lede { color: var(--ink-soft); }
@@ -93,6 +95,17 @@
 .brand-hub-scope .bh-cell:last-child { border-right: none; }
 .brand-hub-scope .bh-cell h3 { font-family: var(--font-dm-sans), sans-serif; font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--sage); margin: 0 0 9px; }
 .brand-hub-scope .bh-cell p { font-size: 14.5px; color: var(--ink-soft); margin: 0; }
+
+/* long-form brand story (body_html) */
+.brand-hub-scope .bh-article { background: #fff; border: 1px solid var(--line); border-top: none; padding: 44px 56px 40px; }
+.brand-hub-scope .bh-article > *:first-child { margin-top: 0; }
+.brand-hub-scope .bh-article > *:last-child { margin-bottom: 0; }
+.brand-hub-scope .bh-article p { font-size: 16px; line-height: 1.75; color: var(--ink-soft); margin: 0 0 18px; max-width: 68ch; }
+.brand-hub-scope .bh-article h2 { font-family: var(--font-cormorant), Georgia, serif; font-size: 30px; font-weight: 600; line-height: 1.2; color: var(--ink); margin: 38px 0 14px; }
+.brand-hub-scope .bh-article strong { color: var(--ink); font-weight: 600; }
+.brand-hub-scope .bh-article em { font-style: italic; }
+.brand-hub-scope .bh-article a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--gold); text-underline-offset: 3px; transition: .18s; }
+.brand-hub-scope .bh-article a:hover { color: var(--gold-deep); text-decoration-color: var(--gold-deep); }
 
 /* range */
 .brand-hub-scope .bh-range { background: var(--paper); border: 1px solid var(--line); border-top: none; padding: 42px 56px 46px; }
@@ -150,6 +163,8 @@
   .brand-hub-scope .bh-cell { border-right: none; border-bottom: 1px solid var(--line); }
   .brand-hub-scope .bh-cell:last-child { border-bottom: none; }
   .brand-hub-scope .bh-range { padding: 34px 26px 38px; }
+  .brand-hub-scope .bh-article { padding: 34px 26px 30px; }
+  .brand-hub-scope .bh-article h2 { font-size: 25px; }
   .brand-hub-scope .bh-single-path { padding: 16px 26px; }
   .brand-hub-scope .bh-compare-grid { grid-template-columns: repeat(2, 1fr); }
 }

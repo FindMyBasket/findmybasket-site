@@ -2,6 +2,7 @@ import { SiteLayout } from './SiteLayout';
 import { BrandHubRange } from './BrandHubRange';
 import { BrandHubComparison } from './BrandHubComparison';
 import { liveOffer, type BrandHubData } from '../lib/brand-hub-queries';
+import { sanitizeBrandHubBody } from '../lib/brand-hub-body';
 import './brand-hub.css';
 
 const ARROW = (
@@ -14,6 +15,9 @@ export async function BrandHub({ data }: { data: BrandHubData }) {
   const { hub, products } = data;
   const offer = liveOffer(hub.offer);
   const heroVariant = `bh-hero--${hub.accent_treatment}`;
+  // Sanitised here rather than at write time, so the allowlist applies to
+  // whatever is in the row today. Empty string for hubs with no body.
+  const bodyHtml = sanitizeBrandHubBody(hub.body_html);
 
   return (
     <SiteLayout>
@@ -37,7 +41,9 @@ export async function BrandHub({ data }: { data: BrandHubData }) {
                 <img className="bh-hero-logo" src={hub.logo_path} alt={hub.display_name} />
               )}
               {hub.eyebrow && <div className="bh-eyebrow">{hub.eyebrow}</div>}
-              <h1 className="bh-serif">{hub.display_name}</h1>
+              {/* display_name still drives the breadcrumb, index card and
+                  creative flag; only the H1 takes the editorial headline. */}
+              <h1 className="bh-serif">{hub.headline ?? hub.display_name}</h1>
               {hub.lede && <p className="bh-lede">{hub.lede}</p>}
               <div className="bh-actions">
                 <a href="#range" className="bh-btn bh-btn-gold">
@@ -63,6 +69,16 @@ export async function BrandHub({ data }: { data: BrandHubData }) {
                   </div>
                 ))}
               </div>
+            )}
+
+            {/* Long-form brand story. Sanitised above with a tag/attribute
+                allowlist that deliberately preserves rel and target on
+                affiliate anchors. */}
+            {bodyHtml && (
+              <div
+                className="bh-article"
+                dangerouslySetInnerHTML={{ __html: bodyHtml }}
+              />
             )}
 
             <BrandHubRange products={products} rangeSub={hub.range_sub} offer={offer} />

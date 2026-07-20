@@ -80,16 +80,27 @@ export function BrandHubRange({ products, rangeSub, offer }: Props) {
               {p.description && <p className="bh-desc">{p.description}</p>}
               <div className="bh-foot">
                 {p.price != null && <span className="bh-price">£{p.price.toFixed(2)}</span>}
-                {p.buy_url && (
-                  <a
-                    className="bh-go"
-                    href={p.buy_url}
-                    target="_blank"
-                    rel="sponsored nofollow noopener"
-                  >
-                    Buy direct →
-                  </a>
-                )}
+                {/* A card can point either at the brand (outbound, affiliate)
+                    or at our own comparison page for that product, depending on
+                    whether we carry the brand for comparison. Internal
+                    destinations must never get sponsored/nofollow: that would
+                    mark our own comparison pages as paid placement and drop the
+                    internal link equity. */}
+                {p.buy_url &&
+                  (p.buy_url.startsWith('/') ? (
+                    <a className="bh-go" href={p.buy_url}>
+                      Compare prices →
+                    </a>
+                  ) : (
+                    <a
+                      className="bh-go"
+                      href={p.buy_url}
+                      target="_blank"
+                      rel="sponsored nofollow noopener"
+                    >
+                      Buy direct →
+                    </a>
+                  ))}
               </div>
             </div>
           </article>
