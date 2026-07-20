@@ -29,8 +29,29 @@
 
 // Multiplier words seen in real deeplink slugs, plus the numeric pack forms.
 // Anchored to slug separators so "twofold-cream" or "trio-logy" cannot trip it.
+// Numeric forms are bounded to 2-6 on purpose. An unbounded \d+ reads a COUNT
+// as a multiplier: "Elemis Dynamic Resurfacing Facial Pads 60pk" is 60 pads,
+// part of the product's identity, not sixty boxes. Real multipacks are small.
 const SLUG_MULTIPLIER_RE =
-  /(?:^|[-_/])(?:duo|double|twin|twinpack|triple|trio|bundle|two|\d+\s*-?\s*pack|\d+pk|x\d+)(?:$|[-_/])/i;
+  /(?:^|[-_/])(?:duo|double|twin|twinpack|triple|trio|bundle|two|[2-6]\s*-?\s*pack|[2-6]pk|x[2-6])(?:$|[-_/])/i;
+
+// Bare "pack" is a multiplier for some merchants ("/brand-pack-metal-detox-…")
+// but a PRODUCT TYPE for others ("sleeping pack", "wash-off pack", "modeling
+// pack" — standard K-beauty terms). Treated as a multiplier only when it is a
+// standalone slug segment AND not preceded by a word that makes it a type.
+const PACK_AS_TYPE_PREFIX =
+  /(sleeping|wash-?off|modell?ing|clay|mud|peel|peel-?off|bubble|night|sheet|nose|lip|eye|foot|hand|hair|mask|cream|gel|water)$/i;
+const BARE_PACK_RE = /(?:^|[-_/])pack(?:$|[-_/])/i;
+
+function bareePackIsMultiplier(slug: string): boolean {
+  const m = BARE_PACK_RE.exec(slug);
+  if (!m) return false;
+  const before = slug.slice(0, m.index).replace(/[-_/]+$/, "");
+  const prevToken = before.split(/[-_/]/).pop() ?? "";
+  // A hyphenated type like "wash-off" needs the last two tokens.
+  const prevTwo = before.split(/[-_/]/).slice(-2).join("-");
+  return !PACK_AS_TYPE_PREFIX.test(prevToken) && !PACK_AS_TYPE_PREFIX.test(prevTwo);
+}
 
 // A name describes MORE THAN ONE distinct item if it joins two things.
 // "&", "and", "+", "with" are how this catalogue writes real bundles.
@@ -66,7 +87,8 @@ function safeDecode(s: string): string {
 
 /** Does the deeplink advertise a multipack? */
 export function deeplinkSignalsMultipack(url: string): boolean {
-  return SLUG_MULTIPLIER_RE.test(deeplinkSlug(url));
+  const slug = deeplinkSlug(url);
+  return SLUG_MULTIPLIER_RE.test(slug) || bareePackIsMultiplier(slug);
 }
 
 /** Does the product name describe exactly one item? */
@@ -83,7 +105,22 @@ export function nameDescribesSingleItem(name: string): boolean {
 /**
  * True when this feed row is a multipack being attached to a single-item
  * product, i.e. the price would misrepresent the product. Skip those rows.
+ *
+ * `comparisonName` MUST be the name of the product the row MATCHED, not the
+ * feed's own product_name.
+ *
+ * That distinction is the whole defect. The first version of this guard passed
+ * the feed name, reasoning that a feed name carrying "Duo" meant the match key
+ * had seen the multiplier and so no silent mismatch was possible. It is not:
+ * the Tier-4 stripped matcher strips past the multiplier, so a feed row named
+ * "Dermalogica Duo Biolumin-C Serum 30ml & Biolumin-C Gel Moisturiser" still
+ * landed on "Dermalogica Biolumin-C Serum 30ml", a single. The feed name said
+ * bundle, the guard stood down, and the mismatch shipped. Six of the ten
+ * escapes in the first live run were this.
+ *
+ * Against the MATCHED product's name the same logic is correct: if the matched
+ * product is itself a bundle, keep the row; if it is a single, skip.
  */
-export function isMultipackMismatch(deepLinkUrl: string, productName: string): boolean {
-  return deeplinkSignalsMultipack(deepLinkUrl) && nameDescribesSingleItem(productName);
+export function isMultipackMismatch(deepLinkUrl: string, comparisonName: string): boolean {
+  return deeplinkSignalsMultipack(deepLinkUrl) && nameDescribesSingleItem(comparisonName);
 }

@@ -23,9 +23,10 @@ const awin = (path: string) =>
   `https://www.awin1.com/cread.php?awinmid=53379&awinaffid=2841268&ued=${encodeURIComponent(GS + path)}`;
 
 // ── The real-data fixture ────────────────────────────────────────────────────
-// 310 live rows whose deeplink advertises a multipack. 84 were confirmed against
-// the merchant's own page titles as multipacks of a SINGLE sku (bad); 226 are
-// genuine multi-item bundles that matched bundle products (good).
+// Rebuilt from CURRENT feed data after the first live run. must_skip holds the
+// rows that escaped the first guard (each re-verified against the merchant's own
+// page title); must_keep holds every live row whose deeplink signals a multipack
+// and which matched a genuine bundle product.
 
 test('catches every confirmed multipack-on-single row', () => {
   const missed = FIXTURE.must_skip.filter((r) => !isMultipackMismatch(awin(r.slug), r.name));
@@ -77,6 +78,15 @@ test('numeric pack forms are recognised', () => {
   }
 });
 
+test('a large count is a count, not a multiplier', () => {
+  // Regression: "Elemis Dynamic Resurfacing Facial Pads 60pk" is 60 pads, part
+  // of the product identity. An unbounded \\d+pk read it as a multipack and
+  // would have suppressed a legitimate live row.
+  assert.equal(deeplinkSignalsMultipack(awin('/elemis-dynamic-resurfacing-facial-pads-60pk')), false);
+  assert.equal(deeplinkSignalsMultipack(awin('/brand-pads-30pk')), false);
+  assert.equal(deeplinkSignalsMultipack(awin('/brand-sheets-x24')), false);
+});
+
 test('multiplier words inside other words do not trigger', () => {
   // "trio" in Trilogy, "two" in Twofold — must be slug-separator anchored.
   assert.equal(deeplinkSignalsMultipack(awin('/trilogy-rosehip-oil-45ml')), false);
@@ -98,4 +108,35 @@ test('empty and malformed input is safe', () => {
   assert.equal(isMultipackMismatch('', 'X Serum 30ml'), false);
   assert.equal(isMultipackMismatch(awin('/x-duo-serum'), ''), false);
   assert.equal(isMultipackMismatch('not a url at all', 'X Serum 30ml'), false);
+});
+
+// ── Regressions from the first live run ──────────────────────────────────────
+
+test('19233: feed name says bundle, matched product is single -> SKIP', () => {
+  // The Tier-4 stripped matcher strips past the multiplier, so this feed row
+  // landed on the single. Passing the FEED name let it through; passing the
+  // MATCHED product name catches it. This is the root-cause regression.
+  const slug = '/dermalogica-duo-biolumin-c-serum-30ml-biolumin-c-gel-moisturiser';
+  const feedName = 'Dermalogica DUO Biolumin C Serum 30ml, Biolumin C Gel Moisturiser';
+  const matchedName = 'Dermalogica Biolumin-C Serum 30ml';
+  assert.equal(isMultipackMismatch(awin(slug), feedName), false, 'feed name is not the determinant');
+  assert.equal(isMultipackMismatch(awin(slug), matchedName), true, 'matched product name is');
+});
+
+test('bare "pack" counts as a multiplier', () => {
+  assert.equal(deeplinkSignalsMultipack(awin('/l-oreal-professionnel-pack-metal-detox-filler')), true);
+  assert.equal(deeplinkSignalsMultipack(awin('/kerastase-pack-nutritive-bain-satin-riche')), true);
+});
+
+test('but not when "pack" is the product type', () => {
+  for (const s of ['/cosrx-sleeping-pack-60ml', '/brand-wash-off-pack-100ml', '/brand-modeling-pack-50g', '/brand-clay-pack-80ml']) {
+    assert.equal(deeplinkSignalsMultipack(awin(s)), false, s);
+  }
+});
+
+test('Group C shape: no multiplier in the slug means no opinion', () => {
+  // 96038 / 105080 from the first run: flagged by the old capture, but their
+  // deeplinks carry no multiplier at all, so the guard must leave them alone.
+  assert.equal(isMultipackMismatch(awin('/matrix-total-results-keep-me-vivid-conditioner-1000ml'), 'Matrix Keep Me Vivid Conditioner 1000ml'), false);
+  assert.equal(isMultipackMismatch(awin('/joico-defy-damage-protective-conditioner-1000ml'), 'JOICO Defy Damage Protective Conditioner 1000ml'), false);
 });

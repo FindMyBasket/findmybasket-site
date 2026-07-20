@@ -517,6 +517,7 @@ serve(async (req) => {
   // item's name need it. See _shared/multipack-guard.ts.
   const multipackGuard: boolean = config.multipack_deeplink_guard === true;
   let countSkippedMultipack = 0;
+  const sampleSkippedMultipack: Array<{ feed_name: string; matched_product_id: number; matched_name: string; url: string }> = [];
   // Rollout flag: when true, fetch+decompress+parse the feed as a stream
   // instead of materialising the whole decompressed feed in memory. Defaults to
   // false (legacy path) for every retailer until explicitly promoted.
@@ -641,6 +642,10 @@ serve(async (req) => {
   // kept load_maps at ~15s under B alone.
   const productByExact = new Map<string, number>();
   const productByStripped = new Map<string, StrippedEntry>();
+  // Names of the products this chunk could match, so the multipack guard can
+  // test the MATCHED product rather than the feed's own name (see
+  // _shared/multipack-guard.ts — the feed name is not a valid proxy).
+  const productNameById = new Map<number, string>();
   const loadedBrands = new Set<string>();
 
   // Persistent (whole-import) accumulator — survives chunk boundaries, bounded by
@@ -775,6 +780,7 @@ serve(async (req) => {
       const exactKey = buildMatchKey(p.brand || "", p.name);
       if (!exactKey) continue;
       if (!productByExact.has(exactKey)) productByExact.set(exactKey, p.id);
+      if (!productNameById.has(p.id)) productNameById.set(p.id, p.name || "");
       const strippedKey = stripSize(exactKey);
       if (strippedKey && !productByStripped.has(strippedKey)) {
         productByStripped.set(strippedKey, { id: p.id, size: extractSize(exactKey), numbers: extractNameNumbers(p.name) });
@@ -1852,16 +1858,6 @@ serve(async (req) => {
         : "";
     }
 
-    // Multipack guard. Runs BEFORE matching and before create-new, because a
-    // multipack row is wrong either way: attached to the single item's page it
-    // misprices it, and created as its own product it duplicates the single
-    // under a multipack price. Checked against the merchant deeplink, since that
-    // is the only field carrying the multiplier — the product_name does not.
-    if (multipackGuard && isMultipackMismatch(rawMerchantUrl || wrappedUrl, name)) {
-      countSkippedMultipack++;
-      continue;
-    }
-
     // Path 1: extract EAN/MPN from feed row.
     const rawEan = idx.ean >= 0 ? (fields[idx.ean] || "").trim() : "";
     const rawMpn = idx.mpn >= 0 ? (fields[idx.mpn] || "").trim() : "";
@@ -1968,6 +1964,32 @@ serve(async (req) => {
       }
       continue;
     }
+    // Multipack guard, MATCHED branch. Compared against the matched product's
+    // name, which is the actual determinant: the feed's own name is not a valid
+    // proxy because the Tier-4 stripped matcher strips past the multiplier and
+    // lands a "Duo" feed row on a single product. Falls back to the feed name
+    // only if the chunk map somehow lacks the id, which would otherwise silently
+    // disable the guard.
+    if (multipackGuard && matchedProductId) {
+      const matchedName = productNameById.get(matchedProductId) ?? name;
+      if (isMultipackMismatch(rawMerchantUrl || wrappedUrl, matchedName)) {
+        countSkippedMultipack++;
+        if (sampleSkippedMultipack.length < 20) {
+          sampleSkippedMultipack.push({ feed_name: name, matched_product_id: matchedProductId, matched_name: matchedName, url: rawMerchantUrl || wrappedUrl });
+        }
+        continue;
+      }
+    }
+
+    // Multipack guard, CREATE-NEW branch. No matched product to compare against,
+    // so the feed name is all there is. A multipack deeplink whose feed name
+    // reads as a single item would create a product named like the single but
+    // priced as a multipack.
+    if (multipackGuard && !matchedProductId && isMultipackMismatch(rawMerchantUrl || wrappedUrl, name)) {
+      countSkippedMultipack++;
+      continue;
+    }
+
     if (matchedProductId) {
       countLinkExisting++;
       linkActions.push({ product_id: matchedProductId, ext_id: matchValue, price, url: wrappedUrl, in_stock: inStock, ean: rawEan, mpn: rawMpn, image_url: imageUrl });
@@ -2272,6 +2294,7 @@ serve(async (req) => {
     // run output rather than silently changing the landed row count.
     multipack_guard_enabled: multipackGuard,
     skipped_multipack_mismatch: countSkippedMultipack,
+    sample_skipped_multipack: sampleSkippedMultipack,
     dry_run: dryRun,
     feed_total_rows: feedRows,
     feed_fetch_ms: fetchMs,
