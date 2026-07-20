@@ -177,33 +177,19 @@ export default function RoutineBuilder() {
 
     const productIds = current.map(p => p.id);
 
+    // Only ACTIVE retailers are purchasable — an inactive retailer's offer must
+    // never reach the optimiser, or it can be recommended as the basket with a
+    // live outbound link to a product we no longer list. `retailers!inner` makes
+    // the embed an inner join so the filter drops the price row, not just the
+    // embedded object.
     const { data: pricesRaw } = await db
       .from('retailer_prices')
-      .select('*, retailers(*)')
+      .select('*, retailers!inner(*)')
       .in('product_id', productIds)
-      .eq('in_stock', true);
+      .eq('in_stock', true)
+      .eq('retailers.active', true);
 
-    // Stylevana de-rank: hide Stylevana for any product with a UK alternative
-    const prices: PriceRow[] | null = (() => {
-      if (!pricesRaw) return null;
-      const byProduct: Record<number, PriceRow[]> = {};
-      for (const row of pricesRaw as any[]) {
-        if (!byProduct[row.product_id]) byProduct[row.product_id] = [];
-        byProduct[row.product_id].push(row as PriceRow);
-      }
-      const out: PriceRow[] = [];
-      for (const pid in byProduct) {
-        const rows = byProduct[pid];
-        const hasNonStylevana = rows.some(
-          r => r.retailers && r.retailers.name !== 'Stylevana',
-        );
-        for (const r of rows) {
-          const isStylevana = r.retailers && r.retailers.name === 'Stylevana';
-          if (!isStylevana || !hasNonStylevana) out.push(r);
-        }
-      }
-      return out;
-    })();
+    const prices: PriceRow[] | null = (pricesRaw as PriceRow[] | null);
 
     setIsOptimising(false);
 

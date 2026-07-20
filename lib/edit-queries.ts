@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { getActiveRetailerIds } from './retailers';
 import { summarisePriceRows, brandSlug, nextBestSavingPct, nextBestPrice, type FeaturedProduct, type TopBrand } from './queries';
 import { compareCategories, type BrandProductTypeChip } from './brand-queries';
 import type { Edit } from './edits';
@@ -25,10 +26,13 @@ export async function getEditStats(edit: Edit): Promise<EditStats> {
 
   const distinctBrands = new Set((brandRows ?? []).map(r => r.normalised_brand));
 
+  const activeRetailerIds = await getActiveRetailerIds();
+
   const { data: retailerRows } = await supabase
     .from('retailer_prices')
     .select('retailer_id')
-    .in('product_id', productIds);
+    .in('product_id', productIds)
+    .in('retailer_id', [...activeRetailerIds]);
 
   const distinctRetailers = new Set((retailerRows ?? []).map(r => r.retailer_id));
 
@@ -159,10 +163,13 @@ export async function getEditProducts(
 
   const productIds = products.map(p => p.id);
 
+  const activeRetailerIds = await getActiveRetailerIds();
+
   const { data: prices } = await supabase
     .from('retailer_prices')
     .select('product_id, retailer_id, price, in_stock')
     .in('product_id', productIds)
+    .in('retailer_id', [...activeRetailerIds])
     .eq('in_stock', true);
 
   if (!prices) return { products: [], totalCount: totalCount ?? 0 };

@@ -433,10 +433,14 @@ Deno.serve(async (req: Request) => {
         if (prodError) throw prodError;
         const products = (productsData || []) as Product[];
 
+        // Only ACTIVE retailers — this email goes OUT to users, so an inactive
+        // retailer's offer would mean recommending and linking a retailer we no
+        // longer list. `retailers!inner` makes the embed an inner join so the
+        // filter drops the price row itself.
         const { data: pricesData, error: priceError } = await supabase
           .from("retailer_prices")
-          .select("product_id, retailer_id, price, url, in_stock, retailers(name, delivery_threshold, delivery_cost)")
-          .in("product_id", productIds).eq("in_stock", true);
+          .select("product_id, retailer_id, price, url, in_stock, retailers!inner(name, delivery_threshold, delivery_cost, active)")
+          .in("product_id", productIds).eq("in_stock", true).eq("retailers.active", true);
         if (priceError) throw priceError;
         const prices = (pricesData || []) as unknown as PriceRow[];
 
