@@ -51,11 +51,12 @@
 --     uncategorised where it can be seen.
 --   category_excludes = [] — SEE THE WARNING BELOW.
 --   match_column = 'merchant_product_id' — per Atelier/BB precedent.
---   staging_mode = 'inline' — 11,337 rows is ~16x Atelier but far below Boots
---     (36k), which needed storage_passthrough. If the first import returns 546
---     WORKER_RESOURCE_LIMIT, the fix is a one-line switch to
---     'storage_passthrough'; no code change.
---   sliced_import / streaming_enabled = false — same reasoning, feed is modest.
+--   staging_mode = 'storage_passthrough', sliced_import = true — CORRECTED
+--     after the fact. This was first written as inline/false on the reasoning
+--     that 11,337 rows is modest, and it 546'd WORKER_RESOURCE_LIMIT twice.
+--     The row count was the wrong thing to reason from: every large feed that
+--     works has sliced_import = true, so follow that precedent rather than
+--     guessing from size. streaming_enabled stays false.
 --   enabled = true so the import actually writes prices; the frontend stays dark
 --     via retailers.active = false.
 --
@@ -68,9 +69,10 @@
 --   to exclude — no equivalent junk sweep has been done here. Non-beauty rows
 --   may import. Fragrance is 7.3% (830 rows), measured from product names, and
 --   is gated off at the categoriser, so it imports without surfacing.
---   The post-import verification should include a category histogram of what
---   actually landed, and category_excludes should be filled in from that before
---   active is flipped.
+--   RESOLVED post-import (2026-07-20): the histogram of what actually landed is
+--   entirely legitimate beauty — hair 2,382, skincare 2,351, makeup 1,191,
+--   bath_body 545, fragrance 262. Zero junk, so category_excludes stays empty.
+--   existing_brands_only had already filtered the junk out by brand. No action.
 
 -- 1. Retailer row (staged inactive).
 --    Domain confirmed by DNS (gorgeousshop.co.uk resolves; thegorgeousshop.co.uk
@@ -101,8 +103,8 @@ INSERT INTO retailer_import_config (
   '[]'::jsonb,
   '[]'::jsonb,
   '[]'::jsonb,
-  false,
-  'inline',
+  true,                     -- sliced_import: required, inline 546'd twice
+  'storage_passthrough',
   false,
   true
 )
@@ -128,9 +130,14 @@ ON CONFLICT (retailer_id) DO UPDATE SET
 --    27 in-stock rows would be dropped SILENTLY on the first run and would then
 --    need a backfill to recover. Seeding them here means they match from run one.
 --    Aliases are stored lowercase to match the table convention and PK.
+--    CANONICAL SPELLINGS CORRECTED — see 20260720160000_fix_gorgeous_shop_alias_casing.sql.
+--    These were first written as 'skinchemists'/'studio10', taken from the
+--    diagnostic's output, which reports the catalogue brand already lower-cased.
+--    The catalogue actually stores 'skinChemists' and 'Studio10', so the original
+--    values created duplicate lower-case brand spellings.
 INSERT INTO public.brand_aliases (alias, canonical, notes) VALUES
-  ('skin chemists', 'skinchemists', '20Jul26 Gorgeous Shop (r30) onboarding — spacing variant, 25 in-stock feed rows'),
-  ('studio 10',     'studio10',     '20Jul26 Gorgeous Shop (r30) onboarding — spacing variant, 2 in-stock feed rows')
+  ('skin chemists', 'skinChemists', '20Jul26 Gorgeous Shop (r30) onboarding — spacing variant, 25 in-stock feed rows'),
+  ('studio 10',     'Studio10',     '20Jul26 Gorgeous Shop (r30) onboarding — spacing variant, 2 in-stock feed rows')
 ON CONFLICT (alias) DO UPDATE
   SET canonical = EXCLUDED.canonical,
       notes     = EXCLUDED.notes;
