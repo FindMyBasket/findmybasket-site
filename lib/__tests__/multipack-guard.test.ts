@@ -140,3 +140,28 @@ test('Group C shape: no multiplier in the slug means no opinion', () => {
   assert.equal(isMultipackMismatch(awin('/matrix-total-results-keep-me-vivid-conditioner-1000ml'), 'Matrix Keep Me Vivid Conditioner 1000ml'), false);
   assert.equal(isMultipackMismatch(awin('/joico-defy-damage-protective-conditioner-1000ml'), 'JOICO Defy Damage Protective Conditioner 1000ml'), false);
 });
+
+// ── ext_id / EAN / MPN match path (regression: 51523) ────────────────────────
+// A row matched on external_product_id never touches the `products` lookup set,
+// so before migration 20260720200000 its matched name was unknown and the guard
+// fell back to the feed name — reopening the proxy bug. These cases pin the
+// behaviour the importer must produce for that path.
+
+test('51523: ext_id-matched duo on a single product is caught', () => {
+  const slug = '/scottish-fine-soaps-duo-au-lait-hand-wash-refill-750ml-refillable-aluminium-bottle';
+  const matchedName = 'Scottish Fine Soaps Au Lait Hand Wash Refill 750ml';
+  assert.equal(isMultipackMismatch(awin(slug), matchedName), true);
+});
+
+test('51523: the feed name would NOT have caught it', () => {
+  // The feed row names both items, so the feed name reads as a bundle. This is
+  // why the fallback had to be removed rather than kept as a best effort.
+  const slug = '/scottish-fine-soaps-duo-au-lait-hand-wash-refill-750ml-refillable-aluminium-bottle';
+  const feedName = 'Scottish Fine Soaps Au Lait Hand Wash Refill 750ml & Refillable Aluminium Bottle 500ml Duo';
+  assert.equal(isMultipackMismatch(awin(slug), feedName), false);
+});
+
+test('ext_id path keeps a genuine bundle-to-bundle match', () => {
+  const slug = '/brand-duo-shampoo-300ml-conditioner-250ml';
+  assert.equal(isMultipackMismatch(awin(slug), 'Brand Shampoo 300ml & Conditioner 250ml Duo'), false);
+});

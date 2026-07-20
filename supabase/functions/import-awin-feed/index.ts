@@ -517,6 +517,7 @@ serve(async (req) => {
   // item's name need it. See _shared/multipack-guard.ts.
   const multipackGuard: boolean = config.multipack_deeplink_guard === true;
   let countSkippedMultipack = 0;
+  let countMultipackUnresolved = 0;
   const sampleSkippedMultipack: Array<{ feed_name: string; matched_product_id: number; matched_name: string; url: string }> = [];
   // Rollout flag: when true, fetch+decompress+parse the feed as a stream
   // instead of materialising the whole decompressed feed in memory. Defaults to
@@ -786,16 +787,29 @@ serve(async (req) => {
         productByStripped.set(strippedKey, { id: p.id, size: extractSize(exactKey), numbers: extractNameNumbers(p.name) });
       }
     }
+    // Each of these projections also carries the matched product's name (see
+    // migration 20260720200000). The multipack guard needs it: a row matched on
+    // EAN/MPN/ext_id never touches the `products` set, so without this its
+    // matched name is unknown and the guard cannot evaluate.
+    const rememberName = (id: unknown, nm: unknown) => {
+      const pid = typeof id === "number" ? id : Number(id);
+      if (Number.isFinite(pid) && typeof nm === "string" && nm && !productNameById.has(pid)) {
+        productNameById.set(pid, nm);
+      }
+    };
     for (const r of (sets?.eans ?? [])) {
       const k = String(r.ean || "").trim();
       if (k && r.product_id != null && !eanToProductId.has(k)) eanToProductId.set(k, r.product_id);
+      rememberName(r.product_id, r.name);
     }
     for (const r of (sets?.mpns ?? [])) {
       const k = String(r.mpn || "").trim();
       if (k && r.product_id != null && !mpnToProductId.has(k)) mpnToProductId.set(k, r.product_id);
+      rememberName(r.product_id, r.name);
     }
     for (const r of (sets?.extids ?? [])) {
       if (r.external_product_id) existingByExtId.set(r.external_product_id, r);
+      rememberName(r.product_id, r.name);
     }
 
     // Overlay the persistent in-feed learning so a product linked/created in an
@@ -1971,8 +1985,14 @@ serve(async (req) => {
     // only if the chunk map somehow lacks the id, which would otherwise silently
     // disable the guard.
     if (multipackGuard && matchedProductId) {
-      const matchedName = productNameById.get(matchedProductId) ?? name;
-      if (isMultipackMismatch(rawMerchantUrl || wrappedUrl, matchedName)) {
+      // NO fallback to the feed's name. Falling back to it is the proxy bug this
+      // guard exists to eliminate, and it silently reopened the hole once
+      // already. If the matched product's name cannot be resolved, DECLINE to
+      // suppress: a missed suppression is recoverable, a wrongly-dropped row is
+      // an invisible gap in the comparison.
+      const matchedName = productNameById.get(matchedProductId);
+      if (matchedName === undefined) countMultipackUnresolved++;
+      if (matchedName !== undefined && isMultipackMismatch(rawMerchantUrl || wrappedUrl, matchedName)) {
         countSkippedMultipack++;
         if (sampleSkippedMultipack.length < 20) {
           sampleSkippedMultipack.push({ feed_name: name, matched_product_id: matchedProductId, matched_name: matchedName, url: rawMerchantUrl || wrappedUrl });
@@ -2294,6 +2314,7 @@ serve(async (req) => {
     // run output rather than silently changing the landed row count.
     multipack_guard_enabled: multipackGuard,
     skipped_multipack_mismatch: countSkippedMultipack,
+    multipack_name_unresolved: countMultipackUnresolved,
     sample_skipped_multipack: sampleSkippedMultipack,
     dry_run: dryRun,
     feed_total_rows: feedRows,
