@@ -256,6 +256,7 @@ import {
   extractCanonicalSize,
   extractShade,
 } from "../_shared/match-key.ts";
+import { isMultipackMismatch } from "../_shared/multipack-guard.ts";
 import { reconstructBeautyFlashName, BEAUTY_FLASH_RETAILER_ID } from "./name-reconstruction.ts";
 import { cleanDebenhamsName, DEBENHAMS_RETAILER_ID } from "./name-hygiene.ts";
 
@@ -510,6 +511,12 @@ serve(async (req) => {
     ? config.category_path_must_contain
     : [];
   const existingBrandsOnly: boolean = config.existing_brands_only === true;
+  // Skip rows whose deeplink advertises a multipack while the product name
+  // describes a single item — the price would misrepresent the product. Opt-in
+  // per retailer: only merchants that actually sell "buy two" under the single
+  // item's name need it. See _shared/multipack-guard.ts.
+  const multipackGuard: boolean = config.multipack_deeplink_guard === true;
+  let countSkippedMultipack = 0;
   // Rollout flag: when true, fetch+decompress+parse the feed as a stream
   // instead of materialising the whole decompressed feed in memory. Defaults to
   // false (legacy path) for every retailer until explicitly promoted.
@@ -1845,6 +1852,16 @@ serve(async (req) => {
         : "";
     }
 
+    // Multipack guard. Runs BEFORE matching and before create-new, because a
+    // multipack row is wrong either way: attached to the single item's page it
+    // misprices it, and created as its own product it duplicates the single
+    // under a multipack price. Checked against the merchant deeplink, since that
+    // is the only field carrying the multiplier — the product_name does not.
+    if (multipackGuard && isMultipackMismatch(rawMerchantUrl || wrappedUrl, name)) {
+      countSkippedMultipack++;
+      continue;
+    }
+
     // Path 1: extract EAN/MPN from feed row.
     const rawEan = idx.ean >= 0 ? (fields[idx.ean] || "").trim() : "";
     const rawMpn = idx.mpn >= 0 ? (fields[idx.mpn] || "").trim() : "";
@@ -2251,6 +2268,10 @@ serve(async (req) => {
     match_column_used: config.match_column,
     feed_format_used: feedFormat,
     top_category_default_used: topCategoryDefault,
+    // Reported so a guard that starts over- or under-firing is visible in the
+    // run output rather than silently changing the landed row count.
+    multipack_guard_enabled: multipackGuard,
+    skipped_multipack_mismatch: countSkippedMultipack,
     dry_run: dryRun,
     feed_total_rows: feedRows,
     feed_fetch_ms: fetchMs,

@@ -1,0 +1,1557 @@
+{
+ "_note": "Real Gorgeous Shop (r30) rows captured 2026-07-20. 'name' is the matched catalogue product name (the feed name that produced the match); 'slug' is the real deeplink path. must_skip rows were confirmed against the merchant's own page titles as multipacks of a single SKU; must_keep rows are genuine multi-item bundles.",
+ "must_skip": [
+  {
+   "pid": 4311,
+   "name": "Medik8 C Tetra Serum 30ml",
+   "slug": "/medik8-double-c-tetra-serum-30ml"
+  },
+  {
+   "pid": 5784,
+   "name": "Cerave Oil Control Moisturising Gel-Cream 52ml",
+   "slug": "/cerave-double-oil-control-moisturising-gel-cream-with-oil-absorbing-technology-ceramides-for-combination-and-oily-skin-52ml"
+  },
+  {
+   "pid": 16049,
+   "name": "Cerave Intensive Moisturising Lotion 473ml",
+   "slug": "/cerave-duo-intensive-moisturising-lotion-473ml-facial-moisturising-lotion-no-spf-52ml"
+  },
+  {
+   "pid": 19233,
+   "name": "Dermalogica Biolumin-C Serum 30ml",
+   "slug": "/dermalogica-duo-biolumin-c-serum-30ml-biolumin-c-gel-moisturiser"
+  },
+  {
+   "pid": 24787,
+   "name": "Schwarzkopf Professional BC Bonacure R-Two Resetting Shampoo 250ml",
+   "slug": "/schwarzkopf-bonacure-r-two-resetting-shampoo-250ml"
+  },
+  {
+   "pid": 24796,
+   "name": "Schwarzkopf Professional BC Bonacure R-Two Rescuing Treatment 200ml",
+   "slug": "/schwarzkopf-bonacure-r-two-rescuing-treatment-200ml"
+  },
+  {
+   "pid": 51523,
+   "name": "Scottish Fine Soaps Au Lait Hand Wash Refill 750ml",
+   "slug": "/scottish-fine-soaps-duo-au-lait-hand-wash-refill-750ml-refillable-aluminium-bottle-500ml-with-pump"
+  },
+  {
+   "pid": 64266,
+   "name": "Biolage Full Rescue Aminexil Treatment 6 X 10ml",
+   "slug": "/biolage-double-full-rescue-densifying-leave-in-spray-250ml"
+  },
+  {
+   "pid": 90732,
+   "name": "Philip Kingsley Flaky/Itchy Scalp Hydrating Curl Anti-Dandruff Shampoo",
+   "slug": "/philip-kingsley-double-flaky-itchy-scalp-hydrating-curl-anti-dandruff-shampoo-75ml"
+  },
+  {
+   "pid": 95774,
+   "name": "Matrix Total Results High Amplify Shampoo for Fine Flat Hair 300ml Dou",
+   "slug": "/matrix-biolage-total-results-double-high-amplify-shampoo-300ml"
+  },
+  {
+   "pid": 96038,
+   "name": "Matrix Total Results Keep Me Vivid Conditioner for High Maintenance Co",
+   "slug": "/matrix-double-total-results-keep-me-vivid-conditioner"
+  },
+  {
+   "pid": 96072,
+   "name": "Shea Moisture Jamaican Black Castor Oil Strengthening Leave in Conditi",
+   "slug": "/shea-moisture-double-jamaican-black-castor-oil-strengthening-leave-in-conditioner-431ml"
+  },
+  {
+   "pid": 96549,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Vitamino Color Shampoo 300ml Doubl",
+   "slug": "/l-oreal-professionnel-serie-expert-double-vitamino-color-shampoo-300ml"
+  },
+  {
+   "pid": 96552,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Vitamino Color Shampoo 750ml Super",
+   "slug": "/l-oreal-professionnel-serie-expert-double-supersize-vitamino-color-shampoo-750ml"
+  },
+  {
+   "pid": 96553,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Vitamino Color Conditioner 500ml S",
+   "slug": "/l-oreal-professionnel-serie-expert-double-supersize-vitamino-color-conditioner-500ml"
+  },
+  {
+   "pid": 96560,
+   "name": "L\u2019Or\u00e9al Professionnel Serie Expert Absolut Repair Shampoo 300ml dou",
+   "slug": "/l-oreal-professionnel-serie-expert-double-absolut-repair-shampoo-300ml"
+  },
+  {
+   "pid": 96566,
+   "name": "L\u2019Or\u00e9al Professional Serie Expert Absolut Repair Lightweight Masque",
+   "slug": "/l-oreal-professionnel-serie-expert-double-absolut-repair-lightweight-masque-250ml"
+  },
+  {
+   "pid": 96569,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Pro Longer Conditioner 200ml Doubl",
+   "slug": "/l-oreal-professionnel-serie-expert-double-pro-longer-conditioner-200ml"
+  },
+  {
+   "pid": 96571,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Pro Longer Conditioner 500ml Super",
+   "slug": "/l-oreal-professionnel-serie-expert-double-supersize-pro-longer-conditioner-500ml"
+  },
+  {
+   "pid": 96577,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Blondifier Shampoo Gloss 300ml Dou",
+   "slug": "/l-oreal-professionnel-serie-expert-double-blondifier-shampoo-gloss-300ml"
+  },
+  {
+   "pid": 96578,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Blondifier Conditioner 200ml Doubl",
+   "slug": "/l-oreal-professionnel-serie-expert-double-blondifier-conditioner-200ml"
+  },
+  {
+   "pid": 96580,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Blondifier Conditioner 500ml Super",
+   "slug": "/l-oreal-professionnel-serie-expert-double-supersize-blondifier-conditioner-500ml"
+  },
+  {
+   "pid": 96582,
+   "name": "L\u2019Or\u00e9al Professionnel Serie Expert Fluidifier Multi-Benefit Blowdry",
+   "slug": "/l-oreal-professionnel-serie-expert-double-fluidifier-multi-benefit-blowdry-cream-150ml"
+  },
+  {
+   "pid": 96583,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Liss Unlimited Shampoo 300ml Doubl",
+   "slug": "/l-oreal-professionnel-serie-expert-double-liss-shampoo-300ml"
+  },
+  {
+   "pid": 96794,
+   "name": "Fudge Professional Fat Hed Medium Hold Lightweight Styling Cream 75g D",
+   "slug": "/fudge-double-professional-fat-hed-medium-hold-lightweight-styling-cream-75g"
+  },
+  {
+   "pid": 96813,
+   "name": "Fudge Professional Matte Hed Mouldable Medium-Hold Hair Styling Creme",
+   "slug": "/fudge-double-professional-matte-hed-mouldable-medium-hold-hair-styling-creme-75g"
+  },
+  {
+   "pid": 96816,
+   "name": "Fudge Aqua Shine Lightweight Hair Styling Heat Protection Hair Serum 5",
+   "slug": "/fudge-double-aqua-shine-lightweight-hair-styling-heat-protection-hair-serum-50ml"
+  },
+  {
+   "pid": 97065,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Curl Expression Hair Rich Mask 250",
+   "slug": "/l-oreal-professionnel-double-curl-expression-hair-rich-mask-250ml"
+  },
+  {
+   "pid": 97067,
+   "name": "L\u2019Or\u00e9al Professionnel Serie Expert Curl Expression Long-Lasting Lea",
+   "slug": "/l-oreal-professionnel-double-curl-expression-long-lasting-leave-in-moisturiser-200ml"
+  },
+  {
+   "pid": 97068,
+   "name": "L'Oreal Professionnel Serie Expert Curl Expression Curl Reviving Spray",
+   "slug": "/l-oreal-professionnel-double-curl-expression-curl-reviving-spray-caring-water-mist-190ml"
+  },
+  {
+   "pid": 97069,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Curl Expression Drying Accelerator",
+   "slug": "/l-oreal-professionnel-double-curl-expression-drying-accelerator-150ml"
+  },
+  {
+   "pid": 97070,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Curl Expression Curl-Activator Je",
+   "slug": "/l-oreal-professionnel-double-curl-expression-curl-activator-jelly-250ml"
+  },
+  {
+   "pid": 97120,
+   "name": "Dermalogica AGE Smart\u00ae Skin Resurfacing Lactic Acid Cleanser 150ml Do",
+   "slug": "/dermalogica-double-age-smart-skin-resurfacing-lactic-acid-cleanser-150ml"
+  },
+  {
+   "pid": 97147,
+   "name": "Dermalogica Invisible Physical Defense Mineral Sunscreen SPF30 50ml Do",
+   "slug": "/dermalogica-double-invisible-physical-defense-mineral-sunscreen-spf30-50ml"
+  },
+  {
+   "pid": 97162,
+   "name": "Dermalogica Supersize Clear Start\u2122 Breakout Clearing Foaming Wash 29",
+   "slug": "/dermalogica-double-supersize-clear-starttm-breakout-clearing-foaming-wash-295ml"
+  },
+  {
+   "pid": 97217,
+   "name": "L'Or\u00e9al Professionnel Metal Detox Anti-Deposit Protector Concentrated",
+   "slug": "/l-oreal-professionnel-double-metal-detox-anti-deposit-protector-concentrated-oil-30ml"
+  },
+  {
+   "pid": 97264,
+   "name": "L\u2019Or\u00e9al Professionnel Serioxyl Volumising Hair Fibre Spray Blonde 2",
+   "slug": "/l-oreal-professionnel-double-serioxyl-volumising-hair-fibre-spray-blonde-250ml"
+  },
+  {
+   "pid": 97281,
+   "name": "Shu Uemura Art of Hair Tsuki Shape Heat-Activated Blow-Dry Spray 200ml",
+   "slug": "/shu-uemura-double-tsuki-shape-heat-activated-blow-dry-spray-200ml"
+  },
+  {
+   "pid": 97463,
+   "name": "L'Oreal Professionnel Serioxyl Advanced Denser Hair Serum for thinning",
+   "slug": "/l-oreal-professionnel-double-serioxyl-advanced-denser-hair-serum-for-thinning-hair-90ml"
+  },
+  {
+   "pid": 97466,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Scalp Advanced Anti-Oiliness Shamp",
+   "slug": "/l-oreal-professionnel-double-serie-expert-scalp-advanced-anti-oiliness-dermo-purifier-shampoo-for-oily-scalps-300ml"
+  },
+  {
+   "pid": 97467,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Scalp Advanced Anti-Dandruff Shamp",
+   "slug": "/l-oreal-professionnel-double-serie-expert-scalp-advanced-anti-dandruff-dermo-clarifier-shampoo-for-scalps-with-dandruff-and-visible-flakes-300ml"
+  },
+  {
+   "pid": 97468,
+   "name": "L'Oreal Professionnel Aminexil Advanced Anti-Hair Loss Programme for h",
+   "slug": "/l-oreal-professionnel-double-aminexil-advanced-anti-hair-loss-programme-for-hair-prone-to-falling-10x6ml"
+  },
+  {
+   "pid": 97515,
+   "name": "L\u2019Or\u00e9al Professionnel Metal Detox Anti-Metal High Protection Cream",
+   "slug": "/l-oreal-professionnel-double-metal-detox-anti-metal-high-protection-cream"
+  },
+  {
+   "pid": 97541,
+   "name": "Schwarzkopf Bonacure R-TWO Renewal Sealer 145ml",
+   "slug": "/schwarzkopf-bonacure-r-two-renewal-sealer-145ml"
+  },
+  {
+   "pid": 97677,
+   "name": "L\u2019Or\u00e9al Professionnel Serie Expert Absolut Repair Molecular Hair Sh",
+   "slug": "/l-oreal-professionnel-duo-serie-expert-absolut-repair-molecular-hair-shampoo-300ml-and-leave-in-mask-100ml"
+  },
+  {
+   "pid": 97702,
+   "name": "Matrix Total Results InstaCure Anti-Breakage Porosity Filler Spray for",
+   "slug": "/matrix-double-total-results-instacure-anti-breakage-porosity-filler-spray-for-damaged-hair-190ml"
+  },
+  {
+   "pid": 97746,
+   "name": "Olaplex No.4P Blonde Enhancer Toning Shampoo, No. 5P Blonde Enhancer T",
+   "slug": "/olaplex-no-4p-blonde-enhancer-toning-shampoo-and-no-5p-blonde-enhancer-toning-conditioner-250ml-duo-olaplex-no-4d-clean-volume-detox-dry-shampoo-250ml"
+  },
+  {
+   "pid": 97747,
+   "name": "Olaplex No.4C Bond Maintenance Clarifying Shampoo 250ml, No. 5 Bond Ma",
+   "slug": "/olaplex-no-4c-bond-maintenance-clarifying-shampoo-250ml-and-no-5-bond-maintenance-conditioner-250ml-duo-olaplex-no-4d-clean-volume-detox-dry-shampoo-250ml"
+  },
+  {
+   "pid": 97891,
+   "name": "L'Oreal Professionnel Serie Expert Scalp Advanced Anti-Discomfort Derm",
+   "slug": "/l-oreal-professionnel-double-serie-expert-scalp-advanced-anti-discomfort-dermo-regulator-shampoo-500ml"
+  },
+  {
+   "pid": 97892,
+   "name": "L'Oreal Professionnel Serie Expert Scalp Advanced Anti-Dandruff Dermo-",
+   "slug": "/l-oreal-professionnel-double-serie-expert-scalp-advanced-anti-dandruff-dermo-clarifier-shampoo-500ml"
+  },
+  {
+   "pid": 97893,
+   "name": "L'Oreal Professionnel Serie Expert Scalp Advanced Anti-Oiliness Dermo-",
+   "slug": "/l-oreal-professionnel-double-serie-expert-scalp-advanced-anti-oiliness-dermo-purifier-shampoo-500ml"
+  },
+  {
+   "pid": 97899,
+   "name": "L'Oreal Professionnel Metal Detox Anti-Porosity Filler Pre-Shampoo Tre",
+   "slug": "/l-oreal-professionnel-duo-metal-detox-anti-porosity-filler-pre-shampoo-treatment-and-metal-detox-shampoo-250ml"
+  },
+  {
+   "pid": 98315,
+   "name": "L\u2019Or\u00e9al Professionnel Scalp Advanced Anti-Discomfort Dermo-Regulato",
+   "slug": "/l-oreal-professionnel-duo-scalp-advanced-anti-discomfort-dermo-regulator-shampoo-500ml-scalp-advanced-anti-discomfort-shampoo-refill-pack-500ml-for-itchy-dry-scalp"
+  },
+  {
+   "pid": 98544,
+   "name": "L'Or\u00e9al Professionnel Vitamino Color Spectrum Shampoo 300ml, Rinse Of",
+   "slug": "/l-oreal-professionnel-duo-vitamino-color-spectrum-shampoo-300ml-rinse-off-hair-mask-250ml-and-serum-50ml-for-coloured-hair"
+  },
+  {
+   "pid": 98791,
+   "name": "Redken Acidic Color Gloss Naked Gloss, Lightweight Hair Oil 100ml Doub",
+   "slug": "/redken-double-acidic-color-gloss-naked-gloss-lightweight-hair-oil-add-shine-and-moisture-for-dull-hair-100ml"
+  },
+  {
+   "pid": 98944,
+   "name": "Schwarzkopf Professional BC Bonacure R-TWO Rescuing Treatment",
+   "slug": "/schwarzkopf-bc-bonacure-r-two-rescuing-treatment-500ml"
+  },
+  {
+   "pid": 98945,
+   "name": "Schwarzkopf Professional BC Bonacure R-TWO Resetting Shampoo 1000ml",
+   "slug": "/schwarzkopf-bc-bonacure-two-resetting-shampoo-1000ml"
+  },
+  {
+   "pid": 99052,
+   "name": "Sol de Janeiro Bum Bum Party Of Two (Worth \u00a332)",
+   "slug": "/sol-de-janiero-bum-bum-party-of-two-2pc"
+  },
+  {
+   "pid": 99340,
+   "name": "Redken Acidic Grow Full System Densifying Instant Densifying Spray 200",
+   "slug": "/redken-duo-acidic-grow-full-system-densifying-instant-densifying-spray-200ml-and-hair-serum-100ml"
+  },
+  {
+   "pid": 99538,
+   "name": "K\u00e9rastase Resistance Ciment Thermique Glacage Thermo-Seal 150ml Doubl",
+   "slug": "/kerastase-resistance-ciment-thermique-glacage-thermo-seal-150ml-double"
+  },
+  {
+   "pid": 99667,
+   "name": "K\u00e9rastase Curl Manifesto Bain Hydratation Douceur Shampoo 200ml Doubl",
+   "slug": "/kerastase-double-curl-manifesto-bain-hydratation-shampoo-200ml"
+  },
+  {
+   "pid": 99669,
+   "name": "K\u00e9rastase Curl Manifesto Fondant Hydratation Essentielle Conditioner",
+   "slug": "/kerastase-double-curl-manifesto-fondant-hydratation-conditioner-250ml"
+  },
+  {
+   "pid": 99670,
+   "name": "K\u00e9rastase Curl Manifesto Cr\u00e8me De Jour Fondamentale Leave-In-Cream 1",
+   "slug": "/kerastase-double-curl-manifesto-leave-in-cream-150ml"
+  },
+  {
+   "pid": 99673,
+   "name": "K\u00e9rastase Curl Manifesto Beurre Haute Nutrition Nourishing Butter Hai",
+   "slug": "/kerastase-double-curl-manifesto-nourishing-butter-hair-masque-200ml"
+  },
+  {
+   "pid": 99722,
+   "name": "K\u00e9rastase Genesis Homme Daily Purifying Fortifying Shampoo 250ml Doub",
+   "slug": "/kerastase-double-genesis-homme-daily-purifying-fortifying-shampoo-250ml"
+  },
+  {
+   "pid": 99726,
+   "name": "K\u00e9rastase Genesis Homme Daily Anti-Hair Fall Fortifying Serum 90ml Do",
+   "slug": "/kerastase-double-genesis-homme-daily-anti-hair-fall-fortifying-serum-90ml"
+  },
+  {
+   "pid": 99759,
+   "name": "K\u00e9rastase Symbiose Moisturising Anti-Dandruff Cellular Shampoo for Dr",
+   "slug": "/kerastase-double-symbiose-moisturising-anti-dandruff-cellular-shampoo-for-dry-scalps-250ml"
+  },
+  {
+   "pid": 99760,
+   "name": "K\u00e9rastase Symbiose Detangling Soothing Cellular Conditioner 200ml Dou",
+   "slug": "/kerastase-double-symbiose-detangling-soothing-cellular-conditioner"
+  },
+  {
+   "pid": 99762,
+   "name": "K\u00e9rastase Symbiose Intensive Anti-Dandruff Cellular Night Serum 90ml",
+   "slug": "/kerastase-double-symbiose-intensive-anti-dandruff-cellular-night-serum-90ml"
+  },
+  {
+   "pid": 99787,
+   "name": "K\u00e9rastase Nutritive Bain Satin Riche High Nutrition Rich Shampoo 250m",
+   "slug": "/kerastase-duo-nutritive-bain-satin-riche-high-nutrition-rich-shampoo-250ml-and-lait-vital-200ml"
+  },
+  {
+   "pid": 99809,
+   "name": "K\u00e9rastase Premi\u00e8re Decalcifying System Reparative Shampoo 250ml Doub",
+   "slug": "/kerastase-duo-premiere-decalcifying-system-reparative-shampoo-250ml"
+  },
+  {
+   "pid": 99848,
+   "name": "K\u00e9rastase Chroma Absolu Huile Chroma \u00c9clat Hair Oil Refillable 75ml",
+   "slug": "/kerastase-duo-chroma-absolu-hair-oil-huile-chroma-eclat-refillable-bottle-for-fine-medium-hair-with-amino-acid-lactic-acid-75ml-chroma-hair-oil-huile-chroma-eclat-bottle-for-fine-to-medium-hair-with-amino-acid-lactic-acid-30ml"
+  },
+  {
+   "pid": 99862,
+   "name": "K\u00e9rastase Premi\u00e8re Shampoo Refillable Bottle for Damaged Hair 500ml",
+   "slug": "/kerastase-duo-premiere-shampoo-for-repairing-damaged-hair-refillable-bottle-for-damaged-hair-with-pure-citric-acid-and-glycine-premiere-shampoo-for-repairing-damaged-hair-refill-pouch"
+  },
+  {
+   "pid": 105001,
+   "name": "Goldwell Dual Senses Color Brilliance Extra Rich Conditioner 200ml Dou",
+   "slug": "/goldwell-dual-senses-color-brilliance-extra-rich-conditioner-200ml-double"
+  },
+  {
+   "pid": 105002,
+   "name": "Goldwell Dual Senses Color Brilliance Extra Rich 60 Second Treatment 2",
+   "slug": "/goldwell-dual-senses-color-brilliance-extra-rich-60-second-treatment-200ml-double"
+  },
+  {
+   "pid": 105008,
+   "name": "Goldwell Dual Senses Just Smooth Taming 60 Second Treatment 200ml Doub",
+   "slug": "/goldwell-dual-senses-just-smooth-taming-60-second-treatment-200ml-double"
+  },
+  {
+   "pid": 105080,
+   "name": "JOICO Defy Damage Protective Conditioner 1000ml",
+   "slug": "/joico-duo-defy-damage-protective-conditioner-for-bond-strengthening-and-color-longevity-white-pump-1000ml"
+  },
+  {
+   "pid": 105381,
+   "name": "Goldwell Dualsenses Scalp Specialist, Deep Cleansing Shampoo 250ml Dou",
+   "slug": "/goldwell-double-dualsenses-scalp-specialist-deep-cleansing-shampoo-250ml"
+  },
+  {
+   "pid": 105382,
+   "name": "Goldwell Dualsenses Scalp Specialist, Anti-Dandruff Shampoo 250ml Doub",
+   "slug": "/goldwell-double-dualsenses-scalp-specialist-anti-dandruff-shampoo-250ml"
+  },
+  {
+   "pid": 105383,
+   "name": "Goldwell Dualsenses Scalp Specialist, Sensitive Foam Shampoo 250ml Dou",
+   "slug": "/goldwell-double-dualsenses-scalp-specialist-sensitive-foam-shampoo-250ml"
+  },
+  {
+   "pid": 105719,
+   "name": "Goldwell Dualsenses Scalp Specialist Deep Cleansing Shampoo 1000ml Dou",
+   "slug": "/goldwell-double-dualsenses-scalp-specialist-deep-cleansing-shampoo-1000ml"
+  },
+  {
+   "pid": 123708,
+   "name": "Olaplex No.4P Blonde Enhancer Toning Shampoo 250ml, No. 5 Bond Mainten",
+   "slug": "/olaplex-no-4p-blonde-enhancer-toning-shampoo-250ml-and-no-5-bond-maintenance-conditioner-250ml-duo-olaplex-no-4d-clean-volume-detox-dry-shampoo-250ml"
+  },
+  {
+   "pid": 127434,
+   "name": "Philip Kingsley Flaky/Itchy Scalp Hydrating Curl AntiDandruff Shampoo",
+   "slug": "/philip-kingsley-double-flaky-itchy-scalp-hydrating-curl-anti-dandruff-shampoo-250ml"
+  },
+  {
+   "pid": 129101,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Blondifier Shampoo Cool 300ml Doub",
+   "slug": "/l-oreal-professionnel-serie-expert-double-blondifier-shampoo-cool-300ml"
+  }
+ ],
+ "must_keep": [
+  {
+   "pid": 32787,
+   "name": "Coco & Eve Like A Virgin Super Hydrating Shampoo 280ml",
+   "slug": "/coco-eve-duo-like-a-virgin-super-hydrating-shampoo-280ml-like-a-virgin-leave-in-conditioner-150ml"
+  },
+  {
+   "pid": 33721,
+   "name": "Coco & Eve Sweet Repair Repairing & Restoring Shampoo 280ml",
+   "slug": "/coco-eve-duo-sweet-repair-reparing-restoring-shampoo-280ml-sweet-repair-repairing-restoring-conditioner-280ml"
+  },
+  {
+   "pid": 95650,
+   "name": "bareMinerals Original Foundation SPF15 - Medium Beige & Mineral Veil D",
+   "slug": "/bareminerals-original-foundation-veil-duo-medium-beige"
+  },
+  {
+   "pid": 95651,
+   "name": "bareMinerals Original Foundation SPF15 - Fairly Light & Mineral Veil D",
+   "slug": "/bareminerals-original-foundation-spf15-fairly-light-mineral-veil-duo"
+  },
+  {
+   "pid": 95687,
+   "name": "bareMinerals Original Foundation SPF15 - Medium Beige & All-Over Face",
+   "slug": "/bareminerals-original-foundation-warmth-duo-medium-beige"
+  },
+  {
+   "pid": 95734,
+   "name": "bareMinerals Original Foundation SPF15 Fairly Light & All-Over-Face Co",
+   "slug": "/bareminerals-spf15-original-foundation-fairly-light-warmth-all-over-face-colour-duo"
+  },
+  {
+   "pid": 95735,
+   "name": "bareMinerals Original Foundation SPF15 Light & All-Over-Face Colour Wa",
+   "slug": "/bareminerals-spf15-original-foundation-light-warmth-all-over-face-colour-duo"
+  },
+  {
+   "pid": 95738,
+   "name": "bareMinerals Original Foundation SPF15 Medium Tan & All-Over-Face Col",
+   "slug": "/bareminerals-original-spf-15-foundation-medium-tan-all-over-face-colour-warmth-duo"
+  },
+  {
+   "pid": 95778,
+   "name": "Matrix Total Results High Amplify Shampoo 300ml & Conditioner 300ml Du",
+   "slug": "/matrix-biolage-total-results-duo-high-amplify-shampoo-300ml-conditioner-300ml"
+  },
+  {
+   "pid": 95836,
+   "name": "Shu Uemura Art of Hair Urban Moisture Shampoo 300ml & Urban Moisture C",
+   "slug": "/shu-uemura-duo-urban-moisture-shampoo-300ml-urban-moisture-conditioner-250ml"
+  },
+  {
+   "pid": 95888,
+   "name": "bareMinerals BAREPRO Liquid Foundation SPF20 - Cashmere 06 & Luxe Perf",
+   "slug": "/bareminerals-duo-barepro-liquid-foundation-spf20-cashmere-06-luxe-performance-brush"
+  },
+  {
+   "pid": 95889,
+   "name": "bareMinerals BAREPRO Liquid Foundation SPF20 - Warm Light 07 & Luxe Pe",
+   "slug": "/bareminerals-duo-barepro-liquid-foundation-spf20-warm-light-07-luxe-performance-brush"
+  },
+  {
+   "pid": 95890,
+   "name": "bareMinerals BAREPRO Liquid Foundation SPF20 - Truffle 29 & Luxe Perfo",
+   "slug": "/bareminerals-duo-barepro-liquid-foundation-spf20-truffle-29-luxe-performance-brush"
+  },
+  {
+   "pid": 95937,
+   "name": "Shu Uemura Art of Hair Ultimate Reset Shampoo 300ml & Conditioner 250m",
+   "slug": "/shu-uemura-duo-art-of-hair-ultimate-reset-shampoo-300ml-conditioner-250ml"
+  },
+  {
+   "pid": 95959,
+   "name": "Ultrasun Super Sensitive Family SPF30 400ml & Aftersun Tan Booster 150",
+   "slug": "/ultrasun-duo-family-spf30-400ml-aftersun-tan-booster-250ml"
+  },
+  {
+   "pid": 96039,
+   "name": "Matrix Total Results Keep Me Vivid Colour Enhancing Shampoo & Conditio",
+   "slug": "/matrix-duo-total-results-keep-me-vivid-shampoo-conditioner"
+  },
+  {
+   "pid": 96073,
+   "name": "Shea Moisture Coconut and Hibiscus Curl Enhancing Smoothie 326ml Doubl",
+   "slug": "/shea-moisture-double-coconut-and-hibiscus-curl-enhancing-smoothie-326ml"
+  },
+  {
+   "pid": 96076,
+   "name": "Shea Moisture Shea Butter Moisture Shampoo 379ml and Restorative Condi",
+   "slug": "/shea-moisture-duo-shea-butter-moisture-shampoo-379ml-and-restorative-conditioner-379ml"
+  },
+  {
+   "pid": 96081,
+   "name": "Shea Moisture Coconut and Hibiscus Curl & Shine Shampoo and Conditione",
+   "slug": "/shea-moisture-duo-coconut-and-hibiscus-curl-shine-shampoo-379ml-and-conditioner-379ml"
+  },
+  {
+   "pid": 96082,
+   "name": "Shea Moisture Coconut and Hibiscus Curl & Shine Gel Style Milk 254ml D",
+   "slug": "/shea-moisture-double-coconut-and-hibiscus-curl-shine-gel-style-milk-254ml"
+  },
+  {
+   "pid": 96131,
+   "name": "Shu Uemura Art of Hair Muroto Volume Shampoo 300ml & Conditioner 250ml",
+   "slug": "/shu-uemura-art-of-hair-duo-muroto-volume-shampoo-300ml-and-volume-conditoner-250ml"
+  },
+  {
+   "pid": 96150,
+   "name": "Olaplex Bond Maintenance No. 4 Shampoo 250ml & No. 5 Conditioner 250m",
+   "slug": "/olaplex-duo-no-4-bond-maintenance-shampoo-250ml-no-5-bond-maintenance-conditioner-250ml"
+  },
+  {
+   "pid": 96171,
+   "name": "Shu Uemura Art of Hair Ultimate Reset Shampoo 300ml, Conditioner 250ml",
+   "slug": "/shu-uemura-duo-ultimate-reset-shampoo-300ml-ultimate-reset-conditioner-250ml-serum-30ml"
+  },
+  {
+   "pid": 96174,
+   "name": "Shu Uemura Art of Hair Muroto Volume Shampoo 300ml & Muroto Volume Mas",
+   "slug": "/shu-uemura-duo-muroto-volume-shampoo-300ml-muroto-volume-masque-200ml"
+  },
+  {
+   "pid": 96176,
+   "name": "Shu Uemura Art of Hair Urban Moisture Shampoo 300ml & Urban Moisture M",
+   "slug": "/shu-uemura-duo-urban-moisture-shampoo-300ml-urban-moisture-masque-200ml"
+  },
+  {
+   "pid": 96209,
+   "name": "Matrix Total Results High Amplify Shampoo 1000ml & Conditioner 1000ml",
+   "slug": "/duo-total-results-high-amplify-shampoo-1000ml-high-amplify-conditioner-1000ml"
+  },
+  {
+   "pid": 96211,
+   "name": "Matrix Total Results Keep Me Vivid Shampoo 1000ml & Conditioner 1000ml",
+   "slug": "/duo-total-results-keep-me-vivid-shampoo-keep-me-vivid-conditioner-1000ml"
+  },
+  {
+   "pid": 96309,
+   "name": "Redken Acidic Bonding Concentrate Shampoo 300ml and Conditioner 300ml",
+   "slug": "/redken-duo-acidic-bonding-concentrate-shampoo-300ml-and-conditioner-300ml"
+  },
+  {
+   "pid": 96548,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Metal Detox Shampoo 300ml and Mask",
+   "slug": "/l-oreal-professionnel-serie-expert-duo-metal-detox-shampoo-300ml-and-mask-250ml"
+  },
+  {
+   "pid": 96551,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Vitamino Color Shampoo 300ml and C",
+   "slug": "/l-oreal-professionnel-serie-expert-duo-vitamino-color-shampoo-300ml-and-conditioner-200ml"
+  },
+  {
+   "pid": 96559,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Silver Shampoo 300ml and Condition",
+   "slug": "/l-oreal-professionnel-serie-expert-duo-silver-shampoo-300ml-and-conditioner-200ml"
+  },
+  {
+   "pid": 96562,
+   "name": "L\u2019Or\u00e9al Professionnel Serie Expert Absolut Repair Shampoo 300ml and",
+   "slug": "/l-oreal-professionnel-serie-expert-duo-absolut-repair-shampoo-300ml-and-conditioner-200ml"
+  },
+  {
+   "pid": 96570,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Pro Longer Shampoo 300ml and Condi",
+   "slug": "/l-oreal-professionnel-serie-expert-duo-pro-longer-shampoo-300ml-and-conditioner-200ml-new"
+  },
+  {
+   "pid": 96579,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Blondifier Shampoo Gloss 300ml and",
+   "slug": "/l-oreal-professionnel-serie-expert-duo-blondifier-shampoo-gloss-300ml-and-conditioner-200ml"
+  },
+  {
+   "pid": 96585,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Liss Shampoo 300ml and Masque 250m",
+   "slug": "/l-oreal-professionnel-serie-expert-duo-liss-shampoo-300ml-and-masque-250ml"
+  },
+  {
+   "pid": 96749,
+   "name": "Dermalogica Skin Resurfacing Lactic Acid Cleanser 150ml & Dynamic Skin",
+   "slug": "/dermalogica-duo-skin-resurfacing-cleanser-150ml-dynamic-skin-recovery-50ml"
+  },
+  {
+   "pid": 96768,
+   "name": "Fudge Xpander Hair-Thickening Volumising Shampoo 1000ml and Densifying",
+   "slug": "/fudge-duo-xpander-hair-thickening-volumising-shampoo-1000ml-and-densifying-conditioner-1000ml"
+  },
+  {
+   "pid": 96771,
+   "name": "Fudge Luminizer Moisture-Boosting Shine-Enhancing Shampoo 1000ml and C",
+   "slug": "/fudge-duo-luminizer-moisture-boosting-shine-enhancing-shampoo-1000ml-and-conditioner-1000ml"
+  },
+  {
+   "pid": 96774,
+   "name": "Fudge Damage Rewind Repairing & Reconstructing Shampoo 1000ml and Cond",
+   "slug": "/fudge-duo-damage-rewind-repairing-reconstructing-shampoo-1000ml-and-conditioner-1000ml"
+  },
+  {
+   "pid": 96780,
+   "name": "Fudge Xpander Hair-Thickening Volumising Gel\u00e9e Shampoo 250ml and Dens",
+   "slug": "/fudge-duo-xpander-hair-thickening-volumising-gelee-shampoo-250ml-and-densifying-conditioner-250ml"
+  },
+  {
+   "pid": 96784,
+   "name": "Fudge Damage Rewind Repairing & Reconstructing Conditioner 250ml Doubl",
+   "slug": "/fudge-double-damage-rewind-repairing-reconstructing-conditioner-250ml"
+  },
+  {
+   "pid": 96831,
+   "name": "Dr. Salts Workout Therapy Shower Gel 200ml and Post Workout Therapy Ep",
+   "slug": "/dr-salts-duo-workout-therapy-shower-gel-200ml-and-post-workout-therapy-epsom-salts-750g"
+  },
+  {
+   "pid": 96832,
+   "name": "Dr. Salts Calming Therapy Shower Gel 200ml and Calming Therapy Epsom S",
+   "slug": "/dr-salts-duo-calming-therapy-shower-gel-200ml-and-calming-therapy-epsom-salts-750g"
+  },
+  {
+   "pid": 97003,
+   "name": "Schwarzkopf BC Clean Repair Rescue Shampoo 250ml and Conditioner 200ml",
+   "slug": "/schwarzkopf-bc-clean-duo-repair-rescue-shampoo-250ml-and-conditioner-200ml"
+  },
+  {
+   "pid": 97011,
+   "name": "Schwarzkopf BC Clean Color Freeze Shampoo 250ml and Conditioner 200ml",
+   "slug": "/schwarzkopf-bc-clean-duo-color-freeze-shampoo-250ml-and-conditioner-200ml"
+  },
+  {
+   "pid": 97012,
+   "name": "Schwarzkopf BC Clean Color Freeze Silver Shampoo 250ml and Conditioner",
+   "slug": "/schwarzkopf-bc-clean-duo-color-freeze-silver-shampoo-250ml-and-conditioner-200ml"
+  },
+  {
+   "pid": 97022,
+   "name": "Schwarzkopf BC Clean Moisture Kick Shampoo 250ml and Conditioner 200ml",
+   "slug": "/schwarzkopf-bc-clean-duo-moisture-kick-shampoo-250ml-and-conditioner-200ml"
+  },
+  {
+   "pid": 97026,
+   "name": "Schwarzkopf BC Clean Moisture Kick Shampoo 250ml and Spray Conditioner",
+   "slug": "/schwarzkopf-bc-clean-duo-moisture-kick-shampoo-250ml-and-spray-conditioner-200ml"
+  },
+  {
+   "pid": 97029,
+   "name": "Schwarzkopf BC Clean Volume Boost Shampoo 250ml and Jelly Conditioner",
+   "slug": "/schwarzkopf-bc-clean-duo-volume-boost-shampoo-250ml-and-jelly-conditioner-200ml"
+  },
+  {
+   "pid": 97033,
+   "name": "Schwarzkopf BC Clean Time Restore Shampoo 250ml and Conditioner 200ml",
+   "slug": "/schwarzkopf-bc-clean-duo-time-restore-shampoo-250ml-and-conditioner-200ml"
+  },
+  {
+   "pid": 97045,
+   "name": "CeraVe AM Facial Moisturising Lotion SPF50 with Ceramides & Vitamin E",
+   "slug": "/cerave-double-cerave-am-facial-moisturising-lotion-spf50-with-ceramides-vitamin-e-for-normal-to-dry-skin-52mlcerave-double-cerave-am-facial-moisturising-lotion-spf50-with-ceramides-vitamin-e-for-normal-to-dry-skin-52mlcerave-double-cerave-am-facial-mo"
+  },
+  {
+   "pid": 97061,
+   "name": "L'Or\u00e9al Professionnel Serie Expert Curl Expression Moisturising & Hyd",
+   "slug": "/l-oreal-professionnel-duo-curl-expression-moisturising-hydrating-shampoo-300ml-curl-expression-hair-rich-mask-250ml"
+  },
+  {
+   "pid": 97062,
+   "name": "L\u2019Or\u00e9al Professionnel Serie Expert Curl Expression Clarifying & Ant",
+   "slug": "/l-oreal-professionnel-double-curl-expression-clarifying-anti-build-up-shampoo-300ml"
+  },
+  {
+   "pid": 97063,
+   "name": "L\u2019Or\u00e9al Professionnel Serie Expert Curl Expression Moisturising & H",
+   "slug": "/l-oreal-professionnel-double-curl-expression-moisturising-hydrating-shampoo-300ml"
+  },
+  {
+   "pid": 97102,
+   "name": "Matrix Total Results InstaCure Anti-Breakage Shampoo 300ml and Conditi",
+   "slug": "/matrix-duo-total-results-instacure-anti-breakage-shampoo-300ml-and-conditioner-300ml"
+  },
+  {
+   "pid": 97103,
+   "name": "Matrix Total Results InstaCure Anti-Breakage Shampoo 1000ml and Condit",
+   "slug": "/matrix-supersize-duo-total-results-instacure-anti-breakage-shampoo-1000ml-and-conditioner-1000ml"
+  },
+  {
+   "pid": 97226,
+   "name": "Olaplex No. 0 Intensive Bond Building Treatment 155ml and No. 3 Hair P",
+   "slug": "/olaplex-duo-no-0-intensive-bond-building-treatment-155ml-and-no-3-hair-perfector-100ml"
+  },
+  {
+   "pid": 97227,
+   "name": "Olaplex No.4C Bond Maintenance Clarifying Shampoo 250ml and No. 5 Bond",
+   "slug": "/olaplex-duo-no-4c-bond-maintenance-clarifying-shampoo-250ml-and-no-5-bond-maintenance-conditioner-250ml"
+  },
+  {
+   "pid": 97309,
+   "name": "Redken All Soft Mega Curl Shampoo 300ml & All Soft Mega Curl Condition",
+   "slug": "/redken-duo-all-soft-mega-curl-shampoo-300ml-all-soft-mega-curl-conditioner-300ml"
+  },
+  {
+   "pid": 97328,
+   "name": "Shu Uemura Izumi Tonic Strengthening Shampoo 300ml & Conditioner 250ml",
+   "slug": "/shu-uemura-duo-izumi-tonic-strengthening-shampoo-300ml-izumi-tonic-strengthening-conditioner-250ml"
+  },
+  {
+   "pid": 97377,
+   "name": "Schwarzkopf BC Clean Frizz Away Shampoo 250ml & BC Clean Frizz Away Co",
+   "slug": "/schwarzkopf-duo-bc-clean-frizz-away-shampoo-250ml-bc-clean-frizz-away-conditioner-200ml"
+  },
+  {
+   "pid": 97425,
+   "name": "Redken Color Extend Blondage Conditioner 300ml and MINI Color Extend B",
+   "slug": "/redken-duo-color-extend-blondage-conditioner-300ml-and-mini-color-extend-blondage-conditioner-30ml"
+  },
+  {
+   "pid": 97427,
+   "name": "Redken One United Multi-Benefit Treatment 150ml and Mini One United Mu",
+   "slug": "/redken-duo-one-united-multi-benefit-treatment-150ml-and-mini-one-united-multi-benefit-treatment-30ml"
+  },
+  {
+   "pid": 97428,
+   "name": "Redken Extreme Length Conditioner 300ml and MINI Extreme Length Condit",
+   "slug": "/redken-duo-extreme-length-conditioner-300ml-and-mini-extreme-length-conditioner-30ml"
+  },
+  {
+   "pid": 97429,
+   "name": "Redken Acidic Bonding Concentrate Shampoo 300ml and MINI Acidic Bondin",
+   "slug": "/redken-duo-acidic-bonding-concentrate-shampoo-300ml-and-mini-acidic-bonding-concentrate-shampoo-50ml"
+  },
+  {
+   "pid": 97459,
+   "name": "L'Oreal Professionnel Serioxyl Purifier & Bodifier Shampoo 300ml and D",
+   "slug": "/l-oreal-professionnel-duo-serioxyl-advanced-purifier-bodifier-shampoo-for-thinning-hair-300ml-and-and-serioxyl-advanced-denser-hair-serum-for-thinning-hair-90ml"
+  },
+  {
+   "pid": 97464,
+   "name": "L'Oreal Professionnel Serioxyl Advanced Purifier & Bodifier shampoo fo",
+   "slug": "/l-oreal-professionnel-double-serioxyl-advanced-purifier-bodifier-shampoo-for-thinning-hair-300ml"
+  },
+  {
+   "pid": 97478,
+   "name": "Spotlight Oral Care Water Flosser with UV Steriliser & Water Flosser w",
+   "slug": "/spotlight-oral-care-duo-water-flosser-with-uv-steriliser-water-flosser-with-uv-steriliser-tips"
+  },
+  {
+   "pid": 97479,
+   "name": "Dermalogica Phyto Nature Serum 40ml and Phyto Nature Oxygen Liquid Cre",
+   "slug": "/dermalogica-duo-phyto-nature-serum-40ml-and-phyto-nature-oxygen-liquid-cream-50ml"
+  },
+  {
+   "pid": 97506,
+   "name": "Matrix Fixer Hairspray, for Flexible Holding and Securing with Dry Fi",
+   "slug": "/matrix-double-fixer-hairspray-for-flexible-holding-and-securing-with-dry-finish-400ml"
+  },
+  {
+   "pid": 97523,
+   "name": "Matrix Food For Soft Hydrating Shampoo & Conditioner with Avocado Oil",
+   "slug": "/matrix-duo-food-for-soft-hydrating-shampoo-with-avocado-oil-and-hyaluronic-acid-for-dry-hair-300ml-food-for-soft-detangling-conditioner-with-avocado-oil-and-hyaluronic-acid-for-dry-hair-300ml"
+  },
+  {
+   "pid": 97539,
+   "name": "CeraVe Facial Moisturising Lotion SPF30 with Ceramides for Normal to D",
+   "slug": "/double-am-facial-moisturising-lotion-spf30-with-ceramides-for-normal-to-dry-skin-52ml"
+  },
+  {
+   "pid": 97548,
+   "name": "CeraVe Foaming Cleanser 236ml + Facial Moisturising Lotion SPF 30 52ml",
+   "slug": "/cerave-duo-foaming-cleanser-236ml-facial-moisturising-lotion-spf-30-52ml"
+  },
+  {
+   "pid": 97553,
+   "name": "Schwarzkopf Bonacure R-TWO Resetting Shampoo 250ml & R-TWO Rescuing",
+   "slug": "/schwarzkopf-duo-bonacure-r-two-resetting-shampoo-250ml-r-two-rescuing-treatment-200ml"
+  },
+  {
+   "pid": 97590,
+   "name": "CeraVe Cleansing Routine | Hydrating Cleanser 236ml and Micellar Clean",
+   "slug": "/cerave-duo-cleansing-routine"
+  },
+  {
+   "pid": 97615,
+   "name": "Redken Acidic Bonding Concentrate Shampoo 300ml & Acidic Bonding Conce",
+   "slug": "/redken-duo-acidic-bonding-concentrate-shampoo-300ml-acidic-bonding-concentrate-lightweight-liquid-conditioner-190ml"
+  },
+  {
+   "pid": 97643,
+   "name": "Redken Acidic Bonding Concentrate Intensive Pre-Treatment, Shampoo and",
+   "slug": "/redken-acidic-bonding-concentrate-intensive-pre-treatment-shampoo-and-lightweight-liquid-conditioner-bundle"
+  },
+  {
+   "pid": 97644,
+   "name": "Redken Acidic Bonding Concentrate Shampoo, Conditioner and 5-Minute Li",
+   "slug": "/redken-acidic-bonding-concentrate-shampoo-conditioner-and-5-minute-liquid-hair-mask-bundle"
+  },
+  {
+   "pid": 97667,
+   "name": "Fudge All Blonde Colour Lock Shampoo 250ml & All Blonde Colour Lock Co",
+   "slug": "/fudge-duo-all-blonde-colour-lock-shampoo-250ml-all-blonde-colour-lock-conditioner-250ml"
+  },
+  {
+   "pid": 97668,
+   "name": "Fudge All Blonde Colour Lock Shampoo 1000ml & All Blonde Colour Lock C",
+   "slug": "/fudge-duo-all-blonde-colour-lock-shampoo-1000ml-all-blonde-colour-lock-conditioner-1000ml"
+  },
+  {
+   "pid": 97692,
+   "name": "Olaplex No.4P Blonde Enhancer Toning Shampoo and No. 5P Blonde Enhance",
+   "slug": "/olaplex-duo-no-4p-blonde-enhancer-toning-shampoo-and-no-5p-blonde-enhancer-toning-conditioner-250ml"
+  },
+  {
+   "pid": 97734,
+   "name": "Schwarzkopf BC Bonacure Anti-Dandruff Shampoo 250ml & BC Bonacure Anti",
+   "slug": "/schwarzkopf-duo-bc-bonacure-anti-dandruff-shampoo-250ml-bc-bonacure-anti-dandruff-hair-serum-100ml"
+  },
+  {
+   "pid": 97735,
+   "name": "Schwarzkopf BC Bonacure Root Activating Shampoo 250ml & BC Bonacure Ro",
+   "slug": "/schwarzkopf-duo-bc-bonacure-root-activating-shampoo-250ml-bc-bonacure-root-activating-hair-serum-100ml"
+  },
+  {
+   "pid": 97736,
+   "name": "Schwarzkopf BC Bonacure Scalp Soothing Shampoo 250ml & BC Bonacure Sca",
+   "slug": "/schwarzkopf-duo-bc-bonacure-scalp-soothing-shampoo-250ml-bc-bonacure-scalp-soothing-hair-serum-100ml"
+  },
+  {
+   "pid": 97738,
+   "name": "Redken One United Multi-Benefit Treatment 150ml & Spray Wax 10 150ml D",
+   "slug": "/redken-duo-leave-in-conditioner-one-united-multi-benefit-treatment-150ml-spray-wax-10-150ml"
+  },
+  {
+   "pid": 97739,
+   "name": "Redken One United Multi-Benefit Treatment 150ml & Quick Blowout 125ml",
+   "slug": "/redken-duo-leave-in-conditioner-one-united-multi-benefit-treatment-150ml-quick-blowout-125ml"
+  },
+  {
+   "pid": 97740,
+   "name": "Redken One United Multi-Benefit Treatment 150ml & Max Hold Hairspray",
+   "slug": "/redken-duo-leave-in-conditioner-one-united-multi-benefit-treatment-150ml-max-hold-hairspray-300ml"
+  },
+  {
+   "pid": 97741,
+   "name": "Redken One United Multi-Benefit Treatment 150ml & Texture Paste 75ml D",
+   "slug": "/redken-duo-leave-in-conditioner-one-united-multi-benefit-treatment-150ml-texture-paste-75ml"
+  },
+  {
+   "pid": 97745,
+   "name": "Olaplex Bond Maintenance No. 4 Shampoo 250ml & No. 5 Conditioner 250ml",
+   "slug": "/olaplex-bond-maintenance-no-4-shampoo-250ml-no-5-conditioner-250ml-duo-olaplex-no-4d-clean-volume-detox-dry-shampoo-250ml"
+  },
+  {
+   "pid": 97761,
+   "name": "Redken Acidic Color Gloss Sulphate-Free Shampoo 300ml and Acidic Color",
+   "slug": "/redken-duo-acidic-color-gloss-sulphate-free-shampoo-300ml-and-acidic-color-gloss-conditioner-300ml"
+  },
+  {
+   "pid": 97771,
+   "name": "Matrix A Curl Can Dream Cleansing Shampoo with Manuka Honey & Intensel",
+   "slug": "/matrix-biolage-duo-matrix-biolage-a-curl-can-dream-cleansing-shampoo-with-manuka-honey-extract-for-curly-and-coily-hair-1l-intensely-hydrating-rich-mask-with-manuka-honey-extract-for-curly-and-coily-hair-1l"
+  },
+  {
+   "pid": 97780,
+   "name": "CeraVe Advanced Repair Ointment for Very Dry and Chapped Skin 88ml Dou",
+   "slug": "/double-cerave-advanced-repair-ointment-for-very-dry-and-chapped-skin-88ml"
+  },
+  {
+   "pid": 97894,
+   "name": "L'Oreal Professionnel Serie Expert Serioxyl Advanced Purifier & Bodifi",
+   "slug": "/l-oreal-professionnel-double-serie-expert-serioxyl-advanced-purifier-bodifier-shampoo-500ml"
+  },
+  {
+   "pid": 97895,
+   "name": "L'Oreal Professionnel Blondifier Gloss Shampoo 500ml & Blondifier Glos",
+   "slug": "/l-oreal-professionnel-duo-blondifier-gloss-shampoo-500ml-blondifier-gloss-conditioner-500ml"
+  },
+  {
+   "pid": 97896,
+   "name": "L'Oreal Professionnel Serie Expert Absolut Repair Shampoo 500ml & Seri",
+   "slug": "/l-oreal-professionnel-duo-serie-expert-absolut-repair-shampoo-500ml-serie-expert-absolut-repair-conditioner-500ml"
+  },
+  {
+   "pid": 97897,
+   "name": "L'Oreal Professionnel Vitamino Color Shampoo 500ml & Vitamino Color Co",
+   "slug": "/l-oreal-professionnel-duo-vitamino-color-shampoo-500ml-vitamino-color-conditioner-500ml"
+  },
+  {
+   "pid": 97898,
+   "name": "L'Oreal Professionnel Series Expert Pro Longer Shampoo 500ml & Serie E",
+   "slug": "/l-oreal-professionnel-duo-serie-expert-pro-longer-shampoo-500ml-serie-expert-pro-longer-conditioner-500ml"
+  },
+  {
+   "pid": 97901,
+   "name": "Biolage Bond Therapy Pre-Shampoo Intensive Treatment Infused with Citr",
+   "slug": "/matrix-double-bond-therapy-pre-shampoo-intensive-treatment-infused-with-citric-acid-and-coconut-oil-for-over-processed-damaged-hair-150ml"
+  },
+  {
+   "pid": 97966,
+   "name": "Redken Acidic Color Gloss Activated Glass Gloss Treatment 237ml and Co",
+   "slug": "/redken-duo-acidic-color-gloss-shampoo-300ml-and-glass-gloss-treatment-250ml"
+  },
+  {
+   "pid": 97971,
+   "name": "Philip Kingsley Flaky Itchy Scalp Shampoo 75ml & Flaky Itchy Scalp Con",
+   "slug": "/philip-kingsley-duo-flaky-itchy-scalp-shampoo-75ml-flaky-itchy-scalp-conditioner"
+  },
+  {
+   "pid": 97978,
+   "name": "Redken Acidic Color Gloss Shampoo 300ml and Acidic Color Gloss Conditi",
+   "slug": "/redken-duo-acidic-color-gloss-shampoo-300ml-and-acidic-color-gloss-conditioner-50ml"
+  },
+  {
+   "pid": 98123,
+   "name": "Matrix A Curl Can Dream Scrunch 'N' Go Defining Spray With 230\u00b0C Heat",
+   "slug": "/matrix-double-a-curl-can-dream-scrunch-n-go-defining-spray-with-230-c-heat-protection-for-all-day-definition-on-waves-and-curls"
+  },
+  {
+   "pid": 98143,
+   "name": "Redken Acidic Bonding Concentrate Shampoo and Conditioner 500ml Bond R",
+   "slug": "/redken-duo-acidic-bonding-concentrate-shampoo-and-conditioner-500ml-bond-repair-supersize-bundle"
+  },
+  {
+   "pid": 98145,
+   "name": "Redken Acidic Color Gloss Sulphate-Free Shampoo 500ml and Acidic Color",
+   "slug": "/redken-duo-acidic-color-gloss-shampoo-and-conditioner-500ml-colour-protection-routine-for-glass-like-shine-supersize"
+  },
+  {
+   "pid": 98177,
+   "name": "Dermalogica Biolumin-C Vitamin C Serum 30ml and Biolumin-C Night Resto",
+   "slug": "/dermalogica-duo-biolumin-c-vitamin-c-serum-30ml-and-biolumin-c-night-restore-25ml"
+  },
+  {
+   "pid": 98178,
+   "name": "Dermalogica BioLumin-C Vitamin C Eye Serum 15ml and Biolumin-C Night R",
+   "slug": "/dermalogica-duo-biolumin-c-vitamin-c-eye-serum-15ml-and-biolumin-c-night-restore-25ml"
+  },
+  {
+   "pid": 98253,
+   "name": "Redken Acidic Bonding Curls Leave-In Treatment 250ml & Hydrating Curl",
+   "slug": "/redken-duo-acidic-bonding-curls-leave-in-treatment-250ml-hydrating-curl-cream-250ml"
+  },
+  {
+   "pid": 98312,
+   "name": "L\u2019Or\u00e9al Professionnel Absolut Repair Molecular Hair Shampoo & Refil",
+   "slug": "/l-oreal-professionnel-duo-absolut-repair-molecular-hair-shampoo-absolut-repair-molecular-shampoo-refill-pack-500ml-for-damaged-hair"
+  },
+  {
+   "pid": 98316,
+   "name": "L\u2019Or\u00e9al Professionel Serie Expert Silver Shampoo 500ml & Refill Pac",
+   "slug": "/l-oreal-professionnel-duo-serie-expert-silver-shampoo-500ml-shampoo-refill-pack-500ml-for-grey-silver-coloured-har"
+  },
+  {
+   "pid": 98322,
+   "name": "CeraVe Renewing 10% Pure Vitamin C Serum with Ceramides for Brighter &",
+   "slug": "/cerave-double-renewing-10-pure-vitamin-c-serum-with-ceramides-for-brighter-smoother-skin-30ml"
+  },
+  {
+   "pid": 98323,
+   "name": "CeraVe Skin Renewing Eye Cream with Peptide Complex & Caffeine for Bri",
+   "slug": "/cerave-double-skin-renewing-eye-cream-with-peptide-complex-caffeine-for-brighter-smoother-eyes-15ml"
+  },
+  {
+   "pid": 98324,
+   "name": "CeraVe Renewing 10% Pure Vitamin C Serum 30ml & Skin Renewing Eye Crea",
+   "slug": "/cerave-duo-renewing-10-pure-vitamin-c-serum-with-ceramides-for-brighter-smoother-skin-30ml-skin-renewing-eye-cream-with-peptide-complex-caffeine-for-brighter-smoother-eyes-15ml"
+  },
+  {
+   "pid": 98348,
+   "name": "Coco & Eve Boost Therapy Volumising Shampoo 280ml & Boost Therapy Volu",
+   "slug": "/coco-eve-duo-boost-therapy-volumising-shampoo-280ml-boost-therapy-voumising-conditioner-280ml"
+  },
+  {
+   "pid": 98349,
+   "name": "Coco & Eve Youth Revive Pro Youth Shampoo 280ml & Youth Revive Pro You",
+   "slug": "/coco-eve-duo-youth-revive-pro-youth-shampoo-280ml-youth-revive-pro-youth-conditioner-280ml"
+  },
+  {
+   "pid": 98350,
+   "name": "Coco & Eve Like a Virgin Clarifying Detox Shampoo 280ml & Hydrating Cr",
+   "slug": "/coco-eve-duo-like-a-virgin-clarifying-detox-shampoo-280ml-like-a-virgin-super-hydrating-cream-conditioner-280ml"
+  },
+  {
+   "pid": 98356,
+   "name": "Matrix Instacure Bond Shampoo 1000ml & Instacure Bond Conditioner 100",
+   "slug": "/matrix-duo-instacure-bond-shampoo-1000ml-instacure-bond-conditioner-1000ml"
+  },
+  {
+   "pid": 98359,
+   "name": "CeraVe Intensive Moisturising Lotion 236ml & Moisturising Cream Pot 34",
+   "slug": "/cerave-duo-intensive-moisturising-lotion-236ml-moisturising-cream-pot-340g"
+  },
+  {
+   "pid": 98360,
+   "name": "Cerave Intensive Moisturising Lotion 236ml & Facial Moisturising Lotio",
+   "slug": "/cerave-duo-intensive-moisturising-lotion-236ml-facial-moisturising-lotion-no-spf-52ml"
+  },
+  {
+   "pid": 98402,
+   "name": "CeraVe Travel Size Moisturising Lotion 88ml & Hydrating Cleanser 88ml",
+   "slug": "/cerave-duo-travel-size-moisturising-lotion-for-dry-skin-88ml-travel-size-hydrating-cleanser-for-normal-to-dry-skin-88ml"
+  },
+  {
+   "pid": 98418,
+   "name": "Schwarzkopf BlondMe Bond Repair Purple Shampoo 300ml & BlondMe Purple",
+   "slug": "/schwarzkopf-duo-blondme-bond-repair-purple-shampoo-300ml-blondme-bond-repair-purple-conditioner-250ml"
+  },
+  {
+   "pid": 98424,
+   "name": "Schwarzkopf BlondMe Bond Repair Nourishing Shampoo 300ml & Bond Repair",
+   "slug": "/schwarzkopf-duo-blondme-bond-repair-nourishing-shampoo-300ml-blondme-bond-repair-nourishing-conditioner-250ml"
+  },
+  {
+   "pid": 98428,
+   "name": "Schwarzkopf BlondMe Bondfinity Deep Repair Mask 200ml & BlondMe Renewa",
+   "slug": "/schwarzkopf-duo-blondme-bondfinity-deep-repair-mask-200ml-blondme-bondfinity-deep-repair-renewal-oil-50ml"
+  },
+  {
+   "pid": 98447,
+   "name": "Redken Acidic Bonding Concentrate 24/7 Night & Day Lightweight Leave-I",
+   "slug": "/redken-double-acidic-bonding-concentrate-24-7-night-and-day-hair-serum-bond-repair-for-damaged-hair-lightweight-leave-in-serum-100m"
+  },
+  {
+   "pid": 98454,
+   "name": "Matrix Glow Mania Color Glow Shampoo 300ml & Glow Mania Color Glow Con",
+   "slug": "/matrix-duo-glow-mania-color-glow-shampoo-300ml-glow-mania-color-glow-conditioner-300ml"
+  },
+  {
+   "pid": 98543,
+   "name": "L'Or\u00e9al Professionnel Vitamino Color Spectrum Shampoo 300ml and Rinse",
+   "slug": "/l-oreal-professionnel-duo-vitamino-color-spectrum-shampoo-300ml-and-rinse-off-hair-mask-250ml-for-coloured-hair"
+  },
+  {
+   "pid": 98545,
+   "name": "L'Or\u00e9al Professionnel Vitamino Color Spectrum Shampoo 300ml & Refill",
+   "slug": "/l-oreal-professionnel-vitamino-duo-color-spectrum-shampoo-300ml-refill-pack-500ml-for-coloured-hair"
+  },
+  {
+   "pid": 98546,
+   "name": "L'Or\u00e9al Professionnel Vitamino Color Spectrum Shampoo 500ml & Refill",
+   "slug": "/l-oreal-professionnel-duo-vitamino-color-spectrum-shampoo-refill-pack-500ml-for-coloured-hair"
+  },
+  {
+   "pid": 98550,
+   "name": "Australian Bodycare Hair Clean Shampoo 200ml & Hair Care Conditioner 2",
+   "slug": "/australian-bodycare-duo-hair-clean-shampoo-200ml-hair-care-conditioner-200ml"
+  },
+  {
+   "pid": 98603,
+   "name": "Scottish Fine Soaps Thistle & Black Pepper All In One Wash Refill 1.2l",
+   "slug": "/scottish-fine-soaps-duo-thistle-black-pepper-all-in-one-wash-refill-1-2ltr-pouch-refillable-aluminium-bottle-500ml-with-pump"
+  },
+  {
+   "pid": 98646,
+   "name": "Scottish Fine Soaps Naturals Coriander & Lime Leaf Hand Wash Refill 60",
+   "slug": "/scottish-fine-soaps-duo-scottish-fine-soaps-naturls-coriander-lime-leaf-hand-wash-refill-600ml-pouch-refillable-aluminium-bottle-500ml-with-pump"
+  },
+  {
+   "pid": 98647,
+   "name": "Scottish Fine Soaps Sea Kelp Hand Wash 750ml Refill & Refillable Alumi",
+   "slug": "/scottish-fine-soaps-duo-sea-kelp-hand-wash-750ml-refill-refillable-aluminium-bottle-500ml-with-pump"
+  },
+  {
+   "pid": 98700,
+   "name": "St Tropez Sunlit Skin Express Bronzing Tint Self Tan 30ml & Expert Tan",
+   "slug": "/st-tropez-duo-sunlit-skin-express-bronzing-tint-self-tan-30ml-expert-tantour-application-face-brush"
+  },
+  {
+   "pid": 98904,
+   "name": "Coco & Eve Pre-Shampoo Treatment Bond Building 125ml & Sweet Repair Ha",
+   "slug": "/coco-eve-duo-pre-shampoo-treatment-bond-building-125ml-sweet-repair-hair-mask-reparing-restoring-212ml"
+  },
+  {
+   "pid": 98906,
+   "name": "Redken Acidic Bonding Concentrate Bond Repair Shampoo 500ml & Refill P",
+   "slug": "/redken-duo-acidic-bonding-concentrate-bond-repair-shampoo-500ml-refill-pouch-500ml"
+  },
+  {
+   "pid": 98925,
+   "name": "Amika Forget Frizz Shampoo 1000ml & Forget Frizz Conditioner 1000ml Du",
+   "slug": "/amika-duo-forget-frizz-shampoo-1000ml-forget-frizz-conditioner-1000ml"
+  },
+  {
+   "pid": 98991,
+   "name": "amika normcare Signature Shampoo 1000ml & normcare Signature Condition",
+   "slug": "/amika-duo-normcare-signature-shampoo-1000ml-normcare-signature-conditioner-1000ml"
+  },
+  {
+   "pid": 99336,
+   "name": "Redken Acidic Grow Full System Densifying Shampoo 300ml & Conditioner",
+   "slug": "/redken-duo-acidic-grow-full-system-densifying-shampoo-300ml-conditioner-300ml"
+  },
+  {
+   "pid": 99540,
+   "name": "K\u00e9rastase Resistance Bain Force Architecte 250ml & Masque Force Archi",
+   "slug": "/kerastase-bain-force-architecte-250ml-masque-force-architecte-200ml-duo"
+  },
+  {
+   "pid": 99551,
+   "name": "K\u00e9rastase Resistance Bain Th\u00e9rapiste 250ml & Masque Th\u00e9rapiste 200m",
+   "slug": "/kerastase-bain-therapiste-250ml-kerastase-masque-therapiste-200ml-duo"
+  },
+  {
+   "pid": 99564,
+   "name": "K\u00e9rastase Specifique Bain Vital Dermo Calm & Specifique Masque Hydra",
+   "slug": "/kerestase-duo-specifique-bain-vital-dermo-calm-specifique-masque-hydra-apaisant"
+  },
+  {
+   "pid": 99565,
+   "name": "K\u00e9rastase Specifique Bain Riche Dermo Calm & Specifique Masque Hydra",
+   "slug": "/kerastase-duo-specifique-bain-riche-dermo-calm-specifique-masque-hydra-apaisant"
+  },
+  {
+   "pid": 99571,
+   "name": "K\u00e9rastase Densifique Bain Densit\u00e9 250ml & Densifique Fondant Densit",
+   "slug": "/kerastase-duo-densifique-bain-densite-250ml-densifique-fondant-200ml"
+  },
+  {
+   "pid": 99572,
+   "name": "K\u00e9rastase Densifique Bain Densit\u00e9 250ml & Densifique Masque Densit\u00e9",
+   "slug": "/kerastase-duo-densifique-bain-densite-250ml-densifique-masque-200ml"
+  },
+  {
+   "pid": 99582,
+   "name": "K\u00e9rastase Resistance Bain Extentioniste 250ml and Fondant Extentionis",
+   "slug": "/kerastase-duo-resistance-bain-extentioniste-250ml-and-fondant-extentioniste-200ml"
+  },
+  {
+   "pid": 99599,
+   "name": "K\u00e9rastase Blond Absolu Bain Lumiere 250ml & Cicaflash Conditioner 250",
+   "slug": "/kerastase-duo-blond-absolue-bain-lumiere-250ml-blond-absolue-fluide-miracle-conditioner-250ml"
+  },
+  {
+   "pid": 99600,
+   "name": "K\u00e9rastase Blond Absolu Bain Ultra-Violet 250ml & Cicaflash Conditione",
+   "slug": "/kerastase-duo-blond-absolue-bain-ultra-violet-250ml-blond-absolue-fluide-miracle-conditioner-250ml"
+  },
+  {
+   "pid": 99601,
+   "name": "K\u00e9rastase Blond Absolu Lumiere 250ml & Blond Absolu Masque Ultra-Viol",
+   "slug": "/kerastase-duo-blond-absolue-lumiere-250ml-blond-absolue-masque-ultra-violet-200ml"
+  },
+  {
+   "pid": 99602,
+   "name": "K\u00e9rastase Blond Absolu Bain Ultra-Violet 250ml & Masque Ultra-Violet",
+   "slug": "/kerastase-duo-blond-absolue-bain-ultra-violet-250ml-blond-absolue-masque-ultra-violet-200ml"
+  },
+  {
+   "pid": 99615,
+   "name": "K\u00e9rastase Soleil Bain Apr\u00e9s-Soleil 250ml and Masque Apres-Soleil 200",
+   "slug": "/kerastase-duo-soleil-bain-apres-soleil-and-masque-apres-soleil"
+  },
+  {
+   "pid": 99641,
+   "name": "K\u00e9rastase Genesis Bain Hydra-Fortifiant 250ml & Fondant Renforcateur",
+   "slug": "/kerastase-duo-genesis-bain-hydra-fortifiant-250ml-and-genesis-fondant-reinforcatuer-200ml"
+  },
+  {
+   "pid": 99646,
+   "name": "K\u00e9rastase Genesis Bain Hydra-Fortifiant 250ml & Masque Reconstituant",
+   "slug": "/kerastase-genesis-bain-hydra-fortifiant-250ml-masque-reconstituant-200ml-duo"
+  },
+  {
+   "pid": 99647,
+   "name": "K\u00e9rastase Genesis Bain Nutri-Fortifiant 250ml & Masque Reconstituant",
+   "slug": "/kerastase-genesis-bain-nutri-fortifiant-250ml-masque-reconstituant-200ml-duo"
+  },
+  {
+   "pid": 99674,
+   "name": "K\u00e9rastase Curl Manifesto Bain Hydratation Douceur Shampoo 250ml & Fon",
+   "slug": "/kerastase-duo-curl-manifesto-bain-hydratation-shampoo-and-conditioner"
+  },
+  {
+   "pid": 99675,
+   "name": "K\u00e9rastase Curl Manifesto Bain Hydratation Douceur Shampoo 250ml & Nou",
+   "slug": "/kerastase-duo-curl-manifesto-hydratation-shampoo-nourishing-butter-hair-masque-duo"
+  },
+  {
+   "pid": 99687,
+   "name": "K\u00e9rastase Specifique Bain Divalent 250ml and Specifique R\u00e9hydratant",
+   "slug": "/kerastase-duo-specifique-bain-divalent-250ml-and-specifique-rehydratant-hair-mask-200ml"
+  },
+  {
+   "pid": 99706,
+   "name": "K\u00e9rastase Chroma Absolu Bain Respect Shampoo 250ml and Chroma Absolu",
+   "slug": "/kerastase-duo-chroma-absolu-bain-opaque-shampoo-250ml-and-chroma-absolu-repairing-fondant-200ml"
+  },
+  {
+   "pid": 99707,
+   "name": "K\u00e9rastase Chroma Absolu Bain Riche Shampoo 250ml and Strengthening Fo",
+   "slug": "/kerastase-duo-chroma-absolu-bain-limpid-shampoo-250ml-and-chroma-absolu-repairing-fondant-200ml"
+  },
+  {
+   "pid": 99708,
+   "name": "K\u00e9rastase Chroma Absolu Bain Riche Shampoo 250ml and Chroma Absolu Ma",
+   "slug": "/kerastase-duo-chroma-absolu-bain-opaque-shampoo-250ml-and-chroma-absolu-mask-200ml"
+  },
+  {
+   "pid": 99710,
+   "name": "K\u00e9rastase Chroma Absolu Bain Respect Shampoo 250ml and Colour Correct",
+   "slug": "/kerastase-duo-chroma-absolu-bain-opaque-shampoo-250ml-and-chroma-absolu-colour-correcting-mask-150ml"
+  },
+  {
+   "pid": 99711,
+   "name": "K\u00e9rastase Chroma Absolu Bain Riche Shampoo 250ml and Colour Correctin",
+   "slug": "/kerastase-duo-chroma-absolu-bain-limpid-shampoo-250ml-and-chroma-absolu-colour-correcting-mask-150ml"
+  },
+  {
+   "pid": 99724,
+   "name": "K\u00e9rastase Genesis Homme Strength & Thickness Boosting Spray 150ml Dou",
+   "slug": "/kerastase-double-genesis-homme-strength-thickness-boosting-spray-190ml"
+  },
+  {
+   "pid": 99736,
+   "name": "K\u00e9rastase Genesis Homme Thickness Boosting Spray 150ml & Molding Clay",
+   "slug": "/kerastase-duo-genesis-homme-strength-thickness-boosting-spray-150ml-genesis-homme-instant-thickening-molding-clay-75ml"
+  },
+  {
+   "pid": 99750,
+   "name": "K\u00e9rastase L\u2019Incroyable Blowdry 150ml and Fresh Affair Dry Shampoo 1",
+   "slug": "/kerastase-duo-l-incroyable-blowdry-150ml-and-fresh-affair-dry-shampoo-150g"
+  },
+  {
+   "pid": 99763,
+   "name": "K\u00e9rastase Symbiose Purifying & Detangling Anti-Dandruff Shampoo & Con",
+   "slug": "/kerastase-duo-symbiose-purifying-detangling-anti-dandruff-shampoo-conditioner"
+  },
+  {
+   "pid": 99764,
+   "name": "K\u00e9rastase Symbiose Moisturising & Detangling Anti-Dandruff Shampoo &",
+   "slug": "/kerastase-duo-symbiose-moisturising-detangling-anti-dandruff-shampoo-conditioner"
+  },
+  {
+   "pid": 99765,
+   "name": "K\u00e9rastase Symbiose Purifying & Moisturising Anti-Dandruff Cellular Sh",
+   "slug": "/kerastase-duo-symbiose-purifying-moisturising-anti-dandruff-cellular-shampoo"
+  },
+  {
+   "pid": 99786,
+   "name": "K\u00e9rastase Nutritive Bain Satin Hydrating Shampoo 250ml and Lait Vital",
+   "slug": "/kerastase-duo-nutritive-bain-satin-hydrating-shampoo-250ml-and-lait-vital-200ml"
+  },
+  {
+   "pid": 99795,
+   "name": "K\u00e9rastase Nutritive Bain Satin Riche High Nutrition Rich Shampoo With",
+   "slug": "/kerastase-double-nutritive-bain-satin-riche-high-nutrition-rich-shampoo-with-niacinamide-for-very-dry-hair-250ml"
+  },
+  {
+   "pid": 99822,
+   "name": "K\u00e9rastase Elixir Ultime L'Huile Originale Hair Oil 75ml and Refill 75",
+   "slug": "/kerastase-duo-elixir-ultime-l-huile-originale-hair-oil-elixir-ultime-l-huile-originale-hair-oil-refill-75ml"
+  },
+  {
+   "pid": 99850,
+   "name": "K\u00e9rastase Elixir Ultime L'Huile Originale Hair Oil Refill 75ml & Elix",
+   "slug": "/kerastase-duo-elixir-ultime-l-huile-originale-hair-oil-refill-75ml-elixir-ultime-l-huile-originale-hair-oil-30ml"
+  },
+  {
+   "pid": 99863,
+   "name": "K\u00e9rastase Blond Absolu Bain Lumiere 500ml & Blond Absolu Shampoo Refi",
+   "slug": "/kerastase-duo-kerastase-blond-absolu-bain-lumiere-500ml-blond-absolu-shampoo-hydrating-refill-pouch-for-lightened-highlighted-blonde-hair-with-hyaluronic-acid-500ml"
+  },
+  {
+   "pid": 99890,
+   "name": "Kerastase Gloss Absolu Refillable Shampoo 500ml & Gloss Absolu Refill",
+   "slug": "/kerastase-duo-gloss-absolu-refillable-shampoo-500ml-gloss-absolu-refill-pouch-shampoo-500ml"
+  },
+  {
+   "pid": 104931,
+   "name": "L'ANZA Keratin Healing Oil Lustrous Shampoo 300ml & Keratin Healing O",
+   "slug": "/lanza-duo-keratin-healing-oil-shampoo-300ml-healing-oil-conditioner-250ml"
+  },
+  {
+   "pid": 105005,
+   "name": "Goldwell Dual Senses Blonde & Highlights Anti-Yellow 60 Second Treatme",
+   "slug": "/goldwell-dual-senses-blonde-highlights-anti-yellow-60-second-treatment-200ml-double"
+  },
+  {
+   "pid": 105016,
+   "name": "Goldwell Dual Senses Rich Repair Restoring Shampoo 250ml and Condition",
+   "slug": "/goldwell-dual-senses-rich-repair-restoring-shampoo-250ml-and-conditioner-200ml-duo"
+  },
+  {
+   "pid": 105022,
+   "name": "Goldwell Dual Senses Ultra Volume Bodifying Shampoo 250ml and Conditio",
+   "slug": "/goldwell-dual-senses-ultra-volume-bodifying-shampoo-250ml-and-conditioner-200ml-duo"
+  },
+  {
+   "pid": 105082,
+   "name": "JOICO Defy Damage Protective Shampoo 1000ml With Pump",
+   "slug": "/joico-duo-defy-damage-protective-shampoo-for-bond-strengthening-and-color-longevity-white-pump-1000ml"
+  },
+  {
+   "pid": 105117,
+   "name": "JOICO Blonde Life Brightening Shampoo 1000ml With Pump",
+   "slug": "/joico-duo-blonde-life-brightening-shampoo-1000ml-with-pump"
+  },
+  {
+   "pid": 105118,
+   "name": "JOICO Blonde Life Brightening Conditioner 1000ml with Pump",
+   "slug": "/joico-duo-blonde-life-brightening-conditioner-1000ml-with-pump"
+  },
+  {
+   "pid": 105119,
+   "name": "JOICO Blonde Life Violet Shampoo 1000ml With Pump",
+   "slug": "/joico-duo-blonde-life-violet-shampoo-1000ml-with-pump"
+  },
+  {
+   "pid": 105120,
+   "name": "JOICO Blonde Life Violet Conditioner 1000ml With Pump",
+   "slug": "/joico-duo-blonde-life-violet-conditioner-1000ml-white-pump"
+  },
+  {
+   "pid": 105121,
+   "name": "JOICO JoiFULL Volumizing Shampoo 1000ml With Pump",
+   "slug": "/joico-duo-joifull-volumizing-shampoo-1000ml-with-pump"
+  },
+  {
+   "pid": 105122,
+   "name": "JOICO JoiFULL Volumizing Conditioner 1000ml With Pump",
+   "slug": "/joico-duo-joifull-volumizing-conditioner-with-pump"
+  },
+  {
+   "pid": 105142,
+   "name": "JOICO Moisture Recovery Shampoo 300ml & Moisture Recovery Conditioner",
+   "slug": "/joico-duo-moisture-recovery-shampoo-300ml-moisture-recovery-conditioner-250ml"
+  },
+  {
+   "pid": 105348,
+   "name": "L'Anza Healing Curls Butter Shampoo 236ml & Healing Curls Butter Condi",
+   "slug": "/l-anza-duo-healing-curls-butter-shampoo-236ml-healing-curls-butter-conditioner-236ml"
+  },
+  {
+   "pid": 105349,
+   "name": "L'Anza Healing Curls Flex Memory Gel 200ml & Healing Curls Restore Moi",
+   "slug": "/l-anza-duo-healing-curls-flex-memory-gel-200ml-healing-curls-restore-moisture-treatment-177ml"
+  },
+  {
+   "pid": 105379,
+   "name": "Goldwell Dualsenses Scalp Specialist, Sensitive Foam Shampoo 250ml & D",
+   "slug": "/goldwell-duo-dualsenses-scalp-specialist-sensitive-foam-shampoo-250ml-dualsenses-scalp-specialist-scalp-rebalance-hydrate-fluid-150ml"
+  },
+  {
+   "pid": 105380,
+   "name": "Goldwell Dualsenses Scalp Specialist, Densifying Shampoo 250ml & Goldw",
+   "slug": "/goldwell-duo-dualsenses-scalp-specialist-densifying-shampoo-250ml-goldwell-dualsenses-scalp-specialist-anti-hair-loss-serum-150ml"
+  },
+  {
+   "pid": 105425,
+   "name": "Alterna My Hair. My Canvas. Begin Again Curl Cleanser 201ml and Condit",
+   "slug": "/alterna-duo-my-hair-my-canvas-begin-again-curl-cleanser-201ml-my-hair-my-canvas-begin-again-curl-conditioner-201-ml"
+  },
+  {
+   "pid": 105444,
+   "name": "K18 Peptide Prep Detox Shampoo 250ml and Leave-In Molecular Repair Hai",
+   "slug": "/k18-duo-peptide-prep-detox-shampoo-250ml-and-leave-in-molecular-repair-hair-mask-50ml"
+  },
+  {
+   "pid": 105445,
+   "name": "K18 Peptide Prep PH Shampoo 250ml and Leave-In Molecular Repair Hair M",
+   "slug": "/k18-duo-peptide-prep-ph-shampoo-250ml-and-leave-in-molecular-repair-hair-mask-50ml"
+  },
+  {
+   "pid": 105594,
+   "name": "Joico InnerJoi Preserve Shampoo 1000ml & InnerJoi Preserve Conditioner",
+   "slug": "/joico-duo-innerjoi-preserve-shampoo-1000ml-innerjoi-preserve-conditioner-1000ml"
+  },
+  {
+   "pid": 105595,
+   "name": "Joico InnerJoi Hydration Shampoo 1000ml & InnerJoi Hydration Condition",
+   "slug": "/joico-duo-innerjoi-hydration-shampoo-1000ml-innerjoi-hydration-conditioner-1000ml-1"
+  },
+  {
+   "pid": 105668,
+   "name": "Joico Scalp Vitality Exfoliating Foaming Scrub 177ml & Scalp Vitality",
+   "slug": "/joico-duo-scalp-vitality-exfoliating-foaming-scrub-177ml-scalp-vitality-refreshing-shampoo-300ml"
+  },
+  {
+   "pid": 105711,
+   "name": "Goldwell Dualsenses Color Brilliance Shampoo 1000ml & Color Brilliance",
+   "slug": "/goldwell-duo-dualsenses-color-brilliance-shampoo-1000ml-color-brilliance-conditioner-1000ml"
+  },
+  {
+   "pid": 105712,
+   "name": "Goldwell Dualsenses Extra Rich Brilliance Shampoo 1000ml & Extra Rich",
+   "slug": "/goldwell-duo-dualsenses-extra-rich-brilliance-shampoo-1000ml-extra-rich-conditioner-1000ml"
+  },
+  {
+   "pid": 105713,
+   "name": "Goldwell Dualsenses Blonde & Highlights Anti-Yellow Shampoo 1000ml & A",
+   "slug": "/goldwell-duo-dualsenses-bonde-highlights-anti-yellow-shampoo-1000ml-anti-yellow-conditioner-1000ml"
+  },
+  {
+   "pid": 105715,
+   "name": "Goldwell Dualsenses Rich Repair Restoring Shampoo 1000ml & Rich Repair",
+   "slug": "/goldwell-duo-dualsenses-rich-repair-restoring-shampoo-1000ml-rich-repair-restoring-conditioner-1000ml"
+  },
+  {
+   "pid": 105716,
+   "name": "Goldwell Dualsenses Ultra Volume Bodifying Shampoo 1000ml & Ultra Volu",
+   "slug": "/goldwell-duo-dualsenses-ultra-volume-bodifying-shampoo-1000ml-ultra-volume-conditioner-1000ml"
+  },
+  {
+   "pid": 105717,
+   "name": "Goldwell Dualsenses Curls & Waves Shampoo 1000ml & Curls & Waves Condi",
+   "slug": "/goldwell-duo-dualsenses-curls-waves-shampoo-1000ml-curls-waves-conditioner-1000ml"
+  },
+  {
+   "pid": 105718,
+   "name": "Goldwell Dualsenses Bond Pro Shampoo 1000ml & Bond Pro Conditioner 100",
+   "slug": "/goldwell-duo-dualsenses-bond-pro-shampoo-1000ml-bond-pro-conditioner-1000ml"
+  },
+  {
+   "pid": 105734,
+   "name": "Goldwell Dualsenses Bond Pro Shampoo 250ml & Bond Pro Conditioner 200m",
+   "slug": "/goldwell-duo-dualsenses-bond-pro-shampoo-250ml-bond-pro-conditioner-200ml"
+  },
+  {
+   "pid": 110021,
+   "name": "K\u00e9rastase Genesis Bain Shampoo Refillable Bottle & Refill Pouch 500ml",
+   "slug": "/kerastase-duo-genesis-bain-shampoo-refillable-bottle-to-protect-from-hair-fall-with-ginger-root-edelweiss-flower-kerastase-genesis-hydra-fortifiant-shampoo-refill-pouch"
+  },
+  {
+   "pid": 110028,
+   "name": "Scottish Fine Soaps Sea Kelp Marine Spa Pouch 1.2ltr & Refillable Alum",
+   "slug": "/scottish-fine-soaps-duo-sea-kelp-marine-spa-pouch-1-2ltr-refillable-aluminium-bottle-500ml-with-pump"
+  },
+  {
+   "pid": 110029,
+   "name": "Scottish Fine Soaps Wild Heather Hand Wash Refill 1.2ltr Pouch & Refil",
+   "slug": "/scottish-fine-soaps-duo-wild-heather-hand-wash-refill-1-2ltr-pouch-refillable-aluminium-bottle-500ml-with-pump"
+  },
+  {
+   "pid": 110030,
+   "name": "Scottish Fine Soaps Oakmoss Hand Wash Refill 1.2ltr Pouch & Refillable",
+   "slug": "/scottish-fine-soaps-duo-oakmoss-hand-wash-refill-1-2ltr-pouch-refillable-aluminium-bottle-500ml-with-pump"
+  },
+  {
+   "pid": 110037,
+   "name": "Redken Acidic Color Gloss Sulphate-Free Shampoo 500ml & Refill Pouch 5",
+   "slug": "/redken-duo-acidic-color-gloss-sulphate-free-shampoo-500ml-refill-pouch-500ml"
+  },
+  {
+   "pid": 110045,
+   "name": "K\u00e9rastase Gloss Absolu Bain Cr\u00e8me Hydra-Glaze 500ml & Refill Pouch D",
+   "slug": "/kerastase-duo-gloss-absolu-bain-creme-hydra-glaze-500ml-and-refill-pouch-500ml"
+  },
+  {
+   "pid": 123690,
+   "name": "JOICO HydraSplash Hydrating Shampoo 300ml & HydraSplash Hydrating Cond",
+   "slug": "/joico-duo-hydrasplash-hydrating-shampoo-300ml-hydrasplash-hydrating-conditioner-250ml"
+  },
+  {
+   "pid": 123698,
+   "name": "Olaplex No.4P Blonde Enhancer Toning Shampoo 250ml and No. 5 Bond Main",
+   "slug": "/olaplex-duo-no-4p-blonde-enhancer-toning-shampoo-250ml-and-no-5-bond-maintenance-conditioner-250ml"
+  },
+  {
+   "pid": 123706,
+   "name": "Olaplex No.4P Blonde Enhancer Toning Shampoo 250ml & No. 5 Bond Mainte",
+   "slug": "/olaplex-no-4p-blonde-enhancer-toning-shampoo-250ml-and-no-5-bond-maintenance-conditioner-250ml-duo-olaplex-no-8-bond-intense-moisture-mask-100ml"
+  },
+  {
+   "pid": 123713,
+   "name": "Coco & Eve Like a Virgin Super Hydrating Shampoo 280ml & Conditioner 2",
+   "slug": "/coco-eve-duo-like-a-virgin-super-hydrating-shampoo-280ml-like-a-virgin-super-hydrating-cream-conditioner-280ml"
+  },
+  {
+   "pid": 123715,
+   "name": "CeraVe Intensive Moisturising Lotion 473ml & Moisturising Cream Pot 45",
+   "slug": "/cerave-duo-intensive-moisturising-lotion-473ml-moisturising-cream-pot-454g"
+  },
+  {
+   "pid": 126796,
+   "name": "milk_shake Moisture Plus Shampoo 300ml & Moisture Plus Conditioner 250",
+   "slug": "/milk-shake-duo-moisture-plus-shampoo-300ml-moisture-plus-conditioner-250ml"
+  },
+  {
+   "pid": 126798,
+   "name": "milk_shake Silver Shine Shampoo 300ml & Silver Shine Conditioner 250ml",
+   "slug": "/milk-shake-duo-silver-shine-shampoo-300ml-silver-shine-conditioner-250ml"
+  },
+  {
+   "pid": 127402,
+   "name": "L'ANZA Healing Remedy Shampoo 266ml & Healing Remedy Conditioner 250ml",
+   "slug": "/lanza-duo-healing-remedy-shampoo-300ml-healing-remedy-conditioner-250ml"
+  },
+  {
+   "pid": 127412,
+   "name": "K\u00e9rastase Specifique Balancing Clay Cleansing Hair Clay 250ml & Speci",
+   "slug": "/kerastase-duo-specifique-cleansing-hair-clay-250ml-and-ml-and-specifique-rehydratant-hair-mask-200ml"
+  },
+  {
+   "pid": 127420,
+   "name": "Redken Color Extend Magnetics Conditioner 300ml and MINI Color Extend",
+   "slug": "/redken-duo-color-extend-magnetics-conditioner-300ml-and-mini-color-extend-magnetics-conditioner-30ml"
+  },
+  {
+   "pid": 127425,
+   "name": "Olaplex No.4P Blonde Enhancer Toning Shampoo & No. 5P Blonde Enhancer",
+   "slug": "/olaplex-no-4p-blonde-enhancer-toning-shampoo-and-no-5p-blonde-enhancer-toning-conditioner-250ml-duo-olaplex-no-8-bond-intense-moisture-mask-100ml"
+  },
+  {
+   "pid": 127427,
+   "name": "Redken Acidic Color Gloss SulphateFree Shampoo 500ml & Acidic Color Gl",
+   "slug": "/redken-duo-acidic-color-gloss-sulphate-free-shampoo-colour-protection-glass-like-shine-for-colour-treated-hair-500ml-acidic-color-gloss-conditioner"
+  },
+  {
+   "pid": 129038,
+   "name": "Goldwell Dual Senses Color Brilliance Shampoo 250ml and Conditioner 20",
+   "slug": "/goldwell-dual-senses-color-brilliance-shampoo-250ml-and-conditioner-200ml-duo"
+  },
+  {
+   "pid": 129041,
+   "name": "Goldwell Dual Senses Color Brilliance Extra Rich Shampoo 250ml and Con",
+   "slug": "/goldwell-dual-senses-color-brilliance-extra-rich-shampoo-250ml-and-conditioner-200ml-duo"
+  },
+  {
+   "pid": 129043,
+   "name": "Goldwell Dual Senses Blonde & Highlights Anti-Yellow Shampoo 250ml Dou",
+   "slug": "/goldwell-dual-senses-blonde-highlights-anti-yellow-shampoo-250ml-double"
+  },
+  {
+   "pid": 129044,
+   "name": "Goldwell Dual Senses Blonde & Highlights Anti-Yellow Shampoo 250ml and",
+   "slug": "/goldwell-dual-senses-blonde-highlights-anti-yellow-shampoo-250ml-and-conditioner-200ml-duo"
+  },
+  {
+   "pid": 129046,
+   "name": "Goldwell Dual Senses Just Smooth Taming Shampoo 250ml and Conditioner",
+   "slug": "/goldwell-dual-senses-just-smooth-taming-shampoo-250ml-and-conditioner-200ml-duo"
+  },
+  {
+   "pid": 129159,
+   "name": "Dermalogica Special Cleansing Gel 500ml & New Skin Smoothing Cream Moi",
+   "slug": "/dermalogica-duo-special-cleansing-gel-500ml-new-skin-smoothing-cream-100ml"
+  }
+ ]
+}

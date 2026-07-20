@@ -79,7 +79,7 @@
 --    does not). Direct HTTP from the build environment is egress-filtered, so
 --    this was not confirmed by fetching the page.
 INSERT INTO retailers (id, name, base_url, active)
-VALUES (30, 'Gorgeous Shop', 'https://www.gorgeousshop.co.uk', false)
+VALUES (30, 'Gorgeous Shop', 'https://www.gorgeousshop.com', false)  -- .com, not .co.uk: see 20260720170000
 ON CONFLICT (id) DO UPDATE
   SET name = EXCLUDED.name,
       base_url = EXCLUDED.base_url;
