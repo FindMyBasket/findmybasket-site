@@ -31,9 +31,14 @@ export async function generateMetadata({
   // A Brand Spotlight hub takes precedence over the price-comparison page.
   const hub = await getBrandHub(params.slug);
   if (hub) {
+    // A hub may carry its own title/description; otherwise derive them from
+    // the brand name and lede as before.
     return {
-      title: `${hub.hub.display_name} Brand Spotlight | FindMyBasket`,
+      title:
+        hub.hub.seo_title ??
+        `${hub.hub.display_name} Brand Spotlight | FindMyBasket`,
       description:
+        hub.hub.meta_description ??
         hub.hub.lede ??
         `Discover the ${hub.hub.display_name} range on FindMyBasket.`,
       alternates: { canonical },
