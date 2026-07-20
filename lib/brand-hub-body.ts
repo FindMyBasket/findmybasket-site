@@ -1,3 +1,8 @@
+// Pinned to 2.17.0 deliberately: 2.17.6 moved to htmlparser2 v12, which is
+// pure ESM and cannot be require()d from Next's CommonJS server runtime. That
+// fails at request time, not build time, and takes down every /brands/[slug]
+// render (hub or not) because this module sits in the route's import graph.
+// Check htmlparser2 is still CJS before bumping.
 import sanitizeHtml from 'sanitize-html';
 
 // Sanitiser for brand_hubs.body_html (long-form spotlight editorial).

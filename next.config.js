@@ -1,12 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // sanitize-html (brand hub body_html) depends on htmlparser2, which is
-  // ESM-only. Bundling it through webpack fails with "ESM packages need to be
-  // imported"; leaving it external means Node require()s it at runtime on the
-  // server, where it works. It is only ever used server-side.
-  experimental: {
-    serverComponentsExternalPackages: ['sanitize-html'],
-  },
   // Allow product images from all known retailer CDNs
   images: {
     remotePatterns: [
