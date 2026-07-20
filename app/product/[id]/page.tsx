@@ -11,7 +11,7 @@ import {
   resolveCanonicalKeeper,
 } from '../../../lib/product-queries';
 import { buildBreadcrumbJsonLd } from '../../../lib/breadcrumb';
-import { IMPORTER_RETAILER_IDS, categoryToSlug } from '../../../lib/queries';
+import { SPECIALIST_IMPORTER_RETAILER_IDS, categoryToSlug } from '../../../lib/queries';
 import { displayProductTitle } from '../../../lib/format/product-name';
 import { ProductDescription } from '../../../components/ProductDescription';
 import { ClickOutLink } from '../../../components/ClickOutLink';
@@ -152,9 +152,11 @@ export default async function ProductPage({ params }: { params: { id: string } }
 
   const inStockOffers = offers.filter(o => o.in_stock);
   const outOfStockOffers = offers.filter(o => !o.in_stock);
-  // Importer-only products (Stylevana/YesStyle, see IMPORTER_RETAILER_IDS) get a
-  // "Specialist import" badge to set delivery/customs expectations.
-  const isSpecialistOnly = inStockOffers.length > 0 && inStockOffers.every(o => IMPORTER_RETAILER_IDS.has(o.retailer_id));
+  // Products stocked only by specialist importers (Stylevana/YesStyle/Atelier De
+  // Glow, see SPECIALIST_IMPORTER_RETAILER_IDS) get a "Specialist import" badge to
+  // set delivery/customs expectations. Presentational only — these retailers are
+  // shown and ranked on price alongside every other retailer.
+  const isSpecialistOnly = inStockOffers.length > 0 && inStockOffers.every(o => SPECIALIST_IMPORTER_RETAILER_IDS.has(o.retailer_id));
   // Offers are sorted in-stock-first then ascending by effective_price, so [0] is
   // the best price and [1] is the next-best. Anchor the saving to the next-best
   // price (not the most expensive) so one outlier high price cannot inflate it.
