@@ -97,9 +97,16 @@ console.log("\n=== 2. CATEGORY MIX ===");
 // Darwin feeds carry google_product_category/product_type; LEGACY AWIN CSV
 // carries merchant_product_category_path/category_name instead. Without the
 // legacy names the category mix comes back entirely "(blank)".
-const catField = ["google_product_category", "product_type", "merchant_product_category_path", "category_name"]
-  .find((c) => col(c) >= 0) ?? "product_type";
-console.log(`(category field in use: ${catField})`);
+// Pick the first candidate that EXISTS **and carries data**. Picking on
+// existence alone silently produced a 100%-blank category mix on both legacy
+// feeds diagnosed so far (Gorgeous Shop fid 110188, Counter Culture fid 95461):
+// each declares merchant_product_category_path and leaves it empty on every
+// row, while category_name holds the real values.
+const CAT_CANDIDATES = ["google_product_category", "product_type", "merchant_product_category_path", "category_name"];
+const catField = CAT_CANDIDATES.find((c) => col(c) >= 0 && body.some((r) => get(r, c) !== ""))
+  ?? CAT_CANDIDATES.find((c) => col(c) >= 0)
+  ?? "product_type";
+console.log(`(category field in use: ${catField}${col(catField) < 0 ? " — ABSENT" : body.some((r) => get(r, catField) !== "") ? "" : " — present but EMPTY on every row"})`);
 const catCounts = new Map<string, number>();
 for (const r of body) { const c = get(r, catField) || "(blank)"; catCounts.set(c, (catCounts.get(c) || 0) + 1); }
 for (const [c, n] of [...catCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20)) console.log(`  ${String(n).padStart(4)}  ${c}`);
