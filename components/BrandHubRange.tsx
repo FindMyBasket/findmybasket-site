@@ -6,6 +6,9 @@ import type { BrandHubOffer, BrandHubProduct } from '../lib/brand-hub-queries';
 interface Props {
   products: BrandHubProduct[];
   rangeSub: string | null;
+  rangeTitle: string | null;
+  rangeCtaLabel: string | null;
+  rangeCtaUrl: string | null;
   offer: BrandHubOffer | null; // already filtered to a live offer (or null)
 }
 
@@ -24,7 +27,14 @@ const ARROW = (
   </svg>
 );
 
-export function BrandHubRange({ products, rangeSub, offer }: Props) {
+export function BrandHubRange({
+  products,
+  rangeSub,
+  rangeTitle,
+  rangeCtaLabel,
+  rangeCtaUrl,
+  offer,
+}: Props) {
   // Category tabs in first-appearance order (products are already sort_order'd).
   const categories = useMemo(() => {
     const seen: string[] = [];
@@ -41,8 +51,11 @@ export function BrandHubRange({ products, rangeSub, offer }: Props) {
 
   return (
     <div className="bh-range" id="range">
+      {/* The heading is part of the framing, not decoration: "The range" over
+          three cards reads as "these three are the range". A hub that curates
+          out of a larger compared catalogue overrides it. */}
       <div className="bh-range-head">
-        <h2 className="bh-serif">The range</h2>
+        <h2 className="bh-serif">{rangeTitle ?? 'The range'}</h2>
       </div>
       {rangeSub && <p className="bh-range-sub">{rangeSub}</p>}
 
@@ -106,6 +119,29 @@ export function BrandHubRange({ products, rangeSub, offer }: Props) {
           </article>
         ))}
       </div>
+
+      {/* Visual counterweight to the card row. Without this the only "there is
+          more than this" signals are body-text links, which lose to three large
+          cards. Same internal/external rule as the cards: an internal
+          comparison page must never be marked sponsored/nofollow. */}
+      {rangeCtaLabel && rangeCtaUrl && (
+        <div className="bh-range-cta">
+          {rangeCtaUrl.startsWith('/') ? (
+            <a className="bh-btn bh-btn-gold" href={rangeCtaUrl}>
+              {rangeCtaLabel} {ARROW}
+            </a>
+          ) : (
+            <a
+              className="bh-btn bh-btn-gold"
+              href={rangeCtaUrl}
+              target="_blank"
+              rel="sponsored nofollow noopener"
+            >
+              {rangeCtaLabel} {ARROW}
+            </a>
+          )}
+        </div>
+      )}
 
       {offer && (
         <div className="bh-offer" id="offer">

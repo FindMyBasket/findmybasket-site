@@ -31,6 +31,13 @@ export interface BrandHub {
   disclosure: string | null;
   zone_note: string | null;
   range_sub: string | null;
+  // Range framing. The card row is a curation, not the catalogue: on a brand
+  // with a large compared range these let the template say so, rather than
+  // leaving it to body-text links. Null keeps the pre-existing render
+  // ("The range" heading, no CTA band).
+  range_title: string | null;
+  range_cta_label: string | null;
+  range_cta_url: string | null;
   // Optional long-form editorial. Never render this raw: it goes through
   // sanitizeBrandHubBody() in lib/brand-hub-body.ts.
   body_html: string | null;
@@ -88,7 +95,7 @@ export async function getBrandHub(slug: string): Promise<BrandHubData | null> {
   const { data: hub, error } = await supabase
     .from('brand_hubs')
     .select(
-      'slug, display_name, accent_treatment, logo_path, eyebrow, lede, pillars, show_comparison, single_path_note, offer, disclosure, zone_note, range_sub, body_html, seo_title, meta_description, headline'
+      'slug, display_name, accent_treatment, logo_path, eyebrow, lede, pillars, show_comparison, single_path_note, offer, disclosure, zone_note, range_sub, range_title, range_cta_label, range_cta_url, body_html, seo_title, meta_description, headline'
     )
     .eq('slug', slug)
     .maybeSingle();
