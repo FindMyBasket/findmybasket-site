@@ -15,11 +15,22 @@ import { gunzipSync } from "node:zlib";
 import { createClient } from "@supabase/supabase-js";
 import { buildMatchKey, normaliseForMatch } from "../supabase/functions/_shared/match-key.ts";
 
-const env = Object.fromEntries(
-  readFileSync("./.env.local", "utf8").split(/\n/).filter((l) => l.includes("="))
-    .map((l) => { const i = l.indexOf("="); return [l.slice(0, i).trim(), l.slice(i + 1).trim()]; }),
-);
-const sb = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+// Credentials come from the process environment when present (CI), falling back
+// to .env.local for local runs. CI has no .env.local, so reading it
+// unconditionally would throw before the diagnosis starts.
+function loadEnv(): Record<string, string> {
+  try {
+    return Object.fromEntries(
+      readFileSync("./.env.local", "utf8").split(/\n/).filter((l) => l.includes("="))
+        .map((l) => { const i = l.indexOf("="); return [l.slice(0, i).trim(), l.slice(i + 1).trim()]; }),
+    );
+  } catch { return {}; }
+}
+const env = loadEnv();
+const SB_URL = process.env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL;
+const SB_KEY = process.env.SUPABASE_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+if (!SB_URL || !SB_KEY) throw new Error("Need SUPABASE_URL + SUPABASE_KEY (or .env.local NEXT_PUBLIC_* pair).");
+const sb = createClient(SB_URL, SB_KEY, { auth: { persistSession: false } });
 
 // ---- 1. Load the feed CSV (gz URL, or plain file) ----
 async function loadFeed(): Promise<string> {
@@ -83,7 +94,12 @@ for (const [b, n] of brandsSorted.slice(0, 25)) console.log(`  ${String(n).padSt
 
 // ---- 2. Category mix + K-beauty ----
 console.log("\n=== 2. CATEGORY MIX ===");
-const catField = col("google_product_category") >= 0 ? "google_product_category" : "product_type";
+// Darwin feeds carry google_product_category/product_type; LEGACY AWIN CSV
+// carries merchant_product_category_path/category_name instead. Without the
+// legacy names the category mix comes back entirely "(blank)".
+const catField = ["google_product_category", "product_type", "merchant_product_category_path", "category_name"]
+  .find((c) => col(c) >= 0) ?? "product_type";
+console.log(`(category field in use: ${catField})`);
 const catCounts = new Map<string, number>();
 for (const r of body) { const c = get(r, catField) || "(blank)"; catCounts.set(c, (catCounts.get(c) || 0) + 1); }
 for (const [c, n] of [...catCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20)) console.log(`  ${String(n).padStart(4)}  ${c}`);
@@ -91,8 +107,36 @@ for (const [c, n] of [...catCounts.entries()].sort((a, b) => b[1] - a[1]).slice(
 // crude beauty/skincare keyword signal over title+category+product_type
 const beautyRe = /(serum|cream|cleanser|toner|moisturis|spf|sunscreen|essence|ampoule|mask|foundation|lipstick|mascara|concealer|blush|skincare|skin care|makeup|make-up|cosmetic|fragrance|perfume|shampoo|conditioner|balm|exfoliat|retinol|niacinamide|hyaluronic)/i;
 let beautyHits = 0;
-for (const r of body) { const blob = `${get(r, "title")} ${get(r, catField)} ${get(r, "product_type")}`; if (beautyRe.test(blob)) beautyHits++; }
+for (const r of body) {
+  // include product_name so LEGACY feeds (no `title` column) still register
+  const blob = `${get(r, "title")} ${get(r, "product_name")} ${get(r, catField)} ${get(r, "product_type")}`;
+  if (beautyRe.test(blob)) beautyHits++;
+}
 console.log(`beauty/skincare keyword hits: ${beautyHits}/${body.length} (${(beautyHits / body.length * 100).toFixed(0)}%)`);
+
+// ---- 2b. Fragrance share ----
+// Fragrance is gated off in the categoriser (EXTENDED_CATEGORIES_ENABLED=false),
+// so fragrance rows import but never surface on the site. A large fragrance
+// block is therefore dead weight until that flag flips, and needs sizing before
+// onboarding rather than after.
+const fragranceRe = /(eau de parfum|eau de toilette|eau de cologne|\bedp\b|\bedt\b|\bedc\b|aftershave|after shave|parfum|cologne|fragrance mist|body mist)/i;
+let fragranceHits = 0;
+const fragranceBrands = new Map<string, number>();
+for (const r of body) {
+  const blob = `${get(r, "title")} ${get(r, "product_name")} ${get(r, catField)}`;
+  if (!fragranceRe.test(blob)) continue;
+  fragranceHits++;
+  const b = get(r, brandField) || "(blank)";
+  fragranceBrands.set(b, (fragranceBrands.get(b) || 0) + 1);
+}
+const fragPct = (fragranceHits / body.length * 100);
+console.log(`\nFRAGRANCE share: ${fragranceHits}/${body.length} (${fragPct.toFixed(1)}%)`);
+console.log(fragPct >= 20
+  ? "  WARNING: large fragrance block — imports but does NOT surface while EXTENDED_CATEGORIES_ENABLED=false"
+  : "  (fragrance block is small enough not to dominate the import)");
+for (const [b, n] of [...fragranceBrands.entries()].sort((a, b2) => b2[1] - a[1]).slice(0, 12)) {
+  console.log(`  ${String(n).padStart(4)}  ${b}`);
+}
 
 // K-beauty: cross-ref feed brands against brands we already carry under K-beauty retailers (11 Stylevana, 25 YesStyle, 7 Skin Cupid)
 const { data: krows } = await sb.from("retailer_prices").select("product_id").in("retailer_id", [7, 11, 25]).limit(100000);

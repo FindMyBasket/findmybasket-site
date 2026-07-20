@@ -1,0 +1,93 @@
+name: feed-diag (read-only)
+
+# Manual, READ-ONLY diagnosis of a candidate AWIN feed before onboarding.
+#
+# Why this exists: scripts/atelier-feed-diag.mts needs the raw feed, which needs
+# AWIN_API_KEY. That secret lives here and in the edge functions, and GitHub
+# secrets are write-only by design, so the harness cannot be run from a laptop
+# or a dev container. This job runs it where the key already is and prints the
+# report to the run log.
+#
+# The deployed awin-feed-count edge function answers brand-level questions
+# without a key, but it only returns merchant_product_id / in_stock /
+# product_name / brand_name. It cannot produce match_key tier A or category mix,
+# which are the numbers that actually decide an onboarding.
+#
+# WRITES NOTHING. Downloads a feed to the runner, reads the catalogue, prints.
+# No Storage upload, no import trigger, no DB mutation.
+#
+# Required GitHub secrets:
+#   AWIN_API_KEY          - AWIN publisher API key
+#   SUPABASE_PROJECT_REF  - crtrjoescntlcjiwdtrt
+#   SUPABASE_SERVICE_KEY  - Supabase key for catalogue reads (SELECT only here)
+
+"on":
+  workflow_dispatch:
+    inputs:
+      fid:
+        description: 'AWIN feed id (e.g. 110188 for Gorgeous Shop)'
+        required: true
+        type: string
+      label:
+        description: 'Retailer name, for the report header'
+        required: false
+        default: '(unnamed candidate)'
+        type: string
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download candidate feed
+        env:
+          AWIN_API_KEY: ${{ secrets.AWIN_API_KEY }}
+          FID: ${{ inputs.fid }}
+        run: |
+          # No `set -x` anywhere in this step: the URL embeds AWIN_API_KEY and
+          # tracing would print it to a log that outlives the run.
+          set -eu
+          COLS="aw_deep_link,product_name,aw_product_id,merchant_product_id,search_price,store_price,merchant_deep_link,brand_name,rrp_price,in_stock,merchant_product_category_path,category_name,ean,mpn,merchant_image_url"
+          curl -fsS \
+            "https://productdata.awin.com/datafeed/download/apikey/${AWIN_API_KEY}/fid/${FID}/format/csv/language/en/delimiter/%2C/compression/gzip/adultcontent/1/columns/${COLS}/" \
+            -o feed.csv.gz
+          ls -lah feed.csv.gz
+
+          # AWIN returns HTML/JSON errors with a 200, so a successful curl is not
+          # proof of a feed. Require gzip magic.
+          MAGIC=$(head -c 2 feed.csv.gz | xxd -p)
+          if [ "$MAGIC" != "1f8b" ]; then
+            echo "::error::Not gzip (magic=$MAGIC) — likely an AWIN error response, not a feed"
+            exit 1
+          fi
+
+          gunzip -c feed.csv.gz > feed.csv
+          echo "rows (incl header): $(wc -l < feed.csv)"
+
+      - name: Run read-only diagnosis
+        env:
+          FEED_FILE: ./feed.csv
+          SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          LABEL: ${{ inputs.label }}
+          FID: ${{ inputs.fid }}
+        run: |
+          set -eu
+          echo "=============================================="
+          echo " FEED DIAGNOSIS — ${LABEL} (fid ${FID})"
+          echo " read-only: nothing is written to the DB"
+          echo "=============================================="
+          npx --yes tsx scripts/atelier-feed-diag.mts
+
+      - name: Discard feed
+        if: always()
+        run: rm -f feed.csv feed.csv.gz
