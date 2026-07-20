@@ -256,6 +256,7 @@ import {
   extractCanonicalSize,
   extractShade,
 } from "../_shared/match-key.ts";
+import { isMultipackMismatch } from "../_shared/multipack-guard.ts";
 import { reconstructBeautyFlashName, BEAUTY_FLASH_RETAILER_ID } from "./name-reconstruction.ts";
 import { cleanDebenhamsName, DEBENHAMS_RETAILER_ID } from "./name-hygiene.ts";
 
@@ -510,6 +511,14 @@ serve(async (req) => {
     ? config.category_path_must_contain
     : [];
   const existingBrandsOnly: boolean = config.existing_brands_only === true;
+  // Skip rows whose deeplink advertises a multipack while the product name
+  // describes a single item — the price would misrepresent the product. Opt-in
+  // per retailer: only merchants that actually sell "buy two" under the single
+  // item's name need it. See _shared/multipack-guard.ts.
+  const multipackGuard: boolean = config.multipack_deeplink_guard === true;
+  let countSkippedMultipack = 0;
+  let countMultipackUnresolved = 0;
+  const sampleSkippedMultipack: Array<{ feed_name: string; matched_product_id: number; matched_name: string; url: string }> = [];
   // Rollout flag: when true, fetch+decompress+parse the feed as a stream
   // instead of materialising the whole decompressed feed in memory. Defaults to
   // false (legacy path) for every retailer until explicitly promoted.
@@ -634,6 +643,10 @@ serve(async (req) => {
   // kept load_maps at ~15s under B alone.
   const productByExact = new Map<string, number>();
   const productByStripped = new Map<string, StrippedEntry>();
+  // Names of the products this chunk could match, so the multipack guard can
+  // test the MATCHED product rather than the feed's own name (see
+  // _shared/multipack-guard.ts — the feed name is not a valid proxy).
+  const productNameById = new Map<number, string>();
   const loadedBrands = new Set<string>();
 
   // Persistent (whole-import) accumulator — survives chunk boundaries, bounded by
@@ -768,21 +781,35 @@ serve(async (req) => {
       const exactKey = buildMatchKey(p.brand || "", p.name);
       if (!exactKey) continue;
       if (!productByExact.has(exactKey)) productByExact.set(exactKey, p.id);
+      if (!productNameById.has(p.id)) productNameById.set(p.id, p.name || "");
       const strippedKey = stripSize(exactKey);
       if (strippedKey && !productByStripped.has(strippedKey)) {
         productByStripped.set(strippedKey, { id: p.id, size: extractSize(exactKey), numbers: extractNameNumbers(p.name) });
       }
     }
+    // Each of these projections also carries the matched product's name (see
+    // migration 20260720200000). The multipack guard needs it: a row matched on
+    // EAN/MPN/ext_id never touches the `products` set, so without this its
+    // matched name is unknown and the guard cannot evaluate.
+    const rememberName = (id: unknown, nm: unknown) => {
+      const pid = typeof id === "number" ? id : Number(id);
+      if (Number.isFinite(pid) && typeof nm === "string" && nm && !productNameById.has(pid)) {
+        productNameById.set(pid, nm);
+      }
+    };
     for (const r of (sets?.eans ?? [])) {
       const k = String(r.ean || "").trim();
       if (k && r.product_id != null && !eanToProductId.has(k)) eanToProductId.set(k, r.product_id);
+      rememberName(r.product_id, r.name);
     }
     for (const r of (sets?.mpns ?? [])) {
       const k = String(r.mpn || "").trim();
       if (k && r.product_id != null && !mpnToProductId.has(k)) mpnToProductId.set(k, r.product_id);
+      rememberName(r.product_id, r.name);
     }
     for (const r of (sets?.extids ?? [])) {
       if (r.external_product_id) existingByExtId.set(r.external_product_id, r);
+      rememberName(r.product_id, r.name);
     }
 
     // Overlay the persistent in-feed learning so a product linked/created in an
@@ -1951,6 +1978,38 @@ serve(async (req) => {
       }
       continue;
     }
+    // Multipack guard, MATCHED branch. Compared against the matched product's
+    // name, which is the actual determinant: the feed's own name is not a valid
+    // proxy because the Tier-4 stripped matcher strips past the multiplier and
+    // lands a "Duo" feed row on a single product. Falls back to the feed name
+    // only if the chunk map somehow lacks the id, which would otherwise silently
+    // disable the guard.
+    if (multipackGuard && matchedProductId) {
+      // NO fallback to the feed's name. Falling back to it is the proxy bug this
+      // guard exists to eliminate, and it silently reopened the hole once
+      // already. If the matched product's name cannot be resolved, DECLINE to
+      // suppress: a missed suppression is recoverable, a wrongly-dropped row is
+      // an invisible gap in the comparison.
+      const matchedName = productNameById.get(matchedProductId);
+      if (matchedName === undefined) countMultipackUnresolved++;
+      if (matchedName !== undefined && isMultipackMismatch(rawMerchantUrl || wrappedUrl, matchedName)) {
+        countSkippedMultipack++;
+        if (sampleSkippedMultipack.length < 20) {
+          sampleSkippedMultipack.push({ feed_name: name, matched_product_id: matchedProductId, matched_name: matchedName, url: rawMerchantUrl || wrappedUrl });
+        }
+        continue;
+      }
+    }
+
+    // Multipack guard, CREATE-NEW branch. No matched product to compare against,
+    // so the feed name is all there is. A multipack deeplink whose feed name
+    // reads as a single item would create a product named like the single but
+    // priced as a multipack.
+    if (multipackGuard && !matchedProductId && isMultipackMismatch(rawMerchantUrl || wrappedUrl, name)) {
+      countSkippedMultipack++;
+      continue;
+    }
+
     if (matchedProductId) {
       countLinkExisting++;
       linkActions.push({ product_id: matchedProductId, ext_id: matchValue, price, url: wrappedUrl, in_stock: inStock, ean: rawEan, mpn: rawMpn, image_url: imageUrl });
@@ -2251,6 +2310,12 @@ serve(async (req) => {
     match_column_used: config.match_column,
     feed_format_used: feedFormat,
     top_category_default_used: topCategoryDefault,
+    // Reported so a guard that starts over- or under-firing is visible in the
+    // run output rather than silently changing the landed row count.
+    multipack_guard_enabled: multipackGuard,
+    skipped_multipack_mismatch: countSkippedMultipack,
+    multipack_name_unresolved: countMultipackUnresolved,
+    sample_skipped_multipack: sampleSkippedMultipack,
     dry_run: dryRun,
     feed_total_rows: feedRows,
     feed_fetch_ms: fetchMs,
