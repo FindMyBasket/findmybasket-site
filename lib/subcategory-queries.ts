@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { getActiveRetailerIds } from './retailers';
-import { applyImporterRule, brandSlug, nextBestSavingPct, nextBestPrice, type FeaturedProduct, type TopBrand, type TopCategory } from './queries';
+import { summarisePriceRows, brandSlug, nextBestSavingPct, nextBestPrice, type FeaturedProduct, type TopBrand, type TopCategory } from './queries';
 
 export interface SubcategoryStats {
   total_products: number;
@@ -230,7 +230,7 @@ export async function getSubcategoryProducts(
   for (const product of products) {
     const rows = byProduct.get(product.id);
     if (!rows) continue;
-    const { retailerCount, prices: priceList } = applyImporterRule(rows);
+    const { retailerCount, prices: priceList } = summarisePriceRows(rows);
     if (retailerCount === 0 || priceList.length === 0) continue;
 
     const minPrice = Math.min(...priceList);

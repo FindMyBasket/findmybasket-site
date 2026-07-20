@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { getActiveRetailerIds } from './retailers';
-import { applyImporterRule, brandSlug, nextBestSavingPct, nextBestPrice, IMPORTER_RETAILER_IDS, type FeaturedProduct } from './queries';
+import { summarisePriceRows, brandSlug, nextBestSavingPct, nextBestPrice, type FeaturedProduct } from './queries';
 
 export interface ProductDetail {
   id: number;
@@ -167,15 +167,6 @@ const { data: retailers } = await supabase    .from('retailers')
     return a.effective_price - b.effective_price;
   });
 
-  // Hide specialist K-beauty importers (Stylevana, YesStyle — see
-  // IMPORTER_RETAILER_IDS) when a mainstream UK retailer stocks the same product,
-  // since UK retailers are cheaper/faster/more trustworthy. Keep importers when
-  // they're the only in-stock option (incl. when ONLY other importers stock it).
-  const hasNonImporterInStock = offers.some(o => !IMPORTER_RETAILER_IDS.has(o.retailer_id) && o.in_stock);
-  if (hasNonImporterInStock) {
-    return offers.filter(o => !IMPORTER_RETAILER_IDS.has(o.retailer_id));
-  }
-
   return offers;
 }
 
@@ -255,7 +246,7 @@ export async function getMoreFromBrand(
   for (const row of rows) {
     const priceRows = byProduct.get(row.id);
     if (!priceRows) continue;
-    const { retailerCount, prices: priceList } = applyImporterRule(priceRows);
+    const { retailerCount, prices: priceList } = summarisePriceRows(priceRows);
     if (retailerCount === 0 || priceList.length === 0) continue;
     scored.push({
       id: row.id,
@@ -326,7 +317,7 @@ async function fetchRelated(
   for (const row of rows) {
     const priceRows = byProduct.get(row.id);
     if (!priceRows) continue;
-    const { retailerCount, prices: priceList } = applyImporterRule(priceRows);
+    const { retailerCount, prices: priceList } = summarisePriceRows(priceRows);
     if (retailerCount === 0 || priceList.length === 0) continue;
     const minPrice = Math.min(...priceList);
     const savingPct = nextBestSavingPct(priceList);

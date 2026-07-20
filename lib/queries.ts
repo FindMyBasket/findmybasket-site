@@ -67,8 +67,8 @@ export interface FeaturedProduct {
   subcategory: string | null;
   image_url: string | null;
   retailer_count: number;
-  // Null when no in-stock retailer remains after the importer rule — render as
-  // "Out of stock" rather than £Infinity (Math.min([]) === Infinity guard).
+  // Null when no retailer is in stock — render as "Out of stock" rather than
+  // £Infinity (Math.min([]) === Infinity guard).
   min_price: number | null;
   // The next-best (second-lowest) in-stock price — a real reference price shown
   // struck through on the card, consistent with saving_pct. Null when there is
@@ -114,30 +114,32 @@ export function brandSlug(brand: string): string {
     .replace(/^-|-$/g, '');
 }
 
-// Hides specialist K-beauty importers (Stylevana #11, YesStyle #25) when a
-// mainstream UK retailer is in stock. Original justification: Stylevana feed
-// 98661 had unreliable product URLs, so we preferred a more reliable retailer
-// whenever one existed. Pending Stylevana migration to feed 101286 — when that
-// ships and link quality is verified in production, this rule and the constant
-// can be removed entirely (Stylevana shown alongside every other retailer).
-export const IMPORTER_RETAILER_IDS = new Set<number>([11, 25]);
+// Specialist import retailers: Stylevana #11, YesStyle #25, Atelier De Glow #29.
+// Presentational ONLY — drives the "Specialist import" badge so longer delivery
+// and possible customs charges are set out before the click. These retailers are
+// never hidden or de-ranked; they compete on price like any other.
+export const SPECIALIST_IMPORTER_RETAILER_IDS = new Set<number>([11, 25, 29]);
 
-// Apply the importer-hide rule to a product's in-stock price rows. Filters by
-// retailer_id, NOT by price value: the old value-based filter wrongly dropped a
-// non-importer whose price coincided with an importer's, which could empty the
-// price array while a retailer remained → Math.min([]) === Infinity (the
-// £Infinity brand-page bug). Importers are hidden only when at least one
-// non-importer retailer is in stock; otherwise all importers are kept.
-export function applyImporterRule(
+// Summarise a product's price rows for card display. Deliberately unfiltered:
+// every active in-stock retailer counts and competes.
+//
+// This previously hid importers whenever a mainstream retailer was in stock,
+// because Stylevana feed 98661 carried unreliable product URLs. Stylevana is now
+// on feed 101286 and link quality was spot-checked in production (2026-07-20:
+// 18/18 URLs resolved to live, correctly-titled product pages), so the rule has
+// been removed per its own sunset condition. It was suppressing the lowest price
+// on 1,246 product pages.
+//
+// Note for anyone reintroducing a filter here: filter by retailer_id, never by
+// price value. The original value-based filter dropped a non-importer whose price
+// coincided with an importer's, emptying the price array while a retailer
+// remained → Math.min([]) === Infinity (the £Infinity brand-page bug).
+export function summarisePriceRows(
   rows: { retailer_id: number; price: number }[]
 ): { retailerCount: number; prices: number[] } {
-  const hasNonImporter = rows.some(r => !IMPORTER_RETAILER_IDS.has(r.retailer_id));
-  const kept = hasNonImporter
-    ? rows.filter(r => !IMPORTER_RETAILER_IDS.has(r.retailer_id))
-    : rows;
   return {
-    retailerCount: new Set(kept.map(r => r.retailer_id)).size,
-    prices: kept.map(r => r.price),
+    retailerCount: new Set(rows.map(r => r.retailer_id)).size,
+    prices: rows.map(r => r.price),
   };
 }
 
@@ -350,7 +352,7 @@ export async function getFeaturedProducts(
   for (const product of products) {
     const rows = byProduct.get(product.id);
     if (!rows) continue;
-    const { retailerCount, prices: priceList } = applyImporterRule(rows);
+    const { retailerCount, prices: priceList } = summarisePriceRows(rows);
     // Featured deals require a genuine multi-retailer comparison.
     if (retailerCount < 2 || priceList.length === 0) continue;
 

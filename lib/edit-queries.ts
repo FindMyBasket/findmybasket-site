@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { applyImporterRule, brandSlug, nextBestSavingPct, nextBestPrice, type FeaturedProduct, type TopBrand } from './queries';
+import { summarisePriceRows, brandSlug, nextBestSavingPct, nextBestPrice, type FeaturedProduct, type TopBrand } from './queries';
 import { compareCategories, type BrandProductTypeChip } from './brand-queries';
 import type { Edit } from './edits';
 
@@ -179,7 +179,7 @@ export async function getEditProducts(
   for (const product of products) {
     const rows = byProduct.get(product.id);
     if (!rows) continue;
-    const { retailerCount, prices: priceList } = applyImporterRule(rows);
+    const { retailerCount, prices: priceList } = summarisePriceRows(rows);
     if (retailerCount === 0 || priceList.length === 0) continue;
 
     const minPrice = Math.min(...priceList);

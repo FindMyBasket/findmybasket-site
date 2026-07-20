@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { getActiveRetailerIds } from './retailers';
-import { applyImporterRule, brandSlug, nextBestSavingPct, nextBestPrice, type FeaturedProduct, type TopCategory } from './queries';
+import { summarisePriceRows, brandSlug, nextBestSavingPct, nextBestPrice, type FeaturedProduct, type TopCategory } from './queries';
 
 export interface BrandLookup {
   normalised_brand: string;
@@ -237,7 +237,7 @@ export async function getBrandProducts(
 
     // Pricing + count from IN-STOCK rows only — unchanged behaviour for products
     // that are buyable (incl. partially-OOS, where some retailers are in stock).
-    const inStock = applyImporterRule(rows.filter(r => r.in_stock));
+    const inStock = summarisePriceRows(rows.filter(r => r.in_stock));
 
     let minPrice: number | null;
     let nextBestPriceVal: number | null;
@@ -251,12 +251,12 @@ export async function getBrandProducts(
       retailerCount = inStock.retailerCount;
     } else {
       // Fully out of stock: null price → ProductCard renders "Out of stock".
-      // Count the retailers that carry it (importer rule over all rows) so the
-      // card still reads "N retailer(s)".
+      // Count the retailers that carry it (over all rows) so the card still
+      // reads "N retailer(s)".
       minPrice = null;
       nextBestPriceVal = null;
       savingPct = null;
-      retailerCount = applyImporterRule(rows).retailerCount;
+      retailerCount = summarisePriceRows(rows).retailerCount;
     }
 
     featured.push({
