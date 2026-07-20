@@ -43,7 +43,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # 22, not 20: supabase-js initialises a realtime client inside
+          # createClient(), which needs a native WebSocket. Node 20 has none and
+          # throws before the diagnosis prints a single line, even though this
+          # script never uses realtime.
+          node-version: '22'
 
       - name: Install dependencies
         run: npm ci
@@ -78,8 +82,10 @@ jobs:
           FEED_FILE: ./feed.csv
           SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
           SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          LABEL: ${{ inputs.label }}
-          FID: ${{ inputs.fid }}
+          # github.event.inputs is the reliable source here; the `inputs` context
+          # came through empty for label on the first dispatch.
+          LABEL: ${{ github.event.inputs.label || inputs.label || '(unnamed candidate)' }}
+          FID: ${{ github.event.inputs.fid || inputs.fid }}
         run: |
           set -eu
           echo "=============================================="
