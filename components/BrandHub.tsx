@@ -81,7 +81,14 @@ export async function BrandHub({ data }: { data: BrandHubData }) {
               />
             )}
 
-            <BrandHubRange products={products} rangeSub={hub.range_sub} offer={offer} />
+            <BrandHubRange
+              products={products}
+              rangeSub={hub.range_sub}
+              rangeTitle={hub.range_title}
+              rangeCtaLabel={hub.range_cta_label}
+              rangeCtaUrl={hub.range_cta_url}
+              offer={offer}
+            />
 
             {!hub.show_comparison && hub.single_path_note && (
               <div className="bh-single-path">

@@ -110,10 +110,19 @@
 /* range */
 .brand-hub-scope .bh-range { background: var(--paper); border: 1px solid var(--line); border-top: none; padding: 42px 56px 46px; }
 .brand-hub-scope .bh-range-head h2 { font-size: 36px; font-weight: 500; margin: 0 0 4px; }
-.brand-hub-scope .bh-range-sub { font-size: 14.5px; color: var(--ink-soft); margin-bottom: 26px; max-width: 60ch; }
+/* Carries the "these are a selection out of N" framing, so it has to land
+   before the cards do. Full ink at 16.5px, not a muted 14.5px caption. */
+.brand-hub-scope .bh-range-sub { font-size: 16.5px; line-height: 1.55; color: var(--ink); margin-bottom: 26px; max-width: 58ch; }
+/* Scoped to the range block so BrandHubComparison's .bh-range-sub (a genuine
+   sub-caption) keeps the quieter treatment. */
+.brand-hub-scope .bh-compare .bh-range-sub { font-size: 14.5px; color: var(--ink-soft); }
 .brand-hub-scope .bh-concerns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 30px; }
 .brand-hub-scope .bh-concern { font-size: 12.5px; color: var(--ink-soft); border: 1px solid var(--line); padding: 6px 14px; border-radius: 20px; background: transparent; cursor: pointer; font-family: inherit; }
 .brand-hub-scope .bh-concern.is-on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+/* range CTA — deliberately spans the full grid width so it counterweights the
+   card row instead of trailing off beside it. */
+.brand-hub-scope .bh-range-cta { display: flex; justify-content: center; margin-top: 22px; padding: 22px; background: var(--paper-2); border: 1px solid var(--line); border-radius: 5px; }
 
 /* grid + cards */
 .brand-hub-scope .bh-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
