@@ -258,6 +258,7 @@ import {
 } from "../_shared/match-key.ts";
 import { isMultipackMismatch } from "../_shared/multipack-guard.ts";
 import { requireServiceRole } from "../_shared/require-service-role.ts";
+import { finaliseRun } from "../_shared/run-metrics.ts";
 import { reconstructBeautyFlashName, BEAUTY_FLASH_RETAILER_ID } from "./name-reconstruction.ts";
 import { cleanDebenhamsName, DEBENHAMS_RETAILER_ID } from "./name-hygiene.ts";
 
@@ -2435,15 +2436,20 @@ serve(async (req) => {
       last_import_status: runHadError ? "error" : "ok",
       last_import_error: runHadError ? [finalCapMsg, ...mergedApplied.errors.slice(0, 5)].filter(Boolean).join("; ").slice(0, 1000) : null,
     }).eq("retailer_id", retailerId);
-    try {
-      await supa.from("scrape_log").insert({ retailer_id: retailerId, status: runHadError ? "partial_failure" : "success", products_seen: runMeta.staged_rows || 0, products_updated: mergedApplied.updates, products_inserted: mergedApplied.links + mergedApplied.creates, duration_ms: Date.now() - startTime });
-    } catch { /* table may not have these exact columns; ignore */ }
+    const absenceReport = await finaliseRun(supa, {
+      retailerId, runStartedAt, startTimeMs: startTime, hadError: runHadError,
+      feedRows: runMeta.staged_rows || 0,
+      matched: mergedApplied.updates,
+      inserted: mergedApplied.links + mergedApplied.creates,
+      counts: mergedCounts,
+      errorMessage: runHadError ? mergedApplied.errors.slice(0, 3).join("; ").slice(0, 500) : null,
+    });
     // Cleanup: staging slice files + all run_state rows for this run.
     try { const { data: f } = await supa.storage.from(STAGING_BUCKET).list(runId); if (f?.length) await supa.storage.from(STAGING_BUCKET).remove(f.map((x) => `${runId}/${x.name}`)); } catch { /* best effort */ }
     await supa.from("import_run_state").delete().eq("run_id", runId);
     // Refresh ISR caches for the brands/categories this run touched (best-effort).
     await triggerRevalidation(supa, retailerId, runStartedAt);
-    result.applied = { final: true, total_slices: totalSlices, updates_applied: mergedApplied.updates, links_applied: mergedApplied.links, creates_applied: mergedApplied.creates, capped_creates: mergedApplied.capped, error_count: mergedApplied.errors.length, sample_errors: mergedApplied.errors.slice(0, 10) };
+    result.applied = { final: true, total_slices: totalSlices, updates_applied: mergedApplied.updates, links_applied: mergedApplied.links, creates_applied: mergedApplied.creates, capped_creates: mergedApplied.capped, error_count: mergedApplied.errors.length, sample_errors: mergedApplied.errors.slice(0, 10), absence: absenceReport };
     result.duration_ms = Date.now() - startTime;
     return new Response(JSON.stringify(result, null, 2), { headers: { "Content-Type": "application/json" } });
   }
@@ -2471,17 +2477,17 @@ serve(async (req) => {
     })
     .eq("retailer_id", retailerId);
 
-  // Optional: log to scrape_log if the table exists in your schema
-  try {
-    await supa.from("scrape_log").insert({
-      retailer_id: retailerId,
-      status: errors.length > 0 ? "partial_failure" : "success",
-      products_seen: feedRows,
-      products_updated: updatesApplied,
-      products_inserted: linksApplied + createsApplied,
-      duration_ms: Date.now() - startTime,
-    });
-  } catch { /* table may not have these exact columns; ignore */ }
+  const absenceReport = await finaliseRun(supa, {
+    // hadError, not errors.length: a create-cap hit means the run is partial
+    // even though every write succeeded, and a partial run must not be used as
+    // an absence baseline or be allowed to flip rows.
+    retailerId, runStartedAt, startTimeMs: startTime, hadError,
+    feedRows,
+    matched: updatesApplied,
+    inserted: linksApplied + createsApplied,
+    counts: (result as any)?.counts,
+    errorMessage: hadError ? [capMsg, ...errors.slice(0, 3)].filter(Boolean).join("; ").slice(0, 500) : null,
+  });
 
   // Refresh ISR caches for the brands/categories this run touched (best-effort).
   await triggerRevalidation(supa, retailerId, runStartedAt);
@@ -2494,6 +2500,7 @@ serve(async (req) => {
     capped_creates: cappedCreates,
     error_count: errors.length,
     sample_errors: errors.slice(0, 10),
+    absence: absenceReport,
   };
   result.duration_ms = Date.now() - startTime;
 

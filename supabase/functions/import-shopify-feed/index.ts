@@ -67,6 +67,7 @@
 //
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { finaliseRun } from "../_shared/run-metrics.ts";
 import { inferCategorisationForImport } from "../_shared/categorisation.ts";
 import {
   normaliseForMatch,
@@ -957,16 +958,17 @@ serve(async (req) => {
     })
     .eq("retailer_id", retailerId);
 
-  try {
-    await supa.from("scrape_log").insert({
-      retailer_id: retailerId,
-      status: errors.length > 0 ? "partial_failure" : "success",
-      products_seen: feedRows,
-      products_updated: updatesApplied,
-      products_inserted: linksApplied + createsApplied,
-      duration_ms: Date.now() - startTime,
-    });
-  } catch { /* table may not have these exact columns; ignore */ }
+  const absenceReport = await finaliseRun(supa, {
+    // Anchor on the request's own start so rows written during this run never
+    // read as older than the run.
+    retailerId, runStartedAt: new Date(startTime).toISOString(),
+    startTimeMs: startTime, hadError: errors.length > 0,
+    feedRows,
+    matched: updatesApplied,
+    inserted: linksApplied + createsApplied,
+    counts: (result as any)?.counts,
+    errorMessage: errors.length > 0 ? errors.slice(0, 3).join("; ").slice(0, 500) : null,
+  });
 
   result.applied = {
     updates_applied: updatesApplied,
@@ -974,6 +976,7 @@ serve(async (req) => {
     creates_applied: createsApplied,
     error_count: errors.length,
     sample_errors: errors.slice(0, 10),
+    absence: absenceReport,
   };
   result.duration_ms = Date.now() - startTime;
 
