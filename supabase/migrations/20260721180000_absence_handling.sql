@@ -25,10 +25,16 @@ ALTER TABLE public.retailer_import_config
 COMMENT ON COLUMN public.retailer_import_config.absence_threshold_days IS
   'Days a row may go unseen in the feed before absence handling flips it out of stock. 0 = flip as soon as it is missed. NULL = use the conservative default (30).';
 
+-- NOTE: Boots and YesStyle are seeded PARKED at 9999 (effectively never), not
+-- at their calibrated 7/0. Between them they account for ~18k of the ~20k
+-- backlog, and almost all of those rows are their product's only offer — so
+-- arming them empties ~18k pages in a single cycle. They stay parked until
+-- Search Console coverage has been watched through the small-retailer wave.
+-- Lower them to the calibrated values (Boots 7, YesStyle 0) to arm.
 UPDATE public.retailer_import_config SET absence_threshold_days = v.days
 FROM (VALUES
-  (25, 0),   -- YesStyle: sheds ended promos instantly; 0/13 matched even at 3 days
-  (23, 7),   -- Boots: fresh 1-5d held, 13d+ overwhelmingly gone or wrong
+  (25, 9999), -- YesStyle: PARKED. Calibrated value is 0 (0/13 matched even at 3 days)
+  (23, 9999), -- Boots: PARKED. Calibrated value is 7 (fresh 1-5d held, 13d+ gone/wrong)
   (8,  21),  -- Escentual: mid volatility, calibrate as data accrues
   (11, 21),  -- Stylevana: mid
   (28, 30),  -- Debenhams: stable, 5/7 still matched at 30 days
