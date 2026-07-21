@@ -257,6 +257,7 @@ import {
   extractShade,
 } from "../_shared/match-key.ts";
 import { isMultipackMismatch } from "../_shared/multipack-guard.ts";
+import { requireServiceRole } from "../_shared/require-service-role.ts";
 import { reconstructBeautyFlashName, BEAUTY_FLASH_RETAILER_ID } from "./name-reconstruction.ts";
 import { cleanDebenhamsName, DEBENHAMS_RETAILER_ID } from "./name-hygiene.ts";
 
@@ -446,6 +447,15 @@ async function triggerRevalidation(supa: any, retailerId: number, sinceIso: stri
 }
 
 serve(async (req) => {
+  // Caller gate. verify_jwt only proves the token is a real project JWT, and
+  // the anon key — public, shipped in the browser bundle — satisfies that. Reject
+  // anything that is not service-role BEFORE reading the body or touching the DB.
+  // Every known caller (pg_cron, the fmb_invoke_import_slice self-chain and its
+  // watchdog via vault, GitHub Actions) presents service-role. No CORS preflight
+  // to spare here: this function has no browser callers and no OPTIONS handler.
+  const denied = requireServiceRole(req);
+  if (denied) return denied;
+
   const startTime = Date.now();
 
   let body: any = {};
