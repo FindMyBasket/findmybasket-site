@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { getActiveRetailerIds } from './retailers';
 import { summarisePriceRows, brandSlug, nextBestSavingPct, nextBestPrice, type FeaturedProduct } from './queries';
+import { pickFamilyOffer, type FamilyPriceRow } from './family-offer';
 
 export interface ProductDetail {
   id: number;
@@ -112,12 +113,21 @@ export async function resolveCanonicalKeeper(id: number): Promise<number | null>
 }
 
 export async function getRetailerOffers(productId: number): Promise<RetailerOffer[]> {
+  // Family-aware (shade-collapse option C): the canonical parent page surfaces
+  // offers from the whole shade family — its own row plus every shade child's —
+  // instead of only its own product_id. Chains are flattened (see the 2026-07-22
+  // chain-flatten), so one level of children is the full family. For ungrouped
+  // products the children query returns nothing and this behaves as before.
+  const { data: children } = await supabase
+    .from('products')
+    .select('id')
+    .eq('parent_product_id', productId);
+  const familyIds = [productId, ...(children ?? []).map(c => c.id)];
+
   const { data: prices } = await supabase
     .from('retailer_prices')
     .select('retailer_id, price, url, in_stock, last_updated')
-    .eq('product_id', productId);
-
-
+    .in('product_id', familyIds);
 
   if (!prices || prices.length === 0) return [];
 
@@ -133,13 +143,28 @@ const { data: retailers } = await supabase    .from('retailers')
 
   const retailerMap = new Map(retailers.map(r => [r.id, r]));
 
-  const offers: RetailerOffer[] = [];
+  // Collapse the family's rows to one representative row per retailer.
+  const rowsByRetailer = new Map<number, FamilyPriceRow[]>();
   for (const price of prices) {
-    const retailer = retailerMap.get(price.retailer_id);
-    if (!retailer) continue;
+    if (!retailerMap.has(price.retailer_id)) continue;
     if (!price.price || !price.url) continue;
+    const arr = rowsByRetailer.get(price.retailer_id) ?? [];
+    arr.push({
+      price: Number(price.price),
+      url: price.url,
+      in_stock: price.in_stock ?? false,
+      last_updated: price.last_updated,
+    });
+    rowsByRetailer.set(price.retailer_id, arr);
+  }
 
-    const numericPrice = Number(price.price);
+  const offers: RetailerOffer[] = [];
+  for (const [retailerId, rows] of rowsByRetailer) {
+    const retailer = retailerMap.get(retailerId)!;
+    const picked = pickFamilyOffer(rows);
+    if (!picked) continue;
+
+    const numericPrice = picked.price;
     const deliveryCost = retailer.delivery_cost ? Number(retailer.delivery_cost) : null;
     const deliveryThreshold = retailer.delivery_threshold ? Number(retailer.delivery_threshold) : null;
 
@@ -149,16 +174,16 @@ const { data: retailers } = await supabase    .from('retailers')
         : numericPrice;
 
     offers.push({
-      retailer_id: price.retailer_id,
+      retailer_id: retailerId,
       retailer_name: retailer.name,
       base_url: retailer.base_url,
       price: numericPrice,
-      url: price.url,
-      in_stock: price.in_stock ?? false,
+      url: picked.url,
+      in_stock: picked.in_stock,
       delivery_cost: deliveryCost,
       delivery_threshold: deliveryThreshold,
       effective_price: effectivePrice,
-      last_updated: price.last_updated,
+      last_updated: picked.last_updated,
     });
   }
 
