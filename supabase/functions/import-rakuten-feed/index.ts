@@ -109,6 +109,7 @@
 //   }
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { finaliseRun } from "../_shared/run-metrics.ts";
 import { inferCategorisationForImport } from "../_shared/categorisation.ts";
 import { normaliseDescription } from "../_shared/description.ts";
 import {
@@ -910,9 +911,14 @@ serve(async (req)=>{
       last_import_status: runHadError ? "error" : "ok",
       last_import_error: runHadError ? ([mergedApplied.capped > 0 ? `capped ${mergedApplied.capped} creates` : null, ...mergedApplied.errors.slice(0, 5)].filter(Boolean).join("; ").slice(0, 1000)) : null
     }).eq("retailer_id", retailerId);
-    try {
-      await supa.from("scrape_log").insert({ retailer_id: retailerId, status: runHadError ? "partial_failure" : "success", products_seen: meta.staged_rows ?? mergedCounts.would_update_existing ?? 0, products_updated: mergedApplied.updates, products_inserted: mergedApplied.links + mergedApplied.creates, duration_ms: Date.now() - startTime });
-    } catch  {}
+    const absenceReport = await finaliseRun(supa, {
+      retailerId, runStartedAt: runStartedAtIso, startTimeMs: startTime, hadError: runHadError,
+      feedRows: meta.staged_rows ?? mergedCounts.would_update_existing ?? 0,
+      matched: mergedApplied.updates,
+      inserted: mergedApplied.links + mergedApplied.creates,
+      counts: mergedCounts,
+      errorMessage: runHadError ? mergedApplied.errors.slice(0, 3).join("; ").slice(0, 500) : null,
+    });
     // Cleanup: remove slice files + run_state (best-effort; the 24h orphan reaper
     // and watchdog are the backstop if this fails).
     try {
@@ -1016,16 +1022,24 @@ serve(async (req)=>{
   };
   if (dryRun) return jsonResponse(result);
   // APPLY — single path keeps the legacy plain link upsert (lowestUpsert=false).
-  const applied = await applyActions(supa, retailerId, acc, { runStartedAtIso: new Date().toISOString(), lowestUpsert: false });
+  // Anchor on the request's own start, not "now": rows written during this run
+  // must never read as older than the run when absence handling compares them.
+  const singleRunStartedAt = new Date(startTime).toISOString();
+  const applied = await applyActions(supa, retailerId, acc, { runStartedAtIso: singleRunStartedAt, lowestUpsert: false });
   await supa.from("retailer_import_config").update({
     last_imported_at: new Date().toISOString(), updated_at: new Date().toISOString(), last_attempt_at: new Date().toISOString(),
     last_import_status: applied.errors.length > 0 ? "error" : "ok",
     last_import_error: applied.errors.length > 0 ? applied.errors.slice(0, 5).join("; ").slice(0, 1000) : null
   }).eq("retailer_id", retailerId);
-  try {
-    await supa.from("scrape_log").insert({ retailer_id: retailerId, status: applied.errors.length > 0 ? "partial_failure" : "success", products_seen: acc.feedRows, products_updated: applied.updatesApplied, products_inserted: applied.linksApplied + applied.createsApplied, duration_ms: Date.now() - startTime });
-  } catch  {}
-  result.applied = { updates_applied: applied.updatesApplied, links_applied: applied.linksApplied, creates_applied: applied.createsApplied, error_count: applied.errors.length, sample_errors: applied.errors.slice(0, 10) };
+  const absenceReport = await finaliseRun(supa, {
+    retailerId, runStartedAt: singleRunStartedAt, startTimeMs: startTime, hadError: applied.errors.length > 0,
+    feedRows: acc.feedRows,
+    matched: applied.updatesApplied,
+    inserted: applied.linksApplied + applied.createsApplied,
+    counts: buildCounts(acc),
+    errorMessage: applied.errors.length > 0 ? applied.errors.slice(0, 3).join("; ").slice(0, 500) : null,
+  });
+  result.applied = { updates_applied: applied.updatesApplied, links_applied: applied.linksApplied, creates_applied: applied.createsApplied, error_count: applied.errors.length, sample_errors: applied.errors.slice(0, 10), absence: absenceReport };
   result.duration_ms = Date.now() - startTime;
   return jsonResponse(result);
 });

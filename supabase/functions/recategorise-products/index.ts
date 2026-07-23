@@ -24,6 +24,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { inferCategorisation } from "../_shared/categorisation.ts";
+import { requireServiceRole } from "../_shared/require-service-role.ts";
 
 // Brand -> URL slug. MUST mirror brandSlug() in lib/queries.ts, brandSlugify()
 // in import-awin-feed and fmb_brand_slug() in SQL.
@@ -63,6 +64,14 @@ Deno.serve(async (req: Request) => {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   };
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  // Caller gate — after the preflight early-return so browser OPTIONS is never
+  // gated. verify_jwt alone does not exclude the public anon key; see
+  // _shared/require-service-role.ts. This function mutates categorisation
+  // across the catalogue, so it is service-role only.
+  const denied = requireServiceRole(req, corsHeaders);
+  if (denied) return denied;
+
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "POST only" }), {
       status: 405,
