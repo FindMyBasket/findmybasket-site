@@ -10,6 +10,7 @@
     "test": "node --test \"lib/**/*.test.ts\""
   },
   "dependencies": {
+    "@supabase/ssr": "0.12.3",
     "@supabase/supabase-js": "^2.45.0",
     "@types/sanitize-html": "^2.16.1",
     "@vercel/edge-config": "^1.4.3",
