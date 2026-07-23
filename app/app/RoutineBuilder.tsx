@@ -752,8 +752,21 @@ export default function RoutineBuilder() {
                 <p className="rb-save-desc">
                   {authedEmail
                     ? `Save these products to your account (${authedEmail}) and we'll track their prices for you.`
-                    : 'Get the best prices for your routine emailed to you each month. Free, and you can unsubscribe anytime.'}
+                    : 'Create a free account to edit your routine anytime and get price-drop alerts. Just your email, no password needed.'}
                 </p>
+                {/* Account is the primary action; the email-only save below is
+                    the quieter legacy fallback we're retiring. */}
+                {!authedEmail && (
+                  <>
+                    <a href="/account" className="rb-save-btn rb-save-account-cta">
+                      Create a free account
+                    </a>
+                    <p className="rb-save-alt-lead">
+                      Or skip the account and we&apos;ll email you this
+                      routine&apos;s best prices each month:
+                    </p>
+                  </>
+                )}
                 <div className="rb-save-form">
                   {!authedEmail && (
                     <input
@@ -766,7 +779,7 @@ export default function RoutineBuilder() {
                     />
                   )}
                   <button
-                    className="rb-save-btn"
+                    className={`rb-save-btn ${authedEmail ? '' : 'rb-save-btn-quiet'}`}
                     onClick={saveRoutine}
                     disabled={
                       saveStatus === 'saving' ||
@@ -779,7 +792,7 @@ export default function RoutineBuilder() {
                       ? 'Saved ✓'
                       : authedEmail
                       ? 'Save to my account'
-                      : 'Save routine'}
+                      : 'Email me instead'}
                   </button>
                 </div>
                 {saveStatus === 'success' && (
@@ -801,7 +814,7 @@ export default function RoutineBuilder() {
                 )}
                 {!authedEmail && (
                   <p className="rb-save-fineprint">
-                    No account needed. Unsubscribe link in every email.{' '}
+                    Unsubscribe link in every email.{' '}
                     <a href="/account">Have an account? Sign in</a>
                   </p>
                 )}
