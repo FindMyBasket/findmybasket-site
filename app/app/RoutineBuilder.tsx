@@ -86,6 +86,16 @@ export default function RoutineBuilder() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [emailDisabled, setEmailDisabled] = useState(false);
 
+  // Signed-in users save straight to their account (fmb_track_product);
+  // everyone else keeps the legacy email path until the cutover completes.
+  const [authedEmail, setAuthedEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    db.auth.getSession().then(({ data }) => {
+      setAuthedEmail(data.session?.user?.email ?? null);
+    });
+  }, []);
+
   // Modal for popup-blocked product links
   const [blockedLinks, setBlockedLinks] = useState<
     { name: string; url: string; retailer: string }[] | null
@@ -471,14 +481,45 @@ export default function RoutineBuilder() {
   // ── SAVE ROUTINE ──────────────────────────────────────────────────────
 
   const saveRoutine = async () => {
-    const email = saveEmail.trim().toLowerCase();
-    if (!email || !email.includes('@') || !email.includes('.')) {
-      setSaveError('Please enter a valid email address.');
+    if (routine.length === 0) {
+      setSaveError('Add some products to your routine first.');
       setSaveStatus('error');
       return;
     }
-    if (routine.length === 0) {
-      setSaveError('Add some products to your routine first.');
+
+    // Signed-in path: track every product on the account (fmb_track_product is
+    // idempotent — ON CONFLICT DO NOTHING — so re-saving never clobbers an
+    // existing row's slot/note or baseline). The category seeds the slot.
+    if (authedEmail) {
+      setSaveStatus('saving');
+      setSaveError(null);
+      try {
+        for (const item of routine) {
+          const { error } = await db.rpc('fmb_track_product', {
+            p_product_id: item.id,
+            p_slot: item.category || null,
+          });
+          if (error) throw error;
+        }
+        setSaveStatus('success');
+        if (typeof window !== 'undefined' && typeof (window as any).gtag === 'function') {
+          (window as any).gtag('event', 'save_routine', {
+            routine_size: routine.length,
+            method: 'account',
+          });
+        }
+      } catch (err) {
+        console.error('Track routine error:', err);
+        setSaveError('Something went wrong. Please try again.');
+        setSaveStatus('error');
+      }
+      return;
+    }
+
+    // Legacy email path — stays live until the account cutover completes.
+    const email = saveEmail.trim().toLowerCase();
+    if (!email || !email.includes('@') || !email.includes('.')) {
+      setSaveError('Please enter a valid email address.');
       setSaveStatus('error');
       return;
     }
@@ -514,6 +555,7 @@ export default function RoutineBuilder() {
       if (typeof window !== 'undefined' && typeof (window as any).gtag === 'function') {
         (window as any).gtag('event', 'save_routine', {
           routine_size: productIds.length,
+          method: 'email',
         });
       }
     } catch (err) {
@@ -708,18 +750,21 @@ export default function RoutineBuilder() {
               <div className="rb-save-card">
                 <div className="rb-save-title">Save your routine ✨</div>
                 <p className="rb-save-desc">
-                  Get the best prices for your routine emailed to you each month. Free,
-                  and you can unsubscribe anytime.
+                  {authedEmail
+                    ? `Save these products to your account (${authedEmail}) and we'll track their prices for you.`
+                    : 'Get the best prices for your routine emailed to you each month. Free, and you can unsubscribe anytime.'}
                 </p>
                 <div className="rb-save-form">
-                  <input
-                    type="email"
-                    className="rb-save-input"
-                    placeholder="your@email.com"
-                    value={saveEmail}
-                    disabled={emailDisabled}
-                    onChange={e => setSaveEmail(e.target.value)}
-                  />
+                  {!authedEmail && (
+                    <input
+                      type="email"
+                      className="rb-save-input"
+                      placeholder="your@email.com"
+                      value={saveEmail}
+                      disabled={emailDisabled}
+                      onChange={e => setSaveEmail(e.target.value)}
+                    />
+                  )}
                   <button
                     className="rb-save-btn"
                     onClick={saveRoutine}
@@ -732,12 +777,21 @@ export default function RoutineBuilder() {
                       ? 'Saving...'
                       : saveStatus === 'success'
                       ? 'Saved ✓'
+                      : authedEmail
+                      ? 'Save to my account'
                       : 'Save routine'}
                   </button>
                 </div>
                 {saveStatus === 'success' && (
                   <p className="rb-save-success">
-                    ✓ Saved. We&apos;ll email you with this month&apos;s best prices.
+                    {authedEmail ? (
+                      <>
+                        ✓ Saved to your account.{' '}
+                        <a href="/account">Manage your routine</a>
+                      </>
+                    ) : (
+                      <>✓ Saved. We&apos;ll email you with this month&apos;s best prices.</>
+                    )}
                   </p>
                 )}
                 {saveStatus === 'error' && (
@@ -745,9 +799,12 @@ export default function RoutineBuilder() {
                     {saveError || 'Something went wrong. Please try again.'}
                   </p>
                 )}
-                <p className="rb-save-fineprint">
-                  No account needed. Unsubscribe link in every email.
-                </p>
+                {!authedEmail && (
+                  <p className="rb-save-fineprint">
+                    No account needed. Unsubscribe link in every email.{' '}
+                    <a href="/account">Have an account? Sign in</a>
+                  </p>
+                )}
               </div>
             )}
 
