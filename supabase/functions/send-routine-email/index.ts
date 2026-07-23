@@ -21,6 +21,7 @@
 //      and a non-zero failure count is logged to the edge-function console.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireServiceRole } from "../_shared/require-service-role.ts";
 
 const RESEND_API = "https://api.resend.com/emails";
 const FROM_ADDRESS = "FindMyBasket <hello@findmybasket.co.uk>";
@@ -373,6 +374,16 @@ Deno.serve(async (req: Request) => {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   };
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  // Caller gate — after the preflight early-return. This function sends real
+  // email to real users, so an ungated version let any visitor with the public
+  // anon key mail our list. Both callers authenticate from the vault copy of
+  // service_role_key, verified 2026-07-21 to equal the live service-role key:
+  //   - cron send-monthly-routines  -> ?mode=monthly
+  //   - trigger_welcome_email       -> ?mode=welcome, AFTER INSERT on saved_routines
+  // That trigger is invisible to a repo grep, which is why it is named here.
+  const denied = requireServiceRole(req, corsHeaders);
+  if (denied) return denied;
 
   try {
     const url = new URL(req.url);

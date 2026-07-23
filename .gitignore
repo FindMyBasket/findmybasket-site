@@ -4,6 +4,12 @@ node_modules/
 out/
 .env*.local
 
+# Claude Code local permission cache. Records approved commands verbatim, which
+# has included AWIN datafeed URLs with AWIN_API_KEY inline. That key cannot be
+# rotated on our account, so this must never be committed. Previously only
+# covered by a machine-global ~/.config/git/ignore, which a fresh clone lacks.
+.claude/settings.local.json
+
 # IDE / build artifacts
 .DS_Store
 *.pem
