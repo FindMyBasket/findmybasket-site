@@ -4,6 +4,12 @@
 //   ?mode=welcome&routineId=X — send welcome email for one routine
 //   ?mode=monthly — send to all active routines not emailed this calendar month
 //   ?mode=test&routineId=X — send a test email (does not update last_emailed_at)
+//   ?mode=alerts — send per-user price-drop emails from the routine_alerts queue
+//                  (new account system: tracked_products + routine_alerts). One
+//                  email per user covering all their live drops. The queue
+//                  (fmb_pending_alert_batch) already filters to consenting users,
+//                  undelivered alerts, and deals still live, so this pass does not
+//                  re-check eligibility — it renders, sends, then marks delivered.
 //
 // Required env vars (set as Edge Function secrets):
 //   RESEND_API_KEY
@@ -79,6 +85,37 @@ interface SavedRoutine {
   unsubscribe_token: string;
   active: boolean;
   last_emailed_at: string | null;
+}
+
+// One drop within a user's alert email. Shape matches the jsonb objects returned
+// by fmb_pending_alert_batch (numerics arrive as strings over PostgREST).
+interface AlertItem {
+  product_id: number;
+  name: string;
+  brand: string | null;
+  image_url: string | null;
+  baseline_price: number | string;
+  alerted_price: number | string;
+  current_price: number | string | null;
+  retailer: string | null;
+  pct_below_baseline: number | string | null;
+  url: string; // '/product/<id>' — made absolute at render time
+}
+
+// One row per consenting user from fmb_pending_alert_batch.
+interface AlertBatchRow {
+  user_id: string;
+  email: string;
+  unsubscribe_token: string;
+  alert_ids: number[];
+  alerts: AlertItem[];
+}
+
+// Postgres numeric -> JS number, tolerant of the string form PostgREST returns.
+function num(v: number | string | null | undefined): number {
+  if (v == null) return 0;
+  const n = typeof v === "string" ? parseFloat(v) : v;
+  return Number.isFinite(n) ? n : 0;
 }
 
 // =============================================
@@ -337,6 +374,103 @@ ${breakdownHtml}
 }
 
 // =============================================
+// PRICE-DROP ALERT EMAIL (new account system)
+// =============================================
+function buildAlertsSubject(items: AlertItem[]): string {
+  if (items.length === 1) {
+    const it = items[0];
+    const saving = num(it.baseline_price) - num(it.current_price ?? it.alerted_price);
+    if (saving > 0) return `A price drop on your routine — save £${saving.toFixed(2)}`;
+    return "A price drop on your routine";
+  }
+  return `${items.length} price drops on your routine`;
+}
+
+function buildAlertsEmailHTML(params: {
+  items: AlertItem[];
+  unsubscribeToken: string;
+  appBaseUrl: string;
+}): string {
+  const { items, unsubscribeToken, appBaseUrl } = params;
+  const unsubscribeUrl = `${appBaseUrl}/unsubscribe-alerts.html?token=${unsubscribeToken}`;
+  const accountUrl = `${appBaseUrl}/account`;
+
+  const totalSaving = items.reduce(
+    (sum, it) => sum + Math.max(0, num(it.baseline_price) - num(it.current_price ?? it.alerted_price)),
+    0,
+  );
+
+  const rowsHtml = items.map((it) => {
+    const was = num(it.baseline_price);
+    const now = num(it.current_price ?? it.alerted_price);
+    const saving = Math.max(0, was - now);
+    const pct = was > 0 ? Math.round((saving / was) * 100) : 0;
+    const productUrl = `${appBaseUrl}${it.url}`;
+    const retailer = it.retailer ? escapeHtml(it.retailer) : "an online retailer";
+    const title = `${it.brand ? escapeHtml(it.brand) + " — " : ""}${escapeHtml(it.name)}`;
+    const img = it.image_url
+      ? `<img src="${escapeHtml(it.image_url)}" alt="" width="56" height="56" style="width:56px;height:56px;border-radius:8px;object-fit:cover;display:block;"/>`
+      : `<div style="width:56px;height:56px;border-radius:8px;background:#f0ece4;"></div>`;
+    return `
+      <tr>
+        <td style="padding: 14px 0; border-bottom: 1px solid #e5e0d8; vertical-align: top; width: 56px;">${img}</td>
+        <td style="padding: 14px 0 14px 14px; border-bottom: 1px solid #e5e0d8; vertical-align: top;">
+          <a href="${productUrl}" style="font-size: 14px; font-weight: 500; color: #1c1a18; text-decoration: none; line-height: 1.35;">${title}</a>
+          <div style="margin-top: 4px; font-size: 13px; color: #6e6a64;">
+            <span style="color:#8a8680;text-decoration:line-through;">£${was.toFixed(2)}</span>
+            &nbsp;<span style="color:#5a8970;font-weight:600;">£${now.toFixed(2)}</span>
+            &nbsp;at ${retailer}
+          </div>
+        </td>
+        <td style="padding: 14px 0; border-bottom: 1px solid #e5e0d8; vertical-align: top; text-align: right; white-space: nowrap;">
+          <span style="display:inline-block;background:rgba(122,158,135,0.14);color:#5a8970;font-size:12px;font-weight:600;padding:4px 10px;border-radius:100px;">−${pct}%</span>
+        </td>
+      </tr>`;
+  }).join("");
+
+  const headline = items.length === 1 ? "A price on your routine just dropped" : "Prices on your routine just dropped";
+
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/></head>
+<body style="margin: 0; padding: 0; background: #faf8f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1c1a18;">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #faf8f4; padding: 40px 20px;">
+<tr><td align="center">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 560px; background: #ffffff; border-radius: 16px; overflow: hidden;">
+<tr><td style="padding: 28px 32px 24px; border-bottom: 1px solid #f0ece4;">
+<div style="font-family: Georgia, 'Times New Roman', serif; font-size: 20px; font-weight: 600; color: #1c1a18;">
+Find<span style="color: #c9a96e;">My</span>Basket</div></td></tr>
+<tr><td style="padding: 32px 32px 8px;">
+<h1 style="margin: 0 0 12px; font-family: Georgia, serif; font-size: 28px; font-weight: 600; color: #1c1a18; line-height: 1.2;">${escapeHtml(headline)}</h1>
+<p style="margin: 0; font-size: 15px; line-height: 1.6; color: #4a4845;">We track the best price across UK retailers for the products in your routine. Here${items.length === 1 ? "'s the one that" : " are the ones that"} just got cheaper.</p>
+</td></tr>
+${totalSaving > 0 ? `
+<tr><td style="padding: 24px 32px 0;">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: rgba(122,158,135,0.12); border: 1px solid rgba(122,158,135,0.3); border-radius: 12px; padding: 18px 22px;">
+<tr><td>
+<div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #6a7e6f; margin-bottom: 6px;">Total drop since you saved ${items.length === 1 ? "it" : "them"}</div>
+<div style="font-family: Georgia, serif; font-size: 32px; font-weight: 600; color: #5a8970; line-height: 1;">£${totalSaving.toFixed(2)}</div>
+</td></tr></table></td></tr>` : ""}
+<tr><td style="padding: 24px 32px 0;">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+${rowsHtml}
+</table></td></tr>
+<tr><td style="padding: 28px 32px 24px;" align="center">
+<a href="${accountUrl}" style="display: inline-block; background: #1c1a18; color: #faf8f4; padding: 16px 36px; border-radius: 100px; text-decoration: none; font-size: 15px; font-weight: 600;">View my routine →</a>
+<p style="margin: 14px 0 0; font-size: 12px; color: #8a8680;">Prices are checked at the time of sending and may vary.</p>
+</td></tr>
+<tr><td style="padding: 24px 32px; background: #faf8f4; border-top: 1px solid #f0ece4;">
+<p style="margin: 0 0 12px; font-size: 12px; color: #8a8680; line-height: 1.6;">You're receiving this because you turned on price-drop alerts for your saved routine on FindMyBasket.</p>
+<p style="margin: 0; font-size: 12px; color: #8a8680;">
+<a href="${unsubscribeUrl}" style="color: #8a8680; text-decoration: underline;">Turn off price alerts</a> ·
+<a href="${accountUrl}" style="color: #8a8680; text-decoration: underline;">Manage in your account</a> ·
+<a href="mailto:hello@findmybasket.co.uk" style="color: #8a8680; text-decoration: underline;">Contact</a>
+</p></td></tr>
+</table>
+<p style="margin: 16px 0 0; font-size: 11px; color: #b0aca4;">© 2026 FindMyBasket. UK skincare price comparison.</p>
+</td></tr></table></body></html>`;
+}
+
+// =============================================
 // OBSERVABILITY
 // =============================================
 // Records every send attempt (success or failure) so delivery problems are
@@ -362,6 +496,114 @@ async function logSend(
   } catch (_) {
     // swallow — observability must not affect sending
   }
+}
+
+// Per-user alert-send log line. routine_id is null here (alerts are keyed on
+// user, not on a saved_routines row). Best-effort — logging never fails a send.
+async function logAlertSend(
+  supabase: ReturnType<typeof createClient>,
+  row: AlertBatchRow,
+  ok: boolean,
+  resendMessageId: string | null,
+  error: string | null,
+): Promise<void> {
+  try {
+    await supabase.from("routine_email_log").insert({
+      routine_id: null,
+      email: row.email,
+      mode: "alerts",
+      ok,
+      resend_message_id: resendMessageId,
+      error: error ? String(error).slice(0, 500) : null,
+    });
+  } catch (_) {
+    // swallow — observability must not affect sending
+  }
+}
+
+// =============================================
+// ALERTS PASS (new account system)
+// =============================================
+// Structurally distinct from the per-routine welcome/monthly path: the queue is
+// per-user and each row carries the alert_ids to stamp delivered. The queue has
+// already filtered to consenting users, undelivered alerts, and still-live deals,
+// so we do not re-check eligibility here — render, send, mark delivered.
+async function sendAlerts(
+  supabase: ReturnType<typeof createClient>,
+  resendKey: string,
+  appBaseUrl: string,
+  corsHeaders: Record<string, string>,
+): Promise<Response> {
+  const { data, error } = await supabase.rpc("fmb_pending_alert_batch", { p_limit: 500 });
+  if (error) return jsonResponse({ error: error.message }, 500, corsHeaders);
+  const batch = (data || []) as AlertBatchRow[];
+
+  let sent = 0;
+  let failed = 0;
+  const errors: string[] = [];
+
+  for (const row of batch) {
+    try {
+      const items = Array.isArray(row.alerts) ? row.alerts : [];
+      if (items.length === 0) continue;
+
+      const html = buildAlertsEmailHTML({ items, unsubscribeToken: row.unsubscribe_token, appBaseUrl });
+      const subject = buildAlertsSubject(items);
+
+      const resendRes = await fetch(RESEND_API, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ from: FROM_ADDRESS, to: row.email, subject, html }),
+      });
+
+      if (!resendRes.ok) {
+        const errText = await resendRes.text();
+        failed++; errors.push(`User ${row.user_id} (${row.email}): Resend ${resendRes.status} — ${errText}`);
+        await logAlertSend(supabase, row, false, null, `Resend ${resendRes.status}: ${errText}`);
+        continue;
+      }
+
+      let resendMessageId: string | null = null;
+      try {
+        const body = await resendRes.json();
+        resendMessageId = (body && typeof body.id === "string") ? body.id : null;
+      } catch (_) {
+        resendMessageId = null;
+      }
+
+      // Stamp delivered ONLY after a confirmed 2xx send, so a failed send leaves
+      // the alerts undelivered and they re-enter the next run's batch.
+      const { error: markErr } = await supabase.rpc("fmb_mark_alerts_delivered", { p_alert_ids: row.alert_ids });
+      if (markErr) {
+        // The email went out; failing to stamp would re-send next run. Make it loud.
+        console.error(`fmb_mark_alerts_delivered failed for user ${row.user_id}:`, markErr.message);
+        errors.push(`User ${row.user_id}: sent but mark-delivered failed — ${markErr.message}`);
+      }
+      await logAlertSend(supabase, row, true, resendMessageId, markErr ? `mark-delivered failed: ${markErr.message}` : null);
+      sent++;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      failed++; errors.push(`User ${row.user_id}: ${message}`);
+      await logAlertSend(supabase, row, false, null, message);
+    }
+  }
+
+  // Housekeeping in the same pass: stamp alerts whose deal has since died so the
+  // queue doesn't silt up with rows that will never be deliverable. Best-effort.
+  let expired = 0;
+  const { data: exp, error: expErr } = await supabase.rpc("fmb_expire_stale_alerts");
+  if (expErr) console.error("fmb_expire_stale_alerts failed:", expErr.message);
+  else expired = typeof exp === "number" ? exp : 0;
+
+  if (failed > 0) {
+    console.error(`send-routine-email[alerts]: ${failed} failed / ${batch.length} users`, errors.slice(0, 10));
+  }
+
+  return jsonResponse(
+    { mode: "alerts", users: batch.length, sent, failed, expired, errors: errors.slice(0, 10) },
+    200,
+    corsHeaders,
+  );
 }
 
 // =============================================
@@ -400,6 +642,13 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabase = createClient(supabaseUrl, serviceKey);
+
+    // Price-drop alerts run their own per-user batch and return here — they do
+    // not use the per-routine SavedRoutine path below.
+    if (mode === "alerts") {
+      return await sendAlerts(supabase, resendKey, appBaseUrl, corsHeaders);
+    }
+
     let routines: SavedRoutine[] = [];
 
     if (mode === "welcome" || mode === "test") {

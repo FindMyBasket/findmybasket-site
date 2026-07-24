@@ -26,12 +26,21 @@ export default async function AccountPage({
   } = await supabase.auth.getUser();
 
   let routine: RoutineRow[] = [];
+  let alertsEnabled = true;
   if (user) {
     const { data, error } = await supabase.rpc('fmb_get_routine');
     if (error) {
       console.error('fmb_get_routine failed:', error.message);
     } else {
       routine = (data ?? []) as RoutineRow[];
+    }
+
+    const { data: prefs, error: prefsError } = await supabase.rpc('fmb_get_alert_prefs');
+    if (prefsError) {
+      console.error('fmb_get_alert_prefs failed:', prefsError.message);
+    } else if (prefs) {
+      // rpc returns the user_alert_prefs row (default email_alerts_enabled = true)
+      alertsEnabled = (prefs as { email_alerts_enabled?: boolean }).email_alerts_enabled ?? true;
     }
   }
 
@@ -40,7 +49,11 @@ export default async function AccountPage({
       <SiteNav />
       <main className="mx-auto w-full max-w-site px-4 py-10 min-h-[60vh]">
         {user ? (
-          <AccountRoutine initialRoutine={routine} email={user.email ?? ''} />
+          <AccountRoutine
+            initialRoutine={routine}
+            email={user.email ?? ''}
+            initialAlertsEnabled={alertsEnabled}
+          />
         ) : (
           <LoginCard linkError={searchParams.error === 'link'} />
         )}
