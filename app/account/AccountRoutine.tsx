@@ -45,13 +45,39 @@ const gbp = (v: number | null | undefined) =>
 export default function AccountRoutine({
   initialRoutine,
   email,
+  initialAlertsEnabled = true,
 }: {
   initialRoutine: RoutineRow[];
   email: string;
+  initialAlertsEnabled?: boolean;
 }) {
   const [routine, setRoutine] = useState<RoutineRow[]>(initialRoutine);
   const [busy, setBusy] = useState<number | null>(null); // product_id being mutated
   const [error, setError] = useState<string | null>(null);
+
+  // Email price-drop alerts on/off. Optimistic toggle backed by fmb_set_alert_prefs.
+  const [alertsEnabled, setAlertsEnabled] = useState(initialAlertsEnabled);
+  const [alertsBusy, setAlertsBusy] = useState(false);
+
+  const toggleAlerts = async () => {
+    const next = !alertsEnabled;
+    setAlertsBusy(true);
+    setAlertsEnabled(next); // optimistic
+    const { data, error: err } = await supabaseBrowser.rpc('fmb_set_alert_prefs', {
+      p_enabled: next,
+    });
+    setAlertsBusy(false);
+    if (err) {
+      console.error('fmb_set_alert_prefs failed:', err.message);
+      setAlertsEnabled(!next); // revert
+      setError('Could not update your alert setting. Please try again.');
+      return;
+    }
+    // Trust the server's returned row over the optimistic value.
+    if (data && typeof (data as { email_alerts_enabled?: boolean }).email_alerts_enabled === 'boolean') {
+      setAlertsEnabled((data as { email_alerts_enabled: boolean }).email_alerts_enabled);
+    }
+  };
 
   // ── data helpers ──────────────────────────────────────────────────────
 
@@ -200,6 +226,34 @@ export default function AccountRoutine({
           {error}
         </p>
       )}
+
+      {/* email price-drop alerts toggle */}
+      <div className="mt-6 flex items-start justify-between gap-4 rounded-lg border border-border bg-warm-white p-4">
+        <div>
+          <p className="font-medium text-ink">Email me when prices drop</p>
+          <p className="mt-1 text-sm text-ink-light">
+            We&apos;ll email you when a product in your routine gets cheaper across UK
+            retailers. No more than one email a day.
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={alertsEnabled}
+          aria-label="Email me when prices drop"
+          disabled={alertsBusy}
+          onClick={toggleAlerts}
+          className={`relative mt-1 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+            alertsEnabled ? 'bg-sage' : 'bg-border'
+          }`}
+        >
+          <span
+            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+              alertsEnabled ? 'translate-x-5' : 'translate-x-0.5'
+            }`}
+          />
+        </button>
+      </div>
 
       {/* add a product */}
       <div className="relative mt-6 max-w-lg">
