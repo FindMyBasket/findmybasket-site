@@ -13,6 +13,7 @@ export function AmazonLink({
   href,
   productId,
   source = 'amazon',
+  clickSource,
   label = 'Check on Amazon',
   className,
   markerClassName = 'text-[11px] text-ink-light',
@@ -20,6 +21,7 @@ export function AmazonLink({
   href: string;
   productId?: number;
   source?: string;
+  clickSource?: string;
   label?: string;
   className?: string;
   markerClassName?: string;
@@ -32,6 +34,7 @@ export function AmazonLink({
         retailerId={9}
         productId={productId}
         source={source}
+        clickSource={clickSource}
         className={className}
       >
         {label}

@@ -12,7 +12,18 @@ import {
   type RoutineItem,
 } from '@/lib/routine-store';
 import { displayProductTitle } from '@/lib/format/product-name';
-import { trackAffiliateClickOut, trackRetailerClick, affiliateNetworkFromUrl, directDestinationUrl } from '@/lib/analytics';
+import {
+  trackAffiliateClickOut,
+  trackRetailerClick,
+  trackBasketOptimised,
+  affiliateNetworkFromUrl,
+  directDestinationUrl,
+  sendOutboundBeacon,
+  awinMidFromHref,
+  EBAY_RETAILER_ID,
+} from '@/lib/analytics';
+import { ClickOutLink } from '@/components/ClickOutLink';
+import { retailerSubtotals } from '@/lib/basket-attribution';
 
 // Affiliate tags — reused exactly from the previous bottom-of-basket links.
 const AMAZON_TAG = 'findmybasket-21';
@@ -46,6 +57,8 @@ interface BreakdownItem {
   product: RoutineItem;
   price: number | null;
   retailerName: string;
+  // Absent only for the "Not tracked yet" fallback row, which has no retailer.
+  retailerId?: number;
   url: string;
 }
 
@@ -77,6 +90,12 @@ export default function RoutineBuilder() {
   const [showSavings, setShowSavings] = useState(false);
   const [showSaveCard, setShowSaveCard] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Size of the basket that produced the CURRENT results — snapshotted at run time
+  // so every optimiser-basket event (basket_optimised + the Shop/open-all/modal
+  // retailer_clicks) reports the same count, even if the routine is edited after the
+  // run leaves stale results on screen. Live routine.length would diverge from the
+  // basket_optimised count in that window. Null until the first run.
+  const [optimisedItemCount, setOptimisedItemCount] = useState<number | null>(null);
 
   // Save routine state
   const [saveEmail, setSaveEmail] = useState('');
@@ -98,7 +117,14 @@ export default function RoutineBuilder() {
 
   // Modal for popup-blocked product links
   const [blockedLinks, setBlockedLinks] = useState<
-    { name: string; url: string; retailer: string }[] | null
+    {
+      name: string;
+      url: string;
+      retailer: string;
+      retailerId?: number;
+      price: number | null;
+      productId: number;
+    }[] | null
   >(null);
 
   // ── ROUTINE STORE SYNC ────────────────────────────────────────────────
@@ -151,7 +177,7 @@ export default function RoutineBuilder() {
       }
 
       // Auto-run the optimiser so users see savings immediately
-      setTimeout(() => runOptimiser(), 300);
+      setTimeout(() => runOptimiser('auto_shared_link'), 300);
     })();
 
     return () => {
@@ -176,9 +202,12 @@ export default function RoutineBuilder() {
     setShowSavings(false);
     setShowSaveCard(false);
     setErrorMsg(null);
+    setOptimisedItemCount(null);
   }, []);
 
-  const runOptimiser = useCallback(async () => {
+  const runOptimiser = useCallback(async (
+    trigger: 'user_action' | 'auto_shared_link' = 'user_action',
+  ) => {
     const current = getRoutine();
     if (current.length === 0) return;
 
@@ -211,6 +240,7 @@ export default function RoutineBuilder() {
     type PriceEntry = {
       price: number;
       url: string;
+      retailerId: number;
       retailerName: string;
       deliveryThreshold: number;
       deliveryCost: number;
@@ -221,6 +251,7 @@ export default function RoutineBuilder() {
       priceMap[row.product_id][row.retailer_id] = {
         price: parseFloat(String(row.price)),
         url: row.url,
+        retailerId: row.retailer_id,
         retailerName: row.retailers.name,
         deliveryThreshold: parseFloat(String(row.retailers.delivery_threshold ?? '25')),
         deliveryCost: parseFloat(String(row.retailers.delivery_cost ?? '3.95')),
@@ -247,6 +278,7 @@ export default function RoutineBuilder() {
             product,
             price: pp.price,
             retailerName: pp.retailerName,
+            retailerId: pp.retailerId,
             url: pp.url,
           });
         }
@@ -312,6 +344,7 @@ export default function RoutineBuilder() {
                 product,
                 price: p1.price,
                 retailerName: p1.retailerName,
+                retailerId: p1.retailerId,
                 url: p1.url,
               });
             } else {
@@ -323,6 +356,7 @@ export default function RoutineBuilder() {
                 product,
                 price: p2.price,
                 retailerName: p2.retailerName,
+                retailerId: p2.retailerId,
                 url: p2.url,
               });
             }
@@ -335,6 +369,7 @@ export default function RoutineBuilder() {
               product,
               price: p1.price,
               retailerName: p1.retailerName,
+              retailerId: p1.retailerId,
               url: p1.url,
             });
           } else if (p2) {
@@ -346,6 +381,7 @@ export default function RoutineBuilder() {
               product,
               price: p2.price,
               retailerName: p2.retailerName,
+              retailerId: p2.retailerId,
               url: p2.url,
             });
           }
@@ -404,6 +440,7 @@ export default function RoutineBuilder() {
             product,
             price: cheapest.price,
             retailerName: cheapest.retailerName,
+            retailerId: cheapest.retailerId,
             url: cheapest.url,
           });
         }
@@ -433,14 +470,21 @@ export default function RoutineBuilder() {
           },
         ],
         worstSingleShopTotal,
+        trigger,
+        current.length,
       );
       return;
     }
 
-    finishRender(allOptions, worstSingleShopTotal);
+    finishRender(allOptions, worstSingleShopTotal, trigger, current.length);
   }, []);
 
-  const finishRender = (options: BasketOption[], worstSingleShopTotal: number) => {
+  const finishRender = (
+    options: BasketOption[],
+    worstSingleShopTotal: number,
+    trigger: 'user_action' | 'auto_shared_link',
+    basketSize: number,
+  ) => {
     let saving = 0;
     let suspect = false;
 
@@ -472,10 +516,45 @@ export default function RoutineBuilder() {
       }
     }
 
+    const suppressed = !(saving > 0.01 && !suspect);
+
     setSavings(saving);
-    setShowSavings(saving > 0.01 && !suspect);
+    setShowSavings(!suppressed);
     setShowSaveCard(true);
     setResults(options);
+    // Snapshot the basket size for every optimiser-basket event tied to THESE
+    // results, so a later routine edit (which leaves stale results on screen) can't
+    // make the Shop/open-all/modal clicks report a different count than the
+    // basket_optimised event that produced them. Verified equal to
+    // winning.breakdown.length in all paths; basketSize is current.length at run time.
+    setOptimisedItemCount(basketSize);
+
+    // basket_optimised — fired here (once per optimisation run) rather than in the
+    // results render, which re-runs on every state change. winning_retailer_count
+    // counts distinct real retailers (the "Not tracked yet" fallback row is not a
+    // retailer), which also decides single vs split. NOTE for the dashboard:
+    // result_type is derived from that untracked-excluding count, so treat it as
+    // UNRELIABLE whenever unpriced_item_count > 0 (a basket with untracked items may
+    // report "single" while really only one retailer's worth of items was priceable).
+    // savings_value is the raw computed saving, reported even when suppressed.
+    const winning = options[0];
+    if (winning) {
+      const pricedRetailers = new Set(
+        winning.breakdown
+          .filter(b => b.retailerName && b.retailerName !== 'Not tracked yet')
+          .map(b => b.retailerName),
+      );
+      trackBasketOptimised({
+        basketItemCount: basketSize,
+        winningRetailerCount: pricedRetailers.size,
+        resultType: pricedRetailers.size <= 1 ? 'single' : 'split',
+        unpricedItemCount: winning.breakdown.filter(b => b.price == null).length,
+        winningBasketTotal: winning.total,
+        savingsValue: saving,
+        savingsSuppressed: suppressed,
+        optimisationTrigger: trigger,
+      });
+    }
   };
 
   // ── SAVE ROUTINE ──────────────────────────────────────────────────────
@@ -568,16 +647,49 @@ export default function RoutineBuilder() {
   // ── OPEN ALL PRODUCTS (popup-blocker fallback) ────────────────────────
 
   const openAllProducts = (
-    products: { name: string; url: string; retailer: string }[],
+    products: {
+      name: string;
+      url: string;
+      retailer: string;
+      retailerId?: number;
+      price: number | null;
+      productId: number;
+    }[],
   ) => {
     if (!products || products.length === 0) return;
 
     const blocked: typeof products = [];
-    products.forEach(p => {
+    products.forEach((p, i) => {
       const win = window.open(directDestinationUrl(p.url), '_blank', 'noopener,noreferrer');
       if (!win || win.closed || typeof win.closed === 'undefined') {
         blocked.push(p);
+        return;
       }
+      // Fire a retailer_click per product that actually opened. These come from the
+      // best-value basket, so is_best_value is always true here; value is the single
+      // item's price (the amount attributable to this click, never the basket total).
+      trackAffiliateClickOut(p.retailer, p.productId);
+      trackRetailerClick({
+        retailerId: p.retailerId,
+        retailerName: p.retailer,
+        affiliateNetwork: affiliateNetworkFromUrl(p.url),
+        itemId: p.productId,
+        value: p.price ?? undefined,
+        basketItemCount: optimisedItemCount ?? routine.length,
+        isBestValue: true,
+        listPosition: i,
+        clickSource: 'optimiser_open_all',
+      });
+      // Same server-side log the anchor-based surfaces get, so these high-intent
+      // clicks are not GA4-only. window.open() is programmatic so there is no
+      // ClickOutLink anchor to carry it — the beacon is sent explicitly here.
+      sendOutboundBeacon({
+        productId: p.productId,
+        retailerId: p.retailerId,
+        awinMid: awinMidFromHref(p.url),
+        price: p.price,
+        source: 'optimiser_open_all',
+      });
     });
 
     if (blocked.length > 0) setBlockedLinks(blocked);
@@ -670,9 +782,12 @@ export default function RoutineBuilder() {
                           onClick={() => {
                             trackAffiliateClickOut('amazon', p.id);
                             trackRetailerClick({
+                              retailerId: 9,
                               retailerName: 'amazon',
                               affiliateNetwork: affiliateNetworkFromUrl(amazonSearchUrl(p)),
-                              productCount: routine.length,
+                              itemId: p.id,
+                              basketItemCount: routine.length,
+                              clickSource: 'routine_amazon_crosscheck',
                             });
                           }}
                         >
@@ -685,9 +800,15 @@ export default function RoutineBuilder() {
                           onClick={() => {
                             trackAffiliateClickOut('ebay', p.id);
                             trackRetailerClick({
+                              // eBay is a cross-check, not one of the tracked
+                              // retailers; send the explicit sentinel id so it
+                              // reports as a labelled row, not "(not set)".
+                              retailerId: EBAY_RETAILER_ID,
                               retailerName: 'ebay',
                               affiliateNetwork: affiliateNetworkFromUrl(ebaySearchUrl(p)),
-                              productCount: routine.length,
+                              itemId: p.id,
+                              basketItemCount: routine.length,
+                              clickSource: 'routine_ebay_crosscheck',
                             });
                           }}
                         >
@@ -722,7 +843,7 @@ export default function RoutineBuilder() {
             <button
               className={`rb-optimise-btn ${isOptimising ? 'loading' : ''}`}
               disabled={routine.length === 0 || isOptimising}
-              onClick={runOptimiser}
+              onClick={() => runOptimiser('user_action')}
             >
               <span>🛒</span>
               <span>{isOptimising ? 'Finding best prices...' : 'Find my basket'}</span>
@@ -843,18 +964,22 @@ export default function RoutineBuilder() {
                       ? 'Shop everything from one retailer'
                       : `Split across ${distinctRetailerCount} retailers for best price`;
 
-                  const retailerUrls: Record<string, string> = {};
-                  opt.breakdown.forEach(b => {
-                    if (b.url && !retailerUrls[b.retailerName]) {
-                      retailerUrls[b.retailerName] = b.url;
-                    }
-                  });
+                  // Per-retailer aggregation for the "Shop {retailer}" buttons:
+                  // first deep-link plus the subtotal of this basket's items at
+                  // that retailer. The subtotal is the amount attributable to a
+                  // click on that retailer's button (never the whole-basket total).
+                  // Extracted to lib/basket-attribution so the value semantics are
+                  // unit-tested against silent regression.
+                  const retailerAgg = retailerSubtotals(opt.breakdown);
                   const productLinks = opt.breakdown
                     .filter(b => b.url)
                     .map(b => ({
                       name: `${b.product.brand} ${b.product.name}`,
                       url: b.url,
                       retailer: b.retailerName,
+                      retailerId: b.retailerId,
+                      price: b.price,
+                      productId: b.product.id,
                     }));
 
                   return (
@@ -905,17 +1030,30 @@ export default function RoutineBuilder() {
                               Open all {productLinks.length} products →
                             </button>
                           )}
-                          {Object.entries(retailerUrls).length > 0 ? (
-                            Object.entries(retailerUrls).map(([name, url]) => (
-                              <a
+                          {Object.entries(retailerAgg).length > 0 ? (
+                            Object.entries(retailerAgg).map(([name, info], ri) => (
+                              // Full ClickOutLink so the highest-intent click on the
+                              // site also lands in the (non-consent-gated, more
+                              // complete) outbound_clicks pipeline, not GA4 alone.
+                              // `value` is this retailer's subtotal, not the basket
+                              // total. ClickOutLink unwraps the href for navigation
+                              // and reads the original for network attribution.
+                              <ClickOutLink
                                 key={name}
-                                href={directDestinationUrl(url)}
-                                target="_blank"
+                                href={info.url}
+                                retailer={name}
+                                retailerId={info.retailerId}
+                                price={info.subtotal}
+                                source="optimiser_shop_button"
+                                clickSource="optimiser_shop_button"
+                                isBestValue={isBest}
+                                listPosition={ri}
+                                basketItemCount={optimisedItemCount ?? routine.length}
                                 rel="noopener noreferrer"
                                 className="rb-shop-retailer-btn"
                               >
                                 Shop {name} →
-                              </a>
+                              </ClickOutLink>
                             ))
                           ) : (
                             <a href="/index.html#waitlist" className="rb-shop-btn">
@@ -953,15 +1091,25 @@ export default function RoutineBuilder() {
             </p>
             <div className="rb-modal-list">
               {blockedLinks.map((p, i) => (
-                <a
+                // The retailer_click (and server beacon) that would have fired when
+                // the tab was blocked. Same best-value basket context as openAllProducts.
+                <ClickOutLink
                   key={i}
-                  href={directDestinationUrl(p.url)}
-                  target="_blank"
+                  href={p.url}
+                  retailer={p.retailer}
+                  retailerId={p.retailerId}
+                  productId={p.productId}
+                  price={p.price ?? undefined}
+                  source="optimiser_modal"
+                  clickSource="optimiser_modal"
+                  isBestValue
+                  listPosition={i}
+                  basketItemCount={optimisedItemCount ?? routine.length}
                   rel="noopener noreferrer"
                   className="rb-modal-link"
                 >
                   {p.name} → {p.retailer}
-                </a>
+                </ClickOutLink>
               ))}
             </div>
             <button

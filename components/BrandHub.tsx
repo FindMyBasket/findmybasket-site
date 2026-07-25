@@ -83,6 +83,8 @@ export async function BrandHub({ data }: { data: BrandHubData }) {
 
             <BrandHubRange
               products={products}
+              brandName={hub.display_name}
+              brandSlug={hub.slug}
               rangeSub={hub.range_sub}
               rangeTitle={hub.range_title}
               rangeCtaLabel={hub.range_cta_label}

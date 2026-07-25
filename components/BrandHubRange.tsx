@@ -2,9 +2,21 @@
 
 import { useMemo, useState } from 'react';
 import type { BrandHubOffer, BrandHubProduct } from '../lib/brand-hub-queries';
+import { ClickOutLink } from './ClickOutLink';
 
 interface Props {
   products: BrandHubProduct[];
+  // The brand this hub belongs to (hub.display_name). Used as retailer_name on the
+  // outbound retailer_click, so brand-partner reporting (iLĀPOTHECARY, Clarins) can
+  // isolate a single brand's hub clicks. Brand-hub buy links are brand-direct
+  // affiliate deeplinks and carry no internal retailer_id (the merchant is not one
+  // of our tracked comparison retailers); affiliate_network is derived from the url
+  // host inside ClickOutLink, and the precise AWIN merchant lands in the server
+  // beacon as awin_mid.
+  brandName: string;
+  // Stable brand key (hub slug) for the GA4 brand_slug dimension — partner reporting
+  // groups on this, not the display name, so diacritics/casing can't fragment it.
+  brandSlug: string;
   rangeSub: string | null;
   rangeTitle: string | null;
   rangeCtaLabel: string | null;
@@ -29,6 +41,8 @@ const ARROW = (
 
 export function BrandHubRange({
   products,
+  brandName,
+  brandSlug,
   rangeSub,
   rangeTitle,
   rangeCtaLabel,
@@ -101,18 +115,27 @@ export function BrandHubRange({
                     internal link equity. */}
                 {p.buy_url &&
                   (p.buy_url.startsWith('/') ? (
+                    // Internal comparison page: plain navigation, never an affiliate
+                    // clickout, so no retailer_click and no sponsored/nofollow.
                     <a className="bh-go" href={p.buy_url}>
                       Compare prices →
                     </a>
                   ) : (
-                    <a
+                    // Brand-direct affiliate buy. ClickOutLink derives the network
+                    // from the host and logs a brand_hub retailer_click + server
+                    // beacon; value is this product's price.
+                    <ClickOutLink
                       className="bh-go"
                       href={p.buy_url}
-                      target="_blank"
+                      retailer={brandName}
+                      brandSlug={brandSlug}
+                      price={p.price ?? undefined}
+                      source="brand_hub_card"
+                      clickSource="brand_hub_card"
                       rel="sponsored nofollow noopener"
                     >
                       Buy direct →
-                    </a>
+                    </ClickOutLink>
                   ))}
               </div>
             </div>
@@ -131,14 +154,17 @@ export function BrandHubRange({
               {rangeCtaLabel} {ARROW}
             </a>
           ) : (
-            <a
+            <ClickOutLink
               className="bh-btn bh-btn-gold"
               href={rangeCtaUrl}
-              target="_blank"
+              retailer={brandName}
+              brandSlug={brandSlug}
+              source="brand_hub_cta"
+              clickSource="brand_hub_cta"
               rel="sponsored nofollow noopener"
             >
               {rangeCtaLabel} {ARROW}
-            </a>
+            </ClickOutLink>
           )}
         </div>
       )}
@@ -160,9 +186,17 @@ export function BrandHubRange({
             </div>
           </div>
           {offer.cta_url && (
-            <a className="bh-btn bh-btn-gold" href={offer.cta_url} target="_blank" rel="sponsored nofollow noopener">
+            <ClickOutLink
+              className="bh-btn bh-btn-gold"
+              href={offer.cta_url}
+              retailer={brandName}
+              brandSlug={brandSlug}
+              source="brand_hub_offer"
+              clickSource="brand_hub_offer"
+              rel="sponsored nofollow noopener"
+            >
               Shop with {offer.code} {ARROW}
-            </a>
+            </ClickOutLink>
           )}
         </div>
       )}
