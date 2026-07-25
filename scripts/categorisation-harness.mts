@@ -31,7 +31,7 @@ type Case = {
   expectType?: string;
   // When set, ALSO asserts the resolved subcategory (face/body/hand/foot/both).
   expectSub?: string;
-  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22;
+  fixedBy: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23;
   note?: string;
 };
 
@@ -556,6 +556,25 @@ const CASES: Case[] = [
   { name: "Eylure Brow Tint Dark Brown Permanent 45 Day", brand: "Eylure", expect: "skincare", fixedBy: 0, note: "brow dye stays skincare" },
   { name: "Bondi Sands Self Tan Tinted Foam Dark 200ml", brand: "Bondi Sands", expect: "skincare", fixedBy: 0, note: "tinted self-tan stays skincare (body/tanning)" },
   { name: "The Ordinary Hyaluronic Acid 2% + B5 Serum 30ml", brand: "The Ordinary", expect: "skincare", expectType: "Serum", fixedBy: 0, note: "plain serum (no tint) untouched by Step 3c" },
+
+  // ── 23. Eye MAKEUP wrongly shelved as skincare Eye Care ───────────────────
+  // "Eye Care" required only the bare word "eye", so eyeshadow palettes / pigment
+  // sticks / eye glitter / eye-context liners fell into skincare Eye Care. Eye Care
+  // now needs a skincare signal; eye + makeup form routes to makeup.
+  { name: "DIOR Backstage Eye Palette 003 Warm Essentials", brand: "Dior", expect: "makeup", expectType: "Eyeshadow", expectSub: "eyes", fixedBy: 23, note: "eye shadow palette → Eyeshadow, not Eye Care" },
+  { name: "CLIO Pro Eye Palette Air Sugar Afternoon", brand: "Clio", expect: "makeup", expectType: "Eyeshadow", expectSub: "eyes", fixedBy: 23 },
+  { name: "Eye Pigment Quick Stick 010 Champagne 5g", brand: "17", expect: "makeup", expectType: "Eyeshadow", expectSub: "eyes", fixedBy: 23, note: "eye pigment stick → Eyeshadow" },
+  { name: "Kose DECORTE Eye Glow Gem Skin Shadow 12G Satin Shine", brand: "Kose", expect: "makeup", expectType: "Eyeshadow", expectSub: "eyes", fixedBy: 23, note: "bare 'shadow' in eye context → Eyeshadow" },
+  { name: "Milktouch Fairy Jewel Eye Glitter Snow Prism", brand: "Milk Touch", expect: "makeup", expectType: "Eyeshadow", expectSub: "eyes", fixedBy: 23, note: "eye glitter → Eyeshadow" },
+  { name: "IsaDora Fine Liner Eye Stylo 1.1ml 01 Carbon Black", brand: "IsaDora", expect: "makeup", expectType: "Eyeliner", expectSub: "eyes", fixedBy: 23, note: "eye-context liner → Eyeliner" },
+
+  // KEEP guards for the same change: genuine eye SKINCARE must stay Eye Care, and a
+  // brush must NOT be pulled into makeup by the new eye+form rule.
+  { name: "The INKEY List Caffeine Eye Cream 15ml", brand: "The INKEY List", expect: "skincare", expectType: "Eye Care", fixedBy: 0, note: "adjacent 'eye cream' stays Eye Care" },
+  { name: "CeraVe Eye Repair Cream 14ml", brand: "CeraVe", expect: "skincare", fixedBy: 0, note: "eye skincare stays skincare (not makeup); non-adjacent cream is Moisturiser, pre-existing" },
+  { name: "Under Eye Hydrogel Patches Gold 60pcs", expect: "skincare", expectType: "Eye Care", fixedBy: 0, note: "under-eye patches stay Eye Care" },
+  { name: "Clarins Total Eye Lift 15ml", brand: "Clarins", expect: "skincare", expectType: "Eye Care", fixedBy: 0, note: "eye treatment with no cream/serum word still Eye Care (bare-eye catchall kept)" },
+  { name: "Eucerin Anti-Pigment Dark Circle Illuminating Eye Care 15ml", brand: "Eucerin", expect: "skincare", fixedBy: 0, note: "anti-pigment dark-circle eye care stays skincare, not Eyeshadow" },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
