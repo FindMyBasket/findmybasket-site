@@ -1,13 +1,13 @@
 'use client';
 
-import { trackAffiliateClickOut, trackRetailerClick, affiliateNetworkFromUrl, directDestinationUrl } from '../lib/analytics';
-
-// Pull the AWIN merchant id out of a cread.php url (awinmid=NNNN) for attribution.
-// Returns null for non-AWIN hrefs (Amazon/eBay cross-checks etc.).
-function awinMidFromHref(href: string): string | null {
-  const m = /[?&]awinmid=(\d+)/i.exec(href);
-  return m ? m[1] : null;
-}
+import {
+  trackAffiliateClickOut,
+  trackRetailerClick,
+  affiliateNetworkFromUrl,
+  directDestinationUrl,
+  awinMidFromHref,
+  sendOutboundBeacon,
+} from '../lib/analytics';
 
 // Affiliate click-out anchor that fires the GA4 click-out events before opening
 // the destination. Used on the product detail page (server component) where we
@@ -23,8 +23,11 @@ export function ClickOutLink({
   productId,
   price,
   source,
-  basketValue,
-  productCount,
+  clickSource,
+  brandSlug,
+  isBestValue,
+  listPosition,
+  basketItemCount,
   className,
   children,
   rel = 'nofollow sponsored noopener',
@@ -35,9 +38,21 @@ export function ClickOutLink({
   retailerId?: number;
   productId?: number;
   price?: number;
+  // Brand-hub only: stable brand key (hub slug) for the GA4 brand_slug dimension.
+  brandSlug?: string;
+  // `source` labels the server-side outbound_clicks row (its own established
+  // vocabulary, e.g. amazon_crosscheck/ebay_search). `clickSource` is the GA4
+  // click_source dimension and defaults to `source` when not given; pass it
+  // explicitly where the two diverge (e.g. a product-page cross-check whose GA4
+  // surface should read product_page, not amazon_crosscheck).
   source?: string;
-  basketValue?: number;
-  productCount?: number;
+  clickSource?: string;
+  // Attribution context. `price` is the amount attributable to this single click
+  // and maps to the GA4 reserved `value`. isBestValue/listPosition describe this
+  // offer's standing in the comparison list it was clicked from.
+  isBestValue?: boolean;
+  listPosition?: number;
+  basketItemCount?: number;
   className?: string;
   children: React.ReactNode;
   rel?: string;
@@ -59,28 +74,22 @@ export function ClickOutLink({
           retailerId,
           retailerName: retailer,
           affiliateNetwork: affiliateNetworkFromUrl(href),
-          basketValue,
-          productCount,
+          itemId: productId,
+          value: price,
+          isBestValue,
+          listPosition,
+          basketItemCount,
+          clickSource: clickSource ?? source,
+          brandSlug,
         });
-        // Server-side outbound-click log. sendBeacon survives the navigation that
-        // follows this click and never blocks it. Errors are swallowed so a logging
-        // hiccup can never stop the user reaching the retailer.
-        try {
-          const payload = JSON.stringify({
-            productId: productId ?? null,
-            retailerId: retailerId ?? null,
-            awinMid: awinMidFromHref(href),
-            price: price ?? null,
-            source: source ?? null,
-            path: typeof window !== 'undefined' ? window.location.pathname : null,
-          });
-          navigator.sendBeacon?.(
-            '/api/track/outbound',
-            new Blob([payload], { type: 'application/json' })
-          );
-        } catch {
-          /* never block the click-out */
-        }
+        // Server-side outbound-click log, resilient to the navigation that follows.
+        sendOutboundBeacon({
+          productId,
+          retailerId,
+          awinMid: awinMidFromHref(href),
+          price,
+          source,
+        });
       }}
     >
       {children}
