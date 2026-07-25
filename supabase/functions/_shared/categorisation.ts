@@ -477,6 +477,20 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
     }
     if (/\b(lipstick|lip gloss|lip stain|lip lacquer|lip pencil|lip liner|lip tint|lip plumper|lip cream|lip paint|lip color|lip colour|lip shine|lip crayon|color balm|colour balm|liquid lip|matte lip|cream lip)\b/.test(t)) return true;
     if (/\b(mascara|eyeliner|eye liner|eye shadow|eyeshadow|eyebrows?|brows?)\b/.test(t)) return true;
+    // Eye MAKEUP whose form-word the line above misses: eye palette/pigment/glitter
+    // and bare "shadow"/"liner" in an eye context ("... Skin Shadow", "Fine Liner
+    // Eye Stylo", "Eye Palette", "Eye Pigment Quick Stick"). Guarded against eye
+    // SKINCARE (cream/serum/gel/balm/patch/treatment/contour/dark-circle/anti-pigment
+    // etc.) so eye creams and dark-circle correctors stay skincare, and against lip
+    // so a lip liner/pigment is not stolen. Brushes/sponges are makeup_tools,
+    // already denylisted before this detector runs.
+    if (
+      /\beye\b/.test(t) &&
+      /\b(palette|pigment|shadow|glitter|liner)\b/.test(t) &&
+      !/\blip\b/.test(t) &&
+      !/\b(brush|brushes|sponge|applicator|puff)\b/.test(t) &&
+      !/\b(cream|serum|gel|balm|patch|patches|pad|pads|treatment|contour|essence|ampoule|concentrate|complex|remover|hydrogel|moistur|anti.?pigment|pigmentation|dark circle|illuminat|brighten|de.?puff|puffiness|wrinkle|repair)\b/.test(t)
+    ) return true;
     // Clinique 'Quickliner For Eye' brand-line pattern
     if (/\b(quickliner|kohl)\b/.test(t)) return true;
     if (/\b(foundation|concealer|colour corrector|color corrector|primer)\b/.test(t)) return true;
@@ -541,12 +555,16 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
       product_type = "Mascara";
       subcategory = "eyes";
     } else if (
-      /\b(eyeliner|eye liner|quickliner|kohl)\b/.test(t) ||
+      /\b(eyeliner|eye liner|quickliner|kohl|kajal)\b/.test(t) ||
+      (/\beye\b/.test(t) && /\bliner\b/.test(t) && !/\blip\b/.test(t)) ||
       (/\b(high-?pigment|high-?pgmnt|long-?wear|longwear|lngwr)\b.*\b(eye-?liner|liner|lnr)\b/.test(t) && !/\blip\b/.test(t))
     ) {
       product_type = "Eyeliner";
       subcategory = "eyes";
-    } else if (/\b(eyeshadow|eye shadow)\b/.test(t)) {
+    } else if (
+      /\b(eyeshadow|eye shadow)\b/.test(t) ||
+      (/\beye\b/.test(t) && /\b(palette|pigment|shadow|glitter)\b/.test(t))
+    ) {
       product_type = "Eyeshadow";
       subcategory = "eyes";
     } else if (/\b(eyebrows?|brows?)\b/.test(t)) {
@@ -827,6 +845,10 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
   // later branches, not be stolen here.
   else if (/\b(moisturi[sz]ers?|cream|lotion|emulsion|balm)\b/.test(t)) skincare_product_type = "Moisturiser";
   else if (/\bsalve\b/.test(t)) skincare_product_type = "Moisturiser";
+  // Bare "eye" → Eye Care. This is safe as a catchall because eye MAKEUP
+  // (palette/shadow/pigment/glitter/liner/mascara) is now routed to makeup upstream
+  // in makeupCheck, so only genuine eye SKINCARE reaches here — including forms
+  // with no cream/serum keyword ("Total Eye Lift", "Eye Fortifier", "Eye Revive").
   else if (/\beye\b/.test(t)) skincare_product_type = "Eye Care";
   else if (/\blip\b/.test(t)) skincare_product_type = "Lip Care";
   // "Oil Control" products are moisturisers/serums/cleansers, NOT facial oils —
