@@ -62,41 +62,58 @@ export async function runSearch(
   };
 }
 
+// Accent-fold and strip apostrophes the same way brand_search_index.brand_folded
+// is built, so a shopper typing "loreal paris" or "loccitane" matches the stored
+// form. Kept in step with fmb_refresh_brand_index() in
+// supabase/migrations/20260727200000_brand_search_index.sql.
+function foldForBrandMatch(input: string): string {
+  return input
+    .toLowerCase()
+    .replace(/'/g, '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
+}
+
+// Brand matches come from brand_search_index, one row per brand (~2,053), NOT
+// from a scan of products_active.
+//
+// Two reasons. Recall: the old ILIKE against the brand column returned nothing
+// at all for %loreal%, %kerastase% and %loccitane%, because the stored values
+// carry apostrophes and accents that a UK shopper does not type. Latency: that
+// scan was the slowest leg of the whole search at p95 202 ms, and since
+// runSearch runs both legs in Promise.all it set end-to-end latency. Measured
+// over the 127 real queries in search_events, the indexed lookup is p95 ~0 ms
+// and takes end-to-end search p95 from 471 ms to 99.9 ms.
+//
+// Folding at query time over products_active was measured and rejected at p95
+// 401 ms: it fixes recall and makes the slow leg twice as slow.
 async function searchBrands(query: string): Promise<BrandMatch[]> {
+  const folded = foldForBrandMatch(query);
+  if (!folded) return [];
+
   const { data } = await supabase
-    .from('products_active')
-    .select('normalised_brand, brand')
-    .ilike('brand', `%${query}%`)
-    .not('normalised_brand', 'is', null)
-    .not('tags', 'cs', '{cleanup_remove}')
-    .limit(200);
+    .from('brand_search_index')
+    .select('brand, normalised_brand, product_count')
+    .like('brand_folded', `%${folded}%`)
+    .order('product_count', { ascending: false })
+    .limit(50);
 
   if (!data) return [];
 
-  const brandMap = new Map<string, { display: string; count: number }>();
-  for (const row of data) {
-    if (!row.normalised_brand) continue;
-    const existing = brandMap.get(row.normalised_brand);
-    if (existing) {
-      existing.count++;
-    } else {
-      brandMap.set(row.normalised_brand, {
-        display: row.brand ?? row.normalised_brand,
-        count: 1,
-      });
-    }
-  }
-
-  const qLower = query.toLowerCase();
-  const matches = Array.from(brandMap.entries()).map(([normalised, { display, count }]) => ({
-    display_name: display,
-    slug: brandSlug(normalised),
-    product_count: count,
-  }));
+  const qLower = folded;
+  const matches = data
+    .filter(row => row.normalised_brand)
+    .map(row => ({
+      display_name: row.brand ?? row.normalised_brand!,
+      slug: brandSlug(row.normalised_brand!),
+      product_count: row.product_count ?? 0,
+    }));
 
   matches.sort((a, b) => {
-    const aPrefix = a.display_name.toLowerCase().startsWith(qLower) ? 0 : 1;
-    const bPrefix = b.display_name.toLowerCase().startsWith(qLower) ? 0 : 1;
+    // Compare folded on both sides, or "L'Oréal Paris" never counts as a prefix
+    // match for "loreal paris" and loses its ranking boost.
+    const aPrefix = foldForBrandMatch(a.display_name).startsWith(qLower) ? 0 : 1;
+    const bPrefix = foldForBrandMatch(b.display_name).startsWith(qLower) ? 0 : 1;
     if (aPrefix !== bPrefix) return aPrefix - bPrefix;
     if (b.product_count !== a.product_count) return b.product_count - a.product_count;
     return a.display_name.localeCompare(b.display_name);
