@@ -1,9 +1,42 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { get } from '@vercel/edge-config';
+import { createServerClient } from '@supabase/ssr';
 import { GONE_IDS, REDIRECTS, GONE_HTML } from './lib/superdrug-removed';
 
-// Only run on product detail URLs. Everything else skips the middleware entirely.
-export const config = { matcher: '/product/:path*' };
+// Two independent jobs share this middleware:
+//   /product/*  — Superdrug-removed gate (below, unchanged)
+//   /account/*  — auth session refresh, so the /account Server Component sees
+//                 a live session even after the access token expires (1h)
+export const config = { matcher: ['/product/:path*', '/account/:path*'] };
+
+// Refresh the Supabase auth session cookies. getUser() forces a token refresh
+// when the access token is expired; setAll writes the rotated cookies onto
+// both the forwarded request and the response.
+async function refreshSession(req: NextRequest): Promise<NextResponse> {
+  let res = NextResponse.next({ request: req });
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) return res; // fail open: page renders signed-out
+
+  const supabase = createServerClient(url, anonKey, {
+    cookies: {
+      getAll() {
+        return req.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
+        res = NextResponse.next({ request: req });
+        cookiesToSet.forEach(({ name, value, options }) =>
+          res.cookies.set(name, value, options)
+        );
+      },
+    },
+  });
+
+  await supabase.auth.getUser();
+  return res;
+}
 
 // Observability header set on every response this middleware touches. Its PRESENCE
 // proves the middleware executed on the route; its VALUE proves what it decided and —
@@ -34,6 +67,10 @@ function pass(state: string): NextResponse {
 }
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
+  if (req.nextUrl.pathname.startsWith('/account')) {
+    return refreshSession(req);
+  }
+
   const m = req.nextUrl.pathname.match(/^\/product\/(\d+)(?:\/|$)/);
   if (!m) return NextResponse.next();
 

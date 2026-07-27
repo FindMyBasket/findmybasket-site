@@ -720,6 +720,35 @@
   cursor: not-allowed;
 }
 
+/* Account-first save card: the create-account CTA is the primary action;
+   the email-only capture below it is the quieter legacy fallback. */
+.rb-save-account-cta {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  margin-bottom: 14px;
+}
+
+.rb-save-alt-lead {
+  font-size: 12px;
+  color: var(--ink-light, #4A4845);
+  line-height: 1.5;
+  margin-bottom: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(28, 26, 24, 0.08);
+}
+
+.rb-save-btn-quiet {
+  background: transparent;
+  color: var(--ink, #1C1A18);
+  border: 1px solid rgba(28, 26, 24, 0.25);
+}
+
+.rb-save-btn-quiet:hover:not(:disabled) {
+  background: rgba(138, 106, 48, 0.08);
+  color: var(--ink, #1C1A18);
+}
+
 .rb-save-success {
   font-size: 13px;
   color: #4F7059;

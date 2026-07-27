@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { addToRoutine, isInRoutine, onRoutineChange, type RoutineItem } from '../lib/routine-store';
+import { trackAddToCart } from '../lib/analytics';
 
 interface Props {
   product: RoutineItem;
@@ -26,6 +27,14 @@ export function SaveToRoutineButton({ product, compact = false }: Props) {
     if (inRoutine) return;
     const result = addToRoutine(product);
     if (result.added) {
+      // Only on a genuine add (addToRoutine is idempotent and returns added:false
+      // for a duplicate). handleClick runs only on the clicked instance, so the
+      // twin desktop/mobile-buy-bar mounts never double-fire this for one click.
+      trackAddToCart({
+        itemId: product.id,
+        itemBrand: product.brand,
+        itemCategory: product.category,
+      });
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2000);
     }

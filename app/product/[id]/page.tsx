@@ -16,6 +16,8 @@ import { displayProductTitle } from '../../../lib/format/product-name';
 import { ProductDescription } from '../../../components/ProductDescription';
 import { ClickOutLink } from '../../../components/ClickOutLink';
 import { AmazonLink } from '../../../components/AmazonLink';
+import { ProductViewTracker } from '../../../components/ProductViewTracker';
+import { EBAY_RETAILER_ID } from '../../../lib/analytics';
 
 export const revalidate = 3600;
 
@@ -241,6 +243,18 @@ export default async function ProductPage({ params }: { params: { id: string } }
 
   return (
   <SiteLayout>
+      <ProductViewTracker
+        itemId={product.id}
+        itemBrand={product.brand ?? undefined}
+        itemCategory={product.product_type ?? undefined}
+        // value deliberately EXCLUDES delivery: it is the best offer's goods price,
+        // whereas the visible "Best price" chip / mobile buy bar show effective_price
+        // (incl delivery). Excluding delivery matches the affiliate commission basis
+        // (paid on goods value, not postage) and keeps view_item.value equal to
+        // retailer_click.value. The gap vs the on-screen figure is intentional.
+        price={inStockOffers[0]?.price}
+        numRetailers={inStockOffers.length}
+      />
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
@@ -389,7 +403,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
               ) : (
                 <>
                   {inStockOffers.map((offer, idx) => (
-                    <RetailerRow key={`${offer.retailer_id}-${idx}`} offer={offer} isBestPrice={idx === 0} productId={product.id} />
+                    <RetailerRow key={`${offer.retailer_id}-${idx}`} offer={offer} isBestPrice={idx === 0} position={idx} productId={product.id} />
                   ))}
                   {outOfStockOffers.length > 0 && (
                     <>
@@ -397,7 +411,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
                         Out of stock
                       </div>
                       {outOfStockOffers.map((offer, idx) => (
-                        <RetailerRow key={`oos-${offer.retailer_id}-${idx}`} offer={offer} isBestPrice={false} productId={product.id} />
+                        <RetailerRow key={`oos-${offer.retailer_id}-${idx}`} offer={offer} isBestPrice={false} position={inStockOffers.length + idx} productId={product.id} />
                       ))}
                     </>
                   )}
@@ -413,6 +427,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
                   href={amazonUrl}
                   productId={product.id}
                   source="amazon_crosscheck"
+                  clickSource="product_page"
                   className="border border-border text-ink-light px-5 py-2.5 rounded-full text-sm font-medium hover:border-gold hover:text-ink transition-colors whitespace-nowrap"
                 />
               </div>
@@ -432,8 +447,10 @@ export default async function ProductPage({ params }: { params: { id: string } }
           <ClickOutLink
             href={ebayUrl}
             retailer="ebay"
+            retailerId={EBAY_RETAILER_ID}
             productId={product.id}
             source="ebay_search"
+            clickSource="product_page"
             className="group bg-warm-white border border-border rounded-2xl p-6 hover:border-gold transition-colors flex items-center justify-between"
           >
             <div>
@@ -514,10 +531,12 @@ export default async function ProductPage({ params }: { params: { id: string } }
 function RetailerRow({
   offer,
   isBestPrice,
+  position,
   productId,
 }: {
   offer: import('../../../lib/product-queries').RetailerOffer;
   isBestPrice: boolean;
+  position: number;
   productId: number;
 }) {
   return (
@@ -561,7 +580,12 @@ function RetailerRow({
             retailer={offer.retailer_name}
             retailerId={offer.retailer_id}
             productId={productId}
+            // price → GA4 value: goods price EXCLUDING delivery (the affiliate
+            // commission basis), even though this row's "Best price" chip shows
+            // effective_price incl delivery. Kept equal to view_item.value on purpose.
             price={offer.price}
+            isBestValue={isBestPrice}
+            listPosition={position}
             source="product_page"
             className="bg-ink text-cream px-5 py-2.5 rounded-full text-sm font-medium hover:bg-gold transition-colors whitespace-nowrap inline-block"
           >

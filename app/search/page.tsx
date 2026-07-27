@@ -4,6 +4,7 @@ import { runSearch, SEARCH_MIN_QUERY_LEN, SEARCH_PAGE_LIMIT } from '../../lib/se
 import { matchTaxonomy } from '../../lib/finder/taxonomy';
 import { logSearch } from '../../lib/events';
 import { getSessionId } from '../../lib/session';
+import { SearchEventTracker } from '../../components/SearchEventTracker';
 
 // A search-results page should not be indexed; it is a utility surface, not a
 // canonical landing page. The homepage JSON-LD SearchAction still targets it.
@@ -52,6 +53,16 @@ export default async function SearchPage({
 
   return (
     <SiteLayout>
+      {/* Client child fires the GA4 `search` event. Gated on the same committed-query
+          condition as the server-side logSearch above, so zero-result committed
+          searches still fire but the typeahead and too-short queries never do. */}
+      {query.length >= SEARCH_MIN_QUERY_LEN && (
+        <SearchEventTracker
+          query={query}
+          resultCount={productTotal + brands.length}
+          source={searchParams.from ?? 'search_page'}
+        />
+      )}
       <div className="max-w-[860px] mx-auto px-5 py-10 md:py-14">
         <form action="/search" method="get" role="search" className="flex gap-3 mb-8">
           <input
