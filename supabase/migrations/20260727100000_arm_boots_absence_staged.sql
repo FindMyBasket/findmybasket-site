@@ -1,0 +1,35 @@
+-- Arm Boots (retailer 23) absence handling — STAGE 1 of 2, at 30 days not 7.
+--
+-- Boots was seeded PARKED at 9999 in 20260721180000_absence_handling.sql while
+-- Search Console coverage was watched through the small-retailer wave. That
+-- wave has run (Stylevana 2,811 · Escentual 631 · Beauty Bay 536 · Debenhams
+-- 465 · Branded Beauty 274 · Beauty Flash 109 · Atelier 7 rows now out of
+-- stock) and the GSC checks came back clean: offerless pages render as valid
+-- InStock:false, return 200, stay indexable, product-page organic traffic is
+-- minor, and affected pages were already fading in impressions.
+--
+-- Boots is armed at 30 rather than its calibrated 7 to split the wave. The
+-- stale cohort is date-clustered, not evenly spread, so the threshold picks
+-- which clusters fire:
+--
+--   threshold 30 (today) -> 4,573 rows: the 05-11 (3,338) and 05-20 (839)
+--                           clusters plus ~400 scattered, i.e. the oldest and
+--                           least defensible rows
+--   threshold 7          -> 12,893 rows, adding the 07-07 (4,012) and 07-08
+--                           (3,757) feed-rotation cohort and the 07-10..07-13
+--                           tail
+--
+-- So this stage flips ~36% of the backlog and leaves the rotation cohort in
+-- place for a second, separately-observable step.
+--
+-- TIME-BOXED, and this is the part to diarise: 30 days is a moving window, not
+-- a fixed subset. The 07-07 cohort crosses 30 days on 2026-08-06 and 07-08 on
+-- 2026-08-07, so leaving this at 30 past 2026-08-06 releases the second wave
+-- automatically rather than deliberately. Step down to 7 before then, or
+-- re-park, but do not let the date make the decision.
+--
+-- YesStyle (25) stays PARKED at 9999 deliberately, so that any Search Console
+-- movement over the next few days is attributable to one retailer.
+UPDATE public.retailer_import_config
+   SET absence_threshold_days = 30
+ WHERE retailer_id = 23;
