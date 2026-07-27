@@ -430,9 +430,19 @@ async function triggerRevalidation(supa: any, retailerId: number, sinceIso: stri
       if (data.length < 1000) break;
       from += 1000;
     }
+    // top_category → route. fragrance/bath_body were previously missing, so
+    // imports touching those categories (e.g. Perfume Click, 57% fragrance)
+    // never refreshed their category pages. bath_body's route is hyphenated.
+    const catRoutes: Record<string, string> = {
+      skincare: "/skincare",
+      makeup: "/makeup",
+      hair: "/hair",
+      fragrance: "/fragrance",
+      bath_body: "/bath-and-body",
+    };
     const paths = [
       ...Array.from(slugs).filter(Boolean).map((s) => `/brands/${s}`),
-      ...Array.from(cats).filter((c) => c === "skincare" || c === "makeup" || c === "hair").map((c) => `/${c}`),
+      ...Array.from(cats).map((c) => catRoutes[c]).filter(Boolean),
     ];
     if (paths.length === 0) return;
     const resp = await fetch("https://www.findmybasket.co.uk/api/revalidate", {
