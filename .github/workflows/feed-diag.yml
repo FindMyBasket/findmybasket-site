@@ -60,7 +60,19 @@ jobs:
           # No `set -x` anywhere in this step: the URL embeds AWIN_API_KEY and
           # tracing would print it to a log that outlives the run.
           set -eu
-          COLS="aw_deep_link,product_name,aw_product_id,merchant_product_id,search_price,store_price,merchant_deep_link,brand_name,rrp_price,in_stock,merchant_product_category_path,category_name,ean,mpn,merchant_image_url"
+          # SIBLING COLUMNS (added 2026-07-27). AWIN exposes more than one column
+          # per concept and advertisers do not agree on which to fill. Five active
+          # retailers sit at exactly 0.0% EAN across 56,821 rows while six sit at
+          # 98.8-100%, which looks like a column-name mismatch rather than five
+          # advertisers independently supplying nothing. The importer requests
+          # `ean` and never `product_GTIN`, so request BOTH halves of each pair
+          # here and let the diagnosis report which one an advertiser populates:
+          #   ean              <-> product_GTIN
+          #   merchant_category <-> merchant_product_category_path
+          #   category_name    <-> product_type
+          # Unknown-but-valid AWIN column names return blank rather than erroring,
+          # so requesting both halves is safe on feeds that carry only one.
+          COLS="aw_deep_link,product_name,aw_product_id,merchant_product_id,search_price,store_price,merchant_deep_link,brand_name,rrp_price,in_stock,merchant_product_category_path,merchant_category,category_name,product_type,ean,product_GTIN,mpn,merchant_image_url"
           curl -fsS \
             "https://productdata.awin.com/datafeed/download/apikey/${AWIN_API_KEY}/fid/${FID}/format/csv/language/en/delimiter/%2C/compression/gzip/adultcontent/1/columns/${COLS}/" \
             -o feed.csv.gz

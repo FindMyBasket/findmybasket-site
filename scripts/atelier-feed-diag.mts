@@ -78,6 +78,59 @@ console.log("=== FEED SHAPE ===");
 console.log("rows (products):", body.length);
 console.log("columns:", header.join(", "));
 
+// === 0. FIELD QUALITY =======================================================
+// Fill rate for every requested column, and explicitly for the sibling pairs.
+//
+// Why the pairs matter: AWIN exposes more than one column per concept and
+// advertisers disagree about which to populate. The importer requests `ean` and
+// never `product_GTIN`, and five active retailers sit at exactly 0.0% EAN across
+// 56,821 rows while six sit at 98.8-100%. If the GTIN side of the pair is
+// populated on those feeds, that is an importer column-name bug, not an
+// advertiser data gap, and EAN is the strongest matching signal we have.
+{
+  const fill = (name: string) => {
+    if (col(name) < 0) return null;
+    const n = body.filter((r) => get(r, name) !== "").length;
+    return { n, pct: body.length ? (n / body.length) * 100 : 0 };
+  };
+  const line = (name: string) => {
+    const f = fill(name);
+    if (!f) return `  ${name.padEnd(34)}  COLUMN NOT RETURNED`;
+    return `  ${name.padEnd(34)}  ${String(f.n).padStart(6)}  ${f.pct.toFixed(1).padStart(5)}%`;
+  };
+
+  console.log("\n=== 0. FIELD QUALITY (fill rate, % of rows) ===");
+  for (const c of [
+    "product_name", "brand_name", "aw_deep_link", "merchant_deep_link",
+    "merchant_image_url", "search_price", "store_price", "rrp_price", "in_stock",
+    "mpn",
+  ]) console.log(line(c));
+
+  console.log("\n  -- sibling pairs: which half does this advertiser populate? --");
+  const pairs: [string, string][] = [
+    ["ean", "product_GTIN"],
+    ["merchant_category", "merchant_product_category_path"],
+    ["category_name", "product_type"],
+  ];
+  for (const [a, b] of pairs) {
+    console.log(line(a));
+    console.log(line(b));
+    const fa = fill(a), fb = fill(b);
+    const pa = fa?.pct ?? 0, pb = fb?.pct ?? 0;
+    let verdict: string;
+    if (pa < 1 && pb < 1) verdict = `NEITHER populated — genuinely absent from this feed`;
+    else if (pa >= 1 && pb < 1) verdict = `only "${a}" populated`;
+    else if (pb >= 1 && pa < 1) verdict = `only "${b}" populated — IMPORTER READS "${a}", SO THIS IS LOST`;
+    else verdict = `both populated (${a} ${pa.toFixed(1)}%, ${b} ${pb.toFixed(1)}%)`;
+    console.log(`    -> ${verdict}\n`);
+  }
+
+  const eanF = fill("ean"), gtinF = fill("product_GTIN");
+  const bearing = Math.max(eanF?.pct ?? 0, gtinF?.pct ?? 0);
+  console.log(`  VERDICT: ${bearing >= 50 ? "EAN-BEARING" : (fill("mpn")?.pct ?? 0) >= 50 ? "MPN-ONLY" : "NEITHER"}` +
+    ` (best barcode coverage ${bearing.toFixed(1)}%, mpn ${(fill("mpn")?.pct ?? 0).toFixed(1)}%)`);
+}
+
 // ---- 1. Brand distribution ----
 const brandField = col("brand") >= 0 ? "brand" : (col("brand_name") >= 0 ? "brand_name" : "brand");
 const brandCounts = new Map<string, number>();
