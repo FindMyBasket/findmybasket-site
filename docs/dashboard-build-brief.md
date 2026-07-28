@@ -149,6 +149,32 @@ Credentials in secrets. Confirm which context you read from, Actions or Codespac
 
 **AWIN credential naming must be resolved before Step 5. Two names are in circulation, AWIN_API_KEY and AWIN_OAUTH_TOKEN. Establish which secret holds the OAuth2 reporting token for api.awin.com, and confirm whether AWIN_API_KEY already exists as a separate feed-pipeline credential. Do not conflate them. Report before building the puller.**
 
+> **RESOLVED 28 July. Two distinct credentials, do not conflate them.**
+>
+> **`AWIN_API_KEY` is the FEED credential. Never overwrite it.** Eight live
+> references, all on the feed-download path against `productdata.awin.com`, where
+> the key is embedded in the URL path rather than sent as a header:
+> `.github/workflows/refresh-debenhams.yml:45`, `.github/workflows/feed-diag.yml:77`,
+> `supabase/functions/import-awin-feed/index.ts:484`,
+> `supabase/functions/awin-feed-count/index.ts:77`. The Debenhams workflow comment
+> confirms the GitHub secret and the edge-function secret hold the same value.
+> Overwriting it with a reporting token breaks nightly imports.
+>
+> **`AWIN_OAUTH_TOKEN` exists in the secret store, has no reader yet, and is
+> intended for the api.awin.com reporting integration in Step 5.** Created ahead of
+> that step. It has zero repo references, which is expected and is NOT evidence
+> about whether it exists: secrets live in the GitHub Actions and Supabase secret
+> stores, so a repo search only ever shows what *references* a credential. Confirm
+> existence with the operator or the platform UI, never by grepping.
+>
+> **Step 5 is greenfield on this front:** nothing in the codebase calls
+> `api.awin.com` at all today, so there is no existing auth pattern to follow and
+> none to break.
+>
+> Incidental, and now a separate ticket: `scripts/secret-divergence-check.sh:65`
+> lists `AWIN_API_KEY` in `SKEW_IGNORE`, so nothing verifies its two copies still
+> match. Establish why it was excluded before removing it, then rotate.
+
 AWIN rate limit is 20 calls per minute per user, so batch per-advertiser pulls sensibly. Allow up to 10 minutes for a newly generated token to propagate if the first call returns empty.
 
 ### 3.3 Establishing the by-network start date
