@@ -120,7 +120,41 @@ BEGIN;
 ROLLBACK;
 ```
 
-## 6. Explain *why* in the migration, not just what
+## 6. A clause is only protective if the thing it names exists
+
+```sql
+-- WRONG: silently does nothing. There is no unique constraint to conflict on,
+-- so no conflict ever arises and every row inserts again on replay.
+INSERT INTO platform_changes (...) VALUES (...) ON CONFLICT DO NOTHING;
+
+-- RIGHT: name the constraint's columns, and make sure the constraint exists.
+ALTER TABLE platform_changes ADD CONSTRAINT platform_changes_title_uniq UNIQUE (title);
+INSERT INTO platform_changes (...) VALUES (...) ON CONFLICT (title) DO NOTHING;
+```
+
+`ON CONFLICT DO NOTHING` with no conflict target is valid SQL, raises nothing, and
+guards nothing. It reads as protective, which is worse than reading as absent.
+Caught in `20260728180000_dashboard_schema.sql` only because convention 5 is
+mandatory: on a PITR replay it would have duplicated every row in
+`platform_changes`, the one table whose entire job is to be the trustworthy record
+of when metrics changed.
+
+**This is the fourth instance of one shape in a single week.** The pattern is a
+statement that is syntactically valid, semantically reasonable, and enforces
+nothing, where the obvious check agrees it worked:
+
+| Written | What it actually did |
+|---|---|
+| `GRANT SELECT ON <table> TO anon` | Restricted nothing. The default ACL already granted ALL, and a GRANT is additive. |
+| `REVOKE EXECUTE ... FROM anon, authenticated` | Left the PUBLIC grant. `has_function_privilege` still returned true. |
+| `ALTER DEFAULT PRIVILEGES ... REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC` | Updated `pg_default_acl` correctly and changed nothing: `acldefault()` is re-merged at creation. |
+| `ON CONFLICT DO NOTHING` | Deduplicated nothing, because the named conflict did not exist. |
+
+The generalisation: **an additive or defensive clause never fails loudly when it is
+a no-op.** Only reading the resulting state proves it did something. Conventions 4
+and 5 are how you read it — assert against the catalogue, and run it twice.
+
+## 7. Explain *why* in the migration, not just what
 
 The SQL says what changed. Only the header can say which assumption was wrong,
 what was verified before running it, and what must not be "simplified" later.
