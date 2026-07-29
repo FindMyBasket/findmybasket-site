@@ -75,12 +75,41 @@
     script.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA4_ID;
     document.head.appendChild(script);
 
+    // DO NOT change this to `window.dataLayer = []`. It reads as redundant
+    // because fmb-gtag-stub.js has already created the array, and that is
+    // exactly why it is dangerous: by the time this runs, dataLayer holds the
+    // events queued before consent, and reassigning it throws them away.
+    // The bug would be invisible in testing, because a returning visitor with
+    // stored consent has an almost-empty queue and passes either way. Only a
+    // first-time visitor who browses before accepting loses anything.
+    // The `|| []` is the fallback for the stub having failed to load, not
+    // defensive noise. See docs/ticket-gtag-hydration-race.md.
     window.dataLayer = window.dataLayer || [];
-    window.gtag = function () {
-      window.dataLayer.push(arguments);
-    };
+    if (typeof window.gtag !== 'function') {
+      // Same fallback: only define gtag if the stub did not. Overwriting the
+      // stub's version would be harmless today (identical behaviour) but would
+      // silently detach the queue bound and the discard path.
+      window.gtag = function () {
+        window.dataLayer.push(arguments);
+      };
+    }
     window.gtag('js', new Date());
     window.gtag('config', GA4_ID, { anonymize_ip: true });
+  }
+
+  // ===== CONSENT OUTCOME =====
+  // Every decision point routes through here, including the ones that used to
+  // do nothing. Refusal is no longer "just don't load analytics": there is now
+  // a queue that has to be actively discarded, and a path that forgets to do so
+  // fails silently while looking correct.
+  function applyConsent(granted) {
+    if (window.FMBGtag && typeof window.FMBGtag.resolve === 'function') {
+      window.FMBGtag.resolve(granted, loadAnalytics);
+      return;
+    }
+    // Stub absent (failed to load, or a page that does not include it). Fall
+    // back to the pre-stub behaviour rather than breaking consent handling.
+    if (granted) loadAnalytics();
   }
 
   // ===== STYLES =====
@@ -203,7 +232,8 @@
 
     function commitConsent(prefs) {
       var rec = setConsent(prefs);
-      if (rec.analytics) loadAnalytics();
+      // Both outcomes act. Refusal discards the queue; it is not a no-op.
+      applyConsent(rec.analytics);
       close();
     }
 
@@ -229,13 +259,18 @@
     // ===== INITIAL DECISION =====
     var existing = getConsent();
     if (existing) {
-      // Returning visitor with stored choice
-      if (existing.analytics) loadAnalytics();
+      // Returning visitor with stored choice. A stored REFUSAL now has work to
+      // do: discard whatever queued between the stub loading and this point.
+      applyConsent(!!existing.analytics);
     } else if (hasGPC()) {
-      // Honour Global Privacy Control without showing banner
+      // Honour Global Privacy Control without showing banner. This is a
+      // refusal, so it discards rather than merely declining to load.
       setConsent({ analytics: false });
+      applyConsent(false);
     } else {
-      // No prior choice, show banner
+      // No prior choice. Deliberately does NOT resolve: events keep queueing,
+      // capped, until the visitor decides. Resolving either way here would
+      // pre-empt a choice they have not made.
       openBanner();
     }
 
