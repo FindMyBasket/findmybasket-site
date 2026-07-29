@@ -1,7 +1,9 @@
 # Ticket: GA4 events fired from mount effects are dropped
 
 **Raised:** 29 July 2026, from Step 4 discovery of the dashboard build.
-**Status:** OPEN, not started. Diagnosis complete, remedy not chosen.
+**Status:** OPEN, not started. Diagnosis complete. **Remedy chosen 29 July: the
+dataLayer stub (remedy 3).** Implementation approach proposed and awaiting review;
+no code written.
 **Blocks:** six dashboard metrics. Five derive from `view_item` and are
 suppressed from display (qualified sessions, commission per qualified session,
 comparison views, session to comparison-view rate, and comparison-view to
@@ -250,7 +252,38 @@ than an obvious winner.
      indicator have to be decided together, not separately**, or the indicator
      will silently become a measurement of something else while keeping its name.
 
-**Evaluate all four. Pick none yet.**
+## DECISION, 29 July: remedy 3, the dataLayer stub
+
+**Remedies 1, 3 and 4 evaluated; 3 chosen. 1 declined, 4 deferred.**
+
+**It does not change the legal position.** Nothing touches the device before
+consent, exactly as today. The stub defines a function and an array in memory; it
+sets no cookie and makes no network request. PECR is therefore not engaged and no
+UK GDPR question arises.
+
+- **Remedy 1, `beforeInteractive` on the banner, declined.** It would load gtag.js
+  and set `_ga` cookies before consent, which is what PECR Regulation 6
+  prohibits.
+- **Remedy 4, Consent Mode v2, deferred rather than rejected.** Its cookieless
+  pings raise an unresolved UK GDPR question that would need a legal opinion,
+  which is not affordable at this stage. It is *also* declined on value: its
+  benefit is modelled data from refusing visitors, and at roughly 47
+  `retailer_click` a week the property is below the threshold at which modelling
+  produces anything usable. **Record as revisit-when-volume-supports-it, not as
+  rejected. Both conditions change together**, since the volume that would make
+  the modelling useful is also the volume that would justify the legal opinion.
+
+**It is the only remedy that addresses the mechanism.** The race is that events
+fire before `gtag` exists. The stub means `gtag` always exists. The other three
+change *when consent is established* and leave the ordering to chance.
+
+> **Do not read "the stub loads before hydration" as a reversal of remedy 1.**
+> What was declined is loading *gtag.js* early. What is adopted is defining the
+> *queue* early. They differ on precisely the point that matters: one transmits
+> and stores, the other does neither.
+
+**Evaluate all four. Pick none yet.** *(Superseded by the decision above. Kept so
+the reasoning that led to it stays legible.)*
 
 **The PECR read applies to all four, not only to option 1.** Every one of them
 changes when something is loaded or what is sent before consent, so each needs
@@ -263,6 +296,123 @@ supplies them.
 Option 3 is closest to how the guard was presumably intended to work, and option
 4 is the most future-proof, but all four need the consent behaviour verified
 rather than assumed.
+
+## Proposed implementation, NOT APPROVED, reported for review
+
+Read against `public/fmb-cookie-banner.js` as it stands.
+
+### 1. Split the stub into its own file
+
+New `public/fmb-gtag-stub.js`, roughly fifteen lines: define
+`window.dataLayer = window.dataLayer || []` and `window.gtag` as a function that
+pushes its `arguments` onto it. Nothing else. No network request, no cookie, no
+reading of stored consent.
+
+Loaded on both surfaces from the one file, so they cannot drift:
+
+| Surface | How |
+|---|---|
+| Next.js app | `<Script src="/fmb-gtag-stub.js" strategy="beforeInteractive" />` in the **root** layout (App Router requires root; it does not work in a nested layout) |
+| Static pages | `<script src="/fmb-gtag-stub.js"></script>` in `<head>`, ordered **before** the existing banner tag |
+
+`public/fmb-cookie-banner.js` keeps its current loading strategy on both
+surfaces. It continues to own the consent UI and the decision.
+
+### 2. Centralise the consent outcome in one function
+
+This is the part that most wants review, because the current code has **four
+independent decision points** and only the granting ones do anything:
+
+| Line | Path | Today | Needs |
+|---|---|---|---|
+| `:206` | `commitConsent`, granted | `loadAnalytics()` | replay |
+| `:206` | `commitConsent`, refused | *nothing* | **discard** |
+| `:233` | returning visitor, granted | `loadAnalytics()` | replay |
+| `:233` | returning visitor, refused | *nothing* | **discard** |
+| `:236` | GPC auto-reject | `setConsent(false)` | **discard** |
+
+Three paths currently do nothing and must now actively discard. Leaving any one
+of them doing nothing leaves a live queue, and it would fail silently, which is
+the exact shape this repo has hit four times in a week.
+
+**So: one `resolveConsent(granted)` called from every decision point, rather than
+discard logic added at each.** One place to read, one place to test.
+
+### 3. Grant path: capture, clear, replay in order
+
+```
+var queued = window.dataLayer.slice();   // capture what accumulated
+window.dataLayer.length = 0;             // clear so gtag.js starts clean
+loadAnalytics();                         // js + config pushed here, in order
+for (var i = 0; i < queued.length; i++) window.dataLayer.push(queued[i]);
+```
+
+Order is load-bearing. `gtag.js` processes `dataLayer` in sequence, so `js` and
+`config` must precede the replayed events or they are mis-attributed or dropped.
+Capture-and-replay rather than letting `gtag.js` find the queue in place, because
+the queue would otherwise sit *ahead* of `config`.
+
+**Hazard in the existing code:** `loadAnalytics()` at `:78` does
+`window.dataLayer = window.dataLayer || []`, which is idempotent and safe. It
+must stay that way. Anyone "tidying" it to `window.dataLayer = []` destroys the
+queue, and the tests would still pass for a returning visitor.
+
+### 4. Refusal path: discard, and stop accepting
+
+```
+window.dataLayer.length = 0;   // drop what accumulated
+window.gtag = function () {};  // discard everything from here
+// gtag.js is never loaded
+```
+
+**Both halves are required.** Truncating alone leaves the stub still queueing, so
+a later acceptance through Cookie Settings would transmit events gathered during
+the refused period. That is the UK GDPR problem this ticket is most concerned
+with, arriving by a back door.
+
+### 5. Bound the queue
+
+Cap it, in the region of 50 entries, dropping newest once full. A visitor who
+never answers the banner and browses at length would otherwise grow it without
+limit. Dropping rather than transmitting is the safe direction.
+
+### 6. Leave the tracker guards in place
+
+`if (typeof gtag !== 'function') return` in `lib/analytics.ts` becomes inert once
+the stub always exists. **Do not remove it.** It is the backstop if the stub ever
+fails to load, and without it that failure would be a crash instead of a silent
+no-op.
+
+### Known limitation, to accept knowingly
+
+Replayed events are timestamped by GA4 at replay time, not at occurrence time.
+For the common case, a returning visitor with stored consent, that is a few
+hundred milliseconds. For a first-time visitor who leaves the banner up and then
+accepts, every queued event lands at the moment of acceptance. Event *counts* are
+correct; intra-session timing for that visitor is not. Acceptable, but it should
+be a known limitation rather than a surprise.
+
+**What this does not do, by design:** it does not recover refusing visitors. The
+Step 6 consent ratio therefore keeps measuring exactly what it measures today,
+which is a point in this remedy's favour given that remedy 4 would have quietly
+changed it.
+
+### Verification, per the three traps
+
+1. **Cold load, not client-side navigation.** Open `/search?q=...` directly in a
+   fresh tab with consent already granted. Client-side navigation is the path
+   that already works and would show a false pass on every affected event.
+2. **DebugView, not same-day GA4 totals.** The 24 to 48 hour processing lag is
+   how this survived from 25 July.
+3. **Re-run the call-site grep**, do not trust the fifteen-event table.
+
+Plus the paths that need deliberate exercise, because ordinary browsing never
+reaches them: an emailed `/app?routine=1,2,3` link, for
+`load_routine_from_url` and the `auto_shared_link` path of `basket_optimised`.
+
+And the one that matters most: **refuse consent, browse, then accept through
+Cookie Settings, and confirm in DebugView that nothing from the refused period
+is transmitted.**
 
 ## After the fix
 
