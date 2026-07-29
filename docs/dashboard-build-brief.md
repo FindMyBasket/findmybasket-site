@@ -18,7 +18,7 @@ Appended as steps complete, so the brief and its state never diverge.
 | 2 | COMPLETE, approved 28 Jul | Schema proposed; eleven tables, not ten. |
 | 3 | COMPLETE, applied 28 Jul | `supabase/migrations/20260728180000_dashboard_schema.sql`. All eleven verified `{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}` by reading `relacl`. |
 | 7 | COMPLETE, approved 28 Jul | Queries confirmed; three premises corrected, see "Corrections from Step 7" below. |
-| 4 | DISCOVERY IN PROGRESS, 29 Jul | `.github/workflows/ga4-diag.yml` + `scripts/ga4-diag.mjs` committed, read-only, `workflow_dispatch`. Four premises corrected, see "Corrections from Step 4" below. `outbound_clicks_other` APPLIED (`20260729120000`), the one part independent of every discovery outcome. Awaiting the first dispatch. No puller, no schedule. |
+| 4 | DISCOVERY COMPLETE, 29 Jul. Puller NOT built. | Diagnostic dispatched, design holds. Results in "Step 4 discovery results" below. By-network start **2026-06-24** recorded as `platform_changes` id 7 (`20260729140000`). `outbound_clicks_other` APPLIED (`20260729120000`). Google Signals disabled, no thresholding. **Open bug: the GA4 `search` event never fires**, and `view_item` undercounts for the same reason. No puller, no schedule. |
 | 5, 6, 8-15 | NOT STARTED | |
 
 ## Corrections from Step 7, adopted 28 July
@@ -124,6 +124,90 @@ and the step text is left intact so the original reasoning stays legible.
    that separates the two causes of a low `view_item` count: if `page_view` is
    healthy and `view_item` is zero, that is a bug; if both are proportionally
    low, that is consent. Neither figure means anything reported alone.
+
+## Step 4 discovery results, 29 July
+
+First dispatch of `ga4-diag.yml`. **The design holds.** Property 415465396.
+
+### Settled, and safe to build on
+
+| Question | Result |
+|---|---|
+| Google Signals (2.3) | **Disabled.** No thresholding notice in either report. The risk most likely to invalidate the design is absent, so no sixth `platform_changes` row is needed for it. |
+| By-network start (2.5) | **2026-06-24**, established empirically. Recorded as `platform_changes` id 7, status `occurred`, migration `20260729140000`. |
+| Retention guard | **Cleared it properly.** Events exist from 2026-04-05, well before the start, and with 14-month retention the start sits 391 days inside the window. A real dimension boundary, not a retention edge. |
+| Network values | `amazon`, `awin`, `ebay`, `rakuten`. No `other` yet and no stray casing, so the four columns cover everything observed. |
+| Time zone | `Etc/GMT`, which is UTC. See 8.1: no offset exists, nothing to fix. |
+| BigQuery export (2.4) | **Off.** With 14-month retention this is no longer urgent, but it is the only thing that makes history permanent and it is not retroactive. Operator's call, not a blocker. |
+
+### The consent ratio, now measured
+
+GA4 `retailer_click` against the server-side `outbound_clicks` table, same ISO
+weeks. This is the Step 6 indicator, seeded:
+
+| Week (Mon) | GA4 | Server-side | Ratio |
+|---|---|---|---|
+| 29 Jun | 36 | 39 | 92% |
+| 6 Jul | 13 | 21 | 62% |
+| 13 Jul | 47 | 58 | 81% |
+| 20 Jul | 85 | 128 | 66% |
+
+Consent plus blockers costs roughly a fifth to a third of clicks, and it is not
+stable week to week, which is the argument for showing it rather than applying a
+fixed correction factor.
+
+> **The 29 June week is not comparable and should not anchor the range.**
+> Server-side logging shipped 2026-07-01 (`2b54593`, first row 11:13:42 UTC),
+> so that week is 7 GA4 days against roughly 4.5 server-side days. The
+> denominator is short, which inflates the ratio. Across the three clean weeks
+> the spread is 62% to 81%, so the cost is nearer a fifth to two fifths than the
+> 8% the first week implies.
+>
+> **Recommended, not yet done:** a sixth `platform_changes` row for the
+> server-side event-logging start on 2026-07-01, since it bounds every
+> cross-check that uses `outbound_clicks` or `search_events` as a denominator,
+> and this is the second time it has needed explaining. Gated; not inserted
+> without approval.
+
+### Open bug, reported not fixed
+
+**The GA4 `search` event is broken. It is not low volume.** GA4 returned 0 for
+the 7-day window while server-side `search_events` recorded 41 rows in the same
+window, 18 in the last two days, most recent 07:48 on 29 July. Consent cannot
+explain it: consent scales a count down rather than zeroing one event while
+`retailer_click` keeps firing through the same gate.
+
+**Diagnosed cause, from the code:** `app/layout.tsx:41` loads the consent banner
+with `strategy="afterInteractive"`, which runs *after* React hydration.
+`window.gtag` is defined by that banner (`fmb-cookie-banner.js:79`), and every
+tracker in `lib/analytics.ts` returns early when `gtag` is not yet a function. So
+a mount effect that fires during hydration finds no `gtag` and drops its event
+silently.
+
+That predicts the exact pattern observed:
+
+| Event | Fires from | Observed | Why |
+|---|---|---|---|
+| `retailer_click` | user click, seconds after load | healthy (47) | banner has long since defined `gtag` |
+| `view_item` | mount effect | low but non-zero (9) | survives only on client-side navigation, where `gtag` already exists from the previous page |
+| `search` | mount effect | **exactly 0** | every entry to `/search` is a full-document GET (`public/index.html:281` and `app/search/page.tsx:67`; there is no `router.push` to `/search` anywhere), so the effect always loses the race |
+
+**Consequence for this build, beyond the search indicators.** `view_item` is
+subject to the same race, so it is not merely young, it is *systematically
+undercounting* by whatever share of product views are cold loads. For a
+comparison site taking search-engine landings straight onto product pages that
+share is likely the majority. **Qualified sessions and commission per qualified
+session are therefore understated by an unknown factor, not just sparse.** Label
+them accordingly until this is fixed.
+
+**Impact on the specified indicators.** Zero-result search rate is Supabase-only
+and unaffected. Search-to-comparison needs GA4, and with `session_id` 100% NULL
+server-side there is no proxy, so that indicator **cannot be built at all** until
+the event fires. It must render "not measured" and must not be approximated.
+
+Fixing it is out of scope for this pass and is not an import-path change; the
+likely remedy is the script strategy in `app/layout.tsx`, which wants its own
+ticket and its own verification.
 
 ## 0. Corrections carried in this version
 
@@ -301,7 +385,7 @@ GA4 dimensions are not retroactive, so the by-network breakdown begins on the re
 
 **Store NULL, not zero, for unmeasured periods, and render as "not measured". Writing zero records a measurement never taken as a measurement of nothing, and the distinction cannot be recovered later.**
 
-**Qualified sessions has almost no history. view_item shipped in PR #129, merged 27 July as 974bcc0, and DebugView verification was never completed. So qualified sessions per week and commission per qualified session will be near-empty at launch. Ship both tiles showing "not measured" rather than holding them: the null-not-zero convention and the platform_changes markers already handle this, and holding them means changing the dashboard shape later.**
+**Qualified sessions has almost no history. view_item shipped in PR #129, merged as 974bcc0 on 25 July at 18:00 +0100 (not 27 July, which this brief carried until the Step 4 discovery checked it against git; deploy may lag merge again, so derive any window arithmetic from the data rather than from either date), and DebugView verification was never completed. So qualified sessions per week and commission per qualified session will be near-empty at launch. Ship both tiles showing "not measured" rather than holding them: the null-not-zero convention and the platform_changes markers already handle this, and holding them means changing the dashboard shape later.**
 
 Search cutover. The browse search recall fix changes total_count for 19 of the 127 distinct queries in search_events, all currently returning fewer than 3 results. total_count writes to search_events.result_count, accumulating since 1 July. Rows with result_count < 3 before the cutover are not comparable with the same rows after it. Record the cutover timestamp when it deploys.
 
@@ -385,22 +469,31 @@ buckets in UTC.** If the property is not on UTC, events near midnight land on
 different days in the two pipelines, and at a week edge in different weeks. The
 diagnostic reports the property time zone for exactly this reason.
 
-**Fix direction, decided 29 July: if the property reports a time zone other than
-UTC, convert `outbound_clicks` to the property time zone before bucketing. Do
-not adjust GA4, and do not re-bucket GA4 into UTC.** GA4 is the side that cannot
-be reprocessed, so the malleable pipeline is the one that moves. State the
-resulting convention in the `week_start` column comment either way.
-
-**Scale, measured 29 July.** Of 267 server-side clicks, exactly 1 falls in the
-23:00 UTC hour, so exactly 1 lands on a different day under Europe/London and 0
-cross a week boundary. That is 0.4%, and it has never moved a weekly bucket.
-
-**This is a systematic offset, not a defect, which is why it is worth fixing
-while it is still arithmetic.** During BST a UK-timezone GA4 day begins at 23:00
-UTC the previous day, so the day-level disagreement scales with traffic and
-week-edge cases become inevitable as volume grows. A discrepancy that is
-currently 1 row in 267 and structurally guaranteed to grow is a better thing to
-correct now than to backfill later.
+> **RESOLVED 29 July, and there is nothing to fix. The property reporting time
+> zone is `Etc/GMT`, which is UTC.** Zero offset, no daylight saving, year round.
+> GA4's `date` dimension and Postgres `date_trunc('week', ...)` therefore agree on
+> every day boundary, always. Verified across the BST switch: `Etc/GMT` reads the
+> same hour as `UTC` in both January and July, while `Europe/London` diverges by
+> an hour in July.
+>
+> **No offset exists and none should be introduced.** An earlier draft of this
+> section recorded a fix direction, "convert `outbound_clicks` to the property
+> time zone before bucketing", which came from the diagnostic string-comparing the
+> time zone against the literal `UTC` and reporting `Etc/GMT` as a mismatch. That
+> was a false positive in the guard, now fixed to treat `Etc/GMT`, `Etc/UTC`,
+> `GMT` and the other fixed zero-offset zones as equivalent.
+>
+> **The correction matters beyond the cosmetic.** Acting on that fix direction
+> would be a no-op at best, and anyone reading "the property time zone" as
+> `Europe/London` would *introduce* the BST offset that does not currently exist,
+> turning a guard into the cause of the defect it was watching for. For the
+> record, had the property been on `Europe/London` the scale would have been
+> small: of 267 server-side clicks exactly 1 falls in the 23:00 UTC hour, so 1
+> would land on a different day and 0 would cross a week boundary.
+>
+> **Keep the guard.** It is correct now and the property time zone is a setting
+> that can be changed later, which is exactly when nobody would think to re-check
+> it.
 
 ## 9. Supabase schema
 

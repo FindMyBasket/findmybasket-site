@@ -186,9 +186,17 @@ let thresholdingSeen = false;
 // The last pair confirms the clickout events are alive and lets the two be
 // compared: they fire on the SAME user action, so any total must count one.
 line('2.2  EVENT VOLUMES, LAST 7 DAYS');
+// The `date` dimension is here for the arithmetic, not for display. An event
+// that shipped part-way through the window is only live for part of it, and
+// dividing its count by a FULL window of page_view understates it by whatever
+// fraction of the window it did not exist for. That is how a healthy event reads
+// as a health problem. Derived from the data rather than from a ship date on
+// purpose: the ship date has already been wrong once (the brief says view_item
+// merged 27 July, git says 974bcc0 landed on main on 25 July at 18:00 +0100),
+// and deploy can lag merge again, so a constant here would be a third guess.
 const events = await runReport({
   dateRanges: [{ startDate: '7daysAgo', endDate: 'yesterday' }],
-  dimensions: [{ name: 'eventName' }],
+  dimensions: [{ name: 'eventName' }, { name: 'date' }],
   metrics: [{ name: 'eventCount' }],
   dimensionFilter: {
     filter: {
@@ -198,31 +206,75 @@ const events = await runReport({
       },
     },
   },
+  limit: 100000,
 });
 if (!events.ok) {
   console.log(`  QUERY FAILED (${events.status}): ${events.json?.error?.message || events.text.slice(0, 400)}`);
 } else {
-  const counts = Object.fromEntries(rows(events.json).map((r) => [r.d[0], r.m[0]]));
+  // eventName -> { day -> count }
+  const byDay = new Map();
+  for (const r of rows(events.json)) {
+    const [name, day] = r.d;
+    if (!byDay.has(name)) byDay.set(name, new Map());
+    byDay.get(name).set(day, (byDay.get(name).get(day) || 0) + r.m[0]);
+  }
+  const total = (name) => [...(byDay.get(name)?.values() || [])].reduce((a, b) => a + b, 0);
+  const activeDays = (name) => [...(byDay.get(name)?.entries() || [])].filter(([, v]) => v > 0).map(([d]) => d);
+
+  const windowDays = new Set([...byDay.values()].flatMap((m) => [...m.keys()])).size;
   for (const name of ['page_view', 'session_start', 'view_item', 'retailer_click', 'affiliate_clickout', 'search']) {
-    console.log(`  ${name.padEnd(20)} ${String(counts[name] ?? 0).padStart(8)}`);
+    const n = total(name);
+    const days = activeDays(name).length;
+    console.log(`  ${name.padEnd(20)} ${String(n).padStart(8)}   on ${days}/${windowDays} days`);
   }
   thresholdingSeen = thresholdNote(events.json, 'event volumes') || thresholdingSeen;
 
-  const pv = counts.page_view ?? 0;
-  const vi = counts.view_item ?? 0;
+  const pv = total('page_view');
+  const vi = total('view_item');
+  const viDays = activeDays('view_item');
+  // page_view restricted to the days view_item was actually alive. This is the
+  // only denominator that makes the two comparable.
+  const pvOnViDays = viDays.reduce((a, d) => a + (byDay.get('page_view')?.get(d) || 0), 0);
+
   console.log('');
   if (pv > 0 && vi === 0) {
     console.log('  VERDICT: page_view healthy, view_item ZERO -> view_item is NOT reaching GA4.');
-    console.log('           This is a BUG to report, not a tile to build around (PR #129, 27 Jul,');
-    console.log('           DebugView verification was never completed).');
+    console.log('           A BUG to report, not a tile to build around.');
   } else if (pv === 0 && vi === 0) {
     console.log('  VERDICT: BOTH zero. Not a view_item question — no data at all for the window.');
     console.log('           Check the property id and the date window before concluding anything.');
   } else if (vi > 0) {
-    console.log(`  VERDICT: view_item IS firing (${vi} in 7 days, ${(vi / Math.max(pv, 1) * 100).toFixed(1)}% of page_view).`);
+    const naive = (vi / Math.max(pv, 1)) * 100;
+    const fair = (vi / Math.max(pvOnViDays, 1)) * 100;
+    console.log(`  VERDICT: view_item IS firing (${vi} events on ${viDays.length} of ${windowDays} days).`);
+    console.log(`           over the FULL window:        ${naive.toFixed(1)}% of page_view  <- understates it`);
+    console.log(`           over its ACTIVE days only:   ${fair.toFixed(1)}% of page_view  <- use this one`);
+    if (viDays.length < windowDays) {
+      console.log('');
+      console.log(`           view_item was live on only ${viDays.length} of ${windowDays} days in this window, so the`);
+      console.log('           full-window figure divides a partial numerator by a whole denominator.');
+      console.log('           Do NOT read the lower number as a health problem. Once the event has been');
+      console.log('           live for a full window the two converge and this note stops appearing.');
+    }
   } else {
     console.log('  VERDICT: see figures above.');
   }
+
+  // An event that fires on ZERO of the window's days, while its server-side
+  // counterpart is still recording, is not low volume. Consent scales a number
+  // down, it does not zero it while other consent-gated events keep firing.
+  const searchTotal = total('search');
+  if (pv > 0 && searchTotal === 0) {
+    console.log('');
+    console.log('  [!] `search` is at ZERO across the whole window while other consent-gated');
+    console.log('      events fire. Consent scales a count down, it does not zero one event and');
+    console.log('      spare the rest. Cross-check against the server-side search_events table');
+    console.log('      before treating this as low volume: if that table is recording and GA4 is');
+    console.log('      not, the event is broken. See the Step 4 discovery findings in');
+    console.log('      docs/dashboard-build-brief.md for the diagnosed cause.');
+  }
+
+  console.log('');
   console.log('  Reminder: gtag.js is not loaded until cookie consent, so every figure here is');
   console.log('  a CONSENTING-visitor figure. Compare against the server-side outbound_clicks');
   console.log('  table, which writes regardless of consent, to read the gap as a consent rate.');
@@ -420,7 +472,21 @@ line('GUARD  REPORTING TIME ZONE  (does GA4 bucket days the same way Postgres do
   const tz = md.timeZone || '(not returned)';
   console.log(`  property reporting time zone: ${tz}`);
   console.log(`  currency: ${md.currencyCode || '(not returned)'}`);
-  if (tz !== 'UTC' && tz !== '(not returned)') {
+
+  // Zero-offset zones that are UTC under a different name. The first version of
+  // this guard string-compared against the literal 'UTC' and reported Etc/GMT as
+  // a mismatch, which is a false positive: Etc/GMT is GMT+0 with no daylight
+  // saving, year round, so it agrees with UTC on every day boundary always.
+  //
+  // The false positive was not cosmetic. It pointed at a fix ("convert
+  // outbound_clicks to the property time zone") which is a no-op at best, and
+  // which would INTRODUCE a BST offset that does not currently exist if anyone
+  // read "the property time zone" as Europe/London. A guard that names the wrong
+  // remedy is worse than one that stays quiet.
+  const ZERO_OFFSET_FIXED = new Set(['UTC', 'Etc/UTC', 'Etc/GMT', 'GMT', 'Etc/Greenwich', 'Etc/Zulu', 'Zulu', 'Universal', 'Etc/Universal']);
+  const isUtcEquivalent = ZERO_OFFSET_FIXED.has(tz);
+
+  if (!isUtcEquivalent && tz !== '(not returned)') {
     console.log('\n  [!] NOT UTC. The GA4 `date` dimension is in the property time zone, but');
     console.log('      Postgres date_trunc(\'week\', ...) on outbound_clicks buckets in UTC. Events');
     console.log('      near midnight fall on different days in the two pipelines, and at a week');
@@ -438,8 +504,15 @@ line('GUARD  REPORTING TIME ZONE  (does GA4 bucket days the same way Postgres do
     console.log('      23:00 UTC the previous day, so day-level disagreement scales with traffic');
     console.log('      and week-edge cases become inevitable as volume grows. Fix it while it is');
     console.log('      still arithmetic rather than a backfill.');
-  } else if (tz === 'UTC') {
-    console.log('\n  [ok] UTC, matching the Postgres side. No offset to reconcile.');
+  } else if (isUtcEquivalent) {
+    console.log(`\n  [ok] ${tz} is zero-offset with no daylight saving, so it IS UTC for bucketing`);
+    console.log('       purposes and agrees with Postgres date_trunc on every day boundary, always.');
+    console.log('       No offset exists and none should be introduced. Specifically: do NOT');
+    console.log('       "convert outbound_clicks to the property time zone", and do not read that');
+    console.log('       phrase as Europe/London, which would CREATE a BST offset that is not there.');
+    console.log('       The guard stays in case the property time zone is ever changed.');
+  } else {
+    console.log('\n  [?] Time zone not returned. Re-run before assuming it matches.');
   }
 }
 
