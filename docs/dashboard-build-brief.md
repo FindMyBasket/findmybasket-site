@@ -206,8 +206,20 @@ server-side there is no proxy, so that indicator **cannot be built at all** unti
 the event fires. It must render "not measured" and must not be approximated.
 
 **Ticket raised: `docs/ticket-gtag-hydration-race.md`.** It carries the full
-audit of all seven GA4 events, the two verification traps, and three candidate
-remedies. Two findings from that audit are worth surfacing here:
+call-site audit, three verification traps, and four candidate remedies (including
+Google Consent Mode v2, which is coupled to the Step 6 consent-ratio indicator
+and must be decided together with it). Findings worth surfacing here:
+
+> **The audit method changed, and that is the bigger lesson than the bug.** The
+> first pass was scoped to `lib/analytics.ts` and reported complete. Re-run by
+> call site, meaning every `gtag(` and every `dataLayer.push` in the repository,
+> it found **fifteen distinct GA4 events, not seven**. Scoping a search to the
+> module that *should* contain a thing can only ever find the instances already
+> where they belong. It is the same shape as a repo grep for a credential, which
+> answers "what references this" and never "does this exist".
+>
+> It happened not to change which events are affected. That is luck, not
+> vindication: the method was wrong either way.
 
 - **`add_to_cart` is safe**, since it fires from a click handler
   (`SaveToRoutineButton.tsx:33`).
@@ -392,6 +404,36 @@ Five dated changes affect the series this dashboard records. Three have happened
 | Niche Beauty retailer go-live | after 4 Aug | catalogue size, comparison depth, brands |
 
 **Required: create a platform_changes table, one row per dated change with a description and the metrics affected, and render its entries as vertical markers on every trend chart. Seed with the five above. This makes the sixth change cost nothing.**
+
+### 4.0 The boundary class most likely to be missed
+
+A general rule, arrived at from the server-side logging boundary but not specific
+to it. Record it here because the next instance will not look like that one.
+
+**A boundary that makes a metric look BETTER rather than emptier is the kind
+nobody questions.** Missing data announces itself: a gap in a chart, a zero, a
+count that fell. It gets investigated. A boundary that improves a figure gets
+congratulated.
+
+**The common mechanism is a short denominator.** When a ratio's denominator
+starts collecting later than its numerator, or stops early, or covers fewer days
+than the period it is charted against, the ratio does not read as incomplete. It
+reads as unusually good performance. Nothing about the number looks wrong.
+
+The worked example is in section 3.1: the ISO week beginning 2026-06-29 shows a
+92% consent ratio against 62%, 81% and 66% for the three complete weeks that
+follow. It is not a good week. It is 7 GA4 days measured against roughly 4.5
+server-side days, because `lib/events.ts` shipped on 1 July.
+
+**So, whenever a metric is a ratio, record a boundary for the start of the
+DENOMINATOR as well as the numerator.** Both are dated changes even when only one
+of them is a change to the product. The two rarely start on the same day, and the
+window where they disagree is exactly the window that will be quoted approvingly.
+
+**Corollary for reading any trend on this dashboard: an unexplained improvement
+deserves the same scrutiny as an unexplained drop.** The platform_changes markers
+exist to make that scrutiny cheap, and they only work if boundaries are recorded
+for the flattering direction too.
 
 ### 4.1 What each boundary means in practice
 
@@ -659,6 +701,18 @@ Step 6, GATED. Build the dashboard page at a new authenticated route: four headl
 >
 > **The two are still never summed and neither is ever substituted for the
 > other.** This is a ratio of two independently sourced figures, both shown.
+>
+> **Coupled to remedy 4 in the hydration-race ticket.** This indicator works only
+> because GA4 counts consenting visitors while the server-side table counts
+> everyone. Adopting Google Consent Mode v2 would put modelled non-consenting
+> sessions into the numerator, so the ratio would drift toward 1 and stop
+> measuring consent while keeping its name. **Decide the remedy and this
+> indicator together.** If Consent Mode is adopted, this indicator must either be
+> redefined or retired deliberately, not left to change meaning quietly.
+>
+> **Denominator boundary applies:** the server-side series starts 2026-07-01
+> (`platform_changes` id 12), so any week straddling that date is unusable here
+> rather than good. See section 4.0.
 >
 > **Label every GA4-sourced figure on the dashboard as a consenting-visitor
 > figure.** Sessions, qualified sessions and comparison views are all subject to

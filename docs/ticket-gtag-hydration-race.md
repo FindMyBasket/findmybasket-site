@@ -48,10 +48,57 @@ load, so the effect always loses the race.
 navigation, because `gtag` is already defined from the previous page. Cold loads
 lose it.
 
-## Scope: every event, audited
+## Method: audit by call site, never by module
+
+**This audit is scoped to every `gtag(` and every `dataLayer.push` in the
+repository, of any file type. It is deliberately not scoped to
+`lib/analytics.ts`.**
+
+The first pass was module-scoped and reported complete. It missed
+`load_routine_from_url` for one reason only: the event is not in the analytics
+module. **Scoping a search to the module that *should* contain a thing can only
+ever find the instances that are already where they belong.** It is the same
+shape as a repo grep for a credential, which can only ever answer "what
+references this", never "does this exist".
+
+The re-run by call site found **fifteen distinct GA4 events, not seven**. The
+module-scoped method undercounted the inventory by more than half. It happened
+not to change which events are affected, and that is luck rather than
+vindication: the method was wrong either way, and the next time it is wrong it
+may be wrong about something that matters.
+
+**If a later pass finds a sixteenth, the same conclusion applies.** Re-run the
+grep rather than trusting this table, and re-run it after any change that adds
+an event.
+
+```
+grep -rn "gtag(" --include="*.ts" --include="*.tsx" --include="*.js" \
+  --include="*.jsx" --include="*.html" . | grep -v node_modules
+grep -rn "dataLayer" --include="*.ts" --include="*.tsx" --include="*.js" \
+  --include="*.jsx" --include="*.html" . | grep -v node_modules
+```
+
+## Two script-loading models, and only one has the bug
+
+Worth knowing before choosing a remedy, because a fix applied to one leaves the
+other inconsistent.
+
+| Surface | How the banner loads | React hydration | Race |
+|---|---|---|---|
+| Next.js app (`app/**`) | `app/layout.tsx:41`, `strategy="afterInteractive"` | yes | **yes** |
+| Static pages (`public/*.html`) | `<script src="/fmb-cookie-banner.js" defer>` | none | no |
+
+The static pages fire their events from form submits and fetch handlers, long
+after a deferred script has run, so they are unaffected. Any remedy that changes
+how or when consent state is established must be applied to **both**, or the two
+surfaces will report on different rules.
+
+## Scope: every event, audited by call site
 
 Requested explicitly, because fixing the two we happened to notice would leave
 the same defect in place elsewhere.
+
+### In `lib/analytics.ts`
 
 | Event | Call site | Trigger | Affected |
 |---|---|---|---|
@@ -61,9 +108,31 @@ the same defect in place elsewhere.
 | `view_item` | `ProductViewTracker.tsx:33` | mount effect | **Yes, partial** |
 | `search` | `SearchEventTracker.tsx:30` | mount effect | **Yes, total** |
 | `basket_optimised` | `RoutineBuilder.tsx:547` | *both* | **Yes, one path** |
-| `load_routine_from_url` | `RoutineBuilder.tsx:172` | mount effect | **Yes, likely total** |
 
-Two findings beyond the original two:
+### Inline `window.gtag` calls in `app/**`, absent from the analytics module
+
+| Event | Call site | Trigger | Affected |
+|---|---|---|---|
+| `load_routine_from_url` | `RoutineBuilder.tsx:173` | mount effect | **Yes, likely total** |
+| `save_routine` | `RoutineBuilder.tsx:585` (account), `:635` (email) | after a user-initiated save | No |
+| `open_all_products` | `RoutineBuilder.tsx:698` | user click | No |
+| `track_product` | `AccountRoutine.tsx:155` | after a user-initiated RPC | No |
+
+### Static pages, `public/*.html`
+
+Unaffected as a class: no React hydration, and the banner is a plain `defer`
+script that has run long before any of these fire. Listed so the inventory is
+complete and so a remedy is not applied to one surface only.
+
+| Event | Call site | Trigger |
+|---|---|---|
+| `category_interest_signup` | `index.html:638` | form submit |
+| `unsubscribe_success` / `unsubscribe_error` | `unsubscribe.html:291-323` | fetch handler |
+| `alert_unsubscribe_success` / `alert_unsubscribe_error` | `unsubscribe-alerts.html:292-323` | fetch handler |
+
+### Findings
+
+Two beyond the original two, and both came from the call-site method:
 
 **`basket_optimised` is affected on one path only.** The `user_action` path
 (`RoutineBuilder.tsx:846`, an `onClick`) is safe. The `auto_shared_link` path is
@@ -119,8 +188,44 @@ than an obvious winner.
    to `dataLayer` before consent, then loading gtag.js after, would transmit the
    queued events, so the queue must be cleared on refusal.
 
-Option 3 is closest to how the guard was presumably intended to work, but all
-three need the consent behaviour verified rather than assumed.
+4. **Google Consent Mode v2.** Load gtag early with consent state `denied` by
+   default, then `gtag('consent','update', ...)` on acceptance. It is designed
+   for exactly this race and it is what Google expects for UK traffic, so it is
+   the option most likely to still be correct in a year.
+
+   **It also addresses a second problem.** Today a refusing visitor is lost
+   entirely, which is the 20 to 40% gap between GA4 and the server-side table.
+   Consent Mode still sends cookieless pings, so those sessions become *modelled*
+   rather than absent.
+
+   Two caveats to weigh, neither of which is a technical question:
+
+   - **Whether modelled conversions are acceptable for decision-making here is a
+     judgement call.** At this volume the modelling has little to work with, and
+     a modelled number carries the same hazard as the biased `view_item` figure
+     this ticket exists to suppress: it is present, plausible, and wrong by an
+     unknown amount. Decide deliberately, not by adopting the default.
+   - **It changes what the Step 6 consent-ratio indicator measures.** That
+     indicator is currently GA4 clicks over server-side clicks, and its whole
+     value is that GA4 counts only consenting visitors. Under Consent Mode the
+     numerator would include modelled non-consenting sessions, so the ratio would
+     drift toward 1 and stop measuring consent at all. **This remedy and that
+     indicator have to be decided together, not separately**, or the indicator
+     will silently become a measurement of something else while keeping its name.
+
+**Evaluate all four. Pick none yet.**
+
+**The PECR read applies to all four, not only to option 1.** Every one of them
+changes when something is loaded or what is sent before consent, so each needs
+the same check: that no analytics cookie is set and no identifying data is
+transmitted until consent is given. Option 3's queue must be cleared rather than
+flushed on refusal, and option 4's cookieless pings need confirming as acceptable
+under PECR for this property rather than assumed acceptable because Google
+supplies them.
+
+Option 3 is closest to how the guard was presumably intended to work, and option
+4 is the most future-proof, but all four need the consent behaviour verified
+rather than assumed.
 
 ## After the fix
 
