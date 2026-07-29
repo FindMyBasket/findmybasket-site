@@ -23,6 +23,29 @@ call-site re-grep); two still need a browser and DebugView, including the gate.
 >    byte offsets in the emitted HTML. Now guarded three ways: reworded source, a
 >    defensive escape in `layout.tsx`, and a test that fails if the sequence
 >    reappears.
+> 4. **Inlining the stub via `readFileSync` 500'd every runtime-rendered route,
+>    and the Vercel check was GREEN throughout.** Reading the file at module
+>    scope in the ROOT layout meant the read happened inside the serverless
+>    function. Vercel's tracer cannot see a runtime `fs` call, so
+>    `public/fmb-gtag-stub.js` was absent from the bundle and the layout threw.
+>    Prerendered pages were unaffected because their read happened on the build
+>    machine, which is exactly what hid it: cache HITs returned 200 and only
+>    cache MISSes failed.
+>
+>    | Route | Before | After |
+>    |---|---|---|
+>    | `/search?q=abib` (runtime, MISS) | **500** | 200 |
+>    | `/account` (runtime, MISS) | **500** | 200 |
+>    | `/app`, `/brands`, `/skincare` (prerendered, HIT) | 200 | 200 |
+>    | production `/search` (runtime, no change) | 200 | 200 |
+>
+>    `outputFileTracingIncludes` did not prevent it. The fix was to remove the
+>    dependency rather than debug the config: a plain `<script src>` is
+>    parser-blocking, is served from the CDN rather than the function bundle, and
+>    is the identical mechanism the static pages already use. **Only fetching a
+>    deployed page on a cache MISS finds this class of defect. A green build
+>    cannot.**
+>
 > 3. **`beforeInteractive` does not do what the proposal assumed.** In the App
 >    Router it emits a preload link plus a `self.__next_s.push(...)` at the end
 >    of `<body>` for Next's own runtime to inject, not a blocking script in the
