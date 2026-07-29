@@ -15,16 +15,6 @@ const nextConfig = {
       { protocol: 'https', hostname: '**.cloudfront.net' },
     ],
   },
-  // app/layout.tsx reads public/fmb-gtag-stub.js with readFileSync at module
-  // scope and inlines it into the server-rendered HTML. Vercel bundles only the
-  // files its dependency tracer can see, and a runtime readFileSync is not an
-  // import, so without this the file can be absent from the serverless bundle
-  // and the ROOT LAYOUT throws, which is every page on the site rather than one.
-  // It builds and runs fine locally either way, so this is a deploy-only failure
-  // mode. Do not remove it while that readFileSync exists.
-  outputFileTracingIncludes: {
-    '/**/*': ['./public/fmb-gtag-stub.js'],
-  },
   // Tell Next.js the existing /api directory is for our static API routes,
   // not for Next.js to manage. Vercel handles them as serverless functions
   // independently.
