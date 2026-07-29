@@ -1,9 +1,34 @@
 # Ticket: GA4 events fired from mount effects are dropped
 
 **Raised:** 29 July 2026, from Step 4 discovery of the dashboard build.
-**Status:** OPEN, not started. Diagnosis complete. **Remedy chosen 29 July: the
-dataLayer stub (remedy 3).** Implementation approach proposed and awaiting review;
-no code written.
+**Status:** **BUILT 29 July, awaiting browser verification.** Remedy 3, the
+dataLayer stub. `public/fmb-gtag-stub.js`, wired into `app/layout.tsx` and all 19
+static pages, with `scripts/gtag-stub.test.mjs` covering the gate, the bound and
+the replay. Two traps closed mechanically (the ordering guarantee and the
+call-site re-grep); two still need a browser and DebugView, including the gate.
+
+> **Three defects were found DURING verification, not during writing.** Recorded
+> because each was invisible to the change itself and each would have shipped.
+>
+> 1. **Accepting after a refusal left analytics dead.** The refusal path set
+>    `gtag` to a hard no-op and never restored it, so a later acceptance through
+>    Cookie Settings configured nothing. The discard was right; the recovery was
+>    missing. Only the refuse-then-accept ORDER exposes it, which is why the gate
+>    test is the gate.
+> 2. **The inline block was truncated by its own comment.** The file documented
+>    the static-page script tag literally, and an HTML parser ends a script
+>    element at the first closing-script sequence regardless of JavaScript
+>    context. The block was cut before `window.gtag` was ever assigned, silently
+>    restoring the exact bug this ticket exists to fix. Found only by reading
+>    byte offsets in the emitted HTML. Now guarded three ways: reworded source, a
+>    defensive escape in `layout.tsx`, and a test that fails if the sequence
+>    reappears.
+> 3. **`beforeInteractive` does not do what the proposal assumed.** In the App
+>    Router it emits a preload link plus a `self.__next_s.push(...)` at the end
+>    of `<body>` for Next's own runtime to inject, not a blocking script in the
+>    head. Whether that precedes hydration is a framework internal. Replaced with
+>    inlining the same file, so the guarantee is visible in the HTML instead of
+>    depending on behaviour that could change on a Next.js upgrade.
 **Blocks:** six dashboard metrics. Five derive from `view_item` and are
 suppressed from display (qualified sessions, commission per qualified session,
 comparison views, session to comparison-view rate, and comparison-view to

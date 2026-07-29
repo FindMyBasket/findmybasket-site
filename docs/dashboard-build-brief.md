@@ -522,6 +522,7 @@ Catalogue baseline. The early-August cluster moves exactly the metrics this dash
 - Superdrug r12 is retired. Its Rakuten feed died 19 July. 29,547 rows retained, all in_stock=false. The live view already excludes them. A pre-19-July figure compared to a current one shows an apparent drop that is the correction landing, not a regression.
 - Comparison depth has two honest figures. Roughly 11,888 root products only, or 12,433 including shade children and merged rows. Use the root figure for anything user-facing or partner-facing, including Spotlight client PDFs. Label every figure on screen with which definition it uses.
 - brand_search_index exists, roughly 2,053 rows, refreshed when the catalogue watermark moves, with a brand_index_health view exposing catalogue brand count, index rows, the difference, last refresh time and how far behind it is. It is a derived cache and can drift silently.
+- **GA4 event timestamps within a session are not exact for first-time visitors, by design.** From the hydration-race fix (`public/fmb-gtag-stub.js`), events fired before a consent decision are held in an in-memory queue and replayed once consent is granted. GA4 stamps them at replay time, not at the moment they occurred. For the common case, a returning visitor with stored consent, the difference is a few hundred milliseconds. For a first-time visitor who leaves the banner up and then accepts, every queued event lands at the moment of acceptance, so they appear simultaneous. **Event counts are correct; intra-session ordering and timing for that visitor class are not.** Anyone querying time-between-events, session duration or event sequence will meet this and should find the explanation here rather than treat it as a data fault. It is the accepted trade: counts correct with timing wrong for one visitor class beats counts wrong for everyone. A maximum of 50 events queue before a decision, after which further pre-consent events are dropped rather than transmitted.
 - search_events contains 7 occurrences of the literal {search_term_string}, the homepage JSON-LD SearchAction template submitted verbatim, most likely by a crawler. Roughly 1.5 per cent of logged searches are not human. Filter this literal from every search metric. Fixing the markup is a separate ticket.
 
 ## 6. Build order
@@ -745,6 +746,17 @@ Step 6, GATED. Build the dashboard page at a new authenticated route: four headl
 >
 > **The two are still never summed and neither is ever substituted for the
 > other.** This is a ratio of two independently sourced figures, both shown.
+>
+> **The chosen remedy leaves this indicator's definition intact, which is a real
+> advantage even though it was not part of the decision.** The dataLayer stub
+> recovers events that were being dropped before consent was decided; it does not
+> recover refusing visitors, and it is not meant to. So the numerator stays "GA4
+> clicks, consenting visitors only" and the denominator stays "server-side
+> clicks, everyone", exactly as today. **The fix therefore does not become a
+> seventh boundary on this particular series**, and consent ratios measured
+> before and after it remain directly comparable. Given how much of this build is
+> boundary bookkeeping, an indicator that survives a change to the pipeline
+> without one is worth noting.
 >
 > **Coupled to remedy 4 in the hydration-race ticket.** This indicator works only
 > because GA4 counts consenting visitors while the server-side table counts
