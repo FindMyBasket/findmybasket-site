@@ -191,7 +191,7 @@ the same defect in place elsewhere.
 
 | Event | Call site | Trigger | Affected |
 |---|---|---|---|
-| `load_routine_from_url` | `RoutineBuilder.tsx:173` | mount effect | **Yes, likely total** |
+| `load_routine_from_url` | `RoutineBuilder.tsx:173` | mount effect, ~~inline~~ **behind an awaited DB call** | ~~**Yes, likely total**~~ **CORRECTED: mostly delivered.** See below |
 | `save_routine` | `RoutineBuilder.tsx:585` (account), `:635` (email) | after a user-initiated save | No |
 | `open_all_products` | `RoutineBuilder.tsx:698` | user click | No |
 | `track_product` | `AccountRoutine.tsx:155` | after a user-initiated RPC | No |
@@ -207,6 +207,61 @@ complete and so a remedy is not applied to one surface only.
 | `category_interest_signup` | `index.html:638` | form submit |
 | `unsubscribe_success` / `unsubscribe_error` | `unsubscribe.html:291-323` | fetch handler |
 | `alert_unsubscribe_success` / `alert_unsubscribe_error` | `unsubscribe-alerts.html:292-323` | fetch handler |
+
+### CORRECTION, 29 July, from the diagnostic: "mount effect" was the wrong axis
+
+The diagnostic contradicted a prediction in the table above, and chasing it
+showed the table was classifying on the wrong property.
+
+**`load_routine_from_url` fired 13 times on 4 of 7 days.** This ticket predicted
+"likely total loss" on the grounds that it fires from a mount effect and only
+ever on emailed `/app?routine=` arrivals, which are always cold loads. Both of
+those premises are true. The conclusion was still wrong.
+
+**It is not fired inline.** `RoutineBuilder.tsx:142` opens the effect, but the
+`gtag` call at `:172` sits inside an `async` IIFE **after an awaited Supabase
+round-trip** (`db.from('products_active').select(...)`, `:155`). A network
+round-trip to Supabase reliably takes longer than the gap between hydration and
+an `afterInteractive` local script tag. So the banner nearly always wins, and
+this event is **mostly delivered**, not mostly lost.
+
+**The right discriminator is not the trigger. It is whether anything AWAITED
+sits between hydration and the `gtag` call.**
+
+| Event | Between hydration and `gtag` | Cold-load outcome |
+|---|---|---|
+| `search` | nothing, inline | lost reliably (observed: 0) |
+| `view_item` | nothing, inline (`ProductViewTracker.tsx:33`) | lost reliably |
+| `load_routine_from_url` | an awaited Supabase round-trip | **mostly delivered** |
+| `basket_optimised` / `auto_shared_link` | `setTimeout(..., 300)` | mostly delivered |
+| `retailer_click`, `add_to_cart`, `save_routine` | a human | delivered |
+
+Grouping by "mount effect" put the two awaited cases in with the two inline ones
+and mis-predicted both. It is the same error as auditing by module instead of by
+call site, one level down: **a category that sounds like the cause, standing in
+for the mechanism.** The mechanism is elapsed time against one specific script
+tag.
+
+**So 13 is probably close to the true number of emailed-routine arrivals**, not a
+biased fraction of it. That is a better outcome than "intermittent, therefore
+biased", which was the natural reading of 13-instead-of-0. It is not a guarantee:
+an unusually slow banner against an unusually fast cached query could still
+invert it, so treat the series as near-complete rather than complete.
+
+**And `view_item` is NOT this pattern.** It fires inline with nothing awaited, so
+it belongs with `search` in the reliably-lost class, and its 9 events on 3 of 7
+days do not indicate the same "sometimes wins" behaviour. That does not settle
+whether the low count is loss or youth, because **both are true at once**: it
+shipped on 25 July (`974bcc0`, 18:00 +0100), so the 7-day window ending 28 July
+contains roughly 3.5 live days, and it was lossy across all of them.
+
+What settles the residual question is the fix itself, which is a natural
+experiment: `view_item` per day either side of `2026-07-29T14:12:58Z`, against
+product-page views on the same days. If the inline-loss diagnosis is right it
+steps up sharply and then tracks product-page views. **Use `sessions` rather than
+`page_view` as the denominator**, because `pageChangesEnabled` is ON and
+`page_view` therefore counts SPA route changes as well as document loads. Do not
+run this comparison across the boundary as though it were a trend.
 
 ### Findings
 
