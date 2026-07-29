@@ -218,6 +218,20 @@ const events = await runReport({
           'add_to_cart',
           'basket_optimised',
           'load_routine_from_url',
+          // Enhanced measurement, added 29 Jul. These are fired by gtag.js
+          // itself, NOT from a React mount effect, so they are NOT subject to
+          // the hydration race that zeroed the custom `search` event. Their
+          // presence alongside a dead custom event is the signal that the race
+          // is the cause rather than low traffic.
+          'view_search_results',
+          'scroll',
+          'click',
+          'file_download',
+          'form_start',
+          'form_submit',
+          'video_start',
+          'user_engagement',
+          'first_visit',
         ],
       },
     },
@@ -241,13 +255,22 @@ if (!events.ok) {
   for (const name of [
     'page_view',
     'session_start',
+    'first_visit',
+    'user_engagement',
     'view_item',
     'retailer_click',
     'affiliate_clickout',
     'search',
+    'view_search_results',
+    'scroll',
+    'click',
     'add_to_cart',
     'basket_optimised',
     'load_routine_from_url',
+    'file_download',
+    'form_start',
+    'form_submit',
+    'video_start',
   ]) {
     const n = total(name);
     const days = activeDays(name).length;
@@ -304,6 +327,131 @@ if (!events.ok) {
   console.log('  Reminder: gtag.js is not loaded until cookie consent, so every figure here is');
   console.log('  a CONSENTING-visitor figure. Compare against the server-side outbound_clicks');
   console.log('  table, which writes regardless of consent, to read the gap as a consent rate.');
+}
+
+// ── 2.6 SITE SEARCH: enhanced measurement vs the custom event ──────────────
+// Added 29 July, from a Run A observation: `view_search_results` fired on
+// gtag.js init while the custom `search` event sat at zero.
+//
+// WHY THIS MATTERS. view_search_results is GA4 ENHANCED MEASUREMENT. gtag.js
+// fires it itself on load, reading the search term straight off the URL query
+// parameter, so it never touches a React mount effect and is NOT subject to the
+// hydration race that zeroed the custom event. It should therefore have history
+// going back to whenever GA4 was installed, for consenting visitors, while
+// `search` has none.
+//
+// WHAT IT DOES AND DOES NOT GIVE US. It carries search_term, so it can supply
+// search VOLUME and the TERMS. It does NOT carry result_count, which is our own
+// custom metric on the custom event, so it cannot by itself produce zero-result
+// rate. (Zero-result rate is Supabase-only anyway, per section 7 of the brief.)
+// Its real value is as the DENOMINATOR for search-to-comparison rate, which the
+// brief currently marks unbuildable.
+line(`2.6  SITE SEARCH  (enhanced measurement vs the custom event, ${HISTORY_START} -> today)`);
+const siteSearch = await runReport({
+  dateRanges: [{ startDate: HISTORY_START, endDate: 'today' }],
+  dimensions: [{ name: 'date' }, { name: 'eventName' }],
+  metrics: [{ name: 'eventCount' }],
+  dimensionFilter: {
+    filter: { fieldName: 'eventName', inListFilter: { values: ['search', 'view_search_results'] } },
+  },
+  limit: 100000,
+});
+if (!siteSearch.ok) {
+  console.log(`  QUERY FAILED (${siteSearch.status}): ${siteSearch.json?.error?.message || siteSearch.text.slice(0, 300)}`);
+} else {
+  const weekly = new Map();
+  for (const r of rows(siteSearch.json)) {
+    const [day, name] = r.d;
+    const wk = isoMonday(day);
+    if (!weekly.has(wk)) weekly.set(wk, { search: 0, view_search_results: 0 });
+    weekly.get(wk)[name] = (weekly.get(wk)[name] || 0) + r.m[0];
+  }
+  const weeks = [...weekly.keys()].sort();
+  if (!weeks.length) {
+    console.log('  Neither event has fired in this window.');
+  } else {
+    console.log('  week (Mon)    search   view_search_results');
+    let vsrTotal = 0;
+    let sTotal = 0;
+    for (const wk of weeks) {
+      const v = weekly.get(wk);
+      sTotal += v.search;
+      vsrTotal += v.view_search_results;
+      console.log(`    ${wk}  ${String(v.search).padStart(6)}   ${String(v.view_search_results).padStart(18)}`);
+    }
+    console.log(`    TOTAL     ${String(sTotal).padStart(6)}   ${String(vsrTotal).padStart(18)}`);
+    console.log(`\n  earliest week with view_search_results: ${weeks.find((w) => weekly.get(w).view_search_results > 0) || 'none'}`);
+    console.log(`  earliest week with the custom search  : ${weeks.find((w) => weekly.get(w).search > 0) || 'none'}`);
+    thresholdNote(siteSearch.json, 'site search history');
+
+    if (vsrTotal > 0 && sTotal === 0) {
+      console.log('\n  [!] view_search_results HAS history while the custom `search` event has NONE.');
+      console.log('      That is the hydration race isolated: the enhanced-measurement event fires');
+      console.log('      from gtag.js and survived, the mount-effect event did not. It is also a');
+      console.log('      usable series: search VOLUME and TERMS are available for the whole window');
+      console.log('      above, predating the fix.');
+      console.log('      It does NOT carry result_count, so it cannot give zero-result rate (that is');
+      console.log('      Supabase-only regardless). It CAN serve as the denominator for');
+      console.log('      search-to-comparison rate, whose numerator is view_item and therefore stays');
+      console.log('      blocked until the race fix lands. Revisit that indicator in the brief.');
+    } else if (vsrTotal > 0 && sTotal > 0) {
+      console.log('\n  Both events have history. Do NOT sum them: they fire on the same user action.');
+      console.log('  Pick one per metric and state which. The custom event carries result_count;');
+      console.log('  the enhanced-measurement one has the longer series.');
+    } else if (vsrTotal === 0) {
+      console.log('\n  view_search_results has NOT fired. Check siteSearchEnabled and the query');
+      console.log('  parameter list in the enhanced-measurement settings reported below: this site');
+      console.log('  uses ?q=, which is in the GA4 default set, so zero here needs explaining.');
+    }
+  }
+}
+
+// ── ENHANCED MEASUREMENT SETTINGS ──────────────────────────────────────────
+// Never audited. `scroll` was observed firing in a browser session on 29 July,
+// so at least part of this is on, and nobody has established what else.
+line('ENHANCED MEASUREMENT  (which auto-collected events are switched on)');
+const streams = await api(`https://analyticsadmin.googleapis.com/v1alpha/properties/${PROPERTY}/dataStreams`);
+if (!streams.ok) {
+  console.log(`  Admin API read failed (${streams.status}): ${streams.json?.error?.message || streams.text.slice(0, 200)}`);
+} else {
+  const web = (streams.json?.dataStreams || []).filter((s) => s.webStreamData);
+  if (!web.length) console.log('  No web data streams found.');
+  for (const s of web) {
+    console.log(`  stream: ${s.displayName}  (${s.webStreamData.measurementId})  ${s.name}`);
+    const em = await api(`https://analyticsadmin.googleapis.com/v1alpha/${s.name}/enhancedMeasurementSettings`);
+    if (!em.ok) {
+      console.log(`    settings read failed (${em.status}): ${em.json?.error?.message || ''}`);
+      continue;
+    }
+    const e = em.json || {};
+    const flags = [
+      ['streamEnabled', 'enhanced measurement master switch'],
+      ['pageViewsEnabled', 'page_view'],
+      ['scrollsEnabled', 'scroll'],
+      ['outboundClicksEnabled', 'click (outbound)'],
+      ['siteSearchEnabled', 'view_search_results'],
+      ['formInteractionsEnabled', 'form_start / form_submit'],
+      ['videoEngagementEnabled', 'video_*'],
+      ['fileDownloadsEnabled', 'file_download'],
+      ['pageChangesEnabled', 'page_view on history change'],
+    ];
+    for (const [k, label] of flags) {
+      const v = e[k];
+      console.log(`    ${v === true ? 'ON ' : v === false ? 'off' : ' ? '}  ${k.padEnd(26)} ${label}`);
+    }
+    console.log(`    searchQueryParameter : ${e.searchQueryParameter || '(default: q,s,search,query,keyword)'}`);
+    console.log(`    uriQueryParameter    : ${e.uriQueryParameter || '(none)'}`);
+    if (e.siteSearchEnabled === true) {
+      console.log('\n    [ok] Site search is ON, so view_search_results is being collected. This');
+      console.log('         site searches with ?q=, which is in the default parameter set.');
+    }
+    if (e.outboundClicksEnabled === true) {
+      console.log('    [!] Outbound clicks are ON, so GA4 auto-collects a `click` event on every');
+      console.log('        outbound link IN ADDITION to our retailer_click and affiliate_clickout.');
+      console.log('        That is a THIRD count of the same user action. Any outbound-click total');
+      console.log('        must still use retailer_click only; do not let `click` into it.');
+    }
+  }
 }
 
 // ── 2.5 + dimension resolution ──────────────────────────────────────────────

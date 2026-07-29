@@ -459,8 +459,38 @@ reaches them: an emailed `/app?routine=1,2,3` link, for
 `load_routine_from_url` and the `auto_shared_link` path of `basket_optimised`.
 
 And the one that matters most: **refuse consent, browse, then accept through
-Cookie Settings, and confirm in DebugView that nothing from the refused period
-is transmitted.**
+Cookie Settings, and confirm that no QUEUED event from the refused period is
+transmitted.**
+
+> **Word that assertion carefully.** An earlier version of this step said "confirm
+> nothing mentioning the refused search terms appears", which is wrong and would
+> have produced a false failure. On acceptance, gtag.js initialises and GA4
+> **enhanced measurement** fires `view_search_results` off the *current URL*. If
+> you are standing on `/search?q=cerave` when you click Save, `cerave` appears in
+> a `collect` request immediately, and it is not a replay.
+>
+> The correct assertion is about the **queue**, not about the terms:
+>
+> | Must NOT appear | Because |
+> |---|---|
+> | `en=search` for any term browsed while refused | that is the custom event, and it only fires from the mount effect that was queued |
+> | `en=view_item` from a product page visited while refused | same, mount effect |
+> | any event carrying a term from a page you have since NAVIGATED AWAY from | a replay would resurrect it; enhanced measurement cannot, it only reads the current page |
+>
+> | May legitimately appear | Because |
+> |---|---|
+> | `view_search_results` for the CURRENT url | enhanced measurement, fired by gtag.js on init, reads `?q=` |
+> | `page_view`, `scroll`, `user_engagement` | enhanced measurement on the current page |
+>
+> **Verified 29 July, Run A step 5 PASSED on this reading.** Three collect
+> requests after Save: `view_search_results` with `search_term=cerave` (the URL
+> the tester was on), `page_view`, and `scroll`. No `en=search` for either term,
+> no `view_item` from the product page browsed while refused, and the earlier
+> term `abib` appeared nowhere at all. Console confirmed `resolved: true`,
+> `granted: true`, `which: pusher`, `dropped: 0`, with steps 3 and 4 having shown
+> `dataLayer` at 0, `which: noop`, and zero collect requests throughout.
+>
+> **The discard holds.**
 
 ## After the fix
 

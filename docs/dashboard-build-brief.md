@@ -202,8 +202,48 @@ them accordingly until this is fixed.
 
 **Impact on the specified indicators.** Zero-result search rate is Supabase-only
 and unaffected. Search-to-comparison needs GA4, and with `session_id` 100% NULL
-server-side there is no proxy, so that indicator **cannot be built at all** until
-the event fires. It must render "not measured" and must not be approximated.
+server-side there is no proxy.
+
+> **Revised 29 July: `view_search_results` may already hold the search side, with
+> history.** Observed during the browser gate run: on consent, gtag.js fired
+> `view_search_results` carrying `search_term`, while the custom `search` event
+> sits at zero.
+>
+> **It is GA4 enhanced measurement, fired by gtag.js off the URL query parameter,
+> not from a React mount effect.** It is therefore not subject to the hydration
+> race at all, and should have collected continuously for consenting visitors
+> since GA4 was installed. This site searches with `?q=`, which is in the GA4
+> default parameter set.
+>
+> **What it does and does not give us:**
+>
+> | | |
+> |---|---|
+> | search volume and terms | **yes**, with history predating the fix |
+> | `result_count` | **no**. That is our own custom metric on the custom event, so zero-result rate stays Supabase-only, which it already was |
+> | denominator for search-to-comparison | **yes**, potentially back weeks |
+> | numerator for search-to-comparison | **no**. That is `view_item`, still broken until the race fix lands |
+>
+> **So the indicator is not unbuildable, it is half-blocked**, and the half that
+> is blocked is the one the race fix unblocks. When it lands, the search side
+> already has a baseline instead of starting from zero.
+>
+> **Do not sum `search` and `view_search_results`.** They fire on the same user
+> action, exactly like `retailer_click` and `affiliate_clickout`. Pick one per
+> metric and label which: the custom event carries `result_count`, the
+> enhanced-measurement one has the longer series.
+>
+> Volume and earliest week are reported by `scripts/ga4-diag.mjs` section 2.6.
+> Confirm from that run before building on it.
+
+> **Enhanced measurement had never been audited.** `scroll` was seen firing in the
+> same session and nobody had established what else is on. The diagnostic now
+> reports the full settings block per data stream. **One to watch: if
+> `outboundClicksEnabled` is on, GA4 auto-collects a `click` event on every
+> outbound link, which is a THIRD count of the same action alongside
+> `retailer_click` and `affiliate_clickout`.** The rule is unchanged, outbound
+> totals use `retailer_click` only, but there is now a third candidate to keep out
+> of it rather than two.
 
 **Ticket raised: `docs/ticket-gtag-hydration-race.md`.** It carries the full
 call-site audit, three verification traps, and four candidate remedies (including
