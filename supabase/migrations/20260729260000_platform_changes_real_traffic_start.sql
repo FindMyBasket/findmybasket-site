@@ -1,9 +1,9 @@
--- PROPOSED, NOT APPLIED. GATED ON APPROVAL.
+-- Eighth boundary: real traffic start, 2026-06-08.
 --
--- Filename is deliberately prefixed PROPOSED_ so `supabase db push` and the
--- migration runner skip it. Rename to 20260729260000_platform_changes_real_
--- traffic_start.sql to arm it. Nothing in this file has been run against
--- production.
+-- APPROVED AND APPLIED 2026-07-29. This file was carried as
+-- PROPOSED_20260729260000_... until the operator approved it; the prefix kept
+-- the migration runner off it while it was still a proposal. Dry-run twice in a
+-- rolled-back transaction before approval, applied on approval.
 --
 -- ============================================================================
 -- Eighth boundary: real traffic start, 2026-06-08, status 'occurred'.
