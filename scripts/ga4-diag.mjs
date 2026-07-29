@@ -294,7 +294,49 @@ if (!byNetwork.ok) {
 }
 
 // ── RETENTION FLOOR ─────────────────────────────────────────────────────────
-line('GUARD  RETENTION FLOOR  (does the property hold data before that date?)');
+// Three numbers, reported side by side so they can be COMPARED rather than one
+// inferred from another: the retention setting GA4 declares, the earliest day
+// the property actually returns data for, and the by-network start found above.
+//
+// The trap this exists to catch: GA4 standard retention is 2 or 14 months. If
+// the custom dimensions were registered BEFORE the retention window opens, the
+// backwards scan returns the retention edge and nothing distinguishes it from a
+// registration boundary. Recording that as the boundary would put a permanently
+// wrong marker on every trend chart, reached by a method that looked rigorous.
+line('GUARD  RETENTION  (setting, observed floor, and by-network start, compared)');
+
+const MONTHS = {
+  TWO_MONTHS: 2,
+  FOURTEEN_MONTHS: 14,
+  TWENTY_FIVE_MONTHS: 25,
+  THIRTY_EIGHT_MONTHS: 38,
+  FIFTY_MONTHS: 50,
+};
+let retentionMonths = null;
+const retention = await api(
+  `https://analyticsadmin.googleapis.com/v1alpha/properties/${PROPERTY}/dataRetentionSettings`,
+);
+if (!retention.ok) {
+  console.log(
+    `  retention setting: Admin API read failed (${retention.status}): ${
+      retention.json?.error?.message || retention.text.slice(0, 200)
+    }`,
+  );
+  console.log('  Fall back to the observed floor below, but note it can only ever show where');
+  console.log('  data STOPS, never whether the setting or the registration date caused it.');
+} else {
+  const setting = retention.json?.eventDataRetention || '(unset)';
+  retentionMonths = MONTHS[setting] ?? null;
+  console.log(`  eventDataRetention          = ${setting}${retentionMonths ? ` (${retentionMonths} months)` : ''}`);
+  console.log(`  resetUserDataOnNewActivity  = ${retention.json?.resetUserDataOnNewActivity ?? '(unset)'}`);
+  if (retentionMonths) {
+    const edge = new Date();
+    edge.setUTCMonth(edge.getUTCMonth() - retentionMonths);
+    console.log(`  implied earliest retained day = ${edge.toISOString().slice(0, 10)} (today minus ${retentionMonths} months)`);
+  }
+}
+
+console.log('');
 const floor = await runReport({
   dateRanges: [{ startDate: HISTORY_START, endDate: 'today' }],
   dimensions: [{ name: 'date' }],
@@ -313,7 +355,22 @@ if (!floor.ok) {
   } else {
     const earliest = dates[0];
     const isoE = `${earliest.slice(0, 4)}-${earliest.slice(4, 6)}-${earliest.slice(6, 8)}`;
-    console.log(`  earliest day with ANY event: ${isoE}   (scan window opened ${HISTORY_START})`);
+    console.log(`  earliest day with ANY event  = ${isoE}   (scan window opened ${HISTORY_START})`);
+    console.log(
+      `  by-network series start      = ${
+        byNetworkStart
+          ? `${byNetworkStart.slice(0, 4)}-${byNetworkStart.slice(4, 6)}-${byNetworkStart.slice(6, 8)}`
+          : '(none found)'
+      }`,
+    );
+
+    // The scan window itself can be the binding constraint, and it is the one
+    // thing here that is our own doing rather than the property's.
+    if (earliest === HISTORY_START.replace(/-/g, '')) {
+      console.log('\n  [!] The earliest day found IS the first day of the scan window, so the');
+      console.log('      window is the limit, not the property. Widen HISTORY_START and re-run.');
+    }
+
     if (byNetworkStart) {
       if (byNetworkStart === earliest) {
         console.log('\n  [!] The by-network series starts on the SAME day the property has any data');
@@ -321,9 +378,36 @@ if (!floor.ok) {
         console.log('      was registered then" and with "retention truncates here". Widen');
         console.log('      HISTORY_START and re-run before recording a boundary date. Recording the');
         console.log('      wrong one puts a permanent false marker on every trend chart.');
+        console.log('      DO NOT insert the platform_changes row on this result.');
       } else {
         console.log('\n  [ok] Events exist BEFORE the by-network start, so the start is a real');
         console.log('       dimension boundary and not a retention edge. Safe to record.');
+      }
+
+      // Compare against the DECLARED setting too, not only the observed floor.
+      // A property can be near its retention edge without having reached it, in
+      // which case the observed floor looks reassuringly early while the real
+      // constraint is days away.
+      if (retentionMonths) {
+        const edge = new Date();
+        edge.setUTCMonth(edge.getUTCMonth() - retentionMonths);
+        const edgeStr = edge.toISOString().slice(0, 10).replace(/-/g, '');
+        const daysApart = Math.round(
+          (Date.parse(`${byNetworkStart.slice(0, 4)}-${byNetworkStart.slice(4, 6)}-${byNetworkStart.slice(6, 8)}`) -
+            Date.parse(edge.toISOString().slice(0, 10))) /
+            86400000,
+        );
+        console.log(`\n  by-network start vs the ${retentionMonths}-month retention edge: ${daysApart} days`);
+        if (Math.abs(daysApart) <= 7 || byNetworkStart <= edgeStr) {
+          console.log('  [!] The start sits within a week of the declared retention edge, or beyond');
+          console.log('      it. Treat the date as a retention artefact until proven otherwise: the');
+          console.log('      dimensions may have been registered earlier and that history aged out.');
+          console.log('      This is the case BigQuery export would resolve (see 2.4), because raw');
+          console.log('      event parameters survive there after the Data API window closes.');
+        } else {
+          console.log('  [ok] Comfortably inside the retention window, so the setting is not what');
+          console.log('       is bounding this series.');
+        }
       }
     }
   }
@@ -340,8 +424,20 @@ line('GUARD  REPORTING TIME ZONE  (does GA4 bucket days the same way Postgres do
     console.log('\n  [!] NOT UTC. The GA4 `date` dimension is in the property time zone, but');
     console.log('      Postgres date_trunc(\'week\', ...) on outbound_clicks buckets in UTC. Events');
     console.log('      near midnight fall on different days in the two pipelines, and at a week');
-    console.log('      edge in different WEEKS. State which convention metrics_ga4_weekly.week_start');
-    console.log('      uses in its column comment, and use the same one in the cross-check.');
+    console.log('      edge in different WEEKS.');
+    console.log('');
+    console.log('      FIX DIRECTION, decided 29 Jul: convert outbound_clicks to the PROPERTY');
+    console.log('      time zone before bucketing. Do not adjust GA4 and do not re-bucket GA4');
+    console.log('      into UTC. GA4 is the side that cannot be reprocessed, so the malleable');
+    console.log('      pipeline is the one that moves.');
+    console.log('');
+    console.log('      Scale, measured 29 Jul: of 267 server-side clicks exactly 1 falls in the');
+    console.log('      23:00 UTC hour, so 1 lands on a different day under Europe/London and 0');
+    console.log('      cross a week boundary. 0.4% today, and it has never moved a weekly bucket.');
+    console.log('      This is a SYSTEMATIC OFFSET, not a defect: during BST a UK day begins at');
+    console.log('      23:00 UTC the previous day, so day-level disagreement scales with traffic');
+    console.log('      and week-edge cases become inevitable as volume grows. Fix it while it is');
+    console.log('      still arithmetic rather than a backfill.');
   } else if (tz === 'UTC') {
     console.log('\n  [ok] UTC, matching the Postgres side. No offset to reconcile.');
   }

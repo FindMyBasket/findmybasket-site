@@ -18,7 +18,7 @@ Appended as steps complete, so the brief and its state never diverge.
 | 2 | COMPLETE, approved 28 Jul | Schema proposed; eleven tables, not ten. |
 | 3 | COMPLETE, applied 28 Jul | `supabase/migrations/20260728180000_dashboard_schema.sql`. All eleven verified `{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}` by reading `relacl`. |
 | 7 | COMPLETE, approved 28 Jul | Queries confirmed; three premises corrected, see "Corrections from Step 7" below. |
-| 4 | DISCOVERY IN PROGRESS, 29 Jul | `.github/workflows/ga4-diag.yml` + `scripts/ga4-diag.mjs` committed, read-only, `workflow_dispatch`. Four premises corrected, see "Corrections from Step 4" below. Awaiting the first dispatch. No puller, no migration, no schedule. |
+| 4 | DISCOVERY IN PROGRESS, 29 Jul | `.github/workflows/ga4-diag.yml` + `scripts/ga4-diag.mjs` committed, read-only, `workflow_dispatch`. Four premises corrected, see "Corrections from Step 4" below. `outbound_clicks_other` APPLIED (`20260729120000`), the one part independent of every discovery outcome. Awaiting the first dispatch. No puller, no schedule. |
 | 5, 6, 8-15 | NOT STARTED | |
 
 ## Corrections from Step 7, adopted 28 July
@@ -96,8 +96,20 @@ and the step text is left intact so the original reasoning stays legible.
    `other`, so four columns cover all five values and sum exactly.** A column
    comment was considered and rejected: a metric that cannot sum to its own
    total is a permanent explanation burden, and the table is empty today, so the
-   migration is trivial now and awkward once there is history. **NOT YET
-   APPLIED.** Gated, and deferred with the rest of Step 4's writes.
+   migration is trivial now and awkward once there is history.
+
+   > **APPLIED 29 July**, `supabase/migrations/20260729120000_ga4_weekly_outbound_clicks_other.sql`.
+   > Independent of every discovery outcome: whatever 2.3 returns, the enum has
+   > five values and the table had three columns. Dry-run twice inside a rolled-back
+   > transaction, then applied twice. Verified by reading the catalogue:
+   > `outbound_clicks_other integer NULL`, four by-network columns present,
+   > `relacl` still `{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}`,
+   > RLS unchanged, 0 rows.
+   >
+   > Both assertions were proved to bite before applying, per convention 6: the
+   > column check raised with the column absent, and the privilege check raised
+   > against a deliberately re-opened table, both inside rolled-back
+   > transactions. A guard that has never been seen to fail is not known to work.
 
 4. **GA4 systematically undercounts against the server-side pipeline, and the
    ratio is a metric, not noise.** `public/fmb-cookie-banner.js:75` does not
@@ -263,7 +275,9 @@ Two cautions on that discovery, both to be tested rather than assumed:
 
 - GA4 does not apply a dimension definition retroactively to data already collected, so the series can start later than the events began firing. Registration was manual with no backfill.
 - Check whether BigQuery export is enabled on the property. Raw event parameters survive in BigQuery even when standard reports and the Data API cannot surface them, so history that appears lost through the Data API may be recoverable there. Treat this as a hypothesis to test, not a finding.
-- **Separate the registration boundary from the retention edge before recording anything.** A first-non-null date only means "the dimension started collecting here" if the property holds data from before it. If the earliest day carrying a network value is also the earliest day carrying any event at all, the result is equally consistent with GA4's retention window simply truncating there, and the two demand opposite conclusions. `scripts/ga4-diag.mjs` runs this check and refuses to call the result a boundary when the two dates coincide; widen `HISTORY_START` and re-run. A wrong date here becomes a permanent false marker on every trend chart.
+- **Separate the registration boundary from the retention edge before recording anything.** A first-non-null date only means "the dimension started collecting here" if the property holds data from before it. GA4 standard retention is 2 or 14 months, so if the dimensions were registered before the retention window opens, the empirical scan returns the retention edge and nothing distinguishes it from a registration boundary. That would be a permanently wrong marker on every trend chart, arrived at by a method that looked rigorous.
+
+  `scripts/ga4-diag.mjs` **reports the declared `eventDataRetention` setting alongside the observed earliest day and the by-network start, so the three can be compared rather than one inferred from another.** It refuses to call the result a boundary when the by-network start coincides with the earliest data of any kind, warns when the start sits within a week of the declared retention edge or beyond it, and flags when the scan window rather than the property is the binding constraint. Widen `HISTORY_START` and re-run in any of those cases. The retention case is the one BigQuery export would resolve, per 2.4, since raw event parameters survive there after the Data API window closes.
 
 ## 4. Known data boundaries
 
@@ -369,8 +383,24 @@ line up for the section 3.5 cross-check without a conversion step.
 in the property's reporting time zone, while `date_trunc` on `outbound_clicks`
 buckets in UTC.** If the property is not on UTC, events near midnight land on
 different days in the two pipelines, and at a week edge in different weeks. The
-diagnostic reports the property time zone for exactly this reason. Whichever
-convention is chosen, state it in the `week_start` column comment.
+diagnostic reports the property time zone for exactly this reason.
+
+**Fix direction, decided 29 July: if the property reports a time zone other than
+UTC, convert `outbound_clicks` to the property time zone before bucketing. Do
+not adjust GA4, and do not re-bucket GA4 into UTC.** GA4 is the side that cannot
+be reprocessed, so the malleable pipeline is the one that moves. State the
+resulting convention in the `week_start` column comment either way.
+
+**Scale, measured 29 July.** Of 267 server-side clicks, exactly 1 falls in the
+23:00 UTC hour, so exactly 1 lands on a different day under Europe/London and 0
+cross a week boundary. That is 0.4%, and it has never moved a weekly bucket.
+
+**This is a systematic offset, not a defect, which is why it is worth fixing
+while it is still arithmetic.** During BST a UK-timezone GA4 day begins at 23:00
+UTC the previous day, so the day-level disagreement scales with traffic and
+week-edge cases become inevitable as volume grows. A discrepancy that is
+currently 1 row in 267 and structurally guaranteed to grow is a better thing to
+correct now than to backfill later.
 
 ## 9. Supabase schema
 
