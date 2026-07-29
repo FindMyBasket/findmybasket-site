@@ -205,9 +205,25 @@ and unaffected. Search-to-comparison needs GA4, and with `session_id` 100% NULL
 server-side there is no proxy, so that indicator **cannot be built at all** until
 the event fires. It must render "not measured" and must not be approximated.
 
-Fixing it is out of scope for this pass and is not an import-path change; the
-likely remedy is the script strategy in `app/layout.tsx`, which wants its own
-ticket and its own verification.
+**Ticket raised: `docs/ticket-gtag-hydration-race.md`.** It carries the full
+audit of all seven GA4 events, the two verification traps, and three candidate
+remedies. Two findings from that audit are worth surfacing here:
+
+- **`add_to_cart` is safe**, since it fires from a click handler
+  (`SaveToRoutineButton.tsx:33`).
+- **`basket_optimised` is affected on one path only.** The `user_action` path is
+  a click and is safe; the `auto_shared_link` path fires from a mount effect via
+  `setTimeout(..., 300)` at `RoutineBuilder.tsx:180`. The delay probably wins the
+  race most of the time, which makes it the worst kind of affected path:
+  intermittent and skewed toward slow connections.
+- **`load_routine_from_url` was on nobody's list** and is likely a total loss.
+  `RoutineBuilder.tsx:172` fires it inline with the same guard, inside the same
+  mount effect, and it only ever fires on emailed `/app?routine=...` arrivals,
+  which are always cold loads. It is not defined in `lib/analytics.ts`, which is
+  why auditing that module alone would have missed it.
+
+**Consequence for the headline tiles: both qualified-sessions tiles are
+suppressed, not shown as "not measured". See section 4.1.**
 
 ## 0. Corrections carried in this version
 
@@ -385,7 +401,38 @@ GA4 dimensions are not retroactive, so the by-network breakdown begins on the re
 
 **Store NULL, not zero, for unmeasured periods, and render as "not measured". Writing zero records a measurement never taken as a measurement of nothing, and the distinction cannot be recovered later.**
 
-**Qualified sessions has almost no history. view_item shipped in PR #129, merged as 974bcc0 on 25 July at 18:00 +0100 (not 27 July, which this brief carried until the Step 4 discovery checked it against git; deploy may lag merge again, so derive any window arithmetic from the data rather than from either date), and DebugView verification was never completed. So qualified sessions per week and commission per qualified session will be near-empty at launch. Ship both tiles showing "not measured" rather than holding them: the null-not-zero convention and the platform_changes markers already handle this, and holding them means changing the dashboard shape later.**
+~~**Qualified sessions has almost no history. view_item shipped in PR #129, merged 27 July as 974bcc0, and DebugView verification was never completed. So qualified sessions per week and commission per qualified session will be near-empty at launch. Ship both tiles showing "not measured" rather than holding them: the null-not-zero convention and the platform_changes markers already handle this, and holding them means changing the dashboard shape later.**~~
+
+> **REVERSED 29 July, on the Step 4 discovery. Suppress both tiles entirely.**
+>
+> The decision above rested on `view_item` being *young*. It is not young, it is
+> *biased*: the hydration race in `docs/ticket-gtag-hydration-race.md` drops the
+> event on every cold page load, so `view_item` undercounts by the share of
+> product views that arrive directly. For a site taking search-engine landings
+> straight onto product pages, that is likely most of them.
+>
+> **"Not measured" and "measured wrong by an unknown factor" call for opposite
+> handling.** A missing number invites nobody to act on it. A present number
+> biased in an unknown direction invites exactly that, and it would sit on two of
+> the four headline tiles. The null-not-zero convention does not help here,
+> because the value is neither null nor zero, it is wrong.
+>
+> **So: qualified sessions per week and commission per qualified session are
+> ABSENT from the page until the race is fixed.** Not "not measured", not a
+> caveat in a tooltip. The dashboard ships with two headline tiles, and the note
+> below says why.
+>
+> Also corrected while checking this: `974bcc0` landed on main on **25 July at
+> 18:00 +0100**, not 27 July. Third date error of the week, and the reason the
+> diagnostic derives its active window from the data rather than from any recorded
+> date.
+>
+> **Sequence to unblock, in order:**
+> 1. Fix the gtag race under its own ticket.
+> 2. Record the fix as a `platform_changes` boundary, `status = 'occurred'`.
+> 3. Only then is the qualified-sessions series trustworthy, and only from that
+>    date forward. Comparing across the fix would show the correction as a
+>    traffic increase.
 
 Search cutover. The browse search recall fix changes total_count for 19 of the 127 distinct queries in search_events, all currently returning fewer than 3 results. total_count writes to search_events.result_count, accumulating since 1 July. Rows with result_count < 3 before the cutover are not comparable with the same rows after it. Record the cutover timestamp when it deploys.
 

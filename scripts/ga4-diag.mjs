@@ -202,7 +202,23 @@ const events = await runReport({
     filter: {
       fieldName: 'eventName',
       inListFilter: {
-        values: ['view_item', 'page_view', 'retailer_click', 'affiliate_clickout', 'search', 'session_start'],
+        // basket_optimised, add_to_cart and load_routine_from_url added 29 Jul.
+        // The hydration-race audit predicts add_to_cart healthy (fires from a
+        // click handler), basket_optimised depressed on its auto_shared_link
+        // path only, and load_routine_from_url at or near zero (it only ever
+        // fires on emailed /app?routine= arrivals, which are always cold loads).
+        // Measuring them turns those predictions into evidence for the ticket.
+        values: [
+          'view_item',
+          'page_view',
+          'retailer_click',
+          'affiliate_clickout',
+          'search',
+          'session_start',
+          'add_to_cart',
+          'basket_optimised',
+          'load_routine_from_url',
+        ],
       },
     },
   },
@@ -222,7 +238,17 @@ if (!events.ok) {
   const activeDays = (name) => [...(byDay.get(name)?.entries() || [])].filter(([, v]) => v > 0).map(([d]) => d);
 
   const windowDays = new Set([...byDay.values()].flatMap((m) => [...m.keys()])).size;
-  for (const name of ['page_view', 'session_start', 'view_item', 'retailer_click', 'affiliate_clickout', 'search']) {
+  for (const name of [
+    'page_view',
+    'session_start',
+    'view_item',
+    'retailer_click',
+    'affiliate_clickout',
+    'search',
+    'add_to_cart',
+    'basket_optimised',
+    'load_routine_from_url',
+  ]) {
     const n = total(name);
     const days = activeDays(name).length;
     console.log(`  ${name.padEnd(20)} ${String(n).padStart(8)}   on ${days}/${windowDays} days`);
