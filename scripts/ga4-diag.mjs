@@ -186,46 +186,272 @@ let thresholdingSeen = false;
 // The last pair confirms the clickout events are alive and lets the two be
 // compared: they fire on the SAME user action, so any total must count one.
 line('2.2  EVENT VOLUMES, LAST 7 DAYS');
+// The `date` dimension is here for the arithmetic, not for display. An event
+// that shipped part-way through the window is only live for part of it, and
+// dividing its count by a FULL window of page_view understates it by whatever
+// fraction of the window it did not exist for. That is how a healthy event reads
+// as a health problem. Derived from the data rather than from a ship date on
+// purpose: the ship date has already been wrong once (the brief says view_item
+// merged 27 July, git says 974bcc0 landed on main on 25 July at 18:00 +0100),
+// and deploy can lag merge again, so a constant here would be a third guess.
 const events = await runReport({
   dateRanges: [{ startDate: '7daysAgo', endDate: 'yesterday' }],
-  dimensions: [{ name: 'eventName' }],
+  dimensions: [{ name: 'eventName' }, { name: 'date' }],
   metrics: [{ name: 'eventCount' }],
   dimensionFilter: {
     filter: {
       fieldName: 'eventName',
       inListFilter: {
-        values: ['view_item', 'page_view', 'retailer_click', 'affiliate_clickout', 'search', 'session_start'],
+        // basket_optimised, add_to_cart and load_routine_from_url added 29 Jul.
+        // The hydration-race audit predicts add_to_cart healthy (fires from a
+        // click handler), basket_optimised depressed on its auto_shared_link
+        // path only, and load_routine_from_url at or near zero (it only ever
+        // fires on emailed /app?routine= arrivals, which are always cold loads).
+        // Measuring them turns those predictions into evidence for the ticket.
+        values: [
+          'view_item',
+          'page_view',
+          'retailer_click',
+          'affiliate_clickout',
+          'search',
+          'session_start',
+          'add_to_cart',
+          'basket_optimised',
+          'load_routine_from_url',
+          // Enhanced measurement, added 29 Jul. These are fired by gtag.js
+          // itself, NOT from a React mount effect, so they are NOT subject to
+          // the hydration race that zeroed the custom `search` event. Their
+          // presence alongside a dead custom event is the signal that the race
+          // is the cause rather than low traffic.
+          'view_search_results',
+          'scroll',
+          'click',
+          'file_download',
+          'form_start',
+          'form_submit',
+          'video_start',
+          'user_engagement',
+          'first_visit',
+        ],
       },
     },
   },
+  limit: 100000,
 });
 if (!events.ok) {
   console.log(`  QUERY FAILED (${events.status}): ${events.json?.error?.message || events.text.slice(0, 400)}`);
 } else {
-  const counts = Object.fromEntries(rows(events.json).map((r) => [r.d[0], r.m[0]]));
-  for (const name of ['page_view', 'session_start', 'view_item', 'retailer_click', 'affiliate_clickout', 'search']) {
-    console.log(`  ${name.padEnd(20)} ${String(counts[name] ?? 0).padStart(8)}`);
+  // eventName -> { day -> count }
+  const byDay = new Map();
+  for (const r of rows(events.json)) {
+    const [name, day] = r.d;
+    if (!byDay.has(name)) byDay.set(name, new Map());
+    byDay.get(name).set(day, (byDay.get(name).get(day) || 0) + r.m[0]);
+  }
+  const total = (name) => [...(byDay.get(name)?.values() || [])].reduce((a, b) => a + b, 0);
+  const activeDays = (name) => [...(byDay.get(name)?.entries() || [])].filter(([, v]) => v > 0).map(([d]) => d);
+
+  const windowDays = new Set([...byDay.values()].flatMap((m) => [...m.keys()])).size;
+  for (const name of [
+    'page_view',
+    'session_start',
+    'first_visit',
+    'user_engagement',
+    'view_item',
+    'retailer_click',
+    'affiliate_clickout',
+    'search',
+    'view_search_results',
+    'scroll',
+    'click',
+    'add_to_cart',
+    'basket_optimised',
+    'load_routine_from_url',
+    'file_download',
+    'form_start',
+    'form_submit',
+    'video_start',
+  ]) {
+    const n = total(name);
+    const days = activeDays(name).length;
+    console.log(`  ${name.padEnd(20)} ${String(n).padStart(8)}   on ${days}/${windowDays} days`);
   }
   thresholdingSeen = thresholdNote(events.json, 'event volumes') || thresholdingSeen;
 
-  const pv = counts.page_view ?? 0;
-  const vi = counts.view_item ?? 0;
+  const pv = total('page_view');
+  const vi = total('view_item');
+  const viDays = activeDays('view_item');
+  // page_view restricted to the days view_item was actually alive. This is the
+  // only denominator that makes the two comparable.
+  const pvOnViDays = viDays.reduce((a, d) => a + (byDay.get('page_view')?.get(d) || 0), 0);
+
   console.log('');
   if (pv > 0 && vi === 0) {
     console.log('  VERDICT: page_view healthy, view_item ZERO -> view_item is NOT reaching GA4.');
-    console.log('           This is a BUG to report, not a tile to build around (PR #129, 27 Jul,');
-    console.log('           DebugView verification was never completed).');
+    console.log('           A BUG to report, not a tile to build around.');
   } else if (pv === 0 && vi === 0) {
     console.log('  VERDICT: BOTH zero. Not a view_item question — no data at all for the window.');
     console.log('           Check the property id and the date window before concluding anything.');
   } else if (vi > 0) {
-    console.log(`  VERDICT: view_item IS firing (${vi} in 7 days, ${(vi / Math.max(pv, 1) * 100).toFixed(1)}% of page_view).`);
+    const naive = (vi / Math.max(pv, 1)) * 100;
+    const fair = (vi / Math.max(pvOnViDays, 1)) * 100;
+    console.log(`  VERDICT: view_item IS firing (${vi} events on ${viDays.length} of ${windowDays} days).`);
+    console.log(`           over the FULL window:        ${naive.toFixed(1)}% of page_view  <- understates it`);
+    console.log(`           over its ACTIVE days only:   ${fair.toFixed(1)}% of page_view  <- use this one`);
+    if (viDays.length < windowDays) {
+      console.log('');
+      console.log(`           view_item was live on only ${viDays.length} of ${windowDays} days in this window, so the`);
+      console.log('           full-window figure divides a partial numerator by a whole denominator.');
+      console.log('           Do NOT read the lower number as a health problem. Once the event has been');
+      console.log('           live for a full window the two converge and this note stops appearing.');
+    }
   } else {
     console.log('  VERDICT: see figures above.');
   }
+
+  // An event that fires on ZERO of the window's days, while its server-side
+  // counterpart is still recording, is not low volume. Consent scales a number
+  // down, it does not zero it while other consent-gated events keep firing.
+  const searchTotal = total('search');
+  if (pv > 0 && searchTotal === 0) {
+    console.log('');
+    console.log('  [!] `search` is at ZERO across the whole window while other consent-gated');
+    console.log('      events fire. Consent scales a count down, it does not zero one event and');
+    console.log('      spare the rest. Cross-check against the server-side search_events table');
+    console.log('      before treating this as low volume: if that table is recording and GA4 is');
+    console.log('      not, the event is broken. See the Step 4 discovery findings in');
+    console.log('      docs/dashboard-build-brief.md for the diagnosed cause.');
+  }
+
+  console.log('');
   console.log('  Reminder: gtag.js is not loaded until cookie consent, so every figure here is');
   console.log('  a CONSENTING-visitor figure. Compare against the server-side outbound_clicks');
   console.log('  table, which writes regardless of consent, to read the gap as a consent rate.');
+}
+
+// ── 2.6 SITE SEARCH: enhanced measurement vs the custom event ──────────────
+// Added 29 July, from a Run A observation: `view_search_results` fired on
+// gtag.js init while the custom `search` event sat at zero.
+//
+// WHY THIS MATTERS. view_search_results is GA4 ENHANCED MEASUREMENT. gtag.js
+// fires it itself on load, reading the search term straight off the URL query
+// parameter, so it never touches a React mount effect and is NOT subject to the
+// hydration race that zeroed the custom event. It should therefore have history
+// going back to whenever GA4 was installed, for consenting visitors, while
+// `search` has none.
+//
+// WHAT IT DOES AND DOES NOT GIVE US. It carries search_term, so it can supply
+// search VOLUME and the TERMS. It does NOT carry result_count, which is our own
+// custom metric on the custom event, so it cannot by itself produce zero-result
+// rate. (Zero-result rate is Supabase-only anyway, per section 7 of the brief.)
+// Its real value is as the DENOMINATOR for search-to-comparison rate, which the
+// brief currently marks unbuildable.
+line(`2.6  SITE SEARCH  (enhanced measurement vs the custom event, ${HISTORY_START} -> today)`);
+const siteSearch = await runReport({
+  dateRanges: [{ startDate: HISTORY_START, endDate: 'today' }],
+  dimensions: [{ name: 'date' }, { name: 'eventName' }],
+  metrics: [{ name: 'eventCount' }],
+  dimensionFilter: {
+    filter: { fieldName: 'eventName', inListFilter: { values: ['search', 'view_search_results'] } },
+  },
+  limit: 100000,
+});
+if (!siteSearch.ok) {
+  console.log(`  QUERY FAILED (${siteSearch.status}): ${siteSearch.json?.error?.message || siteSearch.text.slice(0, 300)}`);
+} else {
+  const weekly = new Map();
+  for (const r of rows(siteSearch.json)) {
+    const [day, name] = r.d;
+    const wk = isoMonday(day);
+    if (!weekly.has(wk)) weekly.set(wk, { search: 0, view_search_results: 0 });
+    weekly.get(wk)[name] = (weekly.get(wk)[name] || 0) + r.m[0];
+  }
+  const weeks = [...weekly.keys()].sort();
+  if (!weeks.length) {
+    console.log('  Neither event has fired in this window.');
+  } else {
+    console.log('  week (Mon)    search   view_search_results');
+    let vsrTotal = 0;
+    let sTotal = 0;
+    for (const wk of weeks) {
+      const v = weekly.get(wk);
+      sTotal += v.search;
+      vsrTotal += v.view_search_results;
+      console.log(`    ${wk}  ${String(v.search).padStart(6)}   ${String(v.view_search_results).padStart(18)}`);
+    }
+    console.log(`    TOTAL     ${String(sTotal).padStart(6)}   ${String(vsrTotal).padStart(18)}`);
+    console.log(`\n  earliest week with view_search_results: ${weeks.find((w) => weekly.get(w).view_search_results > 0) || 'none'}`);
+    console.log(`  earliest week with the custom search  : ${weeks.find((w) => weekly.get(w).search > 0) || 'none'}`);
+    thresholdNote(siteSearch.json, 'site search history');
+
+    if (vsrTotal > 0 && sTotal === 0) {
+      console.log('\n  [!] view_search_results HAS history while the custom `search` event has NONE.');
+      console.log('      That is the hydration race isolated: the enhanced-measurement event fires');
+      console.log('      from gtag.js and survived, the mount-effect event did not. It is also a');
+      console.log('      usable series: search VOLUME and TERMS are available for the whole window');
+      console.log('      above, predating the fix.');
+      console.log('      It does NOT carry result_count, so it cannot give zero-result rate (that is');
+      console.log('      Supabase-only regardless). It CAN serve as the denominator for');
+      console.log('      search-to-comparison rate, whose numerator is view_item and therefore stays');
+      console.log('      blocked until the race fix lands. Revisit that indicator in the brief.');
+    } else if (vsrTotal > 0 && sTotal > 0) {
+      console.log('\n  Both events have history. Do NOT sum them: they fire on the same user action.');
+      console.log('  Pick one per metric and state which. The custom event carries result_count;');
+      console.log('  the enhanced-measurement one has the longer series.');
+    } else if (vsrTotal === 0) {
+      console.log('\n  view_search_results has NOT fired. Check siteSearchEnabled and the query');
+      console.log('  parameter list in the enhanced-measurement settings reported below: this site');
+      console.log('  uses ?q=, which is in the GA4 default set, so zero here needs explaining.');
+    }
+  }
+}
+
+// ── ENHANCED MEASUREMENT SETTINGS ──────────────────────────────────────────
+// Never audited. `scroll` was observed firing in a browser session on 29 July,
+// so at least part of this is on, and nobody has established what else.
+line('ENHANCED MEASUREMENT  (which auto-collected events are switched on)');
+const streams = await api(`https://analyticsadmin.googleapis.com/v1alpha/properties/${PROPERTY}/dataStreams`);
+if (!streams.ok) {
+  console.log(`  Admin API read failed (${streams.status}): ${streams.json?.error?.message || streams.text.slice(0, 200)}`);
+} else {
+  const web = (streams.json?.dataStreams || []).filter((s) => s.webStreamData);
+  if (!web.length) console.log('  No web data streams found.');
+  for (const s of web) {
+    console.log(`  stream: ${s.displayName}  (${s.webStreamData.measurementId})  ${s.name}`);
+    const em = await api(`https://analyticsadmin.googleapis.com/v1alpha/${s.name}/enhancedMeasurementSettings`);
+    if (!em.ok) {
+      console.log(`    settings read failed (${em.status}): ${em.json?.error?.message || ''}`);
+      continue;
+    }
+    const e = em.json || {};
+    const flags = [
+      ['streamEnabled', 'enhanced measurement master switch'],
+      ['pageViewsEnabled', 'page_view'],
+      ['scrollsEnabled', 'scroll'],
+      ['outboundClicksEnabled', 'click (outbound)'],
+      ['siteSearchEnabled', 'view_search_results'],
+      ['formInteractionsEnabled', 'form_start / form_submit'],
+      ['videoEngagementEnabled', 'video_*'],
+      ['fileDownloadsEnabled', 'file_download'],
+      ['pageChangesEnabled', 'page_view on history change'],
+    ];
+    for (const [k, label] of flags) {
+      const v = e[k];
+      console.log(`    ${v === true ? 'ON ' : v === false ? 'off' : ' ? '}  ${k.padEnd(26)} ${label}`);
+    }
+    console.log(`    searchQueryParameter : ${e.searchQueryParameter || '(default: q,s,search,query,keyword)'}`);
+    console.log(`    uriQueryParameter    : ${e.uriQueryParameter || '(none)'}`);
+    if (e.siteSearchEnabled === true) {
+      console.log('\n    [ok] Site search is ON, so view_search_results is being collected. This');
+      console.log('         site searches with ?q=, which is in the default parameter set.');
+    }
+    if (e.outboundClicksEnabled === true) {
+      console.log('    [!] Outbound clicks are ON, so GA4 auto-collects a `click` event on every');
+      console.log('        outbound link IN ADDITION to our retailer_click and affiliate_clickout.');
+      console.log('        That is a THIRD count of the same user action. Any outbound-click total');
+      console.log('        must still use retailer_click only; do not let `click` into it.');
+    }
+  }
 }
 
 // ── 2.5 + dimension resolution ──────────────────────────────────────────────
@@ -420,7 +646,21 @@ line('GUARD  REPORTING TIME ZONE  (does GA4 bucket days the same way Postgres do
   const tz = md.timeZone || '(not returned)';
   console.log(`  property reporting time zone: ${tz}`);
   console.log(`  currency: ${md.currencyCode || '(not returned)'}`);
-  if (tz !== 'UTC' && tz !== '(not returned)') {
+
+  // Zero-offset zones that are UTC under a different name. The first version of
+  // this guard string-compared against the literal 'UTC' and reported Etc/GMT as
+  // a mismatch, which is a false positive: Etc/GMT is GMT+0 with no daylight
+  // saving, year round, so it agrees with UTC on every day boundary always.
+  //
+  // The false positive was not cosmetic. It pointed at a fix ("convert
+  // outbound_clicks to the property time zone") which is a no-op at best, and
+  // which would INTRODUCE a BST offset that does not currently exist if anyone
+  // read "the property time zone" as Europe/London. A guard that names the wrong
+  // remedy is worse than one that stays quiet.
+  const ZERO_OFFSET_FIXED = new Set(['UTC', 'Etc/UTC', 'Etc/GMT', 'GMT', 'Etc/Greenwich', 'Etc/Zulu', 'Zulu', 'Universal', 'Etc/Universal']);
+  const isUtcEquivalent = ZERO_OFFSET_FIXED.has(tz);
+
+  if (!isUtcEquivalent && tz !== '(not returned)') {
     console.log('\n  [!] NOT UTC. The GA4 `date` dimension is in the property time zone, but');
     console.log('      Postgres date_trunc(\'week\', ...) on outbound_clicks buckets in UTC. Events');
     console.log('      near midnight fall on different days in the two pipelines, and at a week');
@@ -438,8 +678,15 @@ line('GUARD  REPORTING TIME ZONE  (does GA4 bucket days the same way Postgres do
     console.log('      23:00 UTC the previous day, so day-level disagreement scales with traffic');
     console.log('      and week-edge cases become inevitable as volume grows. Fix it while it is');
     console.log('      still arithmetic rather than a backfill.');
-  } else if (tz === 'UTC') {
-    console.log('\n  [ok] UTC, matching the Postgres side. No offset to reconcile.');
+  } else if (isUtcEquivalent) {
+    console.log(`\n  [ok] ${tz} is zero-offset with no daylight saving, so it IS UTC for bucketing`);
+    console.log('       purposes and agrees with Postgres date_trunc on every day boundary, always.');
+    console.log('       No offset exists and none should be introduced. Specifically: do NOT');
+    console.log('       "convert outbound_clicks to the property time zone", and do not read that');
+    console.log('       phrase as Europe/London, which would CREATE a BST offset that is not there.');
+    console.log('       The guard stays in case the property time zone is ever changed.');
+  } else {
+    console.log('\n  [?] Time zone not returned. Re-run before assuming it matches.');
   }
 }
 

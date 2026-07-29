@@ -18,7 +18,7 @@ Appended as steps complete, so the brief and its state never diverge.
 | 2 | COMPLETE, approved 28 Jul | Schema proposed; eleven tables, not ten. |
 | 3 | COMPLETE, applied 28 Jul | `supabase/migrations/20260728180000_dashboard_schema.sql`. All eleven verified `{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}` by reading `relacl`. |
 | 7 | COMPLETE, approved 28 Jul | Queries confirmed; three premises corrected, see "Corrections from Step 7" below. |
-| 4 | DISCOVERY IN PROGRESS, 29 Jul | `.github/workflows/ga4-diag.yml` + `scripts/ga4-diag.mjs` committed, read-only, `workflow_dispatch`. Four premises corrected, see "Corrections from Step 4" below. `outbound_clicks_other` APPLIED (`20260729120000`), the one part independent of every discovery outcome. Awaiting the first dispatch. No puller, no schedule. |
+| 4 | DISCOVERY COMPLETE, 29 Jul. Puller NOT built. | Diagnostic dispatched, design holds. Results in "Step 4 discovery results" below. By-network start **2026-06-24** recorded as `platform_changes` id 7 (`20260729140000`). `outbound_clicks_other` APPLIED (`20260729120000`). Google Signals disabled, no thresholding. **Open bug: the GA4 `search` event never fires**, and `view_item` undercounts for the same reason. No puller, no schedule. |
 | 5, 6, 8-15 | NOT STARTED | |
 
 ## Corrections from Step 7, adopted 28 July
@@ -124,6 +124,158 @@ and the step text is left intact so the original reasoning stays legible.
    that separates the two causes of a low `view_item` count: if `page_view` is
    healthy and `view_item` is zero, that is a bug; if both are proportionally
    low, that is consent. Neither figure means anything reported alone.
+
+## Step 4 discovery results, 29 July
+
+First dispatch of `ga4-diag.yml`. **The design holds.** Property 415465396.
+
+### Settled, and safe to build on
+
+| Question | Result |
+|---|---|
+| Google Signals (2.3) | **Disabled.** No thresholding notice in either report. The risk most likely to invalidate the design is absent, so no sixth `platform_changes` row is needed for it. |
+| By-network start (2.5) | **2026-06-24**, established empirically. Recorded as `platform_changes` id 7, status `occurred`, migration `20260729140000`. |
+| Retention guard | **Cleared it properly.** Events exist from 2026-04-05, well before the start, and with 14-month retention the start sits 391 days inside the window. A real dimension boundary, not a retention edge. |
+| Network values | `amazon`, `awin`, `ebay`, `rakuten`. No `other` yet and no stray casing, so the four columns cover everything observed. |
+| Time zone | `Etc/GMT`, which is UTC. See 8.1: no offset exists, nothing to fix. |
+| BigQuery export (2.4) | **Off.** With 14-month retention this is no longer urgent, but it is the only thing that makes history permanent and it is not retroactive. Operator's call, not a blocker. |
+
+### The consent ratio, now measured
+
+GA4 `retailer_click` against the server-side `outbound_clicks` table, same ISO
+weeks. This is the Step 6 indicator, seeded:
+
+| Week (Mon) | GA4 | Server-side | Ratio |
+|---|---|---|---|
+| 29 Jun | 36 | 39 | 92% |
+| 6 Jul | 13 | 21 | 62% |
+| 13 Jul | 47 | 58 | 81% |
+| 20 Jul | 85 | 128 | 66% |
+
+Consent plus blockers costs roughly a fifth to a third of clicks, and it is not
+stable week to week, which is the argument for showing it rather than applying a
+fixed correction factor.
+
+> **The 29 June week is not comparable and should not anchor the range.**
+> Server-side logging shipped 2026-07-01 (`2b54593`, first row 11:13:42 UTC),
+> so that week is 7 GA4 days against roughly 4.5 server-side days. The
+> denominator is short, which inflates the ratio. Across the three clean weeks
+> the spread is 62% to 81%, so the cost is nearer a fifth to two fifths than the
+> 8% the first week implies.
+>
+> **Recommended, not yet done:** a sixth `platform_changes` row for the
+> server-side event-logging start on 2026-07-01, since it bounds every
+> cross-check that uses `outbound_clicks` or `search_events` as a denominator,
+> and this is the second time it has needed explaining. Gated; not inserted
+> without approval.
+
+### Open bug, reported not fixed
+
+**The GA4 `search` event is broken. It is not low volume.** GA4 returned 0 for
+the 7-day window while server-side `search_events` recorded 41 rows in the same
+window, 18 in the last two days, most recent 07:48 on 29 July. Consent cannot
+explain it: consent scales a count down rather than zeroing one event while
+`retailer_click` keeps firing through the same gate.
+
+**Diagnosed cause, from the code:** `app/layout.tsx:41` loads the consent banner
+with `strategy="afterInteractive"`, which runs *after* React hydration.
+`window.gtag` is defined by that banner (`fmb-cookie-banner.js:79`), and every
+tracker in `lib/analytics.ts` returns early when `gtag` is not yet a function. So
+a mount effect that fires during hydration finds no `gtag` and drops its event
+silently.
+
+That predicts the exact pattern observed:
+
+| Event | Fires from | Observed | Why |
+|---|---|---|---|
+| `retailer_click` | user click, seconds after load | healthy (47) | banner has long since defined `gtag` |
+| `view_item` | mount effect | low but non-zero (9) | survives only on client-side navigation, where `gtag` already exists from the previous page |
+| `search` | mount effect | **exactly 0** | every entry to `/search` is a full-document GET (`public/index.html:281` and `app/search/page.tsx:67`; there is no `router.push` to `/search` anywhere), so the effect always loses the race |
+
+**Consequence for this build, beyond the search indicators.** `view_item` is
+subject to the same race, so it is not merely young, it is *systematically
+undercounting* by whatever share of product views are cold loads. For a
+comparison site taking search-engine landings straight onto product pages that
+share is likely the majority. **Qualified sessions and commission per qualified
+session are therefore understated by an unknown factor, not just sparse.** Label
+them accordingly until this is fixed.
+
+**Impact on the specified indicators.** Zero-result search rate is Supabase-only
+and unaffected. Search-to-comparison needs GA4, and with `session_id` 100% NULL
+server-side there is no proxy.
+
+> **Revised 29 July: `view_search_results` may already hold the search side, with
+> history.** Observed during the browser gate run: on consent, gtag.js fired
+> `view_search_results` carrying `search_term`, while the custom `search` event
+> sits at zero.
+>
+> **It is GA4 enhanced measurement, fired by gtag.js off the URL query parameter,
+> not from a React mount effect.** It is therefore not subject to the hydration
+> race at all, and should have collected continuously for consenting visitors
+> since GA4 was installed. This site searches with `?q=`, which is in the GA4
+> default parameter set.
+>
+> **What it does and does not give us:**
+>
+> | | |
+> |---|---|
+> | search volume and terms | **yes**, with history predating the fix |
+> | `result_count` | **no**. That is our own custom metric on the custom event, so zero-result rate stays Supabase-only, which it already was |
+> | denominator for search-to-comparison | **yes**, potentially back weeks |
+> | numerator for search-to-comparison | **no**. That is `view_item`, still broken until the race fix lands |
+>
+> **So the indicator is not unbuildable, it is half-blocked**, and the half that
+> is blocked is the one the race fix unblocks. When it lands, the search side
+> already has a baseline instead of starting from zero.
+>
+> **Do not sum `search` and `view_search_results`.** They fire on the same user
+> action, exactly like `retailer_click` and `affiliate_clickout`. Pick one per
+> metric and label which: the custom event carries `result_count`, the
+> enhanced-measurement one has the longer series.
+>
+> Volume and earliest week are reported by `scripts/ga4-diag.mjs` section 2.6.
+> Confirm from that run before building on it.
+
+> **Enhanced measurement had never been audited.** `scroll` was seen firing in the
+> same session and nobody had established what else is on. The diagnostic now
+> reports the full settings block per data stream. **One to watch: if
+> `outboundClicksEnabled` is on, GA4 auto-collects a `click` event on every
+> outbound link, which is a THIRD count of the same action alongside
+> `retailer_click` and `affiliate_clickout`.** The rule is unchanged, outbound
+> totals use `retailer_click` only, but there is now a third candidate to keep out
+> of it rather than two.
+
+**Ticket raised: `docs/ticket-gtag-hydration-race.md`.** It carries the full
+call-site audit, three verification traps, and four candidate remedies (including
+Google Consent Mode v2, which is coupled to the Step 6 consent-ratio indicator
+and must be decided together with it). Findings worth surfacing here:
+
+> **The audit method changed, and that is the bigger lesson than the bug.** The
+> first pass was scoped to `lib/analytics.ts` and reported complete. Re-run by
+> call site, meaning every `gtag(` and every `dataLayer.push` in the repository,
+> it found **fifteen distinct GA4 events, not seven**. Scoping a search to the
+> module that *should* contain a thing can only ever find the instances already
+> where they belong. It is the same shape as a repo grep for a credential, which
+> answers "what references this" and never "does this exist".
+>
+> It happened not to change which events are affected. That is luck, not
+> vindication: the method was wrong either way.
+
+- **`add_to_cart` is safe**, since it fires from a click handler
+  (`SaveToRoutineButton.tsx:33`).
+- **`basket_optimised` is affected on one path only.** The `user_action` path is
+  a click and is safe; the `auto_shared_link` path fires from a mount effect via
+  `setTimeout(..., 300)` at `RoutineBuilder.tsx:180`. The delay probably wins the
+  race most of the time, which makes it the worst kind of affected path:
+  intermittent and skewed toward slow connections.
+- **`load_routine_from_url` was on nobody's list** and is likely a total loss.
+  `RoutineBuilder.tsx:172` fires it inline with the same guard, inside the same
+  mount effect, and it only ever fires on emailed `/app?routine=...` arrivals,
+  which are always cold loads. It is not defined in `lib/analytics.ts`, which is
+  why auditing that module alone would have missed it.
+
+**Consequence for the headline tiles: both qualified-sessions tiles are
+suppressed, not shown as "not measured". See section 4.1.**
 
 ## 0. Corrections carried in this version
 
@@ -293,6 +445,36 @@ Five dated changes affect the series this dashboard records. Three have happened
 
 **Required: create a platform_changes table, one row per dated change with a description and the metrics affected, and render its entries as vertical markers on every trend chart. Seed with the five above. This makes the sixth change cost nothing.**
 
+### 4.0 The boundary class most likely to be missed
+
+A general rule, arrived at from the server-side logging boundary but not specific
+to it. Record it here because the next instance will not look like that one.
+
+**A boundary that makes a metric look BETTER rather than emptier is the kind
+nobody questions.** Missing data announces itself: a gap in a chart, a zero, a
+count that fell. It gets investigated. A boundary that improves a figure gets
+congratulated.
+
+**The common mechanism is a short denominator.** When a ratio's denominator
+starts collecting later than its numerator, or stops early, or covers fewer days
+than the period it is charted against, the ratio does not read as incomplete. It
+reads as unusually good performance. Nothing about the number looks wrong.
+
+The worked example is in section 3.1: the ISO week beginning 2026-06-29 shows a
+92% consent ratio against 62%, 81% and 66% for the three complete weeks that
+follow. It is not a good week. It is 7 GA4 days measured against roughly 4.5
+server-side days, because `lib/events.ts` shipped on 1 July.
+
+**So, whenever a metric is a ratio, record a boundary for the start of the
+DENOMINATOR as well as the numerator.** Both are dated changes even when only one
+of them is a change to the product. The two rarely start on the same day, and the
+window where they disagree is exactly the window that will be quoted approvingly.
+
+**Corollary for reading any trend on this dashboard: an unexplained improvement
+deserves the same scrutiny as an unexplained drop.** The platform_changes markers
+exist to make that scrutiny quick, and they only work if boundaries are recorded
+for the flattering direction too.
+
 ### 4.1 What each boundary means in practice
 
 Savings reset. dq_dashboard_log row 3, 27 July 11:06 UTC, is the reference: avg_saving_pct 17.23%, total_savings_pool £71,898.74, biggest_saving £184.50. Rows 1 and 2 are from 3 May and are not comparable. Anchor the savings trend to row 3 as its zero point. The earlier figures (avg 23.20%, pool £180,111) were inflated by dead Superdrug r12 rows and must never be quoted as a prior level or a regression.
@@ -301,7 +483,74 @@ GA4 dimensions are not retroactive, so the by-network breakdown begins on the re
 
 **Store NULL, not zero, for unmeasured periods, and render as "not measured". Writing zero records a measurement never taken as a measurement of nothing, and the distinction cannot be recovered later.**
 
-**Qualified sessions has almost no history. view_item shipped in PR #129, merged 27 July as 974bcc0, and DebugView verification was never completed. So qualified sessions per week and commission per qualified session will be near-empty at launch. Ship both tiles showing "not measured" rather than holding them: the null-not-zero convention and the platform_changes markers already handle this, and holding them means changing the dashboard shape later.**
+~~**Qualified sessions has almost no history. view_item shipped in PR #129, merged 27 July as 974bcc0, and DebugView verification was never completed. So qualified sessions per week and commission per qualified session will be near-empty at launch. Ship both tiles showing "not measured" rather than holding them: the null-not-zero convention and the platform_changes markers already handle this, and holding them means changing the dashboard shape later.**~~
+
+> **REVERSED 29 July, on the Step 4 discovery. Suppress both tiles entirely.**
+>
+> The decision above rested on `view_item` being *young*. It is not young, it is
+> *biased*: the hydration race in `docs/ticket-gtag-hydration-race.md` drops the
+> event on every cold page load, so `view_item` undercounts by the share of
+> product views that arrive directly. For a site taking search-engine landings
+> straight onto product pages, that is likely most of them.
+>
+> **"Not measured" and "measured wrong by an unknown factor" call for opposite
+> handling.** A missing number invites nobody to act on it. A present number
+> biased in an unknown direction invites exactly that, and it would sit on two of
+> the four headline tiles. The null-not-zero convention does not help here,
+> because the value is neither null nor zero, it is wrong.
+>
+> **So: everything derived from `view_item` is ABSENT from the page until the
+> race is fixed.** Not "not measured", not a caveat in a tooltip.
+>
+> **Scope corrected 29 July: five metrics, not two.** The first version of this
+> reversal suppressed the two headline tiles and stopped there, which was
+> under-scoped: every metric derived from `view_item` carries the same
+> contamination.
+>
+> | Metric | Where | Direction of error |
+> |---|---|---|
+> | `qualified_sessions` | headline tile + leading indicator | depressed |
+> | Commission per qualified session | headline tile | inflated (broken denominator) |
+> | `comparison_views` | column and tile | depressed |
+> | Session to comparison-view rate | leading indicator | depressed |
+> | Comparison-view to outbound-click rate | leading indicator | **inflated, badly** |
+>
+> **The last one is the worst.** Its denominator is the broken event while its
+> numerator, `retailer_click`, is healthy. On the last seven days it would read
+> 47 over 9, which is **522%**.
+>
+> That absurdity is the only reason it is currently safe: nobody would believe
+> it. **But it is not stable, and that is the real argument for suppressing
+> rather than caveating.** As the cold-load share shifts, or if a partial fix
+> lands, the ratio drifts down through entirely plausible territory. A number
+> that reads 522% gets questioned. The same broken number reading 85% does not,
+> and there is nothing on the page that would distinguish it from a real
+> improvement.
+>
+> **Worth stating plainly rather than leaving as five separate suppressions: the
+> leading indicators, which exist to be the early-warning system, are themselves
+> built on the broken event.** Three of the five are leading indicators. The
+> panel meant to catch a problem early is, until this is fixed, the part of the
+> dashboard least able to.
+>
+> **Still write the column. Still pull the data.** Suppress the DISPLAY only, so
+> the series accumulates and becomes readable from whatever date the fix lands.
+> `metrics_ga4_weekly.qualified_sessions` and `.comparison_views` keep being
+> written by the puller exactly as specified; nothing about the schema or the
+> NULL-not-zero convention changes. What changes is that the dashboard does not
+> render them.
+>
+> Also corrected while checking this: `974bcc0` landed on main on **25 July at
+> 18:00 +0100**, not 27 July. Third date error of the week, and the reason the
+> diagnostic derives its active window from the data rather than from any recorded
+> date.
+>
+> **Sequence to unblock, in order:**
+> 1. Fix the gtag race under its own ticket.
+> 2. Record the fix as a `platform_changes` boundary, `status = 'occurred'`.
+> 3. Only then is the qualified-sessions series trustworthy, and only from that
+>    date forward. Comparing across the fix would show the correction as a
+>    traffic increase.
 
 Search cutover. The browse search recall fix changes total_count for 19 of the 127 distinct queries in search_events, all currently returning fewer than 3 results. total_count writes to search_events.result_count, accumulating since 1 July. Rows with result_count < 3 before the cutover are not comparable with the same rows after it. Record the cutover timestamp when it deploys.
 
@@ -313,6 +562,7 @@ Catalogue baseline. The early-August cluster moves exactly the metrics this dash
 - Superdrug r12 is retired. Its Rakuten feed died 19 July. 29,547 rows retained, all in_stock=false. The live view already excludes them. A pre-19-July figure compared to a current one shows an apparent drop that is the correction landing, not a regression.
 - Comparison depth has two honest figures. Roughly 11,888 root products only, or 12,433 including shade children and merged rows. Use the root figure for anything user-facing or partner-facing, including Spotlight client PDFs. Label every figure on screen with which definition it uses.
 - brand_search_index exists, roughly 2,053 rows, refreshed when the catalogue watermark moves, with a brand_index_health view exposing catalogue brand count, index rows, the difference, last refresh time and how far behind it is. It is a derived cache and can drift silently.
+- **GA4 event timestamps within a session are not exact for first-time visitors, by design.** From the hydration-race fix (`public/fmb-gtag-stub.js`), events fired before a consent decision are held in an in-memory queue and replayed once consent is granted. GA4 stamps them at replay time, not at the moment they occurred. For the common case, a returning visitor with stored consent, the difference is a few hundred milliseconds. For a first-time visitor who leaves the banner up and then accepts, every queued event lands at the moment of acceptance, so they appear simultaneous. **Event counts are correct; intra-session ordering and timing for that visitor class are not.** Anyone querying time-between-events, session duration or event sequence will meet this and should find the explanation here rather than treat it as a data fault. It is the accepted trade: counts correct with timing wrong for one visitor class beats counts wrong for everyone. A maximum of 50 events queue before a decision, after which further pre-consent events are dropped rather than transmitted.
 - search_events contains 7 occurrences of the literal {search_term_string}, the homepage JSON-LD SearchAction template submitted verbatim, most likely by a crawler. Roughly 1.5 per cent of logged searches are not human. Filter this literal from every search metric. Fixing the markup is a separate ticket.
 
 ## 6. Build order
@@ -341,9 +591,17 @@ Headline KPIs, four tiles
 
 Leading indicators
 
-- Qualified sessions per week and trend.
-- Session to comparison-view rate.
-- Comparison-view to outbound-click rate.
+> **Three of the five below are suppressed at launch, because they derive from
+> `view_item`, which the hydration race breaks. See section 4.1.** The
+> early-warning panel is, until that ticket lands, the part of the dashboard
+> least able to warn. Only outbound clicks by network and zero-result search rate
+> render.
+
+- Qualified sessions per week and trend. **SUPPRESSED, derives from view_item.**
+- Session to comparison-view rate. **SUPPRESSED, derives from view_item.**
+- Comparison-view to outbound-click rate. **SUPPRESSED, derives from view_item,
+  and inflated rather than depressed because only its denominator is broken. It
+  would currently read 522%.**
 - Outbound clicks per week by network.
 - Zero-result search rate and search-to-comparison rate. Search is a major entry path and is currently defective, for example "loreal revitalift" returns 1 result against a true 96. These belong here, not in the quality panel, and give the browse-search cutover a measurable before and after.
 
@@ -385,22 +643,31 @@ buckets in UTC.** If the property is not on UTC, events near midnight land on
 different days in the two pipelines, and at a week edge in different weeks. The
 diagnostic reports the property time zone for exactly this reason.
 
-**Fix direction, decided 29 July: if the property reports a time zone other than
-UTC, convert `outbound_clicks` to the property time zone before bucketing. Do
-not adjust GA4, and do not re-bucket GA4 into UTC.** GA4 is the side that cannot
-be reprocessed, so the malleable pipeline is the one that moves. State the
-resulting convention in the `week_start` column comment either way.
-
-**Scale, measured 29 July.** Of 267 server-side clicks, exactly 1 falls in the
-23:00 UTC hour, so exactly 1 lands on a different day under Europe/London and 0
-cross a week boundary. That is 0.4%, and it has never moved a weekly bucket.
-
-**This is a systematic offset, not a defect, which is why it is worth fixing
-while it is still arithmetic.** During BST a UK-timezone GA4 day begins at 23:00
-UTC the previous day, so the day-level disagreement scales with traffic and
-week-edge cases become inevitable as volume grows. A discrepancy that is
-currently 1 row in 267 and structurally guaranteed to grow is a better thing to
-correct now than to backfill later.
+> **RESOLVED 29 July, and there is nothing to fix. The property reporting time
+> zone is `Etc/GMT`, which is UTC.** Zero offset, no daylight saving, year round.
+> GA4's `date` dimension and Postgres `date_trunc('week', ...)` therefore agree on
+> every day boundary, always. Verified across the BST switch: `Etc/GMT` reads the
+> same hour as `UTC` in both January and July, while `Europe/London` diverges by
+> an hour in July.
+>
+> **No offset exists and none should be introduced.** An earlier draft of this
+> section recorded a fix direction, "convert `outbound_clicks` to the property
+> time zone before bucketing", which came from the diagnostic string-comparing the
+> time zone against the literal `UTC` and reporting `Etc/GMT` as a mismatch. That
+> was a false positive in the guard, now fixed to treat `Etc/GMT`, `Etc/UTC`,
+> `GMT` and the other fixed zero-offset zones as equivalent.
+>
+> **The correction matters beyond the cosmetic.** Acting on that fix direction
+> would be a no-op at best, and anyone reading "the property time zone" as
+> `Europe/London` would *introduce* the BST offset that does not currently exist,
+> turning a guard into the cause of the defect it was watching for. For the
+> record, had the property been on `Europe/London` the scale would have been
+> small: of 267 server-side clicks exactly 1 falls in the 23:00 UTC hour, so 1
+> would land on a different day and 0 would cross a week boundary.
+>
+> **Keep the guard.** It is correct now and the property time zone is a setting
+> that can be changed later, which is exactly when nobody would think to re-check
+> it.
 
 ## 9. Supabase schema
 
@@ -520,6 +787,29 @@ Step 6, GATED. Build the dashboard page at a new authenticated route: four headl
 > **The two are still never summed and neither is ever substituted for the
 > other.** This is a ratio of two independently sourced figures, both shown.
 >
+> **The chosen remedy leaves this indicator's definition intact, which is a real
+> advantage even though it was not part of the decision.** The dataLayer stub
+> recovers events that were being dropped before consent was decided; it does not
+> recover refusing visitors, and it is not meant to. So the numerator stays "GA4
+> clicks, consenting visitors only" and the denominator stays "server-side
+> clicks, everyone", exactly as today. **The fix therefore does not become a
+> seventh boundary on this particular series**, and consent ratios measured
+> before and after it remain directly comparable. Given how much of this build is
+> boundary bookkeeping, an indicator that survives a change to the pipeline
+> without one is worth noting.
+>
+> **Coupled to remedy 4 in the hydration-race ticket.** This indicator works only
+> because GA4 counts consenting visitors while the server-side table counts
+> everyone. Adopting Google Consent Mode v2 would put modelled non-consenting
+> sessions into the numerator, so the ratio would drift toward 1 and stop
+> measuring consent while keeping its name. **Decide the remedy and this
+> indicator together.** If Consent Mode is adopted, this indicator must either be
+> redefined or retired deliberately, not left to change meaning quietly.
+>
+> **Denominator boundary applies:** the server-side series starts 2026-07-01
+> (`platform_changes` id 12), so any week straddling that date is unusable here
+> rather than good. See section 4.0.
+>
 > **Label every GA4-sourced figure on the dashboard as a consenting-visitor
 > figure.** Sessions, qualified sessions and comparison views are all subject to
 > the same gate, not only clicks.
@@ -605,7 +895,8 @@ The social puller must be channel-pluggable: adding a channel is a new writer ag
 - review_queue keys on an identifier confirmed not to churn across import cycles.
 - Zero-result search rate appears with the leading indicators, with {search_term_string} filtered out. Search-to-comparison rate renders "not measured" until GA4 supplies it.
 - Brand index staleness appears in the quality panel.
-- Four headline tiles, funnel, leading indicators and milestone bar all populate from stored weekly rows.
+- Headline tiles, funnel, leading indicators and milestone bar all populate from stored weekly rows, except the five view_item-derived metrics suppressed per section 4.1. Those five are ABSENT from the rendered page, not shown as "not measured", while their columns continue to be written by the puller so the series accumulates.
+- No metric whose numerator or denominator is view_item renders anywhere on the page until the hydration-race ticket lands and its fix is recorded as a platform_changes boundary.
 - review_queue populates on the weekly run, reviewed states are never overwritten, and precision computes over reviewed suspect-price flags only.
 - A Clarins PDF contains no comparison, basket-optimisation or savings framing and omits hub-to-comparison. An iLAPOTHECARY PDF may include comparison framing.
 - All generated copy: British English, no em dashes, no banned discount word, savings as ranges only.

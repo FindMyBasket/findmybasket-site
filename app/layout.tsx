@@ -37,7 +37,41 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${cormorant.variable} ${dmSans.variable}`}>
       <body>
+        {/* FIRST child of <body>, and it must stay first. Defines window.gtag
+            and window.dataLayer ahead of everything below it, so an event fired
+            from a mount effect has somewhere to go. It loads no gtag.js and sets
+            no cookie, so nothing reaches the device before consent and the legal
+            position is unchanged.
+
+            A plain <script src>, deliberately, with no async, no defer and no
+            next/script wrapper:
+
+            - NOT next/script beforeInteractive. In the App Router that emits a
+              preload plus a self.__next_s.push(...) at the end of <body> for
+              Next's own runtime to inject, not a blocking script. Whether that
+              precedes hydration is a framework internal.
+            - NOT inlined via readFileSync. That was tried on 29 July and took
+              down every runtime-rendered route on the preview deploy: the read
+              happens inside the serverless function, Vercel's tracer cannot see
+              a runtime fs call, so public/fmb-gtag-stub.js was absent from the
+              bundle and the ROOT LAYOUT threw. Prerendered pages were fine
+              because their read happened at build, which is exactly what made
+              it invisible: the build was green and only cache MISSes 500'd.
+
+            A plain src tag is parser-blocking, so it executes before the parser
+            reaches the RSC flight payload that hydration consumes, and the file
+            is served from the CDN rather than the function bundle, so there is
+            no tracing question at all. It is also the identical mechanism the 19
+            static pages use, which is what "both surfaces on the same rules"
+            was supposed to mean.
+
+            See docs/ticket-gtag-hydration-race.md. */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script src="/fmb-gtag-stub.js" />
         {children}
+        {/* afterInteractive, and it must stay that way: this one DOES load
+            gtag.js once consent is given, so loading it any earlier would set
+            _ga before consent, which is what PECR Regulation 6 prohibits. */}
         <Script src="/fmb-cookie-banner.js" strategy="afterInteractive" />
       </body>
     </html>
