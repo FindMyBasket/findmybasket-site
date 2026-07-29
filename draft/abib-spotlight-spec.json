@@ -1,0 +1,46 @@
+{
+  "_note": "Abib brand spotlight. Build in the SAME template/section as the Ilapothecary brand spotlight (mirror its structure, card, and how it handles the brand logo + hero images + the standing partnership disclosure). This is a brand spotlight, NOT a Savings Hub article — use the spotlight pipeline/section, not scripts/new-article.mts, unless the Ilapothecary one used that generator, in which case match it.",
+
+  "slug": "abib",
+  "brand": "Abib",
+  "seo_title": "Abib: the K-beauty brand built on calm | FindMyBasket",
+  "meta_description": "A brand spotlight on Abib, the K-beauty label built on heartleaf and mild-acidic soothing. What each line does, which to start with, and where to compare prices across UK retailers.",
+  "heading": "Abib: the K-beauty brand built on calm",
+  "subheading": "How a single soothing ingredient became one of Korea's most talked-about skincare stories",
+
+  "body_html_file": "abib-spotlight-body.html",
+
+  "affiliate_link": {
+    "brand_direct_url": "https://www.awin1.com/cread.php?awinmid=122652&awinaffid=2841268&ued=https%3A%2F%2Fabib.global%2F",
+    "rel": "sponsored nofollow noopener",
+    "target": "_blank",
+    "_note": "4 instances in the body, all brand/line-level 'shop Abib', never per-product-instead-of-comparison. Drives the AWIN commission (advertiser 122652)."
+  },
+
+  "hero_images": {
+    "_note": "Robbie supplies these. Lead = Collagen Eye Patch. Convert to .webp at the spotlight's image dimensions (match Ilapothecary).",
+    "lead": { "product_id": 16160, "name": "Collagen Eye Patch Jericho Rose Jelly" },
+    "supporting": [
+      { "product_id": 9015, "name": "Heartleaf Calming Spot Patch" },
+      { "product_id": 2750, "name": "PDRN Collagen Overnight Mask" }
+    ]
+  },
+
+  "brand_logo": {
+    "_note": "Robbie supplies from AWIN creative. Place per the Ilapothecary spotlight's logo treatment."
+  },
+
+  "internal_links_used": {
+    "brand_hub": "/brands/abib",
+    "products": [2744, 9015, 5641, 1606, 16160, 2750, 2738, 5640],
+    "routine_builder": "/app"
+  },
+
+  "disclosure": {
+    "_note": "Sits under the standing brand-spotlight partnership disclosure already on that page ('These are brand partnerships, presented with the brand. They sit alongside, and stay separate from, our independent price comparison...'). Do NOT repeat a partnership/commission line inline in the body."
+  },
+
+  "verified": {
+    "_note": "All internal links verified live at build time. Comparison depths: 16160/9015/2750/2738/5640 = 3 retailers; 2744/5641/1606 = 2 retailers; /brands/abib = 147 products (138 in-stock). No 'cheapest' language, no em dashes, no unsupported savings % claims."
+  }
+}
