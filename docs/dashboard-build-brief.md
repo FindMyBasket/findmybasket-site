@@ -20,7 +20,22 @@ Appended as steps complete, so the brief and its state never diverge.
 | 7 | COMPLETE, approved 28 Jul | Queries confirmed; three premises corrected, see "Corrections from Step 7" below. |
 | 4 | DISCOVERY COMPLETE, 29 Jul. Puller NOT built. | Diagnostic dispatched, design holds. Results in "Step 4 discovery results" below. By-network start **2026-06-24** recorded as `platform_changes` id 7 (`20260729140000`). `outbound_clicks_other` APPLIED (`20260729120000`). Google Signals disabled, no thresholding. ~~Open bug: the GA4 `search` event never fires, and `view_item` undercounts for the same reason.~~ **FIXED 29 Jul**, see the row below. No puller, no schedule. |
 | gtag hydration race | FIXED, LIVE, boundary recorded, 29 Jul | Not a numbered step; it blocked five Step 6 metrics. Fix PR #146 (`4c9aa0a`), queue stub `public/fmb-gtag-stub.js`, verified serving in prod. Deploy instant `2026-07-29T14:12:58Z` recorded as `platform_changes` id 17, `status = 'occurred'` (PR #147, `20260729200000`). `en=search` transmits again on a cold full-document GET. Suppression of the five metrics is now **date-gated from week_start 2026-08-03**, not lifted: see section 4.1. GPC consent path remains UNTESTED. |
+| 4 (puller) | BUILT 29 Jul, **NOT ARMED** | `scripts/ga4-weekly-pull.mjs` + `.github/workflows/ga4-weekly-pull.yml`, schedule commented out. Pure week/boundary logic in `scripts/lib/ga4-weeks.mjs`, 16 tests, run by the workflow before it touches production. Schema addition APPLIED (`20260729240000`): `searches_view_search_results`, `searches_custom_event`, never summed. Arming needs an operator dispatch, dry-run first. |
 | 5, 6, 8-15 | NOT STARTED | |
+
+**Awaiting a decision: an eighth boundary, "real traffic start" 2026-06-08.**
+Written and dry-run but deliberately NOT applied, as
+`supabase/migrations/PROPOSED_20260729260000_platform_changes_real_traffic_start.sql`
+(the `PROPOSED_` prefix keeps the migration runner off it; rename to arm). GA4's
+earliest event is 2026-04-05 and the site launched 2026-06-08, so everything
+between is pre-launch testing against a live property. The evidence that forced
+it: `view_search_results` appears to start 2026-04-13, but that week holds
+exactly ONE event and is followed by a two-month gap before real volume begins
+2026-06-15. Without the row, every trend opens with two months of near-zero
+weeks that are not a slow start but the absence of a website, and the shape reads
+as a growth story. Dated at the launch rather than at 2026-06-15 because the
+latter is one series' observation of the cause; note 2026-06-08 is itself an ISO
+Monday, so the two are consistent.
 
 ## Corrections from Step 7, adopted 28 July
 
@@ -269,11 +284,21 @@ and must be decided together with it). Findings worth surfacing here:
   `setTimeout(..., 300)` at `RoutineBuilder.tsx:180`. The delay probably wins the
   race most of the time, which makes it the worst kind of affected path:
   intermittent and skewed toward slow connections.
-- **`load_routine_from_url` was on nobody's list** and is likely a total loss.
+- **`load_routine_from_url` was on nobody's list.** ~~It is likely a total loss:
   `RoutineBuilder.tsx:172` fires it inline with the same guard, inside the same
   mount effect, and it only ever fires on emailed `/app?routine=...` arrivals,
-  which are always cold loads. It is not defined in `lib/analytics.ts`, which is
-  why auditing that module alone would have missed it.
+  which are always cold loads.~~ It is not defined in `lib/analytics.ts`, which
+  is why auditing that module alone would have missed it.
+
+  **CORRECTED 29 July from the diagnostic: it is mostly DELIVERED, and it is not
+  fired inline.** It observed 13 events on 4 of 7 days. The `gtag` call sits
+  inside an `async` IIFE after an awaited Supabase round-trip
+  (`RoutineBuilder.tsx:155`), which reliably outlasts the gap between hydration
+  and the `afterInteractive` banner. **The discriminator is whether anything
+  AWAITED sits between hydration and the call, not whether the trigger is a mount
+  effect**, and that axis mis-classified this event and `auto_shared_link` alike.
+  `view_item` and `search` really are inline and really are lost. Full table in
+  `docs/ticket-gtag-hydration-race.md`.
 
 **Consequence for the headline tiles: both qualified-sessions tiles are
 suppressed for weeks before `week_start` 2026-08-03, not shown as "not
@@ -811,6 +836,33 @@ Step 3, GATED. On approval, apply the schema migration. Then verify by reading r
 
 Step 4, GATED. Build the GA4 Data API weekly puller writing to metrics_ga4_weekly using the query shapes in section 8. Write NULL for periods before the empirically determined dimension start date on the by-network columns. Dry-run and show pulled numbers before first write.
 
+> **BUILT 29 July, NOT ARMED.** `scripts/ga4-weekly-pull.mjs` +
+> `.github/workflows/ga4-weekly-pull.yml`. The `schedule:` block is commented
+> out on purpose: the job writes to production and has never executed against
+> the real API, because the credential exists only in Actions and this token
+> cannot dispatch a workflow (403, no `actions: write`). Arming sequence is in
+> the workflow header: dry-run dispatch, read the table, write dispatch, then
+> uncomment the schedule in a PR of its own.
+>
+> **The NULL rule generalised.** The step text above asks for NULL before the
+> by-network start. Every boundary in this build landed MID-WEEK, so "before the
+> start date" is not the right test: a week CONTAINING a boundary is a blend of
+> both measurements. 24 June is a Wednesday, so the four by-network columns
+> cannot sum to the week total across the 22 June week, and the brief's own
+> "after that date they must sum exactly" would fail there and read as a defect.
+> One helper, `weekFullyAfter()`, gates every boundary in the puller, matching
+> the single-list rule for the display suppression in section 4.1.
+>
+> Pure week and boundary logic lives in `scripts/lib/ga4-weeks.mjs` with 16 tests
+> in `scripts/ga4-weeks.test.mjs`, and the workflow runs them BEFORE touching
+> production. It was extracted precisely because the puller authenticates at
+> module scope, which would otherwise make the arithmetic that decides what gets
+> written the one part nobody can test.
+>
+> `npm test` now also covers `scripts/**/*.test.mjs`. It previously covered only
+> `lib/**/*.test.ts`, so `scripts/gtag-stub.test.mjs` had been written, was
+> passing, and was running nowhere.
+
 > **Runtime, settled 29 July: GitHub Actions, not pg_cron to an edge function.**
 > `GOOGLE_APPLICATION_CREDENTIALS_JSON` is confirmed by the operator to live in
 > the GitHub Actions secret store, and it is confirmed absent from the Supabase
@@ -995,7 +1047,8 @@ The social puller must be channel-pluggable: adding a channel is a new writer ag
 - Comparison-depth acceptance asserts the definition, not a fixed count. Today's figure is a sanity check within a 10 per cent band. Every figure on screen is labelled with its definition, and user- and partner-facing surfaces use the root figure.
 - The savings trend anchors to the 27 July reset. The 3 May rows are not plotted as a comparable prior level, and the r12-inflated figures are never quoted.
 - By-network columns are NULL, not zero, for weeks before the empirically determined dimension start date, and render as "not measured". The same applies to qualified sessions and commission per qualified session, which have days of history at most.
-- Outbound clicks are sourced from retailer_click only. affiliate_clickout is never counted, and the Supabase outbound_clicks table is never summed with GA4.
+- Outbound clicks are sourced from retailer_click only. **THREE GA4 events fire on one outbound click and on the 7 days to 29 July they measured 47, 47 and 47**: retailer_click (ours), affiliate_clickout (ours), and `click` (enhanced measurement, auto-collected because outboundClicksEnabled is ON). Neither of the other two is ever counted, and the Supabase outbound_clicks table is never summed with GA4. The identical counts are the hazard rather than a reassurance: summing all three gives 141, which is a plausible weekly total for this site and would be reported to a partner rather than caught. The exclusion is stated at the query in `scripts/ga4-weekly-pull.mjs`, not only here.
+- page_view is NOT a count of page loads. pageChangesEnabled is ON, so it also fires on SPA history changes, which inflates it relative to any document-load or server-side figure by however much client-side navigation the site does. It is not used as a denominator anywhere; `sessions` is. Any rate of the form (mount-effect event) / page_view would be understated twice, once by consent and once by this.
 - Every GA4 query uses customEvent:affiliate_network, never customEvent:network.
 - Every Data API call addresses properties/415465396. The measurement id G-Q3J7LSJFLQ is never passed to runReport.
 - week_start is ISO Monday everywhere, derived by bucketing the GA4 date dimension in code. No GA4 week dimension is used, and the semantics are stated in the week_start column comment along with the time-zone convention.
@@ -1007,7 +1060,8 @@ The social puller must be channel-pluggable: adding a channel is a new writer ag
 - The precision retune prompt is suppressed until at least 20 reviewed rows exist, showing "insufficient sample" until then, with the division guarded.
 - cron window state is computed from the pg_cron schedule and cron.job_run_details against retailer_import_config, distinguishes a never-fired trigger from a fired-but-never-began import, and is not collapsed to a boolean.
 - review_queue keys on an identifier confirmed not to churn across import cycles.
-- Zero-result search rate appears with the leading indicators, with {search_term_string} filtered out. Search-to-comparison rate renders "not measured" until GA4 supplies it.
+- Zero-result search rate appears with the leading indicators, with {search_term_string} filtered out. It is Supabase-only (search_events.result_count): view_search_results does not carry result_count, so GA4 cannot produce it. Search-to-comparison rate renders "not measured" until GA4 supplies it, which stays blocked on view_item until the first clean week.
+- The two search columns are never summed. searches_view_search_results is the series WITH history (enhanced measurement, emitted by gtag.js, so it never depended on our mount-effect code and survived the hydration race); searches_custom_event is NULL until the fix and first trustworthy at week_start 2026-08-03. They fire on the same user action and overlap fully after the fix and not at all before it, so a sum would read as a step change in search volume that did not happen. The rule is in the column comments, not only here.
 - Brand index staleness appears in the quality panel.
 - Headline tiles, funnel, leading indicators and milestone bar all populate from stored weekly rows. The five view_item-derived metrics render only for weeks passing the section 4.1 predicate; for earlier weeks they are ABSENT from the rendered page, not shown as "not measured". Their columns are written by the puller for every week regardless, so the series accumulates.
 - The suppression predicate reads changed_at from platform_changes id 17 rather than a hard-coded date, is applied from a single list of the five metrics, and excludes the week_start 2026-07-27 row that straddles the fix. A predicate admitting that row is a defect: it is the plausible-but-wrong case, not the absurd one.

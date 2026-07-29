@@ -31,6 +31,25 @@ export function ClickOutLink({
   className,
   children,
   rel = 'nofollow sponsored noopener',
+  // DO NOT change this to same-tab without reading the note below. It is load
+  // -bearing for analytics in a way nothing at the call sites reveals.
+  //
+  // It is a DEFAULT PARAMETER, so no call site passes it and none of these
+  // links read as new-tab links when you look at them. That is exactly why it
+  // gets "tidied".
+  //
+  // WHY IT MATTERS. public/fmb-gtag-stub.js queues GA4 events fired before the
+  // visitor has answered the cookie banner and replays them if consent is later
+  // granted. The queue lives in memory on THIS page. Opening in a new tab
+  // leaves this page alive, so a retailer_click fired before a consent decision
+  // survives long enough to be replayed. Same-tab navigation would unload the
+  // page and take the queue with it, silently dropping that click.
+  //
+  // The failure would be invisible: no error, correct-looking counts, and a
+  // GA4-vs-server-side consent ratio that quietly drops. It would also change
+  // the meaning of a recorded data boundary (platform_changes id 17, which
+  // lists consent_ratio precisely because this default makes the replay
+  // reachable). See docs/ticket-gtag-hydration-race.md.
   target = '_blank',
 }: {
   href: string;

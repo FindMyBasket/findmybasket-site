@@ -139,7 +139,7 @@ mandatory: on a PITR replay it would have duplicated every row in
 `platform_changes`, the one table whose entire job is to be the trustworthy record
 of when metrics changed.
 
-**This is the fourth instance of one shape in a single week.** The pattern is a
+**This shape has now appeared five times in a fortnight.** The pattern is a
 statement that is syntactically valid, semantically reasonable, and enforces
 nothing, where the obvious check agrees it worked:
 
@@ -149,6 +149,7 @@ nothing, where the obvious check agrees it worked:
 | `REVOKE EXECUTE ... FROM anon, authenticated` | Left the PUBLIC grant. `has_function_privilege` still returned true. |
 | `ALTER DEFAULT PRIVILEGES ... REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC` | Updated `pg_default_acl` correctly and changed nothing: `acldefault()` is re-merged at creation. |
 | `ON CONFLICT DO NOTHING` | Deduplicated nothing, because the named conflict did not exist. |
+| `scripts/gtag-stub.test.mjs` | Checked nothing. It was written, it passed, and no runner ever executed it. See convention 8. |
 
 The generalisation: **an additive or defensive clause never fails loudly when it is
 a no-op.** Only reading the resulting state proves it did something. Conventions 4
@@ -160,3 +161,39 @@ The SQL says what changed. Only the header can say which assumption was wrong,
 what was verified before running it, and what must not be "simplified" later.
 Several files here carry a "do not "fix" this by ..." note that has already
 prevented a regression.
+
+---
+
+## 8. A check that does not run is not a check
+
+`scripts/gtag-stub.test.mjs` was written to cover the consent gate, the queue
+bound and the replay. It passed. Nothing ever ran it: `npm test` was scoped to
+`lib/**/*.test.ts`, and no workflow invoked it. It sat in the repository for
+days as evidence that the riskiest file in the consent path was tested, while
+testing it exactly as much as an empty file would have.
+
+**A test that is not executed is worse than one that was never written**, for
+the same reason a `REVOKE` that revokes nothing is worse than no `REVOKE`: it
+carries the reassurance without the check, and it is the reassurance that stops
+anyone looking again.
+
+These conventions live in the migrations directory because that is where the
+pattern was first catalogued, but this one is not about migrations. It applies
+to any artefact whose whole purpose is to fail when something is wrong:
+
+- **Tests.** Confirm the runner's glob actually matches the file. Add a test
+  that fails, watch it fail in CI, then fix it. A passing suite proves the
+  assertions hold; only a failing one proves they are read.
+- **Assertions inside migrations** (conventions 4 and 5). Run the migration
+  twice, and make one assertion fail on purpose the first time you write it.
+- **Guards, alerts and watchdogs.** A monitor that has never fired is
+  indistinguishable from a monitor that cannot fire. The Boots 04:30 watchdog
+  was blind to never-started runs for exactly this reason.
+
+**The generalisation across all five rows of the table above:** every one of
+them was verified by asking a question whose answer was already yes.
+`has_function_privilege` rolled PUBLIC up and said "granted". A green test run
+said "passing" about files it never opened. **Verify by reading the resulting
+state, not by re-asking the tool that produced it** — read `proacl`, count the
+rows the runner actually executed, check the glob.
+

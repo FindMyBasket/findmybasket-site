@@ -341,11 +341,15 @@ if (!events.ok) {
 // `search` has none.
 //
 // WHAT IT DOES AND DOES NOT GIVE US. It carries search_term, so it can supply
-// search VOLUME and the TERMS. It does NOT carry result_count, which is our own
-// custom metric on the custom event, so it cannot by itself produce zero-result
-// rate. (Zero-result rate is Supabase-only anyway, per section 7 of the brief.)
-// Its real value is as the DENOMINATOR for search-to-comparison rate, which the
-// brief currently marks unbuildable.
+// search VOLUME and the TERMS. It does NOT carry result_count, which rides on
+// our own custom `search` event, so it cannot by itself produce zero-result
+// rate. Its real value is as the DENOMINATOR for search-to-comparison rate,
+// which the brief currently marks unbuildable.
+//
+// This block used to add "zero-result rate is Supabase-only anyway, per section
+// 7 of the brief". That was the script asserting the answer to the question
+// section 2.7 below now actually asks. Removed: a diagnostic that pre-judges a
+// finding will be quoted as having established it.
 line(`2.6  SITE SEARCH  (enhanced measurement vs the custom event, ${HISTORY_START} -> today)`);
 const siteSearch = await runReport({
   dateRanges: [{ startDate: HISTORY_START, endDate: 'today' }],
@@ -406,6 +410,180 @@ if (!siteSearch.ok) {
   }
 }
 
+// ── 2.7 ─────────────────────────────────────────────────────────────────────
+// IS `result_count` REGISTERED, AND IN WHICH SLOT?
+//
+// Why this gates the schema. metrics_ga4_weekly has no search columns at all,
+// and which ones it needs depends on this answer. Building before knowing it
+// means guessing or revisiting the table twice.
+//
+// The premise is sound: the post-fix verification run carried
+// epn.result_count=151 on a live `search` hit, so GA4 RECEIVES the value. That
+// is not the same as being able to query it. An unregistered event parameter is
+// collected, retained against the event, and invisible to the Data API.
+//
+// THE SLOT MATTERS MORE THAN THE REGISTRATION, and this is the part most likely
+// to be got wrong, because "is it a registered custom metric" sounds like the
+// whole question:
+//
+//   Registered as a custom METRIC  -> the Data API returns it AGGREGATED, a sum
+//     (and an average). That yields "average results per search", a real search
+//     quality signal. It does NOT yield ZERO-RESULT RATE. A metricFilter filters
+//     the aggregated ROWS of the report, not the individual events inside them,
+//     so there is no way to get "how many searches returned exactly 0" out of a
+//     column that has already been summed.
+//
+//   Registered as a custom DIMENSION -> the value is a groupable label, so
+//     rows come back per distinct result_count and zero-result rate is
+//     count(value='0') / count(all). This is the slot that answers the question
+//     the dashboard actually asks.
+//
+// So "registered as a metric" and "zero-result rate is available from GA4" are
+// different findings, and only the second makes GA4 a cross-check for the
+// Supabase figure rather than an unrelated number beside it.
+//
+// BOTH SLOTS ARE PROBED TWICE: the Admin API for what is REGISTERED, and a real
+// runReport for what is QUERYABLE. Registration is necessary and not sufficient
+// (a registration can exist and return nothing), and this codebase has already
+// been caught once by trusting a registry over the data: three shorthand
+// dimensions were registered on 27 July that will never collect anything.
+line('2.7  result_count  (registered? in which slot? queryable? since when?)');
+
+const PARAM = 'result_count';
+let metricRegistered = null; // null = could not establish
+let dimensionRegistered = null;
+
+const customMetrics = await api(
+  `https://analyticsadmin.googleapis.com/v1alpha/properties/${PROPERTY}/customMetrics`,
+);
+if (!customMetrics.ok) {
+  console.log(`  [?] customMetrics list FAILED (${customMetrics.status}): ${customMetrics.json?.error?.message || customMetrics.text.slice(0, 200)}`);
+  console.log('      INCONCLUSIVE, not a negative. Do not read this as "not registered".');
+} else {
+  const list = customMetrics.json?.customMetrics || [];
+  const hit = list.find((m) => m.parameterName === PARAM);
+  metricRegistered = Boolean(hit);
+  console.log(`  custom METRICS registered: ${list.length} (GA4 allows 50 event-scoped)`);
+  for (const m of list) {
+    console.log(`    - ${String(m.parameterName).padEnd(24)} ${m.displayName || ''} [${m.scope || '?'}, ${m.measurementUnit || '?'}]`);
+  }
+  console.log(hit
+    ? `  [ok] ${PARAM} IS registered as a custom metric (unit ${hit.measurementUnit || '?'}, scope ${hit.scope || '?'})`
+    : `  [!] ${PARAM} is NOT registered as a custom metric`);
+}
+
+const customDims = await api(
+  `https://analyticsadmin.googleapis.com/v1alpha/properties/${PROPERTY}/customDimensions`,
+);
+if (!customDims.ok) {
+  console.log(`  [?] customDimensions list FAILED (${customDims.status}): ${customDims.json?.error?.message || customDims.text.slice(0, 200)}`);
+  console.log('      INCONCLUSIVE, not a negative.');
+} else {
+  const list = customDims.json?.customDimensions || [];
+  const hit = list.find((d) => d.parameterName === PARAM);
+  dimensionRegistered = Boolean(hit);
+  console.log(`\n  custom DIMENSIONS registered: ${list.length}`);
+  for (const d of list) {
+    console.log(`    - ${String(d.parameterName).padEnd(24)} ${d.displayName || ''} [${d.scope || '?'}]`);
+  }
+  console.log(hit
+    ? `  [ok] ${PARAM} IS also registered as a custom dimension (scope ${hit.scope || '?'})`
+    : `  [!] ${PARAM} is NOT registered as a custom dimension`);
+}
+
+// Empirical probe 1: as a METRIC. Earliest date with a non-zero sum doubles as
+// the series start, which registration date alone would not give.
+const asMetric = await runReport({
+  dateRanges: [{ startDate: HISTORY_START, endDate: 'today' }],
+  dimensions: [{ name: 'date' }],
+  metrics: [{ name: `customEvent:${PARAM}` }],
+  limit: 100000,
+});
+console.log('');
+if (asMetric.ok) {
+  const r = rows(asMetric.json).filter((x) => x.m[0] > 0).sort((a, b) => a.d[0].localeCompare(b.d[0]));
+  console.log(`  [ok] QUERYABLE as a metric. days with a non-zero sum: ${r.length}`);
+  if (r.length) {
+    console.log(`       earliest: ${r[0].d[0]}   latest: ${r[r.length - 1].d[0]}`);
+    console.log(`       total across the window: ${r.reduce((a, x) => a + x.m[0], 0)}`);
+  } else {
+    console.log('       ...but every day is zero. Registered and empty is a real state:');
+    console.log('       registration is NOT retroactive, so this reads as "registered after the');
+    console.log('       last search" or "registered and never collected".');
+  }
+  thresholdNote(asMetric.json, 'result_count as metric');
+} else {
+  const msg = asMetric.json?.error?.message || asMetric.text.slice(0, 300);
+  // A 400 naming the field is GA4 telling us the field does not exist: a real
+  // negative. Anything else (401/403/5xx) is transport and proves nothing.
+  const definitive = asMetric.status === 400 && new RegExp(PARAM).test(msg);
+  console.log(definitive
+    ? `  [!] NOT queryable as a metric. GA4 rejected the field: ${msg}`
+    : `  [?] metric probe INCONCLUSIVE (${asMetric.status}): ${msg}`);
+}
+
+// Empirical probe 2: as a DIMENSION. This is the one that decides whether
+// zero-result rate is available from GA4 at all.
+const asDim = await runReport({
+  dateRanges: [{ startDate: HISTORY_START, endDate: 'today' }],
+  dimensions: [{ name: `customEvent:${PARAM}` }],
+  metrics: [{ name: 'eventCount' }],
+  limit: 1000,
+});
+console.log('');
+if (asDim.ok) {
+  const r = rows(asDim.json);
+  const total = r.reduce((a, x) => a + x.m[0], 0);
+  const zero = r.filter((x) => x.d[0] === '0').reduce((a, x) => a + x.m[0], 0);
+  const other = r.filter((x) => NOT_SET.has(x.d[0])).reduce((a, x) => a + x.m[0], 0);
+  console.log(`  [ok] QUERYABLE as a dimension. distinct values: ${r.length}, events: ${total}`);
+  if (total > 0) {
+    console.log(`       value '0': ${zero} events  =>  zero-result rate ${((zero / total) * 100).toFixed(1)}%`);
+    console.log(`       (not set)/(other): ${other} events`);
+    if (other > 0) {
+      console.log('  [!] HIGH-CARDINALITY WARNING. result_count takes a distinct value per');
+      console.log('      result total (0,1,2,...,151,...), and GA4 collapses rare values into');
+      console.log('      (other) once a dimension goes wide. Anything in (other) is missing from');
+      console.log('      the DENOMINATOR above, which INFLATES the zero-result rate: the numerator');
+      console.log('      (value 0) is frequent and survives collapsing, the long tail does not.');
+      console.log('      That is the flattering direction. Prefer the Supabase figure as primary');
+      console.log('      and use this only as a cross-check, or register a low-cardinality');
+      console.log('      zero-results boolean instead.');
+    }
+  }
+  thresholdNote(asDim.json, 'result_count as dimension');
+} else {
+  const msg = asDim.json?.error?.message || asDim.text.slice(0, 300);
+  const definitive = asDim.status === 400 && new RegExp(PARAM).test(msg);
+  console.log(definitive
+    ? `  [!] NOT queryable as a dimension. GA4 rejected the field: ${msg}`
+    : `  [?] dimension probe INCONCLUSIVE (${asDim.status}): ${msg}`);
+}
+
+console.log('\n  WHAT THIS MEANS FOR metrics_ga4_weekly:');
+if (dimensionRegistered === true) {
+  console.log('   - zero-result rate IS available from GA4. It becomes a CROSS-CHECK against');
+  console.log('     the Supabase figure, not a second source to be summed or substituted.');
+  console.log('     They measure different populations: GA4 is consenting visitors, Supabase is');
+  console.log('     everyone, so they should DISAGREE by roughly the consent ratio. Store both,');
+  console.log('     label which is which, and never average them.');
+} else if (dimensionRegistered === false) {
+  console.log('   - zero-result rate is NOT available from GA4, whatever the metric slot says.');
+  console.log('     It stays Supabase-only and needs no GA4 column. Registering the dimension');
+  console.log('     later would start a series from that date, NOT backfill one.');
+} else {
+  console.log('   - UNDETERMINED: the dimension registry could not be read. Do not add a search');
+  console.log('     column on the strength of the metric answer alone.');
+}
+if (metricRegistered === true) {
+  console.log('   - average results per search IS available from GA4 (the sum, over the search');
+  console.log('     event count). Worth a column as a search-quality signal in its own right;');
+  console.log('     it is NOT zero-result rate and must not be labelled as one.');
+}
+console.log('   - Whatever is added: registration is not retroactive here either, so the column');
+console.log('     starts empty before the registration date and needs a platform_changes row,');
+console.log('     exactly like the by-network columns (id 7).');
+
 // ── ENHANCED MEASUREMENT SETTINGS ──────────────────────────────────────────
 // Never audited. `scroll` was observed firing in a browser session on 29 July,
 // so at least part of this is on, and nobody has established what else.
@@ -424,26 +602,65 @@ if (!streams.ok) {
       continue;
     }
     const e = em.json || {};
+    // `pageViewsEnabled` WAS in this list and always printed " ? ". It is not
+    // unreadable: THE FIELD DOES NOT EXIST. Verified 29 July against the live
+    // discovery document
+    // (analyticsadmin.googleapis.com/$discovery/rest?version=v1alpha,
+    // schema GoogleAnalyticsAdminV1alphaEnhancedMeasurementSettings), which has
+    // exactly eight *Enabled fields and no pageViewsEnabled. page_view is not a
+    // toggle: it is collected whenever streamEnabled is true.
+    //
+    // The bug was not the missing field, it was the " ? " branch, which rendered
+    // "I asked the API something it has no answer for" identically to "the API
+    // declined to tell me". One is a script defect and the other is a property
+    // fact, and they need opposite responses. Same shape as every other entry in
+    // supabase/migrations/README.md convention 6: a construct that cannot fail
+    // loudly. The unknown-key assert below is what makes it fail loudly now.
     const flags = [
       ['streamEnabled', 'enhanced measurement master switch'],
-      ['pageViewsEnabled', 'page_view'],
       ['scrollsEnabled', 'scroll'],
       ['outboundClicksEnabled', 'click (outbound)'],
       ['siteSearchEnabled', 'view_search_results'],
       ['formInteractionsEnabled', 'form_start / form_submit'],
       ['videoEngagementEnabled', 'video_*'],
       ['fileDownloadsEnabled', 'file_download'],
-      ['pageChangesEnabled', 'page_view on history change'],
+      ['pageChangesEnabled', 'page_view on history change (SPA route changes)'],
     ];
     for (const [k, label] of flags) {
       const v = e[k];
       console.log(`    ${v === true ? 'ON ' : v === false ? 'off' : ' ? '}  ${k.padEnd(26)} ${label}`);
+      if (v !== true && v !== false) {
+        console.log(`         [!] ${k} came back neither true nor false. Either GA4 renamed or`);
+        console.log('             removed the field, or this script is asking for one that never');
+        console.log('             existed. Check the discovery document before reading it as off.');
+      }
+    }
+    console.log('    --  pageViewsEnabled            NOT AN API FIELD. page_view is always');
+    console.log('                                    collected when streamEnabled is true.');
+    // Report any *Enabled the API returned that this script does not know about.
+    // Without this, a newly added toggle is simply invisible: the loop above can
+    // only ever report on keys someone thought to list.
+    const unknown = Object.keys(e).filter((k) => /Enabled$/.test(k) && !flags.some(([f]) => f === k));
+    if (unknown.length) {
+      console.log(`    [!] enhanced-measurement toggles this script does not know about: ${unknown.join(', ')}`);
     }
     console.log(`    searchQueryParameter : ${e.searchQueryParameter || '(default: q,s,search,query,keyword)'}`);
     console.log(`    uriQueryParameter    : ${e.uriQueryParameter || '(none)'}`);
     if (e.siteSearchEnabled === true) {
       console.log('\n    [ok] Site search is ON, so view_search_results is being collected. This');
       console.log('         site searches with ?q=, which is in the default parameter set.');
+    }
+    if (e.pageChangesEnabled === true) {
+      console.log('\n    [!] pageChangesEnabled is ON, so page_view fires on SPA history changes');
+      console.log('        as well as document loads. page_view is therefore a count of ROUTE');
+      console.log('        VIEWS, not of page loads, and it is inflated relative to any');
+      console.log('        server-side or document-load-based figure by however much');
+      console.log('        client-side navigation the site does.');
+      console.log('        CONSEQUENCE FOR THE DASHBOARD: page_view must not be used as a');
+      console.log('        denominator without saying so. Any rate of the form');
+      console.log('        <mount-effect event> / page_view is understated twice over, once by');
+      console.log('        consent and once by this. Use `sessions` where a denominator is');
+      console.log('        wanted, and state the definition next to the figure.');
     }
     if (e.outboundClicksEnabled === true) {
       console.log('    [!] Outbound clicks are ON, so GA4 auto-collects a `click` event on every');

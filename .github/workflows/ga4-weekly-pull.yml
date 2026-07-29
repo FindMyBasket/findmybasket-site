@@ -1,0 +1,102 @@
+name: ga4-weekly-pull
+
+# Step 4 of the dashboard build: pull GA4 weekly metrics into
+# public.metrics_ga4_weekly.
+#
+# Runs here rather than pg_cron-to-edge because
+# GOOGLE_APPLICATION_CREDENTIALS_JSON lives in GitHub Actions and nowhere else,
+# and copying it into Supabase to suit a scheduling preference would create a
+# second unverified copy of a credential. That is the AWIN_API_KEY / SKEW_IGNORE
+# pattern this project has already decided not to repeat.
+#
+# NOT SCHEDULED YET, DELIBERATELY. The `schedule:` block below is commented out.
+# This job WRITES to production, and nothing in this repository has ever seen it
+# run against the real API: it cannot be run locally (the credential is not
+# available outside Actions) and the token here cannot dispatch it
+# (`gh workflow run` returns 403, no actions: write). Arming a writer that has
+# never executed, on a timer, is how a bad row lands unattended at 06:00 on a
+# Monday.
+#
+# SEQUENCE TO ARM IT:
+#   1. Dispatch manually with dry_run = true. Read the printed table. Check the
+#      NULL pattern against the boundaries, and that the by-network self-check
+#      reports [ok].
+#   2. Dispatch with dry_run = false. Confirm the rows in metrics_ga4_weekly.
+#   3. Only then uncomment `schedule:` in a PR of its own, so arming it is a
+#      reviewable act rather than a side effect of building it.
+#
+# Required secrets: GOOGLE_APPLICATION_CREDENTIALS_JSON, SUPABASE_URL,
+# SUPABASE_SERVICE_KEY. All three already exist for other workflows.
+
+"on":
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: >-
+          true prints the rows and writes nothing. Leave true until the output
+          has been read at least once.
+        required: false
+        default: 'true'
+        type: choice
+        options: ['true', 'false']
+      weeks:
+        description: >-
+          Trailing ISO weeks to re-pull, 1 to 4. GA4 allows at most four date
+          ranges per request, and the brief requires at least three to absorb
+          the 24-48h processing lag.
+        required: false
+        default: '4'
+        type: string
+
+  # Mondays 06:00 UTC, after the ISO week closes. The trailing re-pull is what
+  # handles GA4's processing lag, so the previous week being provisional at this
+  # hour is expected and self-correcting rather than a reason to run later.
+  #
+  # schedule:
+  #   - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  # Two concurrent runs would upsert the same week_start rows against each other.
+  # Harmless given merge-duplicates, but it makes the logs impossible to read
+  # when one of them is wrong.
+  group: ga4-weekly-pull
+  cancel-in-progress: false
+
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # The week and boundary logic decides which weeks are written and which
+      # are withheld, so it runs before anything touches production. A failure
+      # here means the arithmetic is wrong, and a puller with wrong week
+      # arithmetic writes numbers filed under the wrong dates, which is worse
+      # than not running.
+      - name: Test the week and boundary helpers
+        run: node --test scripts/ga4-weeks.test.mjs
+
+      # No `npm ci`. Zero dependencies on purpose: a job that handles a service
+      # -account private key should not also pull an install tree.
+      - name: Pull GA4 weekly metrics
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+          GA4_PROPERTY_ID: '415465396'
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
+          WEEKS: ${{ github.event.inputs.weeks || '4' }}
+        run: |
+          # No `set -x`: this step holds a service-account private key and a
+          # Supabase service-role key in env, and tracing would print both to a
+          # log that outlives the run.
+          set -eu
+          node scripts/ga4-weekly-pull.mjs
