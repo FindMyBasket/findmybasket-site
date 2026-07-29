@@ -18,7 +18,8 @@ Appended as steps complete, so the brief and its state never diverge.
 | 2 | COMPLETE, approved 28 Jul | Schema proposed; eleven tables, not ten. |
 | 3 | COMPLETE, applied 28 Jul | `supabase/migrations/20260728180000_dashboard_schema.sql`. All eleven verified `{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}` by reading `relacl`. |
 | 7 | COMPLETE, approved 28 Jul | Queries confirmed; three premises corrected, see "Corrections from Step 7" below. |
-| 4, 5, 6, 8-15 | NOT STARTED | |
+| 4 | DISCOVERY IN PROGRESS, 29 Jul | `.github/workflows/ga4-diag.yml` + `scripts/ga4-diag.mjs` committed, read-only, `workflow_dispatch`. Four premises corrected, see "Corrections from Step 4" below. Awaiting the first dispatch. No puller, no migration, no schedule. |
+| 5, 6, 8-15 | NOT STARTED | |
 
 ## Corrections from Step 7, adopted 28 July
 
@@ -54,6 +55,64 @@ original reasoning is still legible.
    could only have held them by inventing dates. Seeded with four; the GA4
    registration boundary is added by Step 4 once its date is known.
 
+## Corrections from Step 4 discovery, adopted 29 July
+
+Same convention as the Step 7 block: these override the step text further down,
+and the step text is left intact so the original reasoning stays legible.
+
+1. **`G-Q3J7LSJFLQ` is a measurement id, not a property id, and the Data API
+   cannot accept it.** It is the gtag config target in
+   `public/fmb-cookie-banner.js:25`. `runReport` addresses
+   `properties/{numeric}`. **The numeric property id is `415465396`.** Every
+   Data API and Admin API call uses `properties/415465396`. The measurement id
+   is never passed to either API. v3 carried the measurement id under the word
+   "property", which would have failed the first query in Step 4; the two are
+   now named separately everywhere in this file, and `scripts/ga4-diag.mjs`
+   rejects a `G-` string rather than sending it.
+
+2. **The week-semantics rationale in v3 was wrong, not only imprecise.** v3
+   recommended ISO Monday weeks "since it matches GA4's own week dimension".
+   **GA4's `week` dimension starts on SUNDAY.** The Monday-based one is
+   `isoWeek` / `yearIsoWeek`. The conclusion survives, the reasoning does not,
+   and the reasoning is the dangerous half: a reader following it would reach
+   for `week`, shift every bucket by a day, and silently break the AWIN
+   reconciliation the Monday choice exists to serve.
+
+   **Adopted: pull the `date` dimension and bucket to Monday in code. Do not use
+   any GA4 week dimension.** It is re-derivable from the raw days, auditable,
+   and immune to the ambiguity. Verified equal to Postgres
+   `date_trunc('week', ...)` across a full week boundary, Sunday 26 July through
+   Monday 3 August, before the workflow was committed.
+
+3. **`metrics_ga4_weekly` needs a fourth by-network column.**
+   `AffiliateNetwork` in `lib/analytics.ts:37` has five values: `awin`,
+   `rakuten`, `amazon`, `ebay`, `other`. The table as built has three columns,
+   so the parts could never sum to the total, for a reason entirely separate
+   from the pre-registration boundary in section 4.1. eBay clicks are real, not
+   hypothetical: 6 rows carry `source='ebay_search'` in the server-side
+   `outbound_clicks` table.
+
+   **Adopted: add `outbound_clicks_other integer NULL`, catching `ebay` and
+   `other`, so four columns cover all five values and sum exactly.** A column
+   comment was considered and rejected: a metric that cannot sum to its own
+   total is a permanent explanation burden, and the table is empty today, so the
+   migration is trivial now and awkward once there is history. **NOT YET
+   APPLIED.** Gated, and deferred with the rest of Step 4's writes.
+
+4. **GA4 systematically undercounts against the server-side pipeline, and the
+   ratio is a metric, not noise.** `public/fmb-cookie-banner.js:75` does not
+   load gtag.js at all until cookie consent is given, and every emitter in
+   `lib/analytics.ts` returns early when `window.gtag` is absent. So GA4 sees
+   consenting visitors only, while `lib/events.ts` writes `outbound_clicks`
+   server-side regardless. The gap is a consent-plus-blocker rate.
+
+   **Adopted: surface it as its own indicator at Step 6, not only as the section
+   3.5 sanity check.** It also means every GA4 figure on the dashboard is a
+   consenting-visitor figure and should be labelled as one. This is the reading
+   that separates the two causes of a low `view_item` count: if `page_view` is
+   healthy and `view_item` is zero, that is a bug; if both are proportionally
+   low, that is consent. Neither figure means anything reported alone.
+
 ## 0. Corrections carried in this version
 
 - v1 named two GA4 events that do not exist: `outbound_click` and `view_comparison`.
@@ -79,7 +138,7 @@ Discover-first throughout. Every step investigates and reports before any edit. 
 
 **Challenge this brief. It has been wrong before. If a step rests on a premise you can check, check it, and report a contradiction rather than working around it.**
 
-Environment: Supabase project crtrjoescntlcjiwdtrt. GA4 property G-Q3J7LSJFLQ. AWIN publisher 2841268. Rakuten SID 4684964. Amazon Associates tag findmybasket-21. Brand kit blue #4A90D9, navy #1A2E4A.
+Environment: Supabase project crtrjoescntlcjiwdtrt. **GA4 property id 415465396**, used as `properties/415465396` for every Data API and Admin API call. **GA4 measurement id G-Q3J7LSJFLQ**, used only by gtag config in `public/fmb-cookie-banner.js`; it is never passed to `runReport`. AWIN publisher 2841268. Rakuten SID 4684964. Amazon Associates tag findmybasket-21. Brand kit blue #4A90D9, navy #1A2E4A.
 
 ## 2. Two blocking prerequisites
 
@@ -133,7 +192,26 @@ v1 of this brief named events that do not exist. Corrected:
 
 Do not create a view_comparison event. The product page is the comparison page and view_item already carries items, value and num_retailers. Qualified sessions are sessions containing view_item. A stricter definition using num_retailers >= 2 is better in principle but per-event metric filtering is awkward in the Data API, so keep it as a secondary metric, not the headline.
 
-The outbound_clicks table in Supabase, written server-side by lib/events.ts, is a separate pipeline from GA4. It holds 252 rows across five weeks. Use it as a consent-undercount cross-check. Never sum it with GA4 clicks.
+The outbound_clicks table in Supabase, written server-side by lib/events.ts, is a separate pipeline from GA4. Use it as a consent-undercount cross-check. Never sum it with GA4 clicks.
+
+> **Measured 29 July, 267 rows, first click 1 Jul 11:15 UTC, last 29 Jul 08:17 UTC.**
+> ISO Monday weeks, network derived from `awin_mid` and `source`. `session_id` is
+> NULL on all 267 rows, confirming correction 3 above.
+>
+> | Week (Mon) | awin | amazon | ebay | rakuten/other | total |
+> |---|---|---|---|---|---|
+> | 29 Jun | 29 | 7 | 1 | 2 | 39 |
+> | 6 Jul | 12 | 5 | 2 | 2 | 21 |
+> | 13 Jul | 43 | 10 | 2 | 3 | 58 |
+> | 20 Jul | 120 | 7 | 1 | 0 | 128 |
+> | 27 Jul (partial) | 17 | 4 | 0 | 0 | 21 |
+>
+> **"Roughly 50 outbound clicks a week" is not the shape of this data and should
+> not be used as an expectation.** The weekly figures are 39, 21, 58, 128, so the
+> week of 20 July is more than double any prior week. Anyone reading the first GA4
+> pull needs this in front of them, or a normal week after a spike reads as a
+> collapse. Note also that these are server-side totals; the GA4 figures will sit
+> BELOW them by the consent-plus-blocker rate, per Step 4 correction 4.
 
 ### 3.2 Dimension registration, resolved
 
@@ -185,6 +263,7 @@ Two cautions on that discovery, both to be tested rather than assumed:
 
 - GA4 does not apply a dimension definition retroactively to data already collected, so the series can start later than the events began firing. Registration was manual with no backfill.
 - Check whether BigQuery export is enabled on the property. Raw event parameters survive in BigQuery even when standard reports and the Data API cannot surface them, so history that appears lost through the Data API may be recoverable there. Treat this as a hypothesis to test, not a finding.
+- **Separate the registration boundary from the retention edge before recording anything.** A first-non-null date only means "the dimension started collecting here" if the property holds data from before it. If the earliest day carrying a network value is also the earliest day carrying any event at all, the result is equally consistent with GA4's retention window simply truncating there, and the two demand opposite conclusions. `scripts/ga4-diag.mjs` runs this check and refuses to call the result a boundary when the two dates coincide; widen `HISTORY_START` and re-run. A wrong date here becomes a permanent false marker on every trend chart.
 
 ## 4. Known data boundaries
 
@@ -204,7 +283,7 @@ Five dated changes affect the series this dashboard records. Three have happened
 
 Savings reset. dq_dashboard_log row 3, 27 July 11:06 UTC, is the reference: avg_saving_pct 17.23%, total_savings_pool £71,898.74, biggest_saving £184.50. Rows 1 and 2 are from 3 May and are not comparable. Anchor the savings trend to row 3 as its zero point. The earlier figures (avg 23.20%, pool £180,111) were inflated by dead Superdrug r12 rows and must never be quoted as a prior level or a regression.
 
-GA4 dimensions are not retroactive, so the by-network breakdown begins on the registration date and cannot be extended earlier. That date predates 27 July and must be established empirically per 3.2. For every week before it, outbound_clicks_awin, _rakuten and _amazon have no value while total outbound clicks does, so the three will not sum to the total.
+GA4 dimensions are not retroactive, so the by-network breakdown begins on the registration date and cannot be extended earlier. That date predates 27 July and must be established empirically per 3.2. For every week before it, outbound_clicks_awin, _rakuten, _amazon and _other have no value while total outbound clicks does, so the four will not sum to the total. **After that date they must sum exactly**, which is what the fourth column exists to guarantee (Step 4 correction 3). A gap after the boundary is a defect, not the boundary showing through.
 
 **Store NULL, not zero, for unmeasured periods, and render as "not measured". Writing zero records a measurement never taken as a measurement of nothing, and the distinction cannot be recovered later.**
 
@@ -267,7 +346,31 @@ Lagging and milestone, monthly not weekly
 - Amazon: manual. No usable earnings API. Monthly CSV export from the Associates UI, upserted.
 - Social: manual weekly paste, Pinterest primary. Optional pullers at Steps 14 and 15.
 
-GA4 Data API query shapes, weekly runReport calls: sessions by week; qualified sessions as sessions containing view_item; comparison views as eventCount filtered to view_item; outbound clicks as eventCount filtered to retailer_click with dimensions week and customEvent:affiliate_network. customEvent:network returns nothing and must not be used. The last query is what reconciles GA4 against the affiliate reports.
+GA4 Data API query shapes, weekly runReport calls against `properties/415465396`: sessions by week; qualified sessions as sessions containing view_item; comparison views as eventCount filtered to view_item; outbound clicks as eventCount filtered to retailer_click with dimensions date and customEvent:affiliate_network. customEvent:network returns nothing and must not be used. The last query is what reconciles GA4 against the affiliate reports.
+
+### 8.1 Week semantics, binding on every puller
+
+`week_start` is the **ISO week start, Monday**, and the same definition binds
+every puller in this build. Two pullers disagreeing here does not produce a
+visible error, it produces tables that will not join.
+
+**Pull the GA4 `date` dimension and bucket to Monday in code. Do not use GA4's
+`week` dimension: it starts on SUNDAY.** See Step 4 correction 2 for why the
+original rationale for this choice was wrong even though the choice was right.
+`isoWeek` / `yearIsoWeek` are the Monday-based GA4 dimensions and are an
+acceptable alternative, but bucketing from `date` is preferred because it stays
+re-derivable from the raw days.
+
+This matches Postgres `date_trunc('week', ...)`, which is already ISO Monday and
+is how every server-side table here buckets, so the GA4 and Supabase pipelines
+line up for the section 3.5 cross-check without a conversion step.
+
+**Open item for the first diagnostic run: the GA4 `date` dimension is expressed
+in the property's reporting time zone, while `date_trunc` on `outbound_clicks`
+buckets in UTC.** If the property is not on UTC, events near midnight land on
+different days in the two pipelines, and at a week edge in different weeks. The
+diagnostic reports the property time zone for exactly this reason. Whichever
+convention is chosen, state it in the `week_start` column comment.
 
 ## 9. Supabase schema
 
@@ -279,7 +382,11 @@ Eleven tables. Apply only after the default-privileges fix in section 2.1.
 ```
 metrics_ga4_weekly (week_start date pk, sessions, qualified_sessions,
 comparison_views, outbound_clicks_awin, outbound_clicks_rakuten,
-outbound_clicks_amazon, updated_at) -- nullable ints, see 4.1
+outbound_clicks_amazon, outbound_clicks_other, updated_at)
+-- nullable ints, see 4.1
+-- outbound_clicks_other added by Step 4 (correction 3), NOT YET APPLIED:
+-- catches the ebay and other values of AffiliateNetwork so the four
+-- by-network columns sum exactly to total outbound clicks.
 
 metrics_awin_weekly (week_start, advertiser, clicks, sales, commission,
 status, updated_at, pk(week_start, advertiser, status))
@@ -332,9 +439,60 @@ Step 3, GATED. On approval, apply the schema migration. Then verify by reading r
 
 Step 4, GATED. Build the GA4 Data API weekly puller writing to metrics_ga4_weekly using the query shapes in section 8. Write NULL for periods before the empirically determined dimension start date on the by-network columns. Dry-run and show pulled numbers before first write.
 
+> **Runtime, settled 29 July: GitHub Actions, not pg_cron to an edge function.**
+> `GOOGLE_APPLICATION_CREDENTIALS_JSON` is confirmed by the operator to live in
+> the GitHub Actions secret store, and it is confirmed absent from the Supabase
+> edge-secret store by reading the full listing. Reasons, in order:
+>
+> 1. Copying it into Supabase to suit a pg_cron design would create a second
+>    unverified copy with nothing checking the two match. That is the
+>    `AWIN_API_KEY` / `SKEW_IGNORE` pattern this project already decided not to
+>    repeat.
+> 2. Service-account auth needs an RS256-signed JWT exchanged for an OAuth
+>    token. In Actions that is `node:crypto` in a few lines, or
+>    `google-auth-library`. In a Deno edge function it means hand-rolling
+>    RSA-SHA256 through WebCrypto and importing a PKCS#8 key by hand.
+> 3. pg_cron to edge exists here for imports that must run inside the DB's window
+>    against feed endpoints. A weekly analytics pull has no such constraint.
+> 4. Writing back uses `SUPABASE_SERVICE_KEY`, already an Actions secret used by
+>    `refresh-debenhams.yml`. The whole job runs on secrets that already exist in
+>    one store and adds nothing to either.
+> 5. No `WORKER_RESOURCE_LIMIT` / 546 class of failure, which this project has hit
+>    repeatedly on edge functions.
+>
+> **Discovery instrument:** `.github/workflows/ga4-diag.yml` and
+> `scripts/ga4-diag.mjs`, committed 29 July, read-only, `workflow_dispatch` only,
+> following the `feed-diag.yml` precedent of running where the key already is
+> rather than moving the key. Scope `analytics.readonly` only, so it cannot
+> mutate a property setting even by accident. Zero npm dependencies on purpose.
+> It answers 2.2 through 2.5 in one run and adds two guards that change how the
+> puller must read: the **retention floor** (a series start that coincides with
+> the earliest data of any kind is ambiguous between "dimension registered here"
+> and "retention truncates here", and those demand opposite conclusions) and the
+> **reporting time zone** (section 8.1).
+
 Step 5, GATED. Build the AWIN Publisher API weekly puller writing clicks, sales, commission by advertiser and status. Pull both pending and confirmed. Resolve the secret name question in section 3 first. Dry-run first.
 
 Step 6, GATED. Build the dashboard page at a new authenticated route: four headline tiles, funnel view, leading-indicator trends including the two search indicators, milestone bar, and platform_changes markers on every trend chart. Add a manual-input upsert form for Amazon monthly and social weekly. An unauthenticated request must return no data.
+
+> **Added 29 July: measured consent rate as a leading indicator.** GA4 outbound
+> clicks divided by server-side `outbound_clicks` for the same ISO week, rendered
+> as a percentage with both raw figures beside it. gtag.js does not load until
+> cookie consent
+> (`public/fmb-cookie-banner.js:75`) while `lib/events.ts` writes regardless, so
+> the gap is a real measured consent-plus-blocker rate rather than a discrepancy
+> to reconcile. It is worth its own indicator on three grounds: it is the
+> correction factor for every other GA4 figure on the page, a sudden move in it
+> is a consent-banner or tracking regression that nothing else on the dashboard
+> would catch, and displaying it stops a future reader treating the two pipelines
+> disagreeing as a bug.
+>
+> **The two are still never summed and neither is ever substituted for the
+> other.** This is a ratio of two independently sourced figures, both shown.
+>
+> **Label every GA4-sourced figure on the dashboard as a consenting-visitor
+> figure.** Sessions, qualified sessions and comparison views are all subject to
+> the same gate, not only clicks.
 
 Step 7, REPORT ONLY. Confirm source tables and exact queries for every quality metric: suspect-price, placeholder or garbage EAN count, null-EAN product percentage, unmatched-row rate, bad-price count, EAN coverage, comparison depth, brand index staleness, and the two search indicators. Report each query before building.
 
@@ -405,6 +563,11 @@ The social puller must be channel-pluggable: adding a channel is a new writer ag
 - By-network columns are NULL, not zero, for weeks before the empirically determined dimension start date, and render as "not measured". The same applies to qualified sessions and commission per qualified session, which have days of history at most.
 - Outbound clicks are sourced from retailer_click only. affiliate_clickout is never counted, and the Supabase outbound_clicks table is never summed with GA4.
 - Every GA4 query uses customEvent:affiliate_network, never customEvent:network.
+- Every Data API call addresses properties/415465396. The measurement id G-Q3J7LSJFLQ is never passed to runReport.
+- week_start is ISO Monday everywhere, derived by bucketing the GA4 date dimension in code. No GA4 week dimension is used, and the semantics are stated in the week_start column comment along with the time-zone convention.
+- The four by-network columns, including outbound_clicks_other, sum exactly to total outbound clicks for every week after the by-network start date.
+- The puller upserts on week_start and re-pulls a trailing window of at least three weeks, so GA4's 24 to 48 hour processing lag cannot permanently understate the most recent week.
+- The measured consent rate renders as its own indicator with both source figures shown, and every GA4-sourced figure is labelled as a consenting-visitor figure.
 - platform_changes is seeded with the known boundaries and its entries render as markers on every trend chart.
 - The suspect-price alert threshold is set from the measured baseline, and the review backlog stays reviewable by one person in a sitting.
 - The precision retune prompt is suppressed until at least 20 reviewed rows exist, showing "insufficient sample" until then, with the division guarded.

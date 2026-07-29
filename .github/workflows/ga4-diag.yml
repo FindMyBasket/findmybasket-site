@@ -1,0 +1,75 @@
+name: ga4-diag (read-only)
+
+# Manual, READ-ONLY GA4 discovery for Step 4 of the dashboard build.
+#
+# Why this exists: the four outstanding discovery questions all need the GA4
+# Data API, which needs GOOGLE_APPLICATION_CREDENTIALS_JSON. That secret lives
+# in GitHub Actions and nowhere else (confirmed by the operator on 29 Jul, not
+# by elimination: it is absent from the Supabase edge-secret store, and GitHub
+# Actions secrets are write-only so a listing cannot prove either way). Copying
+# it into Supabase to suit a pg_cron design would create a second unverified
+# copy, which is the AWIN_API_KEY / SKEW_IGNORE pattern this project already
+# decided not to repeat. So the job runs where the key already is, exactly as
+# feed-diag.yml does for AWIN_API_KEY, and prints the report to the run log.
+#
+# WRITES NOTHING. No Supabase call, no migration, no property mutation. The
+# access token is minted with scope analytics.readonly only, so this job cannot
+# change a GA4 setting even by accident. The credential is never echoed and
+# never written to disk, and there is no `set -x` in the run step.
+#
+# Required GitHub secrets:
+#   GOOGLE_APPLICATION_CREDENTIALS_JSON  - GA4 service-account JSON, raw JSON
+#                                          (NOT a file path), Viewer on the
+#                                          property
+#
+# Not a secret, so it is inlined below rather than stored: 415465396 is the
+# NUMERIC property id the Data API addresses as properties/415465396.
+# G-Q3J7LSJFLQ is the MEASUREMENT id, used only by gtag config in
+# public/fmb-cookie-banner.js. runReport rejects it. v3 of the build brief
+# carried the measurement id as "property" in three places; the script fails
+# loudly rather than sending a G- string to the API.
+
+"on":
+  workflow_dispatch:
+    inputs:
+      history_start:
+        description: >-
+          Start date for the by-network backwards scan (YYYY-MM-DD). Widen this
+          and re-run if the scan reports that the series start and the retention
+          floor are the same day.
+        required: false
+        default: '2026-01-01'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # No `npm ci`. The script has zero dependencies on purpose: it signs the
+      # RS256 service-account JWT with node:crypto and calls the REST endpoints
+      # with fetch. A discovery job that reads a private key should not also
+      # pull an install tree it does not need.
+      - name: Run read-only GA4 diagnosis
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+          GA4_PROPERTY_ID: '415465396'
+          HISTORY_START: ${{ github.event.inputs.history_start || inputs.history_start || '2026-01-01' }}
+        run: |
+          # No `set -x`: this step holds a service-account private key in env and
+          # tracing would print it to a log that outlives the run.
+          set -eu
+          echo "=============================================="
+          echo " GA4 DISCOVERY — property 415465396"
+          echo " read-only: nothing is written, anywhere"
+          echo "=============================================="
+          node scripts/ga4-diag.mjs
