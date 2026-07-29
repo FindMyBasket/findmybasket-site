@@ -19,7 +19,8 @@ exactly zero and had been dropping silently since 25 July.
 stored-consent-at-init. Refusal verified genuinely silent: dataLayer 0, zero
 collect requests, survived two cold loads, and nothing from the refused period
 replayed after a later acceptance. **GPC REMAINS UNTESTED and must stay labelled
-untested.**
+untested.** Test plan at the foot of this ticket; it needs a browser, NOT a
+workflow, so the GitHub Actions quota does not block it.
 
 See "After the fix" at the foot of this ticket for what the un-suppression
 actually required, which was not a straight lift.
@@ -633,3 +634,59 @@ affected-metric list was written from the events the fix was *aimed at*. It
 missed the metric the fix changed as a side effect. Enumerate by what the change
 touches, not by what it intends, exactly as the call-site audit above had to
 replace the module-scoped one.
+
+## GPC: the fifth consent path, still untested. What the test must cover.
+
+The other four paths were verified in a browser. GPC has not been, and it is the
+one carrying the weakest assumption, because `navigator.globalPrivacyControl`
+cannot be set from the page: it needs a browser or extension that actually
+asserts the signal. **This is browser work, not workflow work**, so it is not
+blocked by the Actions quota.
+
+Reading the code narrows what to look for. GPC is handled at
+`public/fmb-cookie-banner.js:265` and routes through the SAME `applyConsent()`
+as banner-refuse, which calls `FMBGtag.resolve(false, loadAnalytics)`. So the
+discard mechanism is shared and already covered. **The untested part is not the
+discard, it is the two things GPC does that no other path does.**
+
+**1. Precedence: a STORED ACCEPT BEATS GPC, and that is a policy decision nobody
+has stated.** `init()` checks `getConsent()` first and only falls through to
+`hasGPC()` when there is no stored record. So a visitor who accepted on an
+earlier visit and has since turned GPC on is still tracked, and no banner
+appears to tell them. That may well be the right call, since an explicit
+first-party choice is arguably more specific than a browser-wide signal, but it
+is currently an emergent property of statement order rather than a decision.
+Decide it deliberately, then test whichever behaviour is chosen.
+
+**2. GPC persists as a durable stored REFUSAL after the signal goes away.** The
+branch calls `setConsent({ analytics: false })` before `applyConsent(false)`, so
+it writes a refusal to localStorage. On a later visit with GPC switched OFF, the
+stored refusal wins at step 1 above and the banner never opens. The visitor can
+still change it through Cookie Settings, and refusal is the safe direction, so
+this is defensible. It is not obvious, and it means GPC's effect outlives the
+GPC signal.
+
+### The test, in order
+
+1. Browser asserting GPC, no stored consent, COLD load of a product page.
+   Expect: no banner, `dataLayer` length 0, zero `collect` requests, and
+   `window.gtag` is the no-op rather than the queue pusher.
+2. Same session, then accept through Cookie Settings. Expect: analytics start,
+   and **nothing from the GPC-refused period replays**. This is the one that
+   matters most, and it is the exact defect that was found during the original
+   refusal verification.
+3. Reload with GPC still on and a stored refusal. Expect: still silent, still no
+   banner.
+4. Turn GPC OFF and reload. Expect: whatever hazard 2 above resolves to. Record
+   the observed behaviour either way, because it is currently unstated.
+5. Stored ACCEPT, then turn GPC ON, reload. Expect: hazard 1. Record it.
+
+**Traps carried over from the original verification, both still apply:** test a
+COLD load, because client-side navigation is the path that already works and is
+a false pass; and read DebugView rather than same-day GA4 totals, because the
+24-48h processing lag is how the original bug survived from 25 July.
+
+Until steps 1 and 2 pass in a browser, GPC stays labelled UNTESTED wherever
+consent coverage is stated, and the "4 of 5" figure stays as it is. It is the
+fifth path on the series just un-suppressed, so it is the last thing standing
+between that series and being fully characterised.

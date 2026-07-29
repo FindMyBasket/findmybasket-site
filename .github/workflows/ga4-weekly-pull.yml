@@ -25,6 +25,26 @@ name: ga4-weekly-pull
 #   3. Only then uncomment `schedule:` in a PR of its own, so arming it is a
 #      reviewable act rather than a side effect of building it.
 #
+# HELD 29 July: GitHub Actions minutes are close to exhausted, so step 1 is
+# deferred until they reset. Unarmed with an empty table is the correct resting
+# state, not a stalled one.
+#
+# WHEN YOU DO DISPATCH, AND IT 403s, CHECK THE QUOTA BEFORE THE PERMISSIONS.
+# An Actions quota 403 is indistinguishable from a token-scope 403 at the API:
+# both are "Resource not accessible by integration". This session spent effort
+# concluding that `gh workflow run` fails structurally for want of
+# `actions: write`, which may be true, may be quota, or may have been both at
+# different times. It is the same shape as convention 6 in
+# supabase/migrations/README.md: an answer that looks definitive and was
+# produced by a check that cannot distinguish the two causes.
+#
+# The four scheduled workflows in this directory (refresh-debenhams,
+# secret-divergence-check, sync-adg-feed, sync-bb-feed) are what consume the
+# quota unattended, and three of them feed the import path. Their health is
+# verifiable WITHOUT Actions, from retailer_import_config.last_import_status and
+# last_imported_at in Supabase, which is the right way to check them while
+# minutes are scarce.
+#
 # Required secrets: GOOGLE_APPLICATION_CREDENTIALS_JSON, SUPABASE_URL,
 # SUPABASE_SERVICE_KEY. All three already exist for other workflows.
 

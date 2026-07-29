@@ -836,13 +836,23 @@ Step 3, GATED. On approval, apply the schema migration. Then verify by reading r
 
 Step 4, GATED. Build the GA4 Data API weekly puller writing to metrics_ga4_weekly using the query shapes in section 8. Write NULL for periods before the empirically determined dimension start date on the by-network columns. Dry-run and show pulled numbers before first write.
 
-> **BUILT 29 July, NOT ARMED.** `scripts/ga4-weekly-pull.mjs` +
+> **BUILT 29 July, NOT ARMED, and HELD.** `scripts/ga4-weekly-pull.mjs` +
 > `.github/workflows/ga4-weekly-pull.yml`. The `schedule:` block is commented
 > out on purpose: the job writes to production and has never executed against
 > the real API, because the credential exists only in Actions and this token
-> cannot dispatch a workflow (403, no `actions: write`). Arming sequence is in
-> the workflow header: dry-run dispatch, read the table, write dispatch, then
-> uncomment the schedule in a PR of its own.
+> cannot dispatch a workflow. Arming sequence is in the workflow header:
+> dry-run dispatch, read the table, write dispatch, then uncomment the schedule
+> in a PR of its own.
+>
+> **Held 29 July on GitHub Actions minutes**, which are close to exhausted.
+> Unarmed, with `metrics_ga4_weekly` empty, is the correct resting state.
+>
+> **Do not treat "403 on dispatch" as settled evidence of a missing
+> `actions: write` scope.** An Actions QUOTA 403 returns the same "Resource not
+> accessible by integration" as a SCOPE 403, so the diagnosis recorded earlier
+> in this build cannot distinguish them and should not be quoted as if it had.
+> Check the quota first. This is convention 6's shape again: a check whose
+> answer looks definitive and cannot tell two causes apart.
 >
 > **The NULL rule generalised.** The step text above asks for NULL before the
 > by-network start. Every boundary in this build landed MID-WEEK, so "before the
