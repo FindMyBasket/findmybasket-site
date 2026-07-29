@@ -2,8 +2,14 @@
 
 **Raised:** 29 July 2026, from Step 4 discovery of the dashboard build.
 **Status:** OPEN, not started. Diagnosis complete, remedy not chosen.
-**Blocks:** qualified sessions, commission per qualified session, and
-search-to-comparison rate. See `docs/dashboard-build-brief.md`.
+**Blocks:** six dashboard metrics. Five derive from `view_item` and are
+suppressed from display (qualified sessions, commission per qualified session,
+comparison views, session to comparison-view rate, and comparison-view to
+outbound-click rate); search-to-comparison rate cannot be computed at all. See
+section 4.1 of `docs/dashboard-build-brief.md`.
+
+Three of those five are leading indicators, so until this lands the panel meant
+to be the early-warning system is the part of the dashboard least able to warn.
 
 ## The defect
 
@@ -193,12 +199,43 @@ than an obvious winner.
    for exactly this race and it is what Google expects for UK traffic, so it is
    the option most likely to still be correct in a year.
 
-   **It also addresses a second problem.** Today a refusing visitor is lost
-   entirely, which is the 20 to 40% gap between GA4 and the server-side table.
-   Consent Mode still sends cookieless pings, so those sessions become *modelled*
-   rather than absent.
+   **It looks like it addresses a second problem.** Today a refusing visitor is
+   lost entirely, which is the 20 to 40% gap between GA4 and the server-side
+   table. Consent Mode still sends cookieless pings, so those hits are not lost.
 
-   Two caveats to weigh, neither of which is a technical question:
+   **But it probably does not help the metric this ticket exists for, and this is
+   the decisive point.** The two halves behave differently:
+
+   - **Event-scoped counts improve.** With `analytics_storage` denied, cookieless
+     pings still carry the event, so `retailer_click` and similar event counts
+     recover most of the gap directly.
+   - **Session-scoped and user-scoped metrics do not.** They cannot be counted
+     from cookieless pings, because there is no identifier to group them by. They
+     are reconstructed by Google's *behavioural modelling*, which only activates
+     once the property meets a minimum data threshold.
+
+   **`qualified_sessions` is session-scoped.** It is the count of sessions
+   containing a `view_item`. So it lands squarely in the half that depends on
+   modelling, and modelling is the half this property is least likely to qualify
+   for. At roughly 47 `retailer_click` a week, the shortfall against the
+   published thresholds is not marginal, it is orders of magnitude, which is why
+   the conclusion holds even if the exact figures have moved.
+
+   **Verify the current threshold against Google's live documentation rather than
+   against this ticket or anyone's recollection.** The published requirements
+   have historically been stated as daily-event and daily-user minimums sustained
+   over a trailing window, and both the numbers and the wording have changed more
+   than once. What matters for the decision is only whether this property clears
+   them, and on any plausible reading it does not.
+
+   **If that holds, remedy 4 does not solve the problem it appeared to solve.**
+   It would improve outbound-click counts, which are already healthy, and leave
+   qualified sessions, the metric under suppression, exactly as unusable. It may
+   still be worth adopting on its own merits, as the option Google expects for UK
+   traffic and the one most likely to still be correct in a year. It should not
+   be adopted *as the fix for this ticket*.
+
+   Two further caveats, neither of which is a technical question:
 
    - **Whether modelled conversions are acceptable for decision-making here is a
      judgement call.** At this volume the modelling has little to work with, and
@@ -229,8 +266,16 @@ rather than assumed.
 
 ## After the fix
 
-Record it as a `platform_changes` boundary with `status = 'occurred'`. The
-qualified-sessions series is only trustworthy from that date forward, and
-comparing across the fix would show the correction as a traffic increase. The
-same applies to search-to-comparison rate, which cannot be computed at all until
-`search` fires.
+Record it as a `platform_changes` boundary with `status = 'occurred'`, then
+un-suppress the five metrics in section 4.1 of the build brief. They are only
+trustworthy from that date forward, and comparing across the fix would show the
+correction as a traffic increase. Search-to-comparison rate becomes computable
+for the first time.
+
+**Watch the comparison-view to outbound-click rate specifically as the fix
+lands.** It is currently inflated to roughly 522% because only its denominator is
+broken, and a figure that absurd is self-evidently wrong. A partial fix would
+walk it down through entirely plausible values on its way to the truth, and there
+is nothing on the page that would distinguish that from a genuine improvement.
+Prefer a fix that lands at once over one that lands gradually, and if it must be
+gradual, keep the metric suppressed until it is complete.

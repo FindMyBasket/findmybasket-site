@@ -459,10 +459,46 @@ GA4 dimensions are not retroactive, so the by-network breakdown begins on the re
 > the four headline tiles. The null-not-zero convention does not help here,
 > because the value is neither null nor zero, it is wrong.
 >
-> **So: qualified sessions per week and commission per qualified session are
-> ABSENT from the page until the race is fixed.** Not "not measured", not a
-> caveat in a tooltip. The dashboard ships with two headline tiles, and the note
-> below says why.
+> **So: everything derived from `view_item` is ABSENT from the page until the
+> race is fixed.** Not "not measured", not a caveat in a tooltip.
+>
+> **Scope corrected 29 July: five metrics, not two.** The first version of this
+> reversal suppressed the two headline tiles and stopped there, which was
+> under-scoped: every metric derived from `view_item` carries the same
+> contamination.
+>
+> | Metric | Where | Direction of error |
+> |---|---|---|
+> | `qualified_sessions` | headline tile + leading indicator | depressed |
+> | Commission per qualified session | headline tile | inflated (broken denominator) |
+> | `comparison_views` | column and tile | depressed |
+> | Session to comparison-view rate | leading indicator | depressed |
+> | Comparison-view to outbound-click rate | leading indicator | **inflated, badly** |
+>
+> **The last one is the worst.** Its denominator is the broken event while its
+> numerator, `retailer_click`, is healthy. On the last seven days it would read
+> 47 over 9, which is **522%**.
+>
+> That absurdity is the only reason it is currently safe: nobody would believe
+> it. **But it is not stable, and that is the real argument for suppressing
+> rather than caveating.** As the cold-load share shifts, or if a partial fix
+> lands, the ratio drifts down through entirely plausible territory. A number
+> that reads 522% gets questioned. The same broken number reading 85% does not,
+> and there is nothing on the page that would distinguish it from a real
+> improvement.
+>
+> **Worth stating plainly rather than leaving as five separate suppressions: the
+> leading indicators, which exist to be the early-warning system, are themselves
+> built on the broken event.** Three of the five are leading indicators. The
+> panel meant to catch a problem early is, until this is fixed, the part of the
+> dashboard least able to.
+>
+> **Still write the column. Still pull the data.** Suppress the DISPLAY only, so
+> the series accumulates and becomes readable from whatever date the fix lands.
+> `metrics_ga4_weekly.qualified_sessions` and `.comparison_views` keep being
+> written by the puller exactly as specified; nothing about the schema or the
+> NULL-not-zero convention changes. What changes is that the dashboard does not
+> render them.
 >
 > Also corrected while checking this: `974bcc0` landed on main on **25 July at
 > 18:00 +0100**, not 27 July. Third date error of the week, and the reason the
@@ -514,9 +550,17 @@ Headline KPIs, four tiles
 
 Leading indicators
 
-- Qualified sessions per week and trend.
-- Session to comparison-view rate.
-- Comparison-view to outbound-click rate.
+> **Three of the five below are suppressed at launch, because they derive from
+> `view_item`, which the hydration race breaks. See section 4.1.** The
+> early-warning panel is, until that ticket lands, the part of the dashboard
+> least able to warn. Only outbound clicks by network and zero-result search rate
+> render.
+
+- Qualified sessions per week and trend. **SUPPRESSED, derives from view_item.**
+- Session to comparison-view rate. **SUPPRESSED, derives from view_item.**
+- Comparison-view to outbound-click rate. **SUPPRESSED, derives from view_item,
+  and inflated rather than depressed because only its denominator is broken. It
+  would currently read 522%.**
 - Outbound clicks per week by network.
 - Zero-result search rate and search-to-comparison rate. Search is a major entry path and is currently defective, for example "loreal revitalift" returns 1 result against a true 96. These belong here, not in the quality panel, and give the browse-search cutover a measurable before and after.
 
@@ -799,7 +843,8 @@ The social puller must be channel-pluggable: adding a channel is a new writer ag
 - review_queue keys on an identifier confirmed not to churn across import cycles.
 - Zero-result search rate appears with the leading indicators, with {search_term_string} filtered out. Search-to-comparison rate renders "not measured" until GA4 supplies it.
 - Brand index staleness appears in the quality panel.
-- Four headline tiles, funnel, leading indicators and milestone bar all populate from stored weekly rows.
+- Headline tiles, funnel, leading indicators and milestone bar all populate from stored weekly rows, except the five view_item-derived metrics suppressed per section 4.1. Those five are ABSENT from the rendered page, not shown as "not measured", while their columns continue to be written by the puller so the series accumulates.
+- No metric whose numerator or denominator is view_item renders anywhere on the page until the hydration-race ticket lands and its fix is recorded as a platform_changes boundary.
 - review_queue populates on the weekly run, reviewed states are never overwritten, and precision computes over reviewed suspect-price flags only.
 - A Clarins PDF contains no comparison, basket-optimisation or savings framing and omits hub-to-comparison. An iLAPOTHECARY PDF may include comparison framing.
 - All generated copy: British English, no em dashes, no banned discount word, savings as ranges only.
