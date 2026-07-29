@@ -432,7 +432,7 @@ window where they disagree is exactly the window that will be quoted approvingly
 
 **Corollary for reading any trend on this dashboard: an unexplained improvement
 deserves the same scrutiny as an unexplained drop.** The platform_changes markers
-exist to make that scrutiny cheap, and they only work if boundaries are recorded
+exist to make that scrutiny quick, and they only work if boundaries are recorded
 for the flattering direction too.
 
 ### 4.1 What each boundary means in practice
