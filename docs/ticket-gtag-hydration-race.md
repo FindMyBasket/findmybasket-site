@@ -1,11 +1,28 @@
 # Ticket: GA4 events fired from mount effects are dropped
 
 **Raised:** 29 July 2026, from Step 4 discovery of the dashboard build.
-**Status:** **BUILT 29 July, awaiting browser verification.** Remedy 3, the
-dataLayer stub. `public/fmb-gtag-stub.js`, wired into `app/layout.tsx` and all 19
-static pages, with `scripts/gtag-stub.test.mjs` covering the gate, the bound and
-the replay. Two traps closed mechanically (the ordering guarantee and the
-call-site re-grep); two still need a browser and DebugView, including the gate.
+**Status:** **RESOLVED 29 July. Fixed, verified in a browser, live, boundary
+recorded.** Remedy 3, the dataLayer stub. `public/fmb-gtag-stub.js`, wired into
+`app/layout.tsx` and all 19 static pages, with `scripts/gtag-stub.test.mjs`
+covering the gate, the bound and the replay. Merged as PR #146 (`4c9aa0a`).
+Production deploy instant `2026-07-29T14:12:58Z`, recorded as `platform_changes`
+id 17 with `status = 'occurred'` (PR #147, migration `20260729200000`).
+
+Verified serving, not merely green: `/fmb-gtag-stub.js` returns 200 (was 404) and
+the rendered `<head>` carries it un-deferred on both a static and a
+runtime-rendered route. **`en=search` transmits on a cold full-document GET**
+(`result_count=151`, `search_source=search_page`), which is the event that read
+exactly zero and had been dropping silently since 25 July.
+
+**Consent-decision coverage: 4 of 5 paths TESTED**, not assumed to share
+`resolveConsent`: banner-refuse, banner-accept, Cookie-Settings-accept,
+stored-consent-at-init. Refusal verified genuinely silent: dataLayer 0, zero
+collect requests, survived two cold loads, and nothing from the refused period
+replayed after a later acceptance. **GPC REMAINS UNTESTED and must stay labelled
+untested.**
+
+See "After the fix" at the foot of this ticket for what the un-suppression
+actually required, which was not a straight lift.
 
 > **Three defects were found DURING verification, not during writing.** Recorded
 > because each was invisible to the change itself and each would have shipped.
@@ -52,14 +69,19 @@ call-site re-grep); two still need a browser and DebugView, including the gate.
 >    head. Whether that precedes hydration is a framework internal. Replaced with
 >    inlining the same file, so the guarantee is visible in the HTML instead of
 >    depending on behaviour that could change on a Next.js upgrade.
-**Blocks:** six dashboard metrics. Five derive from `view_item` and are
+**Blocked:** six dashboard metrics. Five derive from `view_item` and were
 suppressed from display (qualified sessions, commission per qualified session,
 comparison views, session to comparison-view rate, and comparison-view to
-outbound-click rate); search-to-comparison rate cannot be computed at all. See
+outbound-click rate); search-to-comparison rate could not be computed at all. See
 section 4.1 of `docs/dashboard-build-brief.md`.
 
-Three of those five are leading indicators, so until this lands the panel meant
-to be the early-warning system is the part of the dashboard least able to warn.
+Three of those five are leading indicators, so until this landed the panel meant
+to be the early-warning system was the part of the dashboard least able to warn.
+
+**Now unblocked, but the suppression lifts by date rather than all at once:** the
+five render from `week_start` **2026-08-03**, the first ISO week lying entirely
+after the fix. A **seventh** metric turned out to be affected and was missed by
+the original list, `consent_ratio`; see the foot of this ticket.
 
 ## The defect
 
@@ -507,3 +529,52 @@ walk it down through entirely plausible values on its way to the truth, and ther
 is nothing on the page that would distinguish that from a genuine improvement.
 Prefer a fix that lands at once over one that lands gradually, and if it must be
 gradual, keep the metric suppressed until it is complete.
+
+### DONE 29 July, and the warning above turned out to apply to the calendar
+
+The fix did land at once, so the gradual-partial-fix case was avoided in code.
+**It arrived anyway, through the week bucket.** 29 July is a Wednesday and weekly
+rows are ISO-Monday buckets, so `week_start = 2026-07-27` holds roughly 2.6 days
+of broken data and 4.4 days of fixed data. **A blended week is arithmetically a
+partial fix**, and it would walk comparison-view to outbound-click down from 522%
+to exactly the plausible-looking value this section warns about.
+
+So the un-suppression is **date-gated, not lifted**: the five metrics render only
+for weeks whose entire span is after the boundary, first `week_start`
+**2026-08-03**. The binding predicate, the two predicates that look right and are
+not, and the single-list rule are in section 4.1 of the build brief. The 27 July
+week stays absent.
+
+### A seventh affected metric, found during the un-suppression
+
+The fix also moves `consent_ratio` (GA4 `retailer_click` over server-side
+`outbound_clicks`), which nobody had it on their list, and the build brief argued
+explicitly that it did **not**.
+
+The brief's argument was that the stub does not recover refusing visitors, so the
+numerator keeps its meaning. True, and it reasons about the wrong population.
+Before the fix `window.gtag` existed only inside `loadAnalytics()`, which runs
+**only on a grant**, so the click of a visitor who had **not yet answered** the
+banner hit the `typeof gtag !== 'function'` guard and was dropped, while
+`sendOutboundBeacon` fired regardless. Numerator lost it, denominator kept it.
+After the fix it queues and replays on a later acceptance.
+
+The replay only survives because every outbound path leaves the page alive:
+`ClickOutLink` defaults to `target = '_blank'` (`components/ClickOutLink.tsx:34`,
+a default parameter, which is why no call site passes it) and the optimiser uses
+`window.open(..., '_blank')` (`app/app/RoutineBuilder.tsx:663`). Same-tab
+navigation would have killed the queue on unload and made the brief right by
+accident.
+
+**So the consent ratio steps UP at the boundary, and that is the dangerous
+direction:** a rising consent rate reads as good news. It is also the cross-check
+that separates "`view_item` is broken" from "consent is low", so an unrecorded
+step in it would have flattered the five metrics in the same week they returned.
+Recorded by adding `consent_ratio` to `platform_changes` id 17's
+`metrics_affected`, migration `20260729220000`, applied to production.
+
+**The general lesson, which is the same one this ticket keeps teaching:** the
+affected-metric list was written from the events the fix was *aimed at*. It
+missed the metric the fix changed as a side effect. Enumerate by what the change
+touches, not by what it intends, exactly as the call-site audit above had to
+replace the module-scoped one.

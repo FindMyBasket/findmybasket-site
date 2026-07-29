@@ -18,7 +18,8 @@ Appended as steps complete, so the brief and its state never diverge.
 | 2 | COMPLETE, approved 28 Jul | Schema proposed; eleven tables, not ten. |
 | 3 | COMPLETE, applied 28 Jul | `supabase/migrations/20260728180000_dashboard_schema.sql`. All eleven verified `{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}` by reading `relacl`. |
 | 7 | COMPLETE, approved 28 Jul | Queries confirmed; three premises corrected, see "Corrections from Step 7" below. |
-| 4 | DISCOVERY COMPLETE, 29 Jul. Puller NOT built. | Diagnostic dispatched, design holds. Results in "Step 4 discovery results" below. By-network start **2026-06-24** recorded as `platform_changes` id 7 (`20260729140000`). `outbound_clicks_other` APPLIED (`20260729120000`). Google Signals disabled, no thresholding. **Open bug: the GA4 `search` event never fires**, and `view_item` undercounts for the same reason. No puller, no schedule. |
+| 4 | DISCOVERY COMPLETE, 29 Jul. Puller NOT built. | Diagnostic dispatched, design holds. Results in "Step 4 discovery results" below. By-network start **2026-06-24** recorded as `platform_changes` id 7 (`20260729140000`). `outbound_clicks_other` APPLIED (`20260729120000`). Google Signals disabled, no thresholding. ~~Open bug: the GA4 `search` event never fires, and `view_item` undercounts for the same reason.~~ **FIXED 29 Jul**, see the row below. No puller, no schedule. |
+| gtag hydration race | FIXED, LIVE, boundary recorded, 29 Jul | Not a numbered step; it blocked five Step 6 metrics. Fix PR #146 (`4c9aa0a`), queue stub `public/fmb-gtag-stub.js`, verified serving in prod. Deploy instant `2026-07-29T14:12:58Z` recorded as `platform_changes` id 17, `status = 'occurred'` (PR #147, `20260729200000`). `en=search` transmits again on a cold full-document GET. Suppression of the five metrics is now **date-gated from week_start 2026-08-03**, not lifted: see section 4.1. GPC consent path remains UNTESTED. |
 | 5, 6, 8-15 | NOT STARTED | |
 
 ## Corrections from Step 7, adopted 28 July
@@ -275,7 +276,9 @@ and must be decided together with it). Findings worth surfacing here:
   why auditing that module alone would have missed it.
 
 **Consequence for the headline tiles: both qualified-sessions tiles are
-suppressed, not shown as "not measured". See section 4.1.**
+suppressed for weeks before `week_start` 2026-08-03, not shown as "not
+measured". The race was fixed on 29 July and the suppression is date-gated from
+the recorded boundary, not permanent. See section 4.1.**
 
 ## 0. Corrections carried in this version
 
@@ -552,6 +555,75 @@ GA4 dimensions are not retroactive, so the by-network breakdown begins on the re
 >    date forward. Comparing across the fix would show the correction as a
 >    traffic increase.
 
+#### Un-suppression, resolved 29 July. Date-gated, not lifted.
+
+Steps 1 and 2 of that sequence are done. The race is fixed and live (PR #146,
+`4c9aa0a`, queue stub `public/fmb-gtag-stub.js`), and the boundary is recorded:
+`platform_changes` id 17, `changed_at = 2026-07-29 14:12:58+00`, `status =
+'occurred'` (PR #147). Step 3 is what this block specifies, because it is not a
+simple lift.
+
+**The fix landed mid-week.** 29 July 2026 is a **Wednesday**, inside ISO week
+2026-W31, Monday 27 July to Sunday 2 August. Weekly rows are ISO-Monday buckets
+(section 8.1). So the `week_start = 2026-07-27` row is neither broken nor fixed:
+roughly 2.6 days of it dropped `view_item` on every cold load and roughly 4.4
+days did not.
+
+**That straddling week stays suppressed.** It is the hazard this section already
+named, arriving in a different guise: "as a partial fix lands, the ratio drifts
+down through entirely plausible territory". **A blended week is arithmetically a
+partial fix.** Comparison-view to outbound-click would fall from an absurd 522%
+to something believable and wrong, and nothing on the page would distinguish it
+from the fix working. The absurd number was safe. The plausible one is not.
+
+**Binding predicate.** Render the five metrics only for weeks whose entire span
+lies after the boundary:
+
+```sql
+week_start >= date_trunc('week', (SELECT changed_at
+                                  FROM platform_changes
+                                  WHERE id = 17))::date + INTERVAL '7 days'
+```
+
+First rendered `week_start` is therefore **2026-08-03**. Two predicates that look
+right and are not:
+
+- `week_start >= changed_at::date` admits nothing extra here by luck, but it
+  compares a week bucket against a mid-week instant and will mislead on the next
+  boundary that lands on a Monday.
+- `week_start >= date_trunc('week', changed_at)` **admits the contaminated
+  27 July week.** This is the failure the predicate exists to prevent.
+
+Read the boundary from the table, do not hard-code 2026-08-03, so a correction to
+id 17 propagates rather than leaving a stale literal behind.
+
+Weeks before that stay **ABSENT, not "not measured"**. The reasoning above is
+unchanged for them: those values are wrong, not missing, and "not measured"
+would understate the problem.
+
+**The suppression rule lives in one place**, one list of five metrics tested
+against one predicate. Five independent checks is how the sixth gets forgotten.
+
+**What is no longer true:** the leading-indicator panel is not permanently built
+on a broken event. From 3 August it warns as designed. Until then it remains the
+part of the dashboard least able to.
+
+**The consent ratio is a boundary too, and it flatters.** Found while doing this
+un-suppression: the fix also steps the measured consent rate UP at the same
+instant, because pre-decision `retailer_click` events were dropped before it and
+are replayed after it. Recorded by adding `consent_ratio` to id 17's
+`metrics_affected` (migration `20260729220000`). It matters here rather than only
+in section 8, because the consent ratio is the cross-check that separates
+"`view_item` is broken" from "consent is low". Full reasoning in the
+consent-rate block under Step 6.
+
+**One caveat travels with the un-suppressed series.** Consent-decision coverage
+at the fix is **4 of 5 paths tested**: banner-refuse, banner-accept,
+Cookie-Settings-accept, stored-consent-at-init. **GPC is UNTESTED and must stay
+labelled untested** until it is exercised. It bears on exactly this series,
+because `view_item` volume is what the queue replays, and an unobserved GPC path
+could admit or drop events without showing up anywhere else.
+
 Search cutover. The browse search recall fix changes total_count for 19 of the 127 distinct queries in search_events, all currently returning fewer than 3 results. total_count writes to search_events.result_count, accumulating since 1 July. Rows with result_count < 3 before the cutover are not comparable with the same rows after it. Record the cutover timestamp when it deploys.
 
 Catalogue baseline. The early-August cluster moves exactly the metrics this dashboard records. Build the panel now and let it record, but do not treat pre-August catalogue figures as a baseline to compare against.
@@ -591,17 +663,20 @@ Headline KPIs, four tiles
 
 Leading indicators
 
-> **Three of the five below are suppressed at launch, because they derive from
-> `view_item`, which the hydration race breaks. See section 4.1.** The
-> early-warning panel is, until that ticket lands, the part of the dashboard
-> least able to warn. Only outbound clicks by network and zero-result search rate
-> render.
+> **Three of the five below are suppressed for weeks before `week_start`
+> 2026-08-03, because they derive from `view_item`, which the hydration race
+> broke until 29 July. The race is fixed; the suppression is now date-gated, not
+> permanent. See section 4.1 for the binding predicate and why the 27 July week
+> is excluded despite the fix landing inside it.** For weeks at or after
+> 3 August all five render normally. Before it, only outbound clicks by network
+> and zero-result search rate render.
 
-- Qualified sessions per week and trend. **SUPPRESSED, derives from view_item.**
-- Session to comparison-view rate. **SUPPRESSED, derives from view_item.**
-- Comparison-view to outbound-click rate. **SUPPRESSED, derives from view_item,
-  and inflated rather than depressed because only its denominator is broken. It
-  would currently read 522%.**
+- Qualified sessions per week and trend. **SUPPRESSED before week_start
+  2026-08-03.**
+- Session to comparison-view rate. **SUPPRESSED before week_start 2026-08-03.**
+- Comparison-view to outbound-click rate. **SUPPRESSED before week_start
+  2026-08-03**, and inflated rather than depressed in that period because only
+  its denominator was broken. On pre-fix data it reads 522%.
 - Outbound clicks per week by network.
 - Zero-result search rate and search-to-comparison rate. Search is a major entry path and is currently defective, for example "loreal revitalift" returns 1 result against a true 96. These belong here, not in the quality panel, and give the browse-search cutover a measurable before and after.
 
@@ -787,7 +862,7 @@ Step 6, GATED. Build the dashboard page at a new authenticated route: four headl
 > **The two are still never summed and neither is ever substituted for the
 > other.** This is a ratio of two independently sourced figures, both shown.
 >
-> **The chosen remedy leaves this indicator's definition intact, which is a real
+> ~~**The chosen remedy leaves this indicator's definition intact, which is a real
 > advantage even though it was not part of the decision.** The dataLayer stub
 > recovers events that were being dropped before consent was decided; it does not
 > recover refusing visitors, and it is not meant to. So the numerator stays "GA4
@@ -796,7 +871,46 @@ Step 6, GATED. Build the dashboard page at a new authenticated route: four headl
 > seventh boundary on this particular series**, and consent ratios measured
 > before and after it remain directly comparable. Given how much of this build is
 > boundary bookkeeping, an indicator that survives a change to the pipeline
-> without one is worth noting.
+> without one is worth noting.~~
+>
+> **WRONG, corrected 29 July while un-suppressing. The fix IS a boundary on this
+> series, and it flatters.** The definition does survive, and refusing visitors
+> are indeed not recovered. Both halves are true and the conclusion still does not
+> follow, because it reasons about the wrong population.
+>
+> The numerator moves for a third group the paragraph never considered: the
+> visitor who has **not yet answered the banner**. Before the fix `window.gtag`
+> was defined only inside `loadAnalytics()`
+> (`public/fmb-cookie-banner.js`), which runs **only on a grant**. So an
+> undecided visitor's `retailer_click` met the `typeof gtag !== 'function'` guard
+> and was dropped, while `sendOutboundBeacon` fired regardless. Numerator lost it,
+> denominator kept it. After the fix that click queues in the stub and **replays
+> if the visitor later accepts**.
+>
+> **The replay survives the click because every outbound path leaves the page
+> alive.** `ClickOutLink` defaults to `target = '_blank'`
+> (`components/ClickOutLink.tsx:34`, a default parameter, which is why no call
+> site passes it and none of them look like new-tab links), and the optimiser
+> uses `window.open(..., '_blank')` (`app/app/RoutineBuilder.tsx:663`). Had these
+> navigated the current tab, the queue would have died on unload and the original
+> claim would have held by accident.
+>
+> So the consent ratio **steps UP at `2026-07-29T14:12:58Z`** by the share of
+> outbound clicks made before a consent decision by visitors who then accepted.
+> Magnitude unmeasured; direction certain.
+>
+> **This is the flattering-boundary case from section 4.0**, which is why it is
+> worth the words. A rising consent rate reads as good news and invites nobody to
+> check it, and this indicator is the correction factor for every other GA4 figure
+> on the page. Worse for this build specifically: the consent ratio is the
+> cross-check that separates "`view_item` is broken" from "consent is low". An
+> unrecorded step up in it would have made the un-suppressed metrics look better
+> than they are, at exactly the moment they came back on screen.
+>
+> **Recorded by adding `consent_ratio` to `platform_changes` id 17's
+> `metrics_affected`**, not as a new row: it is the same event at the same
+> instant, and only the affected-metric list was wrong. Do not compare consent
+> ratios across that instant.
 >
 > **Coupled to remedy 4 in the hydration-race ticket.** This indicator works only
 > because GA4 counts consenting visitors while the server-side table counts
@@ -887,7 +1001,7 @@ The social puller must be channel-pluggable: adding a channel is a new writer ag
 - week_start is ISO Monday everywhere, derived by bucketing the GA4 date dimension in code. No GA4 week dimension is used, and the semantics are stated in the week_start column comment along with the time-zone convention.
 - The four by-network columns, including outbound_clicks_other, sum exactly to total outbound clicks for every week after the by-network start date.
 - The puller upserts on week_start and re-pulls a trailing window of at least three weeks, so GA4's 24 to 48 hour processing lag cannot permanently understate the most recent week.
-- The measured consent rate renders as its own indicator with both source figures shown, and every GA4-sourced figure is labelled as a consenting-visitor figure.
+- The measured consent rate renders as its own indicator with both source figures shown, and every GA4-sourced figure is labelled as a consenting-visitor figure. Its series carries the platform_changes id 17 marker like any other affected metric, and consent ratios are not compared across 2026-07-29 14:12:58Z.
 - platform_changes is seeded with the known boundaries and its entries render as markers on every trend chart.
 - The suspect-price alert threshold is set from the measured baseline, and the review backlog stays reviewable by one person in a sitting.
 - The precision retune prompt is suppressed until at least 20 reviewed rows exist, showing "insufficient sample" until then, with the division guarded.
@@ -895,8 +1009,9 @@ The social puller must be channel-pluggable: adding a channel is a new writer ag
 - review_queue keys on an identifier confirmed not to churn across import cycles.
 - Zero-result search rate appears with the leading indicators, with {search_term_string} filtered out. Search-to-comparison rate renders "not measured" until GA4 supplies it.
 - Brand index staleness appears in the quality panel.
-- Headline tiles, funnel, leading indicators and milestone bar all populate from stored weekly rows, except the five view_item-derived metrics suppressed per section 4.1. Those five are ABSENT from the rendered page, not shown as "not measured", while their columns continue to be written by the puller so the series accumulates.
-- No metric whose numerator or denominator is view_item renders anywhere on the page until the hydration-race ticket lands and its fix is recorded as a platform_changes boundary.
+- Headline tiles, funnel, leading indicators and milestone bar all populate from stored weekly rows. The five view_item-derived metrics render only for weeks passing the section 4.1 predicate; for earlier weeks they are ABSENT from the rendered page, not shown as "not measured". Their columns are written by the puller for every week regardless, so the series accumulates.
+- The suppression predicate reads changed_at from platform_changes id 17 rather than a hard-coded date, is applied from a single list of the five metrics, and excludes the week_start 2026-07-27 row that straddles the fix. A predicate admitting that row is a defect: it is the plausible-but-wrong case, not the absurd one.
+- GPC is labelled untested wherever consent coverage is stated, until it is exercised.
 - review_queue populates on the weekly run, reviewed states are never overwritten, and precision computes over reviewed suspect-price flags only.
 - A Clarins PDF contains no comparison, basket-optimisation or savings framing and omits hub-to-comparison. An iLAPOTHECARY PDF may include comparison framing.
 - All generated copy: British English, no em dashes, no banned discount word, savings as ranges only.
