@@ -3,12 +3,19 @@
 **Raised:** 30 July 2026, from the YesStyle stall of 29 July.
 **Status:** OPEN as of 30 July 2026. Documented, not fixed. No change proposed yet.
 
-> **This file did not exist until 30 July 2026.** The offset had been reasoned
-> about and its consequences identified, but nothing in the repository recorded
-> it — a grep for the categoriser safety net, the health snapshot and the
-> day-late surfacing as consequences of one cause returned nothing. Recorded now
-> so the fifth consequence is cheap to add. See convention 9 in
-> `supabase/migrations/README.md`.
+> **This file did not exist until 30 July 2026, and was believed to.** The
+> offset had been reasoned about and its consequences identified in conversation,
+> but nothing in the repository recorded it. It was referred to across several
+> turns as "the watchdog ticket", as though it had been seen; nobody checked.
+> A grep for its supposed contents returned nothing.
+>
+> **Recorded as the operator's error, not the agent's.** It matters because it is
+> a *different* failure from the stale records this project catalogued through
+> July: those existed and went out of date, and were found by tripping over them.
+> This one never existed, and was found only because someone went looking. See
+> convention 9 in `supabase/migrations/README.md`, "the absent record".
+>
+> Recorded now so the fourth consequence is cheap to add.
 
 ## One cause
 
@@ -29,7 +36,7 @@ YesStyle imports after all of them.
 
 Everything each observer says about YesStyle describes yesterday's YesStyle.
 
-## Four consequences
+## Three consequences
 
 **1. Monitor delay — up to 23 hours before a failure is reported.** This is the
 one that matters most, because **it is the only one that gates a human
@@ -51,18 +58,21 @@ reads every other retailer same-day and YesStyle a day behind. Its own 24-hour
 window softens this but does not remove it: the snapshot is internally
 inconsistent as to which day it describes.
 
-**4. Day-late surfacing.** Recorded as characterised by the operator rather than
-derived here: YesStyle content surfaces a day later than other retailers'.
-Confirm the mechanism before acting on this one.
+> **There is no fourth. "Day-late surfacing" was carried for a while as a
+> separate consequence and is not one — it is a restatement of consequence 1.**
+> Deleted rather than left flagged for confirmation, because a rephrasing left
+> in a list is worse than an error: someone will eventually spend an afternoon
+> trying to verify a synonym, and find nothing, and not know whether the absence
+> is the answer or the search.
 
-## Do not read this as four bugs
+## Do not read this as three bugs
 
-It is one scheduling fact with four downstream readings. Fixing it is a single
+It is one scheduling fact with three downstream readings. Fixing it is a single
 change — move YesStyle earlier, or move the observers later — and either choice
 trades one set of consequences for another. **Nothing here is proposed as a
-change.** The reason to record it is that the fifth consequence will otherwise be
-investigated from scratch as an unexplained anomaly, which is what happened to
-the first four.
+change.** The reason to record it is that the fourth consequence will otherwise
+be investigated from scratch as an unexplained anomaly, which is what happened to
+the first three.
 
 ## Staleness numbers: four distinct settings, none interchangeable
 
