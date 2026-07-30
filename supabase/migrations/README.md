@@ -105,6 +105,38 @@ being defended against is a statement that succeeds and does nothing.
   assert RLS state is unchanged, because enabling RLS is a separate decision with
   its own test plan.
 
+### The default-privileges fix, observed working on a real creation
+
+Recorded 30 July 2026. `20260728100000_default_privileges_lockdown.sql` was
+verified at the time against `pg_default_acl` and inside rolled-back
+transactions. **On 30 July a table was created in `public` in the ordinary way,
+outside any transaction, and its `relacl` read:**
+
+```
+{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}
+```
+
+No `anon`, no `authenticated`, no `PUBLIC`. That is the intended shape, arrived at
+without a `REVOKE` doing the work — the explicit `REVOKE ALL` in the same script
+was a no-op, which is what success looks like here.
+
+**Why this is worth a paragraph rather than a shrug.** Convention 8 says a guard
+that has never been seen to fire is indistinguishable from one that cannot fire,
+and the same doubt applies in the other direction: a fix verified only against
+`pg_default_acl` and inside transactions that were rolled back had never been
+watched doing its job on a real object that stayed. It has now. This is the
+convention applied to itself.
+
+**It does not extend to functions.** `acldefault()` is still re-merged on function
+creation, so convention 1 stands unchanged and permanently. This paragraph is
+about tables only.
+
+*(This note is written before the migration that would have cited it. That
+migration is deferred, and "record it when the natural moment comes" is how
+several true observations in this project were lost — see convention 9. The
+observation holds on its own; let the migration cite the convention rather than
+the reverse.)*
+
 ## 5. Migrations must be idempotent, and proven so
 
 Run it twice before shipping. Privilege state exists only in the database, so a
@@ -196,6 +228,38 @@ them was verified by asking a question whose answer was already yes.
 said "passing" about files it never opened. **Verify by reading the resulting
 state, not by re-asking the tool that produced it** — read `proacl`, count the
 rows the runner actually executed, check the glob.
+
+### A guard observed firing, on the real case, 30 July 2026
+
+Recorded because this convention is otherwise a catalogue of things that did not
+work, and that is a misleading sample.
+
+The absence handler in `20260721180000_absence_handling.sql` carries GUARD 1:
+`last_import_status` is stamped `running` at apply-start and only `ok` at
+finalisation, so a crashed run leaves `running` and is excluded. Its own comment
+calls it "the single most important guard."
+
+**On 30 July the case it was written for occurred for the first time.** YesStyle's
+29 July import stalled at `running` and never finalised; the 30 July run did not
+start; the last real data was 28 July 10:03, 45.8 hours earlier. Without the
+guard, absence handling would have read 13,389 rows as unseen and flipped them out
+of stock on a crashed run's evidence — emptying most of a retailer's catalogue
+from the comparison, on the authority of an import that never happened.
+
+**It held. The rows were not flipped, and the stall stayed contained to the one
+retailer.**
+
+Two things worth taking from it:
+
+- **A guard whose failure mode is invisible needs its success recorded too.**
+  Nothing would have announced that GUARD 1 worked. There is no log line, no
+  metric, no alert. It was noticed only because a stalled retailer was being
+  investigated for an unrelated reason, and it will not be noticed next time
+  either. This paragraph is the only record that it has ever fired.
+- **It is evidence for the guard, not for the design around it.** The stall itself
+  went 45.8 hours without anything raising it, and was found by hand. A guard
+  that correctly declines to act on bad data is not a substitute for noticing
+  that the data is bad.
 
 ---
 
