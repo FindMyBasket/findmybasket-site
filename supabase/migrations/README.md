@@ -197,3 +197,85 @@ said "passing" about files it never opened. **Verify by reading the resulting
 state, not by re-asking the tool that produced it** — read `proacl`, count the
 rows the runner actually executed, check the glob.
 
+---
+
+## 9. Anything phrased as pending carries the date it was written
+
+**Every block phrased as pending, awaiting, open, recommended, not yet done, or
+gated must carry the date it was written**, in the same way every ticket carries
+`**Raised:** <date>`. Without one, a reader cannot tell a claim made this morning
+from one overtaken hours later, and the tense reads as current no matter how old
+it is.
+
+```markdown
+**Awaiting a decision: an eighth boundary.**            <!-- how old? unknowable -->
+**Awaiting a decision, 29 Jul: an eighth boundary.**    <!-- ageable on sight -->
+```
+
+This is the documentation form of convention 8. A stale pending block is an
+artefact that carries reassurance without the check: it looks like an open
+question under active management, and nothing anywhere verifies it still is.
+
+**A pending heading is the most dangerous stale text there is, because it does
+not merely mislead, it solicits.** A stale *finding* is believed. A stale
+*"awaiting a decision"* invites a reader to go and make a decision that was made
+days ago — re-running an applied migration, re-approving an approved change,
+re-litigating a settled one. It converts a reader's diligence into rework.
+
+**Eight instances in a fortnight**, all the same shape: true when written, stale
+within hours, believed because nothing writes back.
+
+| Written | Still true when read |
+|---|---|
+| "Awaiting a decision: an eighth boundary, real traffic start" | No. Applied as `platform_changes` id 21, status `occurred`. |
+| "Recommended, not yet done: a sixth `platform_changes` row" | No. Applied as id 12, migration `20260729160000`. |
+| "`outbound_clicks_other` ... NOT YET APPLIED" | No. Applied `20260729120000`, and the same file's progress log said so. |
+| "Open bug, reported not fixed" | No. Fixed the same day by PR #146. |
+
+Three of those four sat in one file, which also recorded their resolution
+elsewhere in itself. **A document that contradicts itself was updated by someone
+who searched for the section they were changing, not for the claim they were
+falsifying.**
+
+Two habits follow, and the second is the one that would have caught all four:
+
+1. **Date it when you write it.** A dated claim decays visibly. An undated one
+   does not decay at all, it just stops being true.
+2. **When a pending thing resolves, grep the repository for the claim, not for
+   the file you were working in.** Applying the migration is not the end of the
+   change; the sentence that says it has not been applied is part of the change.
+
+### Which action: delete or retitle
+
+Never annotate in place. A struck-through or "RESOLVED" pending heading still
+reads as pending to anyone skimming headings, and headings are what get skimmed.
+So the block either goes or is retitled — and the rule above does not tell you
+which. This does:
+
+**Delete a stale REQUEST. It carries no reasoning, only a solicitation.** Once
+the thing has been decided, applied or built, nothing in the block is worth
+reading. Every remaining word is an invitation to do it again.
+
+**Retitle a stale FINDING that still justifies something live.** Deleting it
+removes the argument for a rule still in force and leaves the rule looking
+arbitrary — which is how a correct rule gets "simplified" away by the next
+reader, who cannot see what it is defending against. Retitle so the heading
+states the resolution, and say plainly that the body is a record rather than
+current state.
+
+The two boundary blocks in the dashboard brief are the worked example:
+
+| Block | Class | Action |
+|---|---|---|
+| "Awaiting a decision: an eighth boundary" | Request. The decision was made; the block only asked for it. | **Deleted.** |
+| "Open bug, reported not fixed" | Finding. Its diagnosis is still the whole argument for the section 4.1 suppression predicate, which is still in force. | **Retitled**, body kept, marked as a record. |
+
+The test is not "is this text still true" — neither was. It is **does anything
+still standing depend on this reasoning.** If yes, the reasoning outlives the
+status and the heading has to stop advertising the status.
+
+**Resolve from the system of record, never from another document.** Both stale
+boundary claims above were settled by reading `platform_changes` directly. Two
+documents disagreeing tells you only that one is wrong, and offers no way to
+learn which.
+

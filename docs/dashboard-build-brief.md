@@ -18,24 +18,10 @@ Appended as steps complete, so the brief and its state never diverge.
 | 2 | COMPLETE, approved 28 Jul | Schema proposed; eleven tables, not ten. |
 | 3 | COMPLETE, applied 28 Jul | `supabase/migrations/20260728180000_dashboard_schema.sql`. All eleven verified `{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}` by reading `relacl`. |
 | 7 | COMPLETE, approved 28 Jul | Queries confirmed; three premises corrected, see "Corrections from Step 7" below. |
-| 4 | DISCOVERY COMPLETE, 29 Jul. Puller NOT built. | Diagnostic dispatched, design holds. Results in "Step 4 discovery results" below. By-network start **2026-06-24** recorded as `platform_changes` id 7 (`20260729140000`). `outbound_clicks_other` APPLIED (`20260729120000`). Google Signals disabled, no thresholding. ~~Open bug: the GA4 `search` event never fires, and `view_item` undercounts for the same reason.~~ **FIXED 29 Jul**, see the row below. No puller, no schedule. |
+| 4 (discovery) | DISCOVERY COMPLETE, 29 Jul | Diagnostic dispatched, design holds. Results in "Step 4 discovery results" below. By-network start **2026-06-24** recorded as `platform_changes` id 7 (`20260729140000`). `outbound_clicks_other` APPLIED (`20260729120000`). Google Signals disabled, no thresholding. ~~Open bug: the GA4 `search` event never fires, and `view_item` undercounts for the same reason.~~ **FIXED 29 Jul**, see the row below. Puller state is the "4 (puller)" row, not this one. |
 | gtag hydration race | FIXED, LIVE, boundary recorded, 29 Jul | Not a numbered step; it blocked five Step 6 metrics. Fix PR #146 (`4c9aa0a`), queue stub `public/fmb-gtag-stub.js`, verified serving in prod. Deploy instant `2026-07-29T14:12:58Z` recorded as `platform_changes` id 17, `status = 'occurred'` (PR #147, `20260729200000`). `en=search` transmits again on a cold full-document GET. Suppression of the five metrics is now **date-gated from week_start 2026-08-03**, not lifted: see section 4.1. GPC consent path remains UNTESTED. |
 | 4 (puller) | BUILT 29 Jul, **NOT ARMED** | `scripts/ga4-weekly-pull.mjs` + `.github/workflows/ga4-weekly-pull.yml`, schedule commented out. Pure week/boundary logic in `scripts/lib/ga4-weeks.mjs`, 16 tests, run by the workflow before it touches production. Schema addition APPLIED (`20260729240000`): `searches_view_search_results`, `searches_custom_event`, never summed. Arming needs an operator dispatch, dry-run first. |
 | 5, 6, 8-15 | NOT STARTED | |
-
-**Awaiting a decision: an eighth boundary, "real traffic start" 2026-06-08.**
-Written and dry-run but deliberately NOT applied, as
-`supabase/migrations/PROPOSED_20260729260000_platform_changes_real_traffic_start.sql`
-(the `PROPOSED_` prefix keeps the migration runner off it; rename to arm). GA4's
-earliest event is 2026-04-05 and the site launched 2026-06-08, so everything
-between is pre-launch testing against a live property. The evidence that forced
-it: `view_search_results` appears to start 2026-04-13, but that week holds
-exactly ONE event and is followed by a two-month gap before real volume begins
-2026-06-15. Without the row, every trend opens with two months of near-zero
-weeks that are not a slow start but the absence of a website, and the shape reads
-as a growth story. Dated at the launch rather than at 2026-06-15 because the
-latter is one series' observation of the cause; note 2026-06-08 is itself an ISO
-Monday, so the two are consistent.
 
 ## Corrections from Step 7, adopted 28 July
 
@@ -179,13 +165,17 @@ fixed correction factor.
 > the spread is 62% to 81%, so the cost is nearer a fifth to two fifths than the
 > 8% the first week implies.
 >
-> **Recommended, not yet done:** a sixth `platform_changes` row for the
-> server-side event-logging start on 2026-07-01, since it bounds every
-> cross-check that uses `outbound_clicks` or `search_events` as a denominator,
-> and this is the second time it has needed explaining. Gated; not inserted
-> without approval.
+> **APPLIED 29 July as `platform_changes` id 12**, `changed_at =
+> 2026-07-01 11:13:42.836544+00`, status `occurred`, migration
+> `20260729160000_platform_changes_serverside_logging_boundary.sql`. It bounds
+> every cross-check that uses `outbound_clicks` or `search_events` as a
+> denominator. Verified against the table 30 July: eight rows, id 12 present.
 
-### Open bug, reported not fixed
+### The bug this discovery found. Open when written 29 July, FIXED the same day.
+
+**Fixed by PR #146 (`4c9aa0a`), boundary `platform_changes` id 17. The section
+below is the diagnosis as written, kept because its reasoning is still the
+argument for the suppression rule in 4.1. Do not read it as current state.**
 
 **The GA4 `search` event is broken. It is not low volume.** GA4 returned 0 for
 the 7-day window while server-side `search_events` recorded 41 rows in the same
@@ -781,9 +771,9 @@ metrics_ga4_weekly (week_start date pk, sessions, qualified_sessions,
 comparison_views, outbound_clicks_awin, outbound_clicks_rakuten,
 outbound_clicks_amazon, outbound_clicks_other, updated_at)
 -- nullable ints, see 4.1
--- outbound_clicks_other added by Step 4 (correction 3), NOT YET APPLIED:
--- catches the ebay and other values of AffiliateNetwork so the four
--- by-network columns sum exactly to total outbound clicks.
+-- outbound_clicks_other added by Step 4 (correction 3), APPLIED 29 Jul
+-- (20260729120000): catches the ebay and other values of AffiliateNetwork
+-- so the four by-network columns sum exactly to total outbound clicks.
 
 metrics_awin_weekly (week_start, advertiser, clicks, sales, commission,
 status, updated_at, pk(week_start, advertiser, status))
