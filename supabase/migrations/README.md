@@ -261,6 +261,40 @@ Two things worth taking from it:
   that correctly declines to act on bad data is not a substitute for noticing
   that the data is bad.
 
+### The mirror: a guard that fires WRONGLY
+
+This convention is about a check that cannot fail. Its mirror is a check that
+fails when nothing is wrong, and it is not the lesser problem.
+
+Recorded 30 July 2026, from `20260730140000`. An assertion meant to prove a
+function was not executable by `PUBLIC` was written as:
+
+```sql
+IF v_acl LIKE '%=X/%' THEN RAISE EXCEPTION ...   -- WRONG
+```
+
+It raised against a **correctly secured** function, because `%=X/%` also matches
+`postgres=X/postgres` and `service_role=X/postgres` — the grants that are supposed
+to be there. The PUBLIC grant is the element with an **empty grantee**, so the
+test is a leading `'{=X/'` or a `',=X/'` after a comma. Convention 1 has the
+grammar; it was not read carefully enough before the guard was written.
+
+**A guard firing on a false positive is as dangerous as one that never fires, and
+worse in one specific way.** Both end in a check nobody trusts, which is the same
+outcome. But silence merely fails to inform. **A false positive actively trains
+people to ignore the check** — it produces a red that everyone learns is
+meaningless, and the habit of dismissing it survives long after the guard is
+fixed. The next red, the real one, is dismissed by reflex.
+
+So the discipline is symmetrical, and both halves are required:
+
+- **Prove it BITES** — against a state you have deliberately broken (convention 6).
+- **Prove it PASSES** — against the state you believe is correct.
+
+A guard that has only been seen to fire is not known to be a guard either. Both
+proofs are cheap, both belong in a rolled-back transaction, and running only the
+first is how an over-broad predicate ships looking rigorous.
+
 ---
 
 ## 9. Anything phrased as pending carries the date it was written
@@ -385,4 +419,24 @@ something nobody has opened.
 check" is about an artefact that exists and does nothing. This is about an
 artefact that does not exist and is credited anyway. Both end with a reassurance
 that nothing is behind, which is why they are neighbours here.
+
+#### This one has worked, once, and that is worth recording
+
+**30 July 2026, one working day after the paragraph above was written.** A queue of
+six post-4-August items was being recited from memory. Applying the rule here —
+grep for the *claim*, not the filename — found that **four of the six existed
+nowhere in the repository**: "coalesce fix", "Tier A drops", "memory
+reconciliation" and "standing rules" all returned zero occurrences. The list now
+exists at `docs/post-4-august-work-list.md`.
+
+**Recorded because a convention that has demonstrably worked once is a different
+artefact from one that reads well.** Every other instance catalogued in this file
+was found by someone tripping over it. This is the first found by a mechanism,
+and it is the only evidence that the mechanism is one.
+
+Two honest qualifications, so this is not read as more than it is. The operator
+raised the doubt before the grep was run, so the convention supplied the *method*
+rather than the suspicion. And one demonstration is one demonstration — by this
+file's own standard, a rule seen working once is better than a rule never tested
+and a long way short of proven.
 
