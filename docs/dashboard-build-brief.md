@@ -19,7 +19,7 @@ Appended as steps complete, so the brief and its state never diverge.
 | 3 | COMPLETE, applied 28 Jul | `supabase/migrations/20260728180000_dashboard_schema.sql`. All eleven verified `{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}` by reading `relacl`. |
 | 7 | COMPLETE, approved 28 Jul | Queries confirmed; three premises corrected, see "Corrections from Step 7" below. |
 | 4 (discovery) | DISCOVERY COMPLETE, 29 Jul | Diagnostic dispatched, design holds. Results in "Step 4 discovery results" below. By-network start **2026-06-24** recorded as `platform_changes` id 7 (`20260729140000`). `outbound_clicks_other` APPLIED (`20260729120000`). Google Signals disabled, no thresholding. ~~Open bug: the GA4 `search` event never fires, and `view_item` undercounts for the same reason.~~ **FIXED 29 Jul**, see the row below. Puller state is the "4 (puller)" row, not this one. |
-| gtag hydration race | FIXED, LIVE, boundary recorded, 29 Jul | Not a numbered step; it blocked five Step 6 metrics. Fix PR #146 (`4c9aa0a`), queue stub `public/fmb-gtag-stub.js`, verified serving in prod. Deploy instant `2026-07-29T14:12:58Z` recorded as `platform_changes` id 17, `status = 'occurred'` (PR #147, `20260729200000`). `en=search` transmits again on a cold full-document GET. Suppression of the five metrics is now **date-gated from week_start 2026-08-03**, not lifted: see section 4.1. GPC consent path remains UNTESTED. |
+| gtag hydration race | FIXED, LIVE, boundary recorded, 29 Jul | Not a numbered step; it blocked five Step 6 metrics. Fix PR #146 (`4c9aa0a`), queue stub `public/fmb-gtag-stub.js`, verified serving in prod. Deploy instant `2026-07-29T14:12:58Z` recorded as `platform_changes` id 17, `status = 'occurred'` (PR #147, `20260729200000`). `en=search` transmits again on a cold full-document GET. Suppression of the five metrics is now **date-gated from week_start 2026-08-03**, not lifted: see section 4.1. Consent coverage **5 of 5 paths, GPC verified 30 Jul**; stored-accept-beats-GPC kept as a recorded decision. |
 | 4 (puller) | BUILT 29 Jul, **NOT ARMED** | `scripts/ga4-weekly-pull.mjs` + `.github/workflows/ga4-weekly-pull.yml`, schedule commented out. Pure week/boundary logic in `scripts/lib/ga4-weeks.mjs`, 16 tests, run by the workflow before it touches production. Schema addition APPLIED (`20260729240000`): `searches_view_search_results`, `searches_custom_event`, never summed. Arming needs an operator dispatch, dry-run first. |
 | 5, 6, 8-15 | NOT STARTED | |
 
@@ -632,12 +632,20 @@ in section 8, because the consent ratio is the cross-check that separates
 "`view_item` is broken" from "consent is low". Full reasoning in the
 consent-rate block under Step 6.
 
-**One caveat travels with the un-suppressed series.** Consent-decision coverage
-at the fix is **4 of 5 paths tested**: banner-refuse, banner-accept,
-Cookie-Settings-accept, stored-consent-at-init. **GPC is UNTESTED and must stay
-labelled untested** until it is exercised. It bears on exactly this series,
-because `view_item` volume is what the queue replays, and an unobserved GPC path
-could admit or drop events without showing up anywhere else.
+**The caveat that travelled with the un-suppressed series is now discharged.**
+Consent-decision coverage is **5 of 5 paths tested**, none assumed to share
+`resolveConsent`: banner-refuse, banner-accept, Cookie-Settings-accept,
+stored-consent-at-init, and GPC. It bore on exactly this series, because
+`view_item` volume is what the queue replays and an unobserved consent path could
+admit or drop events without showing up anywhere else.
+
+**GPC verified in a browser 30 July 2026.** GPC alone: no banner, granted false,
+noop, dataLayer 0. Stored accept then GPC on: granted true, pusher, dataLayer 5.
+The precedence — a stored acceptance beats a later GPC signal — is confirmed and
+was **decided deliberately to be kept**, with the reasoning and the rejected
+alternative recorded at the ordering site in `public/fmb-cookie-banner.js` and in
+`docs/ticket-gtag-hydration-race.md`. Revisit only if it becomes a compliance
+question.
 
 Search cutover. The browse search recall fix changes total_count for 19 of the 127 distinct queries in search_events, all currently returning fewer than 3 results. total_count writes to search_events.result_count, accumulating since 1 July. Rows with result_count < 3 before the cutover are not comparable with the same rows after it. Record the cutover timestamp when it deploys.
 
@@ -1065,7 +1073,7 @@ The social puller must be channel-pluggable: adding a channel is a new writer ag
 - Brand index staleness appears in the quality panel.
 - Headline tiles, funnel, leading indicators and milestone bar all populate from stored weekly rows. The five view_item-derived metrics render only for weeks passing the section 4.1 predicate; for earlier weeks they are ABSENT from the rendered page, not shown as "not measured". Their columns are written by the puller for every week regardless, so the series accumulates.
 - The suppression predicate reads changed_at from platform_changes id 17 rather than a hard-coded date, is applied from a single list of the five metrics, and excludes the week_start 2026-07-27 row that straddles the fix. A predicate admitting that row is a defect: it is the plausible-but-wrong case, not the absurd one.
-- GPC is labelled untested wherever consent coverage is stated, until it is exercised.
+- Consent-decision coverage is stated as 5 of 5 paths tested, including GPC, verified in a browser 30 July 2026. No path is assumed to share `resolveConsent`. The stored-accept-beats-GPC precedence is a recorded decision, not an emergent property of statement order; revisit only as a compliance question.
 - review_queue populates on the weekly run, reviewed states are never overwritten, and precision computes over reviewed suspect-price flags only.
 - A Clarins PDF contains no comparison, basket-optimisation or savings framing and omits hub-to-comparison. An iLAPOTHECARY PDF may include comparison framing.
 - All generated copy: British English, no em dashes, no banned discount word, savings as ranges only.

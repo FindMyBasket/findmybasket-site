@@ -257,6 +257,30 @@
     });
 
     // ===== INITIAL DECISION =====
+    //
+    // THE ORDER OF THESE TWO BRANCHES IS THE DECISION, NOT AN ACCIDENT.
+    //
+    // getConsent() is tested BEFORE hasGPC(), so a stored acceptance BEATS a
+    // later GPC signal: a visitor who accepted on an earlier visit and has since
+    // switched GPC on stays tracked, and sees no banner. Verified in a browser
+    // on 30 July 2026 (granted true, pusher installed, dataLayer populating with
+    // the signal enabled).
+    //
+    // WHY, so nobody "fixes" it by swapping the lines: an explicit acceptance is
+    // a more specific act than a browser-wide default. The visitor made a choice
+    // about this site; GPC expresses a preference about sites in general. The
+    // specific one wins.
+    //
+    // THE ALTERNATIVE, stated so the choice is legible: testing hasGPC() first
+    // would let GPC override a prior explicit acceptance, re-refusing on every
+    // visit while the signal is on. That is a defensible reading too. It was
+    // considered and NOT adopted.
+    //
+    // IF THIS BECOMES A COMPLIANCE QUESTION, revisit it. Some regimes may treat
+    // GPC as a binding signal that supersedes an earlier acceptance rather than
+    // as a default to be overridden by one. That would make swapping the order
+    // correct. It is not a reason to swap it now.
+    //
     var existing = getConsent();
     if (existing) {
       // Returning visitor with stored choice. A stored REFUSAL now has work to

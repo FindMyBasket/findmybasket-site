@@ -14,13 +14,24 @@ runtime-rendered route. **`en=search` transmits on a cold full-document GET**
 (`result_count=151`, `search_source=search_page`), which is the event that read
 exactly zero and had been dropping silently since 25 July.
 
-**Consent-decision coverage: 4 of 5 paths TESTED**, not assumed to share
+**Consent-decision coverage: 5 of 5 paths TESTED**, none assumed to share
 `resolveConsent`: banner-refuse, banner-accept, Cookie-Settings-accept,
-stored-consent-at-init. Refusal verified genuinely silent: dataLayer 0, zero
-collect requests, survived two cold loads, and nothing from the refused period
-replayed after a later acceptance. **GPC REMAINS UNTESTED and must stay labelled
-untested.** Test plan at the foot of this ticket; it needs a browser, NOT a
-workflow, so the GitHub Actions quota does not block it.
+stored-consent-at-init, and GPC. Refusal verified genuinely silent: dataLayer 0,
+zero collect requests, survived two cold loads, and nothing from the refused
+period replayed after a later acceptance.
+
+**GPC verified in a browser on 30 July 2026**, closing the fifth path. Both
+branches exercised, and the coverage claim is now stated as measured rather than
+routed:
+
+| Path | Result |
+|---|---|
+| GPC alone, no stored consent | no banner, resolved true, granted **false**, `which` = noop, dataLayer **0**. Correct. |
+| Stored accept, then GPC switched on | granted **true**, `which` = pusher, dataLayer **5**. Analytics still running with the signal enabled. |
+
+The second confirms the precedence: **a stored acceptance beats a later GPC
+signal.** That is the intended behaviour and is being kept — see the decision
+recorded at the foot of this ticket.
 
 See "After the fix" at the foot of this ticket for what the un-suppression
 actually required, which was not a straight lift.
@@ -635,28 +646,48 @@ missed the metric the fix changed as a side effect. Enumerate by what the change
 touches, not by what it intends, exactly as the call-site audit above had to
 replace the module-scoped one.
 
-## GPC: the fifth consent path, still untested. What the test must cover.
+## GPC: the fifth consent path. VERIFIED 30 July 2026, and the precedence decided.
 
-The other four paths were verified in a browser. GPC has not been, and it is the
-one carrying the weakest assumption, because `navigator.globalPrivacyControl`
-cannot be set from the page: it needs a browser or extension that actually
-asserts the signal. **This is browser work, not workflow work**, so it is not
-blocked by the Actions quota.
+**Both branches tested in a browser. The analysis below is kept because it is
+still the argument for the ordering comment now in
+`public/fmb-cookie-banner.js`, not because anything here is outstanding.**
 
-Reading the code narrows what to look for. GPC is handled at
-`public/fmb-cookie-banner.js:265` and routes through the SAME `applyConsent()`
-as banner-refuse, which calls `FMBGtag.resolve(false, loadAnalytics)`. So the
-discard mechanism is shared and already covered. **The untested part is not the
-discard, it is the two things GPC does that no other path does.**
+| Path | Observed |
+|---|---|
+| GPC alone, no stored consent | no banner, resolved true, granted **false**, `which` = noop, dataLayer **0** |
+| Stored accept, then GPC on | granted **true**, `which` = pusher, dataLayer **5**, analytics running |
 
-**1. Precedence: a STORED ACCEPT BEATS GPC, and that is a policy decision nobody
-has stated.** `init()` checks `getConsent()` first and only falls through to
-`hasGPC()` when there is no stored record. So a visitor who accepted on an
-earlier visit and has since turned GPC on is still tracked, and no banner
-appears to tell them. That may well be the right call, since an explicit
-first-party choice is arguably more specific than a browser-wide signal, but it
-is currently an emergent property of statement order rather than a decision.
-Decide it deliberately, then test whichever behaviour is chosen.
+GPC is handled at `public/fmb-cookie-banner.js` and routes through the SAME
+`applyConsent()` as banner-refuse, which calls `FMBGtag.resolve(false,
+loadAnalytics)`. The discard mechanism is shared and was already covered. **What
+needed testing was never the discard, it was the two things GPC does that no
+other path does.** Both are now settled.
+
+**1. Precedence: a STORED ACCEPT BEATS GPC. DECIDED — keep it, 30 July 2026.**
+`init()` checks `getConsent()` first and only falls through to `hasGPC()` when
+there is no stored record, so a visitor who accepted on an earlier visit and has
+since turned GPC on stays tracked and sees no banner. **Confirmed by test, and
+adopted deliberately: an explicit acceptance is a more specific act than a
+browser-wide default, so it wins.** The visitor made a choice about this site;
+GPC expresses a preference about sites in general.
+
+**Do NOT swap the order in `init()`.** The alternative — testing `hasGPC()` first,
+letting GPC override a prior explicit acceptance — was considered and not
+adopted. It is a defensible reading, which is exactly why the rejection is
+recorded rather than left implicit.
+
+**This was the finding that mattered most, and not because of the outcome.** The
+behaviour was correct before anyone decided it; it was an emergent property of
+which line came first, and a reader could not tell a decision from an accident.
+It now carries a comment at the ordering site stating the choice, the reasoning
+and the rejected alternative. Same treatment as the `ClickOutLink` `target`
+default, and for the same reason: a load-bearing default that looks incidental
+gets "simplified" by the next reader.
+
+**If this becomes a compliance question, revisit it.** Some regimes may treat GPC
+as a binding signal that supersedes an earlier acceptance rather than as a
+default an acceptance can override. That would make swapping the order correct.
+It is not a reason to swap it now, and the comment in the source says so too.
 
 **2. GPC persists as a durable stored REFUSAL after the signal goes away.** The
 branch calls `setConsent({ analytics: false })` before `applyConsent(false)`, so
@@ -666,27 +697,18 @@ still change it through Cookie Settings, and refusal is the safe direction, so
 this is defensible. It is not obvious, and it means GPC's effect outlives the
 GPC signal.
 
-### The test, in order
+### The test that was run
 
-1. Browser asserting GPC, no stored consent, COLD load of a product page.
-   Expect: no banner, `dataLayer` length 0, zero `collect` requests, and
-   `window.gtag` is the no-op rather than the queue pusher.
-2. Same session, then accept through Cookie Settings. Expect: analytics start,
-   and **nothing from the GPC-refused period replays**. This is the one that
-   matters most, and it is the exact defect that was found during the original
-   refusal verification.
-3. Reload with GPC still on and a stored refusal. Expect: still silent, still no
-   banner.
-4. Turn GPC OFF and reload. Expect: whatever hazard 2 above resolves to. Record
-   the observed behaviour either way, because it is currently unstated.
-5. Stored ACCEPT, then turn GPC ON, reload. Expect: hazard 1. Record it.
+The plan that stood here specified five steps. The two that carried the real
+risk were run and both passed; they are the two recorded in the table above.
 
-**Traps carried over from the original verification, both still apply:** test a
-COLD load, because client-side navigation is the path that already works and is
-a false pass; and read DebugView rather than same-day GA4 totals, because the
-24-48h processing lag is how the original bug survived from 25 July.
+**Traps that applied and were respected:** test a COLD load, because client-side
+navigation is the path that already works and is a false pass; and read DebugView
+rather than same-day GA4 totals, because the 24-48h processing lag is how the
+original bug survived from 25 July.
 
-Until steps 1 and 2 pass in a browser, GPC stays labelled UNTESTED wherever
-consent coverage is stated, and the "4 of 5" figure stays as it is. It is the
-fifth path on the series just un-suppressed, so it is the last thing standing
-between that series and being fully characterised.
+**Consent coverage is now 5 of 5, stated as verified rather than routed.** No
+path in this file is assumed to share `resolveConsent` — each was exercised. The
+un-suppressed series is fully characterised on this axis, and the "GPC untested"
+label is removed everywhere it appeared rather than struck through, per
+convention 9 in `supabase/migrations/README.md`.
