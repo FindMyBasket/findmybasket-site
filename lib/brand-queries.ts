@@ -32,6 +32,27 @@ export async function findBrandBySlug(slug: string): Promise<BrandLookup | null>
       .from('products_active')
       .select('normalised_brand, brand')
       .not('normalised_brand', 'is', null)
+      // INTERIM FIX, 30 July 2026. The .order() is load-bearing: without it this
+      // is LIMIT/OFFSET with no ORDER BY, which has NO guaranteed row order in
+      // Postgres. Across the ~85 separate requests this loop makes, rows could be
+      // returned twice or skipped entirely. A brand whose only row was skipped
+      // resolved to null and its page returned 404 — deterministically, and
+      // invisibly, because the row was present and correct in the database the
+      // whole time. Measured 30 July: 6 of 30 sampled single-product brands were
+      // 404ing live, roughly 60 pages. Exposure scales inversely with product
+      // count, since losing one row from a one-product brand loses the brand.
+      //
+      // DO NOT REMOVE THIS ORDER BY to "tidy" the query or shave a sort.
+      //
+      // This is an interim fix, not the durable one. It corrects the result and
+      // leaves the cost: ~85 sequential round-trips per brand-page render, no
+      // early exit even after the brand is found, roughly 2s of latency on the
+      // lookup alone. The durable fix is a single indexed lookup — see the
+      // ticket, and note that brand_search_index is NOT a safe source for it
+      // because its normalised_brand column diverges from products_active even
+      // though brand_index_health reports no gap (that view compares brand, not
+      // normalised_brand, and normalised_brand is what this route keys on).
+      .order('id')
       .range(offset, offset + PAGE_SIZE - 1);
 
     if (error || !data || data.length === 0) break;
