@@ -133,12 +133,44 @@ with durations swinging 2m03s to 16m57s across 25–28 July.
 row would have kept the previous run's `ok` and the failure would have surfaced
 only as stale prices, much later.
 
-> **PENDING, 30 July 2026 09:15 UTC: today's 10:00 run is being watched.** It will
-> start regardless of the stranded `'running'` (see below), so it is the
-> diagnostic case: either it succeeds and the status self-clears, or it dies the
-> same way and the recurrence is the signal. **Today's failure, if it comes, IS
-> diagnosable** — edge logs retain 24 hours, which is why the 29 July one is not.
-> Append the outcome here.
+### Outcome of the 30 July 10:00 run: SUCCEEDED. Not a recurrence.
+
+Watched and recorded 30 July 2026 10:06 UTC.
+
+| | |
+|---|---|
+| `scrape_log` | row 121, **success**, 10:00:02 → 10:02:58, **177s** |
+| Volumes | source 57,457, matched 7,171, new 68, out-of-stock 31,463 |
+| `last_import_status` | **`ok`** — self-cleared from the stranded `running` |
+| `last_import_error` | empty |
+| `import_run_state` | empty, cleaned up normally |
+| YesStyle price rows | 13,389 → **13,415** |
+
+**Two predictions in this ticket were verified, not merely unfalsified.**
+
+1. **The stranded `'running'` did not block the run.** Predicted from reading the
+   code — the only gate is `config.enabled`, the status is written and never
+   read — and the run started on schedule with the flag still set. Clearing it by
+   hand would have been unnecessary, as stated.
+2. **The status self-cleared on the next success.** No manual intervention was
+   applied at any point.
+
+**The 29 July failure did not recur, so it stays a single unexplained hard kill.**
+Duration 177s is in line with 28 July's 185s; the 16-minute runs of 26 and 27 July
+remain the outliers rather than the fast ones. The cause is not confirmed and now
+probably never will be: the edge logs that would have carried today's evidence
+were never needed, and 29 July's aged out long ago.
+
+**Do not read one clean run as the matter being closed.** A failure that occurred
+once on the largest feed, left no error, and then did not repeat is exactly the
+shape that returns. The §7 stamp and the 09:00 monitor are what will catch it, and
+both are now known to work.
+
+**If it does recur, keep the two failure modes in separate entries even when the
+symptoms look alike.** A run killed before any handler leaves no `scrape_log` row,
+no `import_run_state` residue and an empty `last_import_error` — that is the
+29 July signature. A run that fails and reports writes at least one of those.
+Merging them would make a new fault read as a repeat of an old one.
 
 ## No concurrency guard, confirmed
 
