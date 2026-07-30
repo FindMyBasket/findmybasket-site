@@ -343,3 +343,46 @@ boundary claims above were settled by reading `platform_changes` directly. Two
 documents disagreeing tells you only that one is wrong, and offers no way to
 learn which.
 
+### The absent record, which is a different failure
+
+Everything above is about a record that **existed and went stale**. There is a
+second kind, and it is worse, so do not file it as another instance of the first.
+
+**A record that never existed, and is believed to.** On 30 July 2026 a ticket was
+referred to across several turns as "the watchdog ticket", as though it had been
+read. It had never been written. The offset it supposedly documented had been
+reasoned about in conversation, thoroughly enough that its conclusions were being
+cited — and citation felt like recall. A grep for its contents returned nothing.
+
+**The two fail differently and are found differently:**
+
+| | Stale record | Absent record |
+|---|---|---|
+| What went wrong | was true, stopped being true | never existed |
+| How it is found | by **tripping over it** — you read it, act on it, and something contradicts | only by **going to look for it** |
+| What surfaces it | the document itself | nothing |
+
+**That last row is the whole point. A stale record advertises itself** — it sits
+in a file, gets read, and eventually collides with reality. Convention 9's dating
+rule works because there is something there to carry a date. **An absent record
+advertises nothing.** There is no file to date, no heading to grep for, no
+sentence to notice has aged. Its only symptom is a confident reference to
+something nobody has opened.
+
+**So the countermeasure is different too.** Dating does not help. What helps:
+
+- **When you cite a document, open it.** Not to re-read it — to confirm it is
+  there. A citation is a claim about the repository, and it is checkable in
+  seconds.
+- **Be suspicious of the definite article.** "The watchdog ticket", "the
+  migration that handles this", "the existing test" — a definite reference to a
+  thing you have not opened in this session is the tell. Discussing something at
+  length produces the same familiarity as having documented it.
+- **Grep for the claim, not the filename.** The filename may be wrong or
+  imagined; the distinctive phrase you expect to find in it is a better probe.
+
+**Related but not the same:** convention 8's "a check that does not run is not a
+check" is about an artefact that exists and does nothing. This is about an
+artefact that does not exist and is credited anyway. Both end with a reassurance
+that nothing is behind, which is why they are neighbours here.
+
