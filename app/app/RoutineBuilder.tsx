@@ -38,6 +38,55 @@ function ebaySearchUrl(p: RoutineItem): string {
   return `https://www.ebay.co.uk/sch/i.html?_nkw=${q}&_sacat=26396&mkrid=710-53481-19255-0&campid=7221119&customid=findmybasket&toolid=10001`;
 }
 
+// How long the arrival waits for a `?routine=` preload before showing the explicit
+// failure state instead of a spinner.
+//
+// This is NOT a give-up point. The request is never aborted, so a response landing
+// after this still repopulates the routine and clears the failure (see the preload
+// effect). The only thing this bound decides is how long someone stares at a
+// spinner before being told something honest — which is why it can be short.
+//
+// Measured 2026-08-02 on the preview deployment: the preload query ran at a median
+// of 56ms (range 33-71ms over 8 runs) and the routine rendered at a median of 146ms.
+// 3s is roughly 50x the measured median, which absorbs a badly degraded mobile
+// connection while halving the worst-case wait for someone arriving from a pin.
+// Network throttling could not be applied with the available tooling, so the
+// headroom is reasoned from that baseline rather than measured under load.
+const PRELOAD_TIMEOUT_MS = 3000;
+
+// Where a `?routine=` arrival came from, for the load_routine_from_url event.
+//
+// This was hardcoded to 'email' because saved-routine emails were the only thing
+// that produced these links. Pinterest routine pins now point here too, so a
+// hardcoded value would report every pin arrival as email and make the whole
+// preload test unreadable.
+//
+// Read from utm_source, which is what a campaign link carries. Returns 'unknown'
+// rather than guessing when there is none: the saved-routine emails currently send
+// no utm_source (see supabase/functions/send-routine-email/index.ts), so email
+// arrivals land in 'unknown' until that function is changed to tag its links. That
+// is deliberate — an honest 'unknown' beats an 'email' default that would silently
+// absorb every untagged source.
+function routineArrivalSource(): string {
+  if (typeof window === 'undefined') return 'unknown';
+  const p = new URLSearchParams(window.location.search);
+  return p.get('utm_source') || p.get('source') || 'unknown';
+}
+
+// Parse `?routine=1,2,3` into product ids. Shared by the hydration gate and the
+// preload effect so the two can never disagree about whether a URL routine is
+// present — if they did, the gate would hold a spinner for a preload that is
+// never going to run, or release the empty state over one that is.
+function parseRoutineParam(): number[] {
+  if (typeof window === 'undefined') return [];
+  const raw = new URLSearchParams(window.location.search).get('routine');
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map(s => parseInt(s.trim(), 10))
+    .filter(n => !isNaN(n));
+}
+
 // ── TYPES ──────────────────────────────────────────────────────────────────
 
 interface PriceRow {
@@ -109,6 +158,41 @@ export default function RoutineBuilder() {
   // everyone else keeps the legacy email path until the cutover completes.
   const [authedEmail, setAuthedEmail] = useState<string | null>(null);
 
+  // Arrival state for a `?routine=` link. 'idle' is every ordinary visit, so the
+  // no-parameter path is untouched. 'pending' holds the loading state open so the
+  // empty state cannot render in the gap between hydration and the preload
+  // resolving. 'failed' is an explicit "we couldn't load that routine" — never a
+  // silent fall-through to the empty state, which would be the same bug arriving
+  // five seconds later.
+  const [preload, setPreload] = useState<'idle' | 'pending' | 'failed'>('idle');
+
+  // How many ids in a `?routine=` link resolved to nothing, so the routine can say
+  // it arrived short instead of silently being shorter than the link promised.
+  //
+  // The observed cause is a product losing every price row at an active retailer:
+  // of the unresolvable ids in real saved routines, none were merged or reparented
+  // (measured 2 August 2026). Merged and variant ids CAN also land here — resolving
+  // those is deliberately deferred, see the preload query's comment — so the wording
+  // stays on what the visitor experiences ("no longer available") rather than naming
+  // a cause that would be wrong for most of them.
+  const [preloadMissing, setPreloadMissing] = useState(0);
+
+  // True once a `?routine=` link has populated the routine. Suffixes the click
+  // source on every outbound click this page writes to `outbound_clicks`, so
+  // preload-originated clicks are separable from ones made by a visitor who built
+  // the basket themselves. Without it the preload test deploys and measures
+  // nothing: `source` already carries product_page / optimiser_shop_button /
+  // optimiser_modal, and both arrivals would land in the same buckets.
+  const [arrivedFromPreload, setArrivedFromPreload] = useState(false);
+
+  // `optimiser_shop_button` -> `optimiser_shop_button_preload`. Suffixing keeps the
+  // established vocabulary intact and greppable rather than inventing a parallel
+  // set of names, and needs no schema change.
+  const clickSourceFor = useCallback(
+    (base: string) => (arrivedFromPreload ? `${base}_preload` : base),
+    [arrivedFromPreload],
+  );
+
   useEffect(() => {
     db.auth.getSession().then(({ data }) => {
       setAuthedEmail(data.session?.user?.email ?? null);
@@ -130,7 +214,15 @@ export default function RoutineBuilder() {
   // ── ROUTINE STORE SYNC ────────────────────────────────────────────────
 
   useEffect(() => {
-    setRoutine(getRoutine());
+    const stored = getRoutine();
+    setRoutine(stored);
+    // Claim the loading state BEFORE hydrating, in the same tick, so there is no
+    // render in which hydrated is true and the routine is still empty — that gap
+    // is what showed "Your routine is empty" to visitors following a routine link.
+    // Only when the store is empty: a visitor who already has a basket sees it
+    // immediately rather than waiting behind the network (the preload still merges
+    // into it when it lands).
+    if (stored.length === 0 && parseRoutineParam().length > 0) setPreload('pending');
     setHydrated(true);
     const unsub = onRoutineChange(() => setRoutine(getRoutine()));
     return unsub;
@@ -140,39 +232,82 @@ export default function RoutineBuilder() {
   // Saved-routine emails link to /app?routine=1,2,3 — preserve that behaviour.
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const ids = params.get('routine');
-    if (!ids) return;
-
-    const productIds = ids
-      .split(',')
-      .map(s => parseInt(s.trim(), 10))
-      .filter(n => !isNaN(n));
-    if (productIds.length === 0) return;
+    const productIds = parseRoutineParam();
+    if (productIds.length === 0) {
+      // Covers `?routine=` and `?routine=abc`. The gate uses the same parser, so
+      // it never went pending here — but clear defensively rather than rely on it.
+      setPreload('idle');
+      return;
+    }
 
     let cancelled = false;
+    // Bounded wait. Only escalates a still-pending arrival; it never overrides a
+    // preload that already resolved, and the request is NOT aborted — if it lands
+    // late it still repopulates the routine below.
+    const timer = setTimeout(() => {
+      if (!cancelled) setPreload(p => (p === 'pending' ? 'failed' : p));
+    }, PRELOAD_TIMEOUT_MS);
+
     (async () => {
       const { data, error } = await db
         .from('products_active')
         .select('id, name, brand, product_type')
         .in('id', productIds);
 
-      if (cancelled || error || !data) return;
+      if (cancelled) return;
 
-      const items: RoutineItem[] = data.map(p => ({
-        id: p.id,
-        name: p.name,
-        brand: p.brand || '',
-        category: p.product_type || '',
-      }));
+      if (error || !data || data.length === 0) {
+        // Only claim failure if there is nothing to show. A visitor who already
+        // had a basket keeps it, and never sees a failure screen over it.
+        setPreload(getRoutine().length === 0 ? 'failed' : 'idle');
+        return;
+      }
+
+      // `.in()` returns database order (ascending id), not the order given in the
+      // URL, so a routine pin's steps arrive sorted by id rather than cleanse ->
+      // tone -> serum -> SPF. Reorder before adding: storeAdd appends, and the
+      // store preserves insertion order, so this is the only place order is set.
+      // First occurrence wins for a repeated id, and anything unexpectedly absent
+      // from the map sorts last rather than jumping to the front.
+      const urlOrder = new Map<number, number>();
+      productIds.forEach((id, i) => {
+        if (!urlOrder.has(id)) urlOrder.set(id, i);
+      });
+
+      // Anything the link asked for that products_active did not return. Counted
+      // against the de-duplicated request (urlOrder), so a repeated id in the URL
+      // is not reported as a missing product.
+      setPreloadMissing(Math.max(0, urlOrder.size - data.length));
+      const items: RoutineItem[] = data
+        .slice()
+        .sort(
+          (a, b) =>
+            (urlOrder.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+            (urlOrder.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+        )
+        .map(p => ({
+          id: p.id,
+          name: p.name,
+          brand: p.brand || '',
+          category: p.product_type || '',
+        }));
 
       for (const it of items) storeAdd(it);
       setRoutine(getRoutine());
+      // Release the gate: the routine is populated, so the layout renders. Also
+      // clears a 'failed' set by the timeout if the response arrived late.
+      setPreload('idle');
+
+      // Every outbound click from here on is attributable to a preloaded arrival.
+      // Session-scoped on purpose: if the visitor adds more products by hand and
+      // re-optimises, the session still originated from the link, which is the
+      // question the test is asking.
+      setArrivedFromPreload(true);
 
       if (typeof window !== 'undefined' && typeof (window as any).gtag === 'function') {
         (window as any).gtag('event', 'load_routine_from_url', {
           routine_size: items.length,
-          source: 'email',
+          source: routineArrivalSource(),
         });
       }
 
@@ -182,6 +317,7 @@ export default function RoutineBuilder() {
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -678,7 +814,7 @@ export default function RoutineBuilder() {
         basketItemCount: optimisedItemCount ?? routine.length,
         isBestValue: true,
         listPosition: i,
-        clickSource: 'optimiser_open_all',
+        clickSource: clickSourceFor('optimiser_open_all'),
       });
       // Same server-side log the anchor-based surfaces get, so these high-intent
       // clicks are not GA4-only. window.open() is programmatic so there is no
@@ -688,7 +824,7 @@ export default function RoutineBuilder() {
         retailerId: p.retailerId,
         awinMid: awinMidFromHref(p.url),
         price: p.price,
-        source: 'optimiser_open_all',
+        source: clickSourceFor('optimiser_open_all'),
       });
     });
 
@@ -707,6 +843,20 @@ export default function RoutineBuilder() {
   const worstViableTotal =
     results && results.length > 0 ? Math.max(...results.map(o => o.total)) : 0;
 
+  // Distinct REAL retailers in the winning basket. Counted off the breakdown and
+  // excluding the "Not tracked yet" row, matching how winningRetailerCount is
+  // derived for basket_optimised — the two must not be able to disagree. Reading
+  // option.retailers instead would be wrong: on the partial fallback it can hold
+  // the sentinel 'Best available prices', which is not a retailer.
+  const winningRetailerCount =
+    results && results.length > 0
+      ? new Set(
+          results[0].breakdown
+            .filter(b => b.retailerName && b.retailerName !== 'Not tracked yet')
+            .map(b => b.retailerName),
+        ).size
+      : 0;
+
   // ── RENDER ────────────────────────────────────────────────────────────
 
   return (
@@ -723,8 +873,38 @@ export default function RoutineBuilder() {
         </header>
 
         {/* Routine list — or empty state */}
-        {!hydrated ? (
+        {!hydrated || preload === 'pending' ? (
           <div className="rb-loading">Loading your routine...</div>
+        ) : preload === 'failed' ? (
+          // Explicit failure, never the bare empty state. A visitor who followed a
+          // routine link and is shown "your routine is empty" has been told
+          // something false about their own link; this says what happened and
+          // leaves a way forward.
+          <div className="rb-empty">
+            <div className="rb-empty-icon">🧺</div>
+            <h2 className="rb-empty-title">We couldn&apos;t load that routine</h2>
+            <p className="rb-empty-desc">
+              This link may be out of date. You can still browse the catalogue and
+              build a routine, and we&apos;ll find the best value way to buy it.
+            </p>
+            <div className="rb-browse-grid">
+              <Link href="/skincare" className="rb-browse-card">
+                <span className="rb-browse-icon">🧴</span>
+                <span className="rb-browse-label">Browse skincare</span>
+                <span className="rb-browse-arrow">→</span>
+              </Link>
+              <Link href="/makeup" className="rb-browse-card">
+                <span className="rb-browse-icon">💄</span>
+                <span className="rb-browse-label">Browse makeup</span>
+                <span className="rb-browse-arrow">→</span>
+              </Link>
+              <Link href="/hair" className="rb-browse-card">
+                <span className="rb-browse-icon">💇</span>
+                <span className="rb-browse-label">Browse hair</span>
+                <span className="rb-browse-arrow">→</span>
+              </Link>
+            </div>
+          </div>
         ) : routine.length === 0 ? (
           <div className="rb-empty">
             <div className="rb-empty-icon">🧴</div>
@@ -764,6 +944,18 @@ export default function RoutineBuilder() {
                   {routine.length} product{routine.length !== 1 ? 's' : ''}
                 </span>
               </div>
+
+              {/* A preloaded routine that arrived short says so. Without this the
+                  link silently delivers fewer products than it promised, which is
+                  indistinguishable from having promised fewer. Plain statement, no
+                  apology, no cause: the visitor can act on neither. */}
+              {preloadMissing > 0 && (
+                <p className="rb-routine-missing">
+                  {preloadMissing === 1
+                    ? 'One product from this routine is no longer available.'
+                    : `${preloadMissing} products from this routine are no longer available.`}
+                </p>
+              )}
 
               <div className="rb-routine-list">
                 {routine.map((p, i) => (
@@ -858,6 +1050,26 @@ export default function RoutineBuilder() {
                   this basket at its best-value split across retailers, versus buying the whole basket
                   at the most expensive single shop. Checkout prices may be lower with active sales or
                   member discounts.
+                </div>
+              </div>
+            )}
+
+            {/* Suppressed savings figure. The guard that suppresses it is correct
+                and unchanged, but it fires on the widest price spreads, which are
+                the baskets where the optimiser did the most work. Saying nothing
+                there leaves a visitor looking at a split basket with no account of
+                why it is split.
+
+                States what the optimiser DID, never what it is worth: no prices,
+                no percentages, no retailer names, no comparison. The retailer
+                count is the only quantity and it describes the basket rather than
+                asserting anything about price. */}
+            {!showSavings && winningRetailerCount > 0 && (
+              <div className="rb-savings-summary rb-savings-qualitative">
+                <div className="rb-savings-desc">
+                  {winningRetailerCount > 1
+                    ? `Your basket is split across ${winningRetailerCount} retailers for the best total, delivery included.`
+                    : 'Everything in your basket is best value at one retailer, delivery included.'}
                 </div>
               </div>
             )}
@@ -1044,8 +1256,8 @@ export default function RoutineBuilder() {
                                 retailer={name}
                                 retailerId={info.retailerId}
                                 price={info.subtotal}
-                                source="optimiser_shop_button"
-                                clickSource="optimiser_shop_button"
+                                source={clickSourceFor('optimiser_shop_button')}
+                                clickSource={clickSourceFor('optimiser_shop_button')}
                                 isBestValue={isBest}
                                 listPosition={ri}
                                 basketItemCount={optimisedItemCount ?? routine.length}
@@ -1100,8 +1312,8 @@ export default function RoutineBuilder() {
                   retailerId={p.retailerId}
                   productId={p.productId}
                   price={p.price ?? undefined}
-                  source="optimiser_modal"
-                  clickSource="optimiser_modal"
+                  source={clickSourceFor('optimiser_modal')}
+                  clickSource={clickSourceFor('optimiser_modal')}
                   isBestValue
                   listPosition={i}
                   basketItemCount={optimisedItemCount ?? routine.length}

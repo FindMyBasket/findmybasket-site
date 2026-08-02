@@ -242,6 +242,20 @@
   color: var(--ink-light, #4A4845);
 }
 
+/* Preloaded routine arrived short. Informational, not an error: the routine that
+   did load is still usable and still worth optimising, so this reads as a note
+   rather than a warning. */
+.rb-routine-missing {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-light, #4A4845);
+  background: rgba(28, 26, 24, 0.03);
+  border: 1px solid rgba(28, 26, 24, 0.08);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 0 0 16px;
+}
+
 .rb-routine-list {
   display: flex;
   flex-direction: column;
@@ -398,6 +412,18 @@
   padding: 24px;
   text-align: center;
   margin-bottom: 20px;
+}
+
+/* Savings figure suppressed: the same card carrying a statement instead of an
+   amount. Lighter padding since there is no headline number to give room to, and
+   the text steps up from caption size because here it IS the message. */
+.rb-savings-qualitative {
+  padding: 18px 24px;
+}
+
+.rb-savings-qualitative .rb-savings-desc {
+  font-size: 14px;
+  color: var(--ink, #1C1A18);
 }
 
 .rb-savings-label {
