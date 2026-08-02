@@ -579,6 +579,43 @@ way to inherit the behaviour.
 
 ---
 
+### 16. The welcome-email path can only be exercised signed out
+
+**Raised:** 2 August 2026 · **NOT A TASK.** A property worth knowing, and one open
+verification that will close itself.
+
+**The property.** `app/app/RoutineBuilder.tsx` branches on auth when a routine is
+saved. Signed-in users write to `tracked_products` via `fmb_track_product`;
+signed-out users insert into `saved_routines`. The welcome email is fired by
+`trigger_welcome_email`, an `AFTER INSERT on saved_routines`.
+
+**So a signed-in save sends no welcome email at all, by design** — and does so
+silently: no error, no log row, nothing to notice. Anyone trying to exercise the
+welcome path while signed in will see a successful save and no email, and have
+nothing to look at. That is what happened on 2 August while verifying the
+`utm_source=email` tag.
+
+**The open verification.** The tag added to `send-routine-email` (deployed v16,
+2 August) is recorded as:
+
+> **Verified in the deployed v16 source, and verified end to end on the resulting
+> link. NOT observed in a delivered email.**
+
+The link `/app.html?routine=<ids>&utm_source=email` was driven on production: the
+308 preserves both params, the routine loads, and `load_routine_from_url` reports
+`source: email`. What was not observed is the function actually emitting it into a
+sent message.
+
+**No action. It closes itself** the next time a signed-out visitor saves a routine:
+the welcome email will carry the tag, and the arrival will report `email` rather
+than `unknown`. Deliberately not chased — the residual risk is that the deployed
+source does not do what reading it says it does, and the email path is a separate
+source from the Pinterest work that prompted it.
+
+**If you do want to force it:** sign out first. Signed in, it cannot fire.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
