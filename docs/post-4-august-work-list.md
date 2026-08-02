@@ -461,6 +461,68 @@ rebuilt, which is what the 4 August gate protects.
 > entries, but whoever picks up either should read the other first**, because
 > deciding item 5 in favour of "the files are the source of truth" makes this
 > item strictly worse: it makes replay the sanctioned path.
+---
+
+### 14. Every failure in this class reports success: the detection gap
+
+**Raised:** 2 August 2026 · **Blocked until:** after the preload work lands
+**Detail: complete. NOT STARTED, deliberately. This needs its own brief.**
+
+**NUMBERING.** Numbered 14 behind item 13 (onboarding migrations and rotating feed
+ids, PR #161). The two were written in parallel and both appended here; the
+resulting conflict was resolved in favour of keeping both, in this order. This
+branch is based on #161, so item 13 must land first or this file arrives with a
+gap where 13 should be.
+
+**The gap.** Every failure in this class so far has *reported success*. Not one
+turned a status field red, and not one was caught by the thing that exists to catch
+it. They were all found by a person looking at something else.
+
+| Failure | What it reported |
+|---|---|
+| Branded Beauty AWIN programme closed | The deep links returned **HTTP 200** with a closed-merchant page. Nothing watching error rates can see a 200. |
+| Gorgeous Shop feed id rotated | A 404 the 09:00 monitor did catch, in ~3h, but only because it is the *loud* class. 6,710 rows were already stale. |
+| A `storage_passthrough` retailer whose uploader stops feeding it | **Nothing at all.** `last_import_status` is structurally incapable of going red: the import succeeds, because reading an unchanged file is a success. The data simply stops moving. |
+
+Gorgeous Shop is the useful contrast: it currently reads `last_import_status =
+'error'`, because a rotated feed id is the *loud* class. The silent class never
+reaches that field at all.
+
+**Why this is urgent rather than tidy.** The third row is not hypothetical, and the
+exposure is much wider than one retailer. Measured 2 August 2026:
+
+- **10 of the 12 active retailers are `staging_mode = 'storage_passthrough'`** —
+  Boots, YesStyle, Stylevana, Debenhams, Perfume Click, Escentual, Beauty Flash,
+  Gorgeous Shop, Branded Beauty, The Organic Pharmacy. Together they hold 105,506
+  `retailer_prices` rows. Nine of the ten currently report `last_import_status =
+  'ok'`.
+- **Boots**: `storage_passthrough`, status `ok`, last import 2 August 04:46.
+  35,902 price rows, 31,247 in-stock products, and **sole live offer on 29,734
+  products — 28.1% of the 105,758 canonical live products**.
+- Boots is also the largest clickout destination: 67 of 288 outbound clicks in the
+  31 days to 1 August, 23.3%, more than any other retailer.
+
+A silent stall at Boots would degrade the highest-value surface on the site, and
+strand more than a quarter of the catalogue on a price nothing is refreshing, while
+every dashboard stayed green.
+
+**A figure to correct from the raising conversation:** Boots was described as
+carrying 6,181 products. It carries 35,902 price rows across 35,860 distinct
+products. 6,181 matches nothing measurable for Boots; the nearest figure in the
+same window is Gorgeous Shop's 6,747 rows. Use the measured numbers above.
+
+**Scope of the brief, when it is written.** How a passthrough retailer's staleness
+is detected at all, given a successful import is the wrong signal; what the
+detection threshold should be per retailer; and whether the answer is freshness
+monitoring on `retailer_prices.last_updated` rather than anything on the import
+path. Note the existing discriminator: loud failures surface in ~3h, silent ones
+run 26h+.
+
+**Related, not the same.** Item 13 is about config that goes stale in an artefact.
+This is about staleness that no artefact reports. They share the property that the
+failure is invisible by construction, which is why
+`docs/standing-rule-frozen-catalogue-state.md` records the rule and this records
+the gap. Consolidation, if any, belongs to item 4.
 
 ---
 
