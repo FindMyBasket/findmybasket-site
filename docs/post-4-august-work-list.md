@@ -638,9 +638,20 @@ predates the Next.js port. `git show 6c9b402^:public/app.html` — the legacy st
 builder — has the identical `singleOptions` + `twoOptions` + `allOptions` shape and
 no `threeOptions`. The optimiser arrived in this repo via `8fcfc25` (10 May 2026,
 "Phase 6: port routine builder to /app"), which carried the structure across
-unchanged. So it was inherited rather than chosen here. **That is not proof it was
-never a deliberate choice in the original** — intent cannot be read out of code
-that simply stops. Whoever wrote the legacy builder should say.
+unchanged. So it was inherited rather than chosen here.
+
+**PROVENANCE ANSWERED, 2 August 2026.** The legacy `public/app.html` was written by
+Robbie, solo. There is no other author to ask, and the question is therefore settled
+rather than lost: **two retailers was what was tractable at the time, not a decision
+about what the product should do.**
+
+**That changes its status.** An undocumented ceiling of unknown origin is a
+constraint you work around. A known limit of a first implementation is **a candidate
+to revisit**. Nothing here argues it must change — pairs are O(n²) and cheap, triples
+are O(n³), and the third delivery leg will often lose anyway, so the current answer
+may well be right on the merits. But it should be re-decided on those merits rather
+than inherited, and whatever is decided should end up in a comment at
+`RoutineBuilder.tsx:448`, which is where the next person will look.
 
 **Why it matters enough to record.** It bounds the proposition. "We find the best
 way to buy your whole routine" is, in the implementation, "the best single shop or
@@ -690,6 +701,39 @@ appliances and tools, is. Establish whether the default is the mechanism first,
 then decide whether the fix is the rules, the default, or an unmatched queue.
 `categoriser_safety_net_log` and `review_queue` exist and may already be recording
 these.
+
+---
+
+### 19. PR #162 is held, and being held is not free
+
+**Raised:** 2 August 2026 · **This is a decision that needs making, not a task.**
+
+**The state.** PR #162 (`copy/august-audit-rulings`) has been open since 1 August,
+marked not-for-production. It carries the `public/` half of the retailer copy sweep,
+the 2 August audit rulings applied to it, and
+`docs/commercial-finding-catalogue-depth.md`.
+
+**Why it cannot just sit there.** It is the only thing in the queue containing
+user-facing copy. That copy exists because the live site was wrong — it named
+Superdrug and Branded Beauty after both had gone, and the homepage demo basket
+carried hand-written prices. **Every day the branch is held, the production site
+keeps the state the branch was written to correct.** Holding it is not neutral; it
+is a choice to keep shipping the older copy.
+
+**It is also frozen state in its own right,** which is the connection worth making
+explicit: a branch pinned against a moving catalogue drifts exactly like the copy
+inside it. The retailer list it corrects to 11 is already conditional on the Branded
+Beauty `active = false` flip; the demo basket it rewrites to structure-only was
+already rewritten once, on 1 August, and reproduced the hazard it documented. The
+longer it waits, the more likely it needs re-auditing before it can land at all.
+
+**The decision is binary: review and merge, or close.** There is no good third
+option. If it merges, the live copy stops naming retailers that are gone. If it
+closes, that is a deliberate decision to leave the copy as it is, which is
+defensible but should be made rather than defaulted into.
+
+**Surface it at the start of the next session** rather than letting it age quietly.
+It is listed here so that instruction survives this conversation.
 
 ---
 
