@@ -695,6 +695,41 @@ hair. `skincare/face` is doing duty as a catch-all, which is what a default look
 like when a rule fails to match rather than what a wrong rule looks like. All nine
 are recent additions, mostly Beauty Bay and Debenhams stock.
 
+**PART OF THIS MAY BE ITEM 21's SIBLING, AND THAT PART IS MEASURED.** The category
+columns are a sibling pair like `ean`/`product_GTIN`: the importer requests
+`merchant_product_category_path`, and `feed-diag` reports Escentual, Beauty Flash
+and Gorgeous Shop populating **only `merchant_category`**. A retailer arriving with
+no category path is exactly the input that would land on a `skincare/face` default.
+
+Checked against the nine, 2 August 2026 — **it holds for three of them, and they are
+the worst three**:
+
+| Product | Assigned | Stocked by | Sibling-pair cause? |
+|---|---|---|---|
+| Babyliss Keratin Lustre Hairdryer | skincare/face | **Beauty Flash, Gorgeous Shop** | **plausible** |
+| Babyliss Keratin Lustre Styling Iron | skincare/face | **Beauty Flash, Gorgeous Shop** | **plausible** |
+| BaByliss Pro Keratin Lustre Styling Iron | makeup/face | **Beauty Flash, Gorgeous Shop** | **plausible** |
+| Hairburst Elixir | skincare/face | Beauty Bay, Debenhams | no |
+| RapidLash Eyelash Conditioner | hair/condition | Beauty Bay, Debenhams | no |
+| Urban Decay Naked Palette | skincare/face | Beauty Bay, Debenhams | no |
+| MAC Lipglass Air | skincare/face | Beauty Bay, Debenhams | no |
+| Made By Mitchell Brush Set | skincare/face | Beauty Bay, Debenhams | no |
+| Elizabeth Arden Green Tea Scent Spray | skincare/face | Debenhams, Perfume Click, YesStyle | no |
+
+**All three appliances come solely from the two retailers that populate only
+`merchant_category`.** The other six come from Beauty Bay and Debenhams, neither of
+which is in that group — Beauty Bay populates EAN at 99.8% and stages inline — so
+they need a different explanation.
+
+**So item 18 has at least two causes**, and one of them is item 21's sibling. If the
+category-path hypothesis holds, the nine rows are the visible edge of something
+larger: every product arriving from those three retailers with no category path at
+all, of which only the absurd ones (a hairdryer in skincare) are noticeable.
+
+**Measure that before fixing any misassignment by hand** — count how many rows from
+Escentual, Beauty Flash and Gorgeous Shop carry no usable category path. That number
+decides whether this is nine rows or thousands.
+
 **Do not fix these nine by hand.** Nine rows is not the finding; a categoriser that
 defaults to `skincare/face` on no-match, on a feed that has recently grown
 appliances and tools, is. Establish whether the default is the mechanism first,
@@ -865,6 +900,29 @@ from Robbie's notes, not from the repository. I searched
 `supabase/functions/_shared/match-key.ts`, `scripts/dedup-apply-plan.mts`, `lib/`,
 and the migrations, for both the constant and any EAN-weighted scoring, and found
 nothing. **Treat it as unverified and possibly never implemented.**
+
+**THIS IS NOT A ONE-LINE CHANGE, EVEN THOUGH THE CODE CHANGE IS ONE LINE.**
+Reading 64,142 identifiers into a catalogue that has been matched on names and
+sizes will change matching behaviour at scale, not merely fill a column. Two
+movements, in both directions:
+
+- Products that currently look identical may **separate** on EAN disagreement.
+- Products currently held apart may become **merge candidates**.
+
+That is the right outcome — it is the catalogue becoming more correct — but it is a
+catalogue-wide shift landing in one import, on 64,142 rows, across the five largest
+non-K-beauty retailers including Boots at 35,626.
+
+**Required before any import runs with it:**
+
+1. **A dry run measuring how many existing matches would change** — separations and
+   new merge candidates counted separately, before anything is written. The number
+   is the decision, not the code.
+2. **A staged rollout by retailer, not all five at once.** The Organic Pharmacy is
+   the obvious first at 108 rows; Boots is the obvious last at 35,626. One retailer
+   per import, with the match delta read between each.
+
+Treating this as a one-liner is how a correctness fix becomes an incident.
 
 **If it does not exist, the argument for this item is weaker than first stated, and
 should be made honestly.** It is not a scoring problem. It is that five retailers —
