@@ -1,0 +1,73 @@
+name: feed-price-probe (read-only)
+
+# Prints the price a live AWIN feed currently carries for one named product.
+#
+# WHY THIS EXISTS. feed-diag reports a feed's SHAPE — row count, fill rates,
+# category mix, catalogue overlap — and then discards the file. That answers
+# "is this feed healthy" but not "what does it say about product X", and those
+# are different questions with different consequences.
+#
+# The case that prompted it, 2 August 2026: The Organic Pharmacy's feed had been
+# byte-identical for 37 days. We held £36.95 for Arnica Massage Oil 100ml while
+# the retailer's own page carried og:price:amount of £18.47. Two readings, and
+# they lead to different conversations:
+#   feed says 36.95  -> the merchant's feed is stale. Their side. A relationship
+#                       conversation, not a bug.
+#   feed says 18.47  -> the feed is current and OUR import is not applying it.
+#                       Our side, and urgent.
+# Nothing in the database can tell those apart, because both look identical from
+# here: a value we stored that disagrees with the world.
+#
+# WRITES NOTHING. Downloads a feed to the runner, greps it, prints, deletes.
+# No Storage upload, no import trigger, no DB access at all.
+
+"on":
+  workflow_dispatch:
+    inputs:
+      fid:
+        description: 'AWIN feed id (e.g. 62815 for The Organic Pharmacy)'
+        required: true
+        type: string
+      match:
+        description: 'Case-insensitive substring of product_name (e.g. Arnica Massage Oil)'
+        required: true
+        type: string
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download feed and print matching rows
+        env:
+          AWIN_API_KEY: ${{ secrets.AWIN_API_KEY }}
+          FID: ${{ inputs.fid }}
+          MATCH: ${{ inputs.match }}
+        run: |
+          # No `set -x`: the URL embeds AWIN_API_KEY and tracing would print it
+          # to a log that outlives the run. Same rule as feed-diag.
+          set -eu
+          COLS="product_name,search_price,store_price,rrp_price,in_stock,merchant_product_id,ean,product_GTIN,aw_deep_link"
+          URL="https://productdata.awin.com/datafeed/download/apikey/${AWIN_API_KEY}/language/en/fid/${FID}/columns/${COLS}/format/csv/delimiter/%2C/compression/gzip/"
+          curl -sS --fail --max-time 300 "$URL" -o feed.csv.gz
+          gunzip -f feed.csv.gz
+          echo "=============================================="
+          echo " FEED PRICE PROBE — fid ${FID}"
+          echo " match: ${MATCH}"
+          echo " read-only: nothing is written anywhere"
+          echo "=============================================="
+          echo "feed rows: $(( $(wc -l < feed.csv) - 1 ))"
+          echo
+          echo "--- header ---"
+          head -1 feed.csv
+          echo
+          echo "--- matching rows ---"
+          # -i case-insensitive. Prints whole rows so the price columns are read
+          # in context rather than extracted by a fragile field index.
+          grep -i -- "${MATCH}" feed.csv || echo "(no row matched)"
+          echo
+          echo "matched: $(grep -ic -- "${MATCH}" feed.csv || true)"
+
+      - name: Discard feed
+        if: always()
+        run: rm -f feed.csv feed.csv.gz
