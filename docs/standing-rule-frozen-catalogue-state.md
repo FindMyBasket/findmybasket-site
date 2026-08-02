@@ -6,7 +6,11 @@
 
 Any artefact that freezes a value owned by an external party will drift, and
 nothing will detect it. That covers **prices, retailer names, product IDs, feed
-IDs, merchant IDs, and counts** of any of those.
+IDs, merchant IDs, delivery thresholds and costs, and counts** of any of those.
+
+The rule has two halves. **Frozen state** is a value that was true and has drifted.
+**Fabricated state** is a value that was never true — a runtime default standing in
+for a missing one. The second is worse, and is described below.
 
 The rule started as a copy rule and is not one. A feed ID frozen into a migration
 fails identically to a price frozen into a paragraph: config owned by somebody
@@ -30,6 +34,44 @@ test, no alert, and no job that would ever notice. Each was found by a person
 looking at something else. That is the property that makes it a rule — the
 failure mode is undetectable by construction, so it has to be prevented at
 writing time rather than caught later.
+
+## A worse variant: fabricated state
+
+Frozen state is a value that *was* true and has drifted. **Fabricated state is a
+value that was never true at all** — a default standing in for a missing one, at
+runtime, leaving no trace.
+
+It is worse in the one way that matters. A frozen value is at least visible: it sits
+in a file, it appears in a diff, someone can read it and ask when it was last
+checked. A fabricated value appears in no diff, no migration and no record. It is
+produced fresh on every render from a `??` fallback, and the only evidence it
+happened is the absence of a row.
+
+**The instance.** `retailers.delivery_threshold` is **NULL for Debenhams**, and the
+optimiser substitutes `'25'` at runtime:
+
+```
+// app/app/RoutineBuilder.tsx:528  (and :425, :530, and the email replica)
+const r1Threshold = parseFloat(String(r1Info?.delivery_threshold ?? '25'));
+```
+
+So **every Debenhams basket the product has ever shown has been computed against a
+£25 threshold that nobody set and no record contains.** Debenhams took 17 of 288
+outbound clicks in the 31 days to 1 August, and appears in the winning split of the
+PIN-044 demonstration basket. If the real threshold is not £25, every one of those
+answers was wrong in a way no query could reveal, because the wrong value exists
+only for the microseconds it takes to compute a total.
+
+**Scope, checked 2 August 2026:** Debenhams is the **only** retailer with a NULL
+`delivery_threshold`, and **no** retailer has a NULL `delivery_cost`. Bounded to one
+row — but the mechanism is not, because the fallback fires for any retailer whose
+threshold is ever nulled or dropped.
+
+**The rule this adds.** A default may fill a gap, but it must not do so silently in
+a value the product presents as fact. Either the column is NOT NULL with a recorded
+value, or the absence is surfaced rather than papered over. Prefer a loud failure to
+an invented number: a basket that declines to compute is recoverable, a basket that
+quietly computes on £25 is not.
 
 ## The four instances
 
