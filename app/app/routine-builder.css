@@ -414,6 +414,18 @@
   margin-bottom: 20px;
 }
 
+/* Savings figure suppressed: the same card carrying a statement instead of an
+   amount. Lighter padding since there is no headline number to give room to, and
+   the text steps up from caption size because here it IS the message. */
+.rb-savings-qualitative {
+  padding: 18px 24px;
+}
+
+.rb-savings-qualitative .rb-savings-desc {
+  font-size: 14px;
+  color: var(--ink, #1C1A18);
+}
+
 .rb-savings-label {
   font-size: 11px;
   letter-spacing: 0.14em;

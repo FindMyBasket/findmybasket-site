@@ -802,6 +802,20 @@ export default function RoutineBuilder() {
   const worstViableTotal =
     results && results.length > 0 ? Math.max(...results.map(o => o.total)) : 0;
 
+  // Distinct REAL retailers in the winning basket. Counted off the breakdown and
+  // excluding the "Not tracked yet" row, matching how winningRetailerCount is
+  // derived for basket_optimised — the two must not be able to disagree. Reading
+  // option.retailers instead would be wrong: on the partial fallback it can hold
+  // the sentinel 'Best available prices', which is not a retailer.
+  const winningRetailerCount =
+    results && results.length > 0
+      ? new Set(
+          results[0].breakdown
+            .filter(b => b.retailerName && b.retailerName !== 'Not tracked yet')
+            .map(b => b.retailerName),
+        ).size
+      : 0;
+
   // ── RENDER ────────────────────────────────────────────────────────────
 
   return (
@@ -995,6 +1009,26 @@ export default function RoutineBuilder() {
                   this basket at its best-value split across retailers, versus buying the whole basket
                   at the most expensive single shop. Checkout prices may be lower with active sales or
                   member discounts.
+                </div>
+              </div>
+            )}
+
+            {/* Suppressed savings figure. The guard that suppresses it is correct
+                and unchanged, but it fires on the widest price spreads, which are
+                the baskets where the optimiser did the most work. Saying nothing
+                there leaves a visitor looking at a split basket with no account of
+                why it is split.
+
+                States what the optimiser DID, never what it is worth: no prices,
+                no percentages, no retailer names, no comparison. The retailer
+                count is the only quantity and it describes the basket rather than
+                asserting anything about price. */}
+            {!showSavings && winningRetailerCount > 0 && (
+              <div className="rb-savings-summary rb-savings-qualitative">
+                <div className="rb-savings-desc">
+                  {winningRetailerCount > 1
+                    ? `Your basket is split across ${winningRetailerCount} retailers for the best total, delivery included.`
+                    : 'Everything in your basket is best value at one retailer, delivery included.'}
                 </div>
               </div>
             )}
