@@ -713,7 +713,55 @@ Lagging and milestone, monthly not weekly
 - GA4: fully automated. Analytics Data API v1, service account, weekly cron into Supabase.
 - AWIN: fully automated. Publisher API, weekly by advertiser, pulling both pending and confirmed.
 - Rakuten: semi-automated. API pull if reliable, else monthly CSV paste.
-- Amazon: manual. No usable earnings API. Monthly CSV export from the Associates UI, upserted.
+- Amazon: manual. ~~No usable earnings API.~~ **Manual because no reports have been
+  generated yet, NOT because no API exists. Corrected 31 July 2026, see below.**
+  Monthly CSV export from the Associates UI, upserted.
+
+> **CORRECTED 31 July 2026. "No usable earnings API" is wrong, and the reason it
+> is wrong changes what Step 6 should build.**
+>
+> Assessed against the live Amazon Creators API, all three states verified by
+> real calls, not from documentation:
+>
+> | Surface | State | What it means |
+> |---|---|---|
+> | **Reporting** | **ENTITLED** | `ListReports` authenticates and returns `{reports: []}`. A **200 with an empty collection**, not a missing endpoint and not an auth failure. The earnings API exists and we can call it. |
+> | **Product data** | `AssociateNotEligible` | The **three-qualifying-sales** gate. Note this is NOT the 200-sales-per-month milestone in section 7; they are different thresholds and conflating them will misdate the unlock. |
+> | **Feeds** | `AuthorizationFailed` | A **separate entitlement**, being actively pursued. Different error from the product gate, therefore a different unlock. |
+>
+> **So Amazon is manual because there are no reports to pull yet, not because
+> there is nothing to pull them with.** The distinction is the whole point of
+> this correction: an empty collection from an authenticated endpoint is a
+> *state that changes on its own*, whereas a missing endpoint is not.
+>
+> **Why it binds on Step 6.** A manual-input form built on "no API exists" is
+> **permanent** — nobody revisits it, because nothing would ever prompt them to.
+> A form built on "no reports yet" is **provisional and must be revisited**.
+> Build the Amazon side of the Step 6 form as the second kind, and say so at the
+> form. The two look identical on screen and differ only in whether anyone ever
+> checks again.
+>
+> **Re-check mechanism, and it lives OUTSIDE this repository.** Working samples
+> with a populated `.env` are at **`~/Downloads/creatorsapi-nodejs-sdk/examples`**
+> (`sampleListReports.js`, `sampleGetReport.js`, `sampleListFeeds.js`,
+> `sampleGetItems.js`, `sampleSearchItems.js`, and others). Nothing in this repo
+> references them and nothing here would break if they vanished — and
+> `~/Downloads` is not a durable home for the only copy of a re-check mechanism.
+> Items are queued in `docs/post-4-august-work-list.md`.
+>
+> **On the superseded text itself:** the clause corrected here is the six words
+> struck above. The fuller reasoning this correction was raised against — that
+> *PA-API 5.0 is product data only and gated on sales volume* — **appears nowhere
+> in this repository**; a grep for `pa-api`, `paapi` and `product advertising`
+> across every tracked file returns nothing. It was carried in discussion, not in
+> the file. That is convention 9's absent-record class, the same defect
+> `docs/post-4-august-work-list.md` was created to correct, and it is recorded
+> here rather than quietly dropped because the belief was real even though the
+> artefact never was.
+>
+> Section 12 still lists live Amazon earnings-API integration as out of scope for
+> this build. That remains correct and is unaffected: it is a scope decision, not
+> a claim about what exists.
 - Social: manual weekly paste, Pinterest primary. Optional pullers at Steps 14 and 15.
 
 GA4 Data API query shapes, weekly runReport calls against `properties/415465396`: sessions by week; qualified sessions as sessions containing view_item; comparison views as eventCount filtered to view_item; outbound clicks as eventCount filtered to retailer_click with dimensions date and customEvent:affiliate_network. customEvent:network returns nothing and must not be used. The last query is what reconciles GA4 against the affiliate reports.
@@ -906,6 +954,23 @@ Step 4, GATED. Build the GA4 Data API weekly puller writing to metrics_ga4_weekl
 Step 5, GATED. Build the AWIN Publisher API weekly puller writing clicks, sales, commission by advertiser and status. Pull both pending and confirmed. Resolve the secret name question in section 3 first. Dry-run first.
 
 Step 6, GATED. Build the dashboard page at a new authenticated route: four headline tiles, funnel view, leading-indicator trends including the two search indicators, milestone bar, and platform_changes markers on every trend chart. Add a manual-input upsert form for Amazon monthly and social weekly. An unauthenticated request must return no data.
+
+> **The Amazon half of that form is PROVISIONAL, not permanent. Corrected
+> 31 July 2026; full assessment in section 8.**
+>
+> The Creators API Reporting surface is **entitled**: `ListReports` authenticates
+> and returns `{reports: []}`. Amazon is manual because **no reports have been
+> generated yet**, not because no API exists. That is a state which can change
+> without anyone touching this repository.
+>
+> **Build it as a form that expects to be replaced, and label it as one at the
+> form itself, not only here.** A manual form justified by "no API exists" is
+> permanent by construction — nothing would ever prompt a re-check. The
+> re-check is queued in `docs/post-4-august-work-list.md`, and its mechanism
+> lives outside this repo.
+>
+> `metrics_amazon_monthly` (section 9) is unaffected either way: the same
+> month-keyed columns receive a paste today and a pulled report later.
 
 > **Added 29 July: measured consent rate as a leading indicator.** GA4 outbound
 > clicks divided by server-side `outbound_clicks` for the same ISO week, rendered

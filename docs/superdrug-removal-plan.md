@@ -23,9 +23,84 @@ So the next departure is far simpler:
    `scripts/regen-superdrug-gone-ids.mts` with the retailer id parameterised).
 3. Curate 301s from GSC for the traffic tail; everything else 410s.
 4. Step E revalidation + monitor.
+5. **Copy sweep — MANDATORY, and it was missed on 27 July 2026.** See below.
 No view change, no query-filtering work, no new infra needed — those were one-time and
 are now permanent. The listing-query active filtering (Step C) also already covers every
 future inactive retailer.
+
+### Step 5 — Copy sweep (added 2026-08-01, after it was missed once)
+
+**Steps 1–4 are all database and routing. None of them touches hand-written copy, and
+hand-written copy is where the site makes its factual claims about who we compare.**
+
+**This was missed on 27 July 2026 and went unnoticed for eight days.** After Superdrug
+was retired, `public/about.html` continued to claim *"Currently live across 10 UK
+retailers"* over a list that **still included Superdrug** and **omitted three live
+retailers** (Gorgeous Shop, Atelier De Glow, Perfume Click). The page is in the sitemap
+at priority 0.4, so the claim was indexed. It was found on 1 August only because the
+Branded Beauty closure prompted someone to look — the same way the 450 brand-page 404s
+were found. **Same class: an undecided side effect of a retirement, not a decision.**
+
+Nothing detects this. There is no test, no lint, no query that compares copy against
+`retailers`. It is a manual step and must stay on the list.
+
+**Sweep these, every retirement:**
+
+| Surface | File | What to check |
+|---|---|---|
+| Homepage logo strip | `public/index.html` (~line 288) | hardcoded `<span class="hero-trust-card">` per retailer; **not data-driven**, does not read `retailers.active` |
+| **Homepage demo basket** | **`public/index.html`, the `demo-card` block** | `basket-retailer` names AND every figure. Named "Boots + Superdrug" for 13 days after r12. Rebuilt 2026-08-01 as Escentual + Boots with real catalogue prices; the block carries its own comment explaining that it is hand-written, point-in-time, refreshed by nothing, and that naming retailers is what makes it break at every departure. **Changing the retailer means recomputing all nine figures**, not just swapping the name — the leg subtotals, both single-retailer totals and both savings lines all move together, and they are shown on the card so a reader can check them. |
+| **Partner list and count** | **`public/about.html`** | **the count sentence AND the `<ul>`; these are the core factual claim** |
+| Article price tables | `public/articles/*.html` | hand-written, point-in-time, nothing refreshes them |
+| Meta / OG descriptions | `public/**/*.html` | retailer names appear inside `<meta name="description">` |
+| Logo assets | `public/logos/`, `public/*.webp` | leave in place; harmless, and removal breaks nothing but risks a 404 if still referenced |
+
+**Do NOT remove the retailer's hostname from `next.config.js` `images.remotePatterns`.**
+Retired retailers keep their `retailer_prices` rows, and product images still resolve
+through that CDN. Removing the pattern breaks images on every product the retailer
+carried.
+
+### The same class, found the same way: delivery terms (2026-08-01)
+
+**Retailers 23 to 28 all had NULL `delivery_threshold` and `delivery_cost`. Everything
+before and everything after was populated.** Boots, The Organic Pharmacy, Beauty Bay,
+Beauty Flash and Debenhams — five in a row, 54% of in-stock rows, with the largest
+retailer first in the batch.
+
+**A manual, out-of-band step was skipped five consecutive times and nothing caught it.**
+No migration ever set the columns, there was no default, and there was no constraint. The
+only thing standing between the gap and the user was `RoutineBuilder`'s `?? '25'` /
+`?? '3.95'` fallback, which silently invented delivery figures and presented them as exact
+basket totals. It went unnoticed partly because the invented Boots figure happened to be
+exactly right.
+
+**The defect was absence, not decay. State it that way.** All eleven live retailers were
+verified against their own sites on 2026-08-01. Of the six that already held values, four
+were exactly right — Stylevana, Gorgeous Shop, Atelier De Glow, Perfume Click — YesStyle
+was out by ten pence, and Escentual was wrong on both fields. **Five missing, one wrong,
+one trivially off.** Entered values were largely sound; what failed was entering them at
+all. An earlier draft of this section implied general unreliability and that reading is
+wrong — it would point remediation at re-auditing good data instead of at the missing
+constraint, which is the actual cause.
+
+**Escentual is the exception worth learning from, because it was detectable without
+leaving the database.** It stored a non-zero threshold with a zero cost — free above £25
+and free below it — which no retailer means. That shape is self-contradictory on its face.
+Branded Beauty (6) and Skin Cupid (7) still carry it; both are retiring or inactive.
+**Treat threshold-with-zero-cost as unverified, never as free delivery.**
+
+**The `retailers_delivery_shape` CHECK added on 2026-08-01 is what stops the sixth.** A
+retailer can now only be `tiered` (both values), `flat` (cost, no threshold) or `unknown`
+(neither) — and `unknown` is now a state someone must choose, visible in a query, rather
+than the silent default of forgetting. Onboarding a retailer without delivery terms no
+longer produces a plausible-looking wrong number; it produces a row that says it does not
+know. **That is the difference between this and the copy sweep above: the delivery gap now
+has a mechanism, the copy sweep still does not.**
+
+**Also sweep for retailers that were never partners.** A false claim about who we compare
+is worse than a stale one. Cross-check every retailer name in copy against the `retailers`
+table; anything not in it is either editorial market commentary (legitimate) or a claim we
+cannot support (not). See the 2026-08-01 sweep results for the distinction.
 
 ## Verified state (live DB, r29 active)
 
