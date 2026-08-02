@@ -38,12 +38,21 @@ function ebaySearchUrl(p: RoutineItem): string {
   return `https://www.ebay.co.uk/sch/i.html?_nkw=${q}&_sacat=26396&mkrid=710-53481-19255-0&campid=7221119&customid=findmybasket&toolid=10001`;
 }
 
-// How long the arrival waits for a `?routine=` preload before giving up and
-// showing the explicit failure state. Generous on purpose: a slow success beats
-// a fast lie, and the thing we are avoiding is telling a visitor who followed a
-// routine link that they have nothing. The late-arriving response still wins if
-// it lands after this (see the preload effect — it repopulates and clears).
-const PRELOAD_TIMEOUT_MS = 5000;
+// How long the arrival waits for a `?routine=` preload before showing the explicit
+// failure state instead of a spinner.
+//
+// This is NOT a give-up point. The request is never aborted, so a response landing
+// after this still repopulates the routine and clears the failure (see the preload
+// effect). The only thing this bound decides is how long someone stares at a
+// spinner before being told something honest — which is why it can be short.
+//
+// Measured 2026-08-02 on the preview deployment: the preload query ran at a median
+// of 56ms (range 33-71ms over 8 runs) and the routine rendered at a median of 146ms.
+// 3s is roughly 50x the measured median, which absorbs a badly degraded mobile
+// connection while halving the worst-case wait for someone arriving from a pin.
+// Network throttling could not be applied with the available tooling, so the
+// headroom is reasoned from that baseline rather than measured under load.
+const PRELOAD_TIMEOUT_MS = 3000;
 
 // Parse `?routine=1,2,3` into product ids. Shared by the hydration gate and the
 // preload effect so the two can never disagree about whether a URL routine is
