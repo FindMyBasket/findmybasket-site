@@ -83,11 +83,40 @@ COMMENT ON TABLE public.feed_freeze_findings IS
 -- day three is nearly free; one false positive that trains a reader to skim is
 -- what makes the next real freeze invisible.
 --
--- CAUTION, BEAUTY FLASH. Its 3-day streaks recur on a roughly weekly cadence
--- (27-29 Jun, 4-6 Jul, 11-13 Jul, 18-20 Jul, 25-27 Jul), which looks like a feed
--- refreshed about twice a week rather than daily. It sits one day under the
--- threshold by habit, not by luck. If it produces the first false positive,
--- raise ITS threshold rather than the global one.
+-- BEAUTY FLASH KEEPS THE WEEKEND OFF, and that is the whole story.
+-- Its 3-day streaks are not random: they are exactly 7 days apart (27-29 Jun,
+-- 4-6 Jul, 11-13 Jul, 18-20 Jul, 25-27 Jul). Broken down by weekday over the
+-- window, its feed is byte-identical on:
+--      Sunday   6 of 6 days   100%
+--      Monday   5 of 5 days   100%
+--      Friday   1 of 5 days    20%
+--      Tue/Wed/Thu/Sat        0%
+-- The merchant regenerates on weekdays and not at the weekend, so Sunday and
+-- Monday both re-read Saturday's file. This is THEIR cadence, not our drift.
+--
+-- Which makes N=4 genuinely fragile for this retailer, not merely close: a UK
+-- bank holiday Monday extends the pause to four days and fires the check on a
+-- feed behaving exactly as it always has. Hence the per-retailer override below,
+-- set to 5 so a long weekend is absorbed.
+--
+-- THE OVERRIDE IS INTERIM SCAFFOLDING, NOT THE FIX. A threshold tuned per
+-- retailer to absorb a cadence is treating the symptom. The real answer is an
+-- expected-cadence field — "weekdays only", "daily", "twice weekly" — checked
+-- against actual behaviour, which would describe Beauty Flash correctly instead
+-- of granting it a wider tolerance for being normal. Recorded as work-list
+-- item 20; delete this column when that lands.
+
+-- Per-retailer threshold override. NULL = use the global default.
+ALTER TABLE public.retailer_import_config
+  ADD COLUMN IF NOT EXISTS freeze_min_days integer;
+
+COMMENT ON COLUMN public.retailer_import_config.freeze_min_days IS
+  'Interim per-retailer override for fmb_detect_frozen_feeds. NULL = global default. Superseded by the expected-cadence field, work-list item 20.';
+
+-- Beauty Flash: weekday-only feed, see the note above. 5 absorbs a bank-holiday
+-- Monday; 4 would fire on one.
+UPDATE public.retailer_import_config SET freeze_min_days = 5 WHERE retailer_id = 27;
+
 CREATE OR REPLACE FUNCTION public.fmb_detect_frozen_feeds(
   p_min_days integer DEFAULT 4,
   p_truncation_pct numeric DEFAULT 0.60,
@@ -145,6 +174,8 @@ BEGIN
     WHERE cs.days_identical >= p_min_days
       AND r.active
       AND ric.enabled          -- a deliberately disabled importer is not a fault
+      -- Per-retailer override wins over the global default when set.
+      AND cs.days_identical >= COALESCE(ric.freeze_min_days, p_min_days)
     ORDER BY cs.days_identical DESC
   LOOP
     v_freeze_found := v_freeze_found || jsonb_build_object(
