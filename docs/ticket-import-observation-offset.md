@@ -1,7 +1,10 @@
 # Ticket: the import/observation scheduling offset
 
 **Raised:** 30 July 2026, from the YesStyle stall of 29 July.
-**Status:** OPEN as of 30 July 2026. Documented, not fixed. No change proposed yet.
+**Status:** OPEN as of 1 August 2026. Documented, not fixed. No change proposed yet.
+**Recurred:** 1 August 2026 on Beauty Bay — same signature, different retailer.
+See "Recurrence" below, which **revises consequence 1**: the 23h figure is the
+best case across the fleet, not the worst.
 
 > **This file did not exist until 30 July 2026, and was believed to.** The
 > offset had been reasoned about and its consequences identified in conversation,
@@ -48,6 +51,29 @@ Observed 30 July 2026: the 29 July 10:00 run died, and the 09:00 email on 30 Jul
 named YesStyle, quoted the 23h duration, and diagnosed a hard kill or OOM
 (HTTP 546) that died before recording its outcome. **The monitor worked. The 23
 hours of silence was this offset, not a monitoring gap.**
+
+> ## CORRECTION, 1 August 2026 — this consequence is stated backwards
+>
+> **"Worst case 23 hours" is wrong. 23h is the FASTEST failure report any
+> retailer on this schedule can get, and YesStyle gets it *because* it runs
+> after the observers.**
+>
+> **On time-to-report, the offset is protective, not harmful.** That is the
+> reverse of what the paragraph above implies, and the reverse of what was
+> predicted when the Beauty Bay recurrence was first read.
+>
+> The dominant term is `RUNNING_STUCK_HOURS = 6`, not the offset. A death less
+> than 6h before the next 09:00 is invisible to that pass and waits a further
+> day. Every pg_cron retailer except YesStyle imports between 03:30 and 07:47 —
+> always inside that 6h shadow — so the fleet waits 25.2–29.5h, Stylevana worst.
+> YesStyle's 10:00 slot is the only one that clears the gate by the next morning.
+>
+> **Consequences 2 and 3 are unaffected and stand as written.** The offset is
+> still real and still costs a day on categorisation and on snapshot coherence.
+> It is only this consequence — the one flagged above as mattering most, because
+> it gates a human noticing — that had the sign wrong.
+>
+> Derivation and per-retailer table in "Recurrence" below.
 
 **2. Categoriser safety net runs before the feed it would correct.** The 09:30
 pass fixes miscategorised products, then YesStyle's import lands at 10:00. Any
@@ -171,6 +197,175 @@ symptoms look alike.** A run killed before any handler leaves no `scrape_log` ro
 no `import_run_state` residue and an empty `last_import_error` — that is the
 29 July signature. A run that fails and reports writes at least one of those.
 Merging them would make a new fault read as a repeat of an old one.
+
+## Recurrence: Beauty Bay, 1 August 2026
+
+Recorded 1 August 2026 ~16:15 UTC, **while the run was still stranded** — so this
+entry is written from live state rather than from residue.
+
+The 29 July signature returned on a different retailer. Every line matches:
+
+| Evidence | Establishes |
+|---|---|
+| `last_attempt_at` 1 Aug **06:30:02.988**, status `running` | the apply-start stamp executed; the run started on schedule |
+| `last_imported_at` still 31 Jul 06:30:15 | no successful apply since |
+| **no `scrape_log` row for 1 August** | never reached scrape_log creation |
+| `last_import_error` empty | no error handler ran |
+| ~~`import_run_state` empty~~ | **nothing — see below. Do not cite this line.** |
+
+> **`import_run_state` is NOT evidence for Beauty Bay, and the first draft of this
+> entry wrongly cited it.** Beauty Bay is `staging_mode = 'inline'`, and inline
+> imports never write `import_run_state` at all — not on failure, not on success.
+> Confirmed from `feed_size_history`, which is populated by trigger on
+> `import_run_state`: retailers 26 (Beauty Bay) and 29 (Atelier De Glow) have
+> **zero rows ever**, across every run including successful ones, while all nine
+> `storage_passthrough` retailers have 11–38. An empty table is Beauty Bay's
+> normal state and says nothing about how far this run got.
+>
+> It was valid evidence for YesStyle, which is `storage_passthrough` and does
+> write the table. Carrying it across to an inline retailer was a false match.
+
+The three surviving lines still place this in the 29 July class: the run started,
+reached no `scrape_log` write, and ran no error handler. Per the rule at the end
+of the 29 July entry, that is the **same** failure mode and belongs with it.
+
+**This kills the "largest feed" reading.** YesStyle at ~57,448 source rows was the
+natural suspect for a worker kill. Beauty Bay's last good run staged **7,518
+source rows in 12 seconds** — an eighth the volume, and durations two orders of
+magnitude apart. Feed size is not sufficient to explain the class.
+
+**The watchdog is blind to Beauty Bay permanently, not just in this incident.**
+Stronger and more general than the YesStyle finding. `fmb_watchdog_stalled_imports`
+reads `import_run_state`; inline retailers never write it. So cron 28 cannot
+observe **Beauty Bay or Atelier De Glow in any state, ever** — not stalled, not
+running, not healthy. For YesStyle the table was empty because that particular run
+died early; for these two it is empty by construction.
+
+That is a coverage gap in the watchdog's *domain*, distinct from the scope limit
+in `supabase/migrations/README.md` convention 8. Convention 8 says a watchdog that
+resumes in-flight work cannot see work that never got in flight. This says two
+retailers are outside its field of view altogether.
+
+### The 09:00 monitor did NOT catch it on 1 August, and could not have
+
+This was expected to be a clean test of consequence 1, on the reasoning that
+Beauty Bay's 06:30 import sits *before* the 09:00 monitor rather than after it,
+unlike YesStyle. **That reasoning does not hold, and the test does not isolate the
+offset.**
+
+`monitor-retailer-feeds` fires the stuck-run check only when
+`hoursSince(last_attempt_at) > RUNNING_STUCK_HOURS`, with the constant at **6**
+(`supabase/functions/monitor-retailer-feeds/index.ts:36`, check at :145–147).
+
+| Monitor pass | Elapsed since 06:30 | `> 6h`? | Result |
+|---|---|---|---|
+| 1 Aug 09:00 | 2.5h | no | **silent** |
+| 2 Aug 09:00 | 26.5h | yes | should report |
+
+So running *before* the observer bought nothing. The 2.5h gap is under the stuck
+threshold, so the same-day pass skipped it and the report falls to the next day at
+**26.5h — longer than YesStyle's 23h, not shorter.**
+
+**Time-to-report is `the next 09:00 that is more than 6h after the death`.** For
+the current schedule that is:
+
+| Retailer | Import | Gap to same-day 09:00 | Time to report |
+|---|---|---|---|
+| Stylevana | 03:30 | 5.5h | **29.5h** |
+| Escentual | 04:00 | 5.0h | 29.0h |
+| Boots | 04:30 | 4.5h | 28.5h |
+| Branded Beauty | 05:00 | 4.0h | 28.0h |
+| Organic Pharmacy | 05:30 | 3.5h | 27.5h |
+| Gorgeous Shop | 06:00 | 3.0h | 27.0h |
+| **Beauty Bay** | **06:30** | **2.5h** | **26.5h** |
+| Beauty Flash | 07:00 | 2.0h | 26.0h |
+| Perfume Click | 07:30 | 1.5h | 25.5h |
+| Atelier De Glow | 07:47 | 1.2h | 25.2h |
+| **YesStyle** | **10:00** | n/a (after) | **23.0h — best in fleet** |
+
+**YesStyle, the retailer this ticket was raised about, has the fastest failure
+reporting of any retailer.** It clears the 6h gate before the next morning's pass
+precisely *because* it runs after the observers. The offset is real and the three
+consequences stand, but consequence 1 was attributed to the wrong term: the
+binding constraint is `RUNNING_STUCK_HOURS` against a once-daily monitor, and it
+binds hardest on the retailers that run *earliest*.
+
+**Pending check, 2 August 2026 09:00 UTC.** If the monitor names Beauty Bay at
+~26.5h, the derivation above is confirmed. If it fires earlier, the 6h reading is
+wrong and this section needs revisiting. Not yet verified — do not quote it as
+observed.
+
+### Owed work: a 6h threshold against a once-daily pass is decorative
+
+Raised 1 August 2026. **Not proposed as a change here** — recorded so it is not
+re-derived from scratch.
+
+`RUNNING_STUCK_HOURS = 6` reads like a tuning knob and is not one. Against a
+monitor that runs once a day, only two things can happen to a stuck run:
+
+- **under 6h at the next 09:00** → invisible, waits a full further day
+- **over 6h at the next 09:00** → reported at that pass
+
+The threshold never decides *when* a report happens, only *which* 09:00 it lands
+on. Moving it to 4h or 8h would change nothing for any current retailer: every
+pg_cron slot is either 1.2–5.5h before the pass (always under, on any threshold
+in that range) or 23h before it (always over). **The value is doing almost no
+work.**
+
+Two coherent fixes, mutually exclusive in effect:
+
+1. **Run the monitor more often.** The threshold starts meaning something the
+   moment the pass interval drops below it — at hourly, a 6h threshold reports a
+   06:30 death at 12:30 rather than the next morning.
+2. **Drop the threshold to near-zero and keep the daily pass.** Reports every
+   stranded `running` at the next 09:00 regardless of age. Simpler, and no worse
+   than today, since nothing currently benefits from the 6h grace.
+
+Option 1 is the one that actually shortens time-to-report; option 2 only removes
+a constant that misleads. Doing neither is defensible while the fleet is small —
+but the constant should not be read as protection it is not providing.
+
+### The count is two. Escentual 29 July is NOT an instance.
+
+Recorded because the count was briefly carried as three, and the correction is
+the more useful record. A scan of `scrape_log` for missing scheduled runs,
+22 July to 1 August:
+
+| Date | Retailer(s) with no run | Class |
+|---|---|---|
+| 23 Jul | 10 of 12 retailers | fleet-wide outage, different shape |
+| 25 Jul | Beauty Bay | unverifiable, not counted |
+| 29 Jul | YesStyle | **instance 1** — killed, no handler |
+| 29 Jul | **Escentual** | **NOT an instance** — failed and reported |
+| 1 Aug | Beauty Bay | **instance 2** — this entry |
+
+**Escentual's 29 July run failed loudly.** It recorded
+`last_import_status = 'error'` with `passthrough stage: inflated upload failed`.
+An error handler ran and wrote a cause. That is the reported class, and the
+discriminator at the end of the 29 July entry separates it in one line: *a run
+that fails and reports writes at least one of `scrape_log`, `import_run_state`
+residue, or `last_import_error`.* Escentual wrote the third. YesStyle and Beauty
+Bay wrote none.
+
+The error text is a contemporaneous reading and is **no longer verifiable from
+live state** — `last_import_error` is overwritten per run and Escentual has since
+run successfully many times, now sitting at `ok`. What can still be checked, and
+was: Escentual has no `scrape_log` row for 29 July and no `feed_size_history` row
+for 29 July, while carrying rows for 28, 30 and 31 July. That is consistent with a
+failure at the inflated-upload step, which is the step that would have produced
+the missing `feed_size_history` row.
+
+**Two retailers sharing a date is not two instances of the same fault.** Escentual
+and YesStyle both failed on 29 July, which is what made the day look like a single
+event with two victims. They failed differently. Merging them on the strength of a
+shared date would have done exactly what the 29 July entry's closing rule warns
+against — making a new fault read as a repeat of an old one — with the date
+standing in for the evidence.
+
+Beauty Bay 25 July stays uncounted: `last_attempt_at` has been overwritten many
+times since, so the only residue is the absent `scrape_log` row, which is equally
+consistent with a trigger that never fired. See convention 9, "the absent record":
+a count is a claim, and that one cannot be checked after the fact.
 
 ## No concurrency guard, confirmed
 

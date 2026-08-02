@@ -86,6 +86,29 @@ ON CONFLICT (id) DO UPDATE
       -- deliberately NOT touching active on conflict, so a re-run never un-lives it.
 
 -- 2. Import config (LEGACY awin; feed_url NULL so buildFeedUrl is used).
+--
+-- ============================================================================
+-- STALE VALUE BELOW — awin_feed_id '110188' IS DEAD. Superseded 2 Aug 2026.
+-- ============================================================================
+-- AWIN reissued the Gorgeous Shop datafeed as 116876; 110188 now returns 404.
+-- The live value was corrected by
+-- 20260802120000_gorgeous_shop_fid_rotation.sql. The advertiser id (53379) did
+-- not change.
+--
+-- THIS BLOCK IS STILL A HAZARD, WHICH IS WHY THE NOTE IS HERE AND NOT ONLY IN
+-- THE NEWER FILE. The ON CONFLICT (retailer_id) DO UPDATE below sets
+-- awin_feed_id = EXCLUDED.awin_feed_id unconditionally, so re-running THIS file
+-- against a database that already holds the corrected value writes the dead id
+-- back and breaks the import. Ordering is the only thing preventing that on a
+-- full replay, and a full replay is not the only way this file gets run.
+--
+-- Do NOT edit the literal to fix it. Applied migrations are history; changing
+-- one makes the file disagree with what was actually applied on 20 July. If you
+-- need the current value, read retailer_import_config, not this file.
+--
+-- This is an instance of a CLASS, not a one-off: onboarding migrations hardcode
+-- mutable config, and feed ids rotate. Item 13 in docs/post-4-august-work-list.md.
+-- ============================================================================
 INSERT INTO retailer_import_config (
   retailer_id, feed_format, feed_url, awin_feed_id, awin_merchant_id,
   match_column, existing_brands_only, top_category_default,
@@ -95,7 +118,7 @@ INSERT INTO retailer_import_config (
   30,
   'awin',
   NULL,                     -- NULL on purpose: importer builds the URL from awin_feed_id
-  '110188',                 -- AWIN datafeed id
+  '110188',                 -- AWIN datafeed id — DEAD, 404 since 2 Aug 2026. Live value is 116876. See header above.
   '53379',                  -- AWIN advertiser id (awinmid in aw_deep_link)
   'merchant_product_id',
   true,
@@ -111,7 +134,7 @@ INSERT INTO retailer_import_config (
 ON CONFLICT (retailer_id) DO UPDATE SET
   feed_format                = EXCLUDED.feed_format,
   feed_url                   = EXCLUDED.feed_url,
-  awin_feed_id               = EXCLUDED.awin_feed_id,
+  awin_feed_id               = EXCLUDED.awin_feed_id,   -- <-- THE HAZARD: re-running this file reinstates the dead 110188.
   awin_merchant_id           = EXCLUDED.awin_merchant_id,
   match_column               = EXCLUDED.match_column,
   existing_brands_only       = EXCLUDED.existing_brands_only,
