@@ -526,6 +526,59 @@ the gap. Consolidation, if any, belongs to item 4.
 
 ---
 
+### 15. The routine cross-check links write nothing server-side
+
+**Raised:** 2 August 2026 · **Blocked until:** after the preload work lands
+**Detail: complete. Predates the preload work and is not preload-specific.**
+
+**The defect.** The routine builder's per-product cross-check links —
+`app/app/RoutineBuilder.tsx:941` (Amazon) and `:962` (eBay) — call
+`trackRetailerClick` and `trackAffiliateClickOut` but **never call
+`sendOutboundBeacon`**. Every other outbound surface does. So these clicks exist in
+GA4 and have **never written a row to `outbound_clicks`**.
+
+Confirmed: `select count(*) from outbound_clicks where source like 'routine_%'`
+returns **0**. The `routine_amazon_crosscheck` and `routine_ebay_crosscheck`
+click_source values are registered GA4 dimensions and appear nowhere server-side.
+
+**A figure from the raising conversation needs correcting.** It was put at roughly
+15% of measured clicks, from the July Amazon 38 and eBay 6. Those are **product
+page** cross-checks, and they are recorded correctly:
+
+| Source | Path | Clicks |
+|---|---|---|
+| `amazon_crosscheck` | `/product/[id]` | 41 |
+| `ebay_search` | `/product/[id]` | 7 |
+| `routine_*` | — | **0** |
+
+`AmazonLink` and the product page's eBay link both route through `ClickOutLink`,
+which beacons. The gap is confined to the two hand-rolled `<a>` elements in the
+routine builder. **15% overstates it substantially.**
+
+**The honest size is unknown, and that is the point.** The missing rows are
+missing, so the undercount cannot be measured from `outbound_clicks`. What bounds
+it: only 8 rows have ever been written from `/app` at all, so in absolute terms
+this is currently small. It will not stay small if the preload work succeeds and
+routine traffic grows, which is the reason to fix it before that rather than after.
+
+**Sizing it needs GA4**, not the database: query `retailer_click` filtered to
+`click_source in ('routine_amazon_crosscheck','routine_ebay_crosscheck')` and
+compare with the (zero) server rows.
+
+**Consequence to carry forward.** `outbound_clicks` systematically undercounts, and
+any rate computed from it inherits that. It already undercounts for a second,
+larger reason — GA4/consent aside, the server table is the *complete* one and GA4
+is the partial one, but this surface inverts that for these two link types. Any
+figure quoted from `outbound_clicks` should say which surfaces it can and cannot
+see.
+
+**The fix is small**: add `sendOutboundBeacon` to both handlers, or convert both to
+`ClickOutLink`, which beacons by construction and would stop the class recurring.
+The second is preferable, and is why the class exists: a hand-rolled anchor has no
+way to inherit the behaviour.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
