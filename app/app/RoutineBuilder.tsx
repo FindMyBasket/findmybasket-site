@@ -38,6 +38,27 @@ function ebaySearchUrl(p: RoutineItem): string {
   return `https://www.ebay.co.uk/sch/i.html?_nkw=${q}&_sacat=26396&mkrid=710-53481-19255-0&campid=7221119&customid=findmybasket&toolid=10001`;
 }
 
+// How long the arrival waits for a `?routine=` preload before giving up and
+// showing the explicit failure state. Generous on purpose: a slow success beats
+// a fast lie, and the thing we are avoiding is telling a visitor who followed a
+// routine link that they have nothing. The late-arriving response still wins if
+// it lands after this (see the preload effect — it repopulates and clears).
+const PRELOAD_TIMEOUT_MS = 5000;
+
+// Parse `?routine=1,2,3` into product ids. Shared by the hydration gate and the
+// preload effect so the two can never disagree about whether a URL routine is
+// present — if they did, the gate would hold a spinner for a preload that is
+// never going to run, or release the empty state over one that is.
+function parseRoutineParam(): number[] {
+  if (typeof window === 'undefined') return [];
+  const raw = new URLSearchParams(window.location.search).get('routine');
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map(s => parseInt(s.trim(), 10))
+    .filter(n => !isNaN(n));
+}
+
 // ── TYPES ──────────────────────────────────────────────────────────────────
 
 interface PriceRow {
@@ -109,6 +130,14 @@ export default function RoutineBuilder() {
   // everyone else keeps the legacy email path until the cutover completes.
   const [authedEmail, setAuthedEmail] = useState<string | null>(null);
 
+  // Arrival state for a `?routine=` link. 'idle' is every ordinary visit, so the
+  // no-parameter path is untouched. 'pending' holds the loading state open so the
+  // empty state cannot render in the gap between hydration and the preload
+  // resolving. 'failed' is an explicit "we couldn't load that routine" — never a
+  // silent fall-through to the empty state, which would be the same bug arriving
+  // five seconds later.
+  const [preload, setPreload] = useState<'idle' | 'pending' | 'failed'>('idle');
+
   useEffect(() => {
     db.auth.getSession().then(({ data }) => {
       setAuthedEmail(data.session?.user?.email ?? null);
@@ -130,7 +159,15 @@ export default function RoutineBuilder() {
   // ── ROUTINE STORE SYNC ────────────────────────────────────────────────
 
   useEffect(() => {
-    setRoutine(getRoutine());
+    const stored = getRoutine();
+    setRoutine(stored);
+    // Claim the loading state BEFORE hydrating, in the same tick, so there is no
+    // render in which hydrated is true and the routine is still empty — that gap
+    // is what showed "Your routine is empty" to visitors following a routine link.
+    // Only when the store is empty: a visitor who already has a basket sees it
+    // immediately rather than waiting behind the network (the preload still merges
+    // into it when it lands).
+    if (stored.length === 0 && parseRoutineParam().length > 0) setPreload('pending');
     setHydrated(true);
     const unsub = onRoutineChange(() => setRoutine(getRoutine()));
     return unsub;
@@ -140,24 +177,36 @@ export default function RoutineBuilder() {
   // Saved-routine emails link to /app?routine=1,2,3 — preserve that behaviour.
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const ids = params.get('routine');
-    if (!ids) return;
-
-    const productIds = ids
-      .split(',')
-      .map(s => parseInt(s.trim(), 10))
-      .filter(n => !isNaN(n));
-    if (productIds.length === 0) return;
+    const productIds = parseRoutineParam();
+    if (productIds.length === 0) {
+      // Covers `?routine=` and `?routine=abc`. The gate uses the same parser, so
+      // it never went pending here — but clear defensively rather than rely on it.
+      setPreload('idle');
+      return;
+    }
 
     let cancelled = false;
+    // Bounded wait. Only escalates a still-pending arrival; it never overrides a
+    // preload that already resolved, and the request is NOT aborted — if it lands
+    // late it still repopulates the routine below.
+    const timer = setTimeout(() => {
+      if (!cancelled) setPreload(p => (p === 'pending' ? 'failed' : p));
+    }, PRELOAD_TIMEOUT_MS);
+
     (async () => {
       const { data, error } = await db
         .from('products_active')
         .select('id, name, brand, product_type')
         .in('id', productIds);
 
-      if (cancelled || error || !data) return;
+      if (cancelled) return;
+
+      if (error || !data || data.length === 0) {
+        // Only claim failure if there is nothing to show. A visitor who already
+        // had a basket keeps it, and never sees a failure screen over it.
+        setPreload(getRoutine().length === 0 ? 'failed' : 'idle');
+        return;
+      }
 
       const items: RoutineItem[] = data.map(p => ({
         id: p.id,
@@ -168,6 +217,9 @@ export default function RoutineBuilder() {
 
       for (const it of items) storeAdd(it);
       setRoutine(getRoutine());
+      // Release the gate: the routine is populated, so the layout renders. Also
+      // clears a 'failed' set by the timeout if the response arrived late.
+      setPreload('idle');
 
       if (typeof window !== 'undefined' && typeof (window as any).gtag === 'function') {
         (window as any).gtag('event', 'load_routine_from_url', {
@@ -182,6 +234,7 @@ export default function RoutineBuilder() {
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -723,8 +776,38 @@ export default function RoutineBuilder() {
         </header>
 
         {/* Routine list — or empty state */}
-        {!hydrated ? (
+        {!hydrated || preload === 'pending' ? (
           <div className="rb-loading">Loading your routine...</div>
+        ) : preload === 'failed' ? (
+          // Explicit failure, never the bare empty state. A visitor who followed a
+          // routine link and is shown "your routine is empty" has been told
+          // something false about their own link; this says what happened and
+          // leaves a way forward.
+          <div className="rb-empty">
+            <div className="rb-empty-icon">🧺</div>
+            <h2 className="rb-empty-title">We couldn&apos;t load that routine</h2>
+            <p className="rb-empty-desc">
+              This link may be out of date. You can still browse the catalogue and
+              build a routine, and we&apos;ll find the best value way to buy it.
+            </p>
+            <div className="rb-browse-grid">
+              <Link href="/skincare" className="rb-browse-card">
+                <span className="rb-browse-icon">🧴</span>
+                <span className="rb-browse-label">Browse skincare</span>
+                <span className="rb-browse-arrow">→</span>
+              </Link>
+              <Link href="/makeup" className="rb-browse-card">
+                <span className="rb-browse-icon">💄</span>
+                <span className="rb-browse-label">Browse makeup</span>
+                <span className="rb-browse-arrow">→</span>
+              </Link>
+              <Link href="/hair" className="rb-browse-card">
+                <span className="rb-browse-icon">💇</span>
+                <span className="rb-browse-label">Browse hair</span>
+                <span className="rb-browse-arrow">→</span>
+              </Link>
+            </div>
+          </div>
         ) : routine.length === 0 ? (
           <div className="rb-empty">
             <div className="rb-empty-icon">🧴</div>
