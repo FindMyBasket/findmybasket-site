@@ -102,6 +102,11 @@ deliberately that the files are the source of truth and the history table is not
 used. Either is defensible. Leaving it undecided is the option that has already
 been taken twice by default.
 
+**Read item 13 before deciding this one.** They are separate decisions but a single
+scenario: the same replay that stops at 24 July also reinstates a dead AWIN feed id.
+Choosing "the files are the source of truth" here makes item 13 strictly worse,
+because it makes replay the sanctioned path.
+
 ---
 
 ### 6. Record the bulk-`UPDATE` cost property
@@ -397,6 +402,65 @@ does not touch it in either direction.
 **Independent of item 11.** This is a catalogue query against recorded delivery terms. It
 does not need the optimiser fixed first, and its answer does not change what item 11 must
 do. Run them in either order.
+
+---
+
+### 13. Onboarding migrations hardcode mutable config, and feed ids rotate
+
+**Raised:** 2 August 2026 · **Blocked until:** after 4 August
+**Detail: complete. This is a CLASS, not the Gorgeous Shop incident.**
+
+**The class.** Retailer onboarding migrations write live operational config —
+`awin_feed_id`, `awin_merchant_id`, `feed_url` — as literals inside an
+`ON CONFLICT (retailer_id) DO UPDATE`. Those values are **owned by the affiliate
+network, not by us**, and they change without notice. The migration therefore
+encodes a value that was true on the day it was written and reasserts it forever.
+
+**Same shape as the dormant-rule reasoning** in
+`supabase/migrations/20260728120000_enable_brand_index_poll.sql:12` — a hardcoded
+rule that breaks silently the day the world moves underneath it. There the
+rejected design was a hardcoded import window; here it is a hardcoded feed id.
+Identical failure mode, opposite artefact.
+
+**The instance that surfaced it, recorded so the class is not mistaken for it.**
+Gorgeous Shop (retailer 30), 2 August 2026: AWIN rotated the datafeed from
+`110188` to `116876`, the 06:15 import 404'd, 6,710 in-stock rows went stale. The
+live value was corrected the same evening by
+`20260802120000_gorgeous_shop_fid_rotation.sql`, and
+`20260720140000_gorgeous_shop_onboarding.sql` now carries a non-executable
+warning at the hazard site. **That instance is closed. The class is not.**
+
+**Why it recurs.** Nothing about the fix generalises. The next rotation lands on
+whichever retailer AWIN chooses, and its onboarding migration will carry the same
+construct with a different number in it. The only current defences are ordering
+and a comment — both of which depend on a person reading the right file at the
+right moment.
+
+**Known affected files** (every AWIN onboarding migration with this construct):
+`20260720140000_gorgeous_shop_onboarding.sql`,
+`20260715120000_atelier_de_glow_onboarding.sql`. Confirm the full set when the
+item is picked up rather than trusting this list.
+
+**What is owed: a decision, not a patch.** Options, none yet chosen —
+make the `DO UPDATE` not touch network-owned columns once set; move feed ids out
+of migrations entirely into a config table treated as data rather than schema; or
+record deliberately that migrations are seed-only and never replayed against a
+live database. Any is defensible. **Undecided is the option currently taken by
+default.**
+
+**Why blocked:** it touches the import path and how the database would be
+rebuilt, which is what the 4 August gate protects.
+
+> **It compounds with item 5 — two items, ONE scenario.** A rebuild replayed
+> through the CLI hits both defects in the same pass: it **restores the dead
+> `110188`** (this item) *and* **stops at `20260724102843`**, silently omitting
+> every privilege revoke and every `platform_changes` boundary row since 24 July
+> (item 5). Neither is visible on the live database, so neither will be noticed
+> until a reconstruction is actually needed — the moment least suited to
+> discovering both. **They are separate decisions and should stay separate
+> entries, but whoever picks up either should read the other first**, because
+> deciding item 5 in favour of "the files are the source of truth" makes this
+> item strictly worse: it makes replay the sanctioned path.
 
 ---
 
