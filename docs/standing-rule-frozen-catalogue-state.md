@@ -48,24 +48,38 @@ produced fresh on every render from a `??` fallback, and the only evidence it
 happened is the absence of a row.
 
 **The instance.** `retailers.delivery_threshold` is **NULL for Debenhams**, and the
-optimiser substitutes `'25'` at runtime:
+optimiser substitutes `'25'` at runtime.
 
-```
-// app/app/RoutineBuilder.tsx:528  (and :425, :530, and the email replica)
-const r1Threshold = parseFloat(String(r1Info?.delivery_threshold ?? '25'));
-```
+**It is EIGHT occurrences, not one**, and **both halves of the delivery calculation
+are fabricated** — the cost default is as invented as the threshold. Full list,
+enumerated 2 August 2026:
 
-So **every Debenhams basket the product has ever shown has been computed against a
-£25 threshold that nobody set and no record contains.** Debenhams took 17 of 288
-outbound clicks in the 31 days to 1 August, and appears in the winning split of the
-PIN-044 demonstration basket. If the real threshold is not £25, every one of those
-answers was wrong in a way no query could reveal, because the wrong value exists
-only for the microseconds it takes to compute a total.
+| Location | Fallback |
+|---|---|
+| `app/app/RoutineBuilder.tsx:392` | `delivery_threshold ?? '25'` |
+| `app/app/RoutineBuilder.tsx:393` | `delivery_cost ?? '3.95'` |
+| `app/app/RoutineBuilder.tsx:425` | `delivery_threshold ?? '25'` (single-retailer option) |
+| `app/app/RoutineBuilder.tsx:426` | `delivery_cost ?? '3.95'` |
+| `app/app/RoutineBuilder.tsx:528` | `delivery_threshold ?? '25'` (pair, leg 1) |
+| `app/app/RoutineBuilder.tsx:529` | `delivery_cost ?? '3.95'` |
+| `app/app/RoutineBuilder.tsx:530` | `delivery_threshold ?? '25'` (pair, leg 2) |
+| `app/app/RoutineBuilder.tsx:531` | `delivery_cost ?? '3.95'` |
+| `supabase/functions/send-routine-email/index.ts:187, 230, 231` | `|| 25` and `|| 3.95`, same defaults, email path |
+
+So **every Debenhams basket total the product has ever shown — in the app and in the
+monthly email — was computed against a £25 threshold that nobody set and no record
+contains.** Debenhams took 17 of 288 outbound clicks in the 31 days to 1 August, and
+appears in the winning split of the PIN-044 demonstration basket. If the real
+threshold is not £25, every one of those answers was wrong in a way no query could
+reveal, because the wrong value exists only for the microseconds it takes to compute
+a total.
 
 **Scope, checked 2 August 2026:** Debenhams is the **only** retailer with a NULL
-`delivery_threshold`, and **no** retailer has a NULL `delivery_cost`. Bounded to one
-row — but the mechanism is not, because the fallback fires for any retailer whose
-threshold is ever nulled or dropped.
+`delivery_threshold`, and **no** retailer currently has a NULL `delivery_cost` — so
+only the threshold fallback is firing today. That is luck, not design: the cost
+fallback is live code on every one of those paths and will fabricate £3.95 the moment
+any retailer's cost is nulled or a new retailer is onboarded without one. Bounded to
+one row today; the mechanism is not bounded at all.
 
 **The rule this adds.** A default may fill a gap, but it must not do so silently in
 a value the product presents as fact. Either the column is NOT NULL with a recorded
