@@ -62,6 +62,53 @@ It also bounds the whole-basket proposition independently of the 1 August clicko
 diagnosis: a basket assembled from this catalogue will, on average, be composed
 mostly of products with a single possible source.
 
+## Two implications
+
+**Both are reasoning from the measured figures above, not independent findings.
+Neither has been verified. Neither is to be acted on.**
+
+### 1. Most baskets have no flexibility for the optimiser to use
+
+On a sole-offer product there is no routing choice, so the optimiser has nothing
+to decide. Delivery grouping only creates value when some items in a basket can
+move between retailers: that is the entire mechanism by which a split beats a
+single shop.
+
+At 13.8% comparable, an average five-product basket contains **fewer than one
+comparable product** (5 × 0.138 = 0.69). Treating basket composition as drawn
+uniformly from the buyable catalogue, roughly **48%** of five-product baskets
+would contain **no** comparable product at all (0.862⁵ = 0.476) — nothing to
+optimise, and no split available at any price.
+
+That is a **candidate explanation for the 1.7% optimiser usage** measured on
+1 August (5 of 288 clickouts originating on `/app`), and it sits **upstream of any
+UX cause**. If the optimiser has nothing to decide on most baskets, improving how
+it is presented cannot move much.
+
+Stated honestly: the uniform-draw assumption is a simplification and probably
+pessimistic. Real baskets skew towards popular products, which are more likely to
+be stocked by more than one retailer. The direction is sound; the 48% is
+illustrative, not a forecast. Testing it properly means measuring comparable-share
+on *actual* basket contents, which needs more baskets than the 12 saved routines
+that exist.
+
+### 2. Judge new retailers on overlap, not on size
+
+It follows that a retailer's value to the proposition is not how many products it
+adds.
+
+- A retailer adding products **nobody else stocks** increases the sole-offer share
+  and **dilutes** the proposition. It grows the catalogue and shrinks the share of
+  it that can be compared.
+- A retailer **overlapping existing stock** creates comparable products, which is
+  the only thing that makes the optimiser able to act.
+
+Suggested measure for any future retailer evaluation: **what share of their
+catalogue already exists at another active retailer.** High overlap is the signal,
+not high count. This inverts the instinct that a bigger feed is a better feed.
+
+Not proposed as a rule, and no retailer decision should be made on it as written.
+
 ## Not verified here
 
 **Commission rates are not in the database.** `retailers` holds `id, name,
