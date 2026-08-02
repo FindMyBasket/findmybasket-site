@@ -147,6 +147,17 @@ export default function RoutineBuilder() {
   // five seconds later.
   const [preload, setPreload] = useState<'idle' | 'pending' | 'failed'>('idle');
 
+  // How many ids in a `?routine=` link resolved to nothing, so the routine can say
+  // it arrived short instead of silently being shorter than the link promised.
+  //
+  // The observed cause is a product losing every price row at an active retailer:
+  // of the unresolvable ids in real saved routines, none were merged or reparented
+  // (measured 2 August 2026). Merged and variant ids CAN also land here — resolving
+  // those is deliberately deferred, see the preload query's comment — so the wording
+  // stays on what the visitor experiences ("no longer available") rather than naming
+  // a cause that would be wrong for most of them.
+  const [preloadMissing, setPreloadMissing] = useState(0);
+
   useEffect(() => {
     db.auth.getSession().then(({ data }) => {
       setAuthedEmail(data.session?.user?.email ?? null);
@@ -227,6 +238,11 @@ export default function RoutineBuilder() {
       productIds.forEach((id, i) => {
         if (!urlOrder.has(id)) urlOrder.set(id, i);
       });
+
+      // Anything the link asked for that products_active did not return. Counted
+      // against the de-duplicated request (urlOrder), so a repeated id in the URL
+      // is not reported as a missing product.
+      setPreloadMissing(Math.max(0, urlOrder.size - data.length));
       const items: RoutineItem[] = data
         .slice()
         .sort(
@@ -873,6 +889,18 @@ export default function RoutineBuilder() {
                   {routine.length} product{routine.length !== 1 ? 's' : ''}
                 </span>
               </div>
+
+              {/* A preloaded routine that arrived short says so. Without this the
+                  link silently delivers fewer products than it promised, which is
+                  indistinguishable from having promised fewer. Plain statement, no
+                  apology, no cause: the visitor can act on neither. */}
+              {preloadMissing > 0 && (
+                <p className="rb-routine-missing">
+                  {preloadMissing === 1
+                    ? 'One product from this routine is no longer available.'
+                    : `${preloadMissing} products from this routine are no longer available.`}
+                </p>
+              )}
 
               <div className="rb-routine-list">
                 {routine.map((p, i) => (
