@@ -461,6 +461,121 @@ rebuilt, which is what the 4 August gate protects.
 > entries, but whoever picks up either should read the other first**, because
 > deciding item 5 in favour of "the files are the source of truth" makes this
 > item strictly worse: it makes replay the sanctioned path.
+---
+
+### 14. Every failure in this class reports success: the detection gap
+
+**Raised:** 2 August 2026 · **Blocked until:** after the preload work lands
+**Detail: complete. NOT STARTED, deliberately. This needs its own brief.**
+
+**NUMBERING.** Numbered 14 behind item 13 (onboarding migrations and rotating feed
+ids, PR #161). The two were written in parallel and both appended here; the
+resulting conflict was resolved in favour of keeping both, in this order. This
+branch is based on #161, so item 13 must land first or this file arrives with a
+gap where 13 should be.
+
+**The gap.** Every failure in this class so far has *reported success*. Not one
+turned a status field red, and not one was caught by the thing that exists to catch
+it. They were all found by a person looking at something else.
+
+| Failure | What it reported |
+|---|---|
+| Branded Beauty AWIN programme closed | The deep links returned **HTTP 200** with a closed-merchant page. Nothing watching error rates can see a 200. |
+| Gorgeous Shop feed id rotated | A 404 the 09:00 monitor did catch, in ~3h, but only because it is the *loud* class. 6,710 rows were already stale. |
+| A `storage_passthrough` retailer whose uploader stops feeding it | **Nothing at all.** `last_import_status` is structurally incapable of going red: the import succeeds, because reading an unchanged file is a success. The data simply stops moving. |
+
+Gorgeous Shop is the useful contrast: it currently reads `last_import_status =
+'error'`, because a rotated feed id is the *loud* class. The silent class never
+reaches that field at all.
+
+**Why this is urgent rather than tidy.** The third row is not hypothetical, and the
+exposure is much wider than one retailer. Measured 2 August 2026:
+
+- **10 of the 12 active retailers are `staging_mode = 'storage_passthrough'`** —
+  Boots, YesStyle, Stylevana, Debenhams, Perfume Click, Escentual, Beauty Flash,
+  Gorgeous Shop, Branded Beauty, The Organic Pharmacy. Together they hold 105,506
+  `retailer_prices` rows. Nine of the ten currently report `last_import_status =
+  'ok'`.
+- **Boots**: `storage_passthrough`, status `ok`, last import 2 August 04:46.
+  35,902 price rows, 31,247 in-stock products, and **sole live offer on 29,734
+  products — 28.1% of the 105,758 canonical live products**.
+- Boots is also the largest clickout destination: 67 of 288 outbound clicks in the
+  31 days to 1 August, 23.3%, more than any other retailer.
+
+A silent stall at Boots would degrade the highest-value surface on the site, and
+strand more than a quarter of the catalogue on a price nothing is refreshing, while
+every dashboard stayed green.
+
+**A figure to correct from the raising conversation:** Boots was described as
+carrying 6,181 products. It carries 35,902 price rows across 35,860 distinct
+products. 6,181 matches nothing measurable for Boots; the nearest figure in the
+same window is Gorgeous Shop's 6,747 rows. Use the measured numbers above.
+
+**Scope of the brief, when it is written.** How a passthrough retailer's staleness
+is detected at all, given a successful import is the wrong signal; what the
+detection threshold should be per retailer; and whether the answer is freshness
+monitoring on `retailer_prices.last_updated` rather than anything on the import
+path. Note the existing discriminator: loud failures surface in ~3h, silent ones
+run 26h+.
+
+**Related, not the same.** Item 13 is about config that goes stale in an artefact.
+This is about staleness that no artefact reports. They share the property that the
+failure is invisible by construction, which is why
+`docs/standing-rule-frozen-catalogue-state.md` records the rule and this records
+the gap. Consolidation, if any, belongs to item 4.
+
+---
+
+### 15. The routine cross-check links write nothing server-side
+
+**Raised:** 2 August 2026 · **Blocked until:** after the preload work lands
+**Detail: complete. Predates the preload work and is not preload-specific.**
+
+**The defect.** The routine builder's per-product cross-check links —
+`app/app/RoutineBuilder.tsx:941` (Amazon) and `:962` (eBay) — call
+`trackRetailerClick` and `trackAffiliateClickOut` but **never call
+`sendOutboundBeacon`**. Every other outbound surface does. So these clicks exist in
+GA4 and have **never written a row to `outbound_clicks`**.
+
+Confirmed: `select count(*) from outbound_clicks where source like 'routine_%'`
+returns **0**. The `routine_amazon_crosscheck` and `routine_ebay_crosscheck`
+click_source values are registered GA4 dimensions and appear nowhere server-side.
+
+**A figure from the raising conversation needs correcting.** It was put at roughly
+15% of measured clicks, from the July Amazon 38 and eBay 6. Those are **product
+page** cross-checks, and they are recorded correctly:
+
+| Source | Path | Clicks |
+|---|---|---|
+| `amazon_crosscheck` | `/product/[id]` | 41 |
+| `ebay_search` | `/product/[id]` | 7 |
+| `routine_*` | — | **0** |
+
+`AmazonLink` and the product page's eBay link both route through `ClickOutLink`,
+which beacons. The gap is confined to the two hand-rolled `<a>` elements in the
+routine builder. **15% overstates it substantially.**
+
+**The honest size is unknown, and that is the point.** The missing rows are
+missing, so the undercount cannot be measured from `outbound_clicks`. What bounds
+it: only 8 rows have ever been written from `/app` at all, so in absolute terms
+this is currently small. It will not stay small if the preload work succeeds and
+routine traffic grows, which is the reason to fix it before that rather than after.
+
+**Sizing it needs GA4**, not the database: query `retailer_click` filtered to
+`click_source in ('routine_amazon_crosscheck','routine_ebay_crosscheck')` and
+compare with the (zero) server rows.
+
+**Consequence to carry forward.** `outbound_clicks` systematically undercounts, and
+any rate computed from it inherits that. It already undercounts for a second,
+larger reason — GA4/consent aside, the server table is the *complete* one and GA4
+is the partial one, but this surface inverts that for these two link types. Any
+figure quoted from `outbound_clicks` should say which surfaces it can and cannot
+see.
+
+**The fix is small**: add `sendOutboundBeacon` to both handlers, or convert both to
+`ClickOutLink`, which beacons by construction and would stop the class recurring.
+The second is preferable, and is why the class exists: a hand-rolled anchor has no
+way to inherit the behaviour.
 
 ---
 
