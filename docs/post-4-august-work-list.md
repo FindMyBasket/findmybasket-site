@@ -616,6 +616,83 @@ source from the Pinterest work that prompted it.
 
 ---
 
+### 17. The optimiser returns at most two retailers, and nothing says so
+
+**Raised:** 2 August 2026 · **Detail: complete. NOT STARTED.**
+**The question to answer is whether this is a decision or an accident.**
+
+**The fact.** `app/app/RoutineBuilder.tsx:400-550` builds exactly two families of
+option: `singleOptions` (one retailer that stocks the whole basket) and
+`twoOptions` (every pair). `allOptions` is their concatenation (`:552`). There is
+no three-retailer branch and no stub for one. **The optimiser can never return
+three retailers**, for any basket, at any size.
+
+**It is undocumented.** The only comments at the site are the bare labels
+`// Two-retailer combinations` (`:448`) and `// 2-retailer combinations` in the
+email function's replica (`supabase/functions/send-routine-email/index.ts:195`).
+Nothing in the code, the briefs or this file states the ceiling, gives a reason
+for it, or acknowledges it exists.
+
+**Evidence on provenance, which is suggestive but not conclusive.** The ceiling
+predates the Next.js port. `git show 6c9b402^:public/app.html` — the legacy static
+builder — has the identical `singleOptions` + `twoOptions` + `allOptions` shape and
+no `threeOptions`. The optimiser arrived in this repo via `8fcfc25` (10 May 2026,
+"Phase 6: port routine builder to /app"), which carried the structure across
+unchanged. So it was inherited rather than chosen here. **That is not proof it was
+never a deliberate choice in the original** — intent cannot be read out of code
+that simply stops. Whoever wrote the legacy builder should say.
+
+**Why it matters enough to record.** It bounds the proposition. "We find the best
+way to buy your whole routine" is, in the implementation, "the best single shop or
+the best pair". For a large basket spread across specialists, the true optimum may
+need three, and the product will never find it or say it did not look. There is a
+plausible good reason — pairs are O(n²) and cheap, triples are O(n³) and the extra
+delivery leg usually loses anyway — but that reason is nowhere on record, and a
+performance ceiling that reads as a product claim is the thing worth fixing even if
+the ceiling itself stays.
+
+**Immediate consequence, already actioned:** demonstration copy must not promise
+three. PIN-044's brief said "split across two or three retailers"; two is the only
+achievable answer.
+
+---
+
+### 18. Nine category misassignments, concentrated in recent additions
+
+**Raised:** 2 August 2026, found while selecting demonstration baskets.
+**Detail: complete. NOT STARTED.**
+
+Excluded from the pin baskets, since those are the shop window. Recorded because
+the clustering suggests the categoriser regressed rather than that these are nine
+independent slips.
+
+| ID | Product | Assigned | Should be |
+|---|---|---|---|
+| 105176 | Babyliss Keratin Lustre Hairdryer | skincare / face | hair, appliance |
+| 105178 | Babyliss Keratin Lustre Styling Iron (Rose Gold) | skincare / face | hair, appliance |
+| 105300 | BaByliss Pro Keratin Lustre Styling Iron (Pink) | makeup / face | hair, appliance |
+| 85505 | Hairburst Elixir Volume & Growth Spray | skincare / face | hair |
+| 88663 | Urban Decay Naked Palette Original | skincare / face | makeup / eyes |
+| 90274 | MAC Lipglass Air | skincare / face | makeup / lips |
+| 85720 | RapidLash RapidShield Eyelash Conditioner | hair / condition | makeup / eyes |
+| 66565 | Elizabeth Arden Green Tea Scent Spray | skincare / face | fragrance |
+| 109997 | Made By Mitchell 16 Piece Brush Set | skincare / face | tools |
+
+**The pattern worth checking.** Three styling appliances landed in `skincare/face`
+and `makeup/face`; a brush set and an eyelash conditioner landed in skincare and
+hair. `skincare/face` is doing duty as a catch-all, which is what a default looks
+like when a rule fails to match rather than what a wrong rule looks like. All nine
+are recent additions, mostly Beauty Bay and Debenhams stock.
+
+**Do not fix these nine by hand.** Nine rows is not the finding; a categoriser that
+defaults to `skincare/face` on no-match, on a feed that has recently grown
+appliances and tools, is. Establish whether the default is the mechanism first,
+then decide whether the fix is the rules, the default, or an unmatched queue.
+`categoriser_safety_net_log` and `review_queue` exist and may already be recording
+these.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
