@@ -704,7 +704,39 @@ these.
 
 ---
 
-### 19. PR #162 is held, and being held is not free
+### 19. PR #162 is held, and being held is not free — CLOSED
+
+**Raised:** 2 August 2026 · **CLOSED the same day. Merged as `a339ee0`.**
+
+**Outcome.** Reclassified from tidy-up to correction, and merged. The reasoning that
+settled it: production was naming Superdrug and Branded Beauty as live retailers when
+neither is, and for Branded Beauty the links sat behind a closed AWIN programme
+returning a 200. That is a factual error on the site, not a cosmetic backlog item,
+and the not-for-production marking had already been discharged by the audit rulings
+in `4ea920e`.
+
+**Pre-merge drift check, since the branch had been open since 1 August:** the
+`about.html` list of 11 was re-read against the live `retailers` table and matches
+exactly — the 12 active rows minus Branded Beauty, the deliberate divergence. No
+retailer had been added or removed in the interval, every listed name was still
+`active = true`, all 16 visible mentions of Branded Beauty were in "What this
+supersedes" withdrawal notices rather than presenting it as live, and Superdrug
+appeared only inside HTML comments. Nothing had drifted.
+
+**Verified live after deploy:** about page reads 11 retailers with the correct list;
+zero visible mentions of Superdrug or Branded Beauty on the homepage; zero £ figures
+in the demo card.
+
+**The generalisable part, which is why this item is kept rather than deleted.**
+A branch held indefinitely is frozen state in its own right, and the framing that
+unblocked it was noticing that holding is not neutral: every day it sat, production
+kept the state the branch existed to correct. The question to ask of any held branch
+is not "is it ready" but "what is shipping while it waits".
+
+---
+
+<details>
+<summary>Original entry, retained for the reasoning</summary>
 
 **Raised:** 2 August 2026 · **This is a decision that needs making, not a task.**
 
@@ -734,6 +766,8 @@ defensible but should be made rather than defaulted into.
 
 **Surface it at the start of the next session** rather than letting it age quietly.
 It is listed here so that instruction survives this conversation.
+
+</details>
 
 ---
 
