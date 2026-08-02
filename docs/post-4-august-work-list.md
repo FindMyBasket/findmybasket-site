@@ -771,6 +771,87 @@ It is listed here so that instruction survives this conversation.
 
 ---
 
+### 20. Feed cadence is assumed daily, and for at least one retailer it is not
+
+**Raised:** 2 August 2026 · **Detail: complete. NOT STARTED.**
+
+Every import runs daily and every freshness judgement assumes a daily feed. At
+least one retailer does not have one.
+
+**Beauty Flash keeps the weekend off.** Measured over 26 June - 2 August, its feed
+is byte-identical on **6 of 6 Sundays and 5 of 5 Mondays**, and changes on 100% of
+Tuesdays, Wednesdays, Thursdays and Saturdays. Its five 3-day identical streaks are
+exactly 7 days apart. The merchant regenerates on weekdays and pauses at the
+weekend, so Sunday and Monday both re-read Saturday's file.
+
+**That is the merchant's cadence, not our drift.** Its integration was paused at
+one point (`enabled = false`) pending a category fix, but the weekday pattern is
+consistent across the whole window and is not an artefact of that pause.
+
+**Why it needs fixing rather than tolerating.** The interim answer shipped with the
+freeze check is `retailer_import_config.freeze_min_days`, set to 5 for Beauty Flash
+so a bank-holiday Monday does not fire it. That treats the symptom: it grants a
+retailer a wider tolerance for being normal, and it says nothing anywhere about
+*why* the tolerance exists beyond a code comment.
+
+**The fix is an expected-cadence field** — `daily`, `weekdays`, `twice_weekly` —
+checked against observed behaviour. That describes Beauty Flash correctly instead
+of excusing it, and it turns a second class of failure into something detectable:
+a retailer whose *cadence* changes (daily to weekly) is a real signal that the
+threshold approach cannot see at all, because the streaks stay under it.
+
+**When this lands, delete `freeze_min_days`.** It exists only until this does.
+
+---
+
+### 21. Five retailers supply no EAN, and their identifiers are being discarded
+
+**Raised:** 2 August 2026, found while diagnosing The Organic Pharmacy.
+**Detail: complete. NOT STARTED. Do not fix by hand.**
+
+The importer requests the AWIN column `ean` and never `product_GTIN`. AWIN exposes
+both, and advertisers do not agree on which to populate, so an advertiser filling
+only `product_GTIN` has every identifier silently dropped.
+
+**Confirmed for The Organic Pharmacy** by a read-only `feed-diag` run on fid 62815:
+`ean` 0.0%, `product_GTIN` **94.7%**. The diagnosis prints its own verdict —
+`only "product_GTIN" populated - IMPORTER READS "ean", SO THIS IS LOST`.
+
+**The five retailers at 0% EAN**, measured against `retailer_prices` on 2 August:
+
+| Retailer | Rows | EAN | MPN | GTIN in feed? |
+|---|---|---|---|---|
+| Boots | 35,902 | 0.0% | 100.0% | unconfirmed |
+| Escentual | 7,764 | 0.0% | 99.9% | unconfirmed |
+| Beauty Flash | 7,299 | 0.0% | 68.1% | unconfirmed |
+| Gorgeous Shop | 6,747 | 0.0% | 70.8% | unconfirmed |
+| The Organic Pharmacy | 75 | 0.0% | 5.3% | **94.7% confirmed** |
+| | **57,787** | | | |
+
+For contrast, six retailers sit at 98.9-100% EAN (Debenhams, YesStyle, Perfume
+Click, Beauty Bay, Branded Beauty, Atelier De Glow) and Stylevana at 55.0%. Five
+advertisers independently supplying nothing is far less likely than a column-name
+mismatch, which is what the `feed-diag` workflow comment already hypothesised.
+
+**Confirming the other four costs four read-only `feed-diag` runs**, one per fid.
+Worth doing before any fix, because the answer decides whether this is one change
+(read both columns) or four separate advertiser conversations.
+
+**Consequence.** Four of the five carry MPN heavily, so they are not
+identifier-less — but EAN is the stronger key and its absence pushes matching onto
+names and sizes, which is the weaker basis and the one that produces the shade and
+multipack collisions this catalogue keeps hitting.
+
+**One figure carried but NOT verified.** It was raised that EAN disagreement
+attracts a **-0.40 confidence penalty** in merge scoring. I could not locate that
+penalty anywhere in the repository — searched `supabase/functions/_shared/match-key.ts`,
+`scripts/dedup-apply-plan.mts`, `lib/`, and the migrations, for both the constant
+and any EAN-weighted scoring. It may live outside the repo, in a prompt, or in a
+process that produced `docs/dedup-candidates.json`. **Treat the number as unverified
+until someone points at the code**, and do not build a case on it.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
