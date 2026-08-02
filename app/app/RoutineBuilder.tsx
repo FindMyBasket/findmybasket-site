@@ -217,12 +217,29 @@ export default function RoutineBuilder() {
         return;
       }
 
-      const items: RoutineItem[] = data.map(p => ({
-        id: p.id,
-        name: p.name,
-        brand: p.brand || '',
-        category: p.product_type || '',
-      }));
+      // `.in()` returns database order (ascending id), not the order given in the
+      // URL, so a routine pin's steps arrive sorted by id rather than cleanse ->
+      // tone -> serum -> SPF. Reorder before adding: storeAdd appends, and the
+      // store preserves insertion order, so this is the only place order is set.
+      // First occurrence wins for a repeated id, and anything unexpectedly absent
+      // from the map sorts last rather than jumping to the front.
+      const urlOrder = new Map<number, number>();
+      productIds.forEach((id, i) => {
+        if (!urlOrder.has(id)) urlOrder.set(id, i);
+      });
+      const items: RoutineItem[] = data
+        .slice()
+        .sort(
+          (a, b) =>
+            (urlOrder.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+            (urlOrder.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+        )
+        .map(p => ({
+          id: p.id,
+          name: p.name,
+          brand: p.brand || '',
+          category: p.product_type || '',
+        }));
 
       for (const it of items) storeAdd(it);
       setRoutine(getRoutine());
