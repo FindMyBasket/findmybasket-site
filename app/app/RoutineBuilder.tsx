@@ -54,6 +54,25 @@ function ebaySearchUrl(p: RoutineItem): string {
 // headroom is reasoned from that baseline rather than measured under load.
 const PRELOAD_TIMEOUT_MS = 3000;
 
+// Where a `?routine=` arrival came from, for the load_routine_from_url event.
+//
+// This was hardcoded to 'email' because saved-routine emails were the only thing
+// that produced these links. Pinterest routine pins now point here too, so a
+// hardcoded value would report every pin arrival as email and make the whole
+// preload test unreadable.
+//
+// Read from utm_source, which is what a campaign link carries. Returns 'unknown'
+// rather than guessing when there is none: the saved-routine emails currently send
+// no utm_source (see supabase/functions/send-routine-email/index.ts), so email
+// arrivals land in 'unknown' until that function is changed to tag its links. That
+// is deliberate — an honest 'unknown' beats an 'email' default that would silently
+// absorb every untagged source.
+function routineArrivalSource(): string {
+  if (typeof window === 'undefined') return 'unknown';
+  const p = new URLSearchParams(window.location.search);
+  return p.get('utm_source') || p.get('source') || 'unknown';
+}
+
 // Parse `?routine=1,2,3` into product ids. Shared by the hydration gate and the
 // preload effect so the two can never disagree about whether a URL routine is
 // present — if they did, the gate would hold a spinner for a preload that is
@@ -157,6 +176,22 @@ export default function RoutineBuilder() {
   // stays on what the visitor experiences ("no longer available") rather than naming
   // a cause that would be wrong for most of them.
   const [preloadMissing, setPreloadMissing] = useState(0);
+
+  // True once a `?routine=` link has populated the routine. Suffixes the click
+  // source on every outbound click this page writes to `outbound_clicks`, so
+  // preload-originated clicks are separable from ones made by a visitor who built
+  // the basket themselves. Without it the preload test deploys and measures
+  // nothing: `source` already carries product_page / optimiser_shop_button /
+  // optimiser_modal, and both arrivals would land in the same buckets.
+  const [arrivedFromPreload, setArrivedFromPreload] = useState(false);
+
+  // `optimiser_shop_button` -> `optimiser_shop_button_preload`. Suffixing keeps the
+  // established vocabulary intact and greppable rather than inventing a parallel
+  // set of names, and needs no schema change.
+  const clickSourceFor = useCallback(
+    (base: string) => (arrivedFromPreload ? `${base}_preload` : base),
+    [arrivedFromPreload],
+  );
 
   useEffect(() => {
     db.auth.getSession().then(({ data }) => {
@@ -263,10 +298,16 @@ export default function RoutineBuilder() {
       // clears a 'failed' set by the timeout if the response arrived late.
       setPreload('idle');
 
+      // Every outbound click from here on is attributable to a preloaded arrival.
+      // Session-scoped on purpose: if the visitor adds more products by hand and
+      // re-optimises, the session still originated from the link, which is the
+      // question the test is asking.
+      setArrivedFromPreload(true);
+
       if (typeof window !== 'undefined' && typeof (window as any).gtag === 'function') {
         (window as any).gtag('event', 'load_routine_from_url', {
           routine_size: items.length,
-          source: 'email',
+          source: routineArrivalSource(),
         });
       }
 
@@ -773,7 +814,7 @@ export default function RoutineBuilder() {
         basketItemCount: optimisedItemCount ?? routine.length,
         isBestValue: true,
         listPosition: i,
-        clickSource: 'optimiser_open_all',
+        clickSource: clickSourceFor('optimiser_open_all'),
       });
       // Same server-side log the anchor-based surfaces get, so these high-intent
       // clicks are not GA4-only. window.open() is programmatic so there is no
@@ -783,7 +824,7 @@ export default function RoutineBuilder() {
         retailerId: p.retailerId,
         awinMid: awinMidFromHref(p.url),
         price: p.price,
-        source: 'optimiser_open_all',
+        source: clickSourceFor('optimiser_open_all'),
       });
     });
 
@@ -1215,8 +1256,8 @@ export default function RoutineBuilder() {
                                 retailer={name}
                                 retailerId={info.retailerId}
                                 price={info.subtotal}
-                                source="optimiser_shop_button"
-                                clickSource="optimiser_shop_button"
+                                source={clickSourceFor('optimiser_shop_button')}
+                                clickSource={clickSourceFor('optimiser_shop_button')}
                                 isBestValue={isBest}
                                 listPosition={ri}
                                 basketItemCount={optimisedItemCount ?? routine.length}
@@ -1271,8 +1312,8 @@ export default function RoutineBuilder() {
                   retailerId={p.retailerId}
                   productId={p.productId}
                   price={p.price ?? undefined}
-                  source="optimiser_modal"
-                  clickSource="optimiser_modal"
+                  source={clickSourceFor('optimiser_modal')}
+                  clickSource={clickSourceFor('optimiser_modal')}
                   isBestValue
                   listPosition={i}
                   basketItemCount={optimisedItemCount ?? routine.length}

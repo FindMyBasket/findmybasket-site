@@ -293,7 +293,13 @@ function buildEmailHTML(params: {
 }): string {
   const { result, unsubscribeToken, routineProductIds, appBaseUrl, emailType } = params;
   const unsubscribeUrl = `${appBaseUrl}/unsubscribe.html?token=${unsubscribeToken}`;
-  const basketUrl = `${appBaseUrl}/app.html?routine=${routineProductIds.join(",")}`;
+  // utm_source is load-bearing, not decoration. /app reads it for the
+  // load_routine_from_url event (routineArrivalSource in app/app/RoutineBuilder.tsx)
+  // and defaults to "unknown" when absent, so an untagged link here would report
+  // every saved-routine email as an unattributed arrival. That default replaced a
+  // hardcoded source: 'email' which was reporting Pinterest routine pins as email;
+  // this tag is what keeps the email signal after removing it.
+  const basketUrl = `${appBaseUrl}/app.html?routine=${routineProductIds.join(",")}&utm_source=email`;
 
   const headline = emailType === "welcome" ? "Your routine is saved" : "Your routine this month";
   const intro = emailType === "welcome"
