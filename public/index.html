@@ -291,7 +291,6 @@
         <span class="hero-trust-card"><img src="/logos/stylevana.webp" alt="Stylevana" decoding="async"/></span>
         <span class="hero-trust-card"><img src="/logos/yesstyle.png" alt="YesStyle" decoding="async"/></span>
         <span class="hero-trust-card"><img src="/logos/debenhams.png" alt="Debenhams" decoding="async"/></span>
-        <span class="hero-trust-card"><img src="/logos/branded-beauty.webp" alt="Branded Beauty" decoding="async"/></span>
         <span class="hero-trust-card"><img src="/logos/beauty-flash.png" alt="Beauty Flash" decoding="async"/></span>
         <span class="hero-trust-card"><img src="/logos/the-organic-pharmacy.webp" alt="The Organic Pharmacy" decoding="async"/></span>
         <span class="hero-trust-card"><img src="/logos/gorgeous-shop.webp" alt="Gorgeous Shop" decoding="async"/></span>
@@ -464,19 +463,57 @@
       <p class="section-tag reveal">See it in action</p>
       <h2 class="section-title reveal">Real savings on real routines</h2>
       <p class="reveal" style="margin-top:16px; max-width:500px;">Here's an example of what FindMyBasket will show you for a typical 4-product morning routine.</p>
+      <!--
+        DEMO BASKET — HAND-WRITTEN, POINT-IN-TIME, REFRESHED BY NOTHING.
+
+        Prices read from the live catalogue on 2026-08-01. Delivery terms read from
+        the retailer sites on 2026-08-01. No job, no schedule and no test keeps any
+        of these numbers current. They were true on the day they were typed and
+        drift from that moment; only a person will notice.
+
+        NAMING RETAILERS HERE MEANS THIS BLOCK BREAKS AT EVERY DEPARTURE. It named
+        "Boots + Superdrug" for thirteen days after Superdrug was retired on
+        2026-07-27, because a retirement touches the database and routing and
+        nothing sweeps hand-written copy. See the copy-sweep step in
+        docs/superdrug-removal-plan.md, which now lists this block by line.
+
+        The arithmetic, so it can be checked rather than trusted:
+          Elizabeth Arden Visible Difference Refining Moisture Cream 75ml  Boots 40.00 / Escentual 20.00
+          Shiseido Expert Sun Protector Face Cream SPF30 50ml              Boots 37.00 / Escentual 25.75
+          Shiseido Expert Sun Protector Clear Stick SPF50+ 20g             Boots 33.00 / Escentual 34.00
+          NUXE Nuxuriance Ultra Dark Spot Hand Cream 75ml                  Boots 20.50 / Escentual 23.00
+
+          Split   Escentual 20.00 + 25.75 = 45.75  (>= 30 threshold, no delivery)
+                  Boots     33.00 + 20.50 = 53.50  (>= 25 threshold, no delivery)
+                  total 99.25
+          Escentual only  20.00 + 25.75 + 34.00 + 23.00 = 102.75  (>= 30, no delivery)
+          Boots only      40.00 + 37.00 + 33.00 + 20.50 = 130.50  (>= 25, no delivery)
+
+        Each leg clears ITS OWN retailer's threshold — Escentual £30, Boots £25 —
+        so the "no delivery on either" claim is demonstrated by the subtotals shown
+        on the card rather than asserted. THE TWO THRESHOLDS DIFFER; do not collapse
+        them into one figure when editing. Delivery terms for both are recorded in
+        `retailers`, observed 2026-08-01.
+
+        Escentual's £30 was itself a correction. It was recorded as 25.00/0.00 —
+        free above £25 and free below it, which is unreachable — until re-read from
+        escentual.com on 2026-08-01, which states "Free UK delivery on orders over
+        £30 (from £3.50 under £30)". Both recorded fields were wrong. If this block
+        is ever rebuilt, re-read the terms rather than trusting the column.
+      -->
       <div class="demo-card reveal">
         <div class="demo-result-label">Your routine</div>
         <div class="demo-routine">
-          <div class="demo-product"><div class="demo-product-dot" style="background:linear-gradient(135deg,#E8D5C4,#C4A882)"></div><div class="demo-product-info"><div class="demo-product-name">Gentle Foaming Cleanser</div><div class="demo-product-brand">CeraVe</div></div></div>
-          <div class="demo-product"><div class="demo-product-dot" style="background:linear-gradient(135deg,#B8D4E8,#7AAAC4)"></div><div class="demo-product-info"><div class="demo-product-name">Hyaluronic Acid 2% + B5</div><div class="demo-product-brand">The Ordinary</div></div></div>
-          <div class="demo-product"><div class="demo-product-dot" style="background:linear-gradient(135deg,#D4C8E8,#A89AC4)"></div><div class="demo-product-info"><div class="demo-product-name">Moisturising Lotion SPF 50</div><div class="demo-product-brand">La Roche-Posay</div></div></div>
-          <div class="demo-product"><div class="demo-product-dot" style="background:linear-gradient(135deg,#E8C8C8,#C49090)"></div><div class="demo-product-info"><div class="demo-product-name">Niacinamide 10% + Zinc 1%</div><div class="demo-product-brand">The Ordinary</div></div></div>
+          <div class="demo-product"><div class="demo-product-dot" style="background:linear-gradient(135deg,#E8D5C4,#C4A882)"></div><div class="demo-product-info"><div class="demo-product-name">Visible Difference Refining Moisture Cream 75ml</div><div class="demo-product-brand">Elizabeth Arden</div></div></div>
+          <div class="demo-product"><div class="demo-product-dot" style="background:linear-gradient(135deg,#B8D4E8,#7AAAC4)"></div><div class="demo-product-info"><div class="demo-product-name">Expert Sun Protector Face Cream SPF30 50ml</div><div class="demo-product-brand">Shiseido</div></div></div>
+          <div class="demo-product"><div class="demo-product-dot" style="background:linear-gradient(135deg,#D4C8E8,#A89AC4)"></div><div class="demo-product-info"><div class="demo-product-name">Expert Sun Protector Clear Stick SPF50+ 20g</div><div class="demo-product-brand">Shiseido</div></div></div>
+          <div class="demo-product"><div class="demo-product-dot" style="background:linear-gradient(135deg,#E8C8C8,#C49090)"></div><div class="demo-product-info"><div class="demo-product-name">Nuxuriance Ultra Dark Spot Hand Cream 75ml</div><div class="demo-product-brand">NUXE</div></div></div>
         </div>
         <div class="demo-results">
           <div class="demo-result-label">FindMyBasket recommends</div>
-          <div class="demo-basket best"><div><div class="basket-retailer">Boots + Superdrug</div><div class="basket-items">3 items + 1 item, free delivery both</div></div><div><div class="basket-price">£38.40</div><div class="basket-saving">Save £11.55 vs buying separately</div></div></div>
-          <div class="demo-basket"><div><div class="basket-retailer">Boots only</div><div class="basket-items">All 4 items, free delivery over £40</div></div><div><div class="basket-price">£43.10</div><div class="basket-saving">Save £6.85 vs worst case</div></div></div>
-          <div class="demo-basket"><div><div class="basket-retailer">Alternative retailer</div><div class="basket-items">All 4 items, free delivery over £25</div></div><div><div class="basket-price">£46.20</div><div class="basket-saving" style="color:rgba(250,248,244,0.3)">Baseline option</div></div></div>
+          <div class="demo-basket best"><div><div class="basket-retailer">Escentual + Boots</div><div class="basket-items">£45.75 clears Escentual's £30, £53.50 clears Boots' £25 — no delivery on either</div></div><div><div class="basket-price">£99.25</div><div class="basket-saving">Save £3.50 vs the best single retailer</div></div></div>
+          <div class="demo-basket"><div><div class="basket-retailer">Escentual only</div><div class="basket-items">All 4 items, over Escentual's £30 free-delivery threshold</div></div><div><div class="basket-price">£102.75</div><div class="basket-saving">Save £27.75 vs worst case</div></div></div>
+          <div class="demo-basket"><div><div class="basket-retailer">Boots only</div><div class="basket-items">All 4 items, over Boots' £25 free-delivery threshold</div></div><div><div class="basket-price">£130.50</div><div class="basket-saving" style="color:rgba(250,248,244,0.3)">Baseline option</div></div></div>
         </div>
       </div>
     </div>
