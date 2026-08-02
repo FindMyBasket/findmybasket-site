@@ -800,6 +800,13 @@ of excusing it, and it turns a second class of failure into something detectable
 a retailer whose *cadence* changes (daily to weekly) is a real signal that the
 threshold approach cannot see at all, because the streaks stay under it.
 
+**WATCH THE FIRST LIVE LONG WEEKEND. The next UK bank holiday Monday is
+31 August 2026.** That extends Beauty Flash's normal weekend pause from three days
+to four, which is exactly the case `freeze_min_days = 5` was set for. It should not
+fire — but that is a prediction, not an observation, and 31 August is the first
+chance to watch it rather than assume it. If it fires anyway, the weekday model is
+wrong somewhere and the finding is bigger than the threshold.
+
 **When this lands, delete `freeze_min_days`.** It exists only until this does.
 
 ---
@@ -819,36 +826,51 @@ only `product_GTIN` has every identifier silently dropped.
 
 **The five retailers at 0% EAN**, measured against `retailer_prices` on 2 August:
 
-| Retailer | Rows | EAN | MPN | GTIN in feed? |
+| Retailer | Feed rows | `ean` | `product_GTIN` | GTINs discarded |
 |---|---|---|---|---|
-| Boots | 35,902 | 0.0% | 100.0% | unconfirmed |
-| Escentual | 7,764 | 0.0% | 99.9% | unconfirmed |
-| Beauty Flash | 7,299 | 0.0% | 68.1% | unconfirmed |
-| Gorgeous Shop | 6,747 | 0.0% | 70.8% | unconfirmed |
-| The Organic Pharmacy | 75 | 0.0% | 5.3% | **94.7% confirmed** |
-| | **57,787** | | | |
+| Boots | 36,823 | **0.0%** | **96.7%** | 35,626 |
+| Beauty Flash | 10,862 | **0.0%** | **96.4%** | 10,474 |
+| Gorgeous Shop | 10,114 | **0.0%** | **98.7%** | 9,979 |
+| Escentual | 7,971 | **0.0%** | **99.8%** | 7,955 |
+| The Organic Pharmacy | 114 | **0.0%** | **94.7%** | 108 |
+| | | | | **64,142** |
 
-For contrast, six retailers sit at 98.9-100% EAN (Debenhams, YesStyle, Perfume
-Click, Beauty Bay, Branded Beauty, Atelier De Glow) and Stylevana at 55.0%. Five
-advertisers independently supplying nothing is far less likely than a column-name
-mismatch, which is what the `feed-diag` workflow comment already hypothesised.
+**ALL FIVE CONFIRMED, 2 August 2026**, by one read-only `feed-diag` run each.
+Every one populates `product_GTIN` between 94.7% and 99.8% and `ean` at exactly
+0.0%, and `feed-diag` prints its own verdict on each:
+`only "product_GTIN" populated - IMPORTER READS "ean", SO THIS IS LOST`.
 
-**Confirming the other four costs four read-only `feed-diag` runs**, one per fid.
-Worth doing before any fix, because the answer decides whether this is one change
-(read both columns) or four separate advertiser conversations.
+**So this is ONE importer change, not four advertiser conversations.** No advertiser
+needs contacting. The importer requests `ean` and never `product_GTIN`; five
+advertisers fill the other half of the pair; **64,142 identifiers are being thrown
+away on every import.** That was the question the four runs existed to settle, and
+it settles in the cheaper direction.
+
+**A second instance of the same bug, found in the same runs.** The category columns
+are a sibling pair too — the importer requests `merchant_product_category_path`, and
+`feed-diag` reports that Escentual, Beauty Flash and Gorgeous Shop populate **only
+`merchant_category`**. Boots populates both. So three of the five are likely losing
+their category path the same way they lose their GTIN. Not measured against our
+stored data here; worth checking when the GTIN fix is scoped, because it is the same
+one-line class.
 
 **Consequence.** Four of the five carry MPN heavily, so they are not
 identifier-less — but EAN is the stronger key and its absence pushes matching onto
 names and sizes, which is the weaker basis and the one that produces the shade and
 multipack collisions this catalogue keeps hitting.
 
-**One figure carried but NOT verified.** It was raised that EAN disagreement
-attracts a **-0.40 confidence penalty** in merge scoring. I could not locate that
-penalty anywhere in the repository — searched `supabase/functions/_shared/match-key.ts`,
-`scripts/dedup-apply-plan.mts`, `lib/`, and the migrations, for both the constant
-and any EAN-weighted scoring. It may live outside the repo, in a prompt, or in a
-process that produced `docs/dedup-candidates.json`. **Treat the number as unverified
-until someone points at the code**, and do not build a case on it.
+**PROVENANCE OF THE -0.40 PENALTY: NOT FROM THE CODE.** It was raised that EAN
+disagreement attracts a -0.40 confidence penalty in merge scoring. That figure came
+from Robbie's notes, not from the repository. I searched
+`supabase/functions/_shared/match-key.ts`, `scripts/dedup-apply-plan.mts`, `lib/`,
+and the migrations, for both the constant and any EAN-weighted scoring, and found
+nothing. **Treat it as unverified and possibly never implemented.**
+
+**If it does not exist, the argument for this item is weaker than first stated, and
+should be made honestly.** It is not a scoring problem. It is that five retailers —
+including Boots, the largest — are matched on names and sizes rather than on
+identifiers they are actually supplying. That is worth fixing on its own merits, and
+it does not need a penalty constant to justify it.
 
 ---
 
