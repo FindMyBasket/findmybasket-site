@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { getActiveRetailerIds } from './retailers';
 import { summarisePriceRows, brandSlug, nextBestSavingPct, nextBestPrice, type FeaturedProduct } from './queries';
+import { deliveryFor } from './delivery';
 import { pickFamilyOffer, type FamilyPriceRow } from './family-offer';
 
 export interface ProductDetail {
@@ -29,6 +30,7 @@ export interface RetailerOffer {
   price: number;
   url: string;
   in_stock: boolean;
+  delivery_model: string | null;
   delivery_cost: number | null;
   delivery_threshold: number | null;
   effective_price: number;
@@ -134,7 +136,7 @@ export async function getRetailerOffers(productId: number): Promise<RetailerOffe
   const retailerIds = Array.from(new Set(prices.map(p => p.retailer_id)));
 
 const { data: retailers } = await supabase    .from('retailers')
-    .select('id, name, base_url, delivery_cost, delivery_threshold, active')
+    .select('id, name, base_url, delivery_model, delivery_cost, delivery_threshold, active')
     .in('id', retailerIds)
     .eq('active', true);
 
@@ -165,13 +167,21 @@ const { data: retailers } = await supabase    .from('retailers')
     if (!picked) continue;
 
     const numericPrice = picked.price;
-    const deliveryCost = retailer.delivery_cost ? Number(retailer.delivery_cost) : null;
-    const deliveryThreshold = retailer.delivery_threshold ? Number(retailer.delivery_threshold) : null;
 
-    const effectivePrice =
-      deliveryCost !== null && deliveryThreshold !== null && numericPrice < deliveryThreshold
-        ? numericPrice + deliveryCost
-        : numericPrice;
+    // Was: `delivery_cost ? Number(...) : null` and the same for the threshold, with
+    // effectivePrice adding delivery only when BOTH were non-null. Two defects in
+    // three lines, and the second was live:
+    //
+    //   0 is falsy, so a genuine £0 delivery cost became null. Latent: the only
+    //   retailer with a £0 cost is treated identically either way.
+    //
+    //   A FLAT RETAILER HAS NO THRESHOLD. Debenhams' delivery_threshold is NULL, so
+    //   the null guard skipped delivery entirely and its £3.99 was NEVER ADDED ON A
+    //   PRODUCT PAGE, at any basket size. Not latent. Recorded as its own defect,
+    //   separate from the RoutineBuilder fallbacks, in work-list item 28.
+    const outcome = deliveryFor(retailer, numericPrice);
+    const deliveryCost = outcome.known ? outcome.cost : null;
+    const effectivePrice = outcome.known ? numericPrice + outcome.cost : numericPrice;
 
     offers.push({
       retailer_id: retailerId,
@@ -180,8 +190,12 @@ const { data: retailers } = await supabase    .from('retailers')
       price: numericPrice,
       url: picked.url,
       in_stock: picked.in_stock,
+      delivery_model: retailer.delivery_model ?? null,
       delivery_cost: deliveryCost,
-      delivery_threshold: deliveryThreshold,
+      // Carried verbatim from the retailer row. NULL for a flat retailer is correct
+      // and meaningful: it has no threshold, it is never free.
+      delivery_threshold: retailer.delivery_threshold === null || retailer.delivery_threshold === undefined
+        ? null : Number(retailer.delivery_threshold),
       effective_price: effectivePrice,
       last_updated: picked.last_updated,
     });

@@ -354,10 +354,62 @@ the tables should read from the catalogue instead.
 
 ---
 
-### 11. Make the optimiser read `delivery_model`
+### 11. Make the optimiser read `delivery_model` — DONE, 3 August 2026
 
-**Raised:** 1 August 2026 · **Blocked until:** after 4 August
-**Detail: complete.**
+**Raised 1 August 2026. SHIPPED 3 August 2026.**
+
+> **CLOSED.** All fallback constants removed; one shared rule; three-way branch.
+>
+> | Surface | Before | After |
+> |---|---|---|
+> | `RoutineBuilder.tsx` | four sites, `?? '25'` / `?? '3.95'` | `deliveryFor()` |
+> | `send-routine-email` | three sites, **`|| 25` / `|| 3.95`** | `deliveryFor()` |
+> | `product-queries.ts` | truthiness guard that skipped delivery | `deliveryFor()` |
+>
+> **The `??` versus `||` divergence was the strongest argument, not the duplication.**
+> `delivery_cost || 3.95` turned a genuine £0 cost into £3.95, so the monthly email
+> priced a zero-cost retailer £3.95 higher than the app did **for the same basket**.
+> Two pricing paths disagreeing in production, masked only because that retailer was
+> out of stock. Duplication was the mechanism; disagreement was the defect.
+>
+> **`unknown` behaves as decided:** goods stay visible, no delivered total is claimed,
+> never ranked against a retailer whose delivery is known. A pair with either leg
+> unknown is skipped rather than guessed. `deliveryFor` returns a discriminated union,
+> so `unknown` cannot be silently coerced to zero.
+>
+> **All three exercise routes taken.** `lib/__tests__/delivery.test.ts` covers the
+> branch with synthetic retailers, which is the only thing that tests it (zero active
+> retailers are `unknown`). The Fragrance Shop will be the live transition. The
+> `retailers_delivery_unknown` view makes the state visible so it is transitional by
+> policy rather than by hope; it partitions cleanly today at 11 tiered + 1 flat + 0
+> unknown = 12 active.
+>
+> **The mirror is guarded.** `lib/delivery.ts` duplicates
+> `supabase/functions/_shared/delivery.ts` because the Next runtime cannot import a
+> Deno module. A test imports both and fails on divergence, plus a test that fails if
+> `?? 25` or `|| 3.95` reappears in either.
+>
+> **Verified as instructed, a Debenhams basket over £25:**
+>
+> ```
+> leg £24.99   before +£3.95   after +£3.99   understated by £0.04
+> leg £25.00   before +£0.00   after +£3.99   understated by £3.99
+> leg £48.00   before +£0.00   after +£3.99   understated by £3.99
+> ```
+>
+> **`public/index.html`'s claim is now accurate with no copy change**, as predicted.
+>
+> **Recommendation changes, re-measured after the fix, not carried forward: 160.**
+> Of 1,943 Debenhams products with a live alternative, Debenhams was recommended on
+> 1,427 and is now recommended on 1,267. Of the 745 legs at or above £25 it won 563
+> before and wins 421 after. The other 1,267 keep Debenhams with a corrected total.
+> None of the 13 saved routines change recommendation.
+>
+> **Two findings split out rather than folded in:** item 28 (a live bug on product
+> pages, different cause) and item 29 (a fabricated savings baseline, deliberately not
+> fixed).
+
+**Original detail follows.**
 
 > **A LIVE HOMEPAGE CLAIM IS INACCURATE UNTIL THIS LANDS.** Added 3 August 2026.
 >
@@ -1458,6 +1510,115 @@ A cosmetic hero must not be able to block a deploy.
 **Related:** the daily refresh is `.github/workflows/refresh-homepage-demo.yml`,
 which triggers a production deploy via the Vercel API using `VERCEL_TOKEN`. If that
 workflow fails, the site serves the last good build: **stale, not wrong.**
+
+---
+
+### 28. Debenhams delivery was never added on product pages — SEPARATE DEFECT, FIXED 3 Aug 2026
+
+**Raised and fixed 3 August 2026, found while scoping item 11. Recorded as its own
+defect rather than folded into that work, because it is a different bug in a different
+place with a different cause.**
+
+`lib/product-queries.ts:167-168` read:
+
+```ts
+const deliveryCost = retailer.delivery_cost ? Number(retailer.delivery_cost) : null;
+const deliveryThreshold = retailer.delivery_threshold ? Number(retailer.delivery_threshold) : null;
+```
+
+and then added delivery only when **both** were non-null.
+
+**Two defects in three lines. The second was live.**
+
+1. **`0` is falsy**, so a genuine £0 delivery cost became `null`. **Latent**: the only
+   retailer with a £0 cost is treated identically either way. This is the one the item
+   was originally raised for.
+2. **A FLAT RETAILER HAS NO THRESHOLD.** Debenhams' `delivery_threshold` is `NULL`, so
+   the null guard skipped delivery entirely and **its £3.99 was never added on a
+   product page, at any basket size.** Not latent. Live since the flat model was
+   introduced on 1 August.
+
+**Why this matters more than the fallback work it was found beside.** Item 11 concerned
+the optimiser understating Debenhams by £3.99 **above £25**. This understated it by
+£3.99 **everywhere**, on a different surface, through a different mechanism. Same
+retailer, same amount, unrelated code.
+
+**Fixed** by routing through the shared rule, which treats a flat retailer's absent
+threshold as correct and meaningful rather than as missing data.
+
+---
+
+### 29. The monthly email invents a £3.95-per-retailer savings baseline
+
+**Raised 3 August 2026 during item 11. NOT FIXED, deliberately. Report only.**
+
+`supabase/functions/send-routine-email/index.ts`:
+
+```ts
+const worstDelivery = uniqueRetailerCount * 3.95;
+```
+
+This builds the "what you would have paid" baseline that the email's **saving** is
+measured against, by assuming every retailer charges £3.95.
+
+**No retailer charges exactly £3.95 except Boots and YesStyle.** The real spread is
+£0.00 to £3.99, and Debenhams charges on every basket while the others go free above a
+threshold. So the baseline is invented, and **the saving derived from it is invented
+too.**
+
+**Left in place on purpose.** Every other fabricated delivery constant was removed in
+item 11, but this one moves a **savings figure shown to a user**, not a price. That is
+a claims decision rather than a code one, and this project has spent a fortnight
+learning that savings figures need deciding rather than adjusting. The line is flagged
+in place with a comment pointing here.
+
+**What a fix would need to decide:** whether the baseline is "each item from its own
+retailer, each charging its real delivery" (defensible, computable, and smaller than
+today's figure for most baskets) or something else entirely. It will most likely
+**reduce** the headline saving.
+
+---
+
+### 30. A real user's saved routine became unbuyable in the Boots step-down
+
+**Raised 3 August 2026. REPORT ONLY, not acted on.**
+
+Three active `saved_routines` have zero buyable items and are receiving monthly emails.
+**Two are test data. One is not.**
+
+| id | Routine | Created | Address | Verdict |
+|---|---|---|---|---|
+| 15 | `[1]` | 30 Apr | internal-looking | **Test data.** Product 1 does not exist. |
+| 18 | `[10, 20, 30]` | 30 Apr | internal-looking | **Test data.** None of those products exist. |
+| **37** | `[9445]` | **20 Jul** | **external** | **A REAL USER.** |
+
+**Routine 37 is one real product**: La Roche-Posay Cicaplast Baume B5+ 100ml. Its only
+offer is Boots, and **that row's `last_updated` is 2026-05-11** — inside the 8,237-row
+cohort flipped to `in_stock = false` by the absence step-down at 15:05 today.
+
+**So this routine became unbuyable this afternoon, as a direct and correct consequence
+of the step-down.** Before today the user would have been emailed a price frozen since
+11 May and presented as current. That was worse. But the improvement is invisible to
+them: what they get now is an email with nothing in it.
+
+**What the email renders.** With no options, `send-routine-email` falls back to a
+"Best available prices" basket built from `priceMap`. For a routine whose only offer is
+out of stock, that breakdown is **empty**, so the email renders a saved-routine email
+with **no products, a £0 total and a "Best available prices" heading**.
+
+**Sending a monthly "best price" email containing nothing is worse than not sending
+it.** Options, none taken:
+
+1. **Skip the send** when the breakdown is empty, and say nothing.
+2. **Send a different email**: "we cannot currently find this in stock anywhere",
+   which is true, useful, and keeps the relationship.
+3. **Deactivate** routines with no buyable items after N consecutive empty months.
+
+**(2) is probably right** — it is the only one that tells the user something true. But
+it is a new email template and a product decision.
+
+**Separately: the two test routines should be deactivated**, so the population of live
+routines is not two-thirds fiction. They have been emailed monthly since 30 April.
 
 ---
 
