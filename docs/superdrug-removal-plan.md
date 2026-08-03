@@ -168,6 +168,32 @@ After the flip nothing will ever surface them again.
 **Steps 1–4 are all database and routing. None of them touches hand-written copy, and
 hand-written copy is where the site makes its factual claims about who we compare.**
 
+> **A SWEEP SCOPED TO A RETAILER'S NAME WILL MISS EVERY CLAIM THAT NAMES NOBODY.**
+> Added 3 August 2026, from the sweep's own results.
+>
+> The 3 August sweep searched for the departing retailer and for the retailer count.
+> It found both: the Branded Beauty references and the roster figure. On **the same
+> page** it missed three further false claims, all of which had nothing to do with any
+> retailer's name and so matched no search term:
+>
+> | Missed claim | Why the search could not see it |
+> |---|---|
+> | *"Save up to around 25% on a comparable beauty routine"* (hero, above the fold) | A savings figure. Names no retailer. |
+> | *"Your routine, May"* with three hand-written prices and a £49.44 total | A dated price example. Names no retailer. |
+> | *"We factor in each retailer's free delivery threshold"* | A mechanism claim, wrong for one retailer. Names no retailer. |
+>
+> **The lesson is about the search terms, not the sweeper.** A departure sweep asks
+> "where do we name this retailer?" and that question cannot reach a claim about
+> savings, a price frozen three months ago, or a description of how the optimiser
+> works. Those claims go stale on their own schedule, unrelated to any departure.
+>
+> **So the copy sweep needs a second half that is not departure-driven.** Grep for the
+> *shapes* rather than the names: a percentage next to the word save, a currency
+> figure in hand-written markup, a month name, and any sentence asserting what the
+> optimiser accounts for. Run it on a calendar, not on a departure, because nothing
+> about a departure causes those claims to rot and nothing about them will surface on
+> its own.
+
 **This was missed on 27 July 2026 and went unnoticed for eight days.** After Superdrug
 was retired, `public/about.html` continued to claim *"Currently live across 10 UK
 retailers"* over a list that **still included Superdrug** and **omitted three live
