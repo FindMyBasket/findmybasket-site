@@ -1786,6 +1786,107 @@ should probably be one function with two reasons rather than two functions, so t
 
 ---
 
+### 33. AWIN sibling coalesce rollout, stage by stage
+
+**Started 3 August 2026.** Implementation and rationale in
+`supabase/migrations/20260803200000_sibling_coalesce_opt_in.sql`. One retailer at a
+time, `retailer_import_config.sibling_coalesce`, smallest feed first.
+
+| # | Retailer | Rows | Flag | Dry run | Live run |
+|---|---|---|---|---|---|
+| 1 | The Organic Pharmacy | 114 | **ON 3 Aug** | done, clean | **awaited: cron 22, 05:30 UTC daily** |
+| 2 | Beauty Flash | 10,862 | off | | |
+| 3 | Stylevana | 24,598 | off | | |
+| 4 | Gorgeous Shop | | off | | |
+| 5 | Escentual | | off | | |
+| 6 | Boots | 35,912 | off | | |
+
+#### Stage 1 result, 3 August 2026
+
+Dry run compared with coalesce OFF and ON against the same feed at the same moment:
+
+| Metric | OFF | ON |
+|---|---|---|
+| `rows_with_ean` | 0 | **78** |
+| `barcode_rejected` | n/a | **0** |
+| `category_path_from_sibling` | n/a | 100 |
+| `would_update_existing` | 75 | 75 |
+| `would_link_via_ean` | 0 | 0 |
+| `excluded_by_category` | 30 | 30 |
+
+**Zero link changes and zero category movement.** 78 validated barcodes recovered, none
+rejected.
+
+**THE TIER 0 PROPERTY HELD, AND IT IS THE MORE VALUABLE RESULT.** `existingByExtId` is
+checked before any match tier, so already-imported rows keep their `product_id` and
+merely gain a barcode. **The whole rollout is therefore ADDITIVE ON FIRST RUN for every
+retailer.** The re-linking risk does not sit in a stage; it sits in the imports *after*
+a stage, once the recovered barcodes are in `ean_product_index` and other retailers'
+new rows can match against them.
+
+**So watch for it across consecutive runs, not within one.** Compare
+`would_link_via_ean` between successive imports at stages 4 to 6, where enough barcodes
+will exist for cross-retailer matching to actually fire. A single run's diagnostics
+cannot show this.
+
+**A CLEAN STAGE 1 TELLS YOU VERY LITTLE ABOUT STAGES 2 TO 6.** Recorded here so the
+result is not over-read: the feed is small, its categories already agreed with
+name-based inference so nothing could move, and its barcodes have nothing to match
+against yet. Stage 1 tests that the mechanism runs safely. It does not test that it
+does anything.
+
+**The 78 versus 108 gap is unreconciled, deliberately.** feed-diag counted 108
+`product_GTIN` values across 114 raw feed rows; the importer sees only rows surviving
+filtering (30 excluded by category, 9 by the v6 rule). 78 across a post-filter
+denominator is consistent with that, and the exact reconciliation was **not** verified.
+Two different denominators, stated rather than explained away.
+
+**Next: let cron 22 run naturally at 05:30 UTC and compare the live result against the
+dry run.** A dry run that matches its live run is confirmation; a dry run alone is a
+prediction.
+
+**Then stage 2, Beauty Flash**, which is where the category half is first genuinely
+tested and where the item 18 answer lives.
+
+---
+
+### 34. The import path is deployable by one person from one machine, and nothing records it
+
+**Raised 3 August 2026. REPORT ONLY.**
+
+**No CI workflow deploys edge functions.** `.github/workflows/` contains no
+`supabase functions deploy`. Every edge function in production — the three importers,
+the feed monitor, the routine email sender — was deployed by hand.
+
+**The Supabase CLI reached the operator's Mac on 3 August 2026**, hours before it was
+first needed, installed mid-task to unblock this rollout. Before that, deployment
+required a machine that did not have the tool installed.
+
+**The part that matters in an incident: NO ARTEFACT RECORDS WHICH COMMIT ANY PRODUCTION
+EDGE FUNCTION WAS DEPLOYED FROM.** Not a tag, not a log line, not a row. The deployed
+code cannot be tied to a revision by anything except memory. During an incident the
+first question is "what is actually running", and today that question has no answer
+better than opening the Supabase dashboard and reading the source.
+
+**Three separate exposures, worth not conflating:**
+
+1. **Bus factor.** One person, one machine, one browser session. `supabase login` is a
+   TTY flow and cannot run in CI or in an agent session, so this cannot currently be
+   delegated even in an emergency.
+2. **Provenance.** A deployed function and a repository commit are related only by
+   assumption. A hotfix applied through the dashboard would leave the repository silently
+   wrong, which is the absent-record class this file exists to correct.
+3. **Drift.** Nothing compares deployed source with `main`. A function could have been
+   edited in the dashboard months ago and nothing would say so.
+
+**Not proposing a fix here.** CI deployment needs a service-account token with deploy
+rights and a decision about whether an automated system should be able to write to the
+import path at all — which, given this project's caution about that path, is a real
+question rather than an obvious yes. Recording the exposure so the decision is
+deliberate.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
