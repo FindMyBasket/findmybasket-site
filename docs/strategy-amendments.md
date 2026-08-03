@@ -2,7 +2,31 @@
 
 **Date:** 3 August 2026
 **Against:** FindMyBasket_Strategy_2026-08-03_v2 (Word document, held outside version control)
-**Status:** NOT APPLIED. Apply during the conversion to `docs/strategy.md`, per work-list item 24.
+**Status: APPLIED 3 August 2026.** All nine amendments, plus the A3 and A5 corrections below, are
+live in **`docs/strategy.md`**, marked inline as **[Amended 3 Aug 2026]**. That file is now the
+canonical strategy document. **This file is the historical record of what changed and why; it is no
+longer a queue of pending work.** Do not apply anything from it again.
+
+**Verified at apply time, 3 August 2026,** against the converted file:
+
+| Check | Result |
+|---|---|
+| Sections 1 to 17 | All 17 present as `#` headings |
+| Tables | 28 tables with separator rows survived as tables |
+| Amendment markers | 12 `[Amended 3 Aug 2026]` markers; all nine amendments locatable by the section each references |
+| Em dashes | 0 |
+| En dashes, curly quotes, curly apostrophes, non-breaking spaces, control characters | 0 of each |
+| The word beginning "cheap" | 0 |
+| A3 correction | Applied. The table carries the `products_active` qualifier and states the 12,010 reading alongside 11,535 |
+| A5 correction | Applied. Reads *community-reconstructed* and *undocumented*, with "treat the margin as unknown rather than as two" |
+
+**One cosmetic conversion artefact, not worth a fix on its own:** the two callout boxes in the
+preamble ("What this document is", "Coverage note") converted to single-column tables with an empty
+body row rather than to blockquotes. They render, they read correctly, and no content is lost. Fold
+into the next edit of that file rather than raising a change for it.
+
+**The Word original survives** at `~/Downloads/FindMyBasket_Strategy_2026-08-03_v2.docx`. Nothing was
+lost in the conversion, but see the note at the foot of this file about where it lives.
 
 > These amendments existed only in conversation until this file was written. That is the same
 > defect as the strategy document itself being outside version control, and it is the instance
@@ -171,3 +195,21 @@ because how they were found is worth seeing.
 **Neither changes a strategic conclusion.** A2's 86.4 per cent single-stockist figure is
 unaffected, and A5's argument about conditional access is slightly strengthened by the
 correction. What changes is what may be quoted outward and relied upon.
+
+---
+
+## Where the Word original lives, and why that is worth a line
+
+The source document survives at **`~/Downloads/FindMyBasket_Strategy_2026-08-03_v2.docx`**, so the
+conversion lost nothing. Two observations rather than actions:
+
+- **`~/Downloads` is a directory people empty.** That is the same fragility that put the Creators API
+  SDK and its live credentials at risk until they were relocated on 3 August 2026 (see
+  `~/amazon-api-watch/README.md`). It matters less here, because `docs/strategy.md` is now the
+  canonical copy and is in version control. The `.docx` is a source artefact, not the record.
+- **A `v4` also exists** at `~/Downloads/FindMyBasket_Strategy_2026-08-03_v4.docx`, alongside the
+  `v2` these amendments were drafted against, and a Word lock file (`~$…v2.docx`) suggests the
+  document may have been open at conversion time. The converted markdown was verified to contain all
+  nine amendments and both corrections, so it is correct regardless of which version it came from.
+  **But if `v4` carries edits that never reached `docs/strategy.md`, nothing would surface that.**
+  Worth a one-off diff before the `.docx` files are treated as disposable.

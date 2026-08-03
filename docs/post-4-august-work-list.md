@@ -1149,11 +1149,57 @@ with its own entry, because the only alternatives are tolerating the mail or bri
 
 ---
 
-### 24. Convert the strategy document to `docs/strategy.md` — PENDING, not absent
+### 24. Convert the strategy document to `docs/strategy.md` — DONE, 3 August 2026
 
-**Raised:** 3 August 2026 · **Blocked on:** the Word file, and nothing else.
-**Detail: complete. Not blocked by the 4 August gate, blocked on one input.**
-**Amendments committed 3 August at `docs/strategy-amendments.md`.**
+**Raised and closed 3 August 2026. CLOSED, not blocked.**
+
+**`docs/strategy.md` is the canonical strategy document.** Converted from
+`FindMyBasket_Strategy_2026-08-03_v2.docx` and committed, with all nine amendments
+plus the A3 and A5 corrections applied in the same pass and marked inline as
+`[Amended 3 Aug 2026]`. `docs/strategy-amendments.md` is now the historical record
+of what changed and why, not a queue.
+
+Verified before the amendments were recorded as applied: all 17 sections present as
+markdown headings, 28 tables survived as tables, all nine amendments locatable by
+the section each references, and zero em dashes, en dashes, curly quotes, curly
+apostrophes, non-breaking spaces or control characters. Full check table at the head
+of `docs/strategy-amendments.md`.
+
+**One thing that survived the closure and is worth a look:** a `v4` of the Word
+document exists alongside the `v2` these amendments were drafted against. The
+converted markdown is correct regardless, but **if `v4` carries edits that never
+reached `docs/strategy.md`, nothing would surface that.** A one-off diff before the
+`.docx` files are treated as disposable. Not urgent, not a blocker, and deliberately
+not left as an open item on a closed task.
+
+**Item 12's exposure table can now cite `docs/strategy.md` by path.** Section 2
+carries the wedge claim and section 7 rests the commercial model on it; both now
+record that the delivery half was unevidenced until 1 August, which is context item
+12 should have before it runs.
+
+<details>
+<summary>Original entry, kept for the record</summary>
+
+The primary strategic artefact was a Word file outside version control, cited by
+name across this work and impossible to grep, diff, link to by path or check for
+staleness. Recorded as **pending, not absent**. The conversion and the amendment
+pass were required to happen together, because converting the file as it stood
+would have committed a version known stale on the day it landed, and a stale
+document with a path is worse than a stale document without one: the path makes it
+look authoritative and citable.
+
+The nine amendments were themselves unrecorded at first, which was the same defect
+one level down and the instance that would have survived the fix. Committing them to
+`docs/strategy-amendments.md` on 3 August, ahead of the document itself, reduced the
+blocker from two inputs to one.
+
+An intermediate state is worth recording because it is the exact failure this item
+existed to prevent: for a period on 3 August, `docs/strategy.md` was the raw `.docx`
+binary with the extension renamed. It was 66,541 bytes of ZIP, unreadable and
+ungreppable, and it sat at the authoritative path looking canonical. It was caught
+before being committed, and `main` never carried it.
+
+</details>
 
 **The primary strategic artefact is a Word file outside version control.** It is
 cited by name across this work — item 12 names section 2 as a more exposed surface
