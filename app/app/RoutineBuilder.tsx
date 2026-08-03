@@ -24,6 +24,7 @@ import {
 } from '@/lib/analytics';
 import { ClickOutLink } from '@/components/ClickOutLink';
 import { retailerSubtotals } from '@/lib/basket-attribution';
+import { deliveryFor } from '@/lib/delivery';
 
 // Affiliate tags — reused exactly from the previous bottom-of-basket links.
 const AMAZON_TAG = 'findmybasket-21';
@@ -115,7 +116,11 @@ interface BasketOption {
   retailers: string[];
   total: number;
   productsTotal: number;
-  deliveryCost: number;
+  // null when the retailer's delivery terms are unrecorded. NOT zero: zero means
+  // "free", null means "we do not know", and conflating them is what let a flat
+  // retailer be shown as free delivery. See lib/delivery.ts.
+  deliveryCost: number | null;
+  deliveryUnknown?: boolean;
   breakdown: BreakdownItem[];
   type: 'single' | 'split';
   partial?: boolean;
@@ -378,8 +383,9 @@ export default function RoutineBuilder() {
       url: string;
       retailerId: number;
       retailerName: string;
-      deliveryThreshold: number;
-      deliveryCost: number;
+      deliveryModel: string | null;
+      deliveryThreshold: number | string | null;
+      deliveryCost: number | string | null;
     };
     const priceMap: Record<number, Record<number, PriceEntry>> = {};
     for (const row of prices) {
@@ -389,8 +395,11 @@ export default function RoutineBuilder() {
         url: row.url,
         retailerId: row.retailer_id,
         retailerName: row.retailers.name,
-        deliveryThreshold: parseFloat(String(row.retailers.delivery_threshold ?? '25')),
-        deliveryCost: parseFloat(String(row.retailers.delivery_cost ?? '3.95')),
+        // Terms carried verbatim. Previously coerced here with ?? '25' / ?? '3.95',
+        // which made every retailer look tiered at £25 and hid Debenhams being flat.
+        deliveryModel: (row.retailers as { delivery_model?: string | null }).delivery_model ?? null,
+        deliveryThreshold: row.retailers.delivery_threshold ?? null,
+        deliveryCost: row.retailers.delivery_cost ?? null,
       };
     }
 
@@ -422,9 +431,17 @@ export default function RoutineBuilder() {
 
       if (covered === current.length) {
         const rInfo = prices.find(p => p.retailer_id === rid)?.retailers;
-        const threshold = parseFloat(String(rInfo?.delivery_threshold ?? '25'));
-        const dCost = parseFloat(String(rInfo?.delivery_cost ?? '3.95'));
-        const deliveryCost = total >= threshold ? 0 : dCost;
+        const d = deliveryFor(rInfo ?? {}, total);
+        // Unknown terms: keep the goods visible, refuse to claim a delivered total.
+        // Never defaulted to a number, which is what produced the original defect.
+        if (!d.known) {
+          singleOptions.push({
+            retailers: [retailerName], total, productsTotal: total,
+            deliveryCost: null, deliveryUnknown: true, breakdown, type: 'single',
+          });
+          continue;
+        }
+        const deliveryCost = d.cost;
         singleOptions.push({
           retailers: [retailerName],
           total: total + deliveryCost,
@@ -525,12 +542,15 @@ export default function RoutineBuilder() {
 
         if (!allCovered) continue;
 
-        const r1Threshold = parseFloat(String(r1Info?.delivery_threshold ?? '25'));
-        const r1DCost = parseFloat(String(r1Info?.delivery_cost ?? '3.95'));
-        const r2Threshold = parseFloat(String(r2Info?.delivery_threshold ?? '25'));
-        const r2DCost = parseFloat(String(r2Info?.delivery_cost ?? '3.95'));
-        const d1 = r1Total > 0 ? (r1Total >= r1Threshold ? 0 : r1DCost) : 0;
-        const d2 = r2Total > 0 ? (r2Total >= r2Threshold ? 0 : r2DCost) : 0;
+        const o1 = deliveryFor(r1Info ?? {}, r1Total);
+        const o2 = deliveryFor(r2Info ?? {}, r2Total);
+        // If either leg's terms are unknown the PAIR's delivered total is unknown, so
+        // it cannot be ranked against pairs whose delivery is known. Skip rather than
+        // guess: a guessed number competing with a real one is how the £25 default
+        // made Debenhams look free.
+        if (!o1.known || !o2.known) continue;
+        const d1 = o1.cost;
+        const d2 = o2.cost;
 
         const retailers: string[] = [];
         if (r1Total > 0 && r1Name) retailers.push(r1Name);
@@ -1225,7 +1245,9 @@ export default function RoutineBuilder() {
                         ))}
                         <div className="rb-delivery-row">
                           <span>Delivery</span>
-                          {opt.deliveryCost === 0 ? (
+                          {opt.deliveryCost === null ? (
+                            <span>Delivery not known</span>
+                          ) : opt.deliveryCost === 0 ? (
                             <span className="rb-delivery-free">Free delivery</span>
                           ) : (
                             <span>£{opt.deliveryCost.toFixed(2)}</span>

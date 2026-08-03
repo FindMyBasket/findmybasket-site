@@ -26,6 +26,7 @@
 //      routine_email_log (Resend message id on success, status+body on failure),
 //      and a non-zero failure count is logged to the edge-function console.
 
+import { deliveryFor } from "../_shared/delivery.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireServiceRole } from "../_shared/require-service-role.ts";
 
@@ -43,8 +44,9 @@ interface PriceRow {
   in_stock: boolean;
   retailers: {
     name: string;
-    delivery_threshold: number | string;
-    delivery_cost: number | string;
+    delivery_model: string | null;
+    delivery_threshold: number | string | null;
+    delivery_cost: number | string | null;
   };
 }
 
@@ -144,11 +146,12 @@ function optimiseBasket(routine: Product[], prices: PriceRow[]): OptimisationRes
     };
   }
 
-  const retailerInfoMap: Record<number, { name: string; delivery_threshold: number; delivery_cost: number; }> = {};
+  const retailerInfoMap: Record<number, { name: string; delivery_model: string | null; delivery_threshold: number | string | null; delivery_cost: number | string | null; }> = {};
   for (const row of prices) {
     if (!retailerInfoMap[row.retailer_id]) {
       retailerInfoMap[row.retailer_id] = {
         name: row.retailers.name,
+        delivery_model: row.retailers.delivery_model ?? null,
         delivery_threshold: typeof row.retailers.delivery_threshold === "string"
           ? parseFloat(row.retailers.delivery_threshold) : row.retailers.delivery_threshold,
         delivery_cost: typeof row.retailers.delivery_cost === "string"
@@ -159,6 +162,17 @@ function optimiseBasket(routine: Product[], prices: PriceRow[]): OptimisationRes
 
   const allRetailerIds = Array.from(new Set(prices.map((p) => p.retailer_id)));
   const uniqueRetailerCount = allRetailerIds.length || 1;
+  // FABRICATED CONSTANT, DELIBERATELY LEFT IN PLACE. Flagged 3 August 2026 during
+  // item 11, NOT fixed, because it moves a SAVINGS FIGURE rather than a price.
+  //
+  // This assumes every retailer charges £3.95 to build the "what you would have paid"
+  // baseline the email's saving is measured against. No retailer charges exactly
+  // £3.95 except Boots and YesStyle; the real spread is £0.00 to £3.99, and Debenhams
+  // charges on every basket while the others go free above a threshold. So the
+  // baseline is invented, and the saving derived from it is therefore invented too.
+  //
+  // Changing it changes a number shown to users, which is a claims decision rather
+  // than a code one. Recorded as work-list item 29.
   const worstDelivery = uniqueRetailerCount * 3.95;
   const worstCaseProducts = routine.reduce((sum, product) => {
     const productPrices = priceMap[product.id];
@@ -184,7 +198,13 @@ function optimiseBasket(routine: Product[], prices: PriceRow[]): OptimisationRes
     }
     if (covered === routine.length) {
       const rInfo = retailerInfoMap[rid];
-      const deliveryCost = total >= (rInfo?.delivery_threshold || 25) ? 0 : (rInfo?.delivery_cost || 3.95);
+      // Was: `|| 25` / `|| 3.95`. `||` turned a genuine £0 delivery cost into £3.95,
+      // so this path priced a zero-cost retailer £3.95 higher than the app did for the
+      // SAME basket. Two pricing paths disagreeing in production, masked only because
+      // that retailer was out of stock. Now the one rule, shared with the app.
+      const dOut = deliveryFor(rInfo ?? {}, total);
+      if (!dOut.known) continue;
+      const deliveryCost = dOut.cost;
       singleOptions.push({
         retailers: [retailerName], total: total + deliveryCost,
         productsTotal: total, deliveryCost, breakdown, type: "single",
@@ -227,8 +247,13 @@ function optimiseBasket(routine: Product[], prices: PriceRow[]): OptimisationRes
       }
       if (!allCovered) continue;
 
-      const d1 = r1Total > 0 ? (r1Total >= (r1Info?.delivery_threshold || 25) ? 0 : (r1Info?.delivery_cost || 3.95)) : 0;
-      const d2 = r2Total > 0 ? (r2Total >= (r2Info?.delivery_threshold || 25) ? 0 : (r2Info?.delivery_cost || 3.95)) : 0;
+      const o1 = deliveryFor(r1Info ?? {}, r1Total);
+      const o2 = deliveryFor(r2Info ?? {}, r2Total);
+      // Either leg unknown makes the pair's delivered total unknown, so it cannot be
+      // ranked against pairs whose delivery is known. Skip rather than guess.
+      if (!o1.known || !o2.known) continue;
+      const d1 = o1.cost;
+      const d2 = o2.cost;
       const retailers = [r1Name, r2Name].filter(Boolean);
       twoOptions.push({
         retailers, total: total + d1 + d2,
@@ -705,7 +730,7 @@ Deno.serve(async (req: Request) => {
         // filter drops the price row itself.
         const { data: pricesData, error: priceError } = await supabase
           .from("retailer_prices")
-          .select("product_id, retailer_id, price, url, in_stock, retailers!inner(name, delivery_threshold, delivery_cost, active)")
+          .select("product_id, retailer_id, price, url, in_stock, retailers!inner(name, delivery_model, delivery_threshold, delivery_cost, active)")
           .in("product_id", productIds).eq("in_stock", true).eq("retailers.active", true);
         if (priceError) throw priceError;
         const prices = (pricesData || []) as unknown as PriceRow[];
