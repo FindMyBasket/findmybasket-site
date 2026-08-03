@@ -1256,6 +1256,79 @@ touch the whole-basket positioning that item 12 tests.
 
 ---
 
+### 25. 7,798 pages returning 404 as at 24 July, cause unknown
+
+**Raised:** 3 August 2026 · **REPORT ONLY. Do not act.**
+**Source:** Search Console coverage export, as at 24 July 2026.
+
+**7,798 pages returning 404**, measured not inferred.
+
+**This is not the r12 brand-page 404s.** Those landed on **27 July** and are recorded
+as `platform_changes` id 24 (450 brand pages losing their last active offer). The
+coverage export predates that by three days, so **the r12 404s are additional to
+this figure, not an explanation of it.**
+
+It is also not the Boots step-down. That creates no 404s by construction:
+`products_active` requires a price row at an active retailer and **ignores
+`in_stock` entirely**, so setting `in_stock = false` cannot remove a page. Verified
+against the view definition and against live pages on 3 August.
+
+**Cause unknown.** Candidates worth separating before any of them is assumed:
+retired-retailer orphans predating r12, the pagination defect fixed 30 July
+(PR #157, which was 404ing roughly 60 brand pages over an overlapping window),
+merged-product ids, and genuinely stale URLs Google has not recrawled. Do not
+attribute the whole figure to any one of these.
+
+**Why report-only:** 7,798 is large enough that acting on a guess would be worse
+than not acting. The first piece of work is a breakdown by URL pattern, which needs
+a fresher coverage export than 24 July.
+
+---
+
+### 26. 30,487 pages "Crawled, currently not indexed" against 60,025 indexed
+
+**Raised:** 3 August 2026 · **REPORT ONLY. Do not act.**
+**Source:** Search Console coverage export, as at 24 July 2026.
+
+**Google is crawling roughly a third of the site and declining to index it.**
+30,487 crawled-not-indexed against 60,025 indexed, so **33.7 per cent of crawled
+pages are being refused.**
+
+**This bears directly on the offerless-pages question, and it is the more important
+of the two findings.** The thin-content risk has been discussed throughout the
+retailer-departure work as something to watch for. This is **that signal in its raw
+form, measured rather than inferred.** "Crawled, currently not indexed" is Google's
+standard response to pages it judges to add insufficient value, which is precisely
+what an offerless or single-offer product page is at risk of being.
+
+Read it against `docs/commercial-finding-catalogue-depth.md`: **86.2 per cent of the
+buyable catalogue has a single stockist**, so most product pages cannot show a
+comparison at all. A third of crawled pages going unindexed is consistent with that,
+though the export cannot prove the causal link on its own.
+
+**What it does NOT establish**, and must not be reported as establishing:
+
+- **It predates every August change.** 24 July is before the r12 retirement
+  (27 July), before Branded Beauty (1 August) and before tonight's Boots step-down.
+  It is a baseline, not a consequence.
+- **The URL breakdown is unknown.** Whether the 30,487 are concentrated in product
+  pages, brand pages or something else is the first thing to establish, and it
+  changes the reading entirely.
+
+**Why report-only:** it is a measurement, and the useful next step is a fresher
+export with a URL-pattern breakdown, not a remedy. Read it before item 12 and before
+any further offerless-page work.
+
+> **Both items share a constraint worth stating once.** There is **no programmatic
+> Search Console access in this project**: no credential, no workflow, no stored
+> series, and `gsc_coverage` exists only as a metric name on `platform_changes` rows
+> with nothing populating it. Every GSC figure here was read by hand and **cannot be
+> reproduced from the repository or refreshed without someone opening the UI.** That
+> is the same absent-mechanism shape as the strategy document was, and it is worth
+> deciding deliberately whether it stays manual.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
