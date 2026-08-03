@@ -1879,6 +1879,37 @@ better than opening the Supabase dashboard and reading the source.
 3. **Drift.** Nothing compares deployed source with `main`. A function could have been
    edited in the dashboard months ago and nothing would say so.
 
+#### LIVE INSTANCE, 3 August 2026 evening
+
+**This stopped being hypothetical the same day it was written.**
+
+**Production is running `import-awin-feed` deployed from the branch
+`feat/awin-sibling-coalesce`. `main` still carries the old column list.** The deployed
+code requests both halves of all three sibling pairs; the code on the default branch
+requests one half of each. **Nothing anywhere records this.** Anyone reading `main`
+tomorrow to see what the importer does will read something that is not running.
+
+It is not wrong, and it is deliberate: the branch is unmerged because stage 1 is
+unconfirmed until the 05:30 UTC run, and staging discipline says a stage is confirmed
+before the next begins.
+
+**Two options were considered tonight and rejected, recorded so they are not
+re-proposed:**
+
+| Option | Why rejected |
+|---|---|
+| A header comment in the function saying which branch is deployed | **It would live on the branch.** Someone reading `main` would not see it, which is exactly the reader this is meant to help. The note has to exist somewhere both branches share, or somewhere outside the repository entirely. |
+| Merge now with all flags false | Defensible, since every retailer's flag is off and the flag-off path is byte-identical to the old code. But it **merges unconfirmed work to satisfy a documentation problem**, and staging discipline exists precisely to stop that trade. |
+
+**Leaving it is the choice, for one night**, with the divergence recorded here instead.
+That is the smallest honest option: it does not pretend the gap is closed, and it does
+not spend the staging discipline to close it.
+
+**The general lesson is the one the item already states, now with an example attached:**
+the gap is not that a deploy happened outside CI. It is that **nothing anywhere ties the
+running code to a revision**, so the divergence had to be noticed by the person who
+created it and written down by hand. That is not a mechanism.
+
 **Not proposing a fix here.** CI deployment needs a service-account token with deploy
 rights and a decision about whether an automated system should be able to write to the
 import path at all — which, given this project's caution about that path, is a real
