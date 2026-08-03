@@ -257,6 +257,7 @@ import {
   extractShade,
 } from "../_shared/match-key.ts";
 import { isMultipackMismatch } from "../_shared/multipack-guard.ts";
+import { validateBarcode, coalesceField } from "../_shared/barcode.ts";
 import { requireServiceRole } from "../_shared/require-service-role.ts";
 import { finaliseRun } from "../_shared/run-metrics.ts";
 import { reconstructBeautyFlashName, BEAUTY_FLASH_RETAILER_ID } from "./name-reconstruction.ts";
@@ -278,12 +279,25 @@ function buildFeedUrl(apiKey: string, feedId: string): string {
     "brand_name",
     "rrp_price",
     "in_stock",
+    // SIBLING PAIRS. AWIN advertisers populate one half of each pair and leave the
+    // other blank, and WHICH half differs per feed. Requesting only one half silently
+    // discards data that is present. Measured 3 Aug 2026:
+    //   Beauty Flash  ean 0.0%  product_GTIN 96.4%   category_name 100%  product_type 0%
+    //   Stylevana     ean 43.9% product_GTIN 0.0%    category_name 0%    product_type 100%
+    // Both halves are requested; the row loop prefers the primary and falls back.
     "merchant_product_category_path",
+    "merchant_category",
     "category_name",
+    "product_type",
     // Path 1 / EAN-first matching: barcode + manufacturer part number.
-    // Coverage observed: ~99.7% gtin, 100% mpn in real AWIN feeds.
-    // ean in CSV column maps to <ean> in XML feeds; mpn maps to <mpn>.
+    //
+    // THE ORIGINAL COMMENT HERE READ "Coverage observed: ~99.7% gtin" AND THEN
+    // REQUESTED "ean". The measurement was right and the column name beside it was
+    // wrong, which cost five retailers their barcodes entirely: Boots, Escentual,
+    // Beauty Flash, Gorgeous Shop and The Organic Pharmacy all sat at exactly 0.0%.
+    // Requesting both halves is the fix; reading only one is what caused it.
     "ean",
+    "product_GTIN",
     "mpn",
     // Image URL - feed includes a merchant-hosted image for the product.
     // Used for catalogue display.
@@ -1333,8 +1347,11 @@ serve(async (req) => {
     rrp_price: number;
     brand_name: number;
     category_path: number;
+    category_path_alt: number;
     category_name: number;
+    category_name_alt: number;
     ean: number;
+    ean_alt: number;
     mpn: number;
     image_url: number;
     description: number;
@@ -1359,8 +1376,13 @@ serve(async (req) => {
       // Google format puts the rich category data in google_product_category.
       // We treat it as both "path" (for filtering) and "name" (since it's the only category field).
       category_path: columns.indexOf("google_product_category"),
+      category_path_alt: -1,
       category_name: columns.indexOf("product_type"),
+      category_name_alt: -1,
+      // Already reads gtin correctly, which is why the two google_shopping retailers
+      // have ~99% barcode coverage while five awin ones had none. Left untouched.
       ean: columns.indexOf("gtin"),
+      ean_alt: -1,
       mpn: columns.indexOf("mpn"),
       image_url: columns.indexOf("image_link"),
       description: columns.indexOf("description"),
@@ -1380,8 +1402,11 @@ serve(async (req) => {
       rrp_price: columns.indexOf("rrp_price"),
       brand_name: columns.indexOf("brand_name"),
       category_path: columns.indexOf("merchant_product_category_path"),
+      category_path_alt: columns.indexOf("merchant_category"),
       category_name: columns.indexOf("category_name"),
+      category_name_alt: columns.indexOf("product_type"),
       ean: columns.indexOf("ean"),
+      ean_alt: columns.indexOf("product_GTIN"),
       mpn: columns.indexOf("mpn"),
       image_url: columns.indexOf("merchant_image_url"),
       description: columns.indexOf("description"),
@@ -1638,6 +1663,27 @@ serve(async (req) => {
   }
 
   // Counters for the EAN-first matching tier
+  // PER-RETAILER OPT-IN. Sibling coalesce is off by default and enabled one retailer
+  // at a time via retailer_import_config.sibling_coalesce. This changes what matches on
+  // the next import, so it is staged smallest-first: The Organic Pharmacy at 114 rows,
+  // Boots at 35,912 last. A retailer with the flag off takes byte-identical paths to
+  // before this change.
+  // DRY-RUN-ONLY OVERRIDE. Without this, testing the coalesce would require enabling
+  // the very flag under test, and the next scheduled import would then apply it before
+  // anyone had read the dry run. `coalesce_override` is honoured ONLY when dry_run is
+  // true, so it can never cause a write. Six gates, six reports, and the flag flips
+  // after the report rather than before it.
+  const coalesceOverride = dryRun && body.coalesce_override === true;
+  const coalesceOn = coalesceOverride || config.sibling_coalesce === true;
+  const coalesceStats: {
+    ean_from_alt: number; category_path_from_alt: number; category_name_from_alt: number;
+    barcode_rejected: number; barcode_reject_reasons: Record<string, number>;
+    barcode_reject_samples: Array<{ raw: string; reason: string }>;
+  } = {
+    ean_from_alt: 0, category_path_from_alt: 0, category_name_from_alt: 0,
+    barcode_rejected: 0, barcode_reject_reasons: {}, barcode_reject_samples: [],
+  };
+
   let countLinkViaEan = 0;
   let countLinkViaMpn = 0;
   let countLinkViaNameExact = 0;
@@ -1790,8 +1836,17 @@ serve(async (req) => {
       else if (!brandAliasMap.has(rawBrand.toLowerCase().trim()))
         unmatchedBrandCounts.set(rawBrand, (unmatchedBrandCounts.get(rawBrand) ?? 0) + 1);
     }
-    const categoryPath = fields[idx.category_path] || "";
-    const categoryName = fields[idx.category_name] || "";
+    // Sibling coalesce, gated per retailer. Primary first, sibling only when empty.
+    const catPathC = coalesceOn
+      ? coalesceField(fields, idx.category_path, idx.category_path_alt)
+      : { value: fields[idx.category_path] || "", usedAlt: false };
+    const catNameC = coalesceOn
+      ? coalesceField(fields, idx.category_name, idx.category_name_alt)
+      : { value: fields[idx.category_name] || "", usedAlt: false };
+    const categoryPath = catPathC.value;
+    const categoryName = catNameC.value;
+    if (catPathC.usedAlt) coalesceStats.category_path_from_alt++;
+    if (catNameC.usedAlt) coalesceStats.category_name_from_alt++;
 
     // DIAGNOSTIC: flag The Ordinary rows
     const isOrdinary = brand.toLowerCase().includes("ordinary") || name.toLowerCase().includes("the ordinary");
@@ -1894,7 +1949,28 @@ serve(async (req) => {
     }
 
     // Path 1: extract EAN/MPN from feed row.
-    const rawEan = idx.ean >= 0 ? (fields[idx.ean] || "").trim() : "";
+    // BARCODE. Coalesce then validate. Validation runs ONLY on the coalesced path so
+    // that a retailer with coalesce off is byte-identical to before this change.
+    let rawEan: string;
+    if (coalesceOn) {
+      const c = coalesceField(fields, idx.ean, idx.ean_alt);
+      if (c.usedAlt) coalesceStats.ean_from_alt++;
+      const checked = validateBarcode(c.value);
+      if (checked.reason) {
+        coalesceStats.barcode_rejected++;
+        coalesceStats.barcode_reject_reasons[checked.reason] =
+          (coalesceStats.barcode_reject_reasons[checked.reason] || 0) + 1;
+        if (coalesceStats.barcode_reject_samples.length < 10) {
+          coalesceStats.barcode_reject_samples.push({ raw: c.value.slice(0, 20), reason: checked.reason });
+        }
+      }
+      // A rejected barcode is treated as ABSENT, not as a failure: the row still
+      // imports and still matches on mpn or name. Rejecting a barcode must never cost
+      // a product its listing.
+      rawEan = checked.value ?? "";
+    } else {
+      rawEan = idx.ean >= 0 ? (fields[idx.ean] || "").trim() : "";
+    }
     const rawMpn = idx.mpn >= 0 ? (fields[idx.mpn] || "").trim() : "";
     const normEan = normaliseEan(rawEan);
     const normMpn = normaliseMpn(rawMpn);
@@ -2362,6 +2438,16 @@ serve(async (req) => {
       canonical_size_extracted_on_new: v6CanonicalSizeExtracted,
       shade_extracted_on_new: v6ShadeExtracted,
       rows_with_ean: rowsWithEan,
+      // Coalesce diagnostics, reported from the FIRST stage rather than added later,
+      // so a feed whose barcodes start failing validation is visible per run rather
+      // than discovered in aggregate months on.
+      sibling_coalesce: coalesceOn,
+      ean_from_sibling: coalesceStats.ean_from_alt,
+      category_path_from_sibling: coalesceStats.category_path_from_alt,
+      category_name_from_sibling: coalesceStats.category_name_from_alt,
+      barcode_rejected: coalesceStats.barcode_rejected,
+      barcode_reject_reasons: coalesceStats.barcode_reject_reasons,
+      barcode_reject_samples: coalesceStats.barcode_reject_samples,
       rows_with_mpn: rowsWithMpn,
       beauty_flash_names_rebuilt: countBeautyFlashRebuilt,
       debenhams_names_cleaned: countDebenhamsCleaned,

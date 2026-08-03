@@ -865,6 +865,34 @@ achievable answer.
 **Raised:** 2 August 2026, found while selecting demonstration baskets.
 **PRIORITY RAISED 3 August 2026. Detail: complete. NOT STARTED.**
 
+> **RESCOPED 3 August 2026. THIS ITEM IS ABOUT TWO RETAILERS READING THE WRONG
+> COLUMN, NOT NINE SCATTERED MISASSIGNMENTS.** Read-only feed-diag runs found the
+> cause, and it is mechanical rather than a categorisation-logic problem:
+>
+> | Retailer | Live rows | `merchant_product_category_path` (read) | `merchant_category` | `category_name` (read) | `product_type` |
+> |---|---|---|---|---|---|
+> | **Stylevana** | 12,122 | **0.0%** | 98.6% | **0.0%** | **100%** |
+> | **Beauty Flash** | 7,315 | **0.0%** | 100% | 100% | 0.0% |
+>
+> **Stylevana loses BOTH category columns.** The importer reads the two it populates at
+> 0.0% and ignores the two it fills. **12,122 live rows on the largest feed are
+> currently categorised from the product name alone**, with no feed category data at
+> all. Beauty Flash loses one of the two, at 7,315 rows.
+>
+> That is 19,437 rows across two retailers, which is a different item from "nine
+> misassignments concentrated in recent additions". **The nine are not disproved and
+> are not explained by this** — the overlap is unestablished and should not be assumed.
+> But the large, mechanical, fixable part of this item is now identified.
+>
+> **The fix is the AWIN sibling coalesce**, staged per retailer
+> (`retailer_import_config.sibling_coalesce`). Beauty Flash is stage 2 and Stylevana
+> stage 3, deliberately adjacent so the category half can be read on its own: Stylevana
+> gains no barcodes at all, so anything that moves there is the category fix.
+>
+> **Verification is category distribution before and after, not a populated column.**
+> A product landing in the right category is the outcome; a filled field is only the
+> mechanism.
+
 > **This is now blocking demonstration of the core mechanism, which is why it is no
 > longer a tidiness item.**
 >
@@ -1060,6 +1088,18 @@ wrong somewhere and the finding is bigger than the threshold.
 ---
 
 ### 21. Five retailers supply no EAN, and their identifiers are being discarded
+
+> **THE SCANNER GATE MOVES WHEN THIS LANDS, AND NOTHING WATCHES FOR IT.** Added
+> 3 August 2026. A barcode scanner is planned and not built; it is gated on EAN coverage
+> of roughly 60.7%. AWIN-weighted coverage today is about 47%. Recovering Boots,
+> Escentual, Beauty Flash, Gorgeous Shop and The Organic Pharmacy at 94.7-100% takes it
+> comfortably past that gate.
+>
+> **A gate can be crossed by work done for another reason, and nothing in this project
+> watches for that.** This fix is about matching quality; the scanner is a product
+> decision that was waiting on a number this fix moves. **Check EAN coverage against the
+> gate after stage 6 (Boots) lands**, rather than noticing months later that the
+> condition was met and nobody looked.
 
 **Raised:** 2 August 2026, found while diagnosing The Organic Pharmacy.
 **Detail: complete. NOT STARTED. Do not fix by hand.**

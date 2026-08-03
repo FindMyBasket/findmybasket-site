@@ -646,3 +646,57 @@ mistaken for normality?** If yes, surface it.
 happened: send logs, audit rows, metrics snapshots, run state. These are exactly the
 writes people wrap in a bare catch, because they are "not important enough to fail on" —
 and exactly the writes whose absence is indistinguishable from nothing having happened.
+
+---
+
+## 15. A safeguard can fail confidently rather than silently
+
+**Added 3 August 2026, from a validator that was designed and measured before it shipped.**
+
+Convention 3 says a guard that fires wrongly is as damaging as one that never fires,
+because it trains the habit of dismissal. **This is the sharper case: a guard that fires
+wrongly, reports success, and destroys the thing it was added to protect.**
+
+**The worked example.** The AWIN sibling coalesce required barcode validation, because
+a wrong barcode is a valid-looking string and nothing downstream checks that an EAN
+belongs to the product it is attached to. The obvious reading of "EAN checksum
+validation" is an EAN-13 validator.
+
+Measured against live data **before** writing it:
+
+| Retailer | Barcodes | 13-digit | **12-digit** |
+|---|---|---|---|
+| Debenhams | 10,232 | 7,481 | **2,629** |
+| Beauty Bay | 7,624 | 4,477 | **3,068** |
+
+**Those 6,228 are UPC-A, and they work today.** An EAN-13-only validator would have
+rejected every one of them, on two retailers whose data was never in question, while
+reporting a clean run and a plausible rejection count. The failure would have looked
+like diligence.
+
+**Why it would not have been caught.** A rejected barcode is treated as absent, so no
+row fails, no import errors, and the only symptom is matching quietly getting worse on
+two retailers over subsequent imports. Nothing in the pipeline compares barcode coverage
+before and after a deploy.
+
+**The rule. Measure what a safeguard will reject BEFORE shipping it, against real data,
+and read the rejections rather than the pass rate.** A validator's pass rate is not
+evidence it is correct; it is evidence it is consistent. The rejections are where the
+information is.
+
+**Practical form:**
+
+1. **Run the proposed rule over existing production data and count what it would kill.**
+   If the answer is not zero on data believed good, the rule is wrong until explained.
+2. **Distinguish "absent" from "invalid".** Conflating them buries the signal: empties
+   swamp genuine rejections and the count stops meaning anything.
+3. **Log rejections per source per run from the first deploy**, not added later once a
+   number looks odd. A rejection rate is only readable as a series.
+4. **Prefer widening to rejecting** where a wider rule is provably lossless. UPC-A
+   left-padded to 13 digits *is* the equivalent EAN-13 and its check digit is unchanged,
+   so accepting both costs nothing and makes cross-retailer matching work between a
+   UPC-A retailer and an EAN-13 one.
+
+**Sits beside convention 3.** Convention 3 is about the cost of false alarms to human
+attention. This is about the cost of false alarms to data, which is worse, because
+attention notices being wasted and data does not.
