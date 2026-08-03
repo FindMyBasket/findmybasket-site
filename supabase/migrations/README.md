@@ -700,3 +700,50 @@ information is.
 **Sits beside convention 3.** Convention 3 is about the cost of false alarms to human
 attention. This is about the cost of false alarms to data, which is worse, because
 attention notices being wasted and data does not.
+
+---
+
+## 16. Before any destructive git operation, confirm the non-destructive one did something
+
+**Added 3 August 2026, after a `reset --hard` that nearly discarded a commit whose
+rescue had silently failed.**
+
+**Convention 2 applied to git.** A `git cherry-pick` that produces an **empty** commit
+prints a notice and leaves `HEAD` unchanged. Nothing fails. The branch simply does not
+contain the change, and the next command in the sequence was `git reset --hard`, which
+would have removed the only other copy.
+
+**The sequence that nearly lost work:**
+
+```
+git checkout <branch>
+git cherry-pick <sha>        # produced an EMPTY commit; the change did not transfer
+git checkout main
+git reset --hard origin/main # would have destroyed <sha>, the only remaining copy
+```
+
+**Why it looked fine.** The cherry-pick emitted a hint rather than an error, the shell
+exited 0, and the branch log showed a plausible HEAD. The failure was visible only by
+asking a different question: *is the changed content actually present in the file?*
+
+**Why it happened here specifically.** The two branches held **different versions of the
+same file**. `main` carried items 33 and 34; the branch carried an item 18 rescope and a
+scanner-gate note that `main` did not. A cherry-pick across that divergence can resolve
+to a no-op without conflicting.
+
+**The rule.** Before `reset --hard`, `branch -D`, `push --force`, or any other operation
+that removes a commit from reach, **verify the operation intended to preserve it actually
+preserved it** — by checking the content, not the exit code and not the log.
+
+```
+grep -c '<a string only the rescued change contains>' <file>
+```
+
+**A commit that is still reachable is recoverable; that is the escape hatch and it is
+narrow.** `git reflog` and the dangling object both survive a `reset --hard` for now, but
+they expire, and the recovery only works if you notice in time. In this case the content
+was recovered from the orphaned commit and re-applied. Nothing was lost, but only because
+the check happened before the second destructive step rather than after it.
+
+**Same shape as convention 8.** A check that does not run is not a check; here, a rescue
+that did not rescue is not a rescue, and both report success identically.
