@@ -510,3 +510,48 @@ Gorgeous Shop feed-id rotation in about three hours on 2 August. That is a monit
 its job on the loud failure class rather than a convention being vindicated, and
 `docs/post-4-august-work-list.md` item 14 already records why the loud class is the easy
 one. Counting it here would flatter the list.
+
+---
+
+## 12. A string-scoped sweep will miss paraphrases. A claim sweep has to search for meaning
+
+**Added 3 August 2026, after the same defect recurred twice in one day.**
+
+**A string-scoped sweep will miss paraphrases of the same claim. A claim sweep has to
+search for meaning.**
+
+The 3 August house-rule fix swapped `"all major UK beauty retailers"` and left **eight
+paraphrases standing**, two of them in `og:description` and `twitter:description`,
+which never render on the page and are what search results and link previews show. The
+rule was about the **assertion** — that the site compares an entire market — and the
+grep was about the **words**. Variants found only on a second pass: *"the UK's leading
+beauty retailers"*, *"the UK's major beauty retailers"*, *"the UK's major hair
+retailers"*, *"the UK's leading retailers"*, across two files.
+
+**The practical form, which is the part that will actually get used:**
+
+1. **List the ways the claim could be phrased BEFORE grepping.** Write the synonyms
+   down first: leading, major, top, biggest, all, every, nationwide. The grep is only
+   as good as that list, and the list is the work.
+2. **Treat metadata and structured data as separate surfaces, because neither renders.**
+   `<meta name="description">`, `og:*`, `twitter:*` and JSON-LD each carry claims that
+   no amount of reading the page will reveal. They are also the highest-stakes copy on
+   the site: **an unsupportable claim in a search snippet is worse than one on the
+   page, because it is the version people see before deciding to arrive.**
+3. **Finish on the claim, not on the grep.**
+
+**This was the SECOND recurrence of the same defect in one day, and the second occurred
+inside the fix for the first.** The morning's lesson was that a sweep scoped to a
+retailer's *name* misses claims that name nobody
+(`docs/superdrug-removal-plan.md`, Step 5). The afternoon's was that a sweep scoped to
+a *string* misses claims that say the same thing differently — discovered while
+implementing the morning's fix.
+
+**A sweep is not finished when the grep returns clean. It is finished when the claim
+has been enumerated.**
+
+**Relationship to convention 11.** Convention 11 records guards that have fired in
+anger. This one is the opposite artefact and worth keeping next to it: a *check* that
+ran, returned clean, and was wrong, because the question it asked was narrower than the
+rule it was enforcing. A green result from an under-specified check is more dangerous
+than no check, since it closes the question.
