@@ -1707,6 +1707,45 @@ spot afterwards than one that never measured at all.
 
 ---
 
+### 32. A persistently failing address is never paused, and is retried forever
+
+**Raised 3 August 2026 while building the pause rule. REPORT ONLY. Needs its own
+decision; deliberately not solved in that pass.**
+
+The Template B pause rule filters on `ok`: a routine pauses after **three consecutive
+delivered empty sends**. That filter is correct and deliberate — a pause must follow
+three months of having nothing to say, **not** three months of Resend failing. Those are
+different problems with different remedies, and conflating them would pause a subscriber
+whose routine is perfectly priceable because their mail provider was rejecting us.
+
+**But it leaves the mirror-image gap.** An address that fails every month never
+accumulates three `ok = true` rows, **so it never pauses, and is retried monthly
+forever.**
+
+**That is the deliverability problem in a different form**, and it is the more damaging
+form. Repeated sends to a failing address degrade sender reputation for **every other
+email the platform sends**, including the ones that do have something to say. The empty
+email problem costs one subscriber's attention; this one costs everybody's inbox
+placement.
+
+**Why it is not urgent yet.** `ok = false` has never occurred. All 19 rows in
+`routine_email_log` are `ok = true`. The gap is real and currently unexercised.
+
+**What a rule would have to decide**, none of which should be guessed:
+
+1. **How many consecutive failures before acting.** Hard bounces and soft bounces are
+   not the same signal and Resend distinguishes them; the log currently does not.
+2. **What "acting" means.** Pause, deactivate, or mark the address undeliverable and
+   keep the routine, since the routine may be fine and only the address dead.
+3. **Whether the user can ever be recovered.** An address that starts working again is a
+   different case from one that never will, and nothing currently records which.
+
+**Note the shape.** Both rules read the same series and both are about not sending. They
+should probably be one function with two reasons rather than two functions, so that
+"why was this routine paused" has a single answer. Decide that before either is built.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
