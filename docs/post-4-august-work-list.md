@@ -33,7 +33,16 @@
 
 ---
 
-## RUN ORDER: item 12 goes FIRST, ahead of everything below
+## RUN ORDER: item 12 went first and is now CLOSED (3 August 2026)
+
+**Item 12 ran on 3 August and returned "found easily".** The run order below is kept
+because the reasoning for prioritising it was sound and is worth reusing, not because
+the item is still pending. Everything it was placed ahead of — items 1 and 11, the
+Niche Beauty go-live, The Fragrance Shop go-live — is unchanged and unblocked by the
+result.
+
+<details>
+<summary>The original run-order note</summary>
 
 **Set 3 August 2026.** Item numbers are identifiers, not a running order, and they
 are cited from `dashboard-build-brief.md`, `superdrug-removal-plan.md`,
@@ -60,6 +69,8 @@ Why it jumps the queue:
   than a paragraph. See item 12 for the full statement.
 
 Nothing else in the run order changes.
+
+</details>
 
 ---
 
@@ -385,13 +396,49 @@ defensible while the fix is imminent.
 
 ---
 
-### 12. Does the delivery wedge actually bite? Search the catalogue.
+### 12. Does the delivery wedge actually bite? — ANSWERED 3 August 2026: FOUND EASILY
 
-**Raised:** 1 August 2026 · **Blocked until:** after 4 August
-**PRIORITY RAISED 3 August 2026 — THIS RUNS FIRST. Ahead of items 1 and 11, the
-Niche Beauty go-live and The Fragrance Shop go-live. It can run the day after the
-Boots decision.** See the run-order note at the top of this file.
-**Detail: complete. This is ANALYSIS, not a fix.**
+**Raised 1 August 2026. RUN AND CLOSED 3 August 2026.**
+
+> **OUTCOME: "found easily", the first of the three. Not "found rarely" and not
+> "not found".** This item was written with all three outcomes as findings and none
+> as a failure, so the outcome is recorded by name rather than left to be inferred
+> from the fact that work followed.
+>
+> **The wedge bites, and it is not rare.** Verified instance, every single-retailer
+> option and every retailer pair evaluated exhaustively rather than only the expected
+> two: goods-optimal is Beauty Bay plus Debenhams at £47.20 goods, genuinely the
+> cheapest on goods. Delivered, £51.19. Consolidating at Beauty Bay is £48.00 goods
+> and **£48.00 delivered**, free over £30. **Two different arrangements, £3.19
+> apart.** An £0.80 unit saving bought for £3.99 of postage.
+>
+> | Pairing | Qualifying items |
+> |---|---|
+> | YesStyle to Stylevana | **1,050** |
+> | Beauty Flash to Gorgeous Shop | 678 |
+> | Stylevana to YesStyle | 501 |
+> | Debenhams cheapest by under £3.99 | **673**, of which **435** pair with Beauty Bay |
+>
+> **Both forms occur**: the flat-retailer case, where Debenhams is never free and so
+> wins on goods and loses delivered, and the pure tiered case in the original
+> condition, where a leg lands below its threshold by less than that retailer's
+> delivery charge. The K-beauty specialists dominate the tiered list, which is the
+> section 2 prediction confirmed rather than restated.
+>
+> **Two qualifications, both recorded in `docs/strategy.md` section 2 alongside the
+> result.** This was the first search against true delivery terms; per A1 every
+> earlier run would have measured the fabricated fallbacks. And the wedge only bites
+> where two retailers stock the same product, so the erosion in A2 is erosion of the
+> ground this mechanism stands on: 11,449 comparable in `products_active` that
+> evening, having lost 86 to the Boots step-down hours earlier.
+>
+> **Consequences.** `public/work-with-us.html:329` and strategy section 2 are
+> supported by measurement, not merely defensible. The homepage demo can now
+> demonstrate the mechanism instead of asserting it, which is separate work and must
+> re-price at build time per `docs/standing-rule-frozen-catalogue-state.md`.
+
+**Original detail follows, kept because the search parameters are the record of how
+the question was framed.**
 
 > **Correction to the original framing: "nothing breaks if it never runs" was
 > wrong, and it is what kept this item low.** Nothing breaks *mechanically*. But

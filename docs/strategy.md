@@ -54,6 +54,39 @@ malformed shape impossible. The code still carries the fallbacks, so Debenhams i
 asserted for months before it was true, and this document is where it is recorded which claims are
 supported.
 
+**[Amended 3 Aug 2026] The wedge is EVIDENCED, not merely predicted. Found easily, on the first
+search against true inputs.** The paragraph above predicts on reasoning that thresholds bite hardest
+where unit prices are low and thresholds are high, in the K-beauty specialists. That prediction is
+now measured. Work-list item 12 asked whether a basket exists where the goods-optimal split and the
+delivery-optimal split are genuinely different arrangements. It does, and they are not rare.
+
+A verified three-item instance, every single-retailer option and every retailer pair evaluated
+exhaustively: goods-optimal is Beauty Bay plus Debenhams at £47.20 of goods, which is truly the
+cheapest arrangement on goods. Delivered it costs £51.19, because the Debenhams leg is `flat` and
+never free. Consolidating everything at Beauty Bay costs £48.00 of goods and **£48.00 delivered**,
+free over its £30 threshold. Two different arrangements, £3.19 apart. An £0.80 unit saving bought at
+a cost of £3.99 in postage.
+
+The population, measured 3 August 2026:
+
+| Pairing | Qualifying items | Kind |
+|---|---|---|
+| YesStyle to Stylevana | **1,050** | tiered, leg falls below threshold |
+| Beauty Flash to Gorgeous Shop | 678 | tiered |
+| Stylevana to YesStyle | 501 | tiered |
+| Debenhams cheapest by under its £3.99 flat charge | **673**, of which **435** pair with Beauty Bay alone | flat retailer, never free |
+
+**The K-beauty specialists dominate the tiered list, which is the prediction above confirmed rather
+than restated.** Two qualifications, both material. First, per the amendment above, this is the first
+search run against real delivery terms; every earlier one would have measured the fallbacks. Second,
+the wedge only bites where two retailers stock the same product, so **the erosion recorded in
+section 6 is erosion of the ground this mechanism stands on**: the comparable set was 11,449 in
+`products_active` on the evening of 3 August, having lost 86 to the Boots step-down that afternoon.
+The mechanism is real and the surface it operates on is shrinking.
+
+`public/work-with-us.html:329` and this section are therefore **supported by measurement**, not
+merely defensible in principle.
+
 ## **What the platform does**
 
 - Routine builder at /app. The user assembles a basket, the optimiser runs, and the result is either a single retailer or a split across retailers, delivery included.
