@@ -1,0 +1,75 @@
+# Daily production deploy, so the homepage demo is re-solved against current prices.
+#
+# WHY A TRIGGER AND NOT JUST A GENERATOR. scripts/generate-homepage-demo.mjs runs at
+# build time, so the demo is correct as of the last build. Correctness and freshness
+# are different properties: builds have been near-daily this fortnight, but that is a
+# fact about recent activity rather than a guarantee. Without this, a quiet week means
+# a homepage showing a basket solved against week-old prices, and the baskets turn on a
+# leg sitting a few pounds either side of a delivery threshold.
+#
+# Correctness comes from the generator. Freshness comes from this.
+#
+# WHAT A FAILURE HERE MEANS. If the deploy hook fails, the site keeps serving the last
+# good build. That is a stale demo, not a wrong one, because the generator that produced
+# it re-solved at the time. So this failing is not urgent, and it must not be treated as
+# an outage. It IS worth noticing: a hook that has been failing for a fortnight is a
+# homepage nobody has re-solved for a fortnight.
+#
+# REQUIRED SECRET
+#   VERCEL_DEPLOY_HOOK_URL  Vercel > Project > Settings > Git > Deploy Hooks.
+#                           Create one against the production branch (main).
+#                           NOT the same as VERCEL_TOKEN; this URL is itself the
+#                           credential, so it is a secret and must never be echoed.
+
+name: Refresh homepage demo
+
+on:
+  schedule:
+    # 05:30 UTC. After the overnight retailer imports (the latest observed finishes
+    # around 04:31) so the demo is solved against the day's prices, and before the
+    # 09:00 feed monitor, so a bad overnight import is still visible in that email
+    # rather than being masked by a fallback nobody reads.
+    - cron: '30 5 * * *'
+  workflow_dispatch:
+
+# One at a time. Two overlapping deploys of the same branch produce a race in which
+# the later build can finish first and serve the older solve.
+concurrency:
+  group: refresh-homepage-demo
+  cancel-in-progress: false
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail loudly if the hook is not configured
+        # An unset secret would otherwise curl an empty URL, fail in a way that reads
+        # like a network error, and be dismissed. Name the actual cause.
+        run: |
+          if [ -z "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}" ]; then
+            echo "::error::VERCEL_DEPLOY_HOOK_URL is not set. The homepage demo is NOT being refreshed."
+            echo "Create a deploy hook against main in Vercel > Settings > Git > Deploy Hooks,"
+            echo "then add it as a repository secret. Until then the demo is only as fresh as"
+            echo "the last manual deploy."
+            exit 1
+          fi
+
+      - name: Trigger production deploy
+        # No `set -x`: the hook URL is the credential and tracing would print it.
+        run: |
+          set -euo pipefail
+          code=$(curl -s -o /tmp/hook.out -w '%{http_code}' -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}")
+          echo "deploy hook responded HTTP $code"
+          cat /tmp/hook.out || true
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            echo "::error::Deploy hook returned HTTP $code. The homepage demo was NOT refreshed today."
+            echo "The site continues to serve the last good build, so this is stale rather than wrong."
+            exit 1
+          fi
+
+      - name: Note what this does and does not prove
+        run: |
+          echo "Deploy triggered. This does NOT confirm the build succeeded, nor that a"
+          echo "candidate basket demonstrated the mechanism. If every candidate fails, the"
+          echo "generator renders copy without figures and prints FMB DEMO FALLBACK FIRED"
+          echo "to the build log. Check the Vercel build output, not this workflow, for that."

@@ -790,7 +790,28 @@ achievable answer.
 ### 18. Nine category misassignments, concentrated in recent additions
 
 **Raised:** 2 August 2026, found while selecting demonstration baskets.
-**Detail: complete. NOT STARTED.**
+**PRIORITY RAISED 3 August 2026. Detail: complete. NOT STARTED.**
+
+> **This is now blocking demonstration of the core mechanism, which is why it is no
+> longer a tidiness item.**
+>
+> Found while selecting homepage demo baskets on 3 August: **Beauty Flash's
+> `Moisturiser` category returns milk_shake hair cream, Goldwell styling balm, hand
+> cream and self-tan.** It cannot source a coherent skincare routine.
+>
+> **That matters because Beauty Flash to Gorgeous Shop is the second-largest tiered
+> wedge pairing in the catalogue, at 678 qualifying items** (item 12, answered
+> 3 August). The delivery wedge demonstrably bites there, and the demo cannot use it,
+> because the categories will not yield a basket a reader recognises as a routine.
+>
+> **Category misassignment has stopped being a data-quality chore and become a
+> constraint on proving the differentiator.** The homepage demo shortlist is
+> consequently concentrated on Stylevana, recorded as a known risk in the block
+> comment of `public/index.html`.
+>
+> **Report only in this pass. Not investigated, not fixed. A separate brief follows.**
+> Do not assume the nine known misassignments and the Beauty Flash pollution are the
+> same set; the overlap is unestablished.
 
 Excluded from the pin baskets, since those are the shop window. Recorded because
 the clustering suggests the categoriser regressed rather than that these are nine
