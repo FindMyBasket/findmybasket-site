@@ -33,6 +33,36 @@
 
 ---
 
+## RUN ORDER: item 12 goes FIRST, ahead of everything below
+
+**Set 3 August 2026.** Item numbers are identifiers, not a running order, and they
+are cited from `dashboard-build-brief.md`, `superdrug-removal-plan.md`,
+`partnership-tracker.md` and three migrations — so nothing is renumbered here.
+Priority is stated instead.
+
+**Item 12 (does the delivery wedge actually bite?) runs before items 1, 11, the
+Niche Beauty go-live and The Fragrance Shop go-live.** It can run **the day after
+the Boots decision**.
+
+Why it jumps the queue:
+
+- **It is analysis. It needs no deploy**, touches no import path, and cannot
+  disturb the 4 August GSC read.
+- **It is independent of everything it overtakes.** It does not depend on the AWIN
+  coalesce fix (item 1), on the optimiser reading `delivery_model` (item 11), or on
+  either pending retailer. None of them depend on it either. It is pure catalogue
+  measurement against data that already exists.
+- **Its answer changes what the others are worth.** Item 11 removes the delivery
+  fallbacks so the optimiser models thresholds correctly. If the wedge never bites,
+  that work is still correct but its value is much smaller than assumed, and the
+  sizing should know that first.
+- **The exposure is positioning, not copy**, and positioning is slower to correct
+  than a paragraph. See item 12 for the full statement.
+
+Nothing else in the run order changes.
+
+---
+
 ## Tasks
 
 ### 1. Coalesce fix
@@ -156,21 +186,35 @@ request is still outstanding. Merging them into "Amazon API access" would mean
 one clearing while the line still reads blocked, which is how a cleared unlock
 goes unnoticed.
 
-> **The re-check mechanism lives OUTSIDE this repository, and that is the fragile
-> part.** Working samples with a populated `.env`:
+> **The re-check mechanism lives OUTSIDE this repository.** Working samples with a
+> populated `.env`:
 >
-> **`~/Downloads/creatorsapi-nodejs-sdk/examples`**
+> **`~/amazon-api-watch/sdk/examples`**
 >
 > `sampleListReports.js` · `sampleGetReport.js` · `sampleListFeeds.js` ·
 > `sampleGetItems.js` · `sampleSearchItems.js` · `sampleGetVariations.js` ·
 > `sampleGetBrowseNodes.js`
 >
 > **Nothing in this repository references that directory**, so nothing here would
-> break, warn, or fail a test if it were deleted — and `~/Downloads` is a
-> directory people empty. It is recorded here because this file is the register:
-> an unreferenced mechanism outside the repo is precisely the thing that gets
-> recited from memory later. **Relocating it somewhere durable, with the `.env`
-> handled as a credential rather than a file, is itself owed work.**
+> break, warn, or fail a test if it were deleted. It is recorded here because this
+> file is the register: an unreferenced mechanism outside the repo is precisely the
+> thing that gets recited from memory later.
+>
+> **Relocated 3 Aug 2026 — this item is CLOSED.** It was
+> `~/Downloads/creatorsapi-nodejs-sdk/examples`, a directory people empty. Product-
+> data access **cleared** the same morning (`GetItems` returns real data, shipped
+> 12), which is what made it urgent: the credentials now *work*, and are worth
+> stealing in a way they were not while every call returned `AssociateNotEligible`.
+> The `.env` is now mode **0600** in a durable location.
+>
+> The "nothing references it" line above is true **of this repository only**.
+> Outside it, `~/amazon-api-watch/check-amazon-api.sh` runs these samples daily at
+> 08:30 via a LaunchAgent — one `SDK_DIR` variable, the single functional reference
+> anywhere. That short list is why the move was cheap, and it will not stay short
+> once the dashboard build starts calling product data.
+>
+> Keychain was considered and **declined** — rationale, and the entitlement
+> evidence, in `~/amazon-api-watch/README.md`.
 >
 > The assessment these items come from is written up in
 > `docs/dashboard-build-brief.md` §8, which is where the superseded "no usable
@@ -344,7 +388,35 @@ defensible while the fix is imminent.
 ### 12. Does the delivery wedge actually bite? Search the catalogue.
 
 **Raised:** 1 August 2026 · **Blocked until:** after 4 August
-**Detail: complete. This is ANALYSIS, not a fix — nothing breaks if it never runs.**
+**PRIORITY RAISED 3 August 2026 — THIS RUNS FIRST. Ahead of items 1 and 11, the
+Niche Beauty go-live and The Fragrance Shop go-live. It can run the day after the
+Boots decision.** See the run-order note at the top of this file.
+**Detail: complete. This is ANALYSIS, not a fix.**
+
+> **Correction to the original framing: "nothing breaks if it never runs" was
+> wrong, and it is what kept this item low.** Nothing breaks *mechanically*. But
+> two live surfaces already assert the wedge as fact, so leaving the question open
+> is not a neutral state, it is an unexamined claim sitting in the market-facing
+> material.
+>
+> **The exposure is NOT the articles.** Two savings-hub articles published
+> 3 August do assert it, and copy is the cheap thing to fix. The exposure is:
+>
+> | Surface | The claim |
+> |---|---|
+> | **`public/work-with-us.html:329`** | *"Whole-basket optimisation including delivery. **No other UK platform does this.** Most compare single products. We optimise the entire routine including each retailer's free delivery threshold."* — partner-facing differentiator. |
+> | **Section 2 of the strategy document** | The same positioning, and the more exposed of the two. **Not yet in this repository: a Word file outside version control.** Conversion to `docs/strategy.md` is queued as item 24, PENDING rather than absent. Cite it by path once that lands; until then it can only be named, not grepped. |
+>
+> **If ignoring delivery never gives the wrong answer, the wedge is defensible in
+> principle and never bites in practice.** That is a **positioning finding, not a
+> copy problem.** The mechanism would be real, correctly built and genuinely
+> unique, and also inert — which is a different thing to be telling partners than
+> what is currently being told. Positioning takes far longer to correct than a
+> paragraph does, which is the argument for answering this before more of it is
+> built on.
+>
+> None of the three outcomes below is a failure. The failure mode is continuing to
+> assert it without having looked.
 
 **The question.** Does a 3–5 item basket exist in the live catalogue where the
 **goods-optimal** split and the **delivery-optimal** split are *different arrangements*?
@@ -929,6 +1001,212 @@ should be made honestly.** It is not a scoring problem. It is that five retailer
 including Boots, the largest — are matched on names and sizes rather than on
 identifiers they are actually supplying. That is worth fixing on its own merits, and
 it does not need a penalty constant to justify it.
+
+---
+
+### 22. Amazon live-price selection: is it coherent before it is possible?
+
+**Raised:** 3 August 2026 · **Blocked until:** after 4 August
+**Detail: complete. This is ANALYSIS, not a build. No implementation is to be proposed.**
+
+**Demand data cannot drive selection.** 42 Amazon clicks across 39 distinct products —
+no concentration exists, so there is nothing to rank. The selection criterion is
+therefore **structural**: products with exactly one live retailer, where an Amazon price
+is what converts a listing into a comparison.
+
+#### A. The rolling gate is the first question, and it may end the enquiry
+
+**This leads because it is the objection that copy cannot address.**
+
+Product-data access is a **rolling** entitlement, not a one-time unlock (see
+`~/amazon-api-watch/README.md`; measured `AssociateNotEligible` on 2 Aug at 11 shipped,
+`OK` on 3 Aug at 12). It can be withdrawn with nothing changing at our end.
+
+Now apply that to the population §B.1 selects for:
+
+| Product type | Losing Amazon access means |
+|---|---|
+| Multi-retailer | A comparison degrades to a **smaller comparison**. Tolerable. |
+| **Solo-retailer** | Amazon **is** the comparison. The page **silently reverts to a single listing** — the exact state the feature existed to fix. |
+
+**The feature is least robust precisely where it is most valuable**, and it fails by
+reverting rather than by erroring. Nothing surfaces the reversion; the page simply looks
+like it did before, which is the silent-kill class in item 14.
+
+**This closes off caching as an escape.** The obvious answer — cache the last known
+Amazon price and serve it through an outage — produces a stored price whose refresh path
+no longer exists. That is the **same frozen-state failure** as:
+
+| Prior instance | The shape |
+|---|---|
+| **r12 / Superdrug** | Retired feed, 29,547 rows retained, figures quoted from them long after they stopped being refreshed. |
+| **Branded Beauty article price tables** | Hand-written prices in copy, refreshed by nothing (item 10). |
+| **The `price_history` gap** | As raised 3 Aug. **Least documented of the three** — a grep finds only `docs/superdrug-removal-plan.md:208`. Locate and record it properly as part of this analysis; do not carry it as established. |
+
+**On the count:** this was raised as the *third* instance of the shape. Three priors are
+named above, so a cached Amazon price would be the **fourth**. Settle the count when the
+`price_history` gap is pinned down rather than propagating either number — miscounting a
+recurring defect is how it stops being recognised as recurring.
+
+#### B. What to report, in order
+
+1. **Products with exactly ONE live retailer, grouped by brand, across the WHOLE
+   catalogue** — not the K-beauty subset sampled so far.
+2. **The intersection of that set with products that have received any traffic**
+   (`outbound_clicks` or a product page view). Expected to be small; that overlap is the
+   natural starting set.
+3. **The actual Creators API rate limit at our tier.** Neither party knows the number and
+   any design depends on it. The vendored SDK docs may predate the Nov 2025 changes, so
+   **if the shipped docs and a live response header disagree, report both rather than
+   reconciling them.**
+4. **The optimiser conflict**, below.
+
+#### C. The optimiser conflict — and a corrected premise
+
+**Amazon cannot join the basket optimiser.** On a solo-retailer product, if Amazon is
+cheaper, the page shows a best price the optimiser will not route to. Report how the
+product page and `RoutineBuilder` would **each** handle that today, and what would have to
+change.
+
+**The premise as originally stated was wrong, and is corrected here rather than carried.**
+It is *not* that Amazon has no delivery threshold. Non-Prime is typically free over a
+threshold; Prime is free regardless; and **the buy-box seller can change both**. The
+threshold is therefore **user-dependent** — which no other retailer's is — and the
+optimiser cannot know which user it is serving.
+
+That is a **different problem** from an absent threshold, and plausibly a **harder** one:
+an absent threshold is a constant the optimiser could model, whereas a user-dependent one
+is unknowable at optimisation time. **Establish which of the two it actually is before it
+is treated as settled.** This interacts with item 11 (`delivery_model`), which currently
+assumes a retailer's delivery rule is a property of the retailer.
+
+#### D. Verifications approved, not to be adopted as given
+
+- **Derive** the "186 distinct products with clicks" figure rather than adopting it.
+- **Derive** the `outbound_clicks`-versus-page-view distinction rather than assuming the
+  two populations are interchangeable.
+
+**Why this is the question and not a smaller one.** If §A holds, the feature is incoherent
+regardless of whether §B and §C are solvable, and the correct outcome is not to build it.
+That verdict is worth as much as a green light and costs a fraction of the work — which is
+why this is analysis, and why nothing here authorises an implementation.
+
+---
+
+### 23. Close the `enabled` trap in `monitor-retailer-feeds`
+
+**Raised:** 3 August 2026 · **Blocked until:** after 4 August
+**Detail: complete. Small change, and the comment is the larger half of it.**
+
+`supabase/functions/monitor-retailer-feeds/index.ts:123` selects
+`retailer_import_config.enabled`:
+
+```ts
+.select("retailer_id, last_import_status, last_import_error, last_attempt_at, enabled");
+```
+
+**It is never referenced again.** That `SELECT` is the only occurrence of the string
+`enabled` in the entire function. The monitor's scope is `retailers.active` and nothing
+else (line 104-108); a parked retailer with `enabled = false` alerts as stale every
+morning regardless. Established 2026-08-03 — see
+`docs/superdrug-removal-plan.md`, "Step 0", for the three-retailer proof.
+
+**Do NOT simply delete the column from the select.** A silent removal leaves the next
+reader with no way to know the omission is deliberate, and the natural next step for
+anyone who notices a parked retailer alerting is to *add* `enabled` to the filter,
+believing they are fixing an oversight. The change is:
+
+1. **Remove** `enabled` from the `.select(...)` on line 123.
+2. **Add a comment** at that line recording that `enabled` is deliberately **not**
+   honoured, and why: `enabled` gates whether the *importer runs*, whereas the monitor
+   answers whether the *data is fresh*. A retailer that is parked but still `active` is
+   still being shown to users on stale data, and that is precisely the case worth
+   alerting on. Silencing it would mean the monitor stops watching a retailer the site is
+   still serving. **`active = false` is the flag that means "stop watching", and it
+   already works.**
+
+**Why this is the comment and not a one-liner.** The defect is not the wasted column, it
+is that line 123 reads as though the monitor honours `enabled`. Deleting the word fixes
+the code and leaves the misconception un-addressed for the next person who wonders why a
+parked retailer alerts.
+
+**Same class as two hazards already recorded**, both a line that looks incidental and
+misleads:
+
+| Hazard | The misleading surface |
+|---|---|
+| `ClickOutLink` `target = '_blank'` | A **default parameter** at `components/ClickOutLink.tsx:34`, so no call site passes it and **none of them look like new-tab links** — yet the new-tab behaviour is what keeps the consent-replay queue alive (`docs/dashboard-build-brief.md:1024-1030`). |
+| The `dataLayer` stub | `public/fmb-gtag-stub.js` — a queue that looks like a no-op shim but is load-bearing for pre-consent clicks (`docs/ticket-gtag-hydration-race.md`). |
+
+Add this one to that set when it lands: the shared property is that the *correct* reading
+requires knowing something the line itself does not say.
+
+**Scope note.** This does not change any alerting behaviour. It is a readability and
+misdirection fix, and it must not be bundled with a change to what the monitor watches —
+if the park-window noise is ever judged worth suppressing, that is a separate decision
+with its own entry, because the only alternatives are tolerating the mail or bringing the
+`active` flip forward.
+
+---
+
+### 24. Convert the strategy document to `docs/strategy.md` — PENDING, not absent
+
+**Raised:** 3 August 2026 · **Blocked on:** the Word file, and nothing else.
+**Detail: complete. Not blocked by the 4 August gate, blocked on one input.**
+**Amendments committed 3 August at `docs/strategy-amendments.md`.**
+
+**The primary strategic artefact is a Word file outside version control.** It is
+cited by name across this work — item 12 names section 2 as a more exposed surface
+than any published article — and it cannot be grepped, diffed, linked to by path,
+or checked for staleness. Nothing surfaces its absence, because there is no
+artefact to go stale.
+
+**This is the same shape as the dashboard brief before it was committed**, and the
+same absent-record class this file's own header describes. It is recorded here as
+**pending, not absent**: the document exists and is authoritative, it just has no
+address in this repository.
+
+**Target:** `docs/strategy.md`, markdown, so it is greppable, versionable and
+citable by path the way every other brief here is.
+
+#### Do the conversion and the amendment pass TOGETHER
+
+**Nine amendments are drafted and not applied.** Converting the Word file as it
+stands would commit a version known to be stale on the day it lands, and a stale
+document with a path is worse than a stale document without one, because the path
+makes it look authoritative and citable.
+
+**The amendments now have a path: `docs/strategy-amendments.md`, committed
+3 August 2026, ahead of the strategy document itself.** They previously existed
+only in conversation, which was the same defect as the strategy document being
+outside version control and the instance that would have survived the fix. That is
+closed.
+
+**One blocker remains: the Word file. Not two.** The amendment source is safe
+regardless of when the document arrives.
+
+Sequence:
+
+1. Robbie supplies the Word file. **This is the only outstanding input.**
+2. Convert to markdown at `docs/strategy.md`.
+3. Apply all nine from `docs/strategy-amendments.md` **in the same pass**, before or
+   at the first commit.
+4. Resolve the two editorial notes at the foot of the amendments file first. They
+   flag a missing qualifier on A3's comparison-depth figure and an overstatement in
+   A5 ("the gate is documented" against a threshold recorded as supported, not
+   confirmed). A5 is the amendment most likely to be quoted outward.
+
+**Read A1 and A2 before item 12 runs.** A1 records that the delivery half of the
+wedge had no data until 1 August, so the mechanic was asserted for months before it
+was evidenced. A2 records that comparison depth is being actively eroded by
+retailer departures rather than being static. **Both change what item 12's answer
+means**: a wedge that never bites is a different finding if the delivery inputs were
+fabricated until two days before the test, and a shrinking comparable set moves the
+odds of finding a qualifying basket at all.
+
+**Once it lands:** update item 12's exposure table to cite `docs/strategy.md` by
+path and section rather than by name, and check whether any of the nine amendments
+touch the whole-basket positioning that item 12 tests.
 
 ---
 
