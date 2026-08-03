@@ -213,22 +213,40 @@ async function loadData(allIds) {
   if (!url || !key) return { missingCreds: true }
 
   const supabase = createClient(url, key)
-  const { data: retailers } = await supabase
+  const r1 = await supabase
     .from('retailers').select('id,name,delivery_model,delivery_threshold,delivery_cost')
     .eq('active', true)
-  const { data: offers } = await supabase
+  const r2 = await supabase
     .from('retailer_prices').select('product_id,retailer_id,price')
     .in('product_id', allIds).eq('in_stock', true)
-  const { data: products } = await supabase
+  const r3 = await supabase
     .from('products').select('id,name,brand').in('id', allIds)
-  return { retailers, offers, products }
+
+  // supabase-js reports query failures as an `error` field rather than throwing, so
+  // an unreachable database looks identical to an empty table unless this is read.
+  // Conflating the two would report "no rows" for an outage and send someone to the
+  // catalogue.
+  const failed = [['retailers', r1], ['retailer_prices', r2], ['products', r3]]
+    .filter(([, r]) => r.error)
+    .map(([t, r]) => `${t}: ${r.error.message}`)
+  if (failed.length) return { queryError: failed.join('; ') }
+
+  return { retailers: r1.data, offers: r2.data, products: r3.data }
 }
 
 async function main() {
   const allIds = [...new Set(CANDIDATES.flatMap(c => c.products))]
   const loaded = await loadData(allIds)
+
+  // Credentials and empty result sets are INFRASTRUCTURE, not catalogue findings.
+  // Routing them to the catalogue fallback would send someone to look at product
+  // data when the actual cause is a missing secret or an unreachable database.
   if (loaded.missingCreds) {
-    fallbackLoud(['SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set'])
+    infraFallback('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set')
+    return
+  }
+  if (loaded.queryError) {
+    infraFallback(`supabase query failed — ${loaded.queryError}`)
     return
   }
   const { retailers, offers, products } = loaded
@@ -236,7 +254,7 @@ async function main() {
   const rejections = []
 
   if (!retailers?.length || !offers?.length || !products?.length) {
-    fallbackLoud(['query returned no rows for retailers, offers or products'])
+    infraFallback('query returned no rows for retailers, offers or products')
     return
   }
 
@@ -279,7 +297,7 @@ async function main() {
     return
   }
 
-  fallbackLoud(rejections, null)
+  catalogueFallback(rejections)
 }
 
 function replaceBlock(html, block) {
@@ -291,29 +309,87 @@ function replaceBlock(html, block) {
   return html.slice(0, s) + block + html.slice(e + END.length)
 }
 
-function fallbackLoud(rejections) {
-  const html = readFileSync(TARGET, 'utf8')
-  writeFileSync(TARGET, replaceBlock(html, renderFallback()), 'utf8')
-
-  const bar = '='.repeat(72)
-  console.error(bar)
-  console.error('FMB DEMO FALLBACK FIRED — no candidate basket demonstrates the')
-  console.error('mechanism. Hero rendered WITHOUT figures.')
-  console.error(`  candidates evaluated : ${CANDIDATES.length}`)
-  rejections.forEach(r => console.error(`  rejected             : ${r}`))
-  console.error('')
-  console.error('This is a CATALOGUE finding, not a rendering detail. If it fires on')
-  console.error('consecutive builds, either the shortlist needs rebuilding or the wedge')
-  console.error('has stopped biting. See work-list item 12.')
-  console.error(bar)
-
-  if (process.env.FMB_DEMO_FALLBACK_FATAL === '1') {
-    process.exit(1)
+/**
+ * Write the no-figures hero. Shared by both fallback kinds. Returns false if the
+ * block could not be written at all, which is itself worth reporting rather than
+ * swallowing: it means the markers are gone and NOTHING was regenerated.
+ */
+function writeNoFiguresHero() {
+  try {
+    const html = readFileSync(TARGET, 'utf8')
+    writeFileSync(TARGET, replaceBlock(html, renderFallback()), 'utf8')
+    return true
+  } catch (e) {
+    console.error(`FMB demo: could NOT write the no-figures hero: ${String(e)}`)
+    console.error('The committed state of the block is the no-figures hero, so the site')
+    console.error('still serves copy without figures rather than a stale basket.')
+    return false
   }
 }
 
+const BAR = '='.repeat(72)
+
+/**
+ * CATALOGUE fallback. Every candidate was evaluated and none demonstrated the
+ * mechanism. The data is fine; the baskets are not. Someone should look at the
+ * shortlist or at whether the wedge still bites.
+ */
+function catalogueFallback(rejections) {
+  const wrote = writeNoFiguresHero()
+  console.error(BAR)
+  console.error('FMB DEMO FALLBACK FIRED (CATALOGUE) — no candidate basket')
+  console.error('demonstrates the mechanism. Hero rendered WITHOUT figures.')
+  console.error(`  candidates evaluated : ${CANDIDATES.length}`)
+  rejections.forEach(r => console.error(`  rejected             : ${r}`))
+  console.error(`  hero rewritten       : ${wrote ? 'yes' : 'NO — markers missing'}`)
+  console.error('')
+  console.error('This is a CATALOGUE finding, not a rendering detail and NOT an outage.')
+  console.error('The database answered; the baskets did not qualify. If it fires on')
+  console.error('consecutive builds, either the shortlist needs rebuilding or the wedge')
+  console.error('has stopped biting. See work-list item 12. Do not check Supabase status.')
+  console.error(BAR)
+
+  // Only the catalogue case honours the fatal flag. An infrastructure blip must
+  // never be able to fail the build (see infraFallback).
+  if (process.env.FMB_DEMO_FALLBACK_FATAL === '1') process.exit(1)
+}
+
+/**
+ * INFRASTRUCTURE fallback. The generator could not get usable data, or threw.
+ * ALWAYS exits 0. A cosmetic hero must never be able to block a deploy: a
+ * Supabase blip taking down every deployment is a far larger failure than a
+ * homepage without a worked example, and it would be caused by a decoration.
+ */
+function infraFallback(reason, err) {
+  const wrote = writeNoFiguresHero()
+  console.error(BAR)
+  console.error('FMB DEMO FALLBACK FIRED (INFRASTRUCTURE) — the generator could')
+  console.error('not produce a demo. Hero rendered WITHOUT figures.')
+  console.error(`  reason               : ${reason}`)
+  console.error(`  hero rewritten       : ${wrote ? 'yes' : 'NO — markers missing'}`)
+  if (err) console.error(`  detail               : ${String(err && err.stack ? err.stack.split('\n')[0] : err)}`)
+  console.error('')
+  console.error('This is an INFRASTRUCTURE finding, not a catalogue one. The baskets were')
+  console.error('never evaluated, so this says NOTHING about whether the wedge still bites.')
+  console.error('Check Supabase reachability and the build environment secrets, not the')
+  console.error('catalogue or work-list item 12.')
+  console.error('')
+  console.error('The build CONTINUES deliberately. Exit code is 0 even with')
+  console.error('FMB_DEMO_FALLBACK_FATAL set: a cosmetic hero must not block a deploy.')
+  console.error(BAR)
+}
+
+// Any uncaught throw is infrastructure by definition: the candidate evaluation
+// never completed, so nothing is known about the catalogue. Never rethrow.
 main().catch(err => {
-  console.error('FMB demo: generator threw, falling back to copy without figures.')
-  console.error(err)
-  try { fallbackLoud([`generator threw: ${String(err)}`]) } catch { /* last resort */ }
+  try {
+    infraFallback('generator threw before it could evaluate candidates', err)
+  } catch (inner) {
+    console.error(BAR)
+    console.error('FMB DEMO: the fallback handler ITSELF threw. Nothing was written.')
+    console.error(String(inner))
+    console.error('Exiting 0 regardless so the build proceeds.')
+    console.error(BAR)
+  }
+  process.exitCode = 0
 })
