@@ -443,6 +443,71 @@ function buildAlertsSubject(items: AlertItem[]): string {
   return `${items.length} price drops on your routine`;
 }
 
+/**
+ * TEMPLATE A: the routine has nothing buyable this month.
+ *
+ * WHY A SEPARATE TEMPLATE. Falling through to the normal builder renders a "Best
+ * available prices" heading over an empty breakdown and a £0 total. A monthly
+ * "best price" email containing nothing is worse than not sending, and silence is
+ * worse than both: it loses a subscriber without telling them anything. A true
+ * message keeps the subscriber and the trust.
+ *
+ * FOUR DELIBERATE CHOICES, kept when this was approved 3 August 2026:
+ *   1. NAME THE PRODUCTS. A generic "nothing found" is nearly as bad as an empty email.
+ *   2. SAY WHO WE CHECKED. "at any retailer we compare", never "anywhere" and never a
+ *      whole-market claim. Same house rule as the site (convention 12).
+ *   3. DISTINGUISH OUT OF STOCK FROM DELISTED. A user reading "not available" will
+ *      otherwise assume the product is gone for good.
+ *   4. PROMISE ONLY WHAT THE SYSTEM DOES. It genuinely will report a price next month
+ *      if stock returns. No alert is promised, because no alert exists.
+ *
+ * NO EM DASHES. Guarded by lib/__tests__/email-copy.test.ts.
+ */
+function buildEmptyRoutineEmailHTML(params: {
+  products: Product[]; unsubscribeToken: string; appBaseUrl: string;
+}): string {
+  const { products, unsubscribeToken, appBaseUrl } = params;
+  const unsubscribeUrl = `${appBaseUrl}/unsubscribe.html?token=${unsubscribeToken}`;
+  const basketUrl = `${appBaseUrl}/app.html?routine=${products.map((p) => p.id).join(",")}&utm_source=email`;
+
+  const rows = products.map((p) => `
+    <tr><td style="padding:12px 0;border-bottom:1px solid #f0ece4;">
+      <div style="font-size:15px;color:#1C1A18;font-weight:500;">${escapeHtml(p.brand ? p.brand + " " + p.name : p.name)}</div>
+      <div style="font-size:13px;color:#8a8680;margin-top:3px;">Not currently in stock at any retailer we compare.</div>
+    </td></tr>`).join("");
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#faf8f4;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#1c1a18;">
+<table cellspacing="0" cellpadding="0" border="0" width="100%" style="padding:40px 20px;"><tr><td align="center">
+<table cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;">
+  <tr><td style="padding:24px 28px 20px;border-bottom:1px solid #f0ece4;">
+    <div style="font-family:Georgia,serif;font-size:18px;font-weight:600;">Find<span style="color:#c9a96e;">My</span>Basket</div>
+  </td></tr>
+  <tr><td style="padding:28px;">
+    <h1 style="margin:0 0 14px;font-family:Georgia,serif;font-size:22px;color:#1c1a18;">Still watching for stock</h1>
+    <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#4a4845;">
+      We could not find your routine in stock at any of our retailers this month.
+    </p>
+    <table cellspacing="0" cellpadding="0" border="0" width="100%">${rows}</table>
+    <p style="margin:22px 0 0;font-size:15px;line-height:1.6;color:#4a4845;">
+      We are still watching it. As soon as it is back in stock at any of our retailers,
+      your next monthly email will show the best price, delivered.
+    </p>
+    <p style="margin:14px 0 24px;font-size:14px;line-height:1.6;color:#6e6a64;">
+      This is not a price rise or a delisting. It means the retailers we compare are not
+      currently listing it.
+    </p>
+    <a href="${basketUrl}" style="display:inline-block;background:#1c1a18;color:#faf8f4;padding:13px 28px;border-radius:100px;font-size:14px;font-weight:500;text-decoration:none;">Update my routine</a>
+  </td></tr>
+  <tr><td style="padding:16px 28px;background:#faf8f4;border-top:1px solid #f0ece4;font-size:11px;color:#8a8680;">
+    <a href="${unsubscribeUrl}" style="color:#8a8680;">Unsubscribe</a>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+}
+
 function buildAlertsEmailHTML(params: {
   items: AlertItem[];
   unsubscribeToken: string;
@@ -540,13 +605,25 @@ async function logSend(
   ok: boolean,
   resendMessageId: string | null,
   error: string | null,
+  outcome: string | null = null,
 ): Promise<void> {
   try {
+    // `outcome` records WHAT THE EMAIL CONTAINED, which is orthogonal to `mode` (why
+    // it was sent) and `ok` (whether Resend accepted it). Three independent axes, so
+    // "an empty email that sent successfully" is representable. Template B's
+    // three-consecutive-empty-months rule is derived by reading the last three rows
+    // rather than by keeping a counter, so the rule stays inspectable.
     await supabase.from("routine_email_log").insert({
       routine_id: routine.id,
       email: routine.email,
       mode,
       ok,
+      // outcome is NOT written yet: routine_email_log has no such column, and this
+      // insert swallows its errors so an unknown column would SILENTLY STOP LOGGING.
+      // The parameter is threaded through and the call sites pass it, so enabling
+      // this is one line once the column lands. Field shape is with the operator for
+      // approval; Template B's rule reads the last three rows of this table.
+      // ...(outcome ? { outcome } : {}),
       resend_message_id: resendMessageId,
       error: error ? String(error).slice(0, 500) : null,
     });
@@ -762,12 +839,30 @@ Deno.serve(async (req: Request) => {
         const prices = (pricesData || []) as unknown as PriceRow[];
 
         const result = optimiseBasket(products, prices);
-        const html = buildEmailHTML({
-          result, unsubscribeToken: routine.unsubscribe_token,
-          routineProductIds: productIds, appBaseUrl,
-          emailType: mode === "welcome" ? "welcome" : "monthly",
-        });
-        const subject = buildEmailSubject(result, mode === "welcome" ? "welcome" : "monthly");
+
+        // EMPTY ROUTINE. The optimiser found nothing buyable: every product in this
+        // routine is out of stock at every active retailer. Without this branch the
+        // email renders a "Best available prices" heading over an empty breakdown and
+        // a £0 total, which is worse than not sending. See work-list item 30.
+        //
+        // It is NOT an error and NOT a defect. Routine 37's only offer was a Boots row
+        // last confirmed 11 May, flipped out by the absence step-down on 3 Aug 2026.
+        // Before that flip the user was emailed a May price presented as current,
+        // which was worse. The step-down made a pre-existing emptiness visible.
+        const isEmpty = !result.best || result.best.breakdown.length === 0;
+
+        const html = isEmpty
+          ? buildEmptyRoutineEmailHTML({
+              products, unsubscribeToken: routine.unsubscribe_token, appBaseUrl,
+            })
+          : buildEmailHTML({
+              result, unsubscribeToken: routine.unsubscribe_token,
+              routineProductIds: productIds, appBaseUrl,
+              emailType: mode === "welcome" ? "welcome" : "monthly",
+            });
+        const subject = isEmpty
+          ? "Your routine: still watching for stock"
+          : buildEmailSubject(result, mode === "welcome" ? "welcome" : "monthly");
 
         const resendRes = await fetch(RESEND_API, {
           method: "POST",
@@ -778,7 +873,7 @@ Deno.serve(async (req: Request) => {
         if (!resendRes.ok) {
           const errText = await resendRes.text();
           failed++; errors.push(`Routine ${routine.id} (${routine.email}): Resend ${resendRes.status} — ${errText}`);
-          await logSend(supabase, routine, mode, false, null, `Resend ${resendRes.status}: ${errText}`);
+          await logSend(supabase, routine, mode, false, null, `Resend ${resendRes.status}: ${errText}`, isEmpty ? "empty" : "priced");
           continue;
         }
 
@@ -798,7 +893,7 @@ Deno.serve(async (req: Request) => {
             .update({ last_emailed_at: new Date().toISOString() })
             .eq("id", routine.id);
         }
-        await logSend(supabase, routine, mode, true, resendMessageId, null);
+        await logSend(supabase, routine, mode, true, resendMessageId, null, isEmpty ? "empty" : "priced");
         sent++;
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
