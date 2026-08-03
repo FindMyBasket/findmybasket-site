@@ -606,29 +606,42 @@ async function logSend(
   resendMessageId: string | null,
   error: string | null,
   outcome: string | null = null,
-): Promise<void> {
+): Promise<string | null> {
+  // RETURNS AN ERROR STRING RATHER THAN SWALLOWING. Changed 3 August 2026.
+  //
+  // This used to `catch (_) {}` with the comment "observability must not affect
+  // sending". The intent was right and the implementation was the silent-kill shape:
+  // a schema mismatch here does not raise, it just stops writing rows, and an empty
+  // log looks exactly like an absence of events. That is strictly worse than throwing,
+  // because nothing distinguishes "no emails were sent" from "logging broke".
+  //
+  // It nearly happened: adding `outcome` before the column existed would have silently
+  // ended all send logging. supabase-js reports the failure as an `error` FIELD too
+  // (convention 10), so even without the try/catch a destructure that ignores `error`
+  // would have been silent.
+  //
+  // The rule now: still never throw, still never fail a send, but SURFACE. The caller
+  // pushes the returned string onto the errors array in the function's response, where
+  // the operator sees it. Sending is unaffected; silence is not an option.
+  //
+  // `outcome` records WHAT THE EMAIL CONTAINED, orthogonal to `mode` (why it sent) and
+  // `ok` (whether Resend accepted it). Template B's three-empty-months rule is derived
+  // by reading the last three rows via fmb_routine_empty_streak(), not by a counter,
+  // so the rule stays inspectable.
   try {
-    // `outcome` records WHAT THE EMAIL CONTAINED, which is orthogonal to `mode` (why
-    // it was sent) and `ok` (whether Resend accepted it). Three independent axes, so
-    // "an empty email that sent successfully" is representable. Template B's
-    // three-consecutive-empty-months rule is derived by reading the last three rows
-    // rather than by keeping a counter, so the rule stays inspectable.
-    await supabase.from("routine_email_log").insert({
+    const { error: logErr } = await supabase.from("routine_email_log").insert({
       routine_id: routine.id,
       email: routine.email,
       mode,
       ok,
-      // outcome is NOT written yet: routine_email_log has no such column, and this
-      // insert swallows its errors so an unknown column would SILENTLY STOP LOGGING.
-      // The parameter is threaded through and the call sites pass it, so enabling
-      // this is one line once the column lands. Field shape is with the operator for
-      // approval; Template B's rule reads the last three rows of this table.
-      // ...(outcome ? { outcome } : {}),
+      outcome,
       resend_message_id: resendMessageId,
       error: error ? String(error).slice(0, 500) : null,
     });
-  } catch (_) {
-    // swallow — observability must not affect sending
+    if (logErr) return `routine_email_log insert failed for routine ${routine.id}: ${logErr.message}`;
+    return null;
+  } catch (e) {
+    return `routine_email_log insert threw for routine ${routine.id}: ${String(e)}`;
   }
 }
 
@@ -640,18 +653,27 @@ async function logAlertSend(
   ok: boolean,
   resendMessageId: string | null,
   error: string | null,
-): Promise<void> {
+): Promise<string | null> {
+  // Same treatment as logSend: never throw, never fail a send, but SURFACE rather than
+  // swallow. Fixed alongside logSend on 3 August 2026 because it is the same defect in
+  // the same file, and fixing only the one that had just bitten would be exactly the
+  // instance-not-class mistake recorded as convention 13.
   try {
-    await supabase.from("routine_email_log").insert({
+    const { error: logErr } = await supabase.from("routine_email_log").insert({
       routine_id: null,
       email: row.email,
       mode: "alerts",
       ok,
+      // Alerts are price-drop notifications, not basket emails, so there is no basket
+      // to be empty. outcome stays NULL rather than being forced into a vocabulary
+      // that does not describe them.
       resend_message_id: resendMessageId,
       error: error ? String(error).slice(0, 500) : null,
     });
-  } catch (_) {
-    // swallow — observability must not affect sending
+    if (logErr) return `routine_email_log insert failed for alert to ${row.email}: ${logErr.message}`;
+    return null;
+  } catch (e) {
+    return `routine_email_log insert threw for alert to ${row.email}: ${String(e)}`;
   }
 }
 
@@ -693,7 +715,7 @@ async function sendAlerts(
       if (!resendRes.ok) {
         const errText = await resendRes.text();
         failed++; errors.push(`User ${row.user_id} (${row.email}): Resend ${resendRes.status} — ${errText}`);
-        await logAlertSend(supabase, row, false, null, `Resend ${resendRes.status}: ${errText}`);
+        { const le = await logAlertSend(supabase, row, false, null, `Resend ${resendRes.status}: ${errText}`); if (le) errors.push(le); }
         continue;
       }
 
@@ -713,12 +735,12 @@ async function sendAlerts(
         console.error(`fmb_mark_alerts_delivered failed for user ${row.user_id}:`, markErr.message);
         errors.push(`User ${row.user_id}: sent but mark-delivered failed — ${markErr.message}`);
       }
-      await logAlertSend(supabase, row, true, resendMessageId, markErr ? `mark-delivered failed: ${markErr.message}` : null);
+      { const le = await logAlertSend(supabase, row, true, resendMessageId, markErr ? `mark-delivered failed: ${markErr.message}` : null); if (le) errors.push(le); }
       sent++;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       failed++; errors.push(`User ${row.user_id}: ${message}`);
-      await logAlertSend(supabase, row, false, null, message);
+      { const le = await logAlertSend(supabase, row, false, null, message); if (le) errors.push(le); }
     }
   }
 
@@ -873,7 +895,7 @@ Deno.serve(async (req: Request) => {
         if (!resendRes.ok) {
           const errText = await resendRes.text();
           failed++; errors.push(`Routine ${routine.id} (${routine.email}): Resend ${resendRes.status} — ${errText}`);
-          await logSend(supabase, routine, mode, false, null, `Resend ${resendRes.status}: ${errText}`, isEmpty ? "empty" : "priced");
+          { const le = await logSend(supabase, routine, mode, false, null, `Resend ${resendRes.status}: ${errText}`, isEmpty ? "empty" : "priced"); if (le) errors.push(le); }
           continue;
         }
 
@@ -893,7 +915,7 @@ Deno.serve(async (req: Request) => {
             .update({ last_emailed_at: new Date().toISOString() })
             .eq("id", routine.id);
         }
-        await logSend(supabase, routine, mode, true, resendMessageId, null, isEmpty ? "empty" : "priced");
+        { const le = await logSend(supabase, routine, mode, true, resendMessageId, null, isEmpty ? "empty" : "priced"); if (le) errors.push(le); }
         sent++;
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);

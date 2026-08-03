@@ -603,3 +603,46 @@ of a computation. In both cases the search was narrower than the thing being enf
 **Cost of getting this wrong is asymmetric.** The instance fix looks complete, closes
 the ticket, and reads as diligent in the commit message. Nothing surfaces the surviving
 copy, because the surviving copy is working exactly as written.
+
+---
+
+## 14. A fire-and-forget write turns a schema mismatch into silence
+
+**Added 3 August 2026, after nearly disabling all send logging with a one-line change.**
+
+`routine_email_log` inserts were wrapped in `try { ... } catch (_) {}` with the comment
+*"observability must not affect sending"*. The intent was right. The implementation was
+the silent-kill shape:
+
+**A logging table that stops logging is worse than one that throws, because the absence
+looks like an absence of events.** Nothing distinguishes "no emails were sent" from
+"logging broke three weeks ago".
+
+**How it nearly bit.** Adding an `outcome` field to that insert before the column
+existed would have ended all send logging silently, on every send, indefinitely. The
+send would have succeeded, the operator would have seen nothing wrong, and the table
+would simply have stopped growing.
+
+**Compounded by convention 10.** `supabase-js` reports the failure as an `error` FIELD
+rather than throwing, so even without the `try/catch` a destructure that ignored `error`
+would have been equally silent. Two independent mechanisms, both defaulting to quiet.
+
+**The rule.** A fire-and-forget write must never throw and never fail the operation it
+observes, **but it must not be silent either.** Return the failure and have the caller
+surface it on the channel the operator already reads.
+
+```ts
+const { error: logErr } = await supabase.from("...").insert({ ... });
+if (logErr) return `... insert failed: ${logErr.message}`;   // caller pushes to errors[]
+```
+
+**Not every `catch (_)` is this defect.** In the same file, a defensive `JSON.parse` of
+a Resend response body falls back to `null` for the message id, and `null` is a correct
+answer there rather than a suppressed failure. The distinguishing question is: **would a
+persistent failure of this operation be invisible, and would that invisibility be
+mistaken for normality?** If yes, surface it.
+
+**Where else this shape lives.** Anywhere a write exists only to record that something
+happened: send logs, audit rows, metrics snapshots, run state. These are exactly the
+writes people wrap in a bare catch, because they are "not important enough to fail on" —
+and exactly the writes whose absence is indistinguishable from nothing having happened.
