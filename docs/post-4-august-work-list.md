@@ -1548,9 +1548,50 @@ threshold as correct and meaningful rather than as missing data.
 
 ---
 
-### 29. The monthly email invents a £3.95-per-retailer savings baseline
+### 29. The monthly email invented a £3.95-per-retailer savings baseline — DONE, 3 Aug 2026
 
-**Raised 3 August 2026 during item 11. NOT FIXED, deliberately. Report only.**
+**Raised and fixed 3 August 2026. Priority raised above the Niche Beauty go-live and
+done the same day: it is small, it uses `deliveryFor()` which now exists, and it
+removed the LAST fabricated delivery constant in the codebase.**
+
+> **It was wrong twice, not once.** `£3.95` is invented — only two of twelve retailers
+> charge exactly that, the spread is £0.00 to £3.99, and Debenhams charges on every
+> basket while the rest go free above a threshold. And `uniqueRetailerCount` counted
+> every retailer stocking **any** item in the routine, not the number of orders you
+> would actually place. A single-product routine was charged delivery for **eight**
+> retailers.
+>
+> **The baseline now:** assign each product to its most expensive stocking retailer,
+> group those into real legs, charge each leg that retailer's real delivery through the
+> shared rule. If any leg's terms are unknown, no saving is claimed rather than a
+> guessed one. Same contract as the recommendation path, so the two are comparable.
+>
+> **Measured effect on the six live routines with buyable items:**
+>
+> | Routine | Old baseline delivery | New | Baseline drop |
+> |---|---|---|---|
+> | 36 (one product) | £31.60 | £0.00 | **£31.60** |
+> | 25 | £31.60 | £3.95 | £27.65 |
+> | 3 | £11.85 | £7.45 | £4.40 |
+> | 21 | £11.85 | £7.45 | £4.40 |
+> | 42 | £7.90 | £3.95 | £3.95 |
+> | 26 (twelve products) | £3.95 | £0.00 | £3.95 |
+>
+> **Worked example, routine 36.** One product, best delivered £20.45. The claimed
+> saving falls from **£37.15 (64%)** to **£5.55 (21%)**.
+>
+> **The reduction is the point.** The old figure was inflated by a number nobody
+> measured. That is the r12 savings problem in a different place, and the corrected
+> figure is the first one this email has reported that is derived entirely from
+> observed terms.
+>
+> **Guarded.** The constant test now covers every pricing path, not just the rule, and
+> catches the arithmetic shape (`* 3.95`) as well as the fallback shape (`?? 3.95`) —
+> the last constant survived the first sweep precisely because it was a multiplication.
+> Proven to bite by reintroducing the constant and watching the test fail.
+
+<details>
+<summary>Original entry, when this was deferred</summary>
 
 `supabase/functions/send-routine-email/index.ts`:
 
@@ -1576,6 +1617,8 @@ in place with a comment pointing here.
 retailer, each charging its real delivery" (defensible, computable, and smaller than
 today's figure for most baskets) or something else entirely. It will most likely
 **reduce** the headline saving.
+
+</details>
 
 ---
 
