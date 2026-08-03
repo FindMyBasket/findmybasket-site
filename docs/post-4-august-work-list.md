@@ -1397,6 +1397,49 @@ any further offerless-page work.
 
 ---
 
+### 27. The homepage hero now depends on Supabase at build time
+
+**Raised:** 3 August 2026 · **REPORT ONLY. Nothing to fix. Recorded because it is a
+new coupling and nothing else on the static homepage has one.**
+
+`scripts/generate-homepage-demo.mjs` runs before `next build` and queries Supabase to
+re-solve the demo basket. **The marketing surface now has a database dependency it did
+not have yesterday.**
+
+`public/index.html` is a static file served by a rewrite, with no Supabase client and
+no runtime data access. Every other figure on it is hand-written. This is the first
+part of the homepage whose content is produced from live data, and therefore the first
+that can be affected by the database being unavailable.
+
+**It degrades safely, and that was designed rather than hoped for:**
+
+| If | Then |
+|---|---|
+| Supabase unreachable, credentials absent, query fails, generator throws | `FMB DEMO FALLBACK FIRED (INFRASTRUCTURE)`, hero renders **without figures**, **exit 0** |
+| Every candidate basket fails to demonstrate the mechanism | `FMB DEMO FALLBACK FIRED (CATALOGUE)`, hero renders without figures, exit 0 |
+| Markers missing from `index.html` | Nothing written, said explicitly, exit 0. The committed state is the no-figures hero, so the served page is still safe |
+
+**A build can never fail because of this.** Verified by forcing all nine paths,
+including infrastructure failure with `FMB_DEMO_FALLBACK_FATAL=1`, which still exits 0.
+A cosmetic hero must not be able to block a deploy.
+
+**Why record it at all, given it is safe.** Two reasons, neither urgent:
+
+1. **Nobody expects the homepage to have a database dependency.** Someone debugging a
+   build failure, or wondering why the hero has no figures, will not think to look at
+   Supabase unless this is written down. The fallback is loud in the build log, and a
+   build log is loud at the moment it happens and invisible a day later.
+2. **The coupling is one-directional today and could stop being.** If anything else on
+   the static pages is later generated the same way, this stops being an exception and
+   becomes a pattern, and the pattern deserves a deliberate decision rather than
+   accretion.
+
+**Related:** the daily refresh is `.github/workflows/refresh-homepage-demo.yml`,
+which triggers a production deploy via the Vercel API using `VERCEL_TOKEN`. If that
+workflow fails, the site serves the last good build: **stale, not wrong.**
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
