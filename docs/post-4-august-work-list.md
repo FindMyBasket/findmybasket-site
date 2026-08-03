@@ -1665,6 +1665,48 @@ routines is not two-thirds fiction. They have been emailed monthly since 30 Apri
 
 ---
 
+### 31. The 25% savings claim: traced. Reframing a number is not correcting it
+
+**Raised and answered 3 August 2026. REPORT ONLY, closed by the answer.**
+
+The question left open this morning was whether the removed hero claim, *"Save up to
+around 25% on a comparable beauty routine"*, had a traceable and wrong origin, or was
+simply written by hand. **It was written by hand.** But the history is worse than that,
+and it is the useful part.
+
+| When | What | Traced by |
+|---|---|---|
+| **2 May 2026** | Enters the copy as *"around 25% **average** saving"*. A hardcoded string. No computation, then or ever. | `git log -S`, earliest appearance in an uploaded static file |
+| **29 June 2026** | Commit `938251d` (PR #61) finds it. Its own message: *"a hardcoded string with no computation behind it, and a verification pass put the real catalogue-wide average far lower (~8% on a comparable routine, ~1% on a realistic one); 25% is the best-case top decile, not an average."* | commit message |
+| | **The number was kept. The words were changed** from "average saving" to "Save up to around 25%", reframing a false average as a true-sounding ceiling. | the diff |
+| **3 August 2026** | Removed entirely, replaced with the mechanism and no figure. | PR #178 |
+
+**Two corrections, three months, and the first one left the figure in place.**
+
+> **REFRAMING A NUMBER IS NOT CORRECTING IT.** The June pass did the hard part: it
+> measured, found the real average was ~8% and ~1%, and wrote that down. Then it kept
+> 25% on screen by weakening the sentence around it. A reader saw the same number
+> before and after. Whatever the intent, the effect was to preserve an unsupported
+> figure through a correction pass that had already disproved it.
+
+**What it was NOT.** It did not come from `uniqueRetailerCount * 3.95`, and it did not
+come from the routine emails. Checked directly: no computation has ever produced a 25%
+figure for this copy.
+
+**But the connection is real, one step across.** The same June commit also found the
+stacked-delivery baseline defect and fixed it in the site path across ten files.
+**`send-routine-email` was not one of them**, so the identical computation survived
+there until item 29 today. That is why a live routine was still claiming a 64% saving
+in August for a defect corrected in June. Recorded as
+`supabase/migrations/README.md` convention 13: fix the class, not the instance.
+
+**No action.** The figure is gone, the computation is gone, and the guard tests would
+catch either returning. This is recorded because the *pattern* is worth recognising:
+a correction that measures honestly and then leaves the number standing is harder to
+spot afterwards than one that never measured at all.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row

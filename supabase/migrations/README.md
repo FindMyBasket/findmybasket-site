@@ -555,3 +555,51 @@ anger. This one is the opposite artefact and worth keeping next to it: a *check*
 ran, returned clean, and was wrong, because the question it asked was narrower than the
 rule it was enforcing. A green result from an under-specified check is more dangerous
 than no check, since it closes the question.
+
+---
+
+## 13. Fix the class, not the instance. Enumerate every path before closing
+
+**Added 3 August 2026, from a defect that was diagnosed in writing and then left
+standing in a second code path for five weeks.**
+
+**When a defect is found in one path, enumerate every path that could carry it before
+closing the item.**
+
+The worked example is exact. Commit `938251d` (29 June 2026, PR #61) found that the
+savings baseline *"stacked a delivery charge for every retailer, which inflated every
+on-screen number and produced a baseline basket no real shopper could assemble."* It
+was diagnosed correctly, described in the commit message, and fixed across **ten
+files** in the site path.
+
+`supabase/functions/send-routine-email/index.ts` was not one of them.
+
+The identical computation, `uniqueRetailerCount * 3.95`, survived there until
+**3 August 2026** (work-list item 29). For five weeks the monthly email reported
+savings built on a baseline the project had already written down as wrong. One live
+routine was claiming a **64%** saving where the corrected figure is **21%**.
+
+**This is not a missed sweep. It is a fix applied to the instance rather than the
+class.** The author knew what the defect was; what was never asked is *"where else does
+this shape exist?"*
+
+**Same shape as convention 12, one level down.** Convention 12 says a string-scoped
+sweep misses paraphrases of a claim. This says a file-scoped fix misses reimplementations
+of a computation. In both cases the search was narrower than the thing being enforced.
+
+**The practical form:**
+
+1. **Before closing, list every path that computes the same thing.** Grep for the
+   computation's shape, not its variable names. `uniqueRetailerCount * 3.95` and
+   `allRetailerIds.length * 3.95` are the same defect with different spellings.
+2. **Edge functions are a separate runtime and a separate search.** They are the most
+   commonly missed path in this repository because they do not appear in a Next
+   typecheck, are not covered by the app's tests, and are deployed separately.
+3. **If two paths must implement the same rule, make divergence fail a test.**
+   `lib/__tests__/delivery.test.ts` imports both implementations and asserts they agree;
+   `lib/__tests__/email-copy.test.ts` does the same job for copy rules that had only
+   ever been enforced on the site.
+
+**Cost of getting this wrong is asymmetric.** The instance fix looks complete, closes
+the ticket, and reads as diligent in the commit message. Nothing surfaces the surviving
+copy, because the surviving copy is working exactly as written.
