@@ -742,12 +742,21 @@ Lagging and milestone, monthly not weekly
 > checks again.
 >
 > **Re-check mechanism, and it lives OUTSIDE this repository.** Working samples
-> with a populated `.env` are at **`~/Downloads/creatorsapi-nodejs-sdk/examples`**
+> with a populated `.env` are at **`~/amazon-api-watch/sdk/examples`**
 > (`sampleListReports.js`, `sampleGetReport.js`, `sampleListFeeds.js`,
 > `sampleGetItems.js`, `sampleSearchItems.js`, and others). Nothing in this repo
-> references them and nothing here would break if they vanished — and
-> `~/Downloads` is not a durable home for the only copy of a re-check mechanism.
+> references them and nothing here would break if they vanished. They were at
+> `~/Downloads/creatorsapi-nodejs-sdk/examples` until **3 Aug 2026**; that was not
+> a durable home for the only copy of a re-check mechanism, and they were moved.
 > Items are queued in `docs/post-4-august-work-list.md`.
+>
+> **Update, 3 Aug 2026 — product-data access has CLEARED.** `GetItems` returns
+> real data; the Step 6 form no longer sits behind `AssociateNotEligible`. Two
+> caveats before building on it. First, the gate is **rolling**, so access can be
+> lost again with nothing changing here — see `~/amazon-api-watch/README.md`,
+> which carries the evidence and grades the ~10-in-30 threshold as *supported, not
+> confirmed*. Second, `ListReports` is **still empty**, so the "no reports yet"
+> provisional case above is unchanged and still needs revisiting.
 >
 > **On the superseded text itself:** the clause corrected here is the six words
 > struck above. The fuller reasoning this correction was raised against — that
@@ -952,6 +961,43 @@ Step 4, GATED. Build the GA4 Data API weekly puller writing to metrics_ga4_weekl
 > **reporting time zone** (section 8.1).
 
 Step 5, GATED. Build the AWIN Publisher API weekly puller writing clicks, sales, commission by advertiser and status. Pull both pending and confirmed. Resolve the secret name question in section 3 first. Dry-run first.
+
+> **While the puller is being built, also pull the COMMISSION RATE CARD. Raised
+> 3 August 2026; nothing to act on before Step 5, recorded so it is designed in
+> rather than bolted on.**
+>
+> Commission rates are **not in the database** — `retailers` has no rate column and
+> `metrics_awin_weekly` is empty. Every commission claim the project makes is
+> therefore carried rather than measured, including "Boots sits at the bottom of the
+> commission range" (`docs/commercial-finding-catalogue-depth.md`, "Not verified
+> here") and the ranking of The Fragrance Shop's 2% against it
+> (`docs/partnership-tracker.md`). The £1.33 average commission per sale comes from
+> the 1 August brief, not from this database.
+>
+> `api.awin.com` is believed to expose rates in **three different forms, and they
+> answer different questions — do not substitute one for another:**
+>
+> | Endpoint | Gives | Is it a rate card? |
+> |---|---|---|
+> | `/publishers/{id}/commissiongroups?advertiserId={aid}` | Per-advertiser commission groups: name, code, rate | **Yes.** This is the one that closes the gap. |
+> | `/publishers/{id}/programmedetails` | `commissionRange`, min/max per programme | Partly — a summary, not per-group |
+> | `/publishers/{id}/transactions` | `commissionAmount` per transaction | **No.** Realised earnings, not the rate |
+>
+> Step 5 as written already pulls the third. The first is the addition, and it is
+> cheap while the auth and client are being built anyway.
+>
+> **UNVERIFIED. These endpoint names and shapes are recalled, not observed** — no
+> call to `api.awin.com` has ever been made from this project. Confirm against the
+> live API before designing a table around them, and treat a shape mismatch as
+> expected rather than surprising. Publisher id `2841268`
+> (`supabase/functions/import-awin-feed/index.ts:265`); the reader is
+> `AWIN_OAUTH_TOKEN`, **never** `AWIN_API_KEY`, per section 3 above.
+>
+> **What it closes if it holds:** commission position becomes measured rather than
+> carried, the caveat in the partnership tracker becomes removable instead of
+> permanent, and the £1.33 figure becomes checkable against its own inputs. A rate
+> that changes without notice also becomes observable — the same class as an AWIN
+> feed id rotating, which has already happened once (Gorgeous Shop, 2 August).
 
 Step 6, GATED. Build the dashboard page at a new authenticated route: four headline tiles, funnel view, leading-indicator trends including the two search indicators, milestone bar, and platform_changes markers on every trend chart. Add a manual-input upsert form for Amazon monthly and social weekly. An unauthenticated request must return no data.
 

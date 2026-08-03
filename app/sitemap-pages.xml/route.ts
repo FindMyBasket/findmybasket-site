@@ -31,6 +31,8 @@ const STATIC_PAGES: UrlEntry[] = [
   // Articles live under /articles/ (their canonical path). These entries
   // previously pointed at bare root paths that 404 for most articles; they
   // now match the real files and canonicals.
+  { loc: '/articles/lowest-price-per-product-basket.html', changefreq: 'monthly', priority: 0.7 },
+  { loc: '/articles/beauty-delivery-threshold-savings.html', changefreq: 'monthly', priority: 0.7 },
   { loc: '/articles/cerave-best-value-uk.html', changefreq: 'monthly', priority: 0.7 },
   { loc: '/articles/the-ordinary-best-value-uk.html', changefreq: 'monthly', priority: 0.7 },
   { loc: '/articles/clarins-best-price-uk.html', changefreq: 'monthly', priority: 0.7 },

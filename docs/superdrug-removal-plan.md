@@ -28,6 +28,141 @@ No view change, no query-filtering work, no new infra needed — those were one-
 are now permanent. The listing-query active filtering (Step C) also already covers every
 future inactive retailer.
 
+### Step 0 — expect a daily alert for the whole parked-but-not-retired window
+
+**Established 2026-08-03. Know this before the next departure rather than discovering it
+from the inbox.**
+
+`monitor-retailer-feeds` keys on **`retailers.active` and nothing else.** Its retailer set
+is a single query — `supabase.from("retailers").select("id, name").eq("active", true)` at
+`supabase/functions/monitor-retailer-feeds/index.ts:104-108` — and every downstream check
+(import failures, stuck-running, staleness) is gated on membership of that set via
+`nameById.has()`. A retailer with `active = false` cannot appear in any section of the
+email.
+
+**`retailer_import_config.enabled` does NOT suppress alerts.** It is selected at line 123
+and then never referenced in any filter — the only occurrence of the string `enabled` in
+the whole function is that `SELECT`. Reading line 123 gives the strong and wrong impression
+that the monitor honours it. It does not.
+
+The two flags are set at different times, and only the second one silences the monitor:
+
+| Stage | `active` | `enabled` | Feed refreshes? | Monitor behaviour |
+|---|---|---|---|---|
+| Parked | `true` | `false` | No | **Alerts as STALE, every morning, forever.** Staleness grows without bound because nothing can refresh it. |
+| Retired | `false` | either | No | Silent. Dropped from the retailer set entirely. |
+
+**The natural experiment that proves it**, both observed 2026-08-03 with the flags
+inverted between them:
+
+| Retailer | `active` | `enabled` | Stale | In today's email? |
+|---|---|---|---|---|
+| **Branded Beauty (6)** | `true` | **`false`** | 52h | **YES** — 2,166 rows, `last_import_status = 'ok'`, so no failure is recorded and it lands in the *stale* section on the 36h threshold. |
+| **Superdrug (12)** | **`false`** | `true` | 363h | **NO** — despite `enabled = true` and being 15× staler. |
+
+Superdrug is silent *only* because `active = false`. Skin Cupid (7) is the third case:
+`active = false`, `enabled = false`, `last_import_status = 'error'` — an import failure
+that is likewise never reported, for the same reason.
+
+**Consequences for the runbook:**
+
+- A retailer parked ahead of a held retirement decision **will alert daily until the
+  `active` flip**, and that is correct behaviour, not a fault. Do not treat the recurring
+  email as a defect, and do not silence it per-incident.
+- **No cleanup is needed after step 1.** Flipping `active = false` stops the alert on its
+  own, immediately, with no monitor change and no config edit.
+- If a park is expected to run long, the choice is to tolerate the daily mail or bring the
+  `active` flip forward. There is no third option that keeps the retailer active and quiet
+  without changing the monitor.
+- Retained `retailer_prices` rows are irrelevant to this — Superdrug keeps 29,547 and is
+  silent; Branded Beauty has 2,166 and alerts.
+
+**Live instance:** Branded Beauty was parked 2026-08-02 (jobid 18 inactive,
+`sync-bb-feed.yml` disabled, `enabled = false`) with the `active = false` flip deliberately
+held past the 4 August Boots read. It has alerted since and will continue to until the flip.
+
+#### The general form: deactivating a retailer stops watching it
+
+**Monitoring coverage is a function of `retailers.active`.** The flip that retires a
+retailer is the same flip that removes it from observation — there is no separate
+"retired" and "unmonitored" state. For a genuinely retired retailer that is correct and
+intended: nothing is refreshing it, so nothing should complain.
+
+**The cost is that a retailer deactivated while broken takes its unreported failure with
+it, permanently.** `retailer_import_config.last_import_status` keeps recording, but nobody
+reads it once `active = false`. Skin Cupid (7) is the live proof:
+
+| | |
+|---|---|
+| Status | `error`, `active = false`, `enabled = false` |
+| Error | `Feed download failed: 400 Bad Request (fid null)` |
+| Last **successful** import | `last_imported_at` = 2026-05-21 07:43 UTC |
+| Last **attempt** | `last_attempt_at` = 2026-06-11 17:29 UTC — failed |
+| Age at 2026-08-03 | **52.7 days, never reported once** |
+| Config | `awin_merchant_id = 125042`, `awin_feed_id = NULL` |
+
+**It broke in service.** It ran successfully for weeks and then failed — this is not an
+abandoned pre-launch configuration. The `awin_feed_id` is `NULL` against a live merchant
+id, which is exactly the `fid null` the error names: the programme closed, the feed id was
+cleared or invalidated, an import ran against a null fid and 400'd, and the retailer was
+deactivated with the error still on it.
+
+**Dating precision:** `last_attempt_at` is overwritten on every attempt, so 11 June is the
+**last** attempt, not necessarily the first failure. There are **21.4 days between the last
+success and that attempt**, and any number of failures could have overwritten each other
+inside that window. The break can be bounded to 2026-05-21 → 2026-06-11; it cannot be dated
+to 11 June. Do not restate it as "broke on 11 June".
+
+*(Open detail, not chased: `feed_format` reads `shopify` while the error and the config are
+AWIN-shaped. Worth resolving if Skin Cupid is ever revived; irrelevant to the point here.)*
+
+**This is the same sequence as Superdrug and Branded Beauty** — a programme or feed ends,
+the next import fails, the retailer is retired. The only difference is that nobody was
+watching this one, which is what makes it the strongest of the three as a worked example
+rather than the weakest.
+
+Checked the same day: **Skin Cupid is the only retailer in that state**, and there are no
+`retailer_import_config` rows orphaned from a missing `retailers` row. So this is a single
+buried error, not a backlog — but it was buried for nearly two months and surfaced only
+because it happened to be a control in an unrelated question.
+
+#### Retailer churn is a normal operating condition, not an exception
+
+**Four departures or feed rotations in ten weeks**, 21 May – 3 August 2026:
+
+| Date | Retailer | Event | Caught by |
+|---|---|---|---|
+| 21 May – 11 Jun | **Skin Cupid (7)** | AWIN programme 125042 closed, `awin_feed_id` nulled | **Nobody.** Deactivated with the error still on it; unreported for 52.7 days. |
+| 19 Jul | **Superdrug (12)** | Rakuten feed died | Retired 27 Jul; 29,547 rows retained, `active = false` |
+| 2 Aug | **Gorgeous Shop (30)** | AWIN rotated the datafeed 110188 → 116876 | The 09:00 monitor, in ~3h — the *loud* class. 6,710 rows already stale. |
+| 2 Aug | **Branded Beauty (6)** | AWIN programme closed | Parked; `active` flip held past the 4 Aug Boots read |
+
+That is roughly one event every two and a half weeks, across three different causes
+(programme closure, feed death, id rotation) and two networks. **This is the argument for
+the runbook existing at all**: retailer churn is the steady state, so the departure path
+is a routine operating procedure and not an incident response. Anything that only works
+when a departure is treated as exceptional will fail on the next one.
+
+**This is the same shape as the watchdog's coverage being a function of `staging_mode`.**
+`fmb_watchdog_stalled_imports` (cron 28) reads `import_run_state`; `inline` retailers never
+write that table, so Beauty Bay and Atelier De Glow are outside its field of view
+permanently and by construction, not by fault
+(`docs/ticket-import-observation-offset.md:237-247`).
+
+| Mechanism | Scope actually set by | What that flag is *about* |
+|---|---|---|
+| `monitor-retailer-feeds` (cron 23) | `retailers.active` | whether we sell the retailer |
+| `fmb_watchdog_stalled_imports` (cron 28) | `staging_mode`, via `import_run_state` | how the import stages its data |
+
+**Two mechanisms whose scope is set by a flag that means something else.** Neither flag
+was chosen to define monitoring coverage; both do. When adding a third mechanism, state
+what determines its field of view explicitly, rather than letting it fall out of whichever
+table the query happens to join.
+
+**Practical consequence for a departure:** before flipping `active = false`, read the
+departing retailer's `last_import_status` and `last_import_error` and record them here.
+After the flip nothing will ever surface them again.
+
 ### Step 5 — Copy sweep (added 2026-08-01, after it was missed once)
 
 **Steps 1–4 are all database and routing. None of them touches hand-written copy, and
