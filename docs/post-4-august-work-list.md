@@ -359,6 +359,27 @@ the tables should read from the catalogue instead.
 **Raised:** 1 August 2026 · **Blocked until:** after 4 August
 **Detail: complete.**
 
+> **A LIVE HOMEPAGE CLAIM IS INACCURATE UNTIL THIS LANDS.** Added 3 August 2026.
+>
+> `public/index.html` states: *"We factor in each retailer's free delivery threshold,
+> so you always see the true total cost, not just the product price."*
+>
+> **That is true for ten of the eleven live retailers and false for Debenhams.**
+> Debenhams is `delivery_model = 'flat'`, £3.99 on every basket, never free. The
+> optimiser still carries the `?? '25'` / `?? '3.95'` fallbacks and does not branch on
+> `delivery_model`, so it models Debenhams as tiered with a £25 threshold. **On a
+> Debenhams basket over £25 the site understates the true total by £3.99.**
+>
+> **The copy was deliberately left alone.** Of three false claims found on that page
+> on 3 August, this is the only one where **the product should move to meet the copy
+> rather than the reverse**: the sentence describes what the optimiser ought to do and
+> what the data already supports, so weakening it would entrench the defect in prose.
+> The other two were removed, being a savings figure that was never true and a price
+> example three months old.
+>
+> **When this lands, the claim becomes accurate with no copy change.** Verify it does
+> by pricing a Debenhams basket over £25 before closing the item.
+
 **The data half shipped on 2026-08-01; this is the half that makes it mean anything.**
 `retailers` now carries `delivery_model` (`tiered` / `flat` / `unknown`), real terms for
 ids 8, 23, 24, 26, 27, 28, and a `retailers_delivery_shape` CHECK. The optimiser still

@@ -478,3 +478,35 @@ plausible value is not.
 **Where it will recur:** anywhere `supabase-js` is called without checking `error`.
 That is not a hypothetical set. It is every call site that currently destructures
 only `data`, and no sweep has been run.
+
+---
+
+## 11. A guard that has fired in anger is a different artefact from one that has not
+
+**Added 3 August 2026, after the repository ruleset rejected a direct push to `main`.**
+
+Every convention in this file is reasoning until something it predicted actually
+happens. **A guard nobody has watched fail is not known to be a guard** (convention 8),
+and the corollary is that the moment one *does* fire is the only evidence that it was
+ever more than a good intention. That moment is worth recording, because it is easy to
+mistake "we have a rule about that" for "that is prevented".
+
+**Instances where a guard has caught something real, rather than being reasoned about:**
+
+| Guard | What it caught |
+|---|---|
+| **Convention 9**, the grep for stale phrasing | Found a stale record by mechanism rather than by someone tripping over it. Recorded at the foot of convention 9 as *"the first found by a mechanism"*. |
+| **Convention 5**, the idempotency dry run | Caught `20260729200000` asserting "2 other occurred rows", inferred from a truncated listing that hid id 1. The migration's own comment records this. |
+| **The `main` repository ruleset** | Rejected a direct push to `main` on 3 August 2026 that should have been a branch. The commit was moved to a branch and opened as a PR. No harm reached the remote. |
+| **Exhaustive re-solve of demo baskets** | Caught two hand-picked homepage candidates on 3 August: one with a £0.00 gap that demonstrated nothing, and one whose assumed host was not the host. Neither looked wrong. See `scripts/generate-homepage-demo.mjs`. |
+
+**What this changes in practice.** When a guard fires, record it against the convention
+it belongs to rather than only fixing the thing it caught. The fix is the smaller half.
+The evidence that the mechanism works is the part that is hard to get and easy to lose,
+because a guard that fires and is silently obeyed leaves no trace that it did anything.
+
+**A near-instance, deliberately not counted:** the 09:00 feed monitor caught the
+Gorgeous Shop feed-id rotation in about three hours on 2 August. That is a monitor doing
+its job on the loud failure class rather than a convention being vindicated, and
+`docs/post-4-august-work-list.md` item 14 already records why the loud class is the easy
+one. Counting it here would flatter the list.
