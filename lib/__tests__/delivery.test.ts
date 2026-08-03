@@ -93,14 +93,28 @@ test('the two implementations agree on every case', () => {
   }
 });
 
-test('no fallback constants survive in either implementation', () => {
+test('no fallback constants survive in any pricing path', () => {
   // The original defect was a literal 25 and a literal 3.95 standing in for missing
   // data. A grep is a blunt instrument, but this specific pair reappearing is exactly
   // the regression worth failing a build over.
-  for (const p of ['lib/delivery.ts', 'supabase/functions/_shared/delivery.ts']) {
+  // Every file that prices a basket, not just the rule itself. The last fabricated
+  // constant did not live in the rule: it was `uniqueRetailerCount * 3.95` building
+  // the savings baseline in the email, which survived the first sweep because it was
+  // a multiplication rather than a fallback. Widening the net to the whole pricing
+  // path is convention 12 applied here: search for the shape, not the phrase.
+  const PRICING_PATHS = [
+    'lib/delivery.ts',
+    'supabase/functions/_shared/delivery.ts',
+    'app/app/RoutineBuilder.tsx',
+    'supabase/functions/send-routine-email/index.ts',
+    'lib/product-queries.ts',
+  ];
+  for (const p of PRICING_PATHS) {
     const src = readFileSync(p, 'utf8');
     const code = src.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, ''); // strip comments
-    assert.ok(!/\?\?\s*['"]?(25|3\.95)\b/.test(code), `${p} has a ?? fallback constant`);
-    assert.ok(!/\|\|\s*['"]?(25|3\.95)\b/.test(code), `${p} has a || fallback constant`);
+    assert.ok(!/\?\?\s*['"]?(25|3\.95|3\.99)\b/.test(code), `${p} reintroduced a ?? fallback delivery constant`);
+    assert.ok(!/\|\|\s*['"]?(25|3\.95|3\.99)\b/.test(code), `${p} reintroduced a || fallback delivery constant`);
+    // The savings-baseline shape: a bare delivery-looking literal in arithmetic.
+    assert.ok(!/[*+]\s*3\.95\b|\b3\.95\s*[*+]/.test(code), `${p} reintroduced a hardcoded 3.95 in arithmetic`);
   }
 });

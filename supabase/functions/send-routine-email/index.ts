@@ -161,26 +161,52 @@ function optimiseBasket(routine: Product[], prices: PriceRow[]): OptimisationRes
   }
 
   const allRetailerIds = Array.from(new Set(prices.map((p) => p.retailer_id)));
-  const uniqueRetailerCount = allRetailerIds.length || 1;
-  // FABRICATED CONSTANT, DELIBERATELY LEFT IN PLACE. Flagged 3 August 2026 during
-  // item 11, NOT fixed, because it moves a SAVINGS FIGURE rather than a price.
+
+  // THE SAVINGS BASELINE: what you would pay buying each item at its worst price.
   //
-  // This assumes every retailer charges £3.95 to build the "what you would have paid"
-  // baseline the email's saving is measured against. No retailer charges exactly
-  // £3.95 except Boots and YesStyle; the real spread is £0.00 to £3.99, and Debenhams
-  // charges on every basket while the others go free above a threshold. So the
-  // baseline is invented, and the saving derived from it is therefore invented too.
+  // Rewritten 3 August 2026 (work-list item 29). It previously read:
   //
-  // Changing it changes a number shown to users, which is a claims decision rather
-  // than a code one. Recorded as work-list item 29.
-  const worstDelivery = uniqueRetailerCount * 3.95;
-  const worstCaseProducts = routine.reduce((sum, product) => {
+  //     const worstDelivery = uniqueRetailerCount * 3.95;
+  //
+  // which was wrong twice. £3.95 is a fabricated constant — only two of twelve
+  // retailers charge exactly that, the real spread is £0.00 to £3.99, and Debenhams
+  // charges on every basket while the rest go free above a threshold. And
+  // uniqueRetailerCount counted every retailer stocking ANY item in the routine,
+  // not the number of orders you would actually place.
+  //
+  // A saving measured against an invented baseline is an invented saving. That is the
+  // r12 problem in a different place: a headline figure inflated by a number nobody
+  // measured. Expect this to REDUCE the reported saving. That is the point.
+  //
+  // The baseline now: assign each product to its most expensive stocking retailer,
+  // group those into real legs, and charge each leg that retailer's real delivery via
+  // the shared rule. Same rule the recommendation uses, so the two are comparable.
+  const worstLegs = new Map<number, number>();
+  let worstCaseProducts = 0;
+  for (const product of routine) {
     const productPrices = priceMap[product.id];
-    if (!productPrices) return sum;
-    const maxPrice = Math.max(...Object.values(productPrices).map((p) => p.price));
-    return sum + maxPrice;
-  }, 0);
-  const worstCaseTotal = worstCaseProducts + worstDelivery;
+    if (!productPrices) continue;
+    let worstRid = -1;
+    let worstPrice = -Infinity;
+    for (const [ridStr, pp] of Object.entries(productPrices)) {
+      if (pp.price > worstPrice) { worstPrice = pp.price; worstRid = Number(ridStr); }
+    }
+    if (worstRid < 0) continue;
+    worstCaseProducts += worstPrice;
+    worstLegs.set(worstRid, (worstLegs.get(worstRid) ?? 0) + worstPrice);
+  }
+
+  // If any leg's delivery terms are unknown the baseline is unknown, so no saving is
+  // claimed rather than a guessed one. Same contract as the recommendation path.
+  let worstDelivery = 0;
+  let worstDeliveryKnown = true;
+  for (const [rid, legTotal] of worstLegs) {
+    const outcome = deliveryFor(retailerInfoMap[rid] ?? {}, legTotal);
+    if (!outcome.known) { worstDeliveryKnown = false; break; }
+    worstDelivery += outcome.cost;
+  }
+
+  const worstCaseTotal = worstDeliveryKnown ? worstCaseProducts + worstDelivery : 0;
 
   // Single-retailer options
   const singleOptions: BasketOption[] = [];
