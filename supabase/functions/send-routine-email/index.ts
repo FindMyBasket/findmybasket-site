@@ -333,7 +333,7 @@ function escapeHtml(text: string): string {
 
 function buildEmailSubject(result: OptimisationResult, emailType: "welcome" | "monthly"): string {
   if (emailType === "welcome") return "Your routine is saved ✨";
-  if (result.best && result.saving > 0) return `Your routine this month — save £${result.saving.toFixed(2)}`;
+  if (result.best && result.saving > 0) return `Your routine this month: save £${result.saving.toFixed(2)}`;
   return "Your routine this month";
 }
 
@@ -371,7 +371,7 @@ function buildEmailHTML(params: {
       </tr>`).join("");
   }
 
-  const retailerList = result.best?.retailers.join(" + ") || "—";
+  const retailerList = result.best?.retailers.join(" + ") || "-";
   const totalPrice = result.best?.total.toFixed(2) || "0.00";
   const deliveryText = result.best && result.best.deliveryCost === 0
     ? "Free delivery"
@@ -437,7 +437,7 @@ function buildAlertsSubject(items: AlertItem[]): string {
   if (items.length === 1) {
     const it = items[0];
     const saving = num(it.baseline_price) - num(it.current_price ?? it.alerted_price);
-    if (saving > 0) return `A price drop on your routine — save £${saving.toFixed(2)}`;
+    if (saving > 0) return `A price drop on your routine: save £${saving.toFixed(2)}`;
     return "A price drop on your routine";
   }
   return `${items.length} price drops on your routine`;
@@ -464,7 +464,7 @@ function buildAlertsEmailHTML(params: {
     const pct = was > 0 ? Math.round((saving / was) * 100) : 0;
     const productUrl = `${appBaseUrl}${it.url}`;
     const retailer = it.retailer ? escapeHtml(it.retailer) : "an online retailer";
-    const title = `${it.brand ? escapeHtml(it.brand) + " — " : ""}${escapeHtml(it.name)}`;
+    const title = `${it.brand ? escapeHtml(it.brand) + " - " : ""}${escapeHtml(it.name)}`;
     const img = it.image_url
       ? `<img src="${escapeHtml(it.image_url)}" alt="" width="56" height="56" style="width:56px;height:56px;border-radius:8px;object-fit:cover;display:block;"/>`
       : `<div style="width:56px;height:56px;border-radius:8px;background:#f0ece4;"></div>`;
