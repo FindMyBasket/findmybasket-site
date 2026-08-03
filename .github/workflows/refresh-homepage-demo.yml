@@ -1,0 +1,119 @@
+# Daily production deploy, so the homepage demo is re-solved against current prices.
+#
+# WHY A TRIGGER AND NOT JUST A GENERATOR. scripts/generate-homepage-demo.mjs runs at
+# build time, so the demo is correct as of the last build. Correctness and freshness
+# are different properties: builds have been near-daily this fortnight, but that is a
+# fact about recent activity rather than a guarantee. Without this, a quiet week means
+# a homepage showing a basket solved against week-old prices, and the baskets turn on a
+# leg sitting a few pounds either side of a delivery threshold.
+#
+# Correctness comes from the generator. Freshness comes from this.
+#
+# WHY A TOKEN AND NOT A DEPLOY HOOK. The first version of this workflow used a Vercel
+# Deploy Hook. Deploy Hooks are NOT AVAILABLE on this project and a dashboard search
+# returns nothing, so that approach was abandoned on 3 August 2026 rather than worked
+# around. A token is also the better mechanism on its own merits: it can be scoped to
+# a team and rotated, and its use is attributable. A deploy hook URL is an
+# unauthenticated trigger — anyone holding the URL can deploy production, it carries no
+# identity, and rotating it means replacing every copy.
+#
+# WHAT A FAILURE HERE MEANS. If this fails, the site keeps serving the last good build.
+# That is a STALE demo, not a wrong one, because the generator re-solved when it built.
+# So this failing is not an outage and must not be treated as one. It IS worth noticing:
+# a workflow that has been failing for a fortnight is a homepage nobody has re-solved
+# for a fortnight.
+#
+# REQUIRED SECRET
+#   VERCEL_TOKEN  A Vercel access token with deploy rights on the team below.
+#                 Settings > Tokens in the Vercel dashboard. Scope it to the team.
+
+name: Refresh homepage demo
+
+on:
+  schedule:
+    # 05:30 UTC. After the overnight retailer imports (the latest observed finishes
+    # around 04:31) so the demo is solved against the day's prices, and before the
+    # 09:00 feed monitor, so a bad overnight import is still visible in that email
+    # rather than being masked by a fallback nobody reads.
+    - cron: '30 5 * * *'
+  workflow_dispatch:
+
+concurrency:
+  # One at a time. Two overlapping production deploys can finish out of order, and the
+  # later build serving the older solve is exactly the staleness this exists to prevent.
+  group: refresh-homepage-demo
+  cancel-in-progress: false
+
+env:
+  VERCEL_PROJECT_ID: prj_LIUFdNff9XSLHhGzlASMde6YB5Vv
+  VERCEL_TEAM_ID: team_yVgBqs8yKGekZePH0nYXhqrg
+  # Numeric GitHub repo id for FindMyBasket/findmybasket-site. Vercel's gitSource wants
+  # the id rather than the name; it is stable across renames, which the name is not.
+  GITHUB_REPO_ID: '1201364615'
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail loudly if the token is not configured
+        # An unset secret would otherwise POST with an empty Authorization header, get a
+        # 403, and read like a permissions problem rather than a missing secret. Never
+        # send a request at an empty or unauthenticated target.
+        run: |
+          if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
+            echo "::error::VERCEL_TOKEN is not set. The homepage demo is NOT being refreshed."
+            echo "Create a token in Vercel > Settings > Tokens, scope it to the team, and"
+            echo "add it as the repository secret VERCEL_TOKEN. Until then the demo is only"
+            echo "as fresh as the last manual deploy."
+            exit 1
+          fi
+
+      - name: Trigger a production deploy from main
+        # No `set -x`: the token is a credential and tracing would print the header.
+        # forceNew=1 so Vercel builds again rather than reusing a cached deployment for
+        # the same commit. A cache hit would return 200 and change nothing, which is the
+        # failure mode this whole workflow exists to avoid: a green run that refreshed
+        # nothing.
+        env:
+          TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          code=$(curl -s -o /tmp/vercel.json -w '%{http_code}' -X POST \
+            "https://api.vercel.com/v13/deployments?teamId=${VERCEL_TEAM_ID}&forceNew=1&skipAutoDetectionConfirmation=1" \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -d "{
+                  \"name\": \"findmybasket-site\",
+                  \"project\": \"${VERCEL_PROJECT_ID}\",
+                  \"target\": \"production\",
+                  \"gitSource\": {
+                    \"type\": \"github\",
+                    \"repoId\": ${GITHUB_REPO_ID},
+                    \"ref\": \"main\"
+                  }
+                }")
+
+          echo "Vercel API responded HTTP $code"
+          # Print id/url/state and any error only. Never dump the whole body: it can
+          # echo project configuration. jq is preinstalled on ubuntu-latest; the `//`
+          # defaults keep this from failing when a field is absent.
+          jq -r '"  id: \(.id // "-")\n  url: \(.url // "-")\n  state: \(.readyState // "-")\n  target: \(.target // "-")"' /tmp/vercel.json || true
+          jq -r 'if .error then "  error: \(.error.code // "?") — \(.error.message // "?")" else empty end' /tmp/vercel.json || true
+
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            echo "::error::Vercel API returned HTTP $code. The homepage demo was NOT refreshed today."
+            echo "The site continues to serve the last good build, so this is stale rather than wrong."
+            echo "Check that VERCEL_TOKEN is valid, not expired, and scoped to team ${VERCEL_TEAM_ID}."
+            exit 1
+          fi
+
+      - name: Note what this does and does not prove
+        run: |
+          echo "A production deploy was ACCEPTED. That is all this proves."
+          echo ""
+          echo "It does NOT prove the build succeeded, and it does NOT prove a candidate"
+          echo "basket demonstrated the mechanism. If every candidate fails, the generator"
+          echo "renders copy without figures and prints one of two blocks to the BUILD log:"
+          echo "  FMB DEMO FALLBACK FIRED (CATALOGUE)       -> the baskets did not qualify"
+          echo "  FMB DEMO FALLBACK FIRED (INFRASTRUCTURE)  -> it could not reach the data"
+          echo "Those are different findings. Check the Vercel build output, not this run."

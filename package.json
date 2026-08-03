@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/generate-homepage-demo.mjs && next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --test \"lib/**/*.test.ts\" \"scripts/**/*.test.mjs\""
+    "test": "node --test \"lib/**/*.test.ts\" \"scripts/**/*.test.mjs\"",
+    "generate:demo": "node scripts/generate-homepage-demo.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.3",

@@ -790,7 +790,28 @@ achievable answer.
 ### 18. Nine category misassignments, concentrated in recent additions
 
 **Raised:** 2 August 2026, found while selecting demonstration baskets.
-**Detail: complete. NOT STARTED.**
+**PRIORITY RAISED 3 August 2026. Detail: complete. NOT STARTED.**
+
+> **This is now blocking demonstration of the core mechanism, which is why it is no
+> longer a tidiness item.**
+>
+> Found while selecting homepage demo baskets on 3 August: **Beauty Flash's
+> `Moisturiser` category returns milk_shake hair cream, Goldwell styling balm, hand
+> cream and self-tan.** It cannot source a coherent skincare routine.
+>
+> **That matters because Beauty Flash to Gorgeous Shop is the second-largest tiered
+> wedge pairing in the catalogue, at 678 qualifying items** (item 12, answered
+> 3 August). The delivery wedge demonstrably bites there, and the demo cannot use it,
+> because the categories will not yield a basket a reader recognises as a routine.
+>
+> **Category misassignment has stopped being a data-quality chore and become a
+> constraint on proving the differentiator.** The homepage demo shortlist is
+> consequently concentrated on Stylevana, recorded as a known risk in the block
+> comment of `public/index.html`.
+>
+> **Report only in this pass. Not investigated, not fixed. A separate brief follows.**
+> Do not assume the nine known misassignments and the Beauty Flash pollution are the
+> same set; the overlap is unestablished.
 
 Excluded from the pin baskets, since those are the shop window. Recorded because
 the clustering suggests the categoriser regressed rather than that these are nine
@@ -1373,6 +1394,49 @@ any further offerless-page work.
 > reproduced from the repository or refreshed without someone opening the UI.** That
 > is the same absent-mechanism shape as the strategy document was, and it is worth
 > deciding deliberately whether it stays manual.
+
+---
+
+### 27. The homepage hero now depends on Supabase at build time
+
+**Raised:** 3 August 2026 · **REPORT ONLY. Nothing to fix. Recorded because it is a
+new coupling and nothing else on the static homepage has one.**
+
+`scripts/generate-homepage-demo.mjs` runs before `next build` and queries Supabase to
+re-solve the demo basket. **The marketing surface now has a database dependency it did
+not have yesterday.**
+
+`public/index.html` is a static file served by a rewrite, with no Supabase client and
+no runtime data access. Every other figure on it is hand-written. This is the first
+part of the homepage whose content is produced from live data, and therefore the first
+that can be affected by the database being unavailable.
+
+**It degrades safely, and that was designed rather than hoped for:**
+
+| If | Then |
+|---|---|
+| Supabase unreachable, credentials absent, query fails, generator throws | `FMB DEMO FALLBACK FIRED (INFRASTRUCTURE)`, hero renders **without figures**, **exit 0** |
+| Every candidate basket fails to demonstrate the mechanism | `FMB DEMO FALLBACK FIRED (CATALOGUE)`, hero renders without figures, exit 0 |
+| Markers missing from `index.html` | Nothing written, said explicitly, exit 0. The committed state is the no-figures hero, so the served page is still safe |
+
+**A build can never fail because of this.** Verified by forcing all nine paths,
+including infrastructure failure with `FMB_DEMO_FALLBACK_FATAL=1`, which still exits 0.
+A cosmetic hero must not be able to block a deploy.
+
+**Why record it at all, given it is safe.** Two reasons, neither urgent:
+
+1. **Nobody expects the homepage to have a database dependency.** Someone debugging a
+   build failure, or wondering why the hero has no figures, will not think to look at
+   Supabase unless this is written down. The fallback is loud in the build log, and a
+   build log is loud at the moment it happens and invisible a day later.
+2. **The coupling is one-directional today and could stop being.** If anything else on
+   the static pages is later generated the same way, this stops being an exception and
+   becomes a pattern, and the pattern deserves a deliberate decision rather than
+   accretion.
+
+**Related:** the daily refresh is `.github/workflows/refresh-homepage-demo.yml`,
+which triggers a production deploy via the Vercel API using `VERCEL_TOKEN`. If that
+workflow fails, the site serves the last good build: **stale, not wrong.**
 
 ---
 

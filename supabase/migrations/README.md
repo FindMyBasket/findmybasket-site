@@ -440,3 +440,41 @@ rather than the suspicion. And one demonstration is one demonstration — by thi
 file's own standard, a rule seen working once is better than a rule never tested
 and a long way short of proven.
 
+
+---
+
+## 10. A client that reports failure as a field will not fail loudly
+
+**Added 3 August 2026, found while hardening the homepage demo generator.**
+
+`supabase-js` does not throw when a query fails. It resolves with
+`{ data: null, error: {...} }`. Code that destructures only `data`:
+
+```js
+const { data: retailers } = await supabase.from('retailers').select('*')
+if (!retailers?.length) { /* "no rows" */ }
+```
+
+**cannot distinguish an unreachable database from an empty table.** Both produce a
+null `data`. The first is an outage; the second is a catalogue fact. Reporting one
+as the other sends whoever reads the log to entirely the wrong place, and the wrong
+place is usually the more expensive one to search.
+
+Proven rather than reasoned: pointing the generator at an unreachable host produced
+the message *"query returned no rows"*. Reading `error` turned the same failure into
+*"supabase query failed — retailers: TypeError: fetch failed"*.
+
+**The rule.** Any `supabase-js` call whose result is acted on must read `error`, and
+must classify an error differently from an empty result. Two different messages, not
+one, because they send someone to two different places.
+
+**This is the same shape as convention 1.** `has_function_privilege` rolls `PUBLIC`
+up into every role, so a per-role check reports a grant that is really a `PUBLIC`
+grant, and the `REVOKE` that follows appears to succeed while changing nothing. In
+both cases **the API answers a narrower question than the one being asked, and the
+answer is well-formed**, so nothing looks wrong. A thrown exception is a gift; a
+plausible value is not.
+
+**Where it will recur:** anywhere `supabase-js` is called without checking `error`.
+That is not a hypothetical set. It is every call site that currently destructures
+only `data`, and no sweep has been run.
