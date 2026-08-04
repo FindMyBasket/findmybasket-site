@@ -23,15 +23,29 @@
 -- unexpected result to a feed. Staged smallest-first so anything unexpected is legible:
 --
 --   1. The Organic Pharmacy      114 rows    barcodes
---   2. Beauty Flash           10,862 rows    barcodes + category path (the item 18 answer)
---   3. Stylevana              24,598 rows    CATEGORY ONLY, no barcode gain
+--   2. Beauty Flash           10,862 rows    BARCODES ONLY (see correction below)
+--   3. Stylevana              24,598 rows    BARCODES ONLY, and it has none to gain
 --   4. Gorgeous Shop                         barcodes
 --   5. Escentual                             barcodes
 --   6. Boots                  35,912 rows    barcodes, last
 --
--- Stylevana is third deliberately. Its product_GTIN is 0.0%, so coalescing cannot help
--- its barcodes at all: it is a clean test of the category half in isolation, on the
--- largest feed.
+-- CORRECTION, 4 August 2026: THE CATEGORY HALF IS PROSPECTIVE ONLY.
+-- This file originally described stage 2 as delivering "barcodes + category path" and
+-- stage 3 as a clean test of the category half. Both were wrong.
+--
+-- The importer writes top_category / product_type / subcategory ONLY on createActions.
+-- updateActions carries price, url, in_stock, ean, mpn and image_url and nothing else.
+-- An import therefore NEVER rewrites the category of a product that already exists, with
+-- this flag on or off. Every misassigned product already exists, so enabling the flag
+-- reads the recovered category column and discards it.
+--
+-- The rollout is BARCODE-ONLY at every stage. That is still worth doing: five retailers
+-- sat at 0.0% ean. It is simply not the fix for work-list item 18, which needs a
+-- catalogue-wide backfill of products and carries item 6's search_vector cost.
+--
+-- Stylevana's ordering no longer has a rationale: its product_GTIN is 0.0%, so it gains
+-- no barcodes either. Reorder or drop it; it was placed third to isolate a half that
+-- turns out not to exist.
 --
 -- ORDERING IS PRIMARY-FIRST, NOT SIBLING-FIRST. The row loop prefers the column read
 -- today and falls back only when it is empty, so YesStyle, Debenhams, Perfume Click and

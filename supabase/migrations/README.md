@@ -499,6 +499,20 @@ mistake "we have a rule about that" for "that is prevented".
 | **Convention 5**, the idempotency dry run | Caught `20260729200000` asserting "2 other occurred rows", inferred from a truncated listing that hid id 1. The migration's own comment records this. |
 | **The `main` repository ruleset** | Rejected a direct push to `main` on 3 August 2026 that should have been a branch. The commit was moved to a branch and opened as a PR. No harm reached the remote. |
 | **Exhaustive re-solve of demo baskets** | Caught two hand-picked homepage candidates on 3 August: one with a £0.00 gap that demonstrated nothing, and one whose assumed host was not the host. Neither looked wrong. See `scripts/generate-homepage-demo.mjs`. |
+| **The Debenhams filtered-row-count guard** | Fired 4 August 2026 on its first real opportunity, after 11 consecutive clean runs. `refresh-debenhams.yml` refused a filtered feed of 6,360 lines against a `<12000` floor set when the stable range was 12,600-12,700. The raw feed had shrunk 29% at source and beauty rows 50%. **The import was never invoked, so nothing partial was written and `retailer_import_config` was left untouched.** |
+
+**The Debenhams instance is worth reading against Branded Beauty on 1 August, because
+they are the same class and opposite outcomes.** Both are retailers behind a stored feed
+URL. Branded Beauty's uploader returned HTTP 500, the CSV stayed frozen at its previous
+content, the import re-read those bytes and **recorded `last_import_status = ok`** —
+success reported over stale data, which took a separate investigation to notice.
+Debenhams **refused to proceed and said which of two causes to look at**. A guard that
+stops the pipeline and names its own hypotheses is worth more than one that never fires,
+and far more than a path that succeeds on frozen bytes.
+
+**Do not lower the threshold to let a failing run through.** 12,000 was set against a
+stable 12,600-12,700 and it caught a real supply change on its first opportunity.
+Lowering it would silence the only thing that noticed.
 
 **What this changes in practice.** When a guard fires, record it against the convention
 it belongs to rather than only fixing the thing it caught. The fix is the smaller half.
@@ -747,3 +761,91 @@ the check happened before the second destructive step rather than after it.
 
 **Same shape as convention 8.** A check that does not run is not a check; here, a rescue
 that did not rescue is not a rescue, and both report success identically.
+
+---
+
+## 17. A check that cannot fail is not a check, however well designed
+
+**Added 4 August 2026, from a verification that would have reported a pass on a
+mechanism that never ran.**
+
+Convention 8 says a check that does not run is not a check. **This is the harder case:
+a check that runs, produces a clean result, and could not have produced any other.**
+
+**The worked example.** Stage 2 of the AWIN sibling coalesce was to be verified by
+comparing category distribution before and after enabling the flag. That is a good
+check. It measures the outcome that matters — where products land — rather than the
+mechanism, and it was chosen over "is the column populated" for exactly that reason.
+
+Underneath it, `import-awin-feed` writes `top_category` only on `createActions`.
+Existing products take `updateActions`, which does not carry category at all. **Every
+product in the affected set already existed.** So the distribution could not move, no
+matter what the recovered column contained.
+
+**Run as designed, the check would have shown no movement, and that null result had two
+explanations:**
+
+1. the recovered column agrees with what name inference was already doing, or
+2. the column was never applied.
+
+**Nothing in the observation could distinguish them**, and (1) is the comfortable
+reading. The check would have been reported as a pass, the stage marked verified, and
+the item closed on a measurement that was structurally incapable of failing.
+
+**The rule. Before trusting a check, establish that the mechanism it observes can
+actually change the thing being measured.** Ask what a failure would look like. If you
+cannot describe an input that makes the check fail, it is not measuring what you think.
+
+**Practical form:**
+
+- **Trace the write path, not the read path.** The check read `products.top_category`
+  correctly. The defect was that nothing wrote it. Reading the right column proves
+  nothing if no code path assigns it.
+- **A null result is a finding only when a non-null result was possible.** Otherwise it
+  is an absence of measurement wearing the costume of one.
+- **Prefer a check you have seen fail.** Convention 11 collects guards that have fired
+  in anger for this reason. A check that has only ever passed is indistinguishable from
+  one that cannot fail.
+
+**This was caught by asking a question about reversibility, not about correctness.** The
+operator asked whether a subsequent import with the flag off would rewrite categories,
+in order to establish whether the stage could be rolled back. Answering that required
+reading the write path, which is what exposed it. **The question that found the defect
+was not aimed at it.**
+
+---
+
+## 18. A method proven on a case too small to stress it is not proven
+
+**Added 4 August 2026, after a staging plan's verification method failed on the first
+stage large enough to exercise it.**
+
+**Convention 2 at the level of a method rather than a code path.** A rollout was staged
+smallest-first, deliberately, so that anything unexpected would be legible. Stage 1 was
+The Organic Pharmacy at 114 rows and it passed cleanly: dry run matched live run on
+every metric.
+
+**Stage 2 could not be dry-run at all.** `dry_run: true` forces single-invocation mode
+by design, because slicing depends on each slice committing and a dry run commits
+nothing. Beauty Flash is sliced *because it does not fit in one worker*. The dry run
+asked it to do the exact thing slicing exists to avoid, and returned HTTP 546 twice.
+
+**Every remaining stage is affected**: 6,974 to 35,912 rows, all sliced, none
+dry-runnable. **The verification method the entire staging plan rested on works only
+below a few hundred rows, and nothing revealed that until a stage exercised it.**
+
+**Stage 1 passed because it was too small to test the method.**
+
+**The rule. When a plan depends on a method, verify the METHOD at the scale it will be
+used, not only at the scale that is convenient to start with.** Smallest-first staging
+is still right — it limits blast radius — but it systematically delays discovering that
+the tooling does not scale, because the early stages are the ones least likely to break
+it.
+
+**A caveat written down is worth more than a caveat held.** The stage 1 report recorded,
+in advance, that *a clean stage 1 tells you very little about stages 2 to 6: small feed,
+categories already agreeing, barcodes with nothing to match against*. That turned out to
+be truer than intended — it did not merely fail to test the category half, it failed to
+test whether the verification method worked. **Because it was written down rather than
+thought, it was available to be read back when the stage failed**, and it framed the
+failure as expected-in-kind rather than as a surprise.

@@ -1974,6 +1974,19 @@ serve(async (req) => {
     const rawMpn = idx.mpn >= 0 ? (fields[idx.mpn] || "").trim() : "";
     const normEan = normaliseEan(rawEan);
     const normMpn = normaliseMpn(rawMpn);
+    // DENOMINATOR, STATED. rowsWithEan counts rows that REACH THE DECISION TREE with a
+    // valid barcode. The decision tree below still drops some of them: duplicate
+    // suppression, shade variants, size-mismatch rejection and the creates cap all
+    // `continue` after this point. So rowsWithEan is ALWAYS >= the number of stored
+    // rows carrying a barcode, and the two are different questions:
+    //
+    //   rowsWithEan  "how many feed rows offer us a usable barcode"   (feed quality)
+    //   stored eans  "how many rows in retailer_prices carry one"     (catalogue state)
+    //
+    // Measured on stage 1, 4 Aug 2026: 78 here, 70 stored, 108 product_GTIN values in
+    // the raw feed. THREE denominators, and none of them is wrong. Quote the one you
+    // mean. The placement is deliberately NOT changed: it is a feed-quality metric and
+    // moving it would silently redefine a scrape_log series that already has history.
     if (normEan) rowsWithEan++;
     if (normMpn) rowsWithMpn++;
 
@@ -2437,6 +2450,8 @@ serve(async (req) => {
       capped_creates: cappedCreates,
       canonical_size_extracted_on_new: v6CanonicalSizeExtracted,
       shade_extracted_on_new: v6ShadeExtracted,
+      // Counted BEFORE the decision tree: feed rows offering a usable barcode, not
+      // rows stored with one. See the comment at the increment. Always >= stored.
       rows_with_ean: rowsWithEan,
       // Coalesce diagnostics, reported from the FIRST stage rather than added later,
       // so a feed whose barcodes start failing validation is visible per run rather

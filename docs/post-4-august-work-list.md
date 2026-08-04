@@ -882,16 +882,41 @@ achievable answer.
 > That is 19,437 rows across two retailers, which is a different item from "nine
 > misassignments concentrated in recent additions". **The nine are not disproved and
 > are not explained by this** — the overlap is unestablished and should not be assumed.
-> But the large, mechanical, fixable part of this item is now identified.
+> But the large, mechanical part of this item is now identified.
 >
-> **The fix is the AWIN sibling coalesce**, staged per retailer
-> (`retailer_import_config.sibling_coalesce`). Beauty Flash is stage 2 and Stylevana
-> stage 3, deliberately adjacent so the category half can be read on its own: Stylevana
-> gains no barcodes at all, so anything that moves there is the category fix.
+> ### CORRECTION, 4 August 2026: THE COALESCE DOES NOT FIX THIS
 >
-> **Verification is category distribution before and after, not a populated column.**
-> A product landing in the right category is the outcome; a filled field is only the
-> mechanism.
+> **This entry previously said the AWIN sibling coalesce was the fix for item 18. That
+> was WRONG, not imprecise, and it was asserted repeatedly by both author and operator
+> before anyone checked the write path.**
+>
+> `import-awin-feed` sets `top_category`, `product_type` and `subcategory` **only on
+> `createActions`** (line 2227). `updateActions` (line 2007) carries `price`, `url`,
+> `in_stock`, `ean`, `mpn` and `image_url` **and nothing else**. So **an import never
+> rewrites the category of a product that already exists**, with the flag on or off.
+>
+> **Every misassigned product already exists.** Enabling the flag would read the
+> recovered `merchant_category`, pass it to the categoriser, and discard the result for
+> all 7,315 Beauty Flash rows and all 12,122 Stylevana rows. **The coalesce's category
+> half is PROSPECTIVE ONLY: it changes what NEW products get, and nothing else.**
+>
+> **The self-tan, hand cream and hand salve rows will stay in `Moisturiser`.**
+>
+> **The near-miss is worth as much as the finding.** The planned verification was
+> category distribution before and after. Run as designed it would have shown NO
+> MOVEMENT, and that null result had two available explanations — "the recovered column
+> agrees with name inference" and "the column was never applied" — with **nothing in the
+> observation able to distinguish them**. A well-designed check, made meaningless by a
+> mechanism underneath it that could not fail. Recorded as
+> `supabase/migrations/README.md` convention 17.
+>
+> **What this item actually needs is a category backfill**, which is a catalogue-wide
+> write to `products` and therefore carries item 6's cost: the stored `search_vector`
+> regenerates and index entries rewrite on every touched row. That is a different risk
+> class from a per-retailer import flag, and it was never priced. Recorded as item 35.
+>
+> **The coalesce rollout continues as BARCODE-ONLY** for every stage. Stage 2 onward
+> recovers identifiers, which is real and useful, and does not touch this item.
 
 > **This is now blocking demonstration of the core mechanism, which is why it is no
 > longer a tidiness item.**
@@ -1845,8 +1870,12 @@ Two different denominators, stated rather than explained away.
 dry run.** A dry run that matches its live run is confirmation; a dry run alone is a
 prediction.
 
-**Then stage 2, Beauty Flash**, which is where the category half is first genuinely
-tested and where the item 18 answer lives.
+**Then stage 2, Beauty Flash — BARCODE-ONLY.** Reframed 4 August 2026. It was planned
+as the first real test of the category half; the category half does not exist for
+existing products, so there is nothing there to test. See the correction on item 18.
+**Stages 3 to 6 are barcode-only for the same reason.** Stylevana's 12,122 name-inferred
+rows do not improve by enabling its flag, which removes the reason stage 3 was ordered
+where it was.
 
 ---
 
@@ -1915,6 +1944,61 @@ rights and a decision about whether an automated system should be able to write 
 import path at all — which, given this project's caution about that path, is a real
 question rather than an obvious yes. Recording the exposure so the decision is
 deliberate.
+
+---
+
+### 35. Category backfill: the actual fix for item 18, and it is not an importer flag
+
+**Raised 4 August 2026. NOT STARTED. Needs its own dry run, staging and decision.**
+
+**Why this exists.** The AWIN sibling coalesce recovers category columns the importer
+was discarding, but `import-awin-feed` assigns `top_category`, `product_type` and
+`subcategory` **only when creating a product**. Existing products take the update path,
+which does not carry category. Every misassigned product already exists, so **the
+coalesce is prospective only** and item 18 needs a separate backfill. See the correction
+on item 18 and `README.md` convention 17.
+
+**Known affected set**, measured 3 August 2026:
+
+| Retailer | Rows | What the importer reads | What the feed populates |
+|---|---|---|---|
+| Stylevana | 12,122 | `merchant_product_category_path` 0.0%, `category_name` 0.0% | `merchant_category` 98.6%, `product_type` 100% |
+| Beauty Flash | 7,315 | `merchant_product_category_path` 0.0% | `merchant_category` 100% |
+
+**19,437 rows currently categorised from the product name alone.**
+
+**ITEM 6 APPLIES AND WAS NEVER PRICED.** This is a catalogue-wide `UPDATE` to
+`products`, so both mechanisms in item 6 bite on every touched row:
+
+1. **`search_vector` is a STORED generated column** over `name`, `brand`,
+   `product_type`, `description`. Postgres recomputes a stored generated column on
+   every row update **without dependency tracking**, so `to_tsvector` re-runs even
+   though none of its inputs changed, producing an identical value at full cost.
+2. **`normalised_brand` is indexed**, so the update cannot be HOT. Index entries are
+   rewritten across the table's indexes, **including the GIN on `search_vector`**.
+
+Item 6 states this is trivial at 1,082 rows and material at 100,000. **19,437 sits
+between**, and that cost was not part of anyone's mental model when this looked like an
+importer flag. Neither author nor operator priced it.
+
+**What a design has to decide**, none of it obvious:
+
+- **Which column wins** where the recovered path and current name inference disagree.
+  The recovered column is not automatically right: `merchant_category` is a merchant's
+  own taxonomy, not ours.
+- **Whether to re-derive or to overwrite.** Re-running `inferCategorisationForImport`
+  with the recovered path is not the same as taking the merchant's category verbatim.
+- **What happens to products a human has corrected.** Nothing currently records that a
+  category was set by hand, so a backfill cannot avoid stamping over one.
+- **Whether it is one pass or per-retailer**, given the coalesce rollout is per-retailer
+  and only two retailers are known affected.
+
+**Dry run must count how many products CHANGE category, by direction**, before any
+write. A count of rows touched is not the same measurement, and item 6's cost is paid on
+touched rows whether or not they change.
+
+**The nine misassignments from item 18's original scope are still unexplained** and
+should not be assumed to be inside this set.
 
 ---
 
