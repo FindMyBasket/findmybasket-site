@@ -1873,9 +1873,18 @@ prediction.
 **Then stage 2, Beauty Flash — BARCODE-ONLY.** Reframed 4 August 2026. It was planned
 as the first real test of the category half; the category half does not exist for
 existing products, so there is nothing there to test. See the correction on item 18.
-**Stages 3 to 6 are barcode-only for the same reason.** Stylevana's 12,122 name-inferred
-rows do not improve by enabling its flag, which removes the reason stage 3 was ordered
-where it was.
+**STYLEVANA IS DROPPED FROM THE ROLLOUT ENTIRELY**, not reordered. Decided 4 August 2026.
+Its `product_GTIN` is 0.0%, so it gains no barcodes, and the category half does not exist
+for existing products, so it gains no categories either. **Its flag would be a no-op that
+reads as progress**, and a stage that cannot change anything is worse than no stage,
+because it accumulates false confidence in the method.
+
+**Why it was third, and why it is now nowhere, is the clearest illustration of the
+correction:** it was placed third deliberately, to isolate the category half on the
+largest feed, because it was the one retailer whose barcodes could not move. That made it
+the perfect test of a half that turned out not to exist.
+
+**Remaining order: Gorgeous Shop, Escentual, Boots.** All barcode-only.
 
 ---
 
@@ -1988,8 +1997,8 @@ importer flag. Neither author nor operator priced it.
   own taxonomy, not ours.
 - **Whether to re-derive or to overwrite.** Re-running `inferCategorisationForImport`
   with the recovered path is not the same as taking the merchant's category verbatim.
-- **What happens to products a human has corrected.** Nothing currently records that a
-  category was set by hand, so a backfill cannot avoid stamping over one.
+- **What happens to products a human has corrected.** See the precondition below; this
+  is no longer one open question among four.
 - **Whether it is one pass or per-retailer**, given the coalesce rollout is per-retailer
   and only two retailers are known affected.
 
@@ -1997,8 +2006,132 @@ importer flag. Neither author nor operator priced it.
 write. A count of rows touched is not the same measurement, and item 6's cost is paid on
 touched rows whether or not they change.
 
+---
+
+#### REQUIRED FIRST STEP: capture category provenance. THE BACKFILL IS NOT APPROVED TO PROCEED WITHOUT IT.
+
+**Investigated 4 August 2026. Manual category corrections CANNOT be identified
+retrospectively. Not with difficulty: at all.**
+
+**`categoriser_safety_net_log` is the table built for exactly this**, with
+`product_id`, `old_top_category`, `old_subcategory`, `new_top_category`,
+`new_subcategory`, `reason` and `run_at`. It holds **zero rows, and its sequence has
+NEVER ADVANCED** (`categoriser_safety_net_log_id_seq`, `last_value` never called).
+That distinction is the decisive one: a row count of zero is consistent with a table
+that was emptied, and a never-called sequence is not. **It was never written to, rather
+than cleared.** Same decisive test, and same result, as `price_history`.
+
+**Nine migrations changed categories in bulk and none recorded what they touched:**
+`bath_body_backfill`, `skincare_catchall_cleanup`, `detector_widen_homefrag_aromatherapy`,
+`skincare_colour_decontam_backfill`, `p2a_bodyhandfoot_to_bath_body`,
+`bathbody_phase1_miscategorised`, `lash_and_bodyspray_rule_backfill`,
+`recategorise_helpers`, `hoa_lash_backfill_c`. Each applies a predicate and moves what
+matched. **The predicate survives in the file; the set of products it hit does not**, and
+re-running it today would match a different set, because the shade collapse and merge
+passes have since rewritten many of the names those predicates keyed on.
+
+**No P2b migration exists by filename.** Whatever those rulings were, they are not in the
+migration history under that name.
+
+**What does exist does not help.** `product_merge_log` (4,382), `product_detach_log`
+(841), `shade_regroup_log` (103) and five dated backup tables are substantial and
+carefully kept, and **all record identity rather than category**.
+`fwee_recat_backup_20260716` is the sole exception at **4 rows**, which proves the
+practice was known and applied once.
+
+**CONSEQUENCE FOR THE TWO ROUTES.**
+
+- **Route 1, reconstruct provenance first: NOT AVAILABLE.** The information was never
+  captured. It is not lost, it was never written.
+- **Route 2, accept the loss on evidence that corrections are few: THE PRECONDITION
+  CANNOT BE MET.** That evidence does not exist and cannot be produced. The count of
+  hand-corrected categories is not merely unknown, it is **unknowable from what
+  survives.** Route 2 is therefore **accepting an UNMEASURED loss on NO evidence**, and
+  it must be stated in those words. It may still be the right decision. The softer
+  version is not available.
+
+**THE PRECONDITION, and the reason it is required rather than suggested.**
+
+Capture provenance **going forward**, before the backfill runs: a column or log
+recording how each category was set, written by both the importer and any future bulk
+pass.
+
+It **recovers nothing**. Every category set before it is unrecoverable regardless.
+**What it does is make the backfill the LAST operation that can destroy category history
+silently.** Without it, this backfill destroys history invisibly and so does every future
+one. With it, this is the final time that is possible.
+
+That is why it is a precondition and not a good idea to do alongside: its entire value is
+that it exists *before* the destructive operation, and there is no second chance to
+place it there.
+
 **The nine misassignments from item 18's original scope are still unexplained** and
 should not be assumed to be inside this set.
+
+---
+
+### 36. Enumerate the never-written tables, rather than finding the fourth by accident
+
+**Raised 4 August 2026. REPORT ONLY.** `categoriser_safety_net_log` is the **third**
+purpose-built record found empty this fortnight, after `price_history` and the
+`routine_email_log.outcome` column that did not exist. Three by accident is a pattern
+worth enumerating rather than continuing to trip over.
+
+#### The decisive test, and why a row count is not enough
+
+**A row count of zero is consistent with a table that was emptied. A sequence that has
+never advanced is not.** Only two sequences in `public` have never been called:
+
+| Table | Sequence | Verdict |
+|---|---|---|
+| `categoriser_safety_net_log` | never called | **never written** |
+| `price_history` | never called | **never written** |
+
+Every other sequence has advanced. Use this test, not `count(*)`, when the question is
+"was this ever written to".
+
+#### But the sequence test does not enumerate the class
+
+**Twelve further tables are empty and have no sequence**, so they are invisible to that
+test:
+
+`brand_spotlight_config`, `review_queue`, `routine_alerts`, `user_routines`,
+`metrics_amazon_monthly`, `metrics_awin_weekly`, `metrics_brand_spotlight_weekly`,
+`metrics_ga4_weekly`, `metrics_quality_weekly`, `metrics_rakuten_weekly`,
+`metrics_retailer_quality_weekly`, `metrics_social_weekly`.
+
+**Also note `pg_class.reltuples` is useless here**: it reads `-1` for most tables,
+meaning never analysed rather than empty. A sweep built on it would have reported almost
+the whole schema as empty and been discarded as noise.
+
+#### The distinction that actually matters, and it is not emptiness
+
+**"Empty because the feature is not built" is not the same defect as "empty because
+something was supposed to write and does not".** The eight `metrics_*` tables are empty
+because the dashboard's Step 5 has not been built; that is a schema waiting for a
+feature, and it is fine. `price_history` is empty **while carrying three maintenance
+functions written to keep its rows consistent**. `categoriser_safety_net_log` is empty
+while nine migrations changed the exact columns it exists to record.
+
+**The discriminator is whether a writer exists**, and it is cheap to check:
+
+| Table | Code refs | Has an INSERT | Reading |
+|---|---|---|---|
+| `price_history` | 0 | no | **Defect.** Maintenance functions exist for rows that never arrive |
+| `categoriser_safety_net_log` | 0 | no | **Defect.** Purpose-built for changes that happened nine times |
+| `metrics_ga4_weekly` | 2 | no | Awaiting Step 5. Expected |
+| `routine_alerts` | 1 | **yes** | Has a writer, simply not fired yet |
+
+**No fourth defect found.** The enumeration is the point: the class is now bounded, and
+the next empty table can be classified rather than investigated from scratch.
+
+#### What would prevent a fifth
+
+Nothing currently. A table can be created, given maintenance functions, referenced in a
+brief, and never written to, and **no check anywhere notices**. A periodic assertion that
+every table with a stated purpose has received at least one row within N days of creation
+would catch this class at creation time rather than months later during unrelated work.
+Not proposed as work, recorded as the shape a fix would take.
 
 ---
 
