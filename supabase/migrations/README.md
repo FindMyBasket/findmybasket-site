@@ -1020,7 +1020,7 @@ existing list while they were there.
 the definition is registered, and the registration is a separate, manual, unverifiable-
 from-here step that must be named explicitly in the change that adds the parameter.**
 
-**Two properties that make this worse than an ordinary manual step:**
+**Three properties that make this worse than an ordinary manual step:**
 
 1. **Registration is not retroactive.** Data collected before the definition exists is not
    backfilled and cannot be recovered. Every day between shipping the parameter and
@@ -1029,6 +1029,15 @@ from-here step that must be named explicitly in the change that adds the paramet
 2. **The failure is indistinguishable from the parameter being unused.** An empty column
    in a report reads as "nobody triggered this", which is a plausible and wrong
    conclusion that closes the question.
+3. **The gap is open-ended.** This is the property that makes it worse than the other two
+   together. **Nothing degrades. Nothing alerts. The parameter goes on firing correctly
+   forever.** There is no decay curve, no error budget, no threshold anything crosses, no
+   state that worsens until someone notices. A defect that breaks something eventually
+   announces itself; this one is stable, silent and permanent by construction. **The only
+   bound on how long a parameter stays unreadable is when a human next happens to open the
+   admin page** — and nothing schedules or prompts that. `routine_size` went nearly three
+   months. It could as easily have gone a year, and the day it was found would have looked
+   exactly like every day before it.
 
 **Practical form:**
 

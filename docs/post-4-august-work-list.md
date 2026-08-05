@@ -2329,7 +2329,9 @@ none exists that could. See convention 22.
 `existing_item_count` and `added_item_count` (metrics), `source` and `routine_size`.
 **Registration is not retroactive.** Nothing before 5 August is readable through any of
 the five, including the three months of `routine_size`. Recorded as `platform_changes`
-id 30.
+id 30 and as
+`supabase/migrations/20260805120000_platform_changes_ga4_custom_definitions.sql`. Full
+verification record and reasoning in `docs/ticket-preload-collision.md`.
 
 ---
 
