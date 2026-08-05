@@ -1906,7 +1906,7 @@ code cannot be tied to a revision by anything except memory. During an incident 
 first question is "what is actually running", and today that question has no answer
 better than opening the Supabase dashboard and reading the source.
 
-**Three separate exposures, worth not conflating:**
+**Four separate exposures, worth not conflating:**
 
 1. **Bus factor.** One person, one machine, one browser session. `supabase login` is a
    TTY flow and cannot run in CI or in an agent session, so this cannot currently be
@@ -1916,6 +1916,43 @@ better than opening the Supabase dashboard and reading the source.
    wrong, which is the absent-record class this file exists to correct.
 3. **Drift.** Nothing compares deployed source with `main`. A function could have been
    edited in the dashboard months ago and nothing would say so.
+4. **Attribution.** A hand deploy dropped into a window where something else is already
+   deploying or importing makes any surprise that follows unattributable. **This buys
+   attribution, not safety** — and the distinction is the whole paragraph, because
+   otherwise a reader takes it for a collision risk, verifies that a
+   `supabase functions deploy` and a Vercel build are wholly independent mechanisms,
+   concludes correctly that they cannot collide, and drops the constraint. **They cannot
+   collide is a different claim from a surprise stays attributable, and only the second
+   one survives contact with an actual surprise.** If something odd appears at 05:40 and
+   two things deployed between 05:30 and 05:35, there is no clean signal to read and the
+   investigation starts with no way to halve the search space. The cost of waiting is
+   minutes; the cost of an unattributable surprise is the whole investigation. Same
+   reasoning that holds stage 3 of the AWIN rollout: one change at a time so its effect
+   is readable.
+
+   **The windows to stay out of, in UTC, so nobody has to go and find them** (a reader
+   who has to look them up will not):
+
+   | | What | When |
+   |---|---|---|
+   | GitHub Actions | `refresh-debenhams` | 02:00 |
+   | | `sync-adg-feed` | 02:37 |
+   | | `sync-bb-feed` | 03:00 |
+   | | `refresh-homepage-demo` — **deploys production via Vercel** | 05:30 |
+   | pg_cron | retailer imports, half-hourly and contiguous | **03:30 – 07:47** |
+   | | `refresh-yesstyle` — **outside that window** | 10:00 |
+   | | `fmb-import-watchdog` / `brand-index-refresh` — always on | every 5 / 11 min |
+
+   **Two things the "03:30 to 07:47" shorthand hides.** `refresh-yesstyle` is a retailer
+   import at **10:00**, well clear of the block, so "after 07:47 is clear" is wrong for
+   one retailer. And **05:30 is two jobs, not one**: `refresh-homepage-demo` (Vercel
+   production deploy) and `refresh-organic-pharmacy` (pg_cron import) start in the same
+   minute. Clearing the Vercel build does not clear the import.
+
+   The practical rule: **the quiet stretch is roughly 08:00–09:00 UTC**, after
+   `refresh-atelier-de-glow` at 07:47 and before `monitor-feeds` at 09:00. Deploying
+   outside it is fine, but say in the deploy note what else was in flight, so the next
+   person reading an anomaly knows what to rule out.
 
 #### LIVE INSTANCE, 3 August 2026 evening
 
