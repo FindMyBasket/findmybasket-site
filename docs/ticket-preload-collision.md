@@ -39,9 +39,19 @@ flag would have been worse than no flag — noise that looks like signal.
 | Case | Condition at preload time | Notice | Meaning |
 |---|---|---|---|
 | `clean` | basket empty | none | first arrival, nothing to say |
-| `self_reload` | basket non-empty, nothing added | **suppressed** | refresh or back-navigation. A clean arrival. |
+| `self_reload` | basket non-empty, nothing added | **see below** | refresh or back-navigation. A clean arrival. |
 | `merged` | basket non-empty, something added | rendered | genuine collision |
 | `merged_cleared` | *(not an arrival case)* | — | the visitor took the way out |
+
+> **The `self_reload` notice rule changed after this shipped.** Suppression was wrong
+> wherever the basket held a *previous* merge. It now renders whenever the routine
+> contains anything the link did not bring. See "The defect the first version shipped
+> with" below.
+>
+> **`self_reload` also carries a classification ambiguity and is not a reload rate.** A
+> genuine first arrival by someone who already holds every one of the link's products is
+> filed identically, and nothing distinguishes them. Recorded as a known limitation of the
+> measurement in work list item 38 — read it before quoting any of these three figures.
 
 **`self_reload` is tested on added-count zero rather than on set-superset.** The two are
 equivalent here, and this one measures against what was actually *addable*: an id the link
