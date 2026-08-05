@@ -133,10 +133,32 @@ residue, no error message — so there was nothing for the watchdog to see. It r
 every five minutes for 47 hours and correctly found nothing. **YesStyle needed
 the monitor, and got it.**
 
-The related trap is real but separate, and is recorded in
-`supabase/migrations/README.md` convention 8: a watchdog that resumes in-flight
-work is structurally blind to work that never got in flight. That is a limit on
-the watchdog's scope, not a failure of this incident.
+The related trap is real but separate: **a watchdog that resumes in-flight work is
+structurally blind to work that never got in flight.** That is a limit on the
+watchdog's scope, not a failure of this incident.
+
+Now recorded as `supabase/migrations/README.md` **convention 23**, generalised past
+the watchdog: *a mechanism that resumes work in progress cannot see work that never
+started, and from its position the two are indistinguishable.* Work list item 41
+records the mechanism that makes it structural rather than incidental.
+
+> **Citation corrected 5 August 2026, and the order matters.** This previously
+> cited **convention 8**. **It was not there.** Convention 8 is "a check that does
+> not run is not a check", about artefacts that never execute; its watchdog bullet
+> makes the adjacent point that a monitor which has never fired is
+> indistinguishable from one that cannot fire. The in-flight blindness point was
+> not recorded as a convention anywhere — it had been asserted once, here, and
+> given a number.
+>
+> **A number attached to a claim signals that someone already adjudicated it**,
+> which makes a mis-citation harder to catch than a wrong claim: a wrong claim
+> invites argument, a cited claim invites deference.
+>
+> The citation was first corrected to read *not a convention*, and convention 23
+> was written afterwards as a separate decision — **not invented to justify the
+> reference**. That a document reached for the point as though settled is why it
+> was judged worth writing, and convention 23 records that provenance rather than
+> back-filling itself to look as though it was always there.
 
 ## What the 29 July run actually did
 
@@ -146,8 +168,28 @@ Bounded from the residue, since the edge logs retain 24 hours and it is past tha
 |---|---|
 | `last_attempt_at` 29 Jul 10:00:04, status `running` | the apply-start stamp executed |
 | **no `scrape_log` row for 29 July** | never reached scrape_log creation |
-| `import_run_state` empty | never reached the staging/meta write |
+| `import_run_state` empty | never reached the staging/meta write — **but see the correction below, this row does not stand alone** |
 | `last_import_error` empty | no error handler ran |
+
+#### CORRECTION, 5 August 2026: "`import_run_state` empty" is not independent evidence
+
+**`import_run_state` is empty for every finished run, successful or not.**
+`import-awin-feed/index.ts` deletes the run's rows on the last slice
+(`await supa.from("import_run_state").delete().eq("run_id", runId)`), immediately
+after `finaliseRun`. The table holds **zero rows in the steady state** — verified
+5 August 2026, `select count(*)` returns 0, and there is no history in it at all.
+See work list item 41.
+
+So "empty" is the *default*, not a signal. Read alone, that evidence row would let
+any reader of any future incident conclude "never reached the staging write" from
+a table that is empty by design.
+
+**The conclusion here still holds, because the conjunction is what carries it.**
+Rows survive a mid-chain death — deletion happens only at last-slice finalise — so
+for a run that demonstrably did *not* complete (`status` stuck at `running`, no
+`scrape_log` row), emptiness does narrow it to a death before the staging/meta
+write. **The inference is sound; the row was stated as though it were sound on its
+own, and it is not.** Quote it with its conjunct or not at all.
 
 It died after the `'running'` stamp and before the first staging write — the
 fetch/decompress/parse window. **A run that dies without writing an error was
