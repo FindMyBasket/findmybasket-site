@@ -11,6 +11,19 @@ service_role) and GSC monitoring of the 410 de-index over the coming weeks. Roll
 ever needed: Edge Config `superdrug_removed:false` + `active=true` (active=true alone
 restores the catalogue even without the flag).
 
+> **DATA-QUALITY EXPECTATION TO CARRY IF r12 EVER RETURNS.** Measured 5 Aug 2026.
+> Superdrug's retained rows carry **871 barcodes that cannot normalise, out of 29,247 —
+> 3.0%**. The live-retailer rate is 0.085% (48 of 56,584). **Forty times higher.**
+>
+> It does not matter while retired: those rows are `in_stock = false` and excluded from
+> `products_active`. It matters if Superdrug is ever re-onboarded through AWIN, because
+> it is a property of what that merchant publishes rather than of our importer, and it
+> would arrive again with the feed.
+>
+> Recorded so it is an expectation rather than a discovery. The coalesce work now
+> filters these at write time via `validateBarcode`, so a re-onboarding today would
+> reject them rather than store them — but the underlying feed quality is what it is.
+
 ## Reusable pattern for the NEXT retailer departure
 
 Step A permanently changed `products_active` to require an offer from an ACTIVE retailer,
