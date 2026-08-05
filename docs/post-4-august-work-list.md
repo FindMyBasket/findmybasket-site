@@ -2235,6 +2235,104 @@ waiting because the shrinkage is stable.
 
 ---
 
+### 38. Reading the preload click-out test: the comparator, and what the server table cannot see
+
+**Raised:** 5 August 2026 · **NOT A TASK.** Two things a reader needs *before* quoting a
+preload figure, recorded here because that is where the other caveats of this class have
+landed.
+
+**The 4.7 per cent comparator is not available, and the preload brief carried it
+forward.** `docs/strategy-amendments.md` A6 already records why: the 4.7 per cent
+click-out rate used comparison views as its denominator, and that denominator was broken
+by the gtag hydration race until 29 July. Its own amendment says the conclusion may still
+hold but **the number should not be quoted as measured**. A preload test framed as
+"better than 4.7 per cent" is therefore testing against a figure the project has already
+withdrawn.
+
+**What the test is instead.** Preload-clean against preload-merged, and against the
+post-3-August baseline once that baseline exists. Both comparisons are internal to the
+corrected instrument, which is the only way to avoid inheriting the broken denominator.
+The three-way `preload_case` split shipped today (§4.3 of the preload-collision brief) is
+what makes the first comparison possible; the second waits on the date-gated metrics that
+first render from the week beginning 3 August.
+
+**What `outbound_clicks` can and cannot see.** Item 15 bounds this and is unfixed by
+design. The routine builder's two hand-rolled cross-check anchors call
+`trackRetailerClick` and `trackAffiliateClickOut` but never `sendOutboundBeacon`, so
+`select count(*) from outbound_clicks where source like 'routine_%'` still returns **0**.
+Re-confirmed 5 August 2026.
+
+Everything the server table holds from `/app`, as at 5 August 2026:
+
+| `source` | Rows |
+|---|---|
+| `optimiser_shop_button` | 8 |
+| `optimiser_shop_button_preload` | 3 |
+| `optimiser_modal` | 1 |
+| `routine_*` (both cross-check links) | **0** |
+
+**12 rows in total, against 335 in the table.** Any server-side preload figure sees the
+Shop-button, open-all and modal paths and nothing else. Quote it with that scope attached
+or not at all.
+
+**And the rate itself cannot be computed server-side at any price.** `session_id` is NULL
+on **all 335 rows** — `ensureSessionId()` is never called anywhere in the repo, so the
+`fmb_sid` cookie is never set (`lib/session.ts` defers it pending consent posture).
+Populating it would not help: `outbound_clicks` holds no *arrival* rows, so the
+denominator does not exist in that table and never will. The rate is a GA4 computation.
+The server table is a cross-check on the numerator, scoped as above.
+
+**Why the click-source suffix was the right carrier.** GA4 event-scoped parameters do not
+join across events, so a flag on `load_routine_from_url` alone cannot filter
+`retailer_click` — numerator and denominator each need the distinction on their own event.
+`clickSourceFor` already fed both GA4's `click_source` and `outbound_clicks.source`, so
+extending it from `_preload` to `_preload_{case}` put the split into both pipelines from
+one line, with no schema change, no cookie and no consent question. The three rows written
+before 5 August carry the bare `_preload` and are not case-attributable; `like '%_preload%'`
+still catches them.
+
+---
+
+### 39. `load_routine_from_url` fired two parameters unreadable for three months
+
+**Raised:** 5 August 2026 · **CLOSED the same day by registration.** Recorded because the
+detection story matters more than the fix.
+
+**The finding.** `load_routine_from_url` carries `routine_size` and `source`. Neither had
+ever been registered as a GA4 custom definition, so neither was readable in any report.
+The event fired correctly, the payload was correct, and the values were discarded on
+arrival.
+
+| Parameter | Firing since | Readable before 5 Aug |
+|---|---|---|
+| `routine_size` | 10 May 2026, `8fcfc25` (Phase 6 port) | No |
+| `source` | 2 August 2026, `28d565e` | No |
+
+**A date correction worth keeping.** This was first put at "unreadable since 29 July".
+That is the date the *hydration race fix* landed, after which the event began reliably
+delivering — a different fact. `routine_size` has been unreadable since **10 May**, very
+nearly three months, and `source` since it shipped three days ago. The span is the
+finding, not the week.
+
+**The consequence.** `source` exists precisely to separate Pinterest arrivals from email
+ones (`routineArrivalSource()` reads `utm_source`, and its comment explains the design at
+length). That split has never been available. The preload test would have shipped on
+4 August believing it could attribute arrivals by campaign, and could not have.
+
+**The class.** Same as the gtag hydration race: correct code, correct-looking deploy,
+silent total loss at a boundary nothing watches. Different mechanism, identical signature.
+It was found by a human opening the GA4 admin page to register three *new* parameters and
+noticing the two old ones were absent — not by any test, log, alarm or check, because
+none exists that could. See convention 22.
+
+**Registered 5 August 2026**, five definitions: `preload_case` (dimension),
+`existing_item_count` and `added_item_count` (metrics), `source` and `routine_size`.
+**Registration is not retroactive.** Nothing before 5 August is readable through any of
+the five, including the three months of `routine_size`. Recorded as `platform_changes`
+id 30.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
