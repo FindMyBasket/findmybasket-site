@@ -171,6 +171,61 @@ deletions.
 
 ---
 
+## The defect the first version shipped with, and the rule that replaced it
+
+**Reported from production 5 August 2026 and reproduced.** A preload link opened on an
+existing basket merged with no visible change. Not the first open — the first open showed
+the notice correctly; the second was classified `self_reload` and suppressed it.
+
+**The rule was wrong, not the code.** The notice rendered on `preloadCase === 'merged'`,
+which is a fact about the *arrival*. The merged basket is persistent; the arrival happens
+once. Reload, navigate back from a retailer tab, or reopen the pin later, and the
+explanation and the escape hatch both vanish while the seven-product basket remains —
+reached by doing the most ordinary thing a confused person does.
+
+**Now rendered on `preloadExtras > 0`**: how many products in the routine did not come
+from this link, by set membership against the resolved link ids. Second wording for the
+case where nothing was added: *"Your routine has 7 products. 2 were not from this link."*
+`preload_case` is unchanged, so every figure stays comparable across the change.
+
+Full reasoning in the commit. Verified on preview across all four cases, with the
+identity-versus-arithmetic claim demonstrated rather than asserted: removing one of the
+*link's own* products left the line reading "2 were not from this link" where subtraction
+would have said 1, and removing both extras cleared the notice with no `merged_cleared`
+special case.
+
+---
+
+## Mobile: verified by hand on a real device — CLOSED
+
+**Verified by Robbie on his own phone, 5 August 2026. The notice is visible without
+scrolling on both the merge case and the reload case.** That closes it.
+
+**Recorded because of how it was verified, not only that it was.** Two attempts to settle
+it without a device came first, and they were not equally good:
+
+| Attempt | Outcome |
+|---|---|
+| `resize_window` to 414×896 | **Failed.** The window resized but the page kept reporting a 1455px viewport, so no mobile layout was ever rendered. Produced nothing. |
+| Same-origin iframe at 360 / 390 / 414 wide | **Worked, and gave numbers.** Single-column stacked at all three, notice fully above the fold, 302→363px in an 896px viewport at 414. |
+
+**The iframe result was real evidence and is not being disowned.** But it could not have
+settled the question on its own, and the reason is worth keeping: an iframe sized to
+414×896 in a desktop browser has **896px of usable height**, while a real phone with the
+same CSS viewport width spends 100–200px of it on browser chrome — address bar, tab strip,
+gesture area. **The iframe measures the layout; it does not measure the fold.** A notice
+ending at 363px is comfortably clear either way, which is why the iframe was persuasive,
+but "comfortably clear" was an inference and the device check is a measurement.
+
+**The general form, which is the part worth carrying:** an emulated viewport answers
+*where does the element sit in the layout*. Only a real device answers *does the person
+see it*. Those are different questions and the first is routinely mistaken for the second.
+Where the answer decides whether a change is worth shipping — and here Pinterest traffic
+is overwhelmingly mobile, so a notice most arrivals never see is close to no notice at
+all — the second question is the one that has to be answered.
+
+---
+
 ## Why the flag rides on the click and not only on the arrival
 
 **GA4 event-scoped parameters do not join across events.** A flag on
