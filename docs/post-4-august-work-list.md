@@ -2135,6 +2135,83 @@ Not proposed as work, recorded as the shape a fix would take.
 
 ---
 
+### 37. Debenhams feed shrank 29% at source, and the guard has refused twice
+
+**Raised 4 August 2026, second failure 5 August. WATCHING, not fixing. AWIN message HELD.**
+
+`refresh-debenhams.yml` has failed on 4 and 5 August at its filtered-row guard. **The
+import was never invoked either day**, so nothing partial was written and
+`retailer_import_config` for retailer 28 is untouched. Last successful import
+**3 August 05:44**.
+
+| Date | Input rows | Raw bytes | Beauty rows | Hit rate |
+|---|---|---|---|---|
+| 31 Jul | 2,502,027 | 140.2 MB | 12,757 | 0.51% |
+| 1 Aug | 2,535,936 | 143.4 MB | 12,721 | 0.50% |
+| 2 Aug | 2,665,696 | 155.7 MB | 12,719 | 0.48% |
+| 3 Aug | 2,664,884 | 155.4 MB | 12,623 | 0.47% |
+| **4 Aug** | **1,895,051** | **112.8 MB** | **6,359** | **0.34%** |
+| **5 Aug** | **1,891,597** | **112.7 MB** | **6,323** | **0.33%** |
+
+**Stable, not progressive.** Day-over-day 4→5 August is −0.18% input, −0.08% bytes,
+which is *smaller* than ordinary variation before the drop (31 Jul → 1 Aug was +1.4%).
+**The feed shrank once between 3 and 4 August and has stayed at the new level.** That is
+a supply change, and it also means **it will not recover on its own.**
+
+**Beauty fell disproportionately**: the feed lost 29% and beauty rows lost 50%, so the
+hit rate moved 0.47% → 0.33%. Truncation removes rows roughly uniformly; a category or
+merchant segment leaving looks like this. That points at supply rather than transfer, and
+it is the difference between waiting and asking.
+
+**No feed was withdrawn.** `refresh-debenhams` combines **eight** feed ids
+(`90938, 90940, 90945, 90947, 91126, 91133, 91134, 91135`). Each was diagnosed
+individually on 5 August: **none errors and none is empty.** So "one of Debenhams' feeds
+was withdrawn" is the wrong thing to say to AWIN.
+
+**Two of the eight could not be profiled.** `90945` and `91134` crashed `feed-diag` with
+a Node heap OOM — a limit of the diagnostic, not an AWIN failure. Between them they hold
+roughly 1.02M of today's 1.89M rows, so **more than half the feed is unprofiled** and the
+beauty rows may be in there. **This is why day two produced a partial answer.**
+
+#### Fixed 5 August: a refused run now retains evidence
+
+The filtered feed was computed, inspected by the guard, and **thrown away** on a failing
+run, because the Storage upload runs *after* the guard. Two mornings were spent able to
+say the feed had shrunk by half and unable to say **which products left**.
+
+`refresh-debenhams.yml` now uploads the filtered feed as a run artefact **before** the
+guard, 30-day retention, on pass and on refusal alike. The guard is unchanged and still
+stops the import; the Storage upload still runs after it, so **the last good copy
+(3 August) is preserved as the "before"** and a refused run supplies the "after".
+
+**The 3 August baseline, already retrieved from Storage:** 12,623 rows, 684 brands. Top
+categories `Beauty > Face > Foundations` 914, `Beauty > Lips > Lip Sticks` 508,
+`Beauty > Women Fragrance > Eau De Perfumes` 379. Top brands INGLOT 760, MAC 463,
+Revolution 453, Lancome 445, KIKO 384.
+
+#### Trigger and deadlines
+
+**Revisit Friday 7 August.** If still failing, the AWIN message goes with four days of
+stable shrinkage **plus the artefact diff naming exactly which products left**. That is a
+materially stronger message than one sent on day two, and nothing deteriorates while
+waiting because the shrinkage is stable.
+
+> **A SOFT DEADLINE NOBODY HAS SET, recorded so it is not discovered late.**
+> **7,358 sole-offer Debenhams products** are being served at prices last confirmed
+> 3 August. On those products there is no second retailer to fall back to, so the price
+> shown is the only price shown.
+>
+> The **36-hour staleness alert now fires every morning** and will keep firing, which is
+> the alert-fatigue risk convention 3 describes: a daily red line that everyone knows the
+> reason for trains the habit of dismissal, and the next genuine one arrives into that
+> habit.
+>
+> **Fine at two days. Worth naming at two weeks.** The absence threshold is 30 days, so
+> nothing degrades automatically before then — but "not yet degraded" and "still correct"
+> are different claims, and only the first is true after a fortnight.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row

@@ -67,14 +67,48 @@ jobs:
         run: |
           python3 scripts/filter-debenhams-feed.py raw.csv.gz debenhams-beauty.csv.gz
           ls -lah debenhams-beauty.csv.gz
+          echo "Filtered feed has $(zcat debenhams-beauty.csv.gz | wc -l) lines (incl. header)"
+
+      # Retain the filtered feed BEFORE the guard decides, so a REFUSED run still
+      # leaves evidence. Added 5 Aug 2026, on the second consecutive failure.
+      #
+      # WHY THIS ORDERING IS THE WHOLE POINT. The guard exits non-zero, and the
+      # Storage upload that used to be the only copy runs AFTER it. So on a failing
+      # run the filtered feed was computed, inspected, and thrown away. Two mornings
+      # were spent able to say the feed had shrunk by 50% and unable to say WHICH
+      # products left, because the only artefact that could answer it existed for a
+      # few seconds inside a runner.
+      #
+      # Storage still holds the last GOOD feed (3 Aug), which is the "before". This
+      # supplies the "after" on every run, including refused ones. A failing run now
+      # produces a diff rather than another partial answer.
+      #
+      # It does NOT weaken the guard: the guard is the next step and still stops the
+      # import. This only means a refusal is now evidence rather than a dead end.
+      - name: Retain filtered feed as an artefact (runs on pass AND on refusal)
+        uses: actions/upload-artifact@v4
+        with:
+          name: debenhams-beauty-${{ github.run_id }}
+          path: debenhams-beauty.csv.gz
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Guard — refuse a suspiciously small filtered feed
+        run: |
           # Guard against an over-narrow whitelist OR a truncated raw feed silently
           # shipping a partial catalogue. A full feed yields ~19.5K beauty rows; the
           # truncated download that shipped 3,858 rows must fail here too, so the
           # floor sits well above any plausible seasonal shrink but above 3,858.
+          #
+          # DO NOT LOWER THIS THRESHOLD. It was set against a stable 12,600-12,700 and
+          # has now correctly refused twice, on 4 and 5 Aug 2026, against a real supply
+          # change. Lowering it to let a run through would silence the only thing that
+          # noticed. See migrations/README.md convention 11.
           ROWS=$(zcat debenhams-beauty.csv.gz | wc -l)
-          echo "Filtered feed has $ROWS lines (incl. header)"
           if [ "$ROWS" -lt 12000 ]; then
             echo "::error::Filtered feed has only $ROWS lines (<12000) — whitelist too narrow or raw feed truncated"
+            echo "The filtered feed HAS been retained as an artefact on this run; diff it against"
+            echo "the last good copy in Supabase Storage (retailer-feeds/debenhams-beauty.csv.gz)."
             exit 1
           fi
 
