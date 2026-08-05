@@ -1949,10 +1949,70 @@ better than opening the Supabase dashboard and reading the source.
    production deploy) and `refresh-organic-pharmacy` (pg_cron import) start in the same
    minute. Clearing the Vercel build does not clear the import.
 
-   The practical rule: **the quiet stretch is roughly 08:00–09:00 UTC**, after
+   The practical rule: **the quiet stretch is roughly 08:05–09:00 UTC**, after
    `refresh-atelier-de-glow` at 07:47 and before `monitor-feeds` at 09:00. Deploying
    outside it is fine, but say in the deploy note what else was in flight, so the next
    person reading an anomaly knows what to rule out.
+
+   **08:05 and not 08:00, which is the whole point of the paragraph below.** An earlier
+   draft of this said 08:00, reasoned from `refresh-atelier-de-glow` finishing in its
+   normal ~1–2 minutes. On the slow band that run does not finish until roughly 08:04.
+   **A margin reasoned from the normal band was wrong by exactly the amount the normal
+   band hides**, in the very paragraph warning against reasoning from averages.
+
+   **How long the imports actually run, measured from `scrape_log` rather than assumed.**
+   14 days to 5 August 2026, `completed_at - started_at`, all `status = success`:
+
+   | Retailer | Rows | Normal run | Runs |
+   |---|---|---|---|
+   | The Organic Pharmacy | 114 | 4.6 – 16.4s | 13 |
+   | Escentual | ~7,970 | 24.3 – 78.6s | 11 of 12 |
+   | Gorgeous Shop | ~9,700–11,300 | 61.4 – 115.9s | 8 of 12 |
+   | Boots | ~37,000 | 68.7 – 108.6s | 12 of 14 |
+
+   **Row count does not predict duration, and an expectation carried into this
+   measurement needs correcting.** The sequencing work assumed stage 5 would need a
+   larger margin *because Boots is a bigger retailer* — 35,912 rows was cited as
+   materially longer. **It is not.** Boots at ~37,000 rows runs 69–109s. Gorgeous Shop at
+   ~11,000 rows runs 61–116s — the same, on a third of the rows. A stage is not longer
+   because the retailer is bigger, and the intuition that it is should be discarded here
+   rather than carried to the next stage.
+
+   **Stage 5 does still need its own number — for the slow-band reason below, not the
+   size reason.** Those are different numbers arrived at different ways, and conflating
+   them would produce a margin that looks reasoned and is not.
+
+   **THE MARGIN MUST BE PLANNED AGAINST THE SLOW BAND, NOT THE NORMAL ONE.** Across all
+   147 completed runs in the window: **124 took 1.0–185.3s, 23 took 902.4–1028.3s, and
+   NOTHING took anything in between.** An empty twelve-minute gap in the distribution is
+   not work varying with load; it is two different behaviours. The slow band hits **7 of
+   12 retailers, about one run in six, on 12 of the 14 days**, never all retailers on the
+   same day, and every one of those runs reports `success` with normal `price_updates` —
+   so the work completes and it is the timing that is anomalous. **The cause is not
+   established.** Do not plan a deploy margin from the normal figures above: any import
+   can take **~17 minutes**, and one in six does.
+
+   Recorded as work list item 40, because a 16% rate of runs taking an order of magnitude
+   longer than the rest is larger than a deploy-timing footnote.
+
+   **What this settles and what it does not.** `refresh-organic-pharmacy` is not a
+   constraint on tomorrow: at 4.6–16.4s it is clear by 05:30:17 at worst, and the 05:45
+   wait covers it by 34 minutes. **But the wait was reasoned from one of the two jobs at
+   05:30 and happened to cover both, which is luck rather than method, and it will not
+   hold for a later stage.** A stage landing near a retailer in the slow band needs its
+   own number from the table above plus the ~17-minute allowance, not this one.
+
+   **A note on sample size, which is why this table gives ranges over 11–14 runs rather
+   than a figure.** Organic Pharmacy was first put at 5–8s from six consecutive runs. Over
+   thirteen the range is 4.6–16.4s — the six-run sample understated the maximum by
+   roughly 2×, on the *least* variable importer in the table.
+
+   **It changes no decision here, and that is precisely why it is worth recording.** A
+   convention that only surfaces when it rescues you is easy to believe and easy to treat
+   as folklore about near-misses. One that surfaces when nothing was at stake is the
+   version that shows the rule holds generally — the six-run sample was wrong about the
+   maximum whether or not anything depended on it. Convention 18, a method proven on a
+   case too small to stress it.
 
 #### LIVE INSTANCE, 3 August 2026 evening
 
@@ -2369,6 +2429,60 @@ the five, including the three months of `routine_size`. Recorded as `platform_ch
 id 30 and as
 `supabase/migrations/20260805120000_platform_changes_ga4_custom_definitions.sql`. Full
 verification record and reasoning in `docs/ticket-preload-collision.md`.
+
+---
+
+### 40. One import run in six takes ~17 minutes, and the distribution has an empty middle
+
+**Raised:** 5 August 2026 · **REPORT ONLY.** Found while measuring import durations for
+item 34's fourth exposure, not by looking for it.
+
+**The observation.** 147 completed `scrape_log` runs in the 14 days to 5 August 2026:
+
+| Band | Runs | Range |
+|---|---|---|
+| Normal | 124 | 1.0 – 185.3s |
+| Slow | 23 | 902.4 – 1028.3s |
+| **Between 185.3s and 902.4s** | **0** | — |
+
+**The empty middle is the finding.** A duration that varied with feed size, network
+conditions or row count would fill that gap. Nothing does. Two behaviours, not one
+behaviour under load.
+
+**What it is not.**
+
+- **Not a failure.** Every slow run reports `status = success` with `price_updates` in
+  its normal range. The work completes; the timing is what is anomalous.
+- **Not one retailer.** 7 of 12 affected: Boots, Escentual, Gorgeous Shop, Beauty Flash,
+  Perfume Click, YesStyle, Branded Beauty.
+- **Not a daily platform stall.** It occurs on 12 of 14 days, 1–3 runs per day, never all
+  retailers on the same day. A shared outage would take the whole day's runs together.
+- **Not size-driven.** Boots at ~37,000 rows sits at 69–109s normally; Gorgeous Shop at
+  ~11,000 rows sits at 61–116s. Both appear in the slow band anyway.
+
+**The tight band across unrelated retailers is what makes a fixed bound the likely
+shape** — a lock wait, a cold start, a retry with fixed backoff, or `completed_at` being
+written late — rather than anything proportional to work. **That is a hypothesis and is
+recorded as one.** It has not been tested, and the honest position is that the cause is
+unknown.
+
+**Why it matters beyond curiosity.**
+
+1. **It sets the deploy margin.** Item 34's fourth exposure has to allow ~17 minutes for
+   any import, not the 1–2 minutes the normal band suggests. A margin planned from the
+   average is wrong one run in six.
+2. **It is invisible to everything that watches.** The runs succeed, so no alert fires and
+   no guard trips. This is the detection-gap class of item 14: the system reports success
+   and the anomaly is only visible to someone who subtracts two timestamps.
+3. **It bounds the import window.** The 03:30–07:47 block assumes runs finish long before
+   the next starts. Jobs are half-hourly and the slow band is ~17 minutes, so a slow run
+   still fits — but the headroom is 13 minutes, not 28, and nothing is watching that.
+
+**What would settle it**, in rough order of cost: check whether `started_at` and
+`completed_at` are both written by the function or one by a wrapper; check Supabase
+function logs for a slow run against a normal one on the same retailer; look for a retry
+or backoff constant near 900s in `_shared`. **None of this is on the critical path and
+none of it should displace the 4 August queue.**
 
 ---
 
