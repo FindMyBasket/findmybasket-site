@@ -988,3 +988,70 @@ indistinguishable from decoration.
 fail. Convention 18 is a method proven on a case too small to stress it. This is a test
 that was never shown to be capable of failing. **All three produce a green result that
 closes a question it never opened.**
+
+---
+
+## 22. GA4 custom definitions are a surface nothing in this repository can see
+
+**Added 5 August 2026, from the `load_routine_from_url` finding (work list item 39).**
+
+**A GA4 event parameter can be added in code, pass review, ship, fire correctly on every
+session, and be unreadable indefinitely.** Whether a parameter is readable depends on a
+registration made by hand in the GA4 admin interface. That registration exists nowhere in
+this repository, in any environment variable, in any migration, or in any response the
+running code receives.
+
+**Nothing detects the gap.** `gtag` accepts unregistered parameters silently and returns
+nothing to check. There is no error, no warning, no dropped-payload count, no difference
+in the network request. A test asserting the event fires with the right shape passes. A
+console log shows the correct payload. The event appears in GA4's realtime view. The
+parameter is simply absent from every report, forever, and the only thing that would ever
+say so is a human opening the custom-definitions page and reading the list.
+
+**The worked example.** `routine_size` shipped 10 May 2026 and `source` on 2 August 2026.
+Neither was registered. `source` was built specifically to separate Pinterest routine
+arrivals from emailed ones, and carries a nineteen-line comment explaining why it reads
+`utm_source` rather than defaulting to `'email'`. **That reasoning was correct and the
+output was discarded on arrival for the entire period.** It was found on 5 August only
+because someone opened the admin page to register three different parameters and read the
+existing list while they were there.
+
+**The rule. Adding a GA4 event parameter is not done when the code ships. It is done when
+the definition is registered, and the registration is a separate, manual, unverifiable-
+from-here step that must be named explicitly in the change that adds the parameter.**
+
+**Three properties that make this worse than an ordinary manual step:**
+
+1. **Registration is not retroactive.** Data collected before the definition exists is not
+   backfilled and cannot be recovered. Every day between shipping the parameter and
+   registering it is permanently unreadable — the same accrual property as the missing
+   `price_history` writer (`docs/strategy-amendments.md` A7).
+2. **The failure is indistinguishable from the parameter being unused.** An empty column
+   in a report reads as "nobody triggered this", which is a plausible and wrong
+   conclusion that closes the question.
+3. **The gap is open-ended.** This is the property that makes it worse than the other two
+   together. **Nothing degrades. Nothing alerts. The parameter goes on firing correctly
+   forever.** There is no decay curve, no error budget, no threshold anything crosses, no
+   state that worsens until someone notices. A defect that breaks something eventually
+   announces itself; this one is stable, silent and permanent by construction. **The only
+   bound on how long a parameter stays unreadable is when a human next happens to open the
+   admin page** — and nothing schedules or prompts that. `routine_size` went nearly three
+   months. It could as easily have gone a year, and the day it was found would have looked
+   exactly like every day before it.
+
+**Practical form:**
+
+- **State the exact parameter names and their types (dimension vs metric) in the PR or
+  commit that adds them**, as a list someone can work through in the admin interface. Not
+  "register the new params" — the names, spelled out.
+- **Register before the traffic arrives, not after.** For a campaign with a known start
+  date this is a hard deadline, not a tidy-up. The preload work had one: 4 August.
+- **When registering anything, read the whole existing list.** That is the only detection
+  mechanism that exists, and it is free while you are already there. It is how item 39
+  was found.
+
+**Why this belongs beside conventions 17, 18 and 21.** Those three are about checks that
+cannot fail, methods proven on cases too small to stress them, and tests never shown to be
+capable of failing. This is the same shape one step further out: **a step that is not a
+check at all, in a system that has no way to represent it, so its absence produces no
+signal of any kind.**

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { supabaseBrowser as db } from '@/lib/supabase-browser';
 import { AffiliateDisclosure } from '@/components/AffiliateDisclosure';
@@ -8,6 +8,7 @@ import {
   getRoutine,
   addToRoutine as storeAdd,
   removeFromRoutine as storeRemove,
+  clearRoutine as storeClear,
   onRoutineChange,
   type RoutineItem,
 } from '@/lib/routine-store';
@@ -126,6 +127,25 @@ interface BasketOption {
   partial?: boolean;
 }
 
+// What a `?routine=` arrival landed on. Three cases are distinguishable at the
+// moment the preload writes to the store, and they must be, because two of them
+// look identical to a naive "was the basket empty" test:
+//
+//   clean         nothing in the basket before the preload.
+//   self_reload   the basket already contained every product the link resolved to,
+//                 so nothing was added. This is a refresh of a preload URL, or a
+//                 back-navigation from a retailer tab, and it is almost certainly
+//                 the commonest non-empty case on pin traffic. It is a CLEAN
+//                 arrival that a "basket was not empty" flag would misfile as a
+//                 collision, filling the merged bucket with the exact sessions the
+//                 test is trying to isolate.
+//   merged        a genuine collision: the visitor had a basket, and the link added
+//                 to it. The only case the notice speaks to.
+//
+// merged_cleared is not an arrival case — it is set when the visitor takes the way
+// out below. See startFresh.
+type PreloadCase = 'clean' | 'self_reload' | 'merged' | 'merged_cleared';
+
 const ROUTINE_EMOJIS = ['🧴', '✨', '💧', '🌿', '☀️', '🫧', '💆', '🌸'];
 
 // ── COMPONENT ──────────────────────────────────────────────────────────────
@@ -182,21 +202,46 @@ export default function RoutineBuilder() {
   // a cause that would be wrong for most of them.
   const [preloadMissing, setPreloadMissing] = useState(0);
 
-  // True once a `?routine=` link has populated the routine. Suffixes the click
-  // source on every outbound click this page writes to `outbound_clicks`, so
-  // preload-originated clicks are separable from ones made by a visitor who built
-  // the basket themselves. Without it the preload test deploys and measures
-  // nothing: `source` already carries product_page / optimiser_shop_button /
-  // optimiser_modal, and both arrivals would land in the same buckets.
-  const [arrivedFromPreload, setArrivedFromPreload] = useState(false);
+  // Non-null once a `?routine=` link has populated the routine, carrying WHICH
+  // arrival case it was. Suffixes the click source on every outbound click this
+  // page writes to `outbound_clicks`, so preload-originated clicks are separable
+  // from ones made by a visitor who built the basket themselves. Without it the
+  // preload test deploys and measures nothing: `source` already carries
+  // product_page / optimiser_shop_button / optimiser_modal, and both arrivals
+  // would land in the same buckets.
+  //
+  // This carries the case rather than a boolean because the distinction has to
+  // ride on the CLICK, not only on the arrival event. GA4 event-scoped parameters
+  // do not join across events, so a flag on load_routine_from_url alone cannot
+  // filter retailer_click — numerator and denominator each need it on their own
+  // event. The same string reaches outbound_clicks.source via sendOutboundBeacon,
+  // so both pipelines get the distinction from this one line and neither needs a
+  // schema change, a session cookie, or the consent question that would come with
+  // one. (session_id is NULL on all 335 rows of outbound_clicks: ensureSessionId
+  // is never called, so a click cannot be linked to an arrival server-side.)
+  const [preloadCase, setPreloadCase] = useState<PreloadCase | null>(null);
 
-  // `optimiser_shop_button` -> `optimiser_shop_button_preload`. Suffixing keeps the
-  // established vocabulary intact and greppable rather than inventing a parallel
-  // set of names, and needs no schema change.
+  // `optimiser_shop_button` -> `optimiser_shop_button_preload_merged`. Suffixing
+  // keeps the established vocabulary intact and greppable rather than inventing a
+  // parallel set of names, and needs no schema change. `_preload` stays the common
+  // stem so `source like '%_preload%'` still catches every preload click including
+  // the three rows written before this commit, which carry the bare `_preload`.
   const clickSourceFor = useCallback(
-    (base: string) => (arrivedFromPreload ? `${base}_preload` : base),
-    [arrivedFromPreload],
+    (base: string) => (preloadCase ? `${base}_preload_${preloadCase}` : base),
+    [preloadCase],
   );
+
+  // How many products the preload actually added, for the collision notice. Not
+  // the count in the URL and not the count that resolved: addToRoutine is a union
+  // and returns added:false for an id already in the basket, so an overlapping
+  // basket adds fewer than it resolved. Zero on a self_reload, which is why the
+  // notice is suppressed there rather than rendering "Added 0 products".
+  const [preloadAddedCount, setPreloadAddedCount] = useState(0);
+
+  // The resolved, URL-ordered products this link asked for, kept so the way out of
+  // a collision can repopulate from them without re-querying. Held in a ref rather
+  // than state because nothing renders it.
+  const preloadItems = useRef<RoutineItem[]>([]);
 
   useEffect(() => {
     db.auth.getSession().then(({ data }) => {
@@ -297,22 +342,54 @@ export default function RoutineBuilder() {
           category: p.product_type || '',
         }));
 
-      for (const it of items) storeAdd(it);
+      preloadItems.current = items;
+
+      // Read the basket state at the ONLY moment it is still the pre-preload one.
+      // Nothing between this effect starting and here writes to the store — just
+      // the awaited query and the sort above — so localStorage still holds exactly
+      // what the visitor arrived with. The hydration gate's `preload === 'pending'`
+      // cannot be used as a proxy for "was empty": it is only ever set when the
+      // store was empty, but the 3s timeout can flip it to 'failed' before the
+      // query lands, so reading it here would be wrong on a slow connection.
+      const existingCount = getRoutine().length;
+
+      let addedCount = 0;
+      for (const it of items) {
+        if (storeAdd(it).added) addedCount++;
+      }
+      setPreloadAddedCount(addedCount);
       setRoutine(getRoutine());
       // Release the gate: the routine is populated, so the layout renders. Also
       // clears a 'failed' set by the timeout if the response arrived late.
       setPreload('idle');
 
-      // Every outbound click from here on is attributable to a preloaded arrival.
-      // Session-scoped on purpose: if the visitor adds more products by hand and
-      // re-optimises, the session still originated from the link, which is the
-      // question the test is asking.
-      setArrivedFromPreload(true);
+      // addedCount === 0 on a non-empty basket means every product the link
+      // resolved to was already there — a refresh or a back-navigation, not a
+      // collision. Tested on added rather than on set-superset because the two are
+      // equivalent here and this one is measured against what was actually
+      // addable: an id the link asked for but products_active did not return was
+      // never going to be added, and must not make a self_reload look merged.
+      const arrivalCase: PreloadCase =
+        existingCount === 0 ? 'clean' : addedCount === 0 ? 'self_reload' : 'merged';
+
+      // Every outbound click from here on is attributable to a preloaded arrival,
+      // and now to which kind. Session-scoped on purpose: if the visitor adds more
+      // products by hand and re-optimises, the session still originated from the
+      // link, which is the question the test is asking.
+      setPreloadCase(arrivalCase);
 
       if (typeof window !== 'undefined' && typeof (window as any).gtag === 'function') {
         (window as any).gtag('event', 'load_routine_from_url', {
           routine_size: items.length,
           source: routineArrivalSource(),
+          // preload_case, not a basket_was_empty boolean. A boolean cannot separate
+          // self_reload from merged, and on pin traffic that is the difference
+          // between a readable test and a merged bucket full of clean sessions.
+          preload_case: arrivalCase,
+          // Both counts, so the size of any contamination is quantifiable rather
+          // than inferred from the case alone.
+          existing_item_count: existingCount,
+          added_item_count: addedCount,
         });
       }
 
@@ -713,6 +790,39 @@ export default function RoutineBuilder() {
     }
   };
 
+  // ── THE WAY OUT OF A COLLISION ────────────────────────────────────────
+
+  // Clear the merged basket and repopulate from the link alone, so the visitor
+  // ends up with exactly the routine the pin promised. Deliberately NOT a clear to
+  // empty: that leaves them with nothing and sends them back to the pin. Uses the
+  // items already resolved by the preload rather than re-querying, so this cannot
+  // fail differently from the arrival that produced it.
+  //
+  // clearRoutine writes storage AND dispatches fmb_routine_change, which the store
+  // subscription turns into setRoutine, so component state follows on its own. The
+  // explicit setRoutine below is belt-and-braces consistent with every other call
+  // site. resetResults is the part that is NOT automatic: clearRoutine knows
+  // nothing about the optimiser, so without it the merged basket's results stay on
+  // screen underneath the corrected routine.
+  const startFresh = useCallback(() => {
+    storeClear();
+    for (const it of preloadItems.current) storeAdd(it);
+    setRoutine(getRoutine());
+    setPreloadAddedCount(0);
+    // The arrival was still a collision — this records that the visitor resolved
+    // it, rather than relabelling the session 'clean'. Clicks after this point
+    // carry _preload_merged_cleared, which keeps the clean bucket uncontaminated
+    // and makes the take-up of this link measurable, which is the only way to know
+    // whether shipping it was worth it. preloadMissing is left alone: products the
+    // link could not resolve are still unresolved.
+    setPreloadCase('merged_cleared');
+    resetResults();
+    // No setTimeout: runOptimiser reads getRoutine() directly, not React state, and
+    // the writes above are synchronous. The preload path's 300ms delay exists for
+    // the gtag hydration race on a cold load, which this click is well past.
+    runOptimiser('auto_shared_link');
+  }, [resetResults, runOptimiser]);
+
   // ── SAVE ROUTINE ──────────────────────────────────────────────────────
 
   const saveRoutine = async () => {
@@ -964,6 +1074,26 @@ export default function RoutineBuilder() {
                   {routine.length} product{routine.length !== 1 ? 's' : ''}
                 </span>
               </div>
+
+              {/* A preload that landed on an existing basket says what happened and
+                  offers one tap out of it. Merging stays the default — destroying a
+                  basket someone built by hand is worse — so this states the fact and
+                  leaves the choice. Same class and same plain-statement register as
+                  the unresolvable-products line below, not a second pattern.
+
+                  'merged' only: a self_reload added nothing, so there is nothing to
+                  report and "Added 0 products" would be worse than silence.
+                  'merged_cleared' has already been acted on. */}
+              {preloadCase === 'merged' && (
+                <p className="rb-routine-missing">
+                  {preloadAddedCount === 1
+                    ? 'Added one product to your existing routine.'
+                    : `Added ${preloadAddedCount} products to your existing routine.`}{' '}
+                  <button type="button" className="rb-routine-reset" onClick={startFresh}>
+                    Clear it and start fresh
+                  </button>
+                </p>
+              )}
 
               {/* A preloaded routine that arrived short says so. Without this the
                   link silently delivers fewer products than it promised, which is

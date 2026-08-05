@@ -256,6 +256,23 @@
   margin: 0 0 16px;
 }
 
+/* The way out of a preload collision. A button, not an anchor: it is an action on
+   this page, not navigation. Styled as the plain text link the copy calls for,
+   matching .rb-add-more a rather than introducing a second link colour. */
+.rb-routine-reset {
+  padding: 0;
+  background: none;
+  border: none;
+  font: inherit;
+  color: #8A6A30;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.rb-routine-reset:hover {
+  text-decoration: underline;
+}
+
 .rb-routine-list {
   display: flex;
   flex-direction: column;
