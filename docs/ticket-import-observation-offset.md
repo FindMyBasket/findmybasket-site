@@ -137,14 +137,28 @@ The related trap is real but separate: **a watchdog that resumes in-flight work 
 structurally blind to work that never got in flight.** That is a limit on the
 watchdog's scope, not a failure of this incident.
 
-> **Citation corrected 5 August 2026.** This previously cited
-> `supabase/migrations/README.md` convention 8. **It is not there.** Convention 8
-> is "a check that does not run is not a check", about artefacts that never
-> execute; its watchdog bullet makes the adjacent point that a monitor which has
-> never fired is indistinguishable from one that cannot fire. **The in-flight
-> blindness point is not recorded as a convention anywhere**, and citing a number
-> for it made it look settled. It is stated here and nowhere else. Work list item
-> 41 records the mechanism that makes it structural rather than incidental.
+Now recorded as `supabase/migrations/README.md` **convention 23**, generalised past
+the watchdog: *a mechanism that resumes work in progress cannot see work that never
+started, and from its position the two are indistinguishable.* Work list item 41
+records the mechanism that makes it structural rather than incidental.
+
+> **Citation corrected 5 August 2026, and the order matters.** This previously
+> cited **convention 8**. **It was not there.** Convention 8 is "a check that does
+> not run is not a check", about artefacts that never execute; its watchdog bullet
+> makes the adjacent point that a monitor which has never fired is
+> indistinguishable from one that cannot fire. The in-flight blindness point was
+> not recorded as a convention anywhere — it had been asserted once, here, and
+> given a number.
+>
+> **A number attached to a claim signals that someone already adjudicated it**,
+> which makes a mis-citation harder to catch than a wrong claim: a wrong claim
+> invites argument, a cited claim invites deference.
+>
+> The citation was first corrected to read *not a convention*, and convention 23
+> was written afterwards as a separate decision — **not invented to justify the
+> reference**. That a document reached for the point as though settled is why it
+> was judged worth writing, and convention 23 records that provenance rather than
+> back-filling itself to look as though it was always there.
 
 ## What the 29 July run actually did
 

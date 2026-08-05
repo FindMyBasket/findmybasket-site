@@ -2520,9 +2520,12 @@ through the data model rather than through the guard.
 watchdog's silence as a scope limit. **The scope reading was right and needs no
 change.** The evidence reading needed qualifying: emptiness is the default for every
 finished run, so it is only evidence in conjunction with the run not having completed.
-Corrected in `docs/ticket-import-observation-offset.md`, which also carries a
-mis-citation fix — the in-flight blindness point was attributed to convention 8 and is
-not recorded as a convention anywhere.
+Corrected in `docs/ticket-import-observation-offset.md`, which also carried a
+mis-citation: the in-flight blindness point was attributed to convention 8 and was not
+recorded as a convention anywhere. **It is now `supabase/migrations/README.md`
+convention 23**, generalised past the watchdog — *a mechanism that resumes work in
+progress cannot see work that never started* — and written because a document cited it
+as already existing, which is the provenance worth keeping.
 
 **The gap, stated precisely, because the loose version is wrong.** It is not that the
 watchdog fails to look. **It is that a crashed run leaves nothing behind to look at.**

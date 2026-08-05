@@ -1055,3 +1055,75 @@ cannot fail, methods proven on cases too small to stress them, and tests never s
 capable of failing. This is the same shape one step further out: **a step that is not a
 check at all, in a system that has no way to represent it, so its absence produces no
 signal of any kind.**
+
+---
+
+## 23. A mechanism that resumes work in progress cannot see work that never started
+
+**Added 5 August 2026. Written because a document cited it as already existing.**
+
+**A resumption mechanism observes work that is under way and unfinished.** Watchdogs that
+re-fire a stalled step, retry queues, resume cursors, checkpoint restarts, reconcilers
+that finish half-applied changes — they all read some record of *in-progress* work and
+push it forward.
+
+**From that position, "nothing to resume" and "nothing ever started" are the same
+observation.** The mechanism sees an absence and cannot distinguish which absence it is.
+It reports success, correctly, in both cases. **A resumption mechanism therefore proves
+nothing about whether the work happened**, and any confidence drawn from its silence is
+confidence about the wrong question.
+
+**The worked example.** `fmb_watchdog_stalled_imports` runs every five minutes and reads
+`import_run_state`, firing when `next_slice < total_slices`. On 29 July 2026 the YesStyle
+import was killed after its `'running'` stamp and before its first staging write. It wrote
+no `import_run_state` row, so there was nothing to resume. **The watchdog ran every five
+minutes for 47 hours and correctly found nothing.** What caught it was
+`monitor-retailer-feeds` at 09:00 the next day — a different mechanism, watching for runs
+that never completed at all. Full account in
+`docs/ticket-import-observation-offset.md`.
+
+**The second instance is in the same system and is worth seeing as the same shape.**
+`import_run_state` is deleted on the last slice, so it holds zero rows in the steady
+state (work list item 41). That makes the watchdog unauditable for the same structural
+reason it is blind: after the fact, a run that stalled and was resumed and a run that
+merely took a long time both leave an empty table and a `success` row. **The blindness
+runs forward and backward from the same property.**
+
+**The rule. Every resumption mechanism needs a named partner that watches for work which
+should have started and did not, and the pairing must be written down where either one is
+described.** Not "the monitor probably covers it" — which one, watching what, on what
+schedule. The two are easy to conflate precisely because they both look like "something
+watches the imports", and the gap between them is invisible until an incident lands in it.
+
+**Two failure modes this prevents:**
+
+1. **Reading silence as health.** A watchdog that has found nothing for a month is
+   indistinguishable from one that cannot see anything at all. Convention 11 is the
+   general case; this is the version where the blindness is structural rather than a
+   question of whether the guard has ever fired.
+2. **Fixing the wrong thing.** "The watchdog didn't catch it" invites widening the
+   watchdog. But the mechanism is not under-scoped — it is exactly scoped, and the scope
+   excludes work that never started. **The honest statement is not "it failed to look",
+   it is "there was nothing left behind to look at",** and those imply different work.
+
+### Why this convention exists, which is the more interesting part
+
+**It was not written from an incident. It was written because a document cited it.**
+
+`docs/ticket-import-observation-offset.md` recorded the in-flight blindness point on
+30 July 2026 and attributed it to **convention 8**. Checking that on 5 August found
+convention 8 is "a check that does not run is not a check", about artefacts that never
+execute. **The point was not recorded here, or anywhere.** It had been asserted once, in
+one ticket, and given a number.
+
+**A number attached to a claim is a signal that someone already adjudicated it**, which
+makes a mis-citation harder to catch than a wrong claim: a wrong claim invites argument,
+a cited claim invites deference. The correction was made in the honest order — the
+citation was fixed to say *not a convention* first, rather than a convention being
+invented to justify the reference afterwards.
+
+**That a document reached for this point as though it were settled is better evidence
+that it should exist than any argument for writing it.** The reasoning was load-bearing
+enough that someone needed to cite it, twice-relevant within one system, and it explains
+a class rather than an incident. So it is written now, and dated now, rather than
+back-filled to look as though it was always here.
