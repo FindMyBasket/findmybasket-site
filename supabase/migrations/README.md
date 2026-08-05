@@ -938,3 +938,53 @@ person who said it usually meant "no alarm has gone off".
    is "nothing we watch", the claim is about mechanisms only.
 2. *How old is the data, in units a user would care about?* Thresholds are in units the
    system cares about. Those are rarely the same.
+
+---
+
+## 21. A regression test must be shown to fail against the code that had the defect
+
+**Added 5 August 2026. Distinct from convention 11, and the distinction is the point.**
+
+Convention 11 collects **guards that have fired in anger** — evidence that a mechanism
+works. **This is a different proof about a different artefact: evidence that a test
+catches the specific thing it was written for.**
+
+**A test written after a defect and never run against the defective code is not a
+regression test. It is a test that happens to pass.** The two are indistinguishable from
+a green result, and only one of them will fail if the defect returns.
+
+**The worked example.** The slice-count merge added every value numerically, so a
+`Record<string, number>` of barcode-rejection reasons became the string
+`"0[object Object][object Object][object Object][object Object]"` and a boolean flag
+summed to `4` across four slices. Nine tests were written to cover the fixed behaviour.
+**Then the OLD merge was run against them:**
+
+```
+old merge on reason objects -> "0[object Object][object Object]"
+old merge on boolean        -> 4
+```
+
+**That is the failure reproduced, not described.** Without it, the nine tests assert that
+the new code does what the new code does — which is true of any implementation and
+proves nothing about whether the defect can return.
+
+**The rule. After fixing a defect, run the new tests against the unfixed code and show
+them failing.** Keep the output. A regression test whose failure has never been observed
+is in the same category as a guard that has never fired: plausible, untested, and
+indistinguishable from decoration.
+
+**Practical form:**
+
+- **`git stash` the fix**, or paste the old implementation into a scratch harness, and
+  run the tests. The scratch harness is often easier and does not risk the working tree.
+- **Record the failing output in the commit or the PR**, not just the fact that it
+  failed. `"0[object Object]"` is legible to a future reader in a way that "the old code
+  failed the tests" is not.
+- **If a new test passes against the old code, it is not testing the defect.** That is
+  the signal to look again, and it is the whole reason to run this check — it is cheap
+  and it fails informatively.
+
+**Why this belongs beside conventions 17 and 18.** Convention 17 is a check that cannot
+fail. Convention 18 is a method proven on a case too small to stress it. This is a test
+that was never shown to be capable of failing. **All three produce a green result that
+closes a question it never opened.**
