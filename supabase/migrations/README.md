@@ -849,3 +849,92 @@ be truer than intended — it did not merely fail to test the category half, it 
 test whether the verification method worked. **Because it was written down rather than
 thought, it was available to be read back when the stage failed**, and it framed the
 failure as expected-in-kind rather than as a surprise.
+
+---
+
+## 19. State the rule as the movement, or it will keep failing
+
+**Added 5 August 2026, after the same class of error three times in three days.**
+
+**Three instances is a rule that does not work, not three lapses.**
+
+| Date | What happened | Caught by |
+|---|---|---|
+| 3 Aug | Committed to `main` directly | the `main` ruleset rejected the push |
+| 3 Aug | Committed to `main` directly, again | the ruleset again |
+| 5 Aug | Branched from `feat/awin-sibling-coalesce` instead of `main`, so a PR carried four unrelated commits | nothing — noticed while reading the merge output |
+
+**The rule was written as "branch first". That is why it kept failing.** "Branch first"
+is satisfied by `git checkout -b` from wherever `HEAD` happens to be, which is exactly
+what produced the third instance. The rule was never the problem people thought it was:
+the omitted step is **verifying the base**, and no wording that starts with "branch"
+draws attention to it.
+
+**State it as one movement, not as a first step:**
+
+```
+git checkout main && git pull && git checkout -b <branch>
+```
+
+**Never `git checkout -b` on its own.** Not because branching is wrong, but because on
+its own it silently inherits whatever is checked out, and the inheritance is invisible
+until a PR diff is read — by which time the commits are already in it.
+
+**The general form, and it is the reusable part.** A rule phrased as an *action* fails
+where a rule phrased as a *movement from a known state* does not, because the action can
+be performed correctly from the wrong starting point. **"Branch first" describes what to
+do; "branch from `main`" describes what must be true.** Prefer the second wherever the
+starting state can vary.
+
+**Why the third instance looked harmless, and why that is the trap.** The mis-based PR
+merged work that had — in the two days between — independently become correct to merge.
+The outcome was fine. **It was fine because of the interval, not because the error is
+safe:** the same mistake on 3 August would have merged genuinely unconfirmed work into
+the default branch. Recording only the outcome would teach that this class of error does
+not matter.
+
+---
+
+## 20. "Not yet degraded" and "still correct" are different claims
+
+**Added 5 August 2026, generalised from a stale-feed judgement.**
+
+**Every stale-data judgement this project has made has rested on the first while sounding
+like the second.**
+
+The two claims:
+
+- **"Not yet degraded"** — a threshold has not been crossed, an alert has not fired, a
+  guard has not tripped. It is a statement about **a mechanism**.
+- **"Still correct"** — the data reflects reality. It is a statement about **the world**.
+
+The first does not imply the second, and the gap between them widens with time while
+nothing observable changes.
+
+**The worked example.** Debenhams stopped importing on 4 August 2026. The absence
+threshold is 30 days, so nothing degrades automatically before early September. But
+**7,358 sole-offer products** are served at prices last confirmed on 3 August, and on a
+sole-offer product the price shown is the only price shown. At two days that is fine. At
+two weeks the honest sentence is "these prices are a fortnight old and we have not
+checked them", **not** "nothing has degraded".
+
+**Where this has already applied, unnoticed:**
+
+- **Branded Beauty**, 1 August: the frozen CSV re-imported cleanly and reported
+  `last_import_status = ok`. Not degraded by any mechanism; not correct.
+- **Skin Cupid**, 11 May to 3 August: an error nobody read for 52.7 days. No threshold
+  existed to cross.
+- **The 30-day absence threshold itself** is a "not yet degraded" instrument. It says
+  when to stop *showing* a price, not when to stop *trusting* one.
+
+**The rule. When reporting on stale data, say which claim you are making.** If the
+support is a threshold that has not been crossed, say that, and say what the threshold is
+for. A reader hearing "nothing has degraded" will take it as "the data is fine", and the
+person who said it usually meant "no alarm has gone off".
+
+**Two questions that separate them:**
+
+1. *What would have to be true for this to be wrong, and would we see it?* If the answer
+   is "nothing we watch", the claim is about mechanisms only.
+2. *How old is the data, in units a user would care about?* Thresholds are in units the
+   system cares about. Those are rarely the same.

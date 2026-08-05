@@ -1939,7 +1939,30 @@ re-proposed:**
 | A header comment in the function saying which branch is deployed | **It would live on the branch.** Someone reading `main` would not see it, which is exactly the reader this is meant to help. The note has to exist somewhere both branches share, or somewhere outside the repository entirely. |
 | Merge now with all flags false | Defensible, since every retailer's flag is off and the flag-off path is byte-identical to the old code. But it **merges unconfirmed work to satisfy a documentation problem**, and staging discipline exists precisely to stop that trade. |
 
-**Leaving it is the choice, for one night**, with the divergence recorded here instead.
+#### RESOLVED 5 August 2026 — correct on its merits, arrived at by accident
+
+**Both halves matter and the second is why this is recorded rather than quietly closed.**
+
+**It is correct.** `main` now contains the deployed importer, via PR #185. The reason the
+merge was set aside on 3 August was that it **spent the staging discipline to solve a
+documentation problem** — merging unconfirmed work to make a document accurate. That
+reason has expired: **stage 1 is confirmed against its live run, stage 2 is flipped, and
+`sibling_coalesce` gates behaviour per retailer independently of what `main` contains.**
+Merging changes no behaviour and removes the divergence. On 5 August it is simply the
+right state.
+
+**It was an accident.** The branch for the Debenhams artefact change was cut from
+`feat/awin-sibling-coalesce` rather than from `main`, so PR #185 carried four unrelated
+commits with it. Nobody decided this; the base was not checked.
+
+**Recording only the first half would be worse than not recording it**, because it would
+read as evidence that branching errors are harmless. They are harmless *here* only
+because the merge had independently become correct in the two days between. Had this
+happened on 3 August it would have merged genuinely unconfirmed work into the default
+branch. **The outcome was luck operating on a shrinking window, not a safe class of
+error.** See `README.md` convention 19.
+
+**Leaving it was the choice for one night**, and the divergence was recorded here instead.
 That is the smallest honest option: it does not pretend the gap is closed, and it does
 not spend the staging discipline to close it.
 
