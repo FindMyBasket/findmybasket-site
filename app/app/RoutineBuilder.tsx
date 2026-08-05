@@ -239,9 +239,28 @@ export default function RoutineBuilder() {
   const [preloadAddedCount, setPreloadAddedCount] = useState(0);
 
   // The resolved, URL-ordered products this link asked for, kept so the way out of
-  // a collision can repopulate from them without re-querying. Held in a ref rather
-  // than state because nothing renders it.
+  // a collision can repopulate from them without re-querying, and so the notice can
+  // tell link products from everything else. Held in a ref rather than state because
+  // nothing renders it directly.
   const preloadItems = useRef<RoutineItem[]>([]);
+
+  // How many products in the routine did NOT come from this link. The notice renders
+  // on this rather than on the arrival case, so it describes the basket the visitor is
+  // looking at instead of an event that happened once.
+  //
+  // BY IDENTITY, NOT ARITHMETIC. `routine.length - preloadItems.current.length` agrees
+  // with this only while the basket is a superset of the link. Remove one of the LINK's
+  // own products and the subtraction reports one extra where there are still two, which
+  // is wrong in the one direction that matters — it understates how much of the basket
+  // the pin did not promise. Set membership stays exact under any editing.
+  //
+  // Zero on a clean arrival (the routine is exactly the link), zero on a reload of a
+  // basket holding only the link's products, and zero again after startFresh — so
+  // merged_cleared needs no special case here, it falls out.
+  const preloadLinkIds = new Set(preloadItems.current.map(p => p.id));
+  const preloadExtras = preloadCase
+    ? routine.filter(p => !preloadLinkIds.has(p.id)).length
+    : 0;
 
   useEffect(() => {
     db.auth.getSession().then(({ data }) => {
@@ -1075,20 +1094,34 @@ export default function RoutineBuilder() {
                 </span>
               </div>
 
-              {/* A preload that landed on an existing basket says what happened and
-                  offers one tap out of it. Merging stays the default — destroying a
-                  basket someone built by hand is worse — so this states the fact and
-                  leaves the choice. Same class and same plain-statement register as
-                  the unresolvable-products line below, not a second pattern.
+              {/* A preload that landed on an existing basket says so and offers one tap
+                  out of it. Merging stays the default — destroying a basket someone
+                  built by hand is worse — so this states the fact and leaves the choice.
+                  Same class and same plain-statement register as the
+                  unresolvable-products line below, not a second pattern.
 
-                  'merged' only: a self_reload added nothing, so there is nothing to
-                  report and "Added 0 products" would be worse than silence.
-                  'merged_cleared' has already been acted on. */}
-              {preloadCase === 'merged' && (
+                  STATE-DERIVED, NOT ARRIVAL-DERIVED, and that is the fix. The first
+                  version rendered on preloadCase === 'merged', which is a fact about the
+                  ARRIVAL. The merged basket is persistent but the arrival happens once,
+                  so a reload re-entered as self_reload, suppressed the notice, and left
+                  the visitor looking at seven products with no explanation and no way
+                  out — reached by doing the most ordinary thing a confused person does.
+                  Reproduced on production 5 August 2026.
+
+                  preloadExtras is computed from the routine as it stands, so the line
+                  survives reloads for exactly as long as the basket holds something the
+                  link did not bring, and clears itself the moment it does not. */}
+              {preloadExtras > 0 && (
                 <p className="rb-routine-missing">
-                  {preloadAddedCount === 1
-                    ? 'Added one product to your existing routine.'
-                    : `Added ${preloadAddedCount} products to your existing routine.`}{' '}
+                  {preloadAddedCount > 0
+                    ? (preloadAddedCount === 1
+                        ? 'Added one product to your existing routine.'
+                        : `Added ${preloadAddedCount} products to your existing routine.`)
+                    : `${routine.length === 1 ? 'Your routine has 1 product.' : `Your routine has ${routine.length} products.`} ${
+                        preloadExtras === 1
+                          ? 'One was not from this link.'
+                          : `${preloadExtras} were not from this link.`
+                      }`}{' '}
                   <button type="button" className="rb-routine-reset" onClick={startFresh}>
                     Clear it and start fresh
                   </button>
