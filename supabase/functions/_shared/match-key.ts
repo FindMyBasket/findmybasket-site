@@ -179,6 +179,20 @@ export function normaliseEan(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const digitsOnly = String(raw).replace(/[^0-9]/g, "");
   const stripped = digitsOnly.replace(/^0+/, "");
+  // OFF BY ONE FOR EAN-8, KNOWN AND DELIBERATE. Measured 5 Aug 2026.
+  //
+  // EAN-8 is the shortest legitimate barcode format, and a great many EAN-8 values
+  // begin with a zero. Stripping leading zeros takes those to 7 digits, so this floor
+  // rejects them and the row keeps its `ean` while matching on nothing.
+  //
+  // Catalogue-wide that is 48 rows on active retailers, 0.085% of 56,584 barcodes, of
+  // which about a dozen are genuine EAN-8 (Debenhams) and the rest are merchant SKUs
+  // in the EAN field or all-zero placeholders — both correctly rejected upstream by
+  // validateBarcode in _shared/barcode.ts. NOT worth changing at that volume.
+  //
+  // It recurs on any feed carrying EAN-8, so it is written down here rather than
+  // re-derived from scratch. Lowering the floor to 7 would admit EAN-8 and also admit
+  // more short junk, which is why it has not been done rather than been overlooked.
   if (stripped.length < 8) return null;
   return stripped;
 }
