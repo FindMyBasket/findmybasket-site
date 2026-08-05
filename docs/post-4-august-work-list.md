@@ -865,6 +865,59 @@ achievable answer.
 **Raised:** 2 August 2026, found while selecting demonstration baskets.
 **PRIORITY RAISED 3 August 2026. Detail: complete. NOT STARTED.**
 
+> **RESCOPED 3 August 2026. THIS ITEM IS ABOUT TWO RETAILERS READING THE WRONG
+> COLUMN, NOT NINE SCATTERED MISASSIGNMENTS.** Read-only feed-diag runs found the
+> cause, and it is mechanical rather than a categorisation-logic problem:
+>
+> | Retailer | Live rows | `merchant_product_category_path` (read) | `merchant_category` | `category_name` (read) | `product_type` |
+> |---|---|---|---|---|---|
+> | **Stylevana** | 12,122 | **0.0%** | 98.6% | **0.0%** | **100%** |
+> | **Beauty Flash** | 7,315 | **0.0%** | 100% | 100% | 0.0% |
+>
+> **Stylevana loses BOTH category columns.** The importer reads the two it populates at
+> 0.0% and ignores the two it fills. **12,122 live rows on the largest feed are
+> currently categorised from the product name alone**, with no feed category data at
+> all. Beauty Flash loses one of the two, at 7,315 rows.
+>
+> That is 19,437 rows across two retailers, which is a different item from "nine
+> misassignments concentrated in recent additions". **The nine are not disproved and
+> are not explained by this** — the overlap is unestablished and should not be assumed.
+> But the large, mechanical part of this item is now identified.
+>
+> ### CORRECTION, 4 August 2026: THE COALESCE DOES NOT FIX THIS
+>
+> **This entry previously said the AWIN sibling coalesce was the fix for item 18. That
+> was WRONG, not imprecise, and it was asserted repeatedly by both author and operator
+> before anyone checked the write path.**
+>
+> `import-awin-feed` sets `top_category`, `product_type` and `subcategory` **only on
+> `createActions`** (line 2227). `updateActions` (line 2007) carries `price`, `url`,
+> `in_stock`, `ean`, `mpn` and `image_url` **and nothing else**. So **an import never
+> rewrites the category of a product that already exists**, with the flag on or off.
+>
+> **Every misassigned product already exists.** Enabling the flag would read the
+> recovered `merchant_category`, pass it to the categoriser, and discard the result for
+> all 7,315 Beauty Flash rows and all 12,122 Stylevana rows. **The coalesce's category
+> half is PROSPECTIVE ONLY: it changes what NEW products get, and nothing else.**
+>
+> **The self-tan, hand cream and hand salve rows will stay in `Moisturiser`.**
+>
+> **The near-miss is worth as much as the finding.** The planned verification was
+> category distribution before and after. Run as designed it would have shown NO
+> MOVEMENT, and that null result had two available explanations — "the recovered column
+> agrees with name inference" and "the column was never applied" — with **nothing in the
+> observation able to distinguish them**. A well-designed check, made meaningless by a
+> mechanism underneath it that could not fail. Recorded as
+> `supabase/migrations/README.md` convention 17.
+>
+> **What this item actually needs is a category backfill**, which is a catalogue-wide
+> write to `products` and therefore carries item 6's cost: the stored `search_vector`
+> regenerates and index entries rewrite on every touched row. That is a different risk
+> class from a per-retailer import flag, and it was never priced. Recorded as item 35.
+>
+> **The coalesce rollout continues as BARCODE-ONLY** for every stage. Stage 2 onward
+> recovers identifiers, which is real and useful, and does not touch this item.
+
 > **This is now blocking demonstration of the core mechanism, which is why it is no
 > longer a tidiness item.**
 >
@@ -1060,6 +1113,18 @@ wrong somewhere and the finding is bigger than the threshold.
 ---
 
 ### 21. Five retailers supply no EAN, and their identifiers are being discarded
+
+> **THE SCANNER GATE MOVES WHEN THIS LANDS, AND NOTHING WATCHES FOR IT.** Added
+> 3 August 2026. A barcode scanner is planned and not built; it is gated on EAN coverage
+> of roughly 60.7%. AWIN-weighted coverage today is about 47%. Recovering Boots,
+> Escentual, Beauty Flash, Gorgeous Shop and The Organic Pharmacy at 94.7-100% takes it
+> comfortably past that gate.
+>
+> **A gate can be crossed by work done for another reason, and nothing in this project
+> watches for that.** This fix is about matching quality; the scanner is a product
+> decision that was waiting on a number this fix moves. **Check EAN coverage against the
+> gate after stage 6 (Boots) lands**, rather than noticing months later that the
+> condition was met and nobody looked.
 
 **Raised:** 2 August 2026, found while diagnosing The Organic Pharmacy.
 **Detail: complete. NOT STARTED. Do not fix by hand.**
@@ -1743,6 +1808,407 @@ placement.
 **Note the shape.** Both rules read the same series and both are about not sending. They
 should probably be one function with two reasons rather than two functions, so that
 "why was this routine paused" has a single answer. Decide that before either is built.
+
+---
+
+### 33. AWIN sibling coalesce rollout, stage by stage
+
+**Started 3 August 2026.** Implementation and rationale in
+`supabase/migrations/20260803200000_sibling_coalesce_opt_in.sql`. One retailer at a
+time, `retailer_import_config.sibling_coalesce`, smallest feed first.
+
+| # | Retailer | Rows | Flag | Dry run | Live run |
+|---|---|---|---|---|---|
+| 1 | The Organic Pharmacy | 114 | **ON 3 Aug** | done, clean | **awaited: cron 22, 05:30 UTC daily** |
+| 2 | Beauty Flash | 10,862 | off | | |
+| 3 | Stylevana | 24,598 | off | | |
+| 4 | Gorgeous Shop | | off | | |
+| 5 | Escentual | | off | | |
+| 6 | Boots | 35,912 | off | | |
+
+#### Stage 1 result, 3 August 2026
+
+Dry run compared with coalesce OFF and ON against the same feed at the same moment:
+
+| Metric | OFF | ON |
+|---|---|---|
+| `rows_with_ean` | 0 | **78** |
+| `barcode_rejected` | n/a | **0** |
+| `category_path_from_sibling` | n/a | 100 |
+| `would_update_existing` | 75 | 75 |
+| `would_link_via_ean` | 0 | 0 |
+| `excluded_by_category` | 30 | 30 |
+
+**Zero link changes and zero category movement.** 78 validated barcodes recovered, none
+rejected.
+
+**THE TIER 0 PROPERTY HELD, AND IT IS THE MORE VALUABLE RESULT.** `existingByExtId` is
+checked before any match tier, so already-imported rows keep their `product_id` and
+merely gain a barcode. **The whole rollout is therefore ADDITIVE ON FIRST RUN for every
+retailer.** The re-linking risk does not sit in a stage; it sits in the imports *after*
+a stage, once the recovered barcodes are in `ean_product_index` and other retailers'
+new rows can match against them.
+
+**So watch for it across consecutive runs, not within one.** Compare
+`would_link_via_ean` between successive imports at stages 4 to 6, where enough barcodes
+will exist for cross-retailer matching to actually fire. A single run's diagnostics
+cannot show this.
+
+**A CLEAN STAGE 1 TELLS YOU VERY LITTLE ABOUT STAGES 2 TO 6.** Recorded here so the
+result is not over-read: the feed is small, its categories already agreed with
+name-based inference so nothing could move, and its barcodes have nothing to match
+against yet. Stage 1 tests that the mechanism runs safely. It does not test that it
+does anything.
+
+**The 78 versus 108 gap is unreconciled, deliberately.** feed-diag counted 108
+`product_GTIN` values across 114 raw feed rows; the importer sees only rows surviving
+filtering (30 excluded by category, 9 by the v6 rule). 78 across a post-filter
+denominator is consistent with that, and the exact reconciliation was **not** verified.
+Two different denominators, stated rather than explained away.
+
+**Next: let cron 22 run naturally at 05:30 UTC and compare the live result against the
+dry run.** A dry run that matches its live run is confirmation; a dry run alone is a
+prediction.
+
+**Then stage 2, Beauty Flash — BARCODE-ONLY.** Reframed 4 August 2026. It was planned
+as the first real test of the category half; the category half does not exist for
+existing products, so there is nothing there to test. See the correction on item 18.
+**STYLEVANA IS DROPPED FROM THE ROLLOUT ENTIRELY**, not reordered. Decided 4 August 2026.
+Its `product_GTIN` is 0.0%, so it gains no barcodes, and the category half does not exist
+for existing products, so it gains no categories either. **Its flag would be a no-op that
+reads as progress**, and a stage that cannot change anything is worse than no stage,
+because it accumulates false confidence in the method.
+
+**Why it was third, and why it is now nowhere, is the clearest illustration of the
+correction:** it was placed third deliberately, to isolate the category half on the
+largest feed, because it was the one retailer whose barcodes could not move. That made it
+the perfect test of a half that turned out not to exist.
+
+**Remaining order: Gorgeous Shop, Escentual, Boots.** All barcode-only.
+
+---
+
+### 34. The import path is deployable by one person from one machine, and nothing records it
+
+**Raised 3 August 2026. REPORT ONLY.**
+
+**No CI workflow deploys edge functions.** `.github/workflows/` contains no
+`supabase functions deploy`. Every edge function in production — the three importers,
+the feed monitor, the routine email sender — was deployed by hand.
+
+**The Supabase CLI reached the operator's Mac on 3 August 2026**, hours before it was
+first needed, installed mid-task to unblock this rollout. Before that, deployment
+required a machine that did not have the tool installed.
+
+**The part that matters in an incident: NO ARTEFACT RECORDS WHICH COMMIT ANY PRODUCTION
+EDGE FUNCTION WAS DEPLOYED FROM.** Not a tag, not a log line, not a row. The deployed
+code cannot be tied to a revision by anything except memory. During an incident the
+first question is "what is actually running", and today that question has no answer
+better than opening the Supabase dashboard and reading the source.
+
+**Three separate exposures, worth not conflating:**
+
+1. **Bus factor.** One person, one machine, one browser session. `supabase login` is a
+   TTY flow and cannot run in CI or in an agent session, so this cannot currently be
+   delegated even in an emergency.
+2. **Provenance.** A deployed function and a repository commit are related only by
+   assumption. A hotfix applied through the dashboard would leave the repository silently
+   wrong, which is the absent-record class this file exists to correct.
+3. **Drift.** Nothing compares deployed source with `main`. A function could have been
+   edited in the dashboard months ago and nothing would say so.
+
+#### LIVE INSTANCE, 3 August 2026 evening
+
+**This stopped being hypothetical the same day it was written.**
+
+**Production is running `import-awin-feed` deployed from the branch
+`feat/awin-sibling-coalesce`. `main` still carries the old column list.** The deployed
+code requests both halves of all three sibling pairs; the code on the default branch
+requests one half of each. **Nothing anywhere records this.** Anyone reading `main`
+tomorrow to see what the importer does will read something that is not running.
+
+It is not wrong, and it is deliberate: the branch is unmerged because stage 1 is
+unconfirmed until the 05:30 UTC run, and staging discipline says a stage is confirmed
+before the next begins.
+
+**Two options were considered tonight and rejected, recorded so they are not
+re-proposed:**
+
+| Option | Why rejected |
+|---|---|
+| A header comment in the function saying which branch is deployed | **It would live on the branch.** Someone reading `main` would not see it, which is exactly the reader this is meant to help. The note has to exist somewhere both branches share, or somewhere outside the repository entirely. |
+| Merge now with all flags false | Defensible, since every retailer's flag is off and the flag-off path is byte-identical to the old code. But it **merges unconfirmed work to satisfy a documentation problem**, and staging discipline exists precisely to stop that trade. |
+
+**Leaving it is the choice, for one night**, with the divergence recorded here instead.
+That is the smallest honest option: it does not pretend the gap is closed, and it does
+not spend the staging discipline to close it.
+
+**The general lesson is the one the item already states, now with an example attached:**
+the gap is not that a deploy happened outside CI. It is that **nothing anywhere ties the
+running code to a revision**, so the divergence had to be noticed by the person who
+created it and written down by hand. That is not a mechanism.
+
+**Not proposing a fix here.** CI deployment needs a service-account token with deploy
+rights and a decision about whether an automated system should be able to write to the
+import path at all — which, given this project's caution about that path, is a real
+question rather than an obvious yes. Recording the exposure so the decision is
+deliberate.
+
+---
+
+### 35. Category backfill: the actual fix for item 18, and it is not an importer flag
+
+**Raised 4 August 2026. NOT STARTED. Needs its own dry run, staging and decision.**
+
+**Why this exists.** The AWIN sibling coalesce recovers category columns the importer
+was discarding, but `import-awin-feed` assigns `top_category`, `product_type` and
+`subcategory` **only when creating a product**. Existing products take the update path,
+which does not carry category. Every misassigned product already exists, so **the
+coalesce is prospective only** and item 18 needs a separate backfill. See the correction
+on item 18 and `README.md` convention 17.
+
+**Known affected set**, measured 3 August 2026:
+
+| Retailer | Rows | What the importer reads | What the feed populates |
+|---|---|---|---|
+| Stylevana | 12,122 | `merchant_product_category_path` 0.0%, `category_name` 0.0% | `merchant_category` 98.6%, `product_type` 100% |
+| Beauty Flash | 7,315 | `merchant_product_category_path` 0.0% | `merchant_category` 100% |
+
+**19,437 rows currently categorised from the product name alone.**
+
+**ITEM 6 APPLIES AND WAS NEVER PRICED.** This is a catalogue-wide `UPDATE` to
+`products`, so both mechanisms in item 6 bite on every touched row:
+
+1. **`search_vector` is a STORED generated column** over `name`, `brand`,
+   `product_type`, `description`. Postgres recomputes a stored generated column on
+   every row update **without dependency tracking**, so `to_tsvector` re-runs even
+   though none of its inputs changed, producing an identical value at full cost.
+2. **`normalised_brand` is indexed**, so the update cannot be HOT. Index entries are
+   rewritten across the table's indexes, **including the GIN on `search_vector`**.
+
+Item 6 states this is trivial at 1,082 rows and material at 100,000. **19,437 sits
+between**, and that cost was not part of anyone's mental model when this looked like an
+importer flag. Neither author nor operator priced it.
+
+**What a design has to decide**, none of it obvious:
+
+- **Which column wins** where the recovered path and current name inference disagree.
+  The recovered column is not automatically right: `merchant_category` is a merchant's
+  own taxonomy, not ours.
+- **Whether to re-derive or to overwrite.** Re-running `inferCategorisationForImport`
+  with the recovered path is not the same as taking the merchant's category verbatim.
+- **What happens to products a human has corrected.** See the precondition below; this
+  is no longer one open question among four.
+- **Whether it is one pass or per-retailer**, given the coalesce rollout is per-retailer
+  and only two retailers are known affected.
+
+**Dry run must count how many products CHANGE category, by direction**, before any
+write. A count of rows touched is not the same measurement, and item 6's cost is paid on
+touched rows whether or not they change.
+
+---
+
+#### REQUIRED FIRST STEP: capture category provenance. THE BACKFILL IS NOT APPROVED TO PROCEED WITHOUT IT.
+
+**Investigated 4 August 2026. Manual category corrections CANNOT be identified
+retrospectively. Not with difficulty: at all.**
+
+**`categoriser_safety_net_log` is the table built for exactly this**, with
+`product_id`, `old_top_category`, `old_subcategory`, `new_top_category`,
+`new_subcategory`, `reason` and `run_at`. It holds **zero rows, and its sequence has
+NEVER ADVANCED** (`categoriser_safety_net_log_id_seq`, `last_value` never called).
+That distinction is the decisive one: a row count of zero is consistent with a table
+that was emptied, and a never-called sequence is not. **It was never written to, rather
+than cleared.** Same decisive test, and same result, as `price_history`.
+
+**Nine migrations changed categories in bulk and none recorded what they touched:**
+`bath_body_backfill`, `skincare_catchall_cleanup`, `detector_widen_homefrag_aromatherapy`,
+`skincare_colour_decontam_backfill`, `p2a_bodyhandfoot_to_bath_body`,
+`bathbody_phase1_miscategorised`, `lash_and_bodyspray_rule_backfill`,
+`recategorise_helpers`, `hoa_lash_backfill_c`. Each applies a predicate and moves what
+matched. **The predicate survives in the file; the set of products it hit does not**, and
+re-running it today would match a different set, because the shade collapse and merge
+passes have since rewritten many of the names those predicates keyed on.
+
+**No P2b migration exists by filename.** Whatever those rulings were, they are not in the
+migration history under that name.
+
+**What does exist does not help.** `product_merge_log` (4,382), `product_detach_log`
+(841), `shade_regroup_log` (103) and five dated backup tables are substantial and
+carefully kept, and **all record identity rather than category**.
+`fwee_recat_backup_20260716` is the sole exception at **4 rows**, which proves the
+practice was known and applied once.
+
+**CONSEQUENCE FOR THE TWO ROUTES.**
+
+- **Route 1, reconstruct provenance first: NOT AVAILABLE.** The information was never
+  captured. It is not lost, it was never written.
+- **Route 2, accept the loss on evidence that corrections are few: THE PRECONDITION
+  CANNOT BE MET.** That evidence does not exist and cannot be produced. The count of
+  hand-corrected categories is not merely unknown, it is **unknowable from what
+  survives.** Route 2 is therefore **accepting an UNMEASURED loss on NO evidence**, and
+  it must be stated in those words. It may still be the right decision. The softer
+  version is not available.
+
+**THE PRECONDITION, and the reason it is required rather than suggested.**
+
+Capture provenance **going forward**, before the backfill runs: a column or log
+recording how each category was set, written by both the importer and any future bulk
+pass.
+
+It **recovers nothing**. Every category set before it is unrecoverable regardless.
+**What it does is make the backfill the LAST operation that can destroy category history
+silently.** Without it, this backfill destroys history invisibly and so does every future
+one. With it, this is the final time that is possible.
+
+That is why it is a precondition and not a good idea to do alongside: its entire value is
+that it exists *before* the destructive operation, and there is no second chance to
+place it there.
+
+**The nine misassignments from item 18's original scope are still unexplained** and
+should not be assumed to be inside this set.
+
+---
+
+### 36. Enumerate the never-written tables, rather than finding the fourth by accident
+
+**Raised 4 August 2026. REPORT ONLY.** `categoriser_safety_net_log` is the **third**
+purpose-built record found empty this fortnight, after `price_history` and the
+`routine_email_log.outcome` column that did not exist. Three by accident is a pattern
+worth enumerating rather than continuing to trip over.
+
+#### The decisive test, and why a row count is not enough
+
+**A row count of zero is consistent with a table that was emptied. A sequence that has
+never advanced is not.** Only two sequences in `public` have never been called:
+
+| Table | Sequence | Verdict |
+|---|---|---|
+| `categoriser_safety_net_log` | never called | **never written** |
+| `price_history` | never called | **never written** |
+
+Every other sequence has advanced. Use this test, not `count(*)`, when the question is
+"was this ever written to".
+
+#### But the sequence test does not enumerate the class
+
+**Twelve further tables are empty and have no sequence**, so they are invisible to that
+test:
+
+`brand_spotlight_config`, `review_queue`, `routine_alerts`, `user_routines`,
+`metrics_amazon_monthly`, `metrics_awin_weekly`, `metrics_brand_spotlight_weekly`,
+`metrics_ga4_weekly`, `metrics_quality_weekly`, `metrics_rakuten_weekly`,
+`metrics_retailer_quality_weekly`, `metrics_social_weekly`.
+
+**Also note `pg_class.reltuples` is useless here**: it reads `-1` for most tables,
+meaning never analysed rather than empty. A sweep built on it would have reported almost
+the whole schema as empty and been discarded as noise.
+
+#### The distinction that actually matters, and it is not emptiness
+
+**"Empty because the feature is not built" is not the same defect as "empty because
+something was supposed to write and does not".** The eight `metrics_*` tables are empty
+because the dashboard's Step 5 has not been built; that is a schema waiting for a
+feature, and it is fine. `price_history` is empty **while carrying three maintenance
+functions written to keep its rows consistent**. `categoriser_safety_net_log` is empty
+while nine migrations changed the exact columns it exists to record.
+
+**The discriminator is whether a writer exists**, and it is cheap to check:
+
+| Table | Code refs | Has an INSERT | Reading |
+|---|---|---|---|
+| `price_history` | 0 | no | **Defect.** Maintenance functions exist for rows that never arrive |
+| `categoriser_safety_net_log` | 0 | no | **Defect.** Purpose-built for changes that happened nine times |
+| `metrics_ga4_weekly` | 2 | no | Awaiting Step 5. Expected |
+| `routine_alerts` | 1 | **yes** | Has a writer, simply not fired yet |
+
+**No fourth defect found.** The enumeration is the point: the class is now bounded, and
+the next empty table can be classified rather than investigated from scratch.
+
+#### What would prevent a fifth
+
+Nothing currently. A table can be created, given maintenance functions, referenced in a
+brief, and never written to, and **no check anywhere notices**. A periodic assertion that
+every table with a stated purpose has received at least one row within N days of creation
+would catch this class at creation time rather than months later during unrelated work.
+Not proposed as work, recorded as the shape a fix would take.
+
+---
+
+### 37. Debenhams feed shrank 29% at source, and the guard has refused twice
+
+**Raised 4 August 2026, second failure 5 August. WATCHING, not fixing. AWIN message HELD.**
+
+`refresh-debenhams.yml` has failed on 4 and 5 August at its filtered-row guard. **The
+import was never invoked either day**, so nothing partial was written and
+`retailer_import_config` for retailer 28 is untouched. Last successful import
+**3 August 05:44**.
+
+| Date | Input rows | Raw bytes | Beauty rows | Hit rate |
+|---|---|---|---|---|
+| 31 Jul | 2,502,027 | 140.2 MB | 12,757 | 0.51% |
+| 1 Aug | 2,535,936 | 143.4 MB | 12,721 | 0.50% |
+| 2 Aug | 2,665,696 | 155.7 MB | 12,719 | 0.48% |
+| 3 Aug | 2,664,884 | 155.4 MB | 12,623 | 0.47% |
+| **4 Aug** | **1,895,051** | **112.8 MB** | **6,359** | **0.34%** |
+| **5 Aug** | **1,891,597** | **112.7 MB** | **6,323** | **0.33%** |
+
+**Stable, not progressive.** Day-over-day 4→5 August is −0.18% input, −0.08% bytes,
+which is *smaller* than ordinary variation before the drop (31 Jul → 1 Aug was +1.4%).
+**The feed shrank once between 3 and 4 August and has stayed at the new level.** That is
+a supply change, and it also means **it will not recover on its own.**
+
+**Beauty fell disproportionately**: the feed lost 29% and beauty rows lost 50%, so the
+hit rate moved 0.47% → 0.33%. Truncation removes rows roughly uniformly; a category or
+merchant segment leaving looks like this. That points at supply rather than transfer, and
+it is the difference between waiting and asking.
+
+**No feed was withdrawn.** `refresh-debenhams` combines **eight** feed ids
+(`90938, 90940, 90945, 90947, 91126, 91133, 91134, 91135`). Each was diagnosed
+individually on 5 August: **none errors and none is empty.** So "one of Debenhams' feeds
+was withdrawn" is the wrong thing to say to AWIN.
+
+**Two of the eight could not be profiled.** `90945` and `91134` crashed `feed-diag` with
+a Node heap OOM — a limit of the diagnostic, not an AWIN failure. Between them they hold
+roughly 1.02M of today's 1.89M rows, so **more than half the feed is unprofiled** and the
+beauty rows may be in there. **This is why day two produced a partial answer.**
+
+#### Fixed 5 August: a refused run now retains evidence
+
+The filtered feed was computed, inspected by the guard, and **thrown away** on a failing
+run, because the Storage upload runs *after* the guard. Two mornings were spent able to
+say the feed had shrunk by half and unable to say **which products left**.
+
+`refresh-debenhams.yml` now uploads the filtered feed as a run artefact **before** the
+guard, 30-day retention, on pass and on refusal alike. The guard is unchanged and still
+stops the import; the Storage upload still runs after it, so **the last good copy
+(3 August) is preserved as the "before"** and a refused run supplies the "after".
+
+**The 3 August baseline, already retrieved from Storage:** 12,623 rows, 684 brands. Top
+categories `Beauty > Face > Foundations` 914, `Beauty > Lips > Lip Sticks` 508,
+`Beauty > Women Fragrance > Eau De Perfumes` 379. Top brands INGLOT 760, MAC 463,
+Revolution 453, Lancome 445, KIKO 384.
+
+#### Trigger and deadlines
+
+**Revisit Friday 7 August.** If still failing, the AWIN message goes with four days of
+stable shrinkage **plus the artefact diff naming exactly which products left**. That is a
+materially stronger message than one sent on day two, and nothing deteriorates while
+waiting because the shrinkage is stable.
+
+> **A SOFT DEADLINE NOBODY HAS SET, recorded so it is not discovered late.**
+> **7,358 sole-offer Debenhams products** are being served at prices last confirmed
+> 3 August. On those products there is no second retailer to fall back to, so the price
+> shown is the only price shown.
+>
+> The **36-hour staleness alert now fires every morning** and will keep firing, which is
+> the alert-fatigue risk convention 3 describes: a daily red line that everyone knows the
+> reason for trains the habit of dismissal, and the next genuine one arrives into that
+> habit.
+>
+> **Fine at two days. Worth naming at two weeks.** The absence threshold is 30 days, so
+> nothing degrades automatically before then — but "not yet degraded" and "still correct"
+> are different claims, and only the first is true after a fortnight.
 
 ---
 

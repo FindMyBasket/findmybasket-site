@@ -499,6 +499,20 @@ mistake "we have a rule about that" for "that is prevented".
 | **Convention 5**, the idempotency dry run | Caught `20260729200000` asserting "2 other occurred rows", inferred from a truncated listing that hid id 1. The migration's own comment records this. |
 | **The `main` repository ruleset** | Rejected a direct push to `main` on 3 August 2026 that should have been a branch. The commit was moved to a branch and opened as a PR. No harm reached the remote. |
 | **Exhaustive re-solve of demo baskets** | Caught two hand-picked homepage candidates on 3 August: one with a £0.00 gap that demonstrated nothing, and one whose assumed host was not the host. Neither looked wrong. See `scripts/generate-homepage-demo.mjs`. |
+| **The Debenhams filtered-row-count guard** | Fired 4 August 2026 on its first real opportunity, after 11 consecutive clean runs. `refresh-debenhams.yml` refused a filtered feed of 6,360 lines against a `<12000` floor set when the stable range was 12,600-12,700. The raw feed had shrunk 29% at source and beauty rows 50%. **The import was never invoked, so nothing partial was written and `retailer_import_config` was left untouched.** |
+
+**The Debenhams instance is worth reading against Branded Beauty on 1 August, because
+they are the same class and opposite outcomes.** Both are retailers behind a stored feed
+URL. Branded Beauty's uploader returned HTTP 500, the CSV stayed frozen at its previous
+content, the import re-read those bytes and **recorded `last_import_status = ok`** —
+success reported over stale data, which took a separate investigation to notice.
+Debenhams **refused to proceed and said which of two causes to look at**. A guard that
+stops the pipeline and names its own hypotheses is worth more than one that never fires,
+and far more than a path that succeeds on frozen bytes.
+
+**Do not lower the threshold to let a failing run through.** 12,000 was set against a
+stable 12,600-12,700 and it caught a real supply change on its first opportunity.
+Lowering it would silence the only thing that noticed.
 
 **What this changes in practice.** When a guard fires, record it against the convention
 it belongs to rather than only fixing the thing it caught. The fix is the smaller half.
@@ -646,3 +660,192 @@ mistaken for normality?** If yes, surface it.
 happened: send logs, audit rows, metrics snapshots, run state. These are exactly the
 writes people wrap in a bare catch, because they are "not important enough to fail on" —
 and exactly the writes whose absence is indistinguishable from nothing having happened.
+
+---
+
+## 15. A safeguard can fail confidently rather than silently
+
+**Added 3 August 2026, from a validator that was designed and measured before it shipped.**
+
+Convention 3 says a guard that fires wrongly is as damaging as one that never fires,
+because it trains the habit of dismissal. **This is the sharper case: a guard that fires
+wrongly, reports success, and destroys the thing it was added to protect.**
+
+**The worked example.** The AWIN sibling coalesce required barcode validation, because
+a wrong barcode is a valid-looking string and nothing downstream checks that an EAN
+belongs to the product it is attached to. The obvious reading of "EAN checksum
+validation" is an EAN-13 validator.
+
+Measured against live data **before** writing it:
+
+| Retailer | Barcodes | 13-digit | **12-digit** |
+|---|---|---|---|
+| Debenhams | 10,232 | 7,481 | **2,629** |
+| Beauty Bay | 7,624 | 4,477 | **3,068** |
+
+**Those 6,228 are UPC-A, and they work today.** An EAN-13-only validator would have
+rejected every one of them, on two retailers whose data was never in question, while
+reporting a clean run and a plausible rejection count. The failure would have looked
+like diligence.
+
+**Why it would not have been caught.** A rejected barcode is treated as absent, so no
+row fails, no import errors, and the only symptom is matching quietly getting worse on
+two retailers over subsequent imports. Nothing in the pipeline compares barcode coverage
+before and after a deploy.
+
+**The rule. Measure what a safeguard will reject BEFORE shipping it, against real data,
+and read the rejections rather than the pass rate.** A validator's pass rate is not
+evidence it is correct; it is evidence it is consistent. The rejections are where the
+information is.
+
+**Practical form:**
+
+1. **Run the proposed rule over existing production data and count what it would kill.**
+   If the answer is not zero on data believed good, the rule is wrong until explained.
+2. **Distinguish "absent" from "invalid".** Conflating them buries the signal: empties
+   swamp genuine rejections and the count stops meaning anything.
+3. **Log rejections per source per run from the first deploy**, not added later once a
+   number looks odd. A rejection rate is only readable as a series.
+4. **Prefer widening to rejecting** where a wider rule is provably lossless. UPC-A
+   left-padded to 13 digits *is* the equivalent EAN-13 and its check digit is unchanged,
+   so accepting both costs nothing and makes cross-retailer matching work between a
+   UPC-A retailer and an EAN-13 one.
+
+**Sits beside convention 3.** Convention 3 is about the cost of false alarms to human
+attention. This is about the cost of false alarms to data, which is worse, because
+attention notices being wasted and data does not.
+
+---
+
+## 16. Before any destructive git operation, confirm the non-destructive one did something
+
+**Added 3 August 2026, after a `reset --hard` that nearly discarded a commit whose
+rescue had silently failed.**
+
+**Convention 2 applied to git.** A `git cherry-pick` that produces an **empty** commit
+prints a notice and leaves `HEAD` unchanged. Nothing fails. The branch simply does not
+contain the change, and the next command in the sequence was `git reset --hard`, which
+would have removed the only other copy.
+
+**The sequence that nearly lost work:**
+
+```
+git checkout <branch>
+git cherry-pick <sha>        # produced an EMPTY commit; the change did not transfer
+git checkout main
+git reset --hard origin/main # would have destroyed <sha>, the only remaining copy
+```
+
+**Why it looked fine.** The cherry-pick emitted a hint rather than an error, the shell
+exited 0, and the branch log showed a plausible HEAD. The failure was visible only by
+asking a different question: *is the changed content actually present in the file?*
+
+**Why it happened here specifically.** The two branches held **different versions of the
+same file**. `main` carried items 33 and 34; the branch carried an item 18 rescope and a
+scanner-gate note that `main` did not. A cherry-pick across that divergence can resolve
+to a no-op without conflicting.
+
+**The rule.** Before `reset --hard`, `branch -D`, `push --force`, or any other operation
+that removes a commit from reach, **verify the operation intended to preserve it actually
+preserved it** — by checking the content, not the exit code and not the log.
+
+```
+grep -c '<a string only the rescued change contains>' <file>
+```
+
+**A commit that is still reachable is recoverable; that is the escape hatch and it is
+narrow.** `git reflog` and the dangling object both survive a `reset --hard` for now, but
+they expire, and the recovery only works if you notice in time. In this case the content
+was recovered from the orphaned commit and re-applied. Nothing was lost, but only because
+the check happened before the second destructive step rather than after it.
+
+**Same shape as convention 8.** A check that does not run is not a check; here, a rescue
+that did not rescue is not a rescue, and both report success identically.
+
+---
+
+## 17. A check that cannot fail is not a check, however well designed
+
+**Added 4 August 2026, from a verification that would have reported a pass on a
+mechanism that never ran.**
+
+Convention 8 says a check that does not run is not a check. **This is the harder case:
+a check that runs, produces a clean result, and could not have produced any other.**
+
+**The worked example.** Stage 2 of the AWIN sibling coalesce was to be verified by
+comparing category distribution before and after enabling the flag. That is a good
+check. It measures the outcome that matters — where products land — rather than the
+mechanism, and it was chosen over "is the column populated" for exactly that reason.
+
+Underneath it, `import-awin-feed` writes `top_category` only on `createActions`.
+Existing products take `updateActions`, which does not carry category at all. **Every
+product in the affected set already existed.** So the distribution could not move, no
+matter what the recovered column contained.
+
+**Run as designed, the check would have shown no movement, and that null result had two
+explanations:**
+
+1. the recovered column agrees with what name inference was already doing, or
+2. the column was never applied.
+
+**Nothing in the observation could distinguish them**, and (1) is the comfortable
+reading. The check would have been reported as a pass, the stage marked verified, and
+the item closed on a measurement that was structurally incapable of failing.
+
+**The rule. Before trusting a check, establish that the mechanism it observes can
+actually change the thing being measured.** Ask what a failure would look like. If you
+cannot describe an input that makes the check fail, it is not measuring what you think.
+
+**Practical form:**
+
+- **Trace the write path, not the read path.** The check read `products.top_category`
+  correctly. The defect was that nothing wrote it. Reading the right column proves
+  nothing if no code path assigns it.
+- **A null result is a finding only when a non-null result was possible.** Otherwise it
+  is an absence of measurement wearing the costume of one.
+- **Prefer a check you have seen fail.** Convention 11 collects guards that have fired
+  in anger for this reason. A check that has only ever passed is indistinguishable from
+  one that cannot fail.
+
+**This was caught by asking a question about reversibility, not about correctness.** The
+operator asked whether a subsequent import with the flag off would rewrite categories,
+in order to establish whether the stage could be rolled back. Answering that required
+reading the write path, which is what exposed it. **The question that found the defect
+was not aimed at it.**
+
+---
+
+## 18. A method proven on a case too small to stress it is not proven
+
+**Added 4 August 2026, after a staging plan's verification method failed on the first
+stage large enough to exercise it.**
+
+**Convention 2 at the level of a method rather than a code path.** A rollout was staged
+smallest-first, deliberately, so that anything unexpected would be legible. Stage 1 was
+The Organic Pharmacy at 114 rows and it passed cleanly: dry run matched live run on
+every metric.
+
+**Stage 2 could not be dry-run at all.** `dry_run: true` forces single-invocation mode
+by design, because slicing depends on each slice committing and a dry run commits
+nothing. Beauty Flash is sliced *because it does not fit in one worker*. The dry run
+asked it to do the exact thing slicing exists to avoid, and returned HTTP 546 twice.
+
+**Every remaining stage is affected**: 6,974 to 35,912 rows, all sliced, none
+dry-runnable. **The verification method the entire staging plan rested on works only
+below a few hundred rows, and nothing revealed that until a stage exercised it.**
+
+**Stage 1 passed because it was too small to test the method.**
+
+**The rule. When a plan depends on a method, verify the METHOD at the scale it will be
+used, not only at the scale that is convenient to start with.** Smallest-first staging
+is still right — it limits blast radius — but it systematically delays discovering that
+the tooling does not scale, because the early stages are the ones least likely to break
+it.
+
+**A caveat written down is worth more than a caveat held.** The stage 1 report recorded,
+in advance, that *a clean stage 1 tells you very little about stages 2 to 6: small feed,
+categories already agreeing, barcodes with nothing to match against*. That turned out to
+be truer than intended — it did not merely fail to test the category half, it failed to
+test whether the verification method worked. **Because it was written down rather than
+thought, it was available to be read back when the stage failed**, and it framed the
+failure as expected-in-kind rather than as a surprise.
