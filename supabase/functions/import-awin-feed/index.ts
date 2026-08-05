@@ -258,6 +258,7 @@ import {
 } from "../_shared/match-key.ts";
 import { isMultipackMismatch } from "../_shared/multipack-guard.ts";
 import { validateBarcode, coalesceField } from "../_shared/barcode.ts";
+import { mergeSliceCounts } from "../_shared/merge-counts.ts";
 import { requireServiceRole } from "../_shared/require-service-role.ts";
 import { finaliseRun } from "../_shared/run-metrics.ts";
 import { reconstructBeautyFlashName, BEAUTY_FLASH_RETAILER_ID } from "./name-reconstruction.ts";
@@ -2507,10 +2508,14 @@ serve(async (req) => {
       if (uErr) errors.push(`persist createdUrls: ${uErr.message}`);
     }
     // 2. Accumulate this slice's counts + applied tallies into the meta row.
+    // Merge by KIND, not by addition. See _shared/merge-counts.ts for why, and for
+    // why the previous version's test passed without ever running this code.
     const prevCounts = (runMeta.counts && typeof runMeta.counts === "object") ? runMeta.counts : {};
-    const sliceCounts = result.counts as Record<string, number>;
-    const mergedCounts: Record<string, number> = { ...prevCounts };
-    for (const k of Object.keys(sliceCounts)) mergedCounts[k] = (mergedCounts[k] || 0) + (sliceCounts[k] || 0);
+    const mergedCounts = mergeSliceCounts(
+      prevCounts as Record<string, unknown>,
+      result.counts as Record<string, unknown>,
+    );
+
     const prevApplied = runMeta.applied || { updates: 0, links: 0, creates: 0, capped: 0, errors: [] };
     const mergedApplied = {
       updates: (prevApplied.updates || 0) + updatesApplied,
