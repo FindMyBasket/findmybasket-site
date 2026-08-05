@@ -1949,10 +1949,16 @@ better than opening the Supabase dashboard and reading the source.
    production deploy) and `refresh-organic-pharmacy` (pg_cron import) start in the same
    minute. Clearing the Vercel build does not clear the import.
 
-   The practical rule: **the quiet stretch is roughly 08:00–09:00 UTC**, after
+   The practical rule: **the quiet stretch is roughly 08:05–09:00 UTC**, after
    `refresh-atelier-de-glow` at 07:47 and before `monitor-feeds` at 09:00. Deploying
    outside it is fine, but say in the deploy note what else was in flight, so the next
    person reading an anomaly knows what to rule out.
+
+   **08:05 and not 08:00, which is the whole point of the paragraph below.** An earlier
+   draft of this said 08:00, reasoned from `refresh-atelier-de-glow` finishing in its
+   normal ~1–2 minutes. On the slow band that run does not finish until roughly 08:04.
+   **A margin reasoned from the normal band was wrong by exactly the amount the normal
+   band hides**, in the very paragraph warning against reasoning from averages.
 
    **How long the imports actually run, measured from `scrape_log` rather than assumed.**
    14 days to 5 August 2026, `completed_at - started_at`, all `status = success`:
@@ -1964,10 +1970,17 @@ better than opening the Supabase dashboard and reading the source.
    | Gorgeous Shop | ~9,700–11,300 | 61.4 – 115.9s | 8 of 12 |
    | Boots | ~37,000 | 68.7 – 108.6s | 12 of 14 |
 
-   **Row count does not predict duration, and the intuition that it does is worth
-   discarding here.** Boots at ~37,000 rows runs 69–109s. Gorgeous Shop at ~11,000 rows
-   runs 61–116s — the same, on a third of the rows. A stage is not longer because the
-   retailer is bigger.
+   **Row count does not predict duration, and an expectation carried into this
+   measurement needs correcting.** The sequencing work assumed stage 5 would need a
+   larger margin *because Boots is a bigger retailer* — 35,912 rows was cited as
+   materially longer. **It is not.** Boots at ~37,000 rows runs 69–109s. Gorgeous Shop at
+   ~11,000 rows runs 61–116s — the same, on a third of the rows. A stage is not longer
+   because the retailer is bigger, and the intuition that it is should be discarded here
+   rather than carried to the next stage.
+
+   **Stage 5 does still need its own number — for the slow-band reason below, not the
+   size reason.** Those are different numbers arrived at different ways, and conflating
+   them would produce a margin that looks reasoned and is not.
 
    **THE MARGIN MUST BE PLANNED AGAINST THE SLOW BAND, NOT THE NORMAL ONE.** Across all
    147 completed runs in the window: **124 took 1.0–185.3s, 23 took 902.4–1028.3s, and
@@ -1992,9 +2005,14 @@ better than opening the Supabase dashboard and reading the source.
    **A note on sample size, which is why this table gives ranges over 11–14 runs rather
    than a figure.** Organic Pharmacy was first put at 5–8s from six consecutive runs. Over
    thirteen the range is 4.6–16.4s — the six-run sample understated the maximum by
-   roughly 2×, on the *least* variable importer in the table. It changes no decision here,
-   and that is exactly why it is worth recording: convention 18, a method proven on a case
-   too small to stress it.
+   roughly 2×, on the *least* variable importer in the table.
+
+   **It changes no decision here, and that is precisely why it is worth recording.** A
+   convention that only surfaces when it rescues you is easy to believe and easy to treat
+   as folklore about near-misses. One that surfaces when nothing was at stake is the
+   version that shows the rule holds generally — the six-run sample was wrong about the
+   maximum whether or not anything depended on it. Convention 18, a method proven on a
+   case too small to stress it.
 
 #### LIVE INSTANCE, 3 August 2026 evening
 
