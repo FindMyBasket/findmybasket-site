@@ -2486,6 +2486,59 @@ none of it should displace the 4 August queue.**
 
 ---
 
+### 41. `import_run_state` is deleted on success, so it has no history and the watchdog sees only what is in flight
+
+**Raised:** 5 August 2026 · **REPORT ONLY.** Not a defect. The design, stated,
+because it was being read as a coverage gap.
+
+**The mechanism.** `import-awin-feed/index.ts`, on the last slice, immediately after
+`finaliseRun`:
+
+```ts
+await supa.from("import_run_state").delete().eq("run_id", runId);
+```
+
+**So the table holds zero rows in the steady state.** Verified 5 August 2026:
+`select count(*) from import_run_state` returns **0**, with no oldest row and no
+newest row — nothing has ever been retained.
+
+**What that means for `fmb_watchdog_stalled_imports`** (cron 28, every 5 minutes). It
+reads `import_run_state` where `kind='meta' and key=''`, and fires when
+`next_slice < total_slices` or when an inflated blob exists with `total_slices` still
+NULL. Every row it can ever see belongs to a run that is **currently in flight or
+stalled mid-chain**. A run that completed leaves nothing. A run that died before its
+first staging write leaves nothing either.
+
+**The watchdog is therefore not under-scoped; it is exactly scoped, and the scope
+excludes history by construction.** It cannot be audited against past runs, it cannot
+be shown to have handled a stall correctly after the fact, and "it found nothing" is
+indistinguishable from "there was nothing" — which is convention 11's problem arriving
+through the data model rather than through the guard.
+
+**This retrospectively re-reads the 29 July YesStyle stall.** That incident recorded
+`import_run_state` empty as evidence the run never reached the staging write, and the
+watchdog's silence as a scope limit. **The scope reading was right and needs no
+change.** The evidence reading needed qualifying: emptiness is the default for every
+finished run, so it is only evidence in conjunction with the run not having completed.
+Corrected in `docs/ticket-import-observation-offset.md`, which also carries a
+mis-citation fix — the in-flight blindness point was attributed to convention 8 and is
+not recorded as a convention anywhere.
+
+**The gap, stated precisely, because the loose version is wrong.** It is not that the
+watchdog fails to look. **It is that a crashed run leaves nothing behind to look at.**
+Those imply different fixes: the first would mean changing the watchdog, the second
+means retaining state. Nothing here argues for either — `monitor-retailer-feeds` at
+09:00 already covers runs that never completed, and it is what caught YesStyle.
+
+**What retention would buy, if it is ever wanted:** the ability to say how often the
+watchdog actually fires, whether a resumed slice completed, and how long stalls last.
+None of that is available today, and item 40's slow band is a live example of a
+question the current design cannot answer — a ~17-minute run and a stalled-then-resumed
+run are indistinguishable after the fact, because both end with an empty table and a
+`success` row.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
