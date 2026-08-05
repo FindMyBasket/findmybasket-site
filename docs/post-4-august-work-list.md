@@ -2388,6 +2388,53 @@ one line, with no schema change, no cookie and no consent question. The three ro
 before 5 August carry the bare `_preload` and are not case-attributable; `like '%_preload%'`
 still catches them.
 
+#### KNOWN LIMITATION: `self_reload` cannot be read as a reload rate
+
+**Recorded 5 August 2026, before the pins produced any data. Not a task — a property of
+the instrument that has to be known when the figures are read.**
+
+`self_reload` is assigned when the basket was non-empty and **every product the link
+resolved to was already in it**, so nothing was added. The intended meaning is *the
+visitor is returning to a link they already opened*.
+
+**It also captures a genuine first arrival by someone who already holds all of the link's
+products**, by whatever route — added by hand from product pages, arrived from a different
+pin carrying an overlapping routine, restored from a saved-routine email. **Nothing
+distinguishes the two.** `fmb_routine` stores `id`, `name`, `brand` and `category` and no
+provenance, and nothing anywhere records which routine links a browser has opened. The two
+cases are identical in every value available at classification time.
+
+**The bias is one-way, which is the useful part.** The confusion can only move a session
+from `clean` to `self_reload`, never the reverse: a first arrival with *partial* overlap
+still adds something, so it is correctly `merged`. So when the numbers are read:
+
+| | |
+|---|---|
+| `clean` | a **lower bound** on genuine first arrivals |
+| `self_reload` | an **upper bound** on returns |
+| `merged` | exact — a non-empty basket plus at least one product added |
+
+**Likely rare, stated as a judgement and not a figure**, because no figure exists yet and
+one invented now would be worse than the judgement. It requires the visitor to already
+hold **every** product the link resolves to — five of five for the current pins, not three
+of five. Against a catalogue of ~84,780 products and hand-built baskets that are typically
+a handful of items, a Pinterest arrival holding all five by coincidence is improbable. The
+realistic route to it is not coincidence but the same routine reached twice by different
+paths, which is arguably a return anyway. **The expectation is therefore that
+`self_reload` is close to a reload rate, without being one.** If it comes back large, that
+expectation is what to re-examine first, rather than assuming a surge in reloads.
+
+**What would settle it, not proposed and not scheduled:** persist a marker of which
+routine-link signatures a browser has opened, and classify on that instead of on basket
+contents. That is new client state and a new thing to keep correct, which is why it was
+not built for a case expected to be small. Recorded so the option is on paper rather than
+rediscovered.
+
+**Why this is written before the pins rather than after.** An unrecorded classification
+ambiguity in a measurement that is about to start collecting is the shape that gets
+rediscovered from the data three weeks in — at which point the affected sessions can no
+longer be separated, because the thing that would separate them was never stored.
+
 ---
 
 ### 39. `load_routine_from_url` fired two parameters unreadable for three months
