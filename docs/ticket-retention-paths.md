@@ -1,7 +1,21 @@
 # Ticket: the two retention paths, and what unifying them would cost
 
 **Raised:** 6 August 2026, from the alert-delivery investigation.
-**Status:** scoped, not built. Direction agreed: **B now, D next, C not yet.**
+**Status:** scoped, not built. Direction agreed: **D first, B alongside, C parked.**
+
+> **Ordering revised 6 August 2026, on the strength of the 13-to-0 measurement below.**
+> An earlier draft of this document said "B now, D next". The measurement inverted it.
+>
+> **At the moment of save, 0 of 13 people chose the account path. After the save, 2 of 13
+> authenticated with nothing prompting them.** The upgrade happens *after* the save, not at
+> it — so the welcome email is the moment with evidence behind it, and D leads.
+>
+> **B stays worth doing, for a reason that is not conversion.** The flow misdescribes
+> itself: it calls the better product "instead". And B is what separates two explanations
+> of the same zero — **friction** (people saw the account path and declined it) from
+> **invisibility** (they never registered that it existed). Those need different fixes, and
+> nothing currently distinguishes them. B is not expected to convert; it is expected to tell
+> us which zero we have.
 
 ---
 
@@ -87,9 +101,20 @@ owners and different evidence.
 | | Effort | Breaks | Friction | Unverified-address protection |
 |---|---|---|---|---|
 | **A** leave it | none | nothing | none | preserved |
-| **B** surface the difference | copy + button hierarchy only | nothing | none at save | preserved — both paths unchanged |
-| **C** magic link on every save | moderate | monthly path loses its population (**see Record 2**) | the whole risk | **strengthened** — every address verified |
-| **D** upgrade path after save | small | nothing | deferred, not removed | preserved |
+| **B** surface the difference — *alongside* | copy + button hierarchy only | nothing | none at save | preserved — both paths unchanged |
+| **C** magic link on every save — **parked** | moderate | monthly path loses its population (**see Record 2**) | the whole risk | **strengthened** — every address verified |
+| **D** upgrade path after save — **first** | small | nothing | deferred, not removed | preserved |
+
+**The two numbers that set this order**, and they measure different moments:
+
+| Moment | Measure | Result |
+|---|---|---|
+| **At** the save | chose the account path | **0 of 13** |
+| **After** the save | authenticated unprompted | **2 of 13 (~15%)** |
+
+**The upgrade demonstrably happens after the save and not at it.** Every conversion this
+system has ever had arrived late and unasked. D works with that; B and C both push at the
+moment the evidence says nobody moves.
 
 **Why B first.** No architectural change. The defect is that the flow hides its better
 product: the signed-out button reads "Email me instead" (`RoutineBuilder.tsx:1311`), the
