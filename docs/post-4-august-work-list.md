@@ -2589,6 +2589,70 @@ run are indistinguishable after the fact, because both end with an empty table a
 
 ---
 
+### 42. AWIN advertisers rotate feed ids and nothing tells us — twice in five days
+
+**Raised:** 6 August 2026 · **A CLASS, not an incident.** Both instances were discovered
+by an import failing, days later. Neither was announced.
+
+| Retailer | Old feed id | New feed id | How it surfaced | Lag |
+|---|---|---|---|---|
+| Gorgeous Shop (30) | 110188 | 116876 | import failure | days |
+| Debenhams (28) | beauty inside 8 Fashion feeds | **116972 "Debenhams Beauty"** | guard refusal, 4 Aug | 3 mornings, 73h stale |
+
+**The mechanism is the same both times.** An advertiser reorganises its AWIN feeds. The
+old ids keep working and keep returning data, so nothing errors — they simply stop
+containing the products that moved. **A rotation looks exactly like a supply collapse from
+our side**, and the Debenhams one was three days from being reported to AWIN as a
+commercial problem when it was a configuration change.
+
+**What we had, and why it was not enough.** The row-floor guard caught it on the first
+morning and refused correctly — that is convention 11 working. But a guard says *this feed
+is too small*, not *these products are now somewhere else*. The diagnosis took a retained
+artefact (item 15's sibling change, #185), a feed-level diff, and finally a human finding
+116972 by hand in the AWIN interface.
+
+**Nothing watches for new feed ids appearing.** `awin-feed-count?list=1` already calls
+`productdata.awin.com/datafeed/list/` and returns every feed the publisher account can
+see, with `Feed ID`, `Feed Name`, `No of products` and `Last Imported`. **The capability
+exists and is deployed. Nothing calls it on a schedule and nothing stores the result**, so
+there is no previous list to compare against.
+
+#### What would detect a rotation before an import fails
+
+Roughly in order of cost:
+
+1. **Snapshot the feed list daily and diff it.** One `list=1` call, store `advertiser_id,
+   feed_id, feed_name, product_count, last_imported`, alert on a new id for an advertiser
+   we carry, on an id we carry disappearing, or on a product count moving more than some
+   band. **This is the one that would have caught both instances, on the day, before any
+   import failed** — 116972 was visible in the list with 23,751 products while our guard
+   was refusing.
+2. **Request `data_feed_id` in the download columns.** It is an available column and we do
+   not ask for it, so a combined multi-feed download cannot be attributed to its
+   constituent feeds. **That omission is why "which of the eight still carries beauty" is
+   currently unanswerable** without re-downloading each feed separately, and why work item
+   3 below could not be closed today. Cheap, and it makes every future rotation
+   diagnosable from the artefact we already retain.
+3. **Alert on a feed's `No of products` moving sharply**, from the same snapshot. Catches
+   the case where an advertiser thins a feed rather than replacing it.
+
+**Is it worth building? Yes for (1) and (2), and (2) is nearly free.** The judgement:
+two rotations in five days is not a coincidence rate, it is a property of how AWIN
+advertisers manage feeds, and there are eleven active AWIN-sourced retailers. The cost of
+each instance so far has been three days of stale catalogue plus most of a working day of
+diagnosis, and one near-miss on sending an advertiser a commercial complaint about their
+own reorganisation. A daily list snapshot is one HTTP call and one small table.
+
+**(3) is worth having only once (1) exists** — it shares the snapshot and adds a
+threshold, and thresholds against a once-daily series are the decorative kind unless the
+band is set from observed variance (item 14, and the §7 note in
+`docs/ticket-import-observation-offset.md`).
+
+**Not built. Not scheduled.** Recorded because the second instance is what makes it a
+class, and because the detection asset already exists and is simply not wired to anything.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
