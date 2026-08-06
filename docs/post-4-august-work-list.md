@@ -2589,6 +2589,91 @@ run are indistinguishable after the fact, because both end with an empty table a
 
 ---
 
+### 43. We emit GA4 parameters nothing checks are registered — three found in two days
+
+**Raised:** 6 August 2026 · **REPORT ONLY**, and the report is below. **A class, not three
+incidents.** See convention 23 in `supabase/migrations/README.md` for why the detection gap
+is structural.
+
+**The mechanism.** A GA4 event parameter is only readable if a custom dimension or metric is
+registered **by hand in the GA4 admin**. That registration exists in no file, no environment
+variable, no migration, and in nothing the running code can observe. `gtag` accepts an
+unregistered parameter silently, it appears in realtime, it passes every assertion, and it is
+discarded on arrival. **Nothing in this repository reconciles what we emit against what is
+registered, and nothing can.**
+
+**Three instances in two days**, none found by a check:
+
+| Parameter | Event | Emitted since | Found |
+|---|---|---|---|
+| `routine_size` | `load_routine_from_url` | 10 May 2026 (`8fcfc25`) | 5 Aug, registering something else |
+| `source` | `load_routine_from_url` | 2 Aug 2026 (`28d565e`) | 5 Aug, same visit |
+| `method` | `save_routine` | — | 6 Aug, looking for a number |
+
+The first two were registered on 5 August (`platform_changes` id 30). `routine_size` had been
+unreadable for **nearly three months**.
+
+#### What we emit
+
+Enumerated from source, 6 August 2026. **Custom parameters only** — GA4 standard fields
+(`items`, `item_id`, `item_brand`, `item_category`, `value`, `currency`, `search_term`) are
+excluded because they need no registration.
+
+| Event | Site | Custom parameters emitted |
+|---|---|---|
+| `affiliate_clickout` | `lib/analytics.ts:13` | `retailer`, `product_id` |
+| `retailer_click` | `lib/analytics.ts:138` | `retailer_id`, `retailer_name`, `affiliate_network`, `basket_item_count`, `is_best_value`, `list_position`, `click_source`, `brand_slug` |
+| `basket_optimised` | `lib/analytics.ts:181` | `basket_item_count`, `winning_retailer_count`, `result_type`, `unpriced_item_count`, `winning_basket_total`, `savings_value`, `savings_suppressed`, `optimisation_trigger` |
+| `view_item` | `lib/analytics.ts:230` | `num_retailers` |
+| `search` | `lib/analytics.ts:255` | `result_count`, `search_source` |
+| `load_routine_from_url` | `RoutineBuilder.tsx:401` | `routine_size`, `source`, `preload_case`, `existing_item_count`, `added_item_count` |
+| `save_routine` | `RoutineBuilder.tsx:870`, `:920` | `method`, `routine_size` |
+| `open_all_products` | `RoutineBuilder.tsx:983` | `product_count`, `blocked_count` |
+| `track_product` | `AccountRoutine.tsx:155` | `source` |
+| `add_to_cart` | `lib/analytics.ts:205` | *(standard only)* |
+
+**33 distinct custom parameter names across 10 events.**
+
+#### What is recorded as registered
+
+Only these, and only from repository records — **I cannot read the GA4 admin**, so this is
+what the repo claims, not what the console shows:
+
+| Parameter | Evidence |
+|---|---|
+| `affiliate_network`, `retailer_name`, `brand_slug` | `dashboard-build-brief.md:310`, registered before 27 July |
+| `click_source` | work list item 15, "registered GA4 dimensions" |
+| `num_retailers` | `lib/analytics.ts:217`, comment claims "a registered custom metric" |
+| `preload_case`, `existing_item_count`, `added_item_count`, `source`, `routine_size` | `platform_changes` id 30, registered 5 Aug 2026 |
+
+**That leaves roughly 20 emitted parameters with no record of registration either way** —
+including every parameter on `basket_optimised`, which is the event the savings proposition
+is measured through, and `method` on `save_routine`, which is what prompted this.
+
+**They are not established as unregistered.** They are **unchecked**, which is the finding.
+
+#### The gap runs in both directions
+
+`dashboard-build-brief.md:402` records the mirror image: *"Three further dimensions were
+registered on 27 July under the v1 shorthand: network, retailer and brand. No event sends
+parameters by those names, so they will never collect anything."*
+
+So there are **registered dimensions collecting nothing** and **emitted parameters readable
+by nothing**, and no artefact anywhere lists either set. A reconciliation needs both halves.
+
+#### What would close it, not proposed and not scheduled
+
+The emitted half is derivable from source — the table above was produced by a regex over
+`gtag('event', …)` call sites in about a minute, and could be a script. The registered half
+needs the **GA4 Admin API** (`properties/415465396/customDimensions` and
+`customMetrics`), which `scripts/ga4-diag.mjs` already authenticates for
+(`ga4-diag.mjs:94` — "analytics.readonly covers BOTH the Data API and the Admin"). **The
+credentials and the access already exist; nothing joins the two lists.**
+
+**Stopping here as instructed.** The reconciliation is a build and this is a report.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
