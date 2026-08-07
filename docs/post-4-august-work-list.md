@@ -2674,6 +2674,54 @@ credentials and the access already exist; nothing joins the two lists.**
 
 ---
 
+### 44. Four days of barcode reject reasons were destroyed before anyone could read them
+
+**Raised:** 7 August 2026 · **CLOSED by deploying the fix.** Recorded because the data is
+unrecoverable and because the window is the cost of a deploy that did not happen, not of the
+defect itself.
+
+**The defect.** The sliced-import merge added every counter value numerically. A
+`Record<string, number>` of barcode-rejection reasons became the string
+`"0[object Object][object Object]…"`, and a boolean flag summed to an integer. Fixed in
+`9e1d826` (#187, merged 5 August) via `_shared/merge-counts.ts`, which merges by kind.
+
+**The window.** The fix sat on `main` undeployed. `import-awin-feed` in production stayed at
+version 147, `updated_at` 3 August 19:23 UTC, with `merge-counts.ts` absent from the deployed
+file list and the additive loop still present.
+
+**Measured 7 August 2026:**
+
+| | |
+|---|---|
+| Sliced runs writing a corrupted `barcode_reject_reasons` | **35** |
+| Retailers affected | **9** |
+| Window | 4 – 7 August 2026 |
+| Of those runs, reported `status = 'success'` | **35 — all of them** |
+
+**Every one of the 35 reported success.** The import worked; only the diagnostic was
+destroyed. That is the detection-gap shape of item 14 arriving inside a field rather than a
+job: nothing failed, nothing alerted, and the loss is visible only to someone who checks the
+JSON *type* of a nested key.
+
+**It is unrecoverable, and that is the reason to write it down.** The coercion happened in
+memory before `scrape_log` was written, so the per-reason counts never reached the database
+in any form. There is no source to reconstruct them from. Four days of barcode-rejection
+diagnostics across nine retailers simply do not exist.
+
+**What it cost concretely.** Work list item 21 — five retailers supplying no EAN — is
+answered from exactly these counts, and stage 3 of the AWIN sibling-coalesce rollout was
+waiting on Beauty Flash's reject reasons being readable against a known importer version.
+Both waited on a deploy, not on a fix.
+
+**The lesson is item 34's, not a new one.** A merged fix is not a deployed fix, and nothing
+in this repository can tell the difference — no CI deploys edge functions, and no artefact
+records which commit production is running. What made this one legible in the end was that
+the corrupted value has a *shape*: `jsonb_typeof(...) = 'string'` where an object belongs.
+**Most silent losses do not leave a type mismatch behind, and would not have been findable
+this way.**
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row

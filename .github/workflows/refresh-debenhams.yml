@@ -129,6 +129,25 @@ jobs:
           # produces the artefact — which is the whole point of this run. The threshold
           # gets derived from that artefact, not from an estimate of it.
           #
+          # ── WHATEVER TOMORROW REPORTS IS A FLOOR, NOT A MEASUREMENT ─────────────
+          # READ THIS BEFORE QUOTING THE NINE-FEED NUMBER ANYWHERE.
+          #
+          # 116972 declares no merchant_product_category_path, and that column is
+          # filter-debenhams-feed.py's PRIMARY signal. Every 116972 row therefore falls
+          # through to the fallback — a brand whitelist plus a volume-unit regex — which
+          # was written to rescue designer beauty rows sharing an empty path inside the
+          # FASHION feeds. It was never meant to classify a whole beauty catalogue.
+          #
+          # So the nine-feed artefact admits only those 116972 rows whose brand happens
+          # to be on the whitelist and whose name happens to state a size. It UNDERCOUNTS
+          # 116972's beauty content, by an amount nobody has measured.
+          #
+          # Consequence: the number this run reports is a LOWER BOUND on the recovered
+          # level. A threshold derived from it is conservative, which is the safe
+          # direction, but it must be recorded as "a floor observed under the current
+          # filter" and NOT as "the recovered level". Quoting it as the latter would
+          # state a catalogue size that is wrong and unfalsifiable from the artefact.
+          #
           # ── WHEN THE THRESHOLD IS SET, IT IS NOT PERMANENT ──────────────────────
           # Whatever value replaces 12,000 will be calibrated on the POST-ROTATION
           # level. If Debenhams rotates again, the same trap recurs and a guard set
