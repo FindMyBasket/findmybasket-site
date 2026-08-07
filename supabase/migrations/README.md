@@ -1127,3 +1127,57 @@ that it should exist than any argument for writing it.** The reasoning was load-
 enough that someone needed to cite it, twice-relevant within one system, and it explains
 a class rather than an incident. So it is written now, and dated now, rather than
 back-filled to look as though it was always here.
+
+---
+
+## 24. Corruption that changes a value's SHAPE is findable; corruption that only changes its meaning is not
+
+**Added 7 August 2026, from the barcode-reject-reasons loss (work list item 44).**
+
+**Thirty-five corrupted runs across nine retailers were found by a single query.** Not by an
+alarm, not by a test, not by anyone reading the data — by this:
+
+```sql
+WHERE jsonb_typeof(details->'counts'->'barcode_reject_reasons') = 'string'
+```
+
+The field is a JSON object of reason → count. A merge bug coerced it to the string
+`"0[object Object][object Object]…"`. **The type was wrong, so every instance was mechanically
+enumerable, and the exact window and blast radius fell out in one statement.**
+
+**That was luck, and it should be design.** The same bug applied to a plain integer counter
+would have produced a *different integer*. Still wrong, still silent, still shipped for four
+days — and with **no query that finds it**, because a number where a number belongs looks
+correct from every angle except knowing what the number should have been. Someone would have
+had to read the value and notice it made no sense, which is not a mechanism.
+
+**The rule. When designing a diagnostic field, prefer a representation in which plausible
+corruption changes the SHAPE, not just the content.** An object, an array, a tagged union or
+a constrained enum all fail loudly under the mishandling that silently mangles a bare scalar.
+A bare integer or free string is the least recoverable choice, because every wrong value is
+still a well-formed value.
+
+**And when a corruption IS found, ask what shape made it findable, then check the fields that
+lack that shape.** Item 44's `sibling_coalesce` — a boolean summed to a number by the same
+bug — was the second signature that confirmed the diagnosis. The counters that were already
+integers were mangled identically and **cannot be audited at all**; nothing distinguishes a
+wrongly-summed count from a right one, and no claim is made here about whether they were
+affected, because none can be.
+
+**Practical form:**
+
+- **Prefer structured over scalar for anything diagnostic.** A count is cheaper to store as
+  `{"reason": n}` than as a bare total, and vastly cheaper to audit.
+- **After finding a corruption, enumerate it by type before doing anything else.** It is one
+  query, it establishes the window and the blast radius exactly, and it is available only
+  while the type mismatch survives — a later "fix" that coerces the field back to a plausible
+  value destroys the evidence.
+- **Say explicitly which fields could NOT be checked**, and why. Item 44 records that the
+  integer counters in the same object are unauditable. That is a real limit on the finding
+  and stating it prevents the report reading as complete.
+
+**Why this belongs beside conventions 17, 18, 21 and 23.** Those are about checks that cannot
+fail, methods proven on cases too small to stress them, tests never shown to be capable of
+failing, and mechanisms structurally blind to what never started. **This one is about whether
+a failure leaves a handle to grab it by at all** — and unlike the others, it is decided when
+the field is designed, long before anything goes wrong.
