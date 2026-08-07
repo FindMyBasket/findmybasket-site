@@ -2859,6 +2859,54 @@ by keyword, and the class is defined by having none. **It is invisible to the sa
 that would have to fix it.** That is the argument for closing this rather than leaving it
 open.
 
+#### Measured on Niche Beauty, 7 August 2026 — and this feed largely avoids the trap
+
+The probe (`scripts/feed-categorisation-probe.mts`, run against fid 102930) categorised all
+14,636 rows through the importer's own function:
+
+| | rows | |
+|---|---|---|
+| skincare | 4,642 | 31.7% |
+| makeup | 4,528 | 30.9% |
+| **fragrance** | **2,197** | **15.0%** |
+| hair | 1,427 | 9.7% |
+| bath_body | 1,351 | 9.2% |
+| excluded, 13 reasons | 491 | 3.4% |
+
+**The fragrance worry does not materialise here, and that is a property of this advertiser's
+naming, not a reprieve.** Niche Beauty writes the form into the name —
+`"Creed - Aventus for Her - Eau de Parfum Women"` — so `RE_HARD_FRAGRANCE_FORM` catches it.
+The 2,197 sits within 6% of `feed-diag`'s independently-detected 2,077, which is reassuring
+precisely because the two used different methods on different fields.
+
+**The Cinq Mondes class is still real.** It will be tested properly on a fragrance-only
+retailer, where names may omit the noun *because* the whole catalogue is fragrance and the
+word carries no information. See item 48.
+
+#### A named row showed what the aggregate hid, for the second time
+
+`FARA HOMIDI — ESSENTIAL LIP COMPACT - Lip Palettes` was assigned **skincare**. A lip
+palette is makeup.
+
+Not a blocker at 3.4% excluded and one visible error — but **it is the method point, not the
+row**. A distribution table cannot surface a misclassification: every bucket looks like a
+plausible number. Six named examples per bucket can, and did. That is now twice, after the
+Cinq Mondes pair, that a named example showed something a percentage could not.
+
+**The probe prints six examples per bucket by design, and that choice is what caught it.**
+Keep it when the output is next made terser.
+
+#### The supplements exclusion is near-nil here — concern closed
+
+`category_excludes` of `["Vitamins & Supplements","Supplements"]` would drop **4 rows** of
+14,636. The categoriser separately excludes **18** as `EXCLUDED:supplement` on its own
+denylist, with no config help.
+
+**Keep the exclusion** for consistency with Atelier De Glow and because `top_category` still
+has no supplements value — but it is belt-and-braces, not load-bearing. The long-standing
+"Niche Beauty's supplements are excluded and unquantified" concern is **quantified and
+closed**.
+
 #### One comparator that must not be used
 
 `feed-diag` reports its own "FRAGRANCE share" — 2,077 of 14,636 for Niche Beauty. **That is
@@ -2909,6 +2957,117 @@ reach.
   change built on a number that does not exist — instance 4 would have produced a fix to a
   function that is not in the repository.
 - **When a run fails, say the run failed.** Do not describe what it would have shown.
+
+---
+
+### 48. `feed-diag`'s overlap buckets are match-key-only, and read zero on any differently-named feed
+
+**Raised:** 7 August 2026 · **THE LARGER RESULT of the Niche Beauty work**, and a finding
+about the matcher rather than about any candidate retailer.
+
+#### Zero of 930 is not inefficiency. It is a tier that does not function on this feed
+
+Measured on Niche Beauty (fid 102930), 7 August 2026, both tiers computed over the same
+rows by `scripts/feed-categorisation-probe.mts`:
+
+```
+present in retailer_prices (ANY row):                         1,090
+BUCKET A — in stock, active retailer, in products_active:       930
+present but NOT live (oos / inactive / merged / variant):       160
+
+live barcode matches:                   930
+of those, match_key ALSO matches:         0
+BARCODE-ONLY (match_key misses them):   930
+```
+
+**Zero overlap between the tiers.** Not partial disagreement — the `match_key` tier finds
+**none** of the 930 products the barcode tier finds live.
+
+**The definitional gap is small and does not explain it.** Only 160 of 1,090 fall away once
+"present in `retailer_prices`" is tightened to in-stock, active-retailer and in
+`products_active` (which already excludes merged, variant-child and unimaged). That is a
+~15% inflation, not an order of magnitude. Definitions were worth ruling out first; they are
+not the answer.
+
+**The cause.** Niche Beauty names products `"Creed - Aventus for Her - Eau de Parfum Women"`
+— brand prefix, hyphenated segments, category suffix. `buildMatchKey(brand, name)` produces
+a key our catalogue's keys do not match, on 930 of 930. The barcode tier finds them because
+`product_GTIN` is populated at 100% and the importer reads it through `ean_alt`. **This is
+the sibling-coalesce premise confirmed by measurement.**
+
+#### The consequence beyond Niche Beauty
+
+**`feed-diag`'s bucket A reads zero on any advertiser whose naming convention differs from
+ours, regardless of how much genuine overlap exists.** A has been the onboarding signal.
+Every prestige feed assessed with it was assessed on a measure blind to its depth.
+
+**THE GATE WAS WRONG, NOT THE ANSWER.** An A = 0 gate was set on the reasoning that a new
+retailer earns its place by adding comparison depth, not catalogue size
+(`docs/strategy.md:488`). That reasoning is sound and is unchanged. What was wrong was
+treating A as a measurement of depth: it measures *match-key* depth, and on a
+differently-named feed that is zero by construction. Niche Beauty's real live depth is 930,
+and A reported 0 for it.
+
+#### Which assessments used it
+
+Recovered from workflow run logs, 7 August 2026:
+
+| Run | Feed | A reported | Status |
+|---|---|---|---|
+| 30844150577 | The Organic Pharmacy, fid 62815 | **23** | onboarding assessment; non-zero, so less exposed |
+| 30984692444 | Debenhams 90938 | 0 | rotation investigation |
+| 30984698505 | Debenhams 90940 | 0 | rotation investigation |
+| 30984704512 | Debenhams 90945 | *(no value in log)* | 514k rows |
+| 30984710412 | Debenhams 90947 | 0 | rotation investigation |
+| 30985368741 | Debenhams 91126 | 0 | rotation investigation |
+| 30985374005 | Debenhams 91133 | 0 | rotation investigation |
+| 30985379697 | Debenhams 91134 | *(no value in log)* | 501k rows |
+| 30985385787 | Debenhams 91135 | **10** | rotation investigation |
+| 31172005496 | **Niche Beauty 102930** | **0** | **onboarding — now known to be 930** |
+
+**Only two were onboarding decisions**: The Organic Pharmacy and Niche Beauty. The Debenhams
+runs were feed-rotation investigation, where A was not the decision variable — so the
+retrospective exposure is narrower than it first appears. **The Organic Pharmacy returned
+A = 23, so it was not gated on a zero.** Niche Beauty is the one case where an A = 0
+characterised a retailer, and it is now corrected.
+
+**Any future A = 0 should be treated as "the match-key tier found nothing", not as "there is
+no depth".**
+
+#### Same shape as the guard and the filter
+
+A measure calibrated on the corpus it was written against, **degrading to a plausible zero
+rather than erroring**. The row-floor guard was calibrated on a superseded feed level; the
+Debenhams filter on the feeds that existed when it was written; bucket A on advertisers who
+name products the way our catalogue does. None of the three fails loudly. All three return a
+number that looks like an answer.
+
+#### The test that would confirm it is a pattern — PARKED
+
+**The Fragrance Shop is the natural test and cannot be run now.** It is a **Rakuten**
+retailer, so both the probe and the import path need Rakuten-specific work rather than a
+feed id — a build, not a dispatch. Parked on that basis, not on priority.
+
+**Two predictions to test when it resumes:**
+
+1. **Whether the fragrance-noun naming holds on a fragrance-only retailer.** Niche Beauty
+   writes "Eau de Parfum" into every fragrance name. A fragrance-only catalogue may omit it
+   precisely because it carries no information there — which is item 46's unfixable class,
+   arriving at scale.
+2. **Whether `match_key` scores zero again.** If it does, the tier failure is a property of
+   prestige naming generally rather than of Niche Beauty.
+
+**If both hold, the pattern is confirmed rather than a single-retailer property**, and bucket
+A should be reported alongside a barcode tier permanently rather than alone.
+
+#### Niche Beauty's numbers, with their bounds
+
+- **930 live comparison-depth products** — a barcode-tier **lower bound**, since name-tier
+  matches are not simulated.
+- **≤13,546 creates** — an **upper bound** at 99.1% barcode coverage, for the same reason.
+
+With `match_key` scoring zero, the name tier is unlikely to move either much — but that is an
+inference, and the probe does not test it.
 
 ---
 
