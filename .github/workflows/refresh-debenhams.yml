@@ -39,7 +39,20 @@ jobs:
           # Publisher 2841268, advertiser 22735 (Debenhams), all 8 beauty/general
           # feed IDs combined. Column set mirrors buildFeedUrl() in
           # import-awin-feed exactly so the parser maps every field it needs.
-          FIDS="90938,90940,90945,90947,91126,91133,91134,91135"
+          # Nine feeds. 116972 "Debenhams Beauty" added 7 Aug 2026: Debenhams moved its
+          # beauty catalogue out of the eight Fashion feeds into a dedicated feed some
+          # time on 3-4 August, which halved the filtered output (12,623 -> 6,3xx) and
+          # the guard below has refused every morning since, correctly.
+          #
+          # A ROTATION IS NOT A BREAKAGE, and it announced itself to nobody. AWIN does
+          # not notify when an advertiser reorganises feed ids, and nothing here watches
+          # the datafeed list for new ones. Second instance in five days (Gorgeous Shop
+          # 110188 -> 116876 was the first). See work list item 42.
+          #
+          # THE EIGHT ARE KEPT. None is dead: all still import, all still serve their
+          # own categories, and only beauty moved. Removing them would buy nothing and
+          # would need reverting if beauty moves back.
+          FIDS="90938,90940,90945,90947,91126,91133,91134,91135,116972"
           COLS="aw_deep_link,product_name,aw_product_id,merchant_product_id,search_price,store_price,merchant_deep_link,brand_name,rrp_price,in_stock,merchant_product_category_path,category_name,ean,mpn,merchant_image_url"
           curl -fsSL \
             "https://productdata.awin.com/datafeed/download/apikey/${AWIN_API_KEY}/fid/${FIDS}/format/csv/language/en/delimiter/%2C/compression/gzip/adultcontent/1/columns/${COLS}/" \
@@ -104,6 +117,30 @@ jobs:
           # has now correctly refused twice, on 4 and 5 Aug 2026, against a real supply
           # change. Lowering it to let a run through would silence the only thing that
           # noticed. See migrations/README.md convention 11.
+          #
+          # ── UNCHANGED ON PURPOSE, 7 Aug 2026 ────────────────────────────────────
+          # 116972 was added to FIDS above in the same commit as this comment, and the
+          # floor was DELIBERATELY LEFT AT 12,000. One change per run: the nine-feed
+          # fetch is the change being observed, and moving the threshold at the same
+          # time would make tomorrow's result unattributable.
+          #
+          # The floor is expected to be wrong now, in the other direction, and that is
+          # fine. The retention step above runs BEFORE this guard, so a refusal still
+          # produces the artefact — which is the whole point of this run. The threshold
+          # gets derived from that artefact, not from an estimate of it.
+          #
+          # ── WHEN THE THRESHOLD IS SET, IT IS NOT PERMANENT ──────────────────────
+          # Whatever value replaces 12,000 will be calibrated on the POST-ROTATION
+          # level. If Debenhams rotates again, the same trap recurs and a guard set
+          # against today's baseline will refuse a legitimate future one.
+          #
+          # SO: AFTER ANY FEED ROTATION, THE GUARD'S BASIS MUST BE RE-DERIVED, NOT
+          # DEFENDED. Two rotations in five days across two retailers (Gorgeous Shop
+          # 110188 -> 116876, Debenhams into 116972) mean this is not hypothetical. The
+          # failure mode is treating the number as settled because it was once argued
+          # for. Re-derive it by diffing the current artefact against the previous good
+          # one; the previous good copy lives in Supabase Storage and stays there while
+          # the guard refuses, because a refusal skips the upload.
           ROWS=$(zcat debenhams-beauty.csv.gz | wc -l)
           if [ "$ROWS" -lt 12000 ]; then
             echo "::error::Filtered feed has only $ROWS lines (<12000) — whitelist too narrow or raw feed truncated"
