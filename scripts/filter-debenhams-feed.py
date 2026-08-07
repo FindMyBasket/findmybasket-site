@@ -79,6 +79,31 @@ NON_BEAUTY_NAME_HINTS = (
 )
 
 def is_beauty(row):
+    # THE PRIMARY SIGNAL IS ABSENT FROM THE NEWEST FEED. Recorded 7 August 2026.
+    #
+    # This filter was calibrated on the eight Fashion feeds that existed when it was
+    # written. Four of those eight carry merchant_product_category_path; the other four
+    # never have, which is what the fallback below was built for. Feed 116972
+    # "Debenhams Beauty", added to the fetch on 7 August, carries it for NO row and
+    # uses a different taxonomy entirely (Google's "Health & Beauty > Personal Care >
+    # Cosmetics > ..." in merchant_category, not Debenhams' "Beauty > Face > ...").
+    #
+    # So every 116972 row lands in the fallback, which is a brand whitelist plus a
+    # volume-unit regex — a rescue path for designer beauty hiding in a fashion feed,
+    # not a classifier for a whole beauty catalogue. It undercounts, silently, and the
+    # only symptom is a row count that looks plausible.
+    #
+    # THE GENERAL SHAPE, WHICH IS THE POINT: a filter keyed on a column that some feeds
+    # populate is calibrated on the feeds that existed when it was written. Rotations
+    # keep producing feeds it reads badly, and it degrades without erroring — the same
+    # failure mode as a row-count guard calibrated on a superseded baseline (see the
+    # guard comment in .github/workflows/refresh-debenhams.yml). Two rotations in five
+    # days across two retailers; work list item 42.
+    #
+    # Reading merchant_category as a second primary signal would fix it and is NOT done
+    # here — it changes what the filter admits, and that belongs in its own change with
+    # its own before/after count.
+    #
     # Primary signal: trust Debenhams' own taxonomy. The well-structured beauty
     # catalogue ships a rich path like "Beauty > Face > Foundations"; everything
     # under Clothing / Home & Garden / Toys / Health & Wellness / Accessories
