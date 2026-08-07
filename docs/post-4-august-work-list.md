@@ -2703,10 +2703,45 @@ destroyed. That is the detection-gap shape of item 14 arriving inside a field ra
 job: nothing failed, nothing alerted, and the loss is visible only to someone who checks the
 JSON *type* of a nested key.
 
-**It is unrecoverable, and that is the reason to write it down.** The coercion happened in
-memory before `scrape_log` was written, so the per-reason counts never reached the database
-in any form. There is no source to reconstruct them from. Four days of barcode-rejection
-diagnostics across nine retailers simply do not exist.
+**Exactly three things were destroyed, and the totals were not among them.** The coercion
+happened in memory before `scrape_log` was written, so for sliced retailers between 4 and
+7 August these are unrecoverable:
+
+- `barcode_reject_reasons` — the per-reason object
+- `barcode_reject_samples` — the samples array
+- `sibling_coalesce` — the boolean flag, summed to an integer
+
+**Everything that is a number survived intact, at both layers.** The old merge added values
+numerically, which is *correct* for counters and wrong only for everything else — which is
+why the fix is titled "merge by KIND, not by addition". Verified 7 August on all eight sliced
+retailers: `details.counts.would_update_existing` equals the top-level `price_updates` and
+`matched_count` **exactly**, including Boots at 22,195 across roughly five slices. A
+last-slice value would have been about 4,400.
+
+#### THIS ENTRY HAS BEEN WRONG TWICE, IN OPPOSITE DIRECTIONS
+
+Recorded because the pattern is worth more than any of the three claims.
+
+| | Claim | Verdict |
+|---|---|---|
+| 1 | The counts never reached the database | **Wrong** — the totals did |
+| 2 | `barcode_rejected` was recorded correctly throughout | **Right** |
+| 3 | That figure is a last-slice fragment, so totals are understated | **Wrong** — it is a cumulative counter |
+
+**The common error in 1 and 3 is asserting which layer a number came from without reading
+the write path.** `scrape_log` has two: top-level columns (`source_count`, `matched_count`,
+`price_updates`) and the nested `details.counts` object. Both are written once, on the last
+slice, from the accumulated total — `_shared/run-metrics.ts:64-76` does no merging at all, it
+only serialises what it is handed. That was readable throughout and would have settled all
+three claims in one query.
+
+**The check that settles it, for next time:** compare a `details.counts` counter against the
+top-level column that must equal it. If they match on a multi-slice retailer, the nested
+counters are cumulative. It costs one query and needs no knowledge of the merge code.
+
+**Do not "fix" the numeric counters.** They are correct at both layers, and a pass that
+normalised them would change right values and introduce the mixed state it was meant to
+prevent.
 
 **What it cost concretely.** Work list item 21 — five retailers supplying no EAN — is
 answered from exactly these counts, and stage 3 of the AWIN sibling-coalesce rollout was
