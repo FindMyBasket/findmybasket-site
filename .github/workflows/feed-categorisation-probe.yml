@@ -1,0 +1,105 @@
+name: feed-categorisation-probe (read-only)
+
+# Manual, READ-ONLY probe of what a candidate feed WOULD be categorised as, and
+# what would match versus create, before any import.
+#
+# WHY THIS EXISTS SEPARATELY FROM feed-diag. feed-diag answers "is this feed worth
+# onboarding" — brand shape, field quality, catalogue overlap. This answers "what
+# would the importer DO with it", by running the importer's own categoriser over
+# every row. They are different questions and the second one has no other answer:
+#
+#   import-awin-feed's dry_run CANNOT run a large feed. Dry-runs are never sliced
+#   (index.ts:573 — cross-slice state relies on each slice COMMITTING), so
+#   dry_run:true forces the whole feed through one worker and bypasses
+#   sliced_import. Niche Beauty at 14,636 rows returned WORKER_RESOURCE_LIMIT
+#   twice, including with streaming_enabled:true. The Organic Pharmacy at 114
+#   rows dry-runs fine.
+#
+# So dry_run works on the feeds that do not need inspecting and fails on the
+# create-heavy ones that do. That is structural, not a resourcing accident, and it
+# is why this is a workflow rather than a one-off script.
+#
+# It also needs no retailer_import_config row, and therefore no retailers row — a
+# dry run needs both before it will start (index.ts:509-519), which means the
+# cheapest way to inspect a candidate currently requires creating rows for it.
+#
+# WRITES NOTHING. Downloads a feed to the runner, reads the catalogue with SELECT,
+# prints, deletes the feed. No Storage upload, no import trigger, no DB mutation.
+#
+# Required GitHub secrets:
+#   AWIN_API_KEY          - AWIN publisher API key
+#   SUPABASE_PROJECT_REF  - crtrjoescntlcjiwdtrt
+#   SUPABASE_SERVICE_KEY  - Supabase key (SELECT only here)
+
+"on":
+  workflow_dispatch:
+    inputs:
+      fid:
+        description: 'AWIN feed id (e.g. 102930 for Niche Beauty)'
+        required: true
+        type: string
+      label:
+        description: 'Retailer name, for the report header'
+        required: false
+        default: '(unnamed candidate)'
+        type: string
+      category_excludes:
+        description: 'Comma-separated terms to test as a supplements/category exclusion'
+        required: false
+        default: 'Vitamins & Supplements,Supplements'
+        type: string
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # 22, matching feed-diag: supabase-js initialises a realtime client inside
+          # createClient(), which needs a native WebSocket. Node 20 has none.
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download candidate feed
+        env:
+          AWIN_API_KEY: ${{ secrets.AWIN_API_KEY }}
+          FID: ${{ github.event.inputs.fid || inputs.fid }}
+        run: |
+          # No `set -x` in this step: the URL embeds AWIN_API_KEY and tracing would
+          # print it to a log that outlives the run.
+          set -eu
+          # Both halves of each sibling pair, same reasoning as feed-diag: advertisers
+          # disagree about which half to fill, and coalesceField reads either. Asking
+          # for a column a feed lacks returns blank rather than erroring.
+          COLS="aw_deep_link,product_name,aw_product_id,merchant_product_id,search_price,store_price,merchant_deep_link,brand_name,rrp_price,in_stock,merchant_product_category_path,merchant_category,category_name,product_type,ean,product_GTIN,mpn,merchant_image_url"
+          curl -fsS \
+            "https://productdata.awin.com/datafeed/download/apikey/${AWIN_API_KEY}/fid/${FID}/format/csv/language/en/delimiter/%2C/compression/gzip/adultcontent/1/columns/${COLS}/" \
+            -o feed.csv.gz
+          ls -lah feed.csv.gz
+          # AWIN returns HTML/JSON errors with a 200, so a successful curl is not
+          # proof of a feed. Require gzip magic.
+          MAGIC=$(head -c 2 feed.csv.gz | xxd -p)
+          if [ "$MAGIC" != "1f8b" ]; then
+            echo "::error::Not gzip (magic=$MAGIC) — likely an AWIN error response, not a feed"
+            exit 1
+          fi
+          gunzip -c feed.csv.gz > feed.csv
+          echo "rows (incl header): $(wc -l < feed.csv)"
+
+      - name: Run probe
+        env:
+          FEED_FILE: ./feed.csv
+          SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          LABEL: ${{ github.event.inputs.label || inputs.label || '(unnamed candidate)' }}
+          CATEGORY_EXCLUDES: ${{ github.event.inputs.category_excludes || inputs.category_excludes }}
+        run: npx --yes tsx scripts/feed-categorisation-probe.mts
+
+      - name: Discard feed
+        if: always()
+        run: rm -f feed.csv feed.csv.gz

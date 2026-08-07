@@ -2798,6 +2798,120 @@ any rotation, which a filter change is, in effect.
 
 ---
 
+### 46. Some products cannot be categorised from their name, and no keyword list will fix it
+
+**Raised:** 7 August 2026 · **NOT A BUG. NOT AN OPEN TASK.** Recorded specifically so
+nobody re-attempts it with more keywords.
+
+**The importer categorises from name and brand only** — `import-awin-feed/index.ts:2149`,
+`inferCategorisationForImport(name, brand)`. The feed's category columns never reach the
+categoriser; they are used for *exclusion* (`isPathIncluded`, `isExcludedCategory`). So on
+a create-heavy first import, **every** created product's `top_category` and `subcategory`
+are inferred from the product name.
+
+#### The demonstration
+
+```
+inferCategorisationForImport("Cinq Mondes Bergamot Eau de Parfum 100ml", "Cinq Mondes")
+  -> { top_category: "fragrance", product_type: "Eau de Parfum", subcategory: "scent" }
+
+inferCategorisationForImport("Cinq Mondes Bergamot", "Cinq Mondes")
+  -> { top_category: "skincare",  product_type: "Skincare",      subcategory: "face" }
+```
+
+**Same brand, same botanical, opposite categories.** The only difference is a fragrance
+noun in the string.
+
+**This is not a routing bug and not an eligibility gap.** `inferCategorisation` has nothing
+in `"Cinq Mondes Bergamot"` to work with, and `classifyFragranceOrPersonalCare` is then
+handed a skincare product and correctly declines it. A brand plus a botanical is not
+separable from botanical skincare **by any keyword**, because the string contains nothing
+that distinguishes them.
+
+**Why more nouns cannot help.** The class is defined by the absence of the signal a
+keyword would match. Anything broad enough to catch `"Bergamot"` catches bergamot-scented
+body lotion, bergamot facial oil and bergamot candles. The nouns already present —
+`RE_HARD_FRAGRANCE_FORM` at `categorisation.ts:35-36` and `fragranceNoun` at `:1094` —
+cover `parfum`, `eau de parfum`, `eau de toilette`, `cologne`, `extrait`, `edt`, `edp`.
+**`fragrance` and `scent` are excluded deliberately**, with the reason at `:1090-1093`:
+they are overwhelmingly descriptors on functional products ("… Fragrance Shower Gel").
+A pass adding them would reintroduce a guarded hazard.
+
+#### What the eligibility rule does and does not explain
+
+`:1216-1221` requires `base.excluded ∈ {fragrance, deodorant, shaving}` **or**
+`base.top_category === "skincare"` for the extended detector to run. So a fragrance landing
+in `makeup` never reaches it. Measured across `products_active`, 7 August 2026:
+
+| `top_category` | hard fragrance form | noun only |
+|---|---|---|
+| fragrance | 8,760 | 804 |
+| **makeup** | **75** | 4 |
+| bath_body | 0 | 13 |
+| hair | 0 | 7 |
+| **skincare** | **0** | **0** |
+
+**Zero in skincare** — skincare *is* eligible, so anything landing there is reached and
+rescued. The eligibility gap is real and is **75 rows, 0.8%**, all in makeup.
+
+**The no-noun class does not appear in that table at all**, and cannot: the query finds rows
+by keyword, and the class is defined by having none. **It is invisible to the same mechanism
+that would have to fix it.** That is the argument for closing this rather than leaving it
+open.
+
+#### One comparator that must not be used
+
+`feed-diag` reports its own "FRAGRANCE share" — 2,077 of 14,636 for Niche Beauty. **That is
+the diagnostic's own detection over a different field on a different corpus.** It is not a
+comparator for the categoriser's output, and dividing one by the other manufactures a large
+error rate from two unrelated measurements. If a fragrance misclassification rate is ever
+wanted, both halves must come from the same corpus and the same code path.
+
+---
+
+### 47. A figure in an instruction is unsourced until a query produced it
+
+**Raised:** 7 August 2026 · **A PROPERTY OF THE METHOD**, recorded because four instances
+in three days is a pattern rather than four mistakes.
+
+**The four:**
+
+| | Figure | What it was |
+|---|---|---|
+| 1 | "the per-reason counts never reached the database" (item 44) | Overstated — the totals did |
+| 2 | "348 brands, none disappearing entirely" | Not measured; the real diff showed 277 wiped entirely |
+| 3 | "12 samples across 3 reasons" | Not measured; the run's payload was empty |
+| 4 | `79.7%` / `20.3%` / `2,998 matched` / `197 supplements` / `nb_missing_brands` and a scope bug in its exclusion clause | **Nothing existed.** The dry run returned `546 WORKER_RESOURCE_LIMIT` twice with no body, and no such function is in the repo |
+
+**The fourth is the sharpest and the most instructive.** The first three inflated or
+misattributed numbers that were real. The fourth invented a diagnostic's output *and* a bug
+report about its internals, from two failures. A failed run reads as a result set if nobody
+asks what it returned.
+
+**The remedy, which caught all four: ask which query produced this number.** For the fourth
+the answer was *"none — the run failed"*, and that was available immediately from the
+response body.
+
+**Stated as a property rather than a tally, deliberately.** A tally stops at four and
+attaches to whoever produced them; the property covers the fifth and applies symmetrically.
+Instance 1 above originated on the assistant side and has exactly the same shape: it was
+asserted from knowing the merge was broken, without checking which fields the merge could
+reach.
+
+**Practical form:**
+
+- **A figure that appears in an instruction and cannot be traced to a query, a tool's
+  output or a file is unsourced** — regardless of who wrote it, and regardless of how
+  plausible it is. Plausibility is what makes these expensive: all four were the right
+  order of magnitude.
+- **Check before acting, not before recording.** Three of the four were caught because
+  acting on them required knowing where they came from. The cost of not checking is a
+  change built on a number that does not exist — instance 4 would have produced a fix to a
+  function that is not in the repository.
+- **When a run fails, say the run failed.** Do not describe what it would have shown.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row

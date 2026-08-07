@@ -1202,6 +1202,12 @@ export type ImportCategorisation = {
   excluded?: string;
 };
 
+// DEPENDENT OUTSIDE THE IMPORTERS: scripts/feed-categorisation-probe.mts imports
+// this function to report what a candidate feed WOULD be categorised as, before any
+// import. It pins a small set of input→output assertions and aborts if they stop
+// holding, so a behaviour change here fails that probe loudly rather than silently
+// making its output wrong. If you change this function's verdicts, read those
+// assertions and update both ends together. See the CONTRACT block in that file.
 export function inferCategorisationForImport(
   name: string,
   brand: string = "",
