@@ -2907,6 +2907,62 @@ has no supplements value — but it is belt-and-braces, not load-bearing. The lo
 "Niche Beauty's supplements are excluded and unquantified" concern is **quantified and
 closed**.
 
+#### WHICH OF THE PROBE'S NUMBERS HAD EVIDENCE BEHIND THEM, AND WHICH DID NOT
+
+**Read this before quoting any figure from a probe report.** The probe carries a contract
+(`scripts/feed-categorisation-probe.mts`, CONTRACT block) that asserts input→output pairs
+against `_shared/categorisation.ts` and aborts if they stop holding. It passed 2/2 on the
+Niche Beauty run. **It covers ONE function.**
+
+| Probe figure | Contract-covered? | Verdict against the 7 Aug import |
+|---|---|---|
+| Category distribution (6 buckets) | **YES** — `inferCategorisationForImport` | Sound. Describes rows, not products. |
+| Excluded count, 491 | **NO** | Importer: 386. **1.27× out.** |
+| Barcode rejections, 134 | **NO** | Importer: 94. **1.43× out.** |
+| Creates, ≤13,546 | **NO** | Importer: 7,625. Missed duplicate suppression and out-of-stock entirely. |
+| Live depth, 930 | **NO** | Achieved 410. Cleanly measurable potential ~754. |
+
+**Only the category distribution was underwritten by the contract. Every figure that turned
+out wrong was outside it.**
+
+#### The two mechanisms, neither of which is a bug in either component
+
+**Barcode: same function, different populations.** Both call `validateBarcode`. The probe
+validates **raw feed values** — all 14,636 rows. The importer validates **what survives the
+identifier chain** — 12,336 rows, because `excluded_out_of_stock: 2,294` is applied first.
+Rate-normalised the two are 0.92% and 0.76%, and the residual is plausibly that
+out-of-stock rows are not a random sample: discontinued lines carry worse barcodes. **Not a
+bug in either. A bug in the comparison.** The same substitution explains the exclusion gap
+(3.36% vs 3.10%) and the creates gap, where the probe also missed
+`suppressed_duplicate_create: 3,921`.
+
+**Exclusion: a number reported from a function the contract does not cover.** The probe
+prints an excluded count derived from `inferCategorisationForImport`'s `excluded` field
+*plus* its own `category_excludes` simulation. The contract asserts neither the counting nor
+the exclusion simulation — only that two named products categorise as expected.
+
+#### THE DURABLE FINDING: A PARTIAL CONTRACT IS WORSE THAN NONE
+
+**A contract that covers one function and is read as covering the output converts an
+unverified number into a verified-looking one.** The probe's report opens with
+`categoriser contract: 2 assertions passed`, and every figure below it inherits that
+authority by adjacency. Four of the five did not deserve it.
+
+**This is convention 17's shape — a check that cannot fail — one level up, at the harness.**
+Convention 17 is about a check whose assertion can never be false. This is about a check
+whose assertion is true, narrow, and positioned so that its truth appears to extend to
+everything printed after it. The failure is not in the assertion; it is in the scope being
+unstated.
+
+**The rule: a contract must state what it does NOT cover, in the same place it reports
+passing.** A pass line that reads `2 assertions passed` and nothing else is an invitation to
+over-read. It should name the function it covers and the figures it does not.
+
+**Do not fix the probe while its remaining number is under investigation.** Two of three
+predictions are already known wrong; the third (930) is what the tier-1 investigation tests.
+Fixing an instrument while its last unverified reading is being checked destroys the
+comparison that would tell you whether the instrument or the system was wrong.
+
 #### One comparator that must not be used
 
 `feed-diag` reports its own "FRAGRANCE share" — 2,077 of 14,636 for Niche Beauty. **That is
