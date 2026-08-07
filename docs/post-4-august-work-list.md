@@ -2722,6 +2722,47 @@ this way.**
 
 ---
 
+### 45. `filter-debenhams-feed.py` should read `merchant_category` as a second primary signal
+
+**Raised:** 7 August 2026 · **NOT DONE DELIBERATELY.** Identified while adding feed 116972
+and explicitly left out of that change.
+
+**The gap.** The filter's primary signal is `merchant_product_category_path`, with a
+brand-whitelist plus volume-unit fallback for rows that lack it. **Feed 116972 carries that
+column for no row at all**, and classifies in `merchant_category` using Google's taxonomy
+(`Health & Beauty > Personal Care > Cosmetics > …`) rather than Debenhams' own
+(`Beauty > Face > Foundations`).
+
+So every 116972 row takes the fallback — a path built to rescue designer beauty hiding among
+eyewear and handbags inside the *fashion* feeds, not to classify a 23,751-row beauty
+catalogue. It admits only rows whose brand is on a hand-maintained whitelist **and** whose
+name states a volume. **It undercounts, silently, and the only symptom is a row count that
+looks plausible.**
+
+**The fix is small and its effect is not.** Reading `merchant_category` as a second primary
+signal — accept `Health & Beauty > Personal Care > Cosmetics` and `> Hair Care`, reject
+`Health Care`, `Vision Care`, `Massage & Relaxation` and `Luggage & Bags` — would classify
+116972 properly. It also **changes what the filter admits for every feed that populates
+`merchant_category`**, which is all nine.
+
+**Which is why it is not folded into the feed-id change.** That change has one observable —
+the nine-feed row count — and this would add a second, making tomorrow's number
+unattributable between "the rotation recovered N" and "the filter now admits differently".
+Same reasoning that kept the guard at 12,000 in that commit.
+
+**What it needs to land safely:** a before/after count on the same raw feed, per category
+bucket, so the delta is attributable to the filter rather than to supply. The raw download is
+the expensive part and one run produces both — filter the same `raw.csv.gz` twice, old rule
+and new, and diff. **That is a script, not a pipeline change**, and it can be done off a
+retained artefact without touching the schedule.
+
+**Sequencing:** after the threshold is derived from the nine-feed artefact, not before.
+Deriving a floor under one filter and then changing the filter would invalidate the floor in
+the same week it was set — and the guard comment now says the basis must be re-derived after
+any rotation, which a filter change is, in effect.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
