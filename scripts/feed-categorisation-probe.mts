@@ -31,7 +31,7 @@
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import { inferCategorisationForImport } from "../supabase/functions/_shared/categorisation.ts";
-import { normaliseEan } from "../supabase/functions/_shared/match-key.ts";
+import { normaliseEan, buildMatchKey } from "../supabase/functions/_shared/match-key.ts";
 import { validateBarcode, coalesceField } from "../supabase/functions/_shared/barcode.ts";
 
 const FEED_FILE = process.env.FEED_FILE || "./feed.csv";
@@ -137,7 +137,7 @@ const examples = new Map<string, string[]>();
 let supplementHits = 0;
 const supplementExamples: string[] = [];
 
-type Row = { name: string; brand: string; gtin: string; top: string };
+type Row = { name: string; brand: string; gtin: string; top: string; mkey: string };
 const rows: Row[] = [];
 
 for (const r of body) {
@@ -164,7 +164,7 @@ for (const r of body) {
     if (supplementExamples.length < 10) supplementExamples.push(`${brand} — ${name}`.slice(0, 96));
   }
 
-  rows.push({ name, brand, gtin: coalesceField(r, iEan, iEanAlt).value, top });
+  rows.push({ name, brand, gtin: coalesceField(r, iEan, iEanAlt).value, top, mkey: buildMatchKey(brand, name) });
 }
 
 console.log("=== 1. CATEGORY DISTRIBUTION (inferred from name+brand only) ===");
@@ -208,26 +208,40 @@ if (rejectReasons.size) {
   for (const [k, n] of [...rejectReasons.entries()].sort((a, b) => b[1] - a[1])) console.log(`    ${String(n).padStart(6)}  ${k}`);
 }
 
-// Catalogue lookup in chunks — a barcode already on an ACTIVE retailer means this
-// row deepens comparison; one that exists nowhere is a create.
+// ── CATALOGUE LOOKUP: TWO TIERS, AND THE DIFFERENCE BETWEEN THEM ──────────
+// "Present in retailer_prices" is NOT the same question as "would join a live
+// comparison". The former includes out-of-stock rows, rows at inactive retailers,
+// and rows whose product is merged or a variant child. products_active already
+// excludes merged/variant/unimaged and requires a price row at an ACTIVE retailer,
+// but does NOT require in_stock — so BUCKET A adds that.
+//
+// Reported separately because a gap between the two is usually the two measures
+// answering different questions, not either being wrong. Establish that before
+// concluding anything about a matcher.
 const all = [...validEans];
-const found = new Set<string>();
-for (let i = 0; i < all.length; i += 400) {
-  const chunk = all.slice(i, i + 400);
+const present = new Set<string>();          // any retailer_prices row
+const liveA = new Set<string>();            // BUCKET A: in stock, active retailer, in products_active
+for (let i = 0; i < all.length; i += 300) {
+  const chunk = all.slice(i, i + 300);
   const { data, error } = await sb
     .from("retailer_prices")
-    .select("ean_normalised")
+    .select("ean_normalised, product_id, in_stock, retailers!inner(active)")
     .in("ean_normalised", chunk);
   if (error) { console.error(`  catalogue lookup failed: ${error.message}`); break; }
-  for (const d of data || []) if (d.ean_normalised) found.add(d.ean_normalised);
+  const candidates: Array<{ ean: string; pid: number }> = [];
+  for (const d of (data || []) as any[]) {
+    if (!d.ean_normalised) continue;
+    present.add(d.ean_normalised);
+    if (d.in_stock === true && d.retailers?.active === true) candidates.push({ ean: d.ean_normalised, pid: d.product_id });
+  }
+  const pids = [...new Set(candidates.map((c) => c.pid))];
+  for (let j = 0; j < pids.length; j += 300) {
+    const { data: pa } = await sb.from("products_active").select("id").in("id", pids.slice(j, j + 300));
+    const live = new Set((pa || []).map((x: any) => x.id));
+    for (const c of candidates) if (live.has(c.pid)) liveA.add(c.ean);
+  }
 }
-// THE COVERAGE CAVEAT TRAVELS WITH THE NUMBER, not as a footnote. This probe can
-// only see the BARCODE tier, so its create estimate is an UPPER bound: any row the
-// importer would match by name is counted here as a create. How wrong that is
-// scales directly with barcode coverage — on a 100% GTIN feed it is nearly exact,
-// on a 40% feed most of the unmatched rows are simply invisible to this method.
-// Printing the qualifier on the same lines as the figures is deliberate: a number
-// quoted out of this output carries its own caveat with it.
+
 const cov = 100 * gtinValid / body.length;
 const confidence = cov >= 95 ? "HIGH — nearly all rows carry a usable barcode"
   : cov >= 70 ? "MODERATE — a minority of rows can only match by name"
@@ -235,9 +249,38 @@ const confidence = cov >= 95 ? "HIGH — nearly all rows carry a usable barcode"
   : "VERY LOW — most rows cannot be assessed by barcode at all";
 
 console.log(`\n  barcode coverage: ${gtinValid}/${body.length} = ${cov.toFixed(1)}%  [${confidence}]`);
-console.log(`  barcodes ALREADY in retailer_prices: ${found.size} of ${validEans.size}`);
-console.log(`  -> would MATCH on barcode:  ~${found.size}  (barcode tier only, at ${cov.toFixed(1)}% coverage)`);
-console.log(`  -> would CREATE:            <=${body.length - found.size}  (UPPER BOUND at ${cov.toFixed(1)}% coverage — name-tier matches are counted here as creates)`);
-console.log(`  Name-tier matching is NOT simulated: it depends on staged state this probe`);
-console.log(`  deliberately does not reconstruct. Quote the create figure as an upper bound.`);
+console.log(`  present in retailer_prices (ANY row):        ${present.size} of ${validEans.size}`);
+console.log(`  BUCKET A — in stock, active retailer, in products_active: ${liveA.size}`);
+console.log(`     -> would join a LIVE comparison:          ~${liveA.size}  (at ${cov.toFixed(1)}% coverage)`);
+console.log(`     -> present but NOT live (oos / inactive / merged / variant): ${present.size - liveA.size}`);
+console.log(`  -> would CREATE: <=${body.length - present.size}  (UPPER BOUND at ${cov.toFixed(1)}% coverage — name-tier matches counted as creates)`);
+
+// ── 5. TIER DISAGREEMENT ──────────────────────────────────────────────────
+// feed-diag matches on match_key; this probe matches on normalised barcode. If
+// barcode finds depth match_key misses, that is a finding about the MATCHER, not
+// about the candidate feed — and it is the sibling-coalesce premise, which exists
+// because advertisers populate product_GTIN where we read ean.
+console.log("\n=== 5. TIER DISAGREEMENT (barcode vs match_key) ===");
+const byEan = new Map<string, string>();    // ean -> match_key, for rows that matched on barcode
+for (const r of rows) {
+  if (!r.gtin) continue;
+  const v = validateBarcode(r.gtin);
+  const n = v.value ? (normaliseEan(v.value) ?? v.value) : null;
+  if (n && liveA.has(n)) byEan.set(n, r.mkey);
+}
+const mkeys = [...new Set([...byEan.values()])].filter(Boolean);
+const mkeyHit = new Set<string>();
+for (let i = 0; i < mkeys.length; i += 300) {
+  const { data } = await sb.from("products_active").select("match_key").in("match_key", mkeys.slice(i, i + 300));
+  for (const d of (data || []) as any[]) if (d.match_key) mkeyHit.add(d.match_key);
+}
+const bothTiers = [...byEan.values()].filter((k) => k && mkeyHit.has(k)).length;
+const barcodeOnly = byEan.size - bothTiers;
+console.log(`  live barcode matches:                 ${byEan.size}`);
+console.log(`  of those, match_key ALSO matches:     ${bothTiers}`);
+console.log(`  BARCODE-ONLY (match_key misses them): ${barcodeOnly}`);
+console.log("  A large barcode-only figure is the sibling-coalesce premise confirmed:");
+console.log("  the advertiser names products differently from our catalogue, so only the");
+console.log("  barcode tier finds them. That is a property of the MATCHER, not this feed.");
+
 console.log("\nDone. Nothing was written.");
