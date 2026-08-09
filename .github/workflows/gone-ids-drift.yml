@@ -1,0 +1,144 @@
+name: gone-ids drift check (weekly)
+
+# WHY THIS EXISTS. lib/superdrug-removed.ts is catalogue state frozen into the edge
+# middleware bundle. It was generated 19 July, the Superdrug retirement flipped 27 July,
+# and its own header said to regenerate right before the flip — which was not done. By
+# 9 August it was serving HTTP 410 Gone for 3,894 LIVE, in-stock products, 3,761 of them
+# Perfume Click, for thirteen days. 410 is the strongest "permanently deleted" signal
+# there is, so this was told to Google every day.
+#
+# Nothing caused that except the absence of this job. The list did not decay: no product
+# was deleted or renumbered. A retailer was onboarded between the list being generated and
+# the list being used, and nothing recomputed it.
+#
+# THE RECURRENCE TRIGGER IS RETAILER LIFECYCLE, NOT TIME. Every onboarding and every
+# retirement changes which ids belong in the list. A weekly cadence is a floor, not the
+# right signal — if you are flipping retailers.active, run this by hand the same day
+# rather than waiting for Sunday.
+#
+# WRITES NOTHING TO main. The regeneration is read-only against the database; the only
+# output is a pull request. A route change that 410s catalogue URLs is a human decision,
+# so automation detects and a person merges. See work-list item 51 and
+# docs/standing-rule-frozen-catalogue-state.md.
+
+"on":
+  schedule:
+    - cron: '0 6 * * 0'      # Sundays 06:00 UTC, after every daily import has run
+  workflow_dispatch:
+    inputs:
+      fail_threshold:
+        description: 'Fail the run if the net change exceeds this many ids (default 2000)'
+        required: false
+        default: '2000'
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+
+      - name: Regenerate GONE_IDS from live state
+        env:
+          SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: npx --yes tsx scripts/regen-superdrug-gone-ids.mts | tee regen.log
+
+      # Counts come from the file, not from the script's stdout, so a change to its
+      # logging cannot silently break the threshold check.
+      - name: Measure the drift
+        id: drift
+        run: |
+          BEFORE=$(git show HEAD:lib/superdrug-removed.ts | grep -oE "GONE_IDS_RAW =\s*'[^']*'" | grep -oE "[0-9]+" | wc -l)
+          AFTER=$(grep -oE "GONE_IDS_RAW =\s*'[^']*'" lib/superdrug-removed.ts | grep -oE "[0-9]+" | wc -l)
+          ADDED=$(grep -oE '^  added: [0-9]+' regen.log | grep -oE '[0-9]+' || echo 0)
+          # Fall back to the script's own diff line if the format above ever moves.
+          ADDED=$(grep -oE 'added: [0-9]+' regen.log | grep -oE '[0-9]+' | head -1 || echo 0)
+          REMOVED=$(grep -oE 'removed: [0-9]+' regen.log | grep -oE '[0-9]+' | head -1 || echo 0)
+          NET=$(( AFTER - BEFORE )); NET=${NET#-}
+          CHANGED=no; git diff --quiet -- lib/superdrug-removed.ts || CHANGED=yes
+          for v in BEFORE AFTER ADDED REMOVED NET CHANGED; do echo "$v=${!v}" >> "$GITHUB_OUTPUT"; done
+
+          # A RUN SUMMARY EITHER WAY. No PR is indistinguishable from the workflow not
+          # having run, so the summary is the proof of life and the PR is the proof of
+          # drift. Do not make this conditional.
+          {
+            echo "### GONE_IDS drift check"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| ids before | $BEFORE |"
+            echo "| ids after | $AFTER |"
+            echo "| added (now orphaned) | $ADDED |"
+            echo "| removed (**live again — were being 410'd**) | $REMOVED |"
+            echo "| net change | $NET |"
+            echo "| file changed | **$CHANGED** |"
+            echo ""
+            if [ "$CHANGED" = no ]; then
+              echo "No drift. The committed list matches live state. No pull request opened."
+            else
+              echo "Drift found — pull request opened. **$REMOVED live products are currently served 410.**"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # A jump of thousands is not drift. It means something happened to the catalogue —
+      # a retailer retired, an import failed and left products orphaned, a bulk merge.
+      # Regenerating on top of that would bake the event into the middleware without
+      # anyone deciding it was real. Fail, and make a person look.
+      - name: Refuse a large delta
+        if: steps.drift.outputs.CHANGED == 'yes'
+        run: |
+          LIMIT="${{ inputs.fail_threshold || '2000' }}"
+          if [ "${{ steps.drift.outputs.NET }}" -gt "$LIMIT" ]; then
+            echo "::error::Net change ${{ steps.drift.outputs.NET }} exceeds $LIMIT — this is a catalogue event, not list drift. Investigate before regenerating; do NOT merge a PR from this run."
+            {
+              echo ""
+              echo "> **FAILED: net change ${{ steps.drift.outputs.NET }} exceeds the $LIMIT threshold.**"
+              echo "> A jump this size means the catalogue moved, not that the list drifted."
+              echo "> Find the cause first. Re-run with a raised \`fail_threshold\` only once it is understood."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - name: Open a pull request
+        if: steps.drift.outputs.CHANGED == 'yes'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: auto/gone-ids-drift
+          delete-branch: true
+          title: "fix(middleware): GONE_IDS drift — ${{ steps.drift.outputs.REMOVED }} live products being 410'd"
+          commit-message: |
+            fix(middleware): regenerate GONE_IDS from live state
+
+            Automated weekly drift check. ${{ steps.drift.outputs.REMOVED }} ids removed
+            (live again), ${{ steps.drift.outputs.ADDED }} added (newly orphaned).
+          body: |
+            Automated by `.github/workflows/gone-ids-drift.yml`. **Read the numbers before merging — this changes HTTP status for catalogue URLs.**
+
+            | | |
+            |---|---|
+            | ids before | ${{ steps.drift.outputs.BEFORE }} |
+            | ids after | ${{ steps.drift.outputs.AFTER }} |
+            | **removed — live products currently served 410** | **${{ steps.drift.outputs.REMOVED }}** |
+            | added — newly orphaned, will now 410 | ${{ steps.drift.outputs.ADDED }} |
+
+            **Removed ids are the urgent half.** Each one is a product in `products_active`
+            that the middleware is telling Google is permanently deleted. They return 200
+            the moment this merges and deploys — nothing caches the 410
+            (`max-age=0, must-revalidate`) — but a 410 held for days costs index position
+            that comes back slowly, so consider resubmitting the affected URLs.
+
+            **Added ids** have lost their last live offer and should 410. Sanity-check that
+            a retailer did not simply fail to import: an import failure orphans products
+            that are not actually gone.
+
+            Sources: work-list item 51, `docs/standing-rule-frozen-catalogue-state.md`.
