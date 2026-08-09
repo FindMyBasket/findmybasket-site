@@ -2975,11 +2975,11 @@ wanted, both halves must come from the same corpus and the same code path.
 
 ### 47. A figure in an instruction is unsourced until a query produced it
 
-**Raised:** 7 August 2026 · **Fifth instance added 8 August 2026** · **A PROPERTY OF THE
-METHOD**, recorded because five instances in four days is a pattern rather than five
+**Raised:** 7 August 2026 · **Fifth instance 8 August · Sixth 9 August** · **A PROPERTY OF
+THE METHOD**, recorded because six instances in five days is a pattern rather than six
 mistakes.
 
-**The five:**
+**The six:**
 
 | | Figure | What it was |
 |---|---|---|
@@ -2988,6 +2988,15 @@ mistakes.
 | 3 | "12 samples across 3 reasons" | Not measured; the run's payload was empty |
 | 4 | `79.7%` / `20.3%` / `2,998 matched` / `197 supplements` / `nb_missing_brands` and a scope bug in its exclusion clause | **Nothing existed.** The dry run returned `546 WORKER_RESOURCE_LIMIT` twice with no body, and no such function is in the repo |
 | 5 | "EXCLUDED at 45.7%, **4,116** rows dropped for want of a brand whitelist entry" | Unsourced. The run it was attributed to (`scrape_log` 206) has `skipped_new_brand: 0` — Niche Beauty imported with `existing_brands_only: false`, so the gate never fired. Reconstructing the gate from the catalogue gives **5,029** over 297 brands. Also 4,180 / 3,046 / "89 of 200", none reproducible |
+| 6 | "`merchant_category` populated on all 5,128 rows, whitelist covering **4 of 62** values, `Beauty > Fragrance > Womens Fragrance` present in the feed" | **Nothing on disk could have produced it.** `merchant_category` was never in the Debenhams workflow's `COLS`, so no run has ever downloaded it and no artefact contains it. The values may well be real — they are consistent with everything else observed — but they came from outside the pipeline and nothing retained them |
+
+**The sixth is the one that closes the loop with instance 5, and it is worth stating why.**
+Instance 5's figure could not be reproduced because a *counter* read zero. Instance 6's
+figure could not be reproduced because *the column was never fetched*. Both were quoted as
+properties of a feed; neither was recoverable from anything the pipeline keeps. The
+difference is that instance 6's evidence never existed in our systems at all — and the fix
+for that is not "check the number", it is `merchant_category` being added to `COLS`
+(9 August), so the next such claim has something behind it.
 
 **The fifth arrived within a day of the property being written, which is the point of having
 written it as a property.** It is the mildest of the five in isolation — the number was the
@@ -3040,8 +3049,11 @@ shown the reconstruction — which is what symmetric is supposed to look like in
 
 - **A figure that appears in an instruction and cannot be traced to a query, a tool's
   output or a file is unsourced** — regardless of who wrote it, and regardless of how
-  plausible it is. Plausibility is what makes these expensive: all five were the right
+  plausible it is. Plausibility is what makes these expensive: all six were the right
   order of magnitude.
+- **Ask what would have had to be retained for this to be checkable.** Sometimes the answer
+  is "nothing was" — instance 6 — and that is a finding about the pipeline rather than
+  about the figure.
 - **Check before acting, not before recording.** Three of the four were caught because
   acting on them required knowing where they came from. The cost of not checking is a
   change built on a number that does not exist — instance 4 would have produced a fix to a
@@ -3293,6 +3305,85 @@ The import path is not to be touched while the tier-1 defect (`index.ts:781` col
 `coalesceField(fields, idx.ean, idx.ean_alt)` at `index.ts:1957`, so coalesce-recovered
 barcodes are never in `eanToProductId`) is open. Two importer changes with the matcher unresolved makes any
 surprise unattributable.
+
+---
+
+### 51. The same feed is two different feeds depending on which path fetched it
+
+**Raised:** 9 August 2026 · **A CLASS, NOT AN INSTANCE.** Found while fixing the Debenhams
+filter; the filter was the symptom.
+
+#### What happened
+
+`import-awin-feed`'s `buildFeedUrl` (`index.ts:271-330`) requests **20 columns**.
+`.github/workflows/refresh-debenhams.yml` hand-wrote its own `COLS` and requested **15**.
+Nothing compares the two, and nothing ever has.
+
+Debenhams' `feed_url` is `storage://retailer-feeds/debenhams-beauty.csv.gz`, so
+`buildFeedUrl` is **bypassed entirely** for it. The workflow's list is not a second opinion —
+it is the only column list that applies, and it silently differed from the one every other
+AWIN retailer receives.
+
+#### What it cost, measured
+
+**`merchant_category`** — absent. This is the whole Debenhams outage. 116972 carries no
+`merchant_product_category_path` and puts its taxonomy here instead, so the filter could not
+see it, and neither could anyone diagnosing the filter. Six days stale, and the diagnostic
+question "what is actually in 116972" was unanswerable from anything retained. Added 9 Aug.
+
+**`description` and `product_short_description`** — still absent. Consequence, measured
+9 Aug: of the products carrying a Debenhams offer that have a description, the sources are
+Superdrug 2,093, Beauty Bay 978, Beauty Flash 299, Boots 216, Escentual 70, Stylevana 38,
+Branded Beauty 34, YesStyle 21. **Debenhams appears nowhere.** 10,232 rows and it has never
+contributed a single description, because the columns are not requested. Its description
+coverage is 36.7%, the lowest of any live retailer (Beauty Flash 99.3%, Atelier 100%), and
+every one of those descriptions was borrowed.
+
+**`product_GTIN`** — still absent, and this one is a **latent trap**. It is the column the
+AWIN sibling coalesce reads. `sibling_coalesce` is currently `false` for Debenhams, so
+nothing is broken today. Switch it on as part of the rollout and **it will do nothing at
+all**, silently, with `ean_from_sibling: 0` reading as "this feed has no siblings to
+recover" rather than "we never asked for the column". Item 33's rollout must not reach
+retailer 28 before this is fixed.
+
+**`product_type`** — still absent. The sibling of `category_name`, per item 33's measured
+pairs.
+
+#### The class
+
+**Any retailer whose `feed_url` bypasses `buildFeedUrl` gets whatever columns its fetcher
+chose, and nothing reconciles that with what the importer expects.** Three retailers are in
+this position:
+
+| Retailer | Fetcher | Column list |
+|---|---|---|
+| 28 Debenhams | `refresh-debenhams.yml` | **Ours, hand-written, diverged** |
+| 6 Branded Beauty | `sync-bb-feed.yml` | Merchant's Darwin URL in a secret |
+| 29 Atelier De Glow | `sync-adg-feed.yml` | Merchant's Darwin URL in a secret |
+
+Debenhams is the only one where *we* choose the columns in two places, so it is the only
+one that can diverge in this exact way. The other two have the adjacent exposure: their
+column set is decided by a URL held in a GitHub secret that **nothing in the repository can
+inspect**, so it cannot be diffed against `buildFeedUrl` at all — not because it matches,
+but because it is unreadable from here.
+
+#### Why it did not fail loudly
+
+A missing column is not an error anywhere in the chain. AWIN returns the columns asked for.
+The CSV parser maps what it finds. `idx.merchant_category` is simply `-1`, and every read
+through it returns empty. **A feed with a column missing is indistinguishable from a feed
+where every row leaves that column blank** — and the second is a normal, expected state that
+the sibling-pair work exists to handle. The system is built to tolerate blank columns, which
+is exactly what makes an unrequested one invisible.
+
+Same family as items 48, 49 and the guard: a plausible zero instead of a failure.
+
+#### What would catch it
+
+Not proposed as a build, recorded as the shape of the answer: **one column list, one place.**
+Either the workflows import the importer's list, or a check diffs each fetcher's `COLS`
+against `buildFeedUrl` and fails when they part. A comment asserting they match would be
+convention 17's shape — a check that cannot fail.
 
 ---
 
