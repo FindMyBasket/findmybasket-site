@@ -2859,6 +2859,110 @@ by keyword, and the class is defined by having none. **It is invisible to the sa
 that would have to fix it.** That is the argument for closing this rather than leaving it
 open.
 
+#### Measured on Niche Beauty, 7 August 2026 — and this feed largely avoids the trap
+
+The probe (`scripts/feed-categorisation-probe.mts`, run against fid 102930) categorised all
+14,636 rows through the importer's own function:
+
+| | rows | |
+|---|---|---|
+| skincare | 4,642 | 31.7% |
+| makeup | 4,528 | 30.9% |
+| **fragrance** | **2,197** | **15.0%** |
+| hair | 1,427 | 9.7% |
+| bath_body | 1,351 | 9.2% |
+| excluded, 13 reasons | 491 | 3.4% |
+
+**The fragrance worry does not materialise here, and that is a property of this advertiser's
+naming, not a reprieve.** Niche Beauty writes the form into the name —
+`"Creed - Aventus for Her - Eau de Parfum Women"` — so `RE_HARD_FRAGRANCE_FORM` catches it.
+The 2,197 sits within 6% of `feed-diag`'s independently-detected 2,077, which is reassuring
+precisely because the two used different methods on different fields.
+
+**The Cinq Mondes class is still real.** It will be tested properly on a fragrance-only
+retailer, where names may omit the noun *because* the whole catalogue is fragrance and the
+word carries no information. See item 48.
+
+#### A named row showed what the aggregate hid, for the second time
+
+`FARA HOMIDI — ESSENTIAL LIP COMPACT - Lip Palettes` was assigned **skincare**. A lip
+palette is makeup.
+
+Not a blocker at 3.4% excluded and one visible error — but **it is the method point, not the
+row**. A distribution table cannot surface a misclassification: every bucket looks like a
+plausible number. Six named examples per bucket can, and did. That is now twice, after the
+Cinq Mondes pair, that a named example showed something a percentage could not.
+
+**The probe prints six examples per bucket by design, and that choice is what caught it.**
+Keep it when the output is next made terser.
+
+#### The supplements exclusion is near-nil here — concern closed
+
+`category_excludes` of `["Vitamins & Supplements","Supplements"]` would drop **4 rows** of
+14,636. The categoriser separately excludes **18** as `EXCLUDED:supplement` on its own
+denylist, with no config help.
+
+**Keep the exclusion** for consistency with Atelier De Glow and because `top_category` still
+has no supplements value — but it is belt-and-braces, not load-bearing. The long-standing
+"Niche Beauty's supplements are excluded and unquantified" concern is **quantified and
+closed**.
+
+#### WHICH OF THE PROBE'S NUMBERS HAD EVIDENCE BEHIND THEM, AND WHICH DID NOT
+
+**Read this before quoting any figure from a probe report.** The probe carries a contract
+(`scripts/feed-categorisation-probe.mts`, CONTRACT block) that asserts input→output pairs
+against `_shared/categorisation.ts` and aborts if they stop holding. It passed 2/2 on the
+Niche Beauty run. **It covers ONE function.**
+
+| Probe figure | Contract-covered? | Verdict against the 7 Aug import |
+|---|---|---|
+| Category distribution (6 buckets) | **YES** — `inferCategorisationForImport` | Sound. Describes rows, not products. |
+| Excluded count, 491 | **NO** | Importer: 386. **1.27× out.** |
+| Barcode rejections, 134 | **NO** | Importer: 94. **1.43× out.** |
+| Creates, ≤13,546 | **NO** | Importer: 7,625. Missed duplicate suppression and out-of-stock entirely. |
+| Live depth, 930 | **NO** | Achieved 410. Cleanly measurable potential ~754. |
+
+**Only the category distribution was underwritten by the contract. Every figure that turned
+out wrong was outside it.**
+
+#### The two mechanisms, neither of which is a bug in either component
+
+**Barcode: same function, different populations.** Both call `validateBarcode`. The probe
+validates **raw feed values** — all 14,636 rows. The importer validates **what survives the
+identifier chain** — 12,336 rows, because `excluded_out_of_stock: 2,294` is applied first.
+Rate-normalised the two are 0.92% and 0.76%, and the residual is plausibly that
+out-of-stock rows are not a random sample: discontinued lines carry worse barcodes. **Not a
+bug in either. A bug in the comparison.** The same substitution explains the exclusion gap
+(3.36% vs 3.10%) and the creates gap, where the probe also missed
+`suppressed_duplicate_create: 3,921`.
+
+**Exclusion: a number reported from a function the contract does not cover.** The probe
+prints an excluded count derived from `inferCategorisationForImport`'s `excluded` field
+*plus* its own `category_excludes` simulation. The contract asserts neither the counting nor
+the exclusion simulation — only that two named products categorise as expected.
+
+#### THE DURABLE FINDING: A PARTIAL CONTRACT IS WORSE THAN NONE
+
+**A contract that covers one function and is read as covering the output converts an
+unverified number into a verified-looking one.** The probe's report opens with
+`categoriser contract: 2 assertions passed`, and every figure below it inherits that
+authority by adjacency. Four of the five did not deserve it.
+
+**This is convention 17's shape — a check that cannot fail — one level up, at the harness.**
+Convention 17 is about a check whose assertion can never be false. This is about a check
+whose assertion is true, narrow, and positioned so that its truth appears to extend to
+everything printed after it. The failure is not in the assertion; it is in the scope being
+unstated.
+
+**The rule: a contract must state what it does NOT cover, in the same place it reports
+passing.** A pass line that reads `2 assertions passed` and nothing else is an invitation to
+over-read. It should name the function it covers and the figures it does not.
+
+**Do not fix the probe while its remaining number is under investigation.** Two of three
+predictions are already known wrong; the third (930) is what the tier-1 investigation tests.
+Fixing an instrument while its last unverified reading is being checked destroys the
+comparison that would tell you whether the instrument or the system was wrong.
+
 #### One comparator that must not be used
 
 `feed-diag` reports its own "FRAGRANCE share" — 2,077 of 14,636 for Niche Beauty. **That is
@@ -2871,10 +2975,11 @@ wanted, both halves must come from the same corpus and the same code path.
 
 ### 47. A figure in an instruction is unsourced until a query produced it
 
-**Raised:** 7 August 2026 · **A PROPERTY OF THE METHOD**, recorded because four instances
-in three days is a pattern rather than four mistakes.
+**Raised:** 7 August 2026 · **Fifth instance 8 August · Sixth 9 August** · **A PROPERTY OF
+THE METHOD**, recorded because six instances in five days is a pattern rather than six
+mistakes.
 
-**The four:**
+**The six:**
 
 | | Figure | What it was |
 |---|---|---|
@@ -2882,33 +2987,465 @@ in three days is a pattern rather than four mistakes.
 | 2 | "348 brands, none disappearing entirely" | Not measured; the real diff showed 277 wiped entirely |
 | 3 | "12 samples across 3 reasons" | Not measured; the run's payload was empty |
 | 4 | `79.7%` / `20.3%` / `2,998 matched` / `197 supplements` / `nb_missing_brands` and a scope bug in its exclusion clause | **Nothing existed.** The dry run returned `546 WORKER_RESOURCE_LIMIT` twice with no body, and no such function is in the repo |
+| 5 | "EXCLUDED at 45.7%, **4,116** rows dropped for want of a brand whitelist entry" | Unsourced. The run it was attributed to (`scrape_log` 206) has `skipped_new_brand: 0` — Niche Beauty imported with `existing_brands_only: false`, so the gate never fired. Reconstructing the gate from the catalogue gives **5,029** over 297 brands. Also 4,180 / 3,046 / "89 of 200", none reproducible |
+| 6 | "`merchant_category` populated on all 5,128 rows, whitelist covering **4 of 62** values, `Beauty > Fragrance > Womens Fragrance` present in the feed" | **Nothing on disk could have produced it.** `merchant_category` was never in the Debenhams workflow's `COLS`, so no run has ever downloaded it and no artefact contains it. The values may well be real — they are consistent with everything else observed — but they came from outside the pipeline and nothing retained them |
+
+**The sixth is the one that closes the loop with instance 5, and it is worth stating why.**
+Instance 5's figure could not be reproduced because a *counter* read zero. Instance 6's
+figure could not be reproduced because *the column was never fetched*. Both were quoted as
+properties of a feed; neither was recoverable from anything the pipeline keeps. The
+difference is that instance 6's evidence never existed in our systems at all — and the fix
+for that is not "check the number", it is `merchant_category` being added to `COLS`
+(9 August), so the next such claim has something behind it.
+
+**The fifth arrived within a day of the property being written, which is the point of having
+written it as a property.** It is the mildest of the five in isolation — the number was the
+right order of magnitude and pointed at a real population — and the most instructive about
+cost. It was quoted as a run figure. The run said `skipped_new_brand: 0`. Had the
+reconstruction not been attempted, the gap between 4,116 and 5,029 would have been carried
+forward as fact into a decision about a retailer's onboarding, and the 913-row difference is
+larger than most of the populations this list argues about.
+
+**The same instruction carried three more:** 4,180 Beauty Flash duplicates, 3,046 of them
+internal, and "89 of 200 ambiguous barcodes". The catalogue supports **10** same-retailer
+same-barcode multi-product cases at Beauty Flash, and cannot support thousands:
+`retailer_prices` carries `UNIQUE (product_id, retailer_id)`, so a feed-level barcode repeat
+collapses onto one row rather than surviving as a duplicate. Those figures may well be sound
+feed-level measurements — there is no Beauty Flash feed on disk to re-run them against.
+
+**UNSOURCED IS NOT THE SAME AS WRONG, and the two need different responses.** A false figure
+is corrected. A figure whose derivation cannot be reproduced *because the evidence is not
+retained* is a gap in what we keep, and correcting the number is not available as a move.
+The Beauty Flash case is the clean example: the reason the catalogue cannot confirm 3,046 is
+`UNIQUE (product_id, retailer_id)` — the schema forbids holding the evidence, so a
+feed-level measurement is unfalsifiable from the catalogue **by design**, not by oversight.
+Instance 4 was a number that did not exist. These may be numbers that existed and left no
+trace. Only the first is a mistake; the second is a retention decision nobody made
+deliberately.
+
+**Practical consequence:** when a figure can only be produced from a feed, the feed — or the
+counts derived from it — has to be kept at the moment of measurement. Otherwise the figure
+becomes unauditable the instant the run ends, and every later argument about it is
+irresolvable rather than merely unresolved.
 
 **The fourth is the sharpest and the most instructive.** The first three inflated or
 misattributed numbers that were real. The fourth invented a diagnostic's output *and* a bug
 report about its internals, from two failures. A failed run reads as a result set if nobody
 asks what it returned.
 
-**The remedy, which caught all four: ask which query produced this number.** For the fourth
+**The remedy, which caught all five: ask which query produced this number.** For the fourth
 the answer was *"none — the run failed"*, and that was available immediately from the
-response body.
+response body. For the fifth it was *"a run whose counter for that gate reads zero"*, and
+that was one `scrape_log` read away.
 
 **Stated as a property rather than a tally, deliberately.** A tally stops at four and
 attaches to whoever produced them; the property covers the fifth and applies symmetrically.
 Instance 1 above originated on the assistant side and has exactly the same shape: it was
 asserted from knowing the merge was broken, without checking which fields the merge could
-reach.
+reach. The fifth came from the human side and was corrected by the human side on being
+shown the reconstruction — which is what symmetric is supposed to look like in practice.
 
 **Practical form:**
 
 - **A figure that appears in an instruction and cannot be traced to a query, a tool's
   output or a file is unsourced** — regardless of who wrote it, and regardless of how
-  plausible it is. Plausibility is what makes these expensive: all four were the right
+  plausible it is. Plausibility is what makes these expensive: all six were the right
   order of magnitude.
+- **Ask what would have had to be retained for this to be checkable.** Sometimes the answer
+  is "nothing was" — instance 6 — and that is a finding about the pipeline rather than
+  about the figure.
 - **Check before acting, not before recording.** Three of the four were caught because
   acting on them required knowing where they came from. The cost of not checking is a
   change built on a number that does not exist — instance 4 would have produced a fix to a
   function that is not in the repository.
 - **When a run fails, say the run failed.** Do not describe what it would have shown.
+
+---
+
+### 48. `feed-diag`'s overlap buckets are match-key-only, and read zero on any differently-named feed
+
+**Raised:** 7 August 2026 · **THE LARGER RESULT of the Niche Beauty work**, and a finding
+about the matcher rather than about any candidate retailer.
+
+#### Zero of 930 is not inefficiency. It is a tier that does not function on this feed
+
+Measured on Niche Beauty (fid 102930), 7 August 2026, both tiers computed over the same
+rows by `scripts/feed-categorisation-probe.mts`:
+
+```
+present in retailer_prices (ANY row):                         1,090
+BUCKET A — in stock, active retailer, in products_active:       930
+present but NOT live (oos / inactive / merged / variant):       160
+
+live barcode matches:                   930
+of those, match_key ALSO matches:         0
+BARCODE-ONLY (match_key misses them):   930
+```
+
+**Zero overlap between the tiers.** Not partial disagreement — the `match_key` tier finds
+**none** of the 930 products the barcode tier finds live.
+
+**The definitional gap is small and does not explain it.** Only 160 of 1,090 fall away once
+"present in `retailer_prices`" is tightened to in-stock, active-retailer and in
+`products_active` (which already excludes merged, variant-child and unimaged). That is a
+~15% inflation, not an order of magnitude. Definitions were worth ruling out first; they are
+not the answer.
+
+**The cause.** Niche Beauty names products `"Creed - Aventus for Her - Eau de Parfum Women"`
+— brand prefix, hyphenated segments, category suffix. `buildMatchKey(brand, name)` produces
+a key our catalogue's keys do not match, on 930 of 930. The barcode tier finds them because
+`product_GTIN` is populated at 100% and the importer reads it through `ean_alt`. **This is
+the sibling-coalesce premise confirmed by measurement.**
+
+#### The consequence beyond Niche Beauty
+
+**`feed-diag`'s bucket A reads zero on any advertiser whose naming convention differs from
+ours, regardless of how much genuine overlap exists.** A has been the onboarding signal.
+Every prestige feed assessed with it was assessed on a measure blind to its depth.
+
+**THE GATE WAS WRONG, NOT THE ANSWER.** An A = 0 gate was set on the reasoning that a new
+retailer earns its place by adding comparison depth, not catalogue size
+(`docs/strategy.md:488`). That reasoning is sound and is unchanged. What was wrong was
+treating A as a measurement of depth: it measures *match-key* depth, and on a
+differently-named feed that is zero by construction. Niche Beauty's real live depth is 930,
+and A reported 0 for it.
+
+#### Which assessments used it
+
+Recovered from workflow run logs, 7 August 2026:
+
+| Run | Feed | A reported | Status |
+|---|---|---|---|
+| 30844150577 | The Organic Pharmacy, fid 62815 | **23** | onboarding assessment; non-zero, so less exposed |
+| 30984692444 | Debenhams 90938 | 0 | rotation investigation |
+| 30984698505 | Debenhams 90940 | 0 | rotation investigation |
+| 30984704512 | Debenhams 90945 | *(no value in log)* | 514k rows |
+| 30984710412 | Debenhams 90947 | 0 | rotation investigation |
+| 30985368741 | Debenhams 91126 | 0 | rotation investigation |
+| 30985374005 | Debenhams 91133 | 0 | rotation investigation |
+| 30985379697 | Debenhams 91134 | *(no value in log)* | 501k rows |
+| 30985385787 | Debenhams 91135 | **10** | rotation investigation |
+| 31172005496 | **Niche Beauty 102930** | **0** | **onboarding — now known to be 930** |
+
+**Only two were onboarding decisions**: The Organic Pharmacy and Niche Beauty. The Debenhams
+runs were feed-rotation investigation, where A was not the decision variable — so the
+retrospective exposure is narrower than it first appears. **The Organic Pharmacy returned
+A = 23, so it was not gated on a zero.** Niche Beauty is the one case where an A = 0
+characterised a retailer, and it is now corrected.
+
+**Any future A = 0 should be treated as "the match-key tier found nothing", not as "there is
+no depth".**
+
+#### Same shape as the guard and the filter
+
+A measure calibrated on the corpus it was written against, **degrading to a plausible zero
+rather than erroring**. The row-floor guard was calibrated on a superseded feed level; the
+Debenhams filter on the feeds that existed when it was written; bucket A on advertisers who
+name products the way our catalogue does. None of the three fails loudly. All three return a
+number that looks like an answer.
+
+#### The test that would confirm it is a pattern — PARKED
+
+**The Fragrance Shop is the natural test and cannot be run now.** It is a **Rakuten**
+retailer, so both the probe and the import path need Rakuten-specific work rather than a
+feed id — a build, not a dispatch. Parked on that basis, not on priority.
+
+**Two predictions to test when it resumes:**
+
+1. **Whether the fragrance-noun naming holds on a fragrance-only retailer.** Niche Beauty
+   writes "Eau de Parfum" into every fragrance name. A fragrance-only catalogue may omit it
+   precisely because it carries no information there — which is item 46's unfixable class,
+   arriving at scale.
+2. **Whether `match_key` scores zero again.** If it does, the tier failure is a property of
+   prestige naming generally rather than of Niche Beauty.
+
+**If both hold, the pattern is confirmed rather than a single-retailer property**, and bucket
+A should be reported alongside a barcode tier permanently rather than alone.
+
+#### Niche Beauty's numbers, with their bounds
+
+- **930 live comparison-depth products** — a barcode-tier **lower bound**, since name-tier
+  matches are not simulated.
+- **≤13,546 creates** — an **upper bound** at 99.1% barcode coverage, for the same reason.
+
+With `match_key` scoring zero, the name tier is unlikely to move either much — but that is an
+inference, and the probe does not test it.
+
+---
+
+### 49. `existing_brands_only` dissolves the condition it measures, by measuring it
+
+**Raised:** 8 August 2026 · **THE FINDING from the Niche Beauty import.** Same family as the
+row-floor guard, the Debenhams filter and bucket A — a measure that returns a plausible
+answer instead of failing. **This one is worse, because the measurement caused the
+condition.**
+
+#### The mechanism
+
+`existingBrandSet` is built at `supabase/functions/import-awin-feed/index.ts:706-732`:
+
+```
+supa.from("products").select("match_brand").neq("match_brand", "")
+```
+
+**Every `products.match_brand` in the catalogue. No retailer filter. No `active` filter.
+Merged and variant-child rows included.** The gate at `index.ts:2187-2196` then skips any
+create whose brand is not in that set.
+
+The Niche Beauty import ran 7 August 2026 at 12:38 UTC (`scrape_log` 206) with
+`existing_brands_only: false`, and **created 7,625 products across 417 brands**. 297 of
+those brands had never been in `products` before.
+
+They are in `products` now. So `existingBrandSet` contains them.
+
+#### What that does to the next measurement
+
+Switch retailer 32 to `existing_brands_only: true` tomorrow and the run reports
+`skipped_new_brand: 0`. Nothing about the feed has changed. Nothing about our brand coverage
+has changed in any sense that matters commercially. **The whitelist was populated by the act
+of running the import that the whitelist exists to constrain.**
+
+A zero there reads as *the gate is working, this retailer's brands are all ones we carry*.
+The truth is *the gate was dissolved before it was ever switched on*.
+
+#### Why it is the worse case of the family
+
+| | Failure |
+|---|---|
+| Row-floor guard | Calibrated on a superseded feed level |
+| Debenhams filter | Calibrated on the feeds that existed when written |
+| Bucket A | Blind to differently-named feeds by construction |
+| **This** | **Correct on every run. The prior state it compares against is destroyed by the run itself** |
+
+The first three return a stale or structurally-blind answer. This one returns an answer that
+is arithmetically correct and describes a world the measurement created. There is no
+calibration to refresh and no corpus to widen — re-running it more carefully makes it worse,
+not better.
+
+#### The number, and how it was recovered
+
+The pre-import brand set is only reachable through `products.created_at`:
+
+```sql
+-- brand set as it stood immediately before the Niche Beauty import
+select distinct match_brand from products
+where match_brand is not null and match_brand <> ''
+  and created_at < timestamp '2026-08-07 12:38:17';
+```
+
+Against that: **5,029 of the 7,625 created products carry a brand absent from the
+pre-import catalogue, across 297 brands of 417.** Verified 8 August 2026.
+
+**That reconstruction has a shelf life.** It works only while `created_at` still separates
+the two populations. Any later import that creates products under those brands, any merge
+that rewrites `created_at`, and the boundary stops being recoverable at all.
+
+#### The general form
+
+**A gate whose reference set is derived from the table the gated operation writes to cannot
+be measured after that operation has run.** Whatever else is decided about
+`existing_brands_only` (item 50), the measurement order is now fixed: the counterfactual has
+to be captured *before* the import, or it cannot be captured.
+
+---
+
+### 50. Is `existing_brands_only` the right instrument for a prestige retailer at all?
+
+**Raised:** 8 August 2026 · **A QUESTION ABOUT FIT, NOT A TUNING PARAMETER.** Recorded as a
+question deliberately: it is not answered here and should not be answered by adjusting a
+threshold.
+
+#### What the setting is for
+
+`existing_brands_only` stops a feed dragging in unrelated inventory — a general retailer's
+electronics, homeware, or a long tail of brands we have no reason to carry. Against that
+purpose it works, and it is on for Beauty Flash (1,826 rows skipped on the 7 August run).
+
+#### Why it does not fit here
+
+Niche Beauty carries 417 brands. **297 of them are new to the catalogue by design** — that
+is what a prestige retailer *is*. The setting would discard:
+
+> Byredo · Augustinus Bader · Aesop · Chantecaille · Clé de Peau Beauté · Maison Francis
+> Kurkdjian · Oribe · Biologique Recherche · Hourglass · Westman Atelier · Dr. Barbara
+> Sturm · Susanne Kaufmann · Malin + Goetz · L'Artisan Parfumeur · Pai Skincare · 111Skin ·
+> Lisa Eldridge · goop · Trudon · Montale
+
+**That is the Prestige Edit inventory.** The 5,029 products behind those brands are all in
+stock, all imaged, and distribute skincare 43.2% / fragrance 18.0% / makeup 14.4% /
+bath_body 12.5% / hair 11.8%. Supplement-signal names: 0. Homeware-signal names (candle,
+diffuser, room spray): 222, 4.4%, concentrated in Trudon and FRAMA. Price p25 34.00, median
+58.40, p75 122.00 — **currency unverified**, Niche Beauty is a German advertiser and these
+may be EUR.
+
+**The setting would reject nearly two thirds of a prestige feed for being prestige.** It is
+not filtering noise here; the brands it removes are the reason to onboard the retailer.
+
+#### The shape of the question
+
+- **The gate conflates two different things.** "A brand we do not carry" and "a brand we do
+  not want" are the same signal to it. On a general retailer those mostly coincide. On a
+  prestige retailer they are close to opposites.
+- **It is a whitelist with no way to add to it except by turning it off.** There is no
+  per-retailer allow-list, no brand-count threshold, no review queue — the only way a new
+  brand enters is an import that ignores the gate, which is item 49.
+- **The alternative instruments have not been scoped.** Category-based scoping, a
+  brand-count cap, a first-run-permissive-then-restrict mode, or an explicit per-retailer
+  brand allow-list are all plausible and none has been costed.
+
+#### What must not happen
+
+**Do not set `existing_brands_only: true` on retailer 32 as a way of resolving this.** Per
+item 49 it will report zero skipped and look like agreement.
+
+#### Blocked behind
+
+The import path is not to be touched while the tier-1 defect (`index.ts:781` collects
+`p_eans` from `idx.ean` only, while the row loop reads the barcode through
+`coalesceField(fields, idx.ean, idx.ean_alt)` at `index.ts:1957`, so coalesce-recovered
+barcodes are never in `eanToProductId`) is open. Two importer changes with the matcher unresolved makes any
+surprise unattributable.
+
+---
+
+### 51. The same feed is two different feeds depending on which path fetched it
+
+**Raised:** 9 August 2026 · **A CLASS, NOT AN INSTANCE.** Found while fixing the Debenhams
+filter; the filter was the symptom.
+
+#### What happened
+
+`import-awin-feed`'s `buildFeedUrl` (`index.ts:271-330`) requests **20 columns**.
+`.github/workflows/refresh-debenhams.yml` hand-wrote its own `COLS` and requested **15**
+(16 after `merchant_category` was added on 9 August). Nothing compares the two, and nothing
+ever has.
+
+#### FIRST, A PREMISE THAT WAS CHECKED AND DOES NOT HOLD
+
+**It was proposed that `product_GTIN` is not in AWIN's schema and that the API silently
+returns fewer columns than requested rather than erroring — which would mean the entire
+sibling-coalesce rollout is deployed against a column AWIN never sends. It is not so, and
+the evidence is a real response header.**
+
+feed-diag run 31172005496, Niche Beauty fid 102930, 7 August 2026. Requested 18 columns.
+The parsed header, printed by the diagnostic:
+
+```
+columns: aw_deep_link, product_name, aw_product_id, merchant_product_id, search_price,
+         store_price, merchant_deep_link, brand_name, rrp_price, in_stock,
+         merchant_product_category_path, merchant_category, category_name, product_type,
+         ean, product_GTIN, mpn, merchant_image_url
+  product_GTIN                         14632  100.0%
+```
+
+**Eighteen requested, eighteen returned, `product_GTIN` among them and populated on 100% of
+rows.** No truncation.
+
+**Two independent corroborations, either of which alone settles it.** `columns` is parsed
+from the CSV header AWIN actually sent (`index.ts:1332`), not from our requested list, so
+`columns.indexOf("product_GTIN")` searches the response. If the column were absent,
+`idx.ean_alt` would be `-1`, `coalesceField` would return `usedAlt: false` on every row
+(`_shared/barcode.ts`), and `ean_from_sibling` would be **exactly 0** for every retailer.
+It reads **10,473** for Beauty Flash and **12,336** for Niche Beauty. And Beauty Flash's
+`ean` column is 0.0% populated while it holds **6,055 stored barcodes** — there is no other
+path they could have arrived by.
+
+**So: Beauty Flash's 6,055 EANs came from `product_GTIN`, through the coalesce, exactly as
+designed.** The coalesce rollout is not built on a phantom column. The tier-1 defect
+(`index.ts:781`) remains what it was: the barcodes arrive and are then not used for
+linking, which is a different fault from their not arriving.
+
+**Where the wrong count probably came from, because it is an easy trap.** Reading the column
+list out of `buildFeedUrl` with a naive regex returns **21 entries including `ean` twice** —
+the second `"ean"` is inside a comment within the array literal, describing a historical
+mistake. The real array has 20 entries and no duplicate. This was reproduced accidentally
+while checking, so it is recorded rather than assumed.
+
+Debenhams' `feed_url` is `storage://retailer-feeds/debenhams-beauty.csv.gz`, so
+`buildFeedUrl` is **bypassed entirely** for it. The workflow's list is not a second opinion —
+it is the only column list that applies, and it silently differed from the one every other
+AWIN retailer receives.
+
+#### What it cost, measured
+
+**`merchant_category`** — absent. This is the whole Debenhams outage. 116972 carries no
+`merchant_product_category_path` and puts its taxonomy here instead, so the filter could not
+see it, and neither could anyone diagnosing the filter. Six days stale, and the diagnostic
+question "what is actually in 116972" was unanswerable from anything retained. Added 9 Aug.
+
+**`description` and `product_short_description`** — still absent. Consequence, measured
+9 Aug: of the products carrying a Debenhams offer that have a description, the sources are
+Superdrug 2,093, Beauty Bay 978, Beauty Flash 299, Boots 216, Escentual 70, Stylevana 38,
+Branded Beauty 34, YesStyle 21. **Debenhams appears nowhere.** 10,232 rows and it has never
+contributed a single description, because the columns are not requested. Its description
+coverage is 36.7%, the lowest of any live retailer (Beauty Flash 99.3%, Atelier 100%), and
+every one of those descriptions was borrowed.
+
+**`product_GTIN`** — still absent, and this one is a **latent trap**. It is the column the
+AWIN sibling coalesce reads. `sibling_coalesce` is currently `false` for Debenhams, so
+nothing is broken today. Switch it on as part of the rollout and **it will do nothing at
+all**, silently, with `ean_from_sibling: 0` reading as "this feed has no siblings to
+recover" rather than "we never asked for the column". Item 33's rollout must not reach
+retailer 28 before this is fixed.
+
+**`product_type`** — still absent. The sibling of `category_name`, per item 33's measured
+pairs.
+
+#### The class
+
+**Any retailer whose `feed_url` bypasses `buildFeedUrl` gets whatever columns its fetcher
+chose, and nothing reconciles that with what the importer expects.** Three retailers are in
+this position:
+
+| Retailer | Fetcher | Column list |
+|---|---|---|
+| 28 Debenhams | `refresh-debenhams.yml` | **Ours, hand-written, diverged** |
+| 6 Branded Beauty | `sync-bb-feed.yml` | Merchant's Darwin URL in a secret |
+| 29 Atelier De Glow | `sync-adg-feed.yml` | Merchant's Darwin URL in a secret |
+
+Debenhams is the only one where *we* choose the columns in two places, so it is the only
+one that can diverge in this exact way. The other two have the adjacent exposure: their
+column set is decided by a URL held in a GitHub secret that **nothing in the repository can
+inspect**, so it cannot be diffed against `buildFeedUrl` at all — not because it matches,
+but because it is unreadable from here.
+
+**Strictly, no retailer's IMPORT is fetched by both paths.** `feed_url` is an either/or:
+set it and `buildFeedUrl` is bypassed, leave it null and the workflow route does not exist.
+So the two column lists never race on the same import.
+
+**But the DIAGNOSTICS are a third fetcher, and they read every retailer.** `feed-diag.yml`
+and `feed-categorisation-probe.yml` both hard-code an 18-column `COLS`, omitting
+`description` and `product_short_description`. Those run against retailers whose imports use
+`buildFeedUrl`'s 20 — so a probe and the import it predicts are reading **different feeds**,
+and the probe cannot see description coverage at all. Item 46 already records four of five
+probe figures disagreeing with the importer; the causes found there were population
+differences, and this is a fourth mechanism sitting underneath them that was not known at
+the time. **Three fetchers, three column lists, no comparison between any pair.**
+
+#### Why it did not fail loudly
+
+A missing column is not an error anywhere in the chain. AWIN returns the columns asked for —
+**verified above; it does not truncate, and this failure needs no API misbehaviour to
+happen.** The CSV parser maps what it finds. `idx.merchant_category` is simply `-1`, and
+every read through it returns empty. **A feed with a column missing is indistinguishable
+from a feed where every row leaves that column blank** — and the second is a normal,
+expected state that the sibling-pair work exists to handle. The system is built to tolerate
+blank columns, which is exactly what makes an unrequested one invisible.
+
+**That tolerance is correct and should stay.** The defect is not that blanks are tolerated;
+it is that "we did not ask" and "they did not send" produce the same downstream state and
+nothing distinguishes them at the point of asking. The same shape as the guard conflating a
+truncated download with a narrowed filter, and as deleteMissing conflating an exclusion with
+an absence: two causes, one signal, at the only place a decision is made.
+
+Same family as items 48, 49 and the guard: a plausible zero instead of a failure.
+
+#### What would catch it
+
+Not proposed as a build, recorded as the shape of the answer: **one column list, one place.**
+Either the workflows import the importer's list, or a check diffs each fetcher's `COLS`
+against `buildFeedUrl` and fails when they part. A comment asserting they match would be
+convention 17's shape — a check that cannot fail.
 
 ---
 
