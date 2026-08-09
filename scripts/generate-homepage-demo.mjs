@@ -277,9 +277,24 @@ async function main() {
       continue
     }
 
+    // GUARD THE ARRAY, NOT THE SCALAR. `.filter(Boolean)` silently drops any product
+    // the query did not return, so `ordered` can be SHORTER than cand.products while
+    // `solved` was computed over the full basket. The page would then render three items
+    // under a delivered total calculated for four — a wrong number presented as a
+    // demonstration of getting numbers right, and nothing would fail.
+    //
+    // A missing product means the candidate is stale (merged away, unimaged, retailer
+    // retired), which is a reason to reject the candidate, not to render a short basket.
     const ordered = cand.products
       .map(pid => products.find(p => p.id === pid))
       .filter(Boolean)
+    if (ordered.length !== cand.products.length) {
+      const missing = cand.products.filter(pid => !products.some(p => p.id === pid))
+      rejections.push(
+        `${cand.id} (${cand.label}): ${missing.length} of ${cand.products.length} products ` +
+        `not returned by the catalogue query (ids ${missing.join(', ')}) — candidate is stale`)
+      continue
+    }
 
     const html = readFileSync(TARGET, 'utf8')
     const block = renderDemo(ordered, solved, theseOffers)
