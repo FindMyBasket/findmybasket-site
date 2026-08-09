@@ -257,7 +257,10 @@ import {
   extractShade,
 } from "../_shared/match-key.ts";
 import { isMultipackMismatch } from "../_shared/multipack-guard.ts";
-import { validateBarcode, coalesceField } from "../_shared/barcode.ts";
+// validateBarcode is no longer imported here: it is called only inside extractFeedEan,
+// which is now the single derivation point for a feed row's barcode. Importing it again
+// at a call site would be the first step back to two implementations.
+import { coalesceField, extractFeedEan } from "../_shared/barcode.ts";
 import { mergeSliceCounts } from "../_shared/merge-counts.ts";
 import { requireServiceRole } from "../_shared/require-service-role.ts";
 import { finaliseRun } from "../_shared/run-metrics.ts";
@@ -693,6 +696,25 @@ serve(async (req) => {
   const createdUrls = new Set<string>();                // URLs created this run (Tier 5 shade-variant suppression; replaces the old urlToProductId -1 sentinel)
   const createdByMatchKey = new Map<string, number>();  // 4A-i: match key → -1 (pending); suppresses duplicate creates only, never links
 
+  // TIER-1 AMBIGUITY. A barcode that maps to more than one catalogue product cannot be
+  // linked safely: the old map-build took whichever row the RPC returned first, which is
+  // an arbitrary choice made silently on every ambiguous barcode.
+  //
+  // Measured before this change: 22 of Niche Beauty's 537 barcode matches have more than
+  // one candidate. Inspected by name, 20 are pre-existing catalogue duplicate pairs and 2
+  // are plainly WRONG barcodes — a Beauty of Joseon sheet mask sharing an EAN with a Shu
+  // Uemura shampoo, and a Coco & Eve conditioner sharing one with their detox shampoo.
+  // Linking either way on those two is wrong, and no ranking rule fixes a bad barcode.
+  //
+  // So: SKIP, and record. Skipping is recoverable — the row still matches on mpn or name
+  // and the barcode stays available once the duplicates are merged. Linking is not: it
+  // attaches a price to a product nobody chose.
+  //
+  // The record is the point. A silent skip and a silent wrong link are equally invisible;
+  // this makes the ambiguity a queryable list with both product ids, so it becomes merge
+  // queue input or a barcode denylist rather than a decision nobody sees.
+  const tier1Skips = new Map<string, number[]>();  // ean → candidate product ids
+
   // existing_brands_only needs just the distinct set of match_brand keys. The
   // big feeds that actually OOM have existing_brands_only=false, so they SKIP this
   // entirely; only the (smaller, not memory-bound) restricted retailers pay the
@@ -778,7 +800,13 @@ serve(async (req) => {
       const f = rawFields.map((x) => x.replace(/^"|"$/g, ""));
       const mb = normaliseForMatch(lookupCanonicalBrand(f[idx.brand_name] || ""));
       if (mb) matchBrands.add(mb);
-      if (idx.ean >= 0) { const e = normaliseEan((f[idx.ean] || "").trim()); if (e) eans.add(e); }
+      // TIER-1 KEY PARITY. This MUST derive the barcode exactly as the row loop does,
+      // or the prefetch asks the database about values the lookup never uses and tier 1
+      // cannot match. It previously read `fields[idx.ean]` alone while the row loop read
+      // the coalesced+validated value — see extractFeedEan's comment. Both sites now call
+      // the one function; do not inline either of them again.
+      const e = normaliseEan(extractFeedEan(f, idx.ean, idx.ean_alt, coalesceOn).value);
+      if (e) eans.add(e);
       if (idx.mpn >= 0) { const m = normaliseMpn((f[idx.mpn] || "").trim()); if (m) mpns.add(m); }
       const mv = f[matchColumnIdx]; if (mv) extIds.add(mv);
     }
@@ -833,10 +861,28 @@ serve(async (req) => {
         productNameById.set(pid, nm);
       }
     };
+    // Group by ean BEFORE deciding. The RPC returns one row per (ean, product_id), so
+    // first-wins here silently resolved ambiguity by result order. Collect the full
+    // candidate set per barcode, then admit only the unambiguous ones.
+    const eanCandidates = new Map<string, Set<number>>();
     for (const r of (sets?.eans ?? [])) {
       const k = String(r.ean || "").trim();
-      if (k && r.product_id != null && !eanToProductId.has(k)) eanToProductId.set(k, r.product_id);
+      if (k && r.product_id != null) {
+        let s = eanCandidates.get(k);
+        if (!s) { s = new Set<number>(); eanCandidates.set(k, s); }
+        s.add(Number(r.product_id));
+      }
       rememberName(r.product_id, r.name);
+    }
+    for (const [k, ids] of eanCandidates) {
+      if (ids.size === 1) {
+        // Unambiguous: exactly one catalogue product carries this barcode.
+        if (!eanToProductId.has(k)) eanToProductId.set(k, [...ids][0]);
+      } else if (!tier1Skips.has(k)) {
+        // Ambiguous: do not link, and record every candidate so the decision is
+        // inspectable. Deduped across chunks — a barcode skipped twice is one finding.
+        tier1Skips.set(k, [...ids].sort((a, b) => a - b));
+      }
     }
     for (const r of (sets?.mpns ?? [])) {
       const k = String(r.mpn || "").trim();
@@ -1952,26 +1998,23 @@ serve(async (req) => {
     // Path 1: extract EAN/MPN from feed row.
     // BARCODE. Coalesce then validate. Validation runs ONLY on the coalesced path so
     // that a retailer with coalesce off is byte-identical to before this change.
-    let rawEan: string;
+    // Derived through the SAME function as the tier-1 prefetch (loadChunkMaps). The
+    // counters below are this site's job, not the helper's — the prefetch calls it too
+    // and must not inflate them.
+    const eanEx = extractFeedEan(fields, idx.ean, idx.ean_alt, coalesceOn);
     if (coalesceOn) {
-      const c = coalesceField(fields, idx.ean, idx.ean_alt);
-      if (c.usedAlt) coalesceStats.ean_from_alt++;
-      const checked = validateBarcode(c.value);
-      if (checked.reason) {
+      if (eanEx.usedAlt) coalesceStats.ean_from_alt++;
+      if (eanEx.rejectReason) {
         coalesceStats.barcode_rejected++;
-        coalesceStats.barcode_reject_reasons[checked.reason] =
-          (coalesceStats.barcode_reject_reasons[checked.reason] || 0) + 1;
+        coalesceStats.barcode_reject_reasons[eanEx.rejectReason] =
+          (coalesceStats.barcode_reject_reasons[eanEx.rejectReason] || 0) + 1;
         if (coalesceStats.barcode_reject_samples.length < 10) {
-          coalesceStats.barcode_reject_samples.push({ raw: c.value.slice(0, 20), reason: checked.reason });
+          const rawForSample = coalesceField(fields, idx.ean, idx.ean_alt).value;
+          coalesceStats.barcode_reject_samples.push({ raw: rawForSample.slice(0, 20), reason: eanEx.rejectReason });
         }
       }
-      // A rejected barcode is treated as ABSENT, not as a failure: the row still
-      // imports and still matches on mpn or name. Rejecting a barcode must never cost
-      // a product its listing.
-      rawEan = checked.value ?? "";
-    } else {
-      rawEan = idx.ean >= 0 ? (fields[idx.ean] || "").trim() : "";
     }
+    const rawEan: string = eanEx.value;
     const rawMpn = idx.mpn >= 0 ? (fields[idx.mpn] || "").trim() : "";
     const normEan = normaliseEan(rawEan);
     const normMpn = normaliseMpn(rawMpn);
@@ -2465,6 +2508,10 @@ serve(async (req) => {
       barcode_reject_reasons: coalesceStats.barcode_reject_reasons,
       barcode_reject_samples: coalesceStats.barcode_reject_samples,
       rows_with_mpn: rowsWithMpn,
+      // COUNT ONLY. The rows themselves go to tier1_ean_skips, not into this jsonb —
+      // item 44 is what happens to structured diagnostics stored here, and a skip list
+      // that has to be parsed out of a log blob is not a merge queue.
+      tier1_ambiguous_skipped: tier1Skips.size,
       beauty_flash_names_rebuilt: countBeautyFlashRebuilt,
       debenhams_names_cleaned: countDebenhamsCleaned,
       debenhams_shades_routed: countDebenhamsShadeRouted,
@@ -2485,6 +2532,27 @@ serve(async (req) => {
     sample_create_new_empty_cat_name: sampleCreateNewEmptyCatName,
     duration_ms_so_far: Date.now() - startTime,
   };
+
+  // Persist the ambiguity list. Written on DRY RUNS TOO, deliberately: a dry run is
+  // where the set is meant to be read before anything is applied, and a diagnostic that
+  // only exists on the live path cannot inform the decision to take the live path.
+  // Failure here must never fail the import — the skips are a finding, not a result.
+  if (tier1Skips.size > 0) {
+    try {
+      const skipRows = [...tier1Skips.entries()].map(([ean, ids]) => ({
+        retailer_id: retailerId,
+        dry_run: dryRun,
+        ean,
+        candidate_product_ids: ids,
+      }));
+      for (let i = 0; i < skipRows.length; i += 500) {
+        const { error: skipErr } = await supa.from("tier1_ean_skips").insert(skipRows.slice(i, i + 500));
+        if (skipErr) { console.error("tier1_ean_skips insert failed:", skipErr.message); break; }
+      }
+    } catch (e) {
+      console.error("tier1_ean_skips write threw:", e instanceof Error ? e.message : String(e));
+    }
+  }
 
   if (dryRun) {
     return new Response(JSON.stringify(result, null, 2), { headers: { "Content-Type": "application/json" } });

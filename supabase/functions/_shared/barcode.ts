@@ -56,3 +56,45 @@ export function coalesceField(fields: string[], primaryIdx: number, altIdx: numb
   return { value: alt, usedAlt: alt !== "" };
 }
 
+/**
+ * THE ONLY PLACE A FEED ROW'S BARCODE IS DERIVED. Call this from every site that
+ * needs one; do not reimplement the coalesce/validate sequence anywhere.
+ *
+ * WHY IT EXISTS, which is the whole point of the function. The importer had this
+ * logic in two places and they disagreed. The row loop read
+ * `coalesceField(ean, product_GTIN)` then `validateBarcode`. The chunk prefetch that
+ * builds the tier-1 lookup map read `fields[idx.ean]` alone. So on a feed whose
+ * barcode lives in the sibling column, the prefetch asked the database about a value
+ * the row loop would never look up, and tier 1 could not match by construction:
+ * Beauty Flash carried 9,147 valid barcodes per run and linked ONE.
+ *
+ * Patching one site to match the other would have fixed the symptom and left the next
+ * edit free to re-diverge. Two independent derivations of the same value is the
+ * defect; one function is the fix.
+ *
+ * Callers that need the coalesce counters read `usedAlt` and `rejectReason`
+ * themselves — this returns the facts and counts nothing, so the prefetch can call it
+ * without inflating per-row statistics.
+ */
+export function extractFeedEan(
+  fields: string[],
+  primaryIdx: number,
+  altIdx: number,
+  coalesceOn: boolean,
+): { value: string; usedAlt: boolean; rejectReason: string | null } {
+  // Coalesce off: byte-identical to the pre-coalesce behaviour, raw and unvalidated.
+  // Retailers with the flag off must take exactly the path they took before.
+  if (!coalesceOn) {
+    return {
+      value: primaryIdx >= 0 ? (fields[primaryIdx] || "").trim() : "",
+      usedAlt: false,
+      rejectReason: null,
+    };
+  }
+  const c = coalesceField(fields, primaryIdx, altIdx);
+  const checked = validateBarcode(c.value);
+  // A rejected barcode is ABSENT, not fatal: the row still imports and still matches
+  // on mpn or name. The reason is returned so the caller can count it.
+  return { value: checked.value ?? "", usedAlt: c.usedAlt, rejectReason: checked.reason };
+}
+
