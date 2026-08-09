@@ -3316,8 +3316,50 @@ filter; the filter was the symptom.
 #### What happened
 
 `import-awin-feed`'s `buildFeedUrl` (`index.ts:271-330`) requests **20 columns**.
-`.github/workflows/refresh-debenhams.yml` hand-wrote its own `COLS` and requested **15**.
-Nothing compares the two, and nothing ever has.
+`.github/workflows/refresh-debenhams.yml` hand-wrote its own `COLS` and requested **15**
+(16 after `merchant_category` was added on 9 August). Nothing compares the two, and nothing
+ever has.
+
+#### FIRST, A PREMISE THAT WAS CHECKED AND DOES NOT HOLD
+
+**It was proposed that `product_GTIN` is not in AWIN's schema and that the API silently
+returns fewer columns than requested rather than erroring — which would mean the entire
+sibling-coalesce rollout is deployed against a column AWIN never sends. It is not so, and
+the evidence is a real response header.**
+
+feed-diag run 31172005496, Niche Beauty fid 102930, 7 August 2026. Requested 18 columns.
+The parsed header, printed by the diagnostic:
+
+```
+columns: aw_deep_link, product_name, aw_product_id, merchant_product_id, search_price,
+         store_price, merchant_deep_link, brand_name, rrp_price, in_stock,
+         merchant_product_category_path, merchant_category, category_name, product_type,
+         ean, product_GTIN, mpn, merchant_image_url
+  product_GTIN                         14632  100.0%
+```
+
+**Eighteen requested, eighteen returned, `product_GTIN` among them and populated on 100% of
+rows.** No truncation.
+
+**Two independent corroborations, either of which alone settles it.** `columns` is parsed
+from the CSV header AWIN actually sent (`index.ts:1332`), not from our requested list, so
+`columns.indexOf("product_GTIN")` searches the response. If the column were absent,
+`idx.ean_alt` would be `-1`, `coalesceField` would return `usedAlt: false` on every row
+(`_shared/barcode.ts`), and `ean_from_sibling` would be **exactly 0** for every retailer.
+It reads **10,473** for Beauty Flash and **12,336** for Niche Beauty. And Beauty Flash's
+`ean` column is 0.0% populated while it holds **6,055 stored barcodes** — there is no other
+path they could have arrived by.
+
+**So: Beauty Flash's 6,055 EANs came from `product_GTIN`, through the coalesce, exactly as
+designed.** The coalesce rollout is not built on a phantom column. The tier-1 defect
+(`index.ts:781`) remains what it was: the barcodes arrive and are then not used for
+linking, which is a different fault from their not arriving.
+
+**Where the wrong count probably came from, because it is an easy trap.** Reading the column
+list out of `buildFeedUrl` with a naive regex returns **21 entries including `ean` twice** —
+the second `"ean"` is inside a comment within the array literal, describing a historical
+mistake. The real array has 20 entries and no duplicate. This was reproduced accidentally
+while checking, so it is recorded rather than assumed.
 
 Debenhams' `feed_url` is `storage://retailer-feeds/debenhams-beauty.csv.gz`, so
 `buildFeedUrl` is **bypassed entirely** for it. The workflow's list is not a second opinion —
@@ -3367,14 +3409,34 @@ column set is decided by a URL held in a GitHub secret that **nothing in the rep
 inspect**, so it cannot be diffed against `buildFeedUrl` at all — not because it matches,
 but because it is unreadable from here.
 
+**Strictly, no retailer's IMPORT is fetched by both paths.** `feed_url` is an either/or:
+set it and `buildFeedUrl` is bypassed, leave it null and the workflow route does not exist.
+So the two column lists never race on the same import.
+
+**But the DIAGNOSTICS are a third fetcher, and they read every retailer.** `feed-diag.yml`
+and `feed-categorisation-probe.yml` both hard-code an 18-column `COLS`, omitting
+`description` and `product_short_description`. Those run against retailers whose imports use
+`buildFeedUrl`'s 20 — so a probe and the import it predicts are reading **different feeds**,
+and the probe cannot see description coverage at all. Item 46 already records four of five
+probe figures disagreeing with the importer; the causes found there were population
+differences, and this is a fourth mechanism sitting underneath them that was not known at
+the time. **Three fetchers, three column lists, no comparison between any pair.**
+
 #### Why it did not fail loudly
 
-A missing column is not an error anywhere in the chain. AWIN returns the columns asked for.
-The CSV parser maps what it finds. `idx.merchant_category` is simply `-1`, and every read
-through it returns empty. **A feed with a column missing is indistinguishable from a feed
-where every row leaves that column blank** — and the second is a normal, expected state that
-the sibling-pair work exists to handle. The system is built to tolerate blank columns, which
-is exactly what makes an unrequested one invisible.
+A missing column is not an error anywhere in the chain. AWIN returns the columns asked for —
+**verified above; it does not truncate, and this failure needs no API misbehaviour to
+happen.** The CSV parser maps what it finds. `idx.merchant_category` is simply `-1`, and
+every read through it returns empty. **A feed with a column missing is indistinguishable
+from a feed where every row leaves that column blank** — and the second is a normal,
+expected state that the sibling-pair work exists to handle. The system is built to tolerate
+blank columns, which is exactly what makes an unrequested one invisible.
+
+**That tolerance is correct and should stay.** The defect is not that blanks are tolerated;
+it is that "we did not ask" and "they did not send" produce the same downstream state and
+nothing distinguishes them at the point of asking. The same shape as the guard conflating a
+truncated download with a narrowed filter, and as deleteMissing conflating an exclusion with
+an absence: two causes, one signal, at the only place a decision is made.
 
 Same family as items 48, 49 and the guard: a plausible zero instead of a failure.
 
