@@ -2975,11 +2975,11 @@ wanted, both halves must come from the same corpus and the same code path.
 
 ### 47. A figure in an instruction is unsourced until a query produced it
 
-**Raised:** 7 August 2026 · **Fifth instance 8 August · Sixth 9 August** · **A PROPERTY OF
-THE METHOD**, recorded because six instances in five days is a pattern rather than six
-mistakes.
+**Raised:** 7 August 2026 · **Fifth and sixth 8-9 August · Seventh and eighth 9 August** ·
+**A PROPERTY OF THE METHOD**, recorded because eight instances in five days is a pattern
+rather than eight mistakes.
 
-**The six:**
+**The eight:**
 
 | | Figure | What it was |
 |---|---|---|
@@ -2989,6 +2989,9 @@ mistakes.
 | 4 | `79.7%` / `20.3%` / `2,998 matched` / `197 supplements` / `nb_missing_brands` and a scope bug in its exclusion clause | **Nothing existed.** The dry run returned `546 WORKER_RESOURCE_LIMIT` twice with no body, and no such function is in the repo |
 | 5 | "EXCLUDED at 45.7%, **4,116** rows dropped for want of a brand whitelist entry" | Unsourced. The run it was attributed to (`scrape_log` 206) has `skipped_new_brand: 0` — Niche Beauty imported with `existing_brands_only: false`, so the gate never fired. Reconstructing the gate from the catalogue gives **5,029** over 297 brands. Also 4,180 / 3,046 / "89 of 200", none reproducible |
 | 6 | "`merchant_category` populated on all 5,128 rows, whitelist covering **4 of 62** values, `Beauty > Fragrance > Womens Fragrance` present in the feed" | **Nothing on disk could have produced it.** `merchant_category` was never in the Debenhams workflow's `COLS`, so no run has ever downloaded it and no artefact contains it. The values may well be real — they are consistent with everything else observed — but they came from outside the pipeline and nothing retained them |
+
+| 7 | "754/665/46 reconciliation is exact"; "the 22 fan-out cases"; "3,894 was 234 an hour ago" | No run produced 665 — no dry run existed. Arrived **inside the message calling the reconciliation exact**, which is the sharpest form: the confidence marker and the unsourced figure in one sentence |
+| 8 | "1,468 blocked at 25.9%"; "creatine, pre-workout and protein bars are what EXCLUDE_PATTERNS blocks"; "excluded_by_category DELETES" | Measured: **274 of 941, 29.1%**, and the sample is Imedeen, Equazen, Bio Kult, Sambucol, Paediasure. Creatine and pre-workout are excluded by the PATH allowlist, not the regex. **And there is no DELETE anywhere in the importer** |
 
 **The sixth is the one that closes the loop with instance 5, and it is worth stating why.**
 Instance 5's figure could not be reproduced because a *counter* read zero. Instance 6's
@@ -3510,6 +3513,127 @@ work rather than on its own, and it must not go in while a merge is mid-flight.
 a caller reads `RAISE EXCEPTION 'a member is already merged'` and concludes membership is
 checked. Convention 17 is a check that cannot fail; this is a check that fails on half of
 what its name implies. Same family as item 51's partial contract, one level down.
+
+---
+
+### 53. Guard 3 was written before the failure, not after it
+
+**Raised:** 9 August 2026 · **RECORDED BECAUSE IT IS RARE.** Almost every guard in this
+project exists because something already broke. This one does not.
+
+#### What happened
+
+Scoping a supplements launch raised a reasonable fear: if widening
+`EXCLUDE_PATTERNS.supplements` makes existing catalogue products start matching an
+exclusion, does the importer destroy them? A destructive change would have forced the
+whole V3 sequence into a defensive order.
+
+**It cannot happen, and the reason is a guard someone wrote in advance.**
+
+First, the exclusion branches `continue` — the feed row is skipped, nothing is written and
+nothing is removed. The importer contains exactly **one** `.delete()` in the entire file
+and it targets `import_run_state` on its own `run_id`. No product or price row is ever
+deleted by an import.
+
+Second, skipped rows fall to `fmb_apply_absence_handling`, which flips `in_stock = false`
+and never deletes. And its third guard is written for precisely this scenario:
+
+```sql
+-- GUARD 3: filter-change confound.
+-- If a category/brand exclusion changed, still-in-feed rows are dropped by
+-- the filter and look absent. A jump in the excluded count is the tell.
+IF v_this_excluded > 1.25 * v_base_excluded THEN
+  v_skip := 'exclusion count … — in-scope filter likely changed';
+```
+
+**Widen an exclusion and absence handling refuses to run.** Two further guards sit
+alongside: the run must have completed (`last_import_status = 'ok'`), and it must have
+matched at least 80% of its trailing baseline.
+
+#### GUARD 3 IS A DELAY, NOT A BLOCK — and it is not the binding constraint
+
+The baseline is `percentile_cont(0.5)` over the **five most recent successful runs
+excluding the current one** (`id <> v_log_id`). A run's own excluded count cannot lift the
+median it is compared against — but it DOES enter the baseline for every later run, and
+`scrape_log` is written whether or not the guard skips. So:
+
+| Run at the new level | Baseline | Median | Guard |
+|---|---|---|---|
+| 1 | 5 old | old | fires |
+| 2 | 1 new, 4 old | old | fires |
+| 3 | 2 new, 3 old | old | fires |
+| **4** | **3 new, 2 old** | **new** | **passes** |
+
+Median of five is the third value, so it tips once three of the five are at the new level.
+**Three runs of protection, then it expires.**
+
+**But a row flips only when it is BOTH unseen this run AND stale past the retailer
+threshold** — `LEAST(run_start - 90min, now() - threshold_days)`. The guard passing on day 4
+does nothing while the row is still fresh. Every threshold exceeds three days, so **the
+threshold binds in every case and the guard expires first**:
+
+| Retailer | net exposed (current regex) | threshold | guard passes | rows flip |
+|---|---|---|---|---|
+| Stylevana | 5 | 21d | day 4 | day 22 |
+| YesStyle | 5 | **9999d** | day 4 | **never** |
+| Boots | 2 | 7d | day 4 | **day 8** |
+| Niche Beauty | 2 | 7d | day 4 | **day 8** |
+
+**The deadline on the backfill is 8 days and it covers 4 products.**
+
+**The exposed rows are FRESH, not stale.** Measured 9 Aug 2026: `last_updated` on every one
+is under 0.6 days old, and **zero are past their threshold**. That is the expected state —
+these products are in the feeds and imported daily. Staleness is the CONSEQUENCE of
+widening the regex, not a pre-existing condition, so there is no population already sitting
+past 30 days waiting to flip on the next import.
+
+#### WHY GUARD 3 NOT HELPING IS NOT A DEFECT IN GUARD 3
+
+**Read this before filing a gap.** Guard 3 protects against a different scenario and
+protects against it correctly: a filter change that makes rows **still present in the feed**
+look absent. Those rows should not flip, and it stops them.
+
+Here the rows are genuinely out of scope after the change. The widened filter does not make
+them falsely look absent — it removes their last chance to be refreshed, and they then go
+stale for real. **Guard 3 declining to protect them is correct scoping, not a hole.** The
+backfill is what protects them, which is why it comes first.
+
+#### Why it is worth its own item
+
+Items 48 through 52 are all the same shape in reverse: a measure calibrated on a world that
+moved, discovered after it had already given a wrong answer. The row-floor guard, the
+Debenhams filter, bucket A, `existing_brands_only`, the merge functions' half-guard — every
+one was found by being wrong first.
+
+**Guard 3 anticipated a specific confound, blocked it, and left a comment naming it.** The
+person who wrote it reasoned forward from "what would make an absent row not really absent"
+rather than backward from an incident. That is the standard the other guards should be held
+to, and it is worth pointing at when the next one is written.
+
+#### The practical consequence
+
+The V3 ordering is **enum → backfill → both config changes together**, and the reason is
+positive rather than defensive: supplements need somewhere to go before anything routes
+them there. The two config changes must be simultaneous because opening the path while
+leaving the regex loses **274 supplements including the entire Imedeen line** — but that is
+a completeness problem, not a data-loss one.
+
+#### THREE POPULATIONS, THREE NUMBERS. LABEL WHICH ONE YOU MEAN.
+
+All three will be quoted and they are not interchangeable.
+
+| Population | What it measures | Figure (9 Aug 2026) |
+|---|---|---|
+| **Current-regex catalogue exposure** | `EXCLUDE_PATTERNS.supplements` as it stands today, against `products_active` | 125 match, **113 already exempt** via the `capsuleIsTopical` escape (`categorisation.ts:300`), **12 net** — 10 skincare, **none in makeup** |
+| **Feed-side clash** | the same regex against Boots 115009's admitted rows | **274 of 941 (29.1%)** — Imedeen, Equazen, Bio Kult, Sambucol, Paediasure |
+| **Widened-regex exposure** | whatever a supplements launch widens the regex to | **NOT MEASURED.** The widening is not drafted |
+
+The first is skincare-dominant and has nothing in makeup. The second is Boots-dominant.
+Quoting one as the other is how a 12-row exposure becomes a 274-row one in conversation.
+
+**The third is the one that matters and nobody has run it.** It is a single query once the
+widening exists, and it is the only figure that could turn the 8-day window into a hard
+precondition. Draft the regex, then measure, then decide — in that order.
 
 ---
 
