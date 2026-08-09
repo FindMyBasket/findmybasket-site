@@ -234,6 +234,49 @@ Retired retailers keep their `retailer_prices` rows, and product images still re
 through that CDN. Removing the pattern breaks images on every product the retailer
 carried.
 
+### Step 6 — Regenerate `GONE_IDS` ON THE DAY (added 2026-08-09, after it was missed once)
+
+**Do this the same day you flip `retailers.active`, not on the following Sunday.**
+
+`lib/superdrug-removed.ts` holds `GONE_IDS`, a list of product ids compiled into the edge
+middleware, which serves **HTTP 410 Gone** for each. 410 is the strongest "permanently
+deleted" signal there is, and it is correct for a product with no live offer and wrong for
+anything else.
+
+> **IT WAS ALREADY WRONG ON THE DAY IT SHIPPED.** The list was generated **19 July**. The
+> flip was **27 July**. Its own header said to regenerate right before the flip; that was
+> not done. Perfume Click was onboarded **24 July** — inside the gap — and matched 9,129
+> products on day one, thousands of which had been Superdrug-only when the list was
+> frozen.
+>
+> Result: **3,894 live, in-stock products served 410 for thirteen days**, 3,761 of them
+> Perfume Click. Not decay — no product was deleted or renumbered. A retailer arrived
+> between the list being generated and the list being used, and nothing recomputed it.
+
+**THE TRIGGER IS RETAILER LIFECYCLE, NOT TIME.** `.github/workflows/gone-ids-drift.yml`
+runs weekly and opens a PR on drift, but **weekly is a floor, not the right signal**. Every
+onboarding and every retirement changes which ids belong in the list, and a departure is
+precisely when it changes most. Waiting for the scheduled run means up to seven days of
+410s on live products.
+
+```
+gh workflow run gone-ids-drift.yml          # same day as the flip, then merge the PR
+```
+
+**Both directions matter and they are not symmetrical.**
+
+- **Ids REMOVED** are live products currently being 410'd. Urgent. They return 200 on
+  deploy — nothing caches the 410 (`max-age=0, must-revalidate`) — but index position lost
+  to a multi-day 410 comes back slowly, so resubmit the affected URLs.
+- **Ids ADDED** are newly orphaned and should 410. Sanity-check against a failed import
+  first: an import failure orphans products that are not actually gone, and baking that
+  into middleware turns a transient outage into a de-indexing.
+
+**If the drift check fails on a large delta, that is the guard working.** A retirement will
+legitimately move thousands of ids, so expect to raise `fail_threshold` for this run
+deliberately — and only once the number has been reconciled against the flip you just
+performed.
+
 ### The same class, found the same way: delivery terms (2026-08-01)
 
 **Retailers 23 to 28 all had NULL `delivery_threshold` and `delivery_cost`. Everything

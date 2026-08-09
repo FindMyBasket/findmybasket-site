@@ -3668,6 +3668,81 @@ precondition. Draft the regex, then measure, then decide — in that order.
 
 ---
 
+### 54. Derive a threshold from the artefact, never from a log line
+
+**Raised:** 9 August 2026 · **A SMALL PRINCIPLE WITH A LARGE FAILURE MODE**, from building
+the `GONE_IDS` drift check.
+
+The drift check refuses to open a PR when the net change exceeds a threshold. The count it
+compares could have come from the regeneration script's own output — the script already
+prints `added: N  removed: M`, and parsing that line is the obvious implementation.
+
+**It reads the file instead**, counting ids in `GONE_IDS_RAW` before and after.
+
+#### Why
+
+**A threshold derived from a log line disables itself silently when the logging changes.**
+Reword the message, add a colour code, change a label, and the grep matches nothing, the
+count falls back to zero, zero never exceeds the threshold, and the guard passes every run
+for ever. Nothing errors. The workflow stays green. The check is gone and its absence looks
+exactly like its success.
+
+Deriving the number from the artefact makes the check **independent of how the script
+reports**. The file is the thing being changed, so the count cannot drift from the change
+without the change itself being different.
+
+#### The general form
+
+> **A guard must measure the thing it guards, not a description of it.**
+
+This is the same family as item 51's partial contract and convention 17's check that cannot
+fail, arriving from a third direction. Item 51: a contract covering one function, read as
+covering the output. Convention 17: an assertion that can never be false. **This one: an
+assertion that is real today and becomes vacuous the moment an unrelated cosmetic edit
+lands, with no signal at either point.**
+
+Worth applying wherever a CI step parses another step's stdout to decide something. The
+pattern is cheap to spot: if the guard would still pass when the upstream tool prints
+nothing at all, it is measuring the description.
+
+---
+
+### 55. The homepage demo could render a basket that did not match its own total
+
+**Raised:** 9 August 2026 · **Fixed in the same change** · Recorded for the shape rather
+than the fix, which is three lines.
+
+`scripts/generate-homepage-demo.mjs` selects a candidate basket, solves it across retailers,
+then renders it:
+
+```js
+const ordered = cand.products
+  .map(pid => products.find(p => p.id === pid))
+  .filter(Boolean)          // <- silently drops anything the query did not return
+```
+
+`solved` is computed over **all** of `cand.products`. `ordered` is what gets rendered. If
+the catalogue query did not return one of them — merged away, unimaged, retailer retired —
+`.filter(Boolean)` removes it and **the page renders three items under a delivered total
+calculated for four.**
+
+#### Why this is the worst available shape
+
+The block exists to demonstrate that our arithmetic is right. **A wrong number presented as
+a demonstration of getting numbers right** is worse than the same error anywhere else on
+the site, because the surrounding copy is an argument for trusting it.
+
+And nothing fails. No exception, no empty render, no missing image. The output is a
+well-formed basket with a total that does not add up, and the only way to notice is to sum
+the prices by hand.
+
+The nullish guard on the line above (`?.price ?? null`) protects a value that cannot be
+null. **The array — the thing that could actually lose elements — was unguarded.** A guard
+in the wrong place reads as a guarded function.
+
+**Fix:** a missing product means the candidate is stale, which is a reason to reject the
+candidate and try the next one, not to render a short basket. It now does that and names
+the missing ids in the rejection log.
 ### 56. A report that cannot see its population returns a clean table of noes
 
 **Raised:** 10 August 2026 · **Third member of the family with items 51 and 54.**
