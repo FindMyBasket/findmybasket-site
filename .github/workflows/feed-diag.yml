@@ -38,6 +38,11 @@ name: feed-diag (read-only)
         required: false
         default: ''
         type: string
+      admit_prefix:
+        description: "Pipe-separated path prefixes to PREVIEW admitting (section 5). Blank = skip."
+        required: false
+        default: ''
+        type: string
 
 jobs:
   diag:
@@ -101,6 +106,8 @@ jobs:
           # retailer_import_config.category_path_must_contain for this retailer.
           # Empty = section 4 prints a hint and does nothing. READ-ONLY either way.
           MUST_CONTAIN: ${{ inputs.must_contain }}
+          # Section 5 only. Pipe-separated path PREFIXES to preview admitting.
+          ADMIT_PREFIX: ${{ inputs.admit_prefix }}
           SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
           SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           # github.event.inputs is the reliable source here; the `inputs` context
