@@ -3449,6 +3449,70 @@ convention 17's shape — a check that cannot fail.
 
 ---
 
+### 52. Both merge functions accept a variant child as the keeper
+
+**Raised:** 9 August 2026 · **A DEFECT IN THE REUSABLE FUNCTIONS**, found while scoping the
+Niche Beauty barcode merge. Nothing has hit it yet. Everything that would is a script
+nobody has written.
+
+#### The gap
+
+`fmb_soft_merge_group` guards its members like this, and this is the whole guard:
+
+```sql
+IF EXISTS (SELECT 1 FROM products WHERE id = ANY(p_removed||p_keeper)
+           AND merged_into IS NOT NULL) THEN
+  RAISE EXCEPTION 'a member is already merged';
+```
+
+**`merged_into IS NULL` admits variant children.** A product with `parent_product_id` set is
+a shade or size child hanging off a parent, and it is the wrong merge target no matter what
+its `merged_into` says — merging a root into a child inverts the hierarchy, and
+`products_active` (which requires `merged_into IS NULL AND parent_product_id IS NULL`) then
+resolves the group somewhere neither side chose.
+
+`merge_product_group` is worse: its sanity checks cover null keeper, empty duplicates and
+keeper-in-duplicates, and check **neither** column.
+
+#### Why this is a rule gap and not a property of any batch
+
+Every other definition of "a real product" in this codebase pairs the two conditions —
+`products_active`, the frontend query indexes (`20260623150000`), the description helpers
+(`20260622120000`), `metrics_quality_weekly`'s comparison-depth definition. **The merge
+functions are the only place that checks one and not the other**, and they are the place
+where getting it wrong writes to the catalogue.
+
+The 406-pair Niche Beauty merge did not hit it, because its selection filter happened to
+carry both conditions:
+
+```sql
+where k.parent_product_id is null and k.merged_into is null
+```
+
+Verified after the fact: **0 variant-child keepers in the applied batch.** That is the
+selection query being right, not the function being safe. The next script that calls
+`fmb_soft_merge_group` without replicating that filter by hand gets no protection from the
+function, and the failure is silent — the merge succeeds and the hierarchy is wrong.
+
+**There is a live population waiting for it.** Of the candidates in `tier1_ean_skips`,
+**20 are variant children**. Any batch-2 script selecting on `merged_into IS NULL` alone
+picks them up.
+
+#### The fix, not built
+
+Add `parent_product_id IS NOT NULL` to both functions' member guards, with distinct
+exception text so a caller can tell the two rejections apart. It belongs with the batch-2
+work rather than on its own, and it must not go in while a merge is mid-flight.
+
+#### The general shape
+
+**A guard that names one of a pair of conditions is more dangerous than no guard**, because
+a caller reads `RAISE EXCEPTION 'a member is already merged'` and concludes membership is
+checked. Convention 17 is a check that cannot fail; this is a check that fails on half of
+what its name implies. Same family as item 51's partial contract, one level down.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
