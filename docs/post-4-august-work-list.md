@@ -3546,9 +3546,57 @@ IF v_this_excluded > 1.25 * v_base_excluded THEN
   v_skip := 'exclusion count … — in-scope filter likely changed';
 ```
 
-**Widen an exclusion and absence handling refuses to run at all.** Two further guards sit
+**Widen an exclusion and absence handling refuses to run.** Two further guards sit
 alongside: the run must have completed (`last_import_status = 'ok'`), and it must have
 matched at least 80% of its trailing baseline.
+
+#### GUARD 3 IS A DELAY, NOT A BLOCK — and it is not the binding constraint
+
+The baseline is `percentile_cont(0.5)` over the **five most recent successful runs
+excluding the current one** (`id <> v_log_id`). A run's own excluded count cannot lift the
+median it is compared against — but it DOES enter the baseline for every later run, and
+`scrape_log` is written whether or not the guard skips. So:
+
+| Run at the new level | Baseline | Median | Guard |
+|---|---|---|---|
+| 1 | 5 old | old | fires |
+| 2 | 1 new, 4 old | old | fires |
+| 3 | 2 new, 3 old | old | fires |
+| **4** | **3 new, 2 old** | **new** | **passes** |
+
+Median of five is the third value, so it tips once three of the five are at the new level.
+**Three runs of protection, then it expires.**
+
+**But a row flips only when it is BOTH unseen this run AND stale past the retailer
+threshold** — `LEAST(run_start - 90min, now() - threshold_days)`. The guard passing on day 4
+does nothing while the row is still fresh. Every threshold exceeds three days, so **the
+threshold binds in every case and the guard expires first**:
+
+| Retailer | net exposed (current regex) | threshold | guard passes | rows flip |
+|---|---|---|---|---|
+| Stylevana | 5 | 21d | day 4 | day 22 |
+| YesStyle | 5 | **9999d** | day 4 | **never** |
+| Boots | 2 | 7d | day 4 | **day 8** |
+| Niche Beauty | 2 | 7d | day 4 | **day 8** |
+
+**The deadline on the backfill is 8 days and it covers 4 products.**
+
+**The exposed rows are FRESH, not stale.** Measured 9 Aug 2026: `last_updated` on every one
+is under 0.6 days old, and **zero are past their threshold**. That is the expected state —
+these products are in the feeds and imported daily. Staleness is the CONSEQUENCE of
+widening the regex, not a pre-existing condition, so there is no population already sitting
+past 30 days waiting to flip on the next import.
+
+#### WHY GUARD 3 NOT HELPING IS NOT A DEFECT IN GUARD 3
+
+**Read this before filing a gap.** Guard 3 protects against a different scenario and
+protects against it correctly: a filter change that makes rows **still present in the feed**
+look absent. Those rows should not flip, and it stops them.
+
+Here the rows are genuinely out of scope after the change. The widened filter does not make
+them falsely look absent — it removes their last chance to be refreshed, and they then go
+stale for real. **Guard 3 declining to protect them is correct scoping, not a hole.** The
+backfill is what protects them, which is why it comes first.
 
 #### Why it is worth its own item
 
@@ -3570,12 +3618,22 @@ them there. The two config changes must be simultaneous because opening the path
 leaving the regex loses **274 supplements including the entire Imedeen line** — but that is
 a completeness problem, not a data-loss one.
 
-**Measured churn exposure, 9 August 2026:** of live products whose names match
-`EXCLUDE_PATTERNS.supplements` today, **125 match, 113 are already exempted** by the
-`capsuleIsTopical` escape at `categorisation.ts:300`, leaving **12 net exposed** — 10 in
-skincare, none in makeup. Recoverable and slow (a flip to out-of-stock over the absence
-threshold), not destructive, and small enough that it should be expected in the counts
-rather than discovered in them.
+#### THREE POPULATIONS, THREE NUMBERS. LABEL WHICH ONE YOU MEAN.
+
+All three will be quoted and they are not interchangeable.
+
+| Population | What it measures | Figure (9 Aug 2026) |
+|---|---|---|
+| **Current-regex catalogue exposure** | `EXCLUDE_PATTERNS.supplements` as it stands today, against `products_active` | 125 match, **113 already exempt** via the `capsuleIsTopical` escape (`categorisation.ts:300`), **12 net** — 10 skincare, **none in makeup** |
+| **Feed-side clash** | the same regex against Boots 115009's admitted rows | **274 of 941 (29.1%)** — Imedeen, Equazen, Bio Kult, Sambucol, Paediasure |
+| **Widened-regex exposure** | whatever a supplements launch widens the regex to | **NOT MEASURED.** The widening is not drafted |
+
+The first is skincare-dominant and has nothing in makeup. The second is Boots-dominant.
+Quoting one as the other is how a 12-row exposure becomes a 274-row one in conversation.
+
+**The third is the one that matters and nobody has run it.** It is a single query once the
+widening exists, and it is the only figure that could turn the 8-day window into a hard
+precondition. Draft the regex, then measure, then decide — in that order.
 
 ---
 
