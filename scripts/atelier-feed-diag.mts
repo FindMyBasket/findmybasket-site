@@ -251,3 +251,113 @@ console.log(`D. NET-NEW (brand we don't carry at all):                     ${tie
 const feedBrandsWeCarry = brandsSorted.filter(([b]) => liveBrands.has(normaliseForMatch(b)));
 console.log(`\nfeed brands we already carry (live): ${feedBrandsWeCarry.length}/${brandsSorted.length}`);
 for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).padStart(4)}  ${b}`);
+
+// === 4. IMPORT-PATH AUDIT ============================================================
+// WHY THIS SECTION EXISTS. `retailer_import_config.category_path_must_contain` is an
+// ALLOWLIST matched against `merchant_product_category_path`. Boots drops ~13,750 rows a
+// run through it. Section 2 above reports whichever category field has the best fill,
+// which for most feeds is `product_type` or `merchant_category` — DIFFERENT FIELDS with
+// DIFFERENT TAXONOMIES. So the decision that discards a third of a feed has been keyed on
+// a column no diagnostic printed, and "what are we excluding?" was unanswerable.
+//
+// Prints the excluded population grouped by the field the allowlist actually reads, and
+// cross-tabs it against the supplements definition (docs/supplements-definition.md v1.0)
+// so "surgical or wholesale" can be decided from counts rather than argued.
+{
+  const ALLOW = (process.env.MUST_CONTAIN || "").split("|").map(s => s.trim()).filter(Boolean);
+  const pathCol = col("merchant_product_category_path");
+  if (pathCol < 0) {
+    console.log("\n=== 4. IMPORT-PATH AUDIT ===\n  feed has no merchant_product_category_path column — allowlist would drop everything");
+  } else if (!ALLOW.length) {
+    console.log("\n=== 4. IMPORT-PATH AUDIT ===\n  set MUST_CONTAIN='A|B|C' to audit an allowlist");
+  } else {
+    // Definition v1.0, Rule 1 + Rule 2. Tokens deliberately match the committed file.
+    const FORM = /\b(supplement|supplements|multivitamin|probiotic|prebiotic|capsules|tablets|softgels|gummies|effervescent|lozenges)\b/i;
+    const BOUND = /\b(collagen|biotin|keratin)\b[^,]{0,30}\b(powder|drink|sachets|shots)\b|\b(powder|drink|sachets|shots)\b[^,]{0,30}\b(collagen|biotin|keratin)\b/i;
+    const TOPICAL = /\b(serum|cream|lotion|balm|butter|mask|masque|gel|oil|spray|mist|toner|essence|cleanser|shampoo|conditioner|scrub|peel|patch|patches|candle|diffuser|perfume|eau de|deodorant|soap|wash|foundation|lipstick|mascara|primer|concealer|polish|varnish|ampoule|booster|tint|highlighter)\b/i;
+    const SPORT = /\b(protein|whey|creatine|pre-?workout|bcaa|electrolyte|sports)\b/i;
+    const isSupp = (n: string) => (FORM.test(n) || BOUND.test(n)) && !TOPICAL.test(n);
+
+    const excluded = body.filter(r => {
+      const p = (r[pathCol] ?? "").trim();
+      return !ALLOW.some(a => p.includes(a));
+    });
+    const byPath = new Map<string, { n: number; supp: number; sport: number }>();
+    for (const r of excluded) {
+      const p = ((r[pathCol] ?? "").trim()) || "(empty path)";
+      const nm = get(r, "product_name");
+      const e = byPath.get(p) ?? { n: 0, supp: 0, sport: 0 };
+      e.n++; if (isSupp(nm)) e.supp++; if (SPORT.test(nm)) e.sport++;
+      byPath.set(p, e);
+    }
+    const tot = excluded.length;
+    const totSupp = [...byPath.values()].reduce((a, b) => a + b.supp, 0);
+    const totSport = [...byPath.values()].reduce((a, b) => a + b.sport, 0);
+    console.log("\n=== 4. IMPORT-PATH AUDIT (allowlist: " + ALLOW.join(" | ") + ") ===");
+    console.log("  feed rows            :", body.length);
+    console.log("  EXCLUDED by allowlist:", tot, "(" + (100 * tot / body.length).toFixed(1) + "%)");
+    console.log("  of the excluded — supplements per definition v1.0:", totSupp,
+                "(" + (100 * totSupp / Math.max(tot, 1)).toFixed(1) + "%)");
+    console.log("  of the excluded — sports-nutrition-shaped        :", totSport);
+    console.log("  NON-supplement excluded rows                    :", tot - totSupp);
+    console.log("\n  excluded paths, by volume (supp = supplements v1.0 within that path):");
+    for (const [p, e] of [...byPath.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 30)) {
+      console.log("   " + String(e.n).padStart(6) + "  supp " + String(e.supp).padStart(5) + "  " + p.slice(0, 86));
+    }
+    // Concentration: how many paths hold the supplements, and where the tail starts.
+    const suppPaths = [...byPath.entries()].filter(([, e]) => e.supp > 0).sort((a, b) => b[1].supp - a[1].supp);
+    console.log("\n  paths containing ANY supplement:", suppPaths.length);
+    let run = 0;
+    suppPaths.slice(0, 12).forEach(([p, e], i) => {
+      run += e.supp;
+      console.log("   " + String(i + 1).padStart(2) + ". " + String(e.supp).padStart(5) +
+                  "  cum " + (100 * run / Math.max(totSupp, 1)).toFixed(1) + "%  " + p.slice(0, 76));
+    });
+    console.log("  -> top 12 paths cover " + (100 * run / Math.max(totSupp, 1)).toFixed(1) + "% of supplements");
+  }
+}
+
+// === 5. ADMISSION PREVIEW ===========================================================
+// Answers the two questions that decide a path-allowlist change BEFORE it is made:
+//   (a) what ELSE arrives if a branch is admitted, grouped to 3 path segments, and
+//   (b) whether EXCLUDE_PATTERNS.supplements would then drop what the path admits.
+//
+// (b) matters because the two switches fight. Opening the path lets supplements in;
+// the shared code constant then removes a slice of them, and the category launches with
+// a hole shaped like whatever that regex happens to catch. Deciding them separately is
+// how that hole gets shipped.
+{
+  const pathCol = col("merchant_product_category_path");
+  const PREFIX = (process.env.ADMIT_PREFIX || "").split("|").map(s => s.trim()).filter(Boolean);
+  if (pathCol >= 0 && PREFIX.length) {
+    // The live shared constant, copied verbatim from _shared/categorisation.ts.
+    const EXCLUDE_SUPP = /\b(supplement|vitamin tablet|capsule|gummies|protein shake|meal replacement|powder drink|fish oil|cod liver oil|effervescent tablet)\b/i;
+    const FORM = /\b(supplement|supplements|multivitamin|probiotic|prebiotic|capsules|tablets|softgels|gummies|effervescent|lozenges)\b/i;
+    const BOUND = /\b(collagen|biotin|keratin)\b[^,]{0,30}\b(powder|drink|sachets|shots)\b/i;
+    const TOPICAL = /\b(serum|cream|lotion|balm|butter|mask|gel|oil|spray|mist|toner|essence|cleanser|shampoo|conditioner|scrub|candle|perfume|eau de|soap|wash|foundation|lipstick|mascara|polish)\b/i;
+    const isSupp = (n: string) => (FORM.test(n) || BOUND.test(n)) && !TOPICAL.test(n);
+
+    console.log("\n=== 5. ADMISSION PREVIEW (prefix: " + PREFIX.join(" | ") + ") ===");
+    const admitted = body.filter(r => { const p = (r[pathCol] ?? "").trim(); return PREFIX.some(x => p.startsWith(x)); });
+    const supp = admitted.filter(r => isSupp(get(r, "product_name")));
+    const clash = supp.filter(r => EXCLUDE_SUPP.test(get(r, "product_name")));
+    console.log("  rows admitted by this prefix        :", admitted.length);
+    console.log("  of those, supplements per v1.0      :", supp.length);
+    console.log("  ** of those supplements, EXCLUDE_PATTERNS.supplements would DROP:", clash.length,
+                "(" + (100 * clash.length / Math.max(supp.length, 1)).toFixed(1) + "%) **");
+    console.log("  non-supplement rows arriving alongside:", admitted.length - supp.length);
+    const seg3 = new Map<string, number>();
+    for (const r of admitted) {
+      const k = ((r[pathCol] ?? "").split(">").slice(0, 3).map(x => x.trim()).join(" > ")) || "(empty)";
+      seg3.set(k, (seg3.get(k) ?? 0) + 1);
+    }
+    console.log("\n  what arrives, grouped to 3 path segments:");
+    for (const [k, n] of [...seg3.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20)) {
+      console.log("   " + String(n).padStart(6) + "  " + k.slice(0, 84));
+    }
+    if (clash.length) {
+      console.log("\n  sample of the supplements EXCLUDE_PATTERNS would drop:");
+      clash.slice(0, 10).forEach(r => console.log("   x " + get(r, "product_name").slice(0, 80)));
+    }
+  }
+}
