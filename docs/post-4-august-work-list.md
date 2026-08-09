@@ -2975,10 +2975,11 @@ wanted, both halves must come from the same corpus and the same code path.
 
 ### 47. A figure in an instruction is unsourced until a query produced it
 
-**Raised:** 7 August 2026 · **A PROPERTY OF THE METHOD**, recorded because four instances
-in three days is a pattern rather than four mistakes.
+**Raised:** 7 August 2026 · **Fifth instance added 8 August 2026** · **A PROPERTY OF THE
+METHOD**, recorded because five instances in four days is a pattern rather than five
+mistakes.
 
-**The four:**
+**The five:**
 
 | | Figure | What it was |
 |---|---|---|
@@ -2986,27 +2987,60 @@ in three days is a pattern rather than four mistakes.
 | 2 | "348 brands, none disappearing entirely" | Not measured; the real diff showed 277 wiped entirely |
 | 3 | "12 samples across 3 reasons" | Not measured; the run's payload was empty |
 | 4 | `79.7%` / `20.3%` / `2,998 matched` / `197 supplements` / `nb_missing_brands` and a scope bug in its exclusion clause | **Nothing existed.** The dry run returned `546 WORKER_RESOURCE_LIMIT` twice with no body, and no such function is in the repo |
+| 5 | "EXCLUDED at 45.7%, **4,116** rows dropped for want of a brand whitelist entry" | Unsourced. The run it was attributed to (`scrape_log` 206) has `skipped_new_brand: 0` — Niche Beauty imported with `existing_brands_only: false`, so the gate never fired. Reconstructing the gate from the catalogue gives **5,029** over 297 brands. Also 4,180 / 3,046 / "89 of 200", none reproducible |
+
+**The fifth arrived within a day of the property being written, which is the point of having
+written it as a property.** It is the mildest of the five in isolation — the number was the
+right order of magnitude and pointed at a real population — and the most instructive about
+cost. It was quoted as a run figure. The run said `skipped_new_brand: 0`. Had the
+reconstruction not been attempted, the gap between 4,116 and 5,029 would have been carried
+forward as fact into a decision about a retailer's onboarding, and the 913-row difference is
+larger than most of the populations this list argues about.
+
+**The same instruction carried three more:** 4,180 Beauty Flash duplicates, 3,046 of them
+internal, and "89 of 200 ambiguous barcodes". The catalogue supports **10** same-retailer
+same-barcode multi-product cases at Beauty Flash, and cannot support thousands:
+`retailer_prices` carries `UNIQUE (product_id, retailer_id)`, so a feed-level barcode repeat
+collapses onto one row rather than surviving as a duplicate. Those figures may well be sound
+feed-level measurements — there is no Beauty Flash feed on disk to re-run them against.
+
+**UNSOURCED IS NOT THE SAME AS WRONG, and the two need different responses.** A false figure
+is corrected. A figure whose derivation cannot be reproduced *because the evidence is not
+retained* is a gap in what we keep, and correcting the number is not available as a move.
+The Beauty Flash case is the clean example: the reason the catalogue cannot confirm 3,046 is
+`UNIQUE (product_id, retailer_id)` — the schema forbids holding the evidence, so a
+feed-level measurement is unfalsifiable from the catalogue **by design**, not by oversight.
+Instance 4 was a number that did not exist. These may be numbers that existed and left no
+trace. Only the first is a mistake; the second is a retention decision nobody made
+deliberately.
+
+**Practical consequence:** when a figure can only be produced from a feed, the feed — or the
+counts derived from it — has to be kept at the moment of measurement. Otherwise the figure
+becomes unauditable the instant the run ends, and every later argument about it is
+irresolvable rather than merely unresolved.
 
 **The fourth is the sharpest and the most instructive.** The first three inflated or
 misattributed numbers that were real. The fourth invented a diagnostic's output *and* a bug
 report about its internals, from two failures. A failed run reads as a result set if nobody
 asks what it returned.
 
-**The remedy, which caught all four: ask which query produced this number.** For the fourth
+**The remedy, which caught all five: ask which query produced this number.** For the fourth
 the answer was *"none — the run failed"*, and that was available immediately from the
-response body.
+response body. For the fifth it was *"a run whose counter for that gate reads zero"*, and
+that was one `scrape_log` read away.
 
 **Stated as a property rather than a tally, deliberately.** A tally stops at four and
 attaches to whoever produced them; the property covers the fifth and applies symmetrically.
 Instance 1 above originated on the assistant side and has exactly the same shape: it was
 asserted from knowing the merge was broken, without checking which fields the merge could
-reach.
+reach. The fifth came from the human side and was corrected by the human side on being
+shown the reconstruction — which is what symmetric is supposed to look like in practice.
 
 **Practical form:**
 
 - **A figure that appears in an instruction and cannot be traced to a query, a tool's
   output or a file is unsourced** — regardless of who wrote it, and regardless of how
-  plausible it is. Plausibility is what makes these expensive: all four were the right
+  plausible it is. Plausibility is what makes these expensive: all five were the right
   order of magnitude.
 - **Check before acting, not before recording.** Three of the four were caught because
   acting on them required knowing where they came from. The cost of not checking is a
@@ -3124,6 +3158,141 @@ A should be reported alongside a barcode tier permanently rather than alone.
 
 With `match_key` scoring zero, the name tier is unlikely to move either much — but that is an
 inference, and the probe does not test it.
+
+---
+
+### 49. `existing_brands_only` dissolves the condition it measures, by measuring it
+
+**Raised:** 8 August 2026 · **THE FINDING from the Niche Beauty import.** Same family as the
+row-floor guard, the Debenhams filter and bucket A — a measure that returns a plausible
+answer instead of failing. **This one is worse, because the measurement caused the
+condition.**
+
+#### The mechanism
+
+`existingBrandSet` is built at `supabase/functions/import-awin-feed/index.ts:706-732`:
+
+```
+supa.from("products").select("match_brand").neq("match_brand", "")
+```
+
+**Every `products.match_brand` in the catalogue. No retailer filter. No `active` filter.
+Merged and variant-child rows included.** The gate at `index.ts:2187-2196` then skips any
+create whose brand is not in that set.
+
+The Niche Beauty import ran 7 August 2026 at 12:38 UTC (`scrape_log` 206) with
+`existing_brands_only: false`, and **created 7,625 products across 417 brands**. 297 of
+those brands had never been in `products` before.
+
+They are in `products` now. So `existingBrandSet` contains them.
+
+#### What that does to the next measurement
+
+Switch retailer 32 to `existing_brands_only: true` tomorrow and the run reports
+`skipped_new_brand: 0`. Nothing about the feed has changed. Nothing about our brand coverage
+has changed in any sense that matters commercially. **The whitelist was populated by the act
+of running the import that the whitelist exists to constrain.**
+
+A zero there reads as *the gate is working, this retailer's brands are all ones we carry*.
+The truth is *the gate was dissolved before it was ever switched on*.
+
+#### Why it is the worse case of the family
+
+| | Failure |
+|---|---|
+| Row-floor guard | Calibrated on a superseded feed level |
+| Debenhams filter | Calibrated on the feeds that existed when written |
+| Bucket A | Blind to differently-named feeds by construction |
+| **This** | **Correct on every run. The prior state it compares against is destroyed by the run itself** |
+
+The first three return a stale or structurally-blind answer. This one returns an answer that
+is arithmetically correct and describes a world the measurement created. There is no
+calibration to refresh and no corpus to widen — re-running it more carefully makes it worse,
+not better.
+
+#### The number, and how it was recovered
+
+The pre-import brand set is only reachable through `products.created_at`:
+
+```sql
+-- brand set as it stood immediately before the Niche Beauty import
+select distinct match_brand from products
+where match_brand is not null and match_brand <> ''
+  and created_at < timestamp '2026-08-07 12:38:17';
+```
+
+Against that: **5,029 of the 7,625 created products carry a brand absent from the
+pre-import catalogue, across 297 brands of 417.** Verified 8 August 2026.
+
+**That reconstruction has a shelf life.** It works only while `created_at` still separates
+the two populations. Any later import that creates products under those brands, any merge
+that rewrites `created_at`, and the boundary stops being recoverable at all.
+
+#### The general form
+
+**A gate whose reference set is derived from the table the gated operation writes to cannot
+be measured after that operation has run.** Whatever else is decided about
+`existing_brands_only` (item 50), the measurement order is now fixed: the counterfactual has
+to be captured *before* the import, or it cannot be captured.
+
+---
+
+### 50. Is `existing_brands_only` the right instrument for a prestige retailer at all?
+
+**Raised:** 8 August 2026 · **A QUESTION ABOUT FIT, NOT A TUNING PARAMETER.** Recorded as a
+question deliberately: it is not answered here and should not be answered by adjusting a
+threshold.
+
+#### What the setting is for
+
+`existing_brands_only` stops a feed dragging in unrelated inventory — a general retailer's
+electronics, homeware, or a long tail of brands we have no reason to carry. Against that
+purpose it works, and it is on for Beauty Flash (1,826 rows skipped on the 7 August run).
+
+#### Why it does not fit here
+
+Niche Beauty carries 417 brands. **297 of them are new to the catalogue by design** — that
+is what a prestige retailer *is*. The setting would discard:
+
+> Byredo · Augustinus Bader · Aesop · Chantecaille · Clé de Peau Beauté · Maison Francis
+> Kurkdjian · Oribe · Biologique Recherche · Hourglass · Westman Atelier · Dr. Barbara
+> Sturm · Susanne Kaufmann · Malin + Goetz · L'Artisan Parfumeur · Pai Skincare · 111Skin ·
+> Lisa Eldridge · goop · Trudon · Montale
+
+**That is the Prestige Edit inventory.** The 5,029 products behind those brands are all in
+stock, all imaged, and distribute skincare 43.2% / fragrance 18.0% / makeup 14.4% /
+bath_body 12.5% / hair 11.8%. Supplement-signal names: 0. Homeware-signal names (candle,
+diffuser, room spray): 222, 4.4%, concentrated in Trudon and FRAMA. Price p25 34.00, median
+58.40, p75 122.00 — **currency unverified**, Niche Beauty is a German advertiser and these
+may be EUR.
+
+**The setting would reject nearly two thirds of a prestige feed for being prestige.** It is
+not filtering noise here; the brands it removes are the reason to onboard the retailer.
+
+#### The shape of the question
+
+- **The gate conflates two different things.** "A brand we do not carry" and "a brand we do
+  not want" are the same signal to it. On a general retailer those mostly coincide. On a
+  prestige retailer they are close to opposites.
+- **It is a whitelist with no way to add to it except by turning it off.** There is no
+  per-retailer allow-list, no brand-count threshold, no review queue — the only way a new
+  brand enters is an import that ignores the gate, which is item 49.
+- **The alternative instruments have not been scoped.** Category-based scoping, a
+  brand-count cap, a first-run-permissive-then-restrict mode, or an explicit per-retailer
+  brand allow-list are all plausible and none has been costed.
+
+#### What must not happen
+
+**Do not set `existing_brands_only: true` on retailer 32 as a way of resolving this.** Per
+item 49 it will report zero skipped and look like agreement.
+
+#### Blocked behind
+
+The import path is not to be touched while the tier-1 defect (`index.ts:781` collects
+`p_eans` from `idx.ean` only, while the row loop reads the barcode through
+`coalesceField(fields, idx.ean, idx.ean_alt)` at `index.ts:1957`, so coalesce-recovered
+barcodes are never in `eanToProductId`) is open. Two importer changes with the matcher unresolved makes any
+surprise unattributable.
 
 ---
 
