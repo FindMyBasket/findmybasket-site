@@ -33,6 +33,11 @@ name: feed-diag (read-only)
         required: false
         default: '(unnamed candidate)'
         type: string
+      must_contain:
+        description: "Pipe-separated category_path_must_contain allowlist to audit (section 4). Blank = skip."
+        required: false
+        default: ''
+        type: string
 
 jobs:
   diag:
@@ -92,6 +97,10 @@ jobs:
       - name: Run read-only diagnosis
         env:
           FEED_FILE: ./feed.csv
+          # Section 4 only. Pipe-separated allowlist to audit, e.g. the value of
+          # retailer_import_config.category_path_must_contain for this retailer.
+          # Empty = section 4 prints a hint and does nothing. READ-ONLY either way.
+          MUST_CONTAIN: ${{ inputs.must_contain }}
           SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
           SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           # github.event.inputs is the reliable source here; the `inputs` context
