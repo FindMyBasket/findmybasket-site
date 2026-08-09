@@ -53,7 +53,25 @@ jobs:
           # own categories, and only beauty moved. Removing them would buy nothing and
           # would need reverting if beauty moves back.
           FIDS="90938,90940,90945,90947,91126,91133,91134,91135,116972"
-          COLS="aw_deep_link,product_name,aw_product_id,merchant_product_id,search_price,store_price,merchant_deep_link,brand_name,rrp_price,in_stock,merchant_product_category_path,category_name,ean,mpn,merchant_image_url"
+          # merchant_category ADDED 9 Aug 2026, and it is the enabling change for the
+          # filter's taxonomy extension — NOT a behaviour change on its own.
+          #
+          # WHY IT WAS MISSING AND WHY THAT MATTERED. This COLS list was written against
+          # the eight Fashion feeds, which populate merchant_product_category_path. 116972
+          # populates NONE of that column and carries its taxonomy in merchant_category
+          # instead. Because merchant_category was never requested here, no run has ever
+          # downloaded it, no artefact contains it, and the question "what is in 116972"
+          # was unanswerable from anything this pipeline retains — the filter could not
+          # read the column, and neither could anyone diagnosing the filter.
+          #
+          # import-awin-feed has requested merchant_category since the sibling-pair work
+          # (index.ts:290). This workflow diverged from it and nothing compared the two.
+          # A feed fetched with different columns in two places is two different feeds.
+          #
+          # Requesting it changes nothing until filter-debenhams-feed.py reads it. It is
+          # requested FIRST, deliberately, so the taxonomy report that decides which
+          # values to admit is produced from real rows rather than estimated.
+          COLS="aw_deep_link,product_name,aw_product_id,merchant_product_id,search_price,store_price,merchant_deep_link,brand_name,rrp_price,in_stock,merchant_product_category_path,merchant_category,category_name,ean,mpn,merchant_image_url"
           curl -fsSL \
             "https://productdata.awin.com/datafeed/download/apikey/${AWIN_API_KEY}/fid/${FIDS}/format/csv/language/en/delimiter/%2C/compression/gzip/adultcontent/1/columns/${COLS}/" \
             -o raw.csv.gz
@@ -81,6 +99,62 @@ jobs:
           python3 scripts/filter-debenhams-feed.py raw.csv.gz debenhams-beauty.csv.gz
           ls -lah debenhams-beauty.csv.gz
           echo "Filtered feed has $(zcat debenhams-beauty.csv.gz | wc -l) lines (incl. header)"
+
+      # ── MEASUREMENT ONLY. Enforces nothing. Added 9 Aug 2026. ──────────────────
+      #
+      # THE DEFECT THIS EXISTS TO END: the single filtered-row floor below is doing
+      # the work of two independent checks, and says so in its own error message —
+      # "whitelist too narrow OR raw feed truncated". Those are different failures
+      # with opposite remedies, and one number cannot separate them. It fired
+      # identically for a truncated download (3,858 rows, 30 Jul) and for a taxonomy
+      # rotation the filter stopped recognising (6,311 rows, 6 Aug). Same signal,
+      # unrelated causes, six days of staleness spent telling them apart by hand.
+      #
+      # Same shape as the deleteMissing catch: an exclusion and an absence collapsed
+      # into one indistinguishable condition at the decision point.
+      #
+      # THE SPLIT:
+      #   INTEGRITY — did we download a whole file?      raw bytes, raw rows.
+      #               Independent of the filter entirely.
+      #   COVERAGE  — do we still recognise what is in it?  kept / raw, a RATIO.
+      #               Scale-free: a feed that legitimately halves does not trip it;
+      #               a filter that goes blind to a third of the feed does.
+      #
+      # RAW ROWS HAVE NEVER BEEN RECORDED. Every historical number is a filtered
+      # count or a byte size, so the ratio has no baseline and CANNOT be thresholded
+      # yet. That is why this step only prints. Deriving a floor from one
+      # observation is the thing this whole file keeps getting wrong.
+      - name: Measure raw and filtered populations (no enforcement)
+        run: |
+          RAW_ROWS=$(zcat raw.csv.gz | wc -l)
+          KEPT_ROWS=$(zcat debenhams-beauty.csv.gz | wc -l)
+          RAW_BYTES=$(stat -c%s raw.csv.gz)
+          RATIO=$(awk -v k="$KEPT_ROWS" -v r="$RAW_ROWS" 'BEGIN{ if (r>0) printf "%.4f", k/r; else print "0" }')
+          echo "raw_rows=$RAW_ROWS  kept_rows=$KEPT_ROWS  ratio=$RATIO  raw_bytes=$RAW_BYTES"
+          printf '{"run_id":"%s","utc":"%s","raw_rows":%s,"kept_rows":%s,"ratio":%s,"raw_bytes":%s}\n' \
+            "${{ github.run_id }}" "$(date -u +%FT%TZ)" "$RAW_ROWS" "$KEPT_ROWS" "$RATIO" "$RAW_BYTES" \
+            > feed-measurements.json
+          cat feed-measurements.json
+          {
+            echo "### Debenhams feed measurements"
+            echo ""
+            echo "| metric | value |"
+            echo "|---|---|"
+            echo "| raw rows | $RAW_ROWS |"
+            echo "| kept rows | $KEPT_ROWS |"
+            echo "| kept / raw | $RATIO |"
+            echo "| raw bytes | $RAW_BYTES |"
+            echo ""
+            echo "Ratio is measurement only — no floor is set. See the guard step."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Retain measurements (runs on pass AND on refusal)
+        uses: actions/upload-artifact@v4
+        with:
+          name: debenhams-measurements-${{ github.run_id }}
+          path: feed-measurements.json
+          retention-days: 90
+          if-no-files-found: error
 
       # Retain the filtered feed BEFORE the guard decides, so a REFUSED run still
       # leaves evidence. Added 5 Aug 2026, on the second consecutive failure.
@@ -118,16 +192,42 @@ jobs:
           # change. Lowering it to let a run through would silence the only thing that
           # noticed. See migrations/README.md convention 11.
           #
-          # ── UNCHANGED ON PURPOSE, 7 Aug 2026 ────────────────────────────────────
-          # 116972 was added to FIDS above in the same commit as this comment, and the
-          # floor was DELIBERATELY LEFT AT 12,000. One change per run: the nine-feed
-          # fetch is the change being observed, and moving the threshold at the same
-          # time would make tomorrow's result unattributable.
+          # ── STILL UNCHANGED, 9 Aug 2026, AND NOW DELIBERATELY BLOCKING ──────────
+          # STATUS: this floor is KNOWN WRONG and is being left wrong on purpose. It
+          # refuses every run and Debenhams has been stale since 3 August. That cost is
+          # accepted, not overlooked. Do not "unblock" it by picking a number.
           #
-          # The floor is expected to be wrong now, in the other direction, and that is
-          # fine. The retention step above runs BEFORE this guard, so a refusal still
-          # produces the artefact — which is the whole point of this run. The threshold
-          # gets derived from that artefact, not from an estimate of it.
+          # WHY IT CANNOT BE SET YET — THE ORDER MATTERS AND IT IS NOT ARBITRARY.
+          # filter-debenhams-feed.py currently discards products it should keep: 116972
+          # carries no merchant_product_category_path, so all of its rows fall to a
+          # brand-whitelist fallback covering ~150 brands. Measured on the 9 Aug
+          # artefact: of the 8,294 rows that DO carry a path, 4,635 (55.9%) across 477
+          # brands have a brand that is not on that whitelist. Those rows survive today
+          # only because a path carries them. In a path-less feed they vanish.
+          #
+          # SO: A THRESHOLD DERIVED NOW WOULD BE CALIBRATED ON A FILTER THAT IS
+          # DISCARDING VALID PRODUCTS, AND IT WOULD BE WRONG IN THE DIRECTION THAT
+          # HIDES THE PROBLEM — a low floor that passes a short feed and reports
+          # success. Fix the filter's taxonomy first (it needs the merchant_category
+          # column added to COLS above, 9 Aug), re-measure, then derive.
+          #
+          # AND THE FEED IS STILL MOVING. Two nine-feed observations exist: 11,314
+          # (8 Aug) and 11,076 (9 Aug). Diffing them on merchant_product_id: 514 rows
+          # gone, 276 new, 412 of the losses path-less — including 144 designer
+          # fragrance rows (Hugo Boss, Armani, Mugler, YSL, Elizabeth Arden present on
+          # 8 Aug, absent on 9 Aug). 790 rows of churn in 24 hours on a four-day-old
+          # feed is not a population to calibrate against.
+          #
+          # The retention step above runs BEFORE this guard, so a refusal still
+          # produces the artefact. The threshold gets derived from those artefacts,
+          # after the filter is fixed, not from an estimate of it.
+          #
+          # ── AND WHEN IT IS SET, THE FILTER IS PART OF ITS BASIS ─────────────────
+          # The re-derivation rule already recorded below applies to the FILTER too,
+          # not only to this number. A rotation that changes which taxonomy a feed
+          # populates changes what the filter admits, which changes this floor even
+          # if the underlying catalogue is identical. Re-derive both together or the
+          # floor silently becomes a measure of the filter rather than of the feed.
           #
           # ── WHATEVER TOMORROW REPORTS IS A FLOOR, NOT A MEASUREMENT ─────────────
           # READ THIS BEFORE QUOTING THE NINE-FEED NUMBER ANYWHERE.

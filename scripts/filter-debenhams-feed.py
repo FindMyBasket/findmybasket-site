@@ -102,7 +102,30 @@ def is_beauty(row):
     #
     # Reading merchant_category as a second primary signal would fix it and is NOT done
     # here — it changes what the filter admits, and that belongs in its own change with
-    # its own before/after count.
+    # its own before/after count. The column was added to the workflow's COLS on
+    # 9 August 2026 so the report that decides WHICH values to admit can be produced
+    # from real rows; nothing below reads it yet.
+    #
+    # ── WHEN merchant_category IS ADDED, IT IS AN EXTENSION, NOT A REPLACEMENT ─────
+    # READ THIS BEFORE DELETING THE PATH BRANCH BELOW.
+    #
+    # The obvious-looking cleanup once merchant_category works is to drop the
+    # merchant_product_category_path branch as superseded. That would be wrong, and it
+    # would not fail loudly — it would quietly discard most of the catalogue.
+    #
+    # FOUR of the eight surviving Fashion feeds still populate
+    # merchant_product_category_path, and it is the ONLY signal that admits their rows.
+    # Measured on the 9 Aug 2026 artefact: 8,294 of 11,075 kept rows (74.9%) came in via
+    # that path branch, and 4,635 of those (55.9%) have a brand that is NOT on
+    # BEAUTY_BRANDS below — 477 distinct brands, including Dove, OPI, Vaseline, Simple,
+    # IT Cosmetics, Nails Inc, Kevyn Aucoin and Mason Pearson. Remove the path branch
+    # and every one of those rows is dropped, because no other branch can see them.
+    #
+    # The two taxonomies are populated by DIFFERENT feeds and neither is a superset:
+    #   merchant_product_category_path  →  four of the eight Fashion feeds
+    #   merchant_category              →  116972 "Debenhams Beauty"
+    # Both branches are load-bearing. A feed rotation can move which is which again,
+    # which is the reason to keep both rather than track whichever is current.
     #
     # Primary signal: trust Debenhams' own taxonomy. The well-structured beauty
     # catalogue ships a rich path like "Beauty > Face > Foundations"; everything
