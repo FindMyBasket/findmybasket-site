@@ -78,6 +78,50 @@ NON_BEAUTY_NAME_HINTS = (
     'rug', 'cushion', 'duvet', 'bedding', 'towel', 'candle', 'diffuser',
 )
 
+
+# ── TIER 1: merchant_category allowlist (added 10 Aug 2026) ──────────────────────
+#
+# WHY THIS EXISTS. Feed 116972 "Debenhams Beauty" populates merchant_product_category_path
+# on 0.0% of rows and carries its taxonomy in merchant_category instead. The path branch
+# below therefore reads nothing on it, and every 116972 row fell through to the brand
+# whitelist — a rescue path for designer beauty hiding in a fashion feed, never a
+# classifier for a whole beauty catalogue.
+#
+# Measured on the raw 2,450,213-row feed (taxonomy report, 10 Aug 2026): 151 values name
+# Health & Beauty, holding 39,192 rows of which only 10,356 were kept. 111 clean-beauty
+# values carry 18,968 recoverable rows.
+#
+# THIS IS TIER 1 ONLY — the nine largest clean-beauty values, 10,928 recoverable rows.
+# Staged deliberately: a fourfold expansion of one retailer lands in comparison depth,
+# savings, category distribution and the homepage demo simultaneously, and if anything is
+# wrong the cause is unattributable. Tier 2 follows only once this has landed and been read.
+#
+# CHOSEN VALUE BY VALUE, NOT BY PREFIX. "Health & Beauty" as a prefix also admits
+# Vision Care > Eyeglasses (1,722), Mobility & Accessibility (3,030) and Jewelry Holders
+# (372). Those are deferred, not rejected — see docs, the drop-shipped question is open.
+#
+# Fitness & Nutrition > Vitamins & Supplements (1,496) is NOT here. Supplements is a
+# separate decision with its own definition and its own sequence.
+TIER1_MERCHANT_CATEGORIES = (
+    "Health & Beauty > Personal Care > Cosmetics > Bath & Body",
+    "Health & Beauty > Personal Care > Cosmetics > Skin Care > Lotion & Moisturizer",
+    "Health & Beauty > Personal Care > Hair Care > Shampoo & Conditioner > Shampoo",
+    "Health & Beauty > Personal Care > Hair Care > Shampoo & Conditioner > Conditioners",
+    "Health & Beauty > Personal Care > Hair Care > Hair Styling Products",
+    "Health & Beauty > Personal Care > Cosmetics > Perfume & Cologne",
+    "Health & Beauty > Personal Care > Hair Care > Hair Styling Tools > Combs & Brushes",
+    "Health & Beauty > Personal Care > Cosmetics > Skin Care > Facial Cleansers",
+    "Health & Beauty > Personal Care > Cosmetics > Cosmetic Tools > Makeup Tools > Makeup Brushes",
+)
+
+# Which branch admitted each row. THE CONTROL FOR TOMORROW'S READ: the four originally
+# whitelisted paths have carried 3,700-4,500 rows throughout, including across the 4 Aug
+# rotation. If the total lands as expected AND the path branch still contributes its usual
+# share, the extension is additive. If the total is right but the composition shifted,
+# something else moved and the total would hide it.
+KEPT_BY = {"path": 0, "tier1_merchant_category": 0, "brand_fallback": 0}
+
+
 def is_beauty(row):
     # THE PRIMARY SIGNAL IS ABSENT FROM THE NEWEST FEED. Recorded 7 August 2026.
     #
@@ -133,7 +177,19 @@ def is_beauty(row):
     # (and the eyewear/bags carrying those paths) is dropped here.
     path = (row.get('merchant_product_category_path') or '').strip().lower()
     if path:
-        return path.startswith('beauty')
+        if path.startswith('beauty'):
+            KEPT_BY["path"] += 1
+            return True
+        return False
+
+    # TIER 1. Path absent -> try the retailer's OTHER taxonomy before falling back to the
+    # brand whitelist. This is an EXTENSION, not a replacement: four of the eight surviving
+    # Fashion feeds still populate merchant_product_category_path and the branch above is
+    # the only thing that admits their rows.
+    mcat = (row.get('merchant_category') or '').strip()
+    if mcat and any(mcat.startswith(t) for t in TIER1_MERCHANT_CATEGORIES):
+        KEPT_BY["tier1_merchant_category"] += 1
+        return True
 
     # No category path at all: the bulk of these are designer fragrance and
     # accessories. Admit only whitelisted beauty brands, and only when the
@@ -151,7 +207,10 @@ def is_beauty(row):
     # Havana ... ORIA/G/SK"), watches ("Roller Buckle 40Mm") or apparel
     # ("Cotton Crew | Size: Large") because their names use model codes and
     # shapes, not category words. A volume unit does separate them cleanly.
-    return bool(VOLUME_RE.search(name)) or any(h in name for h in FRAGRANCE_HINTS)
+    if bool(VOLUME_RE.search(name)) or any(h in name for h in FRAGRANCE_HINTS):
+        KEPT_BY["brand_fallback"] += 1
+        return True
+    return False
 
 def main():
     if len(sys.argv) != 3:
@@ -179,6 +238,12 @@ def main():
 
     print(f"\nDone. {in_rows:,} input rows -> {out_rows:,} beauty rows "
           f"({100*out_rows/in_rows:.2f}%)", file=sys.stderr)
+    # COMPOSITION, not just the total. A correct total with a shifted composition means
+    # something moved that the headline count would hide.
+    print("\nKEPT BY BRANCH:", file=sys.stderr)
+    for k, v in KEPT_BY.items():
+        print(f"  {k:28s} {v:8,}", file=sys.stderr)
+    print(f"  {'TOTAL':28s} {sum(KEPT_BY.values()):8,}", file=sys.stderr)
     print(f"Input: {input_path} ({input_path.stat().st_size:,} bytes)", file=sys.stderr)
     print(f"Output: {output_path} ({output_path.stat().st_size:,} bytes)", file=sys.stderr)
 
