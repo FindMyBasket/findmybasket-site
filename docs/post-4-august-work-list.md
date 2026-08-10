@@ -3800,6 +3800,65 @@ noticed because it never errored.
 
 ---
 
+### 57. A rule fitted to its catalogue, not to its concept
+
+**Raised:** 10 August 2026 · **THE VALIDATION THAT CAUGHT IT IS THE RECORD-WORTHY PART.**
+
+The supplements classification rule was written against the catalogue, then validated
+against a random 34-row catalogue sample it had not been written from. **32 of 34.** A real
+result on an honest test.
+
+It was then run against 2,415 raw Boots feed rows — the population that arrives when the
+path allowlist opens — **before** the config change. It failed in three directions at once.
+
+#### The failure that matters
+
+```
+SUPPLEMENT (default fired) | Viagra Connect Sildenafil 50Mg Film-Coated Tablets - 4
+```
+
+**A pharmaceutical entering a consumer supplements category through a rule with no concept
+of medicine.** Not a misfiled moisturiser — a different order of problem, and unreachable by
+tuning, because every signal the rule reads correctly says "supplement".
+
+#### The mechanism: words that invert between catalogues
+
+| Word | Beauty catalogue | Health catalogue |
+|---|---|---|
+| `oil` | facial oil — topical | fish oil — ingested |
+| `gel` | gel cleanser — topical | soft gel capsule — dosage form |
+| `pack` | sheet-mask pack — topical | pack of 10 capsules — quantity |
+
+Same string, opposite meaning, and **only the surrounding catalogue disambiguates**. The
+rule had no way to know which catalogue it was reading.
+
+The truncation heuristic inverted the same way: a short trailing token means a cut-off word
+in beauty and a pack size in health, so it flagged **95.6%** of the health feed.
+
+#### The general form
+
+> **A rule validated on one corpus is validated for that corpus. Moving it to another
+> corpus is an untested change, however good the validation was.**
+
+This is items 48 and 51 arriving from the far side. Bucket A was calibrated on advertisers
+who name products the way our catalogue does; the Debenhams filter on the feeds that existed
+when it was written. **Both were found by being wrong in production. This one was found by
+being tested on the new corpus first**, which is the only difference that matters and the
+reason it cost nothing.
+
+**The practice worth keeping: when a classifier moves to a new population, re-validate on a
+sample of THAT population before the change that exposes it.** It is one workflow dispatch
+and it turned a config change into a design decision.
+
+#### What it changed
+
+Imports now classify on the retailer's own taxonomy path; the name rule is a secondary
+check, never the classifier. `Medicine & Drugs` is not admitted, and the ~115 supplements
+inside it are a **stated accepted cost** rather than an oversight. Recorded in
+`docs/supplements-definition.md` v1.2.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
