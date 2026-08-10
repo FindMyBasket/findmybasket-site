@@ -277,6 +277,76 @@ legitimately move thousands of ids, so expect to raise `fail_threshold` for this
 deliberately — and only once the number has been reconciled against the flip you just
 performed.
 
+### Two worked examples, and the test that separates them
+
+**Added 10 August 2026.** A departure has two shapes and they get different treatment. The
+test is one question:
+
+> **Can this retailer return without a new approval?**
+
+| | **Superdrug (r12)** — retained | **Skin Cupid (r7)** — closed |
+|---|---|---|
+| What happened | programme paused; could reappear on AWIN with the same catalogue | **programme closed** in June; a return needs fresh AWIN approval |
+| Price rows | **29,547 retained**, all flipped `in_stock = false` | **removed**; 0 live rows today |
+| `retailers` row | **kept** | **kept** |
+| `retailer_import_config` | kept, `enabled = true` | kept, `enabled = false` |
+| Backups | n/a — rows retained in place | `retailer_prices_skincupid_backup` (594 rows) |
+| Reason recorded? | **yes**, in this document | **it was not** — see below |
+
+**Both keep their `retailers` row, and that is deliberate.** Deleting it cascades
+`retailer_import_config` and erases the evidence the retailer was ever integrated.
+`scrape_log` also holds the import history — 11 runs for Skin Cupid — and the backup tables
+carry a `retailer_id` column pointing at it. A retirement is not an un-integration.
+
+#### THE SKIN CUPID LESSON IS ABOUT THE RECORD, NOT THE ROWS
+
+Skin Cupid's price rows were removed at some point before August 2026 and parked in **two
+identical 594-row backup tables**, `retailer_prices_skincupid_backup` and
+`..._backup_2`, verified byte-identical on the compared columns. **Neither carries a table
+comment and no document says why the rows went.**
+
+The consequence surfaced on 10 August 2026, when a deletion was proposed for rows that had
+already been deleted:
+
+```
+live rows, retailer_id = 7                     0
+live rows matching any backup row id           0
+backup vs backup_2 identical                   YES
+products referenced by the backup, still alive 118
+  ...of those, with no live offer at all         3
+```
+
+**The decision had already been taken and executed, and was about to be taken again**
+because nothing recorded it. That is the cost of an undocumented retirement: not the rows,
+which were fine, but a second decision cycle spent rediscovering the first.
+
+**So the rule for a closed programme:**
+
+1. Back up the price rows to ONE table named for the retailer and the date.
+2. **Comment that table at creation** with the programme status, the date, and whether a
+   return needs fresh approval.
+3. Delete the live rows.
+4. Keep `retailers` and `retailer_import_config`, with `enabled = false`.
+5. Record the closure in this document, next to the examples above.
+
+Step 2 is the one that was skipped, and it is the cheapest of the five.
+
+#### Orphan check before deleting price rows
+
+Removing a retailer's rows can leave products with no offer at all. Those are different from
+products that merely lose one retailer, and they need counting before the delete, not after:
+
+```sql
+select count(*) from products p
+where p.id in (select product_id from <backup_table>)
+  and not exists (select 1 from retailer_prices rp where rp.product_id = p.id);
+```
+
+For Skin Cupid the answer is **3 of 118**, and all three are already invisible —
+`products_active` requires an offer at an ACTIVE retailer, so a product with no offer at all
+cannot appear. **Deleting the rows changed nothing anyone could see**, which is why it was
+safe, and is the thing to establish before any equivalent delete rather than assume.
+
 ### The same class, found the same way: delivery terms (2026-08-01)
 
 **Retailers 23 to 28 all had NULL `delivery_threshold` and `delivery_cost`. Everything
