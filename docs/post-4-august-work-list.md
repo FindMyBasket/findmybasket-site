@@ -2975,11 +2975,12 @@ wanted, both halves must come from the same corpus and the same code path.
 
 ### 47. A figure in an instruction is unsourced until a query produced it
 
-**Raised:** 7 August 2026 · **Fifth and sixth 8-9 August · Seventh and eighth 9 August** ·
-**A PROPERTY OF THE METHOD**, recorded because eight instances in five days is a pattern
-rather than eight mistakes.
+**Raised:** 7 August 2026 · **Fifth to eighth 8-9 August · Ninth 10 August** ·
+**A PROPERTY OF THE METHOD**, recorded because nine instances in six days is a pattern
+rather than nine mistakes. **Read instance 9 first: it is the one the remedy nearly
+missed.**
 
-**The eight:**
+**The nine:**
 
 | | Figure | What it was |
 |---|---|---|
@@ -2992,6 +2993,36 @@ rather than eight mistakes.
 
 | 7 | "754/665/46 reconciliation is exact"; "the 22 fan-out cases"; "3,894 was 234 an hour ago" | No run produced 665 — no dry run existed. Arrived **inside the message calling the reconciliation exact**, which is the sharpest form: the confidence marker and the unsourced figure in one sentence |
 | 8 | "1,468 blocked at 25.9%"; "creatine, pre-workout and protein bars are what EXCLUDE_PATTERNS blocks"; "excluded_by_category DELETES" | Measured: **274 of 941, 29.1%**, and the sample is Imedeen, Equazen, Bio Kult, Sambucol, Paediasure. Creatine and pre-workout are excluded by the PATH allowlist, not the regex. **And there is no DELETE anywhere in the importer** |
+
+| 9 | "224 tier-1 links predicted for Beauty Flash, 4 for The Organic Pharmacy" — later restated as "1,208 against 224" and "1,140 against 4" | **No run ever produced any of them.** Every `would_link_via_ean` above 100 in the entire history is Stylevana (500s), Branded Beauty (125-162), Niche Beauty (237) and Beauty Flash today (681). No dry run was executed. The real numbers are **681 and 1** |
+
+#### INSTANCE 9 IS THE DANGEROUS SHAPE: A FIGURE THAT ACQUIRED PROVENANCE BY BEING REPEATED
+
+**The other eight were caught because nobody could source them.** Asked "which query
+produced this?", the answer came back "none", and the figure died.
+
+**Instance 9 had a source, and the source was this file's own process.** The numbers were
+asserted in conversation on 9 August. They were then repeated back in an assistant summary
+as *"predictions on record: 224 and 4"* — not as a claim, as a restatement. By the following
+morning they were being reasoned about as the output of a prediction *method*, and the
+question on the table was "why is the method wrong by two orders of magnitude?" — a question
+that presupposes the method exists.
+
+**A fabricated figure that survives one round trip acquires provenance it never had.** The
+repetition is what does it. "Predictions on record" is a claim about record-keeping, and
+nothing had been recorded.
+
+**The remedy has to extend**, because "which query produced this number?" now returns
+"an earlier message", which reads like an answer:
+
+> **Ask which query produced it ORIGINALLY, not where you last saw it.** A figure's
+> appearance in a previous summary is not a source. If the chain terminates in prose rather
+> than a query, a tool's output or a file, it is unsourced no matter how many times it has
+> been restated.
+
+**Both sides produced this one.** The figures were asserted human-side; the provenance was
+manufactured assistant-side by restating them as recorded. Neither half alone would have
+survived to the next morning.
 
 **The sixth is the one that closes the loop with instance 5, and it is worth stating why.**
 Instance 5's figure could not be reproduced because a *counter* read zero. Instance 6's
@@ -3634,6 +3665,63 @@ Quoting one as the other is how a 12-row exposure becomes a 274-row one in conve
 **The third is the one that matters and nobody has run it.** It is a single query once the
 widening exists, and it is the only figure that could turn the 8-day window into a hard
 precondition. Draft the regex, then measure, then decide — in that order.
+
+---
+
+### 56. A report that cannot see its population returns a clean table of noes
+
+**Raised:** 10 August 2026 · **Third member of the family with items 51 and 54.**
+
+`scripts/debenhams-taxonomy-report.py` exists to answer one question: **what would admitting
+this `merchant_category` value ADD that the filter does not already keep?** It reports, per
+value, `rows / already / NEW / flagged / no-size`.
+
+It was written to take a feed file. The only feed file the pipeline retains is the
+**filtered output** — every row of which the filter already kept. So `already` is always the
+whole row count and **`NEW` is always zero, by construction**.
+
+Run against the real artefact on 10 August 2026:
+
+```
+raw rows: 11,066   distinct values: 142
+    rows  already      NEW  flagged  no-size  value
+    1490     1490        0        0        0  … Makeup > Face Makeup > Foundations & Concealers
+    1237     1237        0        0        0  … Skin Care > Lotion & Moisturizer
+     568      568        0        0        0  … Bath & Body
+  [139 more, NEW = 0 on every one]
+```
+
+**142 values, zero exceptions, no error, exit code 0, a complete and well-formatted table.**
+The output is indistinguishable from a real finding that no value would add anything — which
+is a plausible answer, and the wrong one.
+
+#### The family
+
+| Item | Shape |
+|---|---|
+| 51 | a contract covering one function, read as covering the output |
+| 54 | a threshold parsed from a log line, silently vacuous when the logging changes |
+| **56** | **a report reading a population that excludes what it is asking about** |
+
+All three produce **a confident, well-formed, wrong answer with nothing failing.** And all
+three are invisible to testing that checks the tool *runs*, because the tool runs perfectly.
+
+#### The tell, and it is cheap
+
+**If a diagnostic's key column can only take one value given its input, it is reading the
+wrong input.** A column of identical answers is not a result; it is a question that was
+never asked. `NEW = 0` on 142 of 142 values should read as "this cannot come out any other
+way", not as "nothing would be added".
+
+#### Fixed
+
+The report now runs against `raw.csv.gz` inside `refresh-debenhams.yml`, in the window
+between the filter step and the cleanup step — the only window in which the question is
+answerable at all. Read-only, before the guard so a refused run still produces it, and it
+cannot fail the import.
+
+**It had existed for a day without ever having been given data it could read.** Nobody
+noticed because it never errored.
 
 ---
 
