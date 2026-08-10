@@ -1,5 +1,9 @@
 # Supplements: the category definition
 
+**VERSION 1.2** — 10 August 2026. **The name rule classifies the CATALOGUE ONLY. Imports
+classify on the retailer's path.** See "Implementation" below — this is the most important
+section in the file and it exists because the rule was tested on feed rows and failed.
+
 **VERSION 1.1** — 10 August 2026. Rule 2 resolved: **sports nutrition is IN scope.**
 Supersedes v1.0 (9 August). Figures measured under v1.0 are not wrong, they answered a
 narrower question — quote the version with the number.
@@ -201,6 +205,78 @@ Imedeen line. Two switches, one decision, as recorded in work-list item 53.
 
 The regex also still needs its topical-capsule carve-out (`categorisation.ts:300`), which is
 unaffected by v1.1 and should not be disturbed.
+
+## Implementation: PATH-FIRST FOR IMPORTS, name rule for the catalogue
+
+**THE NAME RULE IS FITTED TO THE BEAUTY CATALOGUE, NOT TO THE CONCEPT.** It scored 32 of 34
+on a random catalogue sample it was not written from — a real result — and then failed in
+three directions on 2,415 raw Boots rows from
+`Health & Beauty > Health Care > Fitness & Nutrition` and `… > Medicine & Drugs`.
+
+### The headline failure: a pharmaceutical entering a consumer category
+
+```
+SUPPLEMENT (default fired) | Viagra Connect Sildenafil 50Mg Film-Coated Tablets - 4
+SUPPLEMENT (default fired) | Pregnacare Vitabiotics Original - 90 Tablets
+```
+
+**This is not a misfiled product. It is a prescription-adjacent medicine entering a consumer
+supplements category through a rule that has no concept of medicine.** A name rule cannot
+acquire one: "film-coated tablets" is a dosage form, and every signal the rule reads says
+supplement. **This is the reason imports cannot use a name rule** — not an edge case to
+patch, and not a threshold to tune.
+
+### Why it fails: the same word means different things in the two catalogues
+
+| Word | In the beauty catalogue | In the health catalogue |
+|---|---|---|
+| `oil` | facial oil — **topical** | fish oil, evening primrose oil — **ingested** |
+| `gel` | gel cleanser — **topical** | soft gel capsule — **dosage form** |
+| `pack` | sheet-mask pack — **topical** | pack of 10 capsules — **quantity** |
+
+Measured misfires: `Seven Seas Evening Primrose Oil 30 Capsules`, `New Leaf Omega 3 Fish Oil
+Supplements`, `Boots IBS Relief 30 Soft Gel Capsules`, `Mendurance Max Capsules 10 Pack` —
+all classified **topical**, all ingested.
+
+And in the other direction, real supplements read as not-a-supplement because bare `sachets`
+was deliberately dropped as a form word (it matched sample sizes in beauty):
+`Vida Glow Marine Collagen 30 x 3g Sachets`, `Zooki Marine Collagen 30x15ml Liquid Sachets`.
+
+**A rule cannot be tuned out of this.** The words are genuinely ambiguous and only the
+surrounding catalogue disambiguates them.
+
+### The decision
+
+> **Imports classify on the retailer's own taxonomy path. The name rule is a SECONDARY check
+> on the result, never the classifier.**
+
+`Health & Beauty > Health Care > Fitness & Nutrition > Vitamins & Supplements` already
+separates supplements from medicines, because the retailer separated them. That is a better
+signal than any regex over names, and it is free.
+
+### ONE PATH, NOT TWO. `Medicine & Drugs` is NOT admitted.
+
+595 rows, of which roughly 115 are supplement-shaped and **480 are medicines**. No rule we
+have distinguishes them reliably — see the sildenafil case above.
+
+> **ACCEPTED COST, NOT AN OVERSIGHT: the ~115 supplement-shaped rows inside
+> `Medicine & Drugs` are knowingly forgone.** They are real supplements and we are choosing
+> not to take them, because the only way to get them is to admit 480 medicines alongside.
+> **Do not reopen this as a gap.** If it is ever revisited, the question is not "can we
+> filter them out" — it is "do we want medicines in the catalogue at all", which is a
+> different and much larger decision.
+
+### Retired: the truncation flag, for this population
+
+A name ending in a short token flagged possible truncation, and on the beauty catalogue it
+worked — it is how two Elizabeth Arden topical capsule products were caught.
+
+On the Boots health feed it flagged **2,309 of 2,415 rows, 95.6%**, because Boots names end
+in `40g`, `10ml`, `- 4`, `850g`. A pack size looks exactly like a cut-off word.
+
+**Retired for this use rather than tuned**, and for the same reason as the veto: the pattern
+is not wrong, it is reading a catalogue whose conventions invert its meaning. It stays valid
+on beauty names.
 
 ## Recording rule
 
