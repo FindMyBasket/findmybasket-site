@@ -1,5 +1,9 @@
 # Supplements: the category definition
 
+**VERSION 1.1** — 10 August 2026. Rule 2 resolved: **sports nutrition is IN scope.**
+Supersedes v1.0 (9 August). Figures measured under v1.0 are not wrong, they answered a
+narrower question — quote the version with the number.
+
 **Written 9 August 2026, BEFORE any count was recorded against it.** That ordering is
 deliberate and is the point of the file. Two counts produced earlier the same day —
 4,481/1,383 and 1,104/168 — differed four-fold because both definitions were implicit, and
@@ -110,16 +114,34 @@ nails, collagen, complexion, radiance, glow.
 
 **Out of scope, though supplements under Rule 1:**
 
-- **Sports nutrition.** Protein, whey, creatine, pre-workout, BCAA, electrolytes. A
-  different vertical with different competitors, different basket economics and different
-  buyers. *Reachable* — Boots' feed carries the categories and Debenhams 116972 carries
-  Applied Nutrition at 281 products — but reachable is not in scope.
+- ~~**Sports nutrition.**~~ **RESOLVED 10 AUGUST 2026 — NOW IN SCOPE.** See below.
 - **General wellness with no appearance claim.** Sleep, immunity, digestion, general
   multivitamins. **This is the largest single judgement call in the whole definition —
   498 products at the loose measurement — and the one most worth challenging.**
 
-**Scope is commercial and reversible. The definition is not.** If sports nutrition is
-brought in later, Rule 2 changes and Rule 1 does not.
+### Sports nutrition — resolved IN, 10 August 2026
+
+**The decision, and the reasoning, because this is the half that changes with strategy.**
+
+MyProtein is confirmed present and in stock in the Boots feed (fid 115009). The commercial
+case is **brand-direct versus reseller price variance on the same SKU**: identical products,
+two sources, and heavy items where delivery thresholds bite hardest — which is the
+mechanism the whole platform exists to demonstrate. It is arguably the strongest comparison
+case available, because the products are identical by construction rather than by matching.
+
+**In scope from v1.1:** protein powder, whey, creatine, pre-workout, BCAA, protein bars,
+mass gainer, electrolytes.
+
+**Still out of scope:** general wellness with no appearance *or* performance claim — sleep,
+immunity, digestion, general multivitamins. That remains the largest judgement call in the
+definition and is still open.
+
+**Note what this did NOT change.** Rule 1 is untouched. Protein was always a supplement
+under Rule 1 — ingested, systemic claim, not topical. Only the commercial gate moved, which
+is precisely why the two rules are kept apart.
+
+**Scope is commercial and reversible. The definition is not.** Rule 2 has now changed once
+and Rule 1 has not; that is the intended asymmetry.
 
 ---
 
@@ -138,14 +160,47 @@ Run against the catalogue on 9 August 2026, roots only:
 **1,331 → 99. The definition removes 93% of what a loose regex admits**, which is the whole
 reason two people counting without one differed four-fold.
 
-**Headline figures, valid only when cited with this file:**
+**Headline figures, valid only when cited with this file AND its version:**
 
-- **99 products in scope**
-- **27 comparable at two or more active retailers**
+| | v1.0 (9 Aug) | **v1.1 (10 Aug)** |
+|---|---|---|
+| Products in scope | 99 | **110** |
+| — of which sports nutrition | n/a (excluded) | **11** |
+| Live in `products_active` | — | **108** |
+| Comparable at 2+ active retailers | 27 | **27** |
+
+**Widening Rule 2 to sports nutrition added 11 catalogue products and zero comparable
+ones.** That is not an argument against the decision — the case rests on Boots feed
+inventory that is currently excluded at import, not on what is already in the catalogue —
+but it does mean **the sports-nutrition case is entirely dependent on the Boots path change
+landing.** Nothing in the catalogue today demonstrates it.
 
 Known residual: topical single-dose capsules (above), which would take 99 lower.
 
 ---
+
+## Consequence: `EXCLUDE_PATTERNS.supplements` now contradicts Rule 2
+
+The shared denylist in `_shared/categorisation.ts` reads:
+
+```
+["supplement", /\b(supplement|vitamin tablet|capsule|gummies|protein shake|
+                  meal replacement|powder drink|fish oil|cod liver oil|
+                  effervescent tablet)\b/]
+```
+
+**`protein shake` and `meal replacement` are named explicitly, and under v1.1 both are in
+scope.** The regex was written when sports nutrition was out; it now removes products the
+definition admits.
+
+**This must change in the same commit as the path allowlist, not after.** Opening the Boots
+path while the regex still catches `protein shake` launches the category with a hole in
+exactly the products the sports-nutrition case rests on — the same failure already measured
+for beauty supplements, where the regex drops 274 of 941 admitted rows including the entire
+Imedeen line. Two switches, one decision, as recorded in work-list item 53.
+
+The regex also still needs its topical-capsule carve-out (`categorisation.ts:300`), which is
+unaffected by v1.1 and should not be disturbed.
 
 ## Recording rule
 
