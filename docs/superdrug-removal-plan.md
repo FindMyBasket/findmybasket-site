@@ -24,6 +24,34 @@ restores the catalogue even without the flag).
 > filters these at write time via `validateBarcode`, so a re-onboarding today would
 > reject them rather than store them — but the underlying feed quality is what it is.
 
+## Before onboarding: a category allowlist is retailer-specific, always
+
+**Added 10 August 2026, from the Boots supplements work.** This sits here because the
+departure runbook is what gets read when a retailer's scope changes, and the same trap
+applies on the way in.
+
+**`retailer_import_config.category_path_must_contain` is matched against a string the
+RETAILER wrote.** Boots' `Health & Beauty > Health Care > Fitness & Nutrition > Vitamins &
+Supplements` is a Boots string and tells you nothing about anyone else's feed.
+
+> **Never copy a path allowlist between retailers. Audit each feed before writing one.**
+
+Two measured reasons it cannot be shortcut:
+
+- **The column differs.** Debenhams feed 116972 populates `merchant_product_category_path`
+  on **0.0%** of rows and carries its taxonomy in `merchant_category` instead. An allowlist
+  written against the wrong column drops the entire feed — which is what kept Debenhams
+  stale from 3 August.
+- **A name rule is not a substitute.** Classifying on product names instead of paths was
+  tested on 2,415 raw Boots rows and put `Viagra Connect Sildenafil Film-Coated Tablets` in
+  a consumer supplements category. Words invert between catalogues: `oil`, `gel` and `pack`
+  are application words in beauty and dosage forms in health. See
+  `docs/supplements-definition.md` v1.2 and work-list item 57.
+
+**The audit is one dispatch.** `.github/workflows/feed-diag.yml` sections 4-6 report what an
+allowlist excludes, what a proposed change would admit, and how a classification rule
+behaves on that retailer's raw rows.
+
 ## Reusable pattern for the NEXT retailer departure
 
 Step A permanently changed `products_active` to require an offer from an ACTIVE retailer,

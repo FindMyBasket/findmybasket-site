@@ -245,6 +245,29 @@ was deliberately dropped as a form word (it matched sample sizes in beauty):
 **A rule cannot be tuned out of this.** The words are genuinely ambiguous and only the
 surrounding catalogue disambiguates them.
 
+### PATH-FIRST IS RETAILER-SPECIFIC BY CONSTRUCTION
+
+**This is a property of the approach, not a limitation of this instance, and it is the thing
+to carry to the next retailer.**
+
+Boots' taxonomy is Boots' own. `Health & Beauty > Health Care > Fitness & Nutrition >
+Vitamins & Supplements` is a Boots string. It tells you nothing about Debenhams, Escentual or
+anyone onboarded next. **Every supplements retailer needs its own path audit before its own
+allowlist** — there is no shared path list and there never will be.
+
+The trade is deliberate: a name rule generalises across retailers and is wrong (see the
+sildenafil case); a path rule is right and generalises across nothing. **Per-retailer work
+that is correct beats shared work that is not**, but the per-retailer work must actually be
+done each time rather than assumed from the last one.
+
+**Debenhams is the immediate case.** Its taxonomy is precisely what has kept it stale since
+3 August — `merchant_product_category_path` is empty on feed 116972 and its categories live
+in `merchant_category` instead. Whenever supplements reaches Debenhams it will need the same
+audit from scratch, against a different column.
+
+`.github/workflows/feed-diag.yml` sections 4-6 exist to make that audit one dispatch. Use
+them; do not infer another retailer's paths from this one.
+
 ### The decision
 
 > **Imports classify on the retailer's own taxonomy path. The name rule is a SECONDARY check
@@ -256,15 +279,29 @@ signal than any regex over names, and it is free.
 
 ### ONE PATH, NOT TWO. `Medicine & Drugs` is NOT admitted.
 
-595 rows, of which roughly 115 are supplement-shaped and **480 are medicines**. No rule we
-have distinguishes them reliably — see the sildenafil case above.
+**MEASURED, 10 August 2026** — an earlier draft said "480 medicines", which was residual
+arithmetic (595 − 115) and not a measurement. The real composition, over 600 rows:
 
-> **ACCEPTED COST, NOT AN OVERSIGHT: the ~115 supplement-shaped rows inside
-> `Medicine & Drugs` are knowingly forgone.** They are real supplements and we are choosing
-> not to take them, because the only way to get them is to admit 480 medicines alongside.
-> **Do not reopen this as a gap.** If it is ever revisited, the question is not "can we
-> filter them out" — it is "do we want medicines in the catalogue at all", which is a
+| Rule verdict | n | What they actually are |
+|---|---|---|
+| not-a-supplement | **470** | first aid, topical medicines, devices, contraceptives — plasters, skin closures, TENS pads, Daktarin cream, Vicks nasal spray, Nicorette mouthspray, eye drops, heat wraps, Durex |
+| SUPPLEMENT (default fired) | **115** | **oral medicines** — Combogesic Pain Relief Film-Coated Tablets, Nurofen Pain Relief Soft Capsules, Fybocalm Capsules, Viagra Connect |
+| topical (both signals) | 15 | bundles pairing a tablet with a spray |
+
+> **ACCEPTED COST, NOT AN OVERSIGHT — AND SMALLER THAN FIRST STATED.** The earlier note said
+> ~115 real supplements would be forgone. **They are not supplements.** Measured, the 115
+> the rule flags are ORAL MEDICINES — painkillers and prescription-adjacent products whose
+> dosage form is a tablet or capsule. Excluding `Medicine & Drugs` forgoes almost nothing we
+> want and avoids exactly what we must not take.
+>
+> **Do not reopen this as a gap.** The decision is better supported than the arithmetic that
+> first justified it. If it is ever revisited the question is not "can we filter the
+> supplements out" — it is "do we want medicines in the catalogue at all", which is a
 > different and much larger decision.
+
+One incidental finding worth carrying: **`MyProtein Hyrox The Electro Watermelon 291g` sits
+in `Medicine & Drugs`**, not in Fitness & Nutrition. Sports nutrition is scattered across
+Boots' paths, so the sports-nutrition case is not fully served by one path either.
 
 ### Retired: the truncation flag, for this population
 
