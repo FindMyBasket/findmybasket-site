@@ -43,6 +43,16 @@ name: feed-diag (read-only)
         required: false
         default: ''
         type: string
+      sample_paths:
+        description: "Pipe-separated paths whose RAW rows to classify with the supplements rule (section 6). Blank = skip."
+        required: false
+        default: ''
+        type: string
+      sample_n:
+        description: "How many rows to print for hand-checking (section 6, default 40)."
+        required: false
+        default: '40'
+        type: string
 
 jobs:
   diag:
@@ -108,6 +118,9 @@ jobs:
           MUST_CONTAIN: ${{ inputs.must_contain }}
           # Section 5 only. Pipe-separated path PREFIXES to preview admitting.
           ADMIT_PREFIX: ${{ inputs.admit_prefix }}
+          # Section 6 only. Paths whose rows to classify with the supplements rule.
+          SAMPLE_PATHS: ${{ inputs.sample_paths }}
+          SAMPLE_N: ${{ inputs.sample_n }}
           SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
           SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           # github.event.inputs is the reliable source here; the `inputs` context

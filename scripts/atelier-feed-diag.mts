@@ -361,3 +361,58 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
     }
   }
 }
+
+// === 6. RULE VERDICT SAMPLE ==========================================================
+// WHY: the supplements classification rule (docs/supplements-definition.md) was written
+// and validated against CATALOGUE products — rows that have already been through
+// categorisation, brand canonicalisation and, for some retailers, name reconstruction.
+// The rows that arrive when a path allowlist opens have been through NONE of that. They
+// are raw feed strings.
+//
+// A rule validated on cleaned data and applied to raw data is an untested rule. This
+// prints its verdict on a random sample of the rows a proposed path change would admit,
+// so the transfer can be checked BEFORE the config change rather than inferred after.
+//
+// Prints only. Set SAMPLE_PATHS to the paths under consideration.
+{
+  const pathCol = col("merchant_product_category_path");
+  const PATHS = (process.env.SAMPLE_PATHS || "").split("|").map(s => s.trim()).filter(Boolean);
+  const N = Number(process.env.SAMPLE_N || 40);
+  if (pathCol >= 0 && PATHS.length) {
+    // docs/supplements-definition.md v1.1 — form / application, with the default stated.
+    const FORM = /\b(supplement|supplements|multivitamin|probiotic|prebiotic|capsules?|tablets?|softgels?|gummies|effervescent|lozenges?|whey|creatine|pre-?workout|bcaa|protein powder|protein shake|protein bar|mass gainer|electrolyte)\b/i;
+    const APPLY = /\b(serum|cream|lotion|balm|butter|mask|masque|gel|oil|spray|mist|toner|essence|cleanser|cleansing|foam|sunscreen|spf|shampoo|conditioner|scrub|peel|patch|patches|candle|diffuser|perfume|eau de|deodorant|soap|wash|pack|foundation|lipstick|mascara|primer|concealer|polish|varnish|ampoule|booster|tint|highlighter)\b/i;
+    // Truncation is the rule's only observed failure mode on the catalogue: the
+    // application word exists and the feed cut it off. Flag, do not classify.
+    const TRUNC = /(\s\S{1,3}|[a-z])$|\.\.\.$|…$|\s&$|\swith$/;
+
+    const rows = body.filter(r => { const p = (r[pathCol] ?? "").trim(); return PATHS.some(x => p.startsWith(x)); });
+    const verdict = (n: string) => {
+      const f = FORM.test(n), a = APPLY.test(n);
+      if (!f) return "not-a-supplement";
+      if (a) return "topical (both signals)";
+      return "SUPPLEMENT (default fired)";
+    };
+    const counts = new Map<string, number>();
+    let trunc = 0;
+    for (const r of rows) {
+      const n = get(r, "product_name");
+      counts.set(verdict(n), (counts.get(verdict(n)) ?? 0) + 1);
+      if (TRUNC.test(n.trim())) trunc++;
+    }
+    console.log("\n=== 6. RULE VERDICT SAMPLE (paths: " + PATHS.join(" | ") + ") ===");
+    console.log("  rows in those paths:", rows.length);
+    for (const [k, v] of [...counts.entries()].sort((a, b) => b[1] - a[1])) {
+      console.log("   " + String(v).padStart(6) + "  " + k);
+    }
+    console.log("   " + String(trunc).padStart(6) + "  names that LOOK TRUNCATED (rule's known failure mode — review, do not trust)");
+    console.log("\n  random sample for hand-checking (verdict | brand | name):");
+    // Deterministic shuffle so a re-run of the same feed samples the same rows.
+    const shuffled = rows.map((r, i) => ({ r, k: (i * 2654435761) % 4294967291 })).sort((a, b) => a.k - b.k).slice(0, N);
+    for (const { r } of shuffled) {
+      const n = get(r, "product_name");
+      const flag = TRUNC.test(n.trim()) ? " [TRUNC?]" : "";
+      console.log("   " + verdict(n).padEnd(26) + flag.padEnd(9) + " | " + get(r, "brand_name").slice(0, 22).padEnd(22) + " | " + n.slice(0, 72));
+    }
+  }
+}
