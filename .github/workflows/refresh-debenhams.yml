@@ -100,6 +100,44 @@ jobs:
           ls -lah debenhams-beauty.csv.gz
           echo "Filtered feed has $(zcat debenhams-beauty.csv.gz | wc -l) lines (incl. header)"
 
+      # ── TAXONOMY REPORT ON THE **RAW** FEED. Read-only, enforces nothing. ──────
+      #
+      # WHY IT MUST RUN HERE AND NOT ON THE ARTEFACT. The retained artefact is the
+      # FILTERED output, so every row in it was already kept. Running the report against
+      # it reports "already N, NEW 0" for every value — structurally incapable of
+      # answering the only question it exists to answer, which is what a merchant_category
+      # value would ADMIT that the filter does not already keep. Measured 10 Aug 2026:
+      # 11,066 artefact rows, 142 distinct values, NEW = 0 on all of them.
+      #
+      # raw.csv.gz is still on the runner at this point and is deleted by the cleanup step
+      # at the end, so this is the only window in which the question is answerable at all.
+      # That window is why the report existed for a day without ever having been run on
+      # data it could read.
+      - name: Taxonomy report on the raw feed (read-only)
+        run: |
+          python3 scripts/debenhams-taxonomy-report.py raw.csv.gz --min-rows 5 --samples 3 \
+            > taxonomy-report.txt 2>&1 || echo "(report exited non-zero — see file)" >> taxonomy-report.txt
+          echo "--- first 60 lines ---"
+          head -60 taxonomy-report.txt
+          {
+            echo "### Debenhams taxonomy report (raw feed)"
+            echo ""
+            echo "Per \`merchant_category\` value: what admitting it would ADD that the filter does not already keep."
+            echo "Full report retained as an artefact for 30 days."
+            echo ""
+            echo '```'
+            head -40 taxonomy-report.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Retain the taxonomy report
+        uses: actions/upload-artifact@v4
+        with:
+          name: debenhams-taxonomy-${{ github.run_id }}
+          path: taxonomy-report.txt
+          retention-days: 30
+          if-no-files-found: warn
+
       # ── MEASUREMENT ONLY. Enforces nothing. Added 9 Aug 2026. ──────────────────
       #
       # THE DEFECT THIS EXISTS TO END: the single filtered-row floor below is doing
