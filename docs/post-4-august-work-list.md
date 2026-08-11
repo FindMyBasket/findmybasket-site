@@ -4177,6 +4177,107 @@ rate.
 
 ---
 
+### 61. Amazon joins the basket optimiser, and delivery stops being a property of the retailer
+
+**Raised:** 11 August 2026 · **Robbie's decision:** Amazon joins the basket optimiser, it
+does not sit beside it. **Item 60's cross-check is phase 1. This is phase 2.** Separate
+items because they are separate pieces of work with a hard ordering between them, not two
+halves of one.
+
+#### The design problem
+
+**Amazon's delivery is a property of the SHOPPER, not the retailer.** Prime members pay
+nothing. Non-members pay unless they clear a threshold. And the buy-box seller can change
+both, so the terms are not even fixed per product.
+
+Every other retailer has one threshold and one charge. That is not an informal
+observation — it is what the schema encodes and what two CHECK constraints enforce:
+
+```sql
+retailers_delivery_model_check   CHECK (delivery_model IN ('tiered','flat','unknown'))
+retailers_delivery_shape         CHECK (
+     (delivery_model = 'tiered'  AND delivery_threshold IS NOT NULL AND delivery_cost IS NOT NULL)
+  OR (delivery_model = 'flat'    AND delivery_threshold IS NULL     AND delivery_cost IS NOT NULL)
+  OR (delivery_model = 'unknown' AND delivery_threshold IS NULL     AND delivery_cost IS NULL))
+```
+
+Thirteen active retailers today: **11 tiered, 1 flat, 1 unknown.** The assumption has never
+been tested because it has never been false.
+
+**The sharpest statement of the problem is the function signature.**
+`deliveryFor(retailer, legTotal)` takes the retailer's terms and the leg subtotal, and
+nothing else. **There is no parameter that could carry the answer.** That is not an
+oversight to correct; it was correct for all thirteen.
+
+#### The answer: the Prime toggle
+
+**Ask once, store it with the routine, and Amazon's delivery becomes knowable.** One
+question, asked a single time, converts a case that cannot be priced into one that is
+priced exactly — not estimated, not averaged, not hedged with "delivery may apply".
+
+**That is the thing no UK comparison site does.** Everyone else either excludes Amazon,
+shows a goods price with delivery unresolved, or picks one assumption and applies it to
+every shopper. The toggle is cheap and the output is a delivered total that is true for
+the person reading it.
+
+#### What it touches, so the size is on record
+
+| Surface | The work |
+|---|---|
+| `delivery_model` | A fourth value, and **both** constraints change — the enum and, more substantially, `retailers_delivery_shape`, which has one arm per model. Amazon's arm is genuinely new: threshold and cost present like `tiered`, plus the member-pays-nothing fact, which no existing arm can express. |
+| The optimiser | **Branches on shopper state for the first time.** `deliveryFor` gains an argument and every call site passes it. |
+| The delivery rule | Two runtime copies — `lib/delivery.ts` and `supabase/functions/_shared/delivery.ts` — with `lib/__tests__/delivery.test.ts` asserting they agree case by case. The fourth model lands in all three or the test fails. The guard works as designed; it makes the change **wider but not riskier**. |
+| `RoutineBuilder` | Gains a persistent preference. `lib/routine-store.ts` is a `RoutineItem[]` in localStorage today with no preference field at all. |
+| The three readers | `scripts/generate-homepage-demo.mjs`, `send-routine-email`, and the savings calculation all read delivery, and **all three need handling.** |
+| The savings figure | The baseline is a *delivered* total, so a Prime shopper and a non-Prime shopper have **different savings on the same routine**. The headline number becomes shopper-relative. |
+
+#### The degradation path already exists, and it is `unknown`
+
+A shopper who has not answered is exactly the `unknown` case: goods stay visible, the
+retailer is never ranked on delivered total against one whose delivered total is known.
+That branch shipped 3 August for retailers mid-onboarding. **Phase 2 therefore has a safe
+default that is already written and already tested**, rather than one that has to be
+invented.
+
+One difference that must not be carried across: for a retailer, `unknown` is
+**transitional**, and `retailers_delivery_unknown` exists to catch anything that stays
+there. For a shopper, unanswered is a **permanent, legitimate state** — most people will
+never answer. The behaviour transfers; **the watch does not.**
+
+#### OPEN, with no clean answer yet
+
+**Amazon prices cannot be stored beyond 24 hours, but a saved routine is priced at a
+moment.**
+
+Re-pricing on view is fine — that fetch is live by construction. **Price-drop alerts are
+the problem**, and they are the problem precisely because they are the feature: the alert
+compares `baseline_price` against `current_price`, and both are stored. A price-drop alert
+without a held price is not a degraded alert, it is not an alert.
+
+- **Exclude Amazon from alerts** — then the retailer most likely to be a routine's cheapest
+  is the one silently absent from the feature that tells you a price moved.
+- **Re-fetch at alert time** — call volume scales with subscribers × routine size against a
+  rate limit that is **not discoverable from any response header** (item 60), and an
+  unreachable API becomes a *missing* alert rather than a stale one.
+
+**Neither is obviously right. Recorded open, and deliberately not decided now** — phase 1
+produces the fact that decides it.
+
+#### SEQUENCE: cross-check first
+
+Not caution — sequencing on an input. Phase 1 establishes the fetch, the ASIN map and the
+degradation, and it measures **how often Amazon actually wins.**
+
+**Building phase 2 first means designing for a case whose frequency is unknown.** A schema
+arm, a stored preference, two synchronised runtime copies and a shopper-relative savings
+figure are all justified if Amazon wins often, and are a question asked of every shopper to
+change a handful of baskets if it does not. **The frequency is an input to the design, and
+only phase 1 produces it.**
+
+**Both sequenced behind supplements.**
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
