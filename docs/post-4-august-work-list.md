@@ -3989,6 +3989,108 @@ Beauty's 237 → 62 → 33.
 
 ---
 
+### 60. Amazon: the three measurements item 22 was gated on
+
+**Raised:** 11 August 2026 · **Measured, not assumed.** Item 22's first discovery step had
+never been run, and the design depended on all three answers. Cost: **two GetItems calls**,
+both HTTP 200.
+
+**A rate limit is per-second throughput, not a monthly allowance.** The wasting asset is
+qualifying SALES — currently twelve against a floor near ten on a rolling window — and a
+GetItems request is not one. That distinction is why the measurement was affordable, and it
+was the thing blocking it.
+
+#### 1. NO QUOTA HEADERS ON EITHER PATH — throttling must be self-imposed
+
+Success path, `HTTP 200`, complete and verbatim:
+
+```
+content-type, content-length, connection, date,
+x-amzn-requestid, x-cache, via, x-amz-cf-pop, x-amz-cf-id, vary
+```
+
+**Ten headers, seven of them CloudFront plumbing. Nothing names a quota, a remaining count,
+a reset window or a TPS.** No `x-ratelimit-*`, no `retry-after`.
+
+The 3 August diagnostic established the same for the error path but could not check the
+success path, because `DefaultApi.getItems` discards the response. **Both paths are now
+checked and both are empty.** That was the last place the information could have been.
+
+> **Rate limiting is not discoverable from responses. Any throttle must be self-imposed and
+> empirical — a chosen rate that is backed off on failure, never a rate read from a header.**
+
+Recorded as a negative result because it closes the question. Nobody needs to look again.
+
+#### 2. TEN PER CALL — and unmatched ASINs vanish silently
+
+| ASINs sent | Result |
+|---|---|
+| 3 | 200 |
+| 10 | 200 |
+| **12** | **400 ValidationException** |
+
+> `Value '[…]' at 'itemIds' failed to satisfy constraint: **Member must have length less
+> than or equal to 10**`
+
+Server-enforced; the SDK carries no client-side check. **300 ASINs is 30 calls, not 300** —
+which is the answer that decides the shape, and it is the good one.
+
+**THE TRAP, and it is the half that will bite:** the 10-ASIN call returned **2 items**. The
+eight unmatched ASINs did **not** error and were **silently absent** from
+`itemsResult.items`.
+
+> **A map that assumes ten back would drop eight and look like it worked.** Partial returns
+> are the normal case, not an error case. Reconcile returned ASINs against requested ones
+> every call, and treat the difference as data rather than as a failure.
+
+Same family as the plausible-zero items (48, 51, 54, 56): a well-formed successful response
+that is quietly incomplete.
+
+#### 3. THE FIRST ASIN MAP IS BRAND-LED, NOT CLICK-LED
+
+`outbound_clicks` holds **367 clicks** across the whole catalogue's history. The ranking:
+
+| | clicks |
+|---|---|
+| Beauty of Joseon Relief Sun Rice + Probiotic SPF | **11** |
+| Eucerin Urea Repair 10% Urea Lotion | 9 |
+| medicube Age-R Booster Pro X2 | 7 |
+| …rank 15 | **4** |
+
+**Eleven at rank one and four by rank fifteen is noise with an order imposed on it.** The
+gap between rank 3 and rank 30 is two or three clicks. A curated set built on it would be
+arbitrary dressed as data-driven.
+
+**But the SHAPE underneath is real, and it matches what strategy.md already says.** The top
+fifteen is K-beauty-dominated: Beauty of Joseon ×3, medicube ×3, Haruharu Wonder, SKIN1004,
+Arencia. `docs/strategy.md:44` already records that the proposition holds hardest for
+K-beauty specialists, because delivery thresholds bite where unit prices are low.
+
+> **Selection principle: the first ASIN map is brand-led — the K-beauty brands we already
+> know convert — not a top-N by clicks.**
+>
+> **The reason, and it is the point: the click data cannot support a ranking and the brand
+> pattern can.** A defensible principle beats a precise-looking list built on four clicks.
+
+#### One structural finding that makes this cheap
+
+`DefaultApi.getItems` throws the response away:
+
+```js
+.then(function(response_and_data) { return response_and_data.data; });
+```
+
+But **`getItemsWithHttpInfo` already returns `{data, response}`**. No patch, no fork, no
+vendored-SDK change — call the inner method. **Instrumenting this is a script, not a
+project**, and the earlier note that the SDK discards the response object was true of one
+wrapper and not of the layer beneath it.
+
+#### Status
+
+**Specified enough to build. Needs no further measurement.** Sequenced behind supplements.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
