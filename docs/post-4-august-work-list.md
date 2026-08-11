@@ -3933,6 +3933,62 @@ disagree.** If it never disagrees, it is not measuring anything the headline doe
 
 ---
 
+### 59. A retracted premise and a re-opened decision are different acts, and only the first happened
+
+**Raised:** 11 August 2026 · **THE MOST CONSEQUENTIAL ERROR IN THE AUGUST THREAD**, and it
+is not an unsourced figure. Every part of the evidence chain worked. The decision that
+rested on it was simply never revisited.
+
+#### The sequence
+
+| | |
+|---|---|
+| **9 Aug** | It was concluded that `product_GTIN` **is not an AWIN column**, that the sibling coalesce therefore gates a fallback to nothing, and that the flag is decoration. **Stages 3-6 of the rollout were cancelled** on that basis |
+| **10 Aug** | The premise was tested. `feed-diag` run 31172005496 printed the **parsed AWIN response header**: `product_GTIN` present, populated on **14,632 of 14,636 rows**. Corroborated by `ean_from_sibling` reading 10,473 on Beauty Flash — structurally impossible if the column were absent. **The retraction was recorded the same day** |
+| **11 Aug** | The cancellation was still in force. Gorgeous Shop, Escentual and Boots were still at `sibling_coalesce = false`, still storing **zero barcodes across 51,110 rows** |
+
+**The evidence was retracted correctly and promptly. Nobody walked the consequence back.**
+
+#### Why this is a distinct failure mode
+
+Item 47 is about figures that were never sourced. **This is the opposite: the figure was
+sourced, found wrong, and corrected — and the correction did not propagate.**
+
+> **Retracting a premise and re-opening what rested on it are two acts. Doing the first
+> feels like doing both.**
+
+It feels complete because the record is now accurate: the false claim is struck, the true
+one is written down, the file reads correctly. What is missing is invisible — a decision
+somewhere else, still standing, whose only support has been removed. Nothing points from the
+retraction to it.
+
+**The cancellation outlived its justification by two days and 51,110 rows**, and would have
+outlived it indefinitely, because nothing in the process asks "what did we decide on the
+strength of this?"
+
+#### The practical form
+
+- **When a premise is retracted, list what was decided on it in the same edit.** Not later,
+  not as a follow-up — in the same edit, because that is the only moment the connection is
+  in anyone's head.
+- **A cancellation is a decision and needs a reason attached.** "Stages 3-6 cancelled" with
+  no recorded basis cannot be audited when the basis fails. Had the cancellation cited the
+  phantom-column premise explicitly, falsifying it would have surfaced the cancellation.
+- **Cheap check: after any correction, grep the record for what cited the old claim.**
+
+#### Resolution
+
+Rollout resumed 11 August, item 33's order, smallest first, one flag per run so a surprise
+stays attributable. **Gorgeous Shop flipped first** — 7,254 rows, 5,872 in stock, 0
+barcodes, `product_GTIN` at 98.7%. Escentual and Boots remain off pending its read.
+
+Recorded expectation for the first run, set before it: **150-600 tier-1 links as a one-off
+backlog spike**, falling sharply the next day; `tier1_ambiguous_skipped` appearing where
+there were none and holding roughly flat. Same shape as Beauty Flash's 681 → 94 and Niche
+Beauty's 237 → 62 → 33.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
