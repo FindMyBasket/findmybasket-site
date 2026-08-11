@@ -99,6 +99,33 @@ topical about them. **These are the category's core**, and any definition that e
 is wrong. Note the form tokens are unreliable alone (above), so they qualify via the
 actives-bound-to-carrier clause: `collagen … drink`, `marine collagen … sachets`.
 
+### Capsule counts and "nutrient" vocabulary → NO TEXTUAL SIGNAL IS RELIABLE
+
+**Added 11 August 2026, from the manual review of the residual — the one edge case where
+the product page is the only authority.**
+
+> **Capsule count and words like `nutrient`, `complex`, `beauty` and `supply` do not
+> distinguish ingestible from topical in prestige skincare, because both use that
+> vocabulary.**
+
+Elemis, Oskia and Elizabeth Arden all sell **topical** products in capsule form, at counts
+of 14, 60 and 90 — exactly the pack sizes an oral supplement uses. A high capsule count
+reads as "a month's supply" and is equally a month of single-use serum capsules.
+
+**THE MECHANISM, and it is why this is an edge case rather than a bug.** It is not that the
+classifier is bad. **The vocabulary does not carry the distinction**, so a human reading the
+same words fails the same way — measured: a manual pass over the five residual rows returned
+**two of five wrong**, and both errors were reasoned from "nutrient" and a 60-count.
+
+The sharper observation from that pass: **confidence was higher on the two that were wrong
+than on the three that were right**, because "nutrient" and a capsule count *felt* like
+evidence when they were vocabulary. A signal that reads as evidence and carries none is
+worse than no signal, because it raises confidence while lowering accuracy.
+
+**Practical consequence:** this class cannot be resolved by widening a regex or by careful
+reading. It needs the retailer's own taxonomy path (see Implementation, below) or a product
+page. It is the strongest single argument for path-first classification.
+
 ### Devices and tools → NEITHER.
 
 LED masks, cleansing brushes, derma rollers, massagers. Not ingested and not a formulation.

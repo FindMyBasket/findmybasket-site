@@ -219,7 +219,33 @@ export function inferCategorisation(name: string, brand: string = ""): Categoris
   // Commit 20: 'concentrate' must match the plural feeds actually use ("Capsule
   // Concentrates" — 7th Heaven Vitamin C / Retinol topical capsules); the bare
   // \b form missed the trailing 's'.
-  const capsuleIsTopical = /\bcapsule\b/.test(t) &&
+  // PLURAL, 11 Aug 2026. \bcapsule\b does NOT match "Capsules" — \b after "capsule"
+  // requires a non-word char and "s" is one — so this guard never fired on any product
+  // whose name uses the plural, which is nearly all of them. Elizabeth Arden's "RETINOL +
+  // HPR Ceramide Capsules … Serum" matched the co-occurrence half and was still read as a
+  // supplement candidate.
+  //
+  // THE SAME ONE-CHARACTER FIX ON THE OTHER LIST WOULD HAVE THE OPPOSITE EFFECT, AND
+  // NOTHING IN THE CODE SAYS WHICH LIST IS WHICH:
+  //
+  //   capsuleIsTopical (HERE)          PROTECTIVE. Exempts topicals from the supplement
+  //                                    denylist. Matching MORE is matching more correctly.
+  //   excludeChecks["supplement"]      DESTRUCTIVE. Drops the row at import; the product
+  //                                    never enters the catalogue. Its identical plural gap
+  //                                    (\bsupplement\b misses "Supplements") is DELIBERATELY
+  //                                    LEFT: pluralising it would newly drop everything
+  //                                    named "… Supplements", including Philip Kingsley
+  //                                    Density Healthy Hair Complex Supplements (id 88222),
+  //                                    which is in the 93-row supplements backfill. The fix
+  //                                    would delete a product V3 is launching.
+  //
+  // Read the job before the regex. See docs/supplements-backfill-review.md — DROP_AT_IMPORT
+  // versus ROUTE_ONCE_INSIDE.
+  //
+  // Commit 20 already hit this on the co-occurrence side ('concentrate' -> 'concentrate\w*')
+  // and did not carry it to the trigger. NOTE 'ampoule' below is still singular, so
+  // "Capsules - Ampoules" (Eve Lom) is still not exempted; left as its own decision.
+  const capsuleIsTopical = /\bcapsules?\b/.test(t) &&
     /\b(cream|serum|ampoule|toner|essence|cleans\w*|foam|sunscreen|spf|mask|moistur|lotion|drop|gel|concentrate\w*)\b/.test(t);
   // Pre-check: apparel/footwear/bag denylist over-fires on garment WORDS used as
   // cosmetic shade / line names (Essie "Espadrille", Maybelline "Business
