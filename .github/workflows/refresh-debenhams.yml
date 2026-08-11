@@ -230,7 +230,27 @@ jobs:
           # change. Lowering it to let a run through would silence the only thing that
           # noticed. See migrations/README.md convention 11.
           #
-          # ── STILL UNCHANGED, 9 Aug 2026, AND NOW DELIBERATELY BLOCKING ──────────
+          # ── RAISED TO 15,000 ON 11 AUG 2026. DERIVATION BELOW. ──────────────────
+          # The floor sat at 12,000 from the pre-rotation era and refused every run from
+          # 4 to 10 August — correctly, because the filter could not read feed 116972's
+          # taxonomy. The tier-1 merchant_category allowlist (#222) fixed that, and the
+          # first post-extension run produced 22,590 filtered rows.
+          #
+          # DERIVED, NOT ESTIMATED:
+          #   observed post-extension population   22,590
+          #   15,000 is 66% of it
+          # The old floor was ~95% of its then-stable 12,600-12,700 band, which is far too
+          # tight for a feed whose RAW side moves ~700 rows day to day. 66% sits below any
+          # plausible seasonal shrink, comfortably above the 11,067 the pre-extension
+          # filter produced, and would still have caught the 6,311-row rotation failure
+          # that started this.
+          #
+          # ONE DATAPOINT. This is derived from a single observation, which is the same
+          # weakness the previous floor had. RE-DERIVE AFTER A WEEK OF SERIES, from the
+          # feed-measurements artefacts, and record the range it is set against rather
+          # than the single number it was set from.
+          #
+          # ── HISTORY: STILL UNCHANGED, 9 Aug 2026, AND DELIBERATELY BLOCKING ─────
           # STATUS: this floor is KNOWN WRONG and is being left wrong on purpose. It
           # refuses every run and Debenhams has been stale since 3 August. That cost is
           # accepted, not overlooked. Do not "unblock" it by picking a number.
@@ -299,8 +319,8 @@ jobs:
           # one; the previous good copy lives in Supabase Storage and stays there while
           # the guard refuses, because a refusal skips the upload.
           ROWS=$(zcat debenhams-beauty.csv.gz | wc -l)
-          if [ "$ROWS" -lt 12000 ]; then
-            echo "::error::Filtered feed has only $ROWS lines (<12000) — whitelist too narrow or raw feed truncated"
+          if [ "$ROWS" -lt 15000 ]; then
+            echo "::error::Filtered feed has only $ROWS lines (<15000) — whitelist too narrow or raw feed truncated"
             echo "The filtered feed HAS been retained as an artefact on this run; diff it against"
             echo "the last good copy in Supabase Storage (retailer-feeds/debenhams-beauty.csv.gz)."
             exit 1

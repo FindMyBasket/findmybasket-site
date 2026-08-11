@@ -2975,12 +2975,13 @@ wanted, both halves must come from the same corpus and the same code path.
 
 ### 47. A figure in an instruction is unsourced until a query produced it
 
-**Raised:** 7 August 2026 · **Fifth to eighth 8-9 August · Ninth 10 August** ·
+**Raised:** 7 August 2026 · **Fifth to eighth 8-9 August · Ninth 10 August · Tenth
+11 August** ·
 **A PROPERTY OF THE METHOD**, recorded because nine instances in six days is a pattern
 rather than nine mistakes. **Read instance 9 first: it is the one the remedy nearly
 missed.**
 
-**The nine:**
+**The ten:**
 
 | | Figure | What it was |
 |---|---|---|
@@ -2995,6 +2996,30 @@ missed.**
 | 8 | "1,468 blocked at 25.9%"; "creatine, pre-workout and protein bars are what EXCLUDE_PATTERNS blocks"; "excluded_by_category DELETES" | Measured: **274 of 941, 29.1%**, and the sample is Imedeen, Equazen, Bio Kult, Sambucol, Paediasure. Creatine and pre-workout are excluded by the PATH allowlist, not the regex. **And there is no DELETE anywhere in the importer** |
 
 | 9 | "224 tier-1 links predicted for Beauty Flash, 4 for The Organic Pharmacy" — later restated as "1,208 against 224" and "1,140 against 4" | **No run ever produced any of them.** Every `would_link_via_ean` above 100 in the entire history is Stylevana (500s), Branded Beauty (125-162), Niche Beauty (237) and Beauty Flash today (681). No dry run was executed. The real numbers are **681 and 1** |
+
+| 10 | "Boots has been running 31,000-36,000 in-stock rows and is now 23,001 — a two-day oscillation present since 27 July" · and "KEPT_BY path branch at 4,177" | **Neither measured.** Boots `matched_count` since 27 July: min 22,161, max 22,346, **swing 185, standard deviation 58**. There is no cycle and never was. The 23,001/13,045 split falls exactly on the 7-day absence threshold. `KEPT_BY` read **8,189**, not 4,177 |
+
+#### INSTANCE 10: THE FIGURE PRODUCED A PROPOSED WORK ITEM
+
+**This is the first instance that got as far as commissioning work.** A remembered row count
+was compared against a real one, the gap was explained by inventing a mechanism — a two-day
+pagination cycle — and an item was proposed to investigate it, on a retailer described as
+"stable and not urgent" but worth recording "before it gets blamed for something else".
+
+**A standard deviation of 58 across a fortnight leaves no room for an 8,000-row swing.**
+There was nothing to explain, so the mechanism was invented to close a gap that did not
+exist.
+
+**The item was not opened.** Refusing to write it up was the correct action and is recorded
+here as the precedent: *an unsourced figure must not become a recorded finding, even when
+the person asking for it is the person who owns the record.* A work-list item confers more
+provenance than a message does — it is the artefact everything else cites — so the bar for
+entering it is higher, not lower.
+
+**Both halves came from the same reflex as instance 9**: a number recalled rather than
+queried, then reasoned forward from. The remedy is unchanged and now has a second clause —
+**ask which query produced it, and refuse the write-up if the answer is "none", regardless
+of who is asking.**
 
 #### INSTANCE 9 IS THE DANGEROUS SHAPE: A FIGURE THAT ACQUIRED PROVENANCE BY BEING REPEATED
 
@@ -3856,6 +3881,55 @@ Imports now classify on the retailer's own taxonomy path; the name rule is a sec
 check, never the classifier. `Medicine & Drugs` is not admitted, and the ~115 supplements
 inside it are a **stated accepted cost** rather than an oversight. Recorded in
 `docs/supplements-definition.md` v1.2.
+
+---
+
+### 58. The control caught a bad expectation, not a bad result
+
+**Raised:** 11 August 2026 · **Recorded because both halves are true and only one is
+interesting.**
+
+`KEPT_BY` was added to `filter-debenhams-feed.py` specifically so the tier-1 extension could
+be read by composition and not only by total — the stated reason being that *"a total that
+lands with the composition shifted is something else wearing the right number"*.
+
+First post-extension run, 11 August:
+
+```
+KEPT BY BRANCH:
+  path                            8,189
+  tier1_merchant_category        13,010
+  brand_fallback                  1,391
+  TOTAL                          22,590
+```
+
+**The path branch was predicted at 3,700-4,500 and read 8,189.** The prediction was wrong,
+not the result: the 9 August artefact already showed **8,294 rows carrying a category
+path**, so the path branch has been at ~8,200 throughout. The band never described it.
+
+**The reconciliation is exact:**
+
+| | |
+|---|---|
+| pre-extension filtered total | 11,067 |
+| tier-1 rows admitted | 13,010 |
+| …of which previously rescued by the brand fallback | **~1,390** (fallback fell 2,781 → 1,391) |
+| net new | **11,523** |
+| **11,067 + 11,523** | **22,590** ✓ |
+
+Tier 1 runs before the brand fallback, so it absorbed rows the fallback used to catch. That
+is why 13,010 admitted is not 13,010 gained.
+
+#### Why this is worth an item
+
+**"The control worked" and "the prediction was wrong" are both true, and the second is the
+finding.** A control that only ever confirms expectations is decorative; this one produced a
+number nobody expected and forced the reconciliation that explained it. Had only the total
+been read — 22,590 against ~22,000 expected — the run would have looked unremarkable and the
+1,390-row transfer between branches would have gone unnoticed.
+
+**The general form: build the control to be read BEFORE the headline, and expect it to
+disagree.** If it never disagrees, it is not measuring anything the headline does not.
 
 ---
 
