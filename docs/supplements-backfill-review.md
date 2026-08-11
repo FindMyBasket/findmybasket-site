@@ -200,18 +200,73 @@ All currently `skincare` except where marked `hair`.
 
 ---
 
+## VERDICTS RETURNED — all 18 of Block A excluded
+
+Robbie's pass, 11 August. **Rows 1-13 confirmed topical.** Rows 14-18, the five judgement
+calls, **all five returned topical**:
+
+| # | Product | Verdict | Reasoning given |
+|---|---|---|---|
+| 14 | Eve Lom Youth Radiance Recovery Capsules — Ampoules | TOPICAL | Ampoule is a topical dosage form; Eve Lom is a skincare house |
+| 15 | mixsoon Collagen Powder 100mg × 10 sticks | TOPICAL | An ingestible collagen dose is 3,000-10,000mg. 100mg is a cosmetic actives powder mixed into a serum |
+| 16 | mixsoon Collagen Powder (3g) | TOPICAL | same |
+| 17 | Elemis Skin Bliss Capsules 14 | **TOPICAL** — corrected | first called SUPPLEMENT, reasoning from the capsule count |
+| 18 | Oskia Super C Smart Nutrient Beauty Capsules 60 | **TOPICAL** — corrected | first called SUPPLEMENT, reasoning from "nutrient" and a 60-count |
+
+### THE MANUAL PASS PRODUCED TWO ERRORS IN FIVE JUDGEMENT CALLS
+
+**Recorded because it is the same failure mode as the classifier, applied by hand.**
+
+Rows 17 and 18 were first called supplements by reasoning from **"nutrient" and a 60-capsule
+count** rather than from the product. Both are topical. That is a 40% error rate on the
+residual the human pass existed to resolve — and it is not carelessness, it is the same
+signal being unreliable whoever reads it.
+
+> **Capsule count and words like "nutrient", "complex" and "beauty" do not distinguish
+> ingestible from topical in prestige skincare, because both use that vocabulary.**
+
+Elemis, Oskia and Elizabeth Arden all sell topical products in capsule form, with counts of
+14, 60 and 90 — exactly the pack sizes an oral supplement uses. **A high capsule count reads
+as "a month's supply" and is equally a month of single-use serum capsules.**
+
+This explains both halves of the pass: why the residual needed a human at all, and why the
+human still got two of five wrong. **It belongs in `docs/supplements-definition.md` as an
+edge case**, because it is the one class where no textual signal is reliable and the product
+page is the only authority.
+
+---
+
+## EXPECTED BEFORE THE BACKFILL RUNS
+
+Recorded now so the movement is expected rather than observed. `products_active` counts,
+11 August, before any change:
+
+| Category | now | after backfill |
+|---|---|---|
+| skincare | 44,634 | **−78** |
+| **hair** | **10,783** | **−15 → 10,768** |
+| makeup | 22,800 | unchanged (the one candidate, NYX gloss, is excluded) |
+| fragrance | 11,307 | unchanged |
+| bath_body | 7,716 | unchanged |
+| **supplements** | — | **+93** |
+
+**The 15 hair rows leaving `hair` are the movement most likely to be misread**, because
+`hair` is a live category whose count drops with no other explanation. They are all hair
+supplements: Hair Gain ×5, Ogaenics ×2, Philip Kingsley ×2, Solgar ×2, Aime, casimir,
+Combeau, Equi London.
+
 ## Totals
 
 | | rows |
 |---|---|
 | Backfill to `supplements` | **83** |
-| Backfill to `supplements` / `sports` | **10** (after excluding the NYX gloss) |
-| **Backfill total** | **93** |
-| Exclude — topical, already correctly `skincare`/`makeup` | 13 |
-| Review — judgement calls | 5 |
+| Backfill to `supplements` / `sports` | **10** |
+| **Backfill total** | **93 — SETTLED** |
+| Excluded — topical, all already correctly categorised | **18** |
 | **Population examined** | **111** |
 
-Backfill lands between **93 and 98** depending on the five review rows.
+**Backfill is 93.** All five review rows returned topical, so the range closed at the
+bottom.
 
 **Version discipline:** 99 was v1.0; 110/111 is v1.1; **93–98 is v1.1 after the veto fix.**
 Quote the version with the number.
