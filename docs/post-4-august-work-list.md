@@ -4085,9 +4085,95 @@ vendored-SDK change — call the inner method. **Instrumenting this is a script,
 project**, and the earlier note that the SDK discards the response object was true of one
 wrapper and not of the layer beneath it.
 
+#### 4. THE BARCODE TEST — the last unknown, and it passes
+
+**Measured 11 August 2026, one GetItems call, six ASINs from confirmed official brand
+stores.** `itemInfo.externalIds` exists as a resource and **returned EANs for all six**.
+
+| ASIN | Brand | Matched catalogue product | Size agreement | Live retailers |
+|---|---|---|---|---|
+| B01LEJ5MSK | COSRX | `7741` Advanced Snail 92 All In One Cream Tube 100g | Amazon says **1 g** — wrong | **7** |
+| B09JVNZVH3 | Beauty of Joseon | `7092` Relief Sun Rice + Probiotic SPF50 | 50 ml / 50ml | **7** |
+| B0D1G7XF9X | medicube | `4310` Zero Pore Blackhead Mud Mask 100g | 100 g / 100g | **4** |
+| B0CNCL35CH | Dr. Melaxin | `5880` Cemenrete Calcium Volume Multi Balm 9g | 9 g / 9g | **3** |
+| B0DM1VTB62 | COSRX | `83025` Advanced Snail Mucin Glass Glow Hydrogel Mask | 3 count / 34g | **2** |
+| **B00PBX3L7K** | COSRX | **NO MATCH** — Snail 96 Mucin Essence 100ml | — | — |
+
+**Five of six. The map is semi-automatic and a few hundred products is feasible** — not the
+20-30 manual map that was the fallback if barcodes were absent.
+
+#### THE JOIN IS ONE-TO-MANY BY NATURE. This is the finding, not a caution.
+
+**B01LEJ5MSK returned THIRTEEN EANs for one ASIN**, of which **exactly one matched**
+(`8809416470016`). An Amazon listing aggregates variants and many sellers' stock, so
+multiple manufacturer identifiers collapse onto a single ASIN.
+
+> **A pipeline written for one identifier per ASIN matches NOTHING on that product, and the
+> failure reads as a coverage gap rather than a design error.** Try every returned EAN;
+> accept the first catalogue hit.
+
+That is the difference between a map that covers COSRX's flagship cream and one that
+silently does not, and nothing in the output would say which you had built.
+
+#### SIZE IS CONFIRMATION ONLY, NEVER A GATE
+
+> **RULE: never reject a barcode match on a size mismatch.**
+
+B01LEJ5MSK reports `size: 1 g (Pack of 1)` for a **100g** cream — a correct match on a
+product carried by seven retailers, which any sensible size check would have rejected.
+B0DM1VTB62 reports `3 count` against our `34g`, also correct and also unrecognisable to a
+size comparison.
+
+Amazon's `size` is a merchandising field, not a spec. Use it to sanity-check a match a human
+is already reviewing; never to filter automatically.
+
+#### PARTIAL COVERAGE IS REAL, AND THE MANUAL PASS IS PART OF THE PIPELINE
+
+**The miss is COSRX Advanced Snail 96 Mucin Power Essence** — one of the best-known K-beauty
+products there is. Its two Amazon EANs (`8809419647347`, `0716053700353`) match nothing in
+our catalogue.
+
+**Official-store membership does not guarantee a match.** Five of six is a sample of six, so
+the true rate is unknown — but the miss landing on a flagship rather than an obscure product
+is the useful signal: **the non-matches are not a tail to be tidied up. Reviewing them is a
+standing part of the pipeline**, and it is where the products people actually search for may
+sit.
+
+#### WHY THIS IS ADDITIVE RATHER THAN DILUTIVE
+
+**Every one of the five matches sits on a product with 2 to 7 live retailers.**
+
+Amazon is an **extra column on rows that already work** — not a new orphan, not breadth. It
+deepens existing comparisons rather than adding single-stockist products, which is the
+opposite of the Boots supplements trade-off and the reason this needs no "breadth, not
+depth" caveat.
+
+#### The confirmed official-store set
+
+| Brand | Store | ASINs confirmed |
+|---|---|---|
+| COSRX | `42AB92B6…` | B00PBX3L7K, B01LEJ5MSK, B0DM1VTB62 |
+| medicube | `4EFC153A…` | B0D1G7XF9X, B0FKTKF8RB, B0DNMCJMBB |
+| Beauty of Joseon | `C6E0917D…` | B09JVNZVH3 |
+| Dr Melaxin | `9825D09E…` | B0CNCL35CH |
+| unnamed | `67C2B44D…` | B0CYS776TR |
+
+**Official stores are first-party distribution**, which removes the grey-market objection to
+linking. The 13-EAN listing illustrates why that matters: it is visibly an aggregation of
+many sellers' stock rather than one manufacturer SKU.
+
+Four of the five brands appear in the click-engagement top fifteen — the brand-led selection
+principle confirming itself from an independent direction.
+
 #### Status
 
 **Specified enough to build. Needs no further measurement.** Sequenced behind supplements.
+
+Pipeline shape, settled: enumerate ASINs from official brand stores -> `GetItems` in batches
+of **10** with `itemInfo.externalIds` -> match **any** returned EAN against
+`ean_normalised` -> confirm by title and brand -> store the ASIN -> **manual pass over
+non-matches**. Self-imposed throttle, backed off on failure; no header will tell you the
+rate.
 
 ---
 
