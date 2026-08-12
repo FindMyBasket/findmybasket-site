@@ -2976,12 +2976,12 @@ wanted, both halves must come from the same corpus and the same code path.
 ### 47. A figure in an instruction is unsourced until a query produced it
 
 **Raised:** 7 August 2026 · **Fifth to eighth 8-9 August · Ninth 10 August · Tenth
-11 August** ·
-**A PROPERTY OF THE METHOD**, recorded because nine instances in six days is a pattern
-rather than nine mistakes. **Read instance 9 first: it is the one the remedy nearly
-missed.**
+11 August · Eleventh 12 August** ·
+**A PROPERTY OF THE METHOD**, recorded because eleven instances in six days is a pattern
+rather than eleven mistakes. **Read instance 9 first: it is the one the remedy nearly
+missed. Read instance 11 for the failure mode that costs the most.**
 
-**The ten:**
+**The eleven:**
 
 | | Figure | What it was |
 |---|---|---|
@@ -2998,6 +2998,48 @@ missed.**
 | 9 | "224 tier-1 links predicted for Beauty Flash, 4 for The Organic Pharmacy" — later restated as "1,208 against 224" and "1,140 against 4" | **No run ever produced any of them.** Every `would_link_via_ean` above 100 in the entire history is Stylevana (500s), Branded Beauty (125-162), Niche Beauty (237) and Beauty Flash today (681). No dry run was executed. The real numbers are **681 and 1** |
 
 | 10 | "Boots has been running 31,000-36,000 in-stock rows and is now 23,001 — a two-day oscillation present since 27 July" · and "KEPT_BY path branch at 4,177" | **Neither measured.** Boots `matched_count` since 27 July: min 22,161, max 22,346, **swing 185, standard deviation 58**. There is no cycle and never was. The 23,001/13,045 split falls exactly on the 7-day absence threshold. `KEPT_BY` read **8,189**, not 4,177 |
+
+| 11 | `barcode_ambiguous_skipped` read **null** on the Gorgeous Shop coalesce run, and a recorded stopping condition was invoked on it | **The field does not exist.** The counter is `tier1_ambiguous_skipped` and it read **1,342**, corroborated by 1,342 rows in `tier1_ean_skips` over 1,328 distinct barcodes. `barcode_ambiguous_skipped` appears nowhere — not in the importer, not in a migration, not in this file |
+
+#### INSTANCE 11: THE FIRST ONE THAT STOPPED WORK RATHER THAN MISDIRECTING IT
+
+**Every previous instance produced a false conclusion. This one produced a false alarm**,
+and that is a different and more expensive failure mode, because a false alarm is *designed*
+to be obeyed. A recorded stopping condition — "links far outside the band, or skips not
+appearing at all" — fired on a field name that had never existed, and a rollout stage
+halted on it. The halt was correct behaviour given the reading. **The reading was of
+nothing.**
+
+**A fabricated FIELD NAME is worse than a fabricated figure, because the database answers
+it politely.** A wrong number can be contradicted by a query. A wrong column name in
+`details->>'...'` returns `null` in Postgres — indistinguishable, at the call site, from a
+counter that ran and wrote nothing. **The instrument reports absence identically to the
+question being unaskable**, so the usual remedy ("which query produced this?") returns "this
+one, and it ran fine".
+
+**The reasoning built on top of it was sound, which is what made it durable.** Null-versus-
+zero *is* a real and important distinction; the series does show it working — `null`
+pre-deploy, `0` when the counter ran and found no ambiguity, `1,342` today. Beauty Flash
+reads `null` on 8 and 9 August for exactly the stated reason. **A correct piece of
+reasoning was attached to a reading that did not exist**, and the quality of the reasoning
+is what made the alarm credible.
+
+**The remedy is a new clause, because the existing ones do not reach this.**
+
+> **Before acting on a null, confirm the field exists.** `grep` the name in the repo. A
+> `jsonb` key that returns null has two causes — the counter did not write, or the key was
+> never real — and the database cannot tell you which. **Not-written and not-a-field are
+> the same value and opposite problems.**
+
+**Both halves again, and the assistant half is the one to fix.** The field name was invented
+human-side. But the reading was accepted and reported back assistant-side across two turns
+without once checking that the key existed, while a `grep` that would have settled it in
+seconds was available throughout — and item 60's own text, in this file, names the counter
+correctly.
+
+**Cheap, general, and not yet done: a diagnostic that rejects unknown keys.** Any read of
+`details->>'x'` where `x` is not a key the importer writes should raise rather than return
+null. Until then the guard is manual and belongs in the reading, not the write-up.
 
 #### INSTANCE 10: THE FIGURE PRODUCED A PROPOSED WORK ITEM
 
@@ -4275,6 +4317,146 @@ change a handful of baskets if it does not. **The frequency is an input to the d
 only phase 1 produces it.**
 
 **Both sequenced behind supplements.**
+
+---
+
+### 62. Tier 1 pre-empts tier 2, it does not acquire links — so `would_link_via_ean` is the wrong metric
+
+**Raised:** 12 August 2026, from the Gorgeous Shop coalesce read · **Supersedes the metric
+used for stages 1-3.**
+
+Gorgeous Shop's first coalesce run returned `would_link_via_ean` **1,133** against a
+recorded band of **150-600**. Nearly double the top, and a stopping condition fired. **The
+band was measuring the right quantity against the wrong counter.**
+
+| | via_ean | via_mpn | via_name | **link_total** |
+|---|---|---|---|---|
+| Beauty Flash, tier 1 off | 1 | 1,282 | 265 | 1,548 |
+| Beauty Flash, tier 1 on | **681** | 767 *(−515)* | 179 | 1,627 · **+79** |
+| Gorgeous Shop, coalesce off | 0 | 2,294 | 85 | 1,526 |
+| Gorgeous Shop, coalesce on | **1,133** | 1,126 *(−1,168)* | 40 *(−45)* | 1,735 · **+209** |
+
+**MPN fell by 1,168 while EAN rose by 1,133.** Tier 1 took essentially every one of its
+links off tiers 2-4. Net movement was **+209 — inside the band all along.**
+
+The prediction had been scaled as `681 ÷ 9,147 rows_with_ean = 7.4%`, applied to Gorgeous
+Shop's 8,323. **`rows_with_ean` is not the denominator.** Tier 1 does not acquire links from
+rows that carry a barcode; it re-decides rows the lower tiers were already matching. The
+population it draws from is the tier-2 population, and Gorgeous Shop's was nearly twice
+Beauty Flash's (2,294 vs 1,282 on comparable row counts) — which is the whole of the
+"surprise".
+
+> **METRIC FOR ALL REMAINING STAGES: net movement in `would_link_to_existing_product`.
+> Not `would_link_via_ean`.** The tier counters describe *which* tier resolved a row. Only
+> the total describes whether a row got linked that would not otherwise have been.
+
+#### Ground truth, which needs no counters at all
+
+The run's inserts form one contiguous id block, 488,652-489,676, sitting immediately above
+Boots' 04:30 maximum:
+
+- **552 rows inserted.** Prior days: 5, 31, 4, 3, 55, 4, then 178. All 552 carry a barcode.
+- **534** landed on a product that already had another live in-stock retailer.
+- **57** moved a product 1 → 2 · **476** added a price to an already-comparable product ·
+  **18** breadth-only, matching `would_create_new_product` exactly.
+- Comparison depth **12,355** against the 12,115 baseline, but Debenhams, Boots, Beauty Bay
+  and Beauty Flash all ran the same morning. **Gorgeous Shop's own contribution to depth is
+  the 57**, and quoting the +240 as its result would be the go-live attribution error again.
+
+Correctness spot-check on twelve of the new rows: every one sits on a product where one to
+three other retailers carry the **same barcode**. Creates also fell 79 → 18, so tier 1 is
+suppressing duplicate product creation as well as redirecting links.
+
+**`new_count` is not rows written.** It is `linksApplied + createsApplied` — 1,027 that day,
+of which 475 were upserts onto rows that already existed. Do not read it as acquisition.
+
+#### Escentual and Boots are the opposite case, and fill rate does not predict them either
+
+`feed-diag`, re-run read-only on 12 August, both stable against the 2 August figures:
+
+| | Feed rows | `ean` | `product_GTIN` | `mpn` |
+|---|---|---|---|---|
+| Escentual, fid 97233 | 7,980 | **0.0%** | **99.8%** (7,966) | 99.9% |
+| Boots, fid 115009 | 37,411 | **0.0%** | **96.8%** (36,217) | 100.0% |
+
+Boots' allowlist excludes 13,766 rows (36.8%), leaving 23,645 admitted.
+
+**Both have `would_link_via_mpn` = 0, so there is no tier-2 population to reallocate from —
+but that does not make tier 1's links net new at scale, because almost nothing reaches the
+tier ladder at all.** Both resolve on tier 0:
+
+| | Feed rows | tier-0 updates | pre-filtered | **rows reaching the tier ladder** |
+|---|---|---|---|---|
+| Gorgeous Shop | 9,706 | 5,740 | 1,647 | **2,319** |
+| Boots | 37,411 | 22,315 | 14,908 | **188** |
+| Escentual | 7,981 | 6,220 | 1,709 | **52** |
+
+Boots and Escentual match **99.2% of admitted rows on `external_product_id`** before tier 1
+is consulted. Gorgeous Shop matches 71%. **The addressable population is 12× and 44× smaller
+— not larger.**
+
+> **Predicted net link movement: tens, not hundreds. Escentual is bounded above by ~48 rows,
+> Boots by ~159.** `rows_with_mpn` reads 6,375 and 22,887 for the two, and `via_mpn` still
+> reads 0, because those rows exit at tier 0 and never see a tier. The same will be true of
+> tier 1.
+
+**So the fill rate answers a different question than the one it was asked for — and the
+answer is more valuable.** Barcodes are written on tier-0 *update* rows too, not only on
+new links. Flipping these two flags puts roughly **7,000 and 23,000 barcodes into the
+catalogue's index**, where they are read by *other* retailers' tier 1 on subsequent runs.
+Gorgeous Shop's 1,133 were matched against barcodes that Beauty Flash's 10 August flip had
+put there.
+
+> **The two remaining flags are supply-side, not demand-side.** Their own link movement is
+> tens. Their contribution is ~30,000 barcodes into the index that every other retailer's
+> tier 1 reads. **Judging them on their own `link_total` would retire them as failures.**
+
+Expected reads on a flip, therefore: `rows_with_ean` 0 → thousands, `ean_from_sibling` at
+roughly the fill rate, `barcode_rejected` non-trivial, `tier1_ambiguous_skipped` appearing —
+and `would_link_to_existing_product` **barely moving**. That last one is the success case,
+not the failure case, and it must be written down before the flip or it will read as a
+non-event.
+
+**Calibration for the barcode haircut, from Gorgeous Shop:** fill 98.6% → `rows_with_ean`
+85.8% of feed rows, because **13.0% of populated GTINs fail validation** — length_11,
+length_7 internal SKUs (`OW94SKU18155`), comma-joined pairs. Retailer-specific, so it is a
+warning that fill overstates usable barcodes, not a multiplier to apply blind.
+
+---
+
+### 63. The one counter that closes the import arithmetic is computed and never persisted
+
+**Raised:** 12 August 2026 · **A gap in the record, not in behaviour.** Nothing is
+mis-importing; the run simply cannot be reconciled afterwards.
+
+The tier counters do not sum to the link total. Gorgeous Shop, two consecutive days:
+
+| | Σ tiers | `would_link_to_existing_product` | unexplained |
+|---|---|---|---|
+| 11 Aug | 2,379 | 1,526 | **853** |
+| 12 Aug | 2,299 | 1,735 | **564** |
+
+Only two paths can consume a row between matching and linking: the shade-variant skip, which
+read **0** on both days, and the multipack guard. So the guard accounts for all of it, and
+the swing of **289** across a flag flip is a real behavioural change — plausibly tier 1
+landing on the correct product, whose name no longer trips the mismatch test — that cannot
+be confirmed.
+
+**Why it cannot:** `skipped_multipack_mismatch` is set on the **top level** of the importer's
+`result` object, while `scrape_log.details` persists only `result.counts`. The counter is
+computed, returned in the HTTP response, and discarded. Same for
+`multipack_name_unresolved` and `sample_skipped_multipack`.
+
+**This is item 47's retention point in a new place.** A figure derived from a feed becomes
+unauditable the instant the run ends unless it is written down at the moment of measurement
+— and here it *is* measured, deliberately, with a comment saying it is "reported so a guard
+that starts over- or under-firing is visible in the run output rather than silently changing
+the landed row count". **It is visible in the run output and invisible everywhere the run
+output is kept.**
+
+**Fix:** move the three fields into `counts`. One line. **On the import path, so not today**
+— and it needs a baseline captured first, because the day it lands is the day the
+unexplained gap stops being unexplained, and that transition should be attributable.
 
 ---
 
