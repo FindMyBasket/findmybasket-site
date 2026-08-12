@@ -2,21 +2,11 @@ import { BrandPage } from '../../../components/BrandPage';
 import { BrandHub } from '../../../components/BrandHub';
 import { findBrandBySlug } from '../../../lib/brand-queries';
 import { getBrandHub } from '../../../lib/brand-hub-queries';
+import { categoryDisplay } from '../../../lib/queries';
 
 export const revalidate = 3600;
 
 const SITE_URL = 'https://www.findmybasket.co.uk';
-
-// Coarse top_category labels for titles/headings (mirrors CATEGORY_DISPLAY in
-// components/BrandPage.tsx).
-const CATEGORY_LABEL: Record<string, string> = {
-  skincare: 'Skincare',
-  makeup: 'Makeup',
-  hair: 'Hair',
-  fragrance: 'Fragrance',
-  bath_body: 'Bath & Body',
-  supplements: 'Supplements',
-};
 
 export async function generateMetadata({
   params,
@@ -52,7 +42,7 @@ export async function generateMetadata({
   }
   const filterLabel =
     searchParams.type ??
-    (searchParams.category ? CATEGORY_LABEL[searchParams.category] ?? searchParams.category : undefined);
+    (searchParams.category ? categoryDisplay(searchParams.category) : undefined);
   if (filterLabel) {
     return {
       title: `${brand.display_name} ${filterLabel} prices across UK retailers | FindMyBasket`,

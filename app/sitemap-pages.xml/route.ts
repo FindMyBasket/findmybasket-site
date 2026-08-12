@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '../../lib/supabase';
-import { brandSlug, categoryToSlug } from '../../lib/queries';
+// DB top_category values from the single source in lib/queries. Route slugs are
+// derived via categoryToSlug (identity except bath_body -> bath-and-body);
+// queries filter on the raw value.
+import { brandSlug, categoryToSlug, ALL_CATEGORIES as CATEGORIES } from '../../lib/queries';
 import { listEdits } from '../../lib/edits';
 
 // Sitemap for non-product pages: static HTML, categories, subcategories,
@@ -45,10 +48,6 @@ const STATIC_PAGES: UrlEntry[] = [
   { loc: '/articles/skincare-routine-cost-uk.html', changefreq: 'monthly', priority: 0.7 },
   { loc: '/articles/volufiline-pdrn-topical-collagen-explained.html', changefreq: 'monthly', priority: 0.7 },
 ];
-
-// DB top_category values. Route slugs are derived via categoryToSlug (identity
-// except bath_body -> bath-and-body); queries filter on the raw value.
-const CATEGORIES = ['skincare', 'makeup', 'hair', 'fragrance', 'bath_body', 'supplements'];
 
 function escapeXml(s: string): string {
   return s
