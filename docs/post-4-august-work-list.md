@@ -3034,6 +3034,36 @@ the count was correct.
 direction, because it is the same instance rather than a second one: same brief, same
 absence of a query behind it. Measured, **37 on the admissible path**.
 
+#### THE SAME SHAPE WITHOUT A NUMBER: A FIGURE READ AS MEASURING SOMETHING IT DID NOT
+
+**The design brief for item 71 was built on `feed-diag`'s regexes in the belief they were
+the classifier's.** The 45.4% disagreement rate — the entire stated basis for path-first
+classification — was **evidence about `docs/supplements-definition.md`, not about shipped
+behaviour.**
+
+The two differ in exactly the way that mattered. `feed-diag`'s `APPLY` list contains `oil`;
+the shipped `capsuleIsTopical` list does not. So the premise *"`capsuleIsTopical` would
+misfire on Omega 3 Oil 1000mg Capsules"* was **false against the code** — that row is not
+topical to the categoriser, and never was.
+
+> **This is instance 12's shape without a number in it. A figure was carried between two
+> contexts and read as measuring something it did not measure.** The 45.4% is real, it was
+> correctly computed, and it answers a different question than the one it was quoted for.
+> **Unsourced is not the only failure — MIS-SOURCED is the same cost with better
+> provenance**, because a figure with a real derivation resists challenge harder than one
+> with none.
+
+**Both sides produced it**, and the assistant half is the one with the remedy: the numbers
+were quoted human-side from the diagnostic's output, and reported back assistant-side as
+though they described the importer, across two turns, **while the shipped function was
+three greps away and was eventually just run.** Running it took one command and inverted
+the design.
+
+> **When a figure describes the behaviour of code, run the code.** A diagnostic that
+> re-implements a rule is a second implementation, and item 65's seven label maps are what
+> second implementations do. `feed-diag` and `categorisation.ts` are two copies of the
+> supplements rule that have already diverged.
+
 **The remedy needs a clause the others do not imply:**
 
 > **When a figure is retracted, record it as retracted where it will be seen NEXT — not
@@ -5142,12 +5172,24 @@ Path-first alone is not sufficient, and this inverts the original brief. **Boots
 Fluid*, *BetterYou Magnesium Muscle **Body Spray** 100ml*, *CBD Brothers Oil 5000mg*. **The
 veto must still fire, or the category imports toners as supplements.**
 
-#### Why it cannot simply be kept
+#### CORRECTION: the premise this item was raised on was false
 
-On the same path it is wrong the other way: *Boots Vegan Omega 3 Oil 1000 Mg, 60 Capsules*
-and *Seven Seas Evening Primrose Oil … 30 Capsules* both read **topical**. `oil`, `gel` and
-`pack` are **dosage forms in a health catalogue and application words in a beauty one** —
-item 57, 10 August: *the rule is fitted to the catalogue, not to the concept.*
+**It was raised believing `capsuleIsTopical` misfires on *Boots Vegan Omega 3 Oil 1000 Mg,
+60 Capsules*. It does not.** `oil` is absent from its co-occurrence list. That verdict came
+from `feed-diag`'s `APPLY` regex, which does contain `oil`, and was read as the
+classifier's — see item 47, instance 12.
+
+Run against the shipped code, both Omega 3 and *Seven Seas Evening Primrose Oil … 30
+Capsules* return **`skincare`**: not topical, not excluded, just unclaimed by anything and
+caught by the catchall.
+
+**The item survives the correction, with a different justification.** `oil`, `gel` and
+`pack` are still dosage forms in a health catalogue and application words in a beauty one —
+item 57, 10 August, *the rule is fitted to the catalogue, not to the concept* — and the
+narrow topical list the supplements branch needs must still leave them out. What changed is
+that this is a list to **write**, not a list to **condition**: nothing in `capsuleIsTopical`
+needs touching, which is why the branch sits above `inferCategorisation` rather than inside
+it.
 
 #### The shape, and its interaction with #226
 
@@ -5169,80 +5211,134 @@ this is an item rather than a paragraph inside item 72.**
 
 ---
 
-### 72. Boots supplements: the atomic change, at ~900 rather than ~5,700
+### 72. Boots supplements, re-scoped: the 1,425 is the problem, not the 315
 
-**Raised:** 12 August 2026 · **Discovered and proposed, NOT applied.** Blocked by item 71.
-**Sequenced after Boots' coalesce flip**, and after Baseline A is retaken following
-Stylevana 03:30 and YesStyle 10:00.
+**Raised:** 12 August 2026 · **Re-scoped the same day** once the shipped classifier was run
+instead of `feed-diag`'s copy of it. **Discovered and proposed. NOT applied.**
 
-**Decision, taken knowing the corrected size** (item 47 instance 12): proceed at ~900.
-**The argument was never the row count.** A 93-product category is not something you show
-MyProtein; ~900 is ten times that and carries the sports-nutrition brands, which is the
-variance case and the commercial purpose. That arrives at 900 exactly as at 5,700.
+#### THE REAL PROBLEM IS THE 1,425
 
-**Three parts, atomic — any one alone launches the category with a hole:**
+`inferCategorisationForImport` run over all **1,808** rows of Boots'
+`Health & Beauty > Health Care > Fitness & Nutrition` branch, as the importer would see
+them, with no change to anything:
 
-| | Change | Import path? |
+| Verdict today | rows | |
 |---|---|---|
-| 1 | Admit `Health & Beauty > Health Care > Fitness & Nutrition > Vitamins & Supplements`. **NOT `Medicine & Drugs`** — 113 supplement-shaped rows inside it are an accepted loss, already on record | **Yes** — `retailer_import_config` row, no deploy |
-| 2 | `EXCLUDE_PATTERNS`: opening the path while leaving the regex loses **274 supplements (29.3%)**, including the entire Imedeen line | **Yes** — shared-module **deploy** |
-| 3 | Path-first classification plus the item-71 veto | **Yes** — shared-module **deploy** |
+| **`skincare`** | **1,425** | **78.8%** |
+| `EXCLUDED: supplement` | 315 | 17.4% |
+| hair · bath_body · makeup | 47 | 2.6% |
+| other exclusions | 21 | 1.2% |
+| **`supplements`** | **0** | — |
 
-**Parts 2 and 3 change classification for every retailer, not just Boots.** That is a wider
-blast radius than the coalesce flag, which is one boolean on one row — hence the sequencing.
+> **Open the path today and 1,425 rows of protein powder, glucosamine and multivitamins
+> land on the skincare page.** That is **fifteen times** the 315 the denylist drops, and
+> **nobody was looking at it, because the brief was about the drop.**
 
-#### THE SPORTS SPLIT IS BY BRAND, AND THE DATA SUPPLIED THE JUSTIFICATION
+**Nothing assigns `supplements` at all.** The gap was never a veto firing wrongly; it is
+that everything not claimed by a denylist falls through the `skincare` catchall. The
+original framing — *path admits, topical veto rejects* — does not map onto the code, which
+has a **denylist that drops** and a **protective exemption that prevents dropping**.
 
-**`\bprotein\b` does not match "Myprotein".** There is no word boundary inside the brand
-name, so **any name-based sports rule silently misses the largest sports brand in the feed
-because of its own name.**
+The 315 is still real and still has to be fixed. It is simply the smaller half, and it now
+costs nothing extra to fix (below).
 
-> **That is the argument for a brand list — not the list itself.** It came out of the data
-> rather than the reasoning, it is structural rather than a coverage gap, and no amount of
-> tuning a name regex fixes it. A brand list also fails safe: an unlisted sports brand
-> lands in `supplements`, which is wrong but not absurd.
+#### `EXCLUDE_PATTERNS` NEEDS NO EDIT — AND THAT CHANGES THE SEQUENCING
 
-**The allowlist, taken at the ≥70%-sports-shaped break in the distribution:**
+The supplements branch resolves the row **before the denylist verdict is consulted**, so
+for rows on a Boots supplements path the `supplement` entry in `excludeChecks` never
+applies. **The 315 drops stop without a regex every other retailer reads being touched.**
 
-Optimum Nutrition · Grenade · Revival · Liquid IV · C4 · Misfits · Humantra · YOURLVLS ·
-Sci-Mx · Fulfil · Nicks · Barebells · ORS · Eleat · Warrior · Nuzest · Vidrate ·
-**MyProtein**
+*(Naming: `EXCLUDE_PATTERNS` is what the docs and `feed-diag` call it; the shipped
+identifier is `excludeChecks` in `categorisation.ts`. Two names for one list — item 65's
+finding, in a place nobody had looked.)*
 
-**MyProtein is the stated exception** — 19 of 37 by name signal, but all 37 are MyProtein,
-and a MyProtein multivitamin in `sports` is defensible where the reverse is not.
+**So this is ONE shared-module deploy, not two, and the deploy is INERT.** With
+`supplements_path_prefixes` defaulting to `{}`, no retailer has a supplements path and the
+new branch is unreachable. Behaviour is unchanged everywhere, by construction.
 
-**A list from the data is not a list from memory, and the difference is measurable.**
-Of the eleven brands proposed from memory, **Bulk, SiS and Maximuscle are absent from the
-Boots feed entirely**, and PhD has **one** row. Meanwhile Revival (29 rows, 100% sports),
-Liquid IV (22, 95.5%), C4, Misfits, Sci-Mx, Fulfil, Nicks, ORS, Eleat and Warrior — all at
-or near 100% — were in neither list until the distribution was read. **Dropped from the
-proposal:** PhD, High5, Gatorade, USN, Applied Nutrition, at 1-15 rows and under 50%; they
-fail safe into `supplements`.
+> **That separates the deploy from the activation, and it changes the sequencing.** The
+> deploy provably alters nothing, so it does **not** need to follow Boots' coalesce flip.
+> The **config flip** — writing the path prefix into `retailer_import_config` — is the
+> change that carries risk, and that is what must follow the coalesce read with its own
+> baseline.
+>
+> **Deploy inert → confirm a clean import cycle with no movement → then flip config.** Two
+> steps with a checkpoint between, rather than one atomic change whose blast radius is
+> everything.
 
-#### What arrives alongside, and what does not
+**This only holds if the inertness is measured rather than claimed.** See the regression
+test below; without it, "inert" is an assertion and the old sequencing stands.
 
-Admitting the leaf path rather than the `Health Care` subtree keeps out **2,179
-non-supplement rows** — first aid, biometric monitors, incontinence aids, supports and
-braces, condoms.
+#### The design (item 71, approved)
 
-> **`bath_body` should not move at all.** No `Personal Care` rows arrive: `Cosmetics`,
-> `Hair Care` and `Shaving & Grooming` are already admitted and the rest of `Personal Care`
-> stays excluded. The expected 6,673-row `bath_body` movement **does not happen**, and that
-> is now a prediction to check rather than a risk to price.
+| | |
+|---|---|
+| **Signal** | `retailer_import_config.supplements_path_prefixes text[] DEFAULT '{}'`, beside `category_path_must_contain`. Config, not a code constant — the allowlist already lives there and changes without a deploy |
+| **Access** | `categoryPath` is declared at `import-awin-feed/index.ts:1894`; the call is at **2193**; **net brace delta 0** — same block, same iteration. `retailerId` is function-scope. **Zero plumbing** |
+| **Branch** | Early return in `inferCategorisationForImport`, above the shared logic |
+| **Topical list** | `serum\|toner\|cream\|lotion\|mask\|shampoo\|conditioner\|moistur\|body spray` — **deliberately without `oil`, `gel`, `pack`** (item 57) |
+| **Subcategory** | Brand allowlist → `sports`, else `supplements` |
+
+**`inferCategorisation` IS NOT TOUCHED, so #226 is literally unmodified rather than
+guarded.** That is stronger than the guard that was asked for, and it is the reason to
+branch **above** the shared function rather than inside it: there is no condition wrapped
+around `capsuleIsTopical` to reason about, no regex to restore, and no way for the change
+to reach any other retailer's classification. Reverting is deleting a branch.
+
+`capsuleIsTopical` needs no change at all — it does not fire on these rows.
+
+#### THE REGRESSION TEST IS PART OF THE CHANGE, NOT A LATER STEP
+
+**It is what makes "byte-identical for four callers" a measurement rather than a claim**,
+and the inert-deploy sequencing above depends entirely on it.
+
+- **Fixture:** `supabase/functions/_shared/__fixtures__/categorisation-corpus.json`,
+  following the `multipack-guard-fixture.json` pattern — a `_note` recording provenance and
+  build date, then a stratified sample of live `products_active` names and brands, **at
+  least 2,000 rows spanning all six categories**, plus **every one of the 1,808 Boots
+  Fitness & Nutrition names**, which are the rows the change is aimed at and therefore the
+  ones most likely to move.
+- **Assertion:** for every fixture row, `inferCategorisationForImport(name, brand)` — the
+  **two-argument form** — returns exactly what it returns today: `top_category`,
+  `subcategory`, `product_type`, `excluded` and `tags` compared field by field. The golden
+  values are generated once against `main` before the branch is written and committed with
+  the fixture.
+- **What it proves:** the four callers — the AWIN, Shopify and Rakuten importers and the
+  two harness scripts — are unaffected, because they all use the two-argument form and the
+  new parameter defaults to absent. **A single moved row fails the suite.**
+- **Second assertion, the other direction:** with the supplements path supplied, the Boots
+  rows move to `supplements`/`sports` and the named topicals — *Anua Niacinamide Toner*,
+  *Olay Vitamin C Moisture Fluid* — **do not**. Otherwise the test only proves the change
+  does nothing.
+- **Hermetic:** the fixture is committed, so it runs in `npm test` without credentials,
+  like every other test in `lib/__tests__/`.
+
+#### What still stands from the original scope
+
+**Path allowlist:** admit `…Fitness & Nutrition > Vitamins & Supplements`. **NOT
+`Medicine & Drugs`** — the 113 supplement-shaped rows inside it remain an accepted loss.
+
+**Sports split by brand allowlist**, justified by the data rather than the reasoning:
+**`\bprotein\b` does not match "Myprotein"** — no word boundary inside the brand name — so
+any name-based sports rule silently misses the largest sports brand in the feed **because
+of its own name.** Structural, not a coverage gap.
+
+List at the ≥70%-sports-shaped break: Optimum Nutrition · Grenade · Revival · Liquid IV ·
+C4 · Misfits · Humantra · YOURLVLS · Sci-Mx · Fulfil · Nicks · Barebells · ORS · Eleat ·
+Warrior · Nuzest · Vidrate · **MyProtein** (the stated exception: 19 of 37 by name signal,
+but all 37 are MyProtein).
+
+**`bath_body` should not move at all** — no `Personal Care` rows arrive. A prediction to
+check, not a risk to price.
 
 #### Baselines, 12 August, taken before
 
 | | |
 |---|---|
-| supplements | **93** (83 + 10) |
-| bath_body | **7,812** |
-| products_active | **97,677** |
-| brands | **2,400** |
-| comparable at 2+ | **12,379** |
-| Boots `retailer_prices` rows | 36,051 |
+| supplements | **93** (83 + 10) · bath_body **7,812** · products_active **97,677** |
+| brands | **2,400** · comparable at 2+ **12,379** · Boots rows 36,051 |
 
-**Baseline A must be retaken** after the current cycle completes; these are the
-category-side figures only.
+**Baseline A must be retaken** after the current cycle; these are category-side only.
 
 ---
 
