@@ -4500,6 +4500,91 @@ downstream effect is worth isolating. One flag per run, each read before the nex
 
 ---
 
+### 65. Supplements shipped, and the record of how it got there was wrong in three places
+
+**Raised:** 12 August 2026, on merging PR #232 · **The category is live: 93 products,
+83 `supplements` / 10 `sports`, 23 of them comparable.**
+
+#### PR 1 NEVER MERGED, AND THE SEQUENCE ON RECORD SAYS OTHERWISE
+
+**Stated plainly because a later reader would be misled about what shipped when.** The
+supplements work was scoped as "PR 1: the enum change", then "PR 2: frontend plus
+backfill". **PR 1 does not exist.** Every supplements commit before #232 — #211, #218,
+#220, #221, #225, #226 — is documentation or a classifier regex. No migration was ever
+written.
+
+**Its contents were not merely unmerged, they were unbuildable.** `products.subcategory`
+carries a CHECK of fourteen values and neither `supplements` nor `sports` was among them,
+so the backfill would have failed on the constraint. That is the good failure mode — it
+would have refused rather than landed half — but it was found by reading the constraint
+before the write, not by the write.
+
+> **A PR that is planned, discussed and cited is indistinguishable in the record from one
+> that shipped.** Six commits referenced the supplements programme while the only
+> executable part of it had never been written. Nothing in the record marked the gap,
+> because documentation and migration commits read the same from the outside.
+
+The migration landed inside #232 in consequence, which is not where it was meant to be.
+
+#### THE 93 CEILING IS STRUCTURAL, AND IS RECORDED SO NOBODY INVESTIGATES IT
+
+**The v6 denylist excludes `supplements` at import time.** New supplement products are
+therefore never created, and the category **cannot grow from imports**. 93 is a ceiling,
+not a starting position, until the Boots path allowlist work lands.
+
+> **A static count for a fortnight is the expected behaviour here.** Anyone who notices
+> it should find this paragraph, not open an investigation. The category was launched
+> thin deliberately; the ceiling is the other half of that decision and was not written
+> down with it.
+
+#### TWO CORRECTIONS THAT BEAT WHAT THEY CORRECTED
+
+**1. The placement argument is the brands, not the products.** It was framed as "the 28
+beauty-adjacent products that are the overlap". 28 is the doc's *product-type* split
+(hair-skin-nails complexes), not a brand cut. Measured properly:
+
+> **All 24 brands in the backfill keep products in a beauty category afterwards. 24 of 24.
+> 701 products remain across the same names — Philip Kingsley 201, DHC 166, Solgar 63,
+> Vida Glow 27, Hair Gain 25. Not one is a pure-supplement brand.**
+
+**Supplements belongs alongside skincare because the brands do**, and that is a far harder
+argument than any count of products, because it cannot be moved by reclassifying a few
+rows. Six of the 24 clear the cross-category thresholds and render on the category page on
+day one.
+
+Also corrected: **Vital Proteins, named as one of the four brands justifying the category,
+has zero comparable products** — 2 rows at one retailer each. The 23 featured products come
+from exactly three brands: Vida Glow 15, Solgar 6, Hair Gain 2.
+
+**2. The finder has no category facet, so item 6 of the brief described something that does
+not exist.** `category_filter` is hardcoded `null` at both call sites (`lib/search.ts:137`,
+`lib/finder/taxonomy.ts:78`). **The real facet is the brand page's category chips**, and
+they are driven from `stats.category_breakdown` rather than a hardcoded list — **which is
+why they picked supplements up with no work at all.**
+
+> **The data-driven surface needed nothing; the seven hardcoded maps each needed an edit.**
+> That contrast is the argument for the consolidation PR, and it arrived by accident.
+
+#### AND ONE OF MINE: FOUR DOCS PRs SHIPPED INSIDE A FEATURE MERGE
+
+`feat/supplements-frontend-and-backfill` was branched from the previous working branch
+rather than from `main`, so **#232's squash merge carried #228, #229, #230 and #231 with
+it.** Items 60-64 and `docs/coalesce-rollout-baseline.md` are all on `main` and nothing was
+lost — verified by diffing each branch against `main` and finding only deletions — but they
+landed under a commit titled "the category goes live".
+
+**This is the same defect as the PR 1 finding, from the opposite direction.** There, work
+that never shipped reads as though it did. Here, work that shipped reads as though it was
+something else. Both make the log an unreliable answer to "what changed, and when".
+
+> **Branch from `main`, not from the branch you were just on.** Cheap check before opening
+> a PR: `git log --oneline main..HEAD` should list only the commits you intend to ship.
+
+The four PRs were **closed, not merged** — merging them would have been a no-op that
+reverted #232's edits to the files they share.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
