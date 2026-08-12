@@ -5390,6 +5390,123 @@ check, not a risk to price.
 
 ---
 
+### 73. Copying held. Reimplementation is what failed.
+
+**Raised:** 12 August 2026, after the 45.4% figure turned out to describe a document rather
+than the shipped code (item 47, instance 12) · **Survey of 20 scripts. Report only, nothing
+fixed.**
+
+#### THE COUNTERINTUITIVE FINDING, AND IT INVERTS EVERYONE'S INSTINCT
+
+**Duplication was assumed to be the defect. It is not.** This list has spent a fortnight on
+duplicated content — four category orderings, seven label maps, three navs — so the natural
+conclusion was that the copied regexes in the diagnostics were the same disease.
+
+**Measured against the shipped code today, copying held at 13 of 15.**
+
+| Copy | Against shipped | Result |
+|---|---|---|
+| `feed-diag`'s `EXCLUDE_SUPP` | supplement denylist | **byte-identical**, apart from an `/i` flag that is a no-op because the caller lowercases first |
+| `annotate-excluded`'s `RE` record | 14 of 15 denylist buckets | **12 identical**, 2 diverged (`intimate_health`, `apparel`), 1 bucket never copied |
+
+**Both copies declare themselves.** `annotate-excluded.mts`: *"the regexes below are copied
+verbatim from `_shared/categorisation.ts` Step 1"*. `feed-diag` line 333: *"The live shared
+constant, copied verbatim"*.
+
+> **A "copied verbatim" comment is a weak control, and it mostly worked.** It survives
+> months, it is honest about what it is, and a reader knows to check. It is not a good
+> control — 2 of 15 drifted with nothing reporting it — but it is **not what produced the
+> failure this week.**
+
+**What produced the failure was reimplementation from a document.** `feed-diag`'s
+`FORM`/`BOUND`/`TOPICAL`/`APPLY` regexes implement
+`docs/supplements-definition.md`, not `categorisation.ts`. They produced the **45.4%
+disagreement rate** that was quoted as evidence about the classifier, inverted a design
+brief, and survived two turns of reporting before the shipped function was simply run.
+
+#### THE CONTROLLED EXPERIMENT IS INSIDE ONE FILE
+
+Both postures sit in `atelier-feed-diag.mts`, and produced opposite outcomes in the same
+week on the same feed:
+
+| | Source | Figure | Verdict |
+|---|---|---|---|
+| `EXCLUDE_SUPP` | **copied from shipped** | 274 dropped, 29.3% | **correct — survived every check** |
+| `FORM`/`TOPICAL`/`APPLY` | **reimplemented from the doc** | 45.4% disagreement | **misleading as quoted** |
+
+**Same file. Same author. Same afternoon. One number right, one number wrong, and the
+difference is whether the rule was copied or rewritten.**
+
+#### THE SHARPEST FINDING: THREE COPIES IN ONE FILE, AND THEY DISAGREE
+
+The reimplementation is not one rule used three times. **It is three rules**, at lines 275,
+335 and 383:
+
+| | line 275 | line 335 | line 383 |
+|---|---|---|---|
+| `FORM` | 11 tokens | 11 tokens | **20** — adds `bcaa`, `creatine`, `electrolyte`, `mass gainer`, `pre-workout`; pluralises `capsules?` |
+| `TOPICAL`/`APPLY` | 38 tokens | **6** | **43** — adds `cleansing`, `foam`, `spf`, `sunscreen`, **`pack`** |
+| `BOUND` | bidirectional | one direction only | — |
+
+The middle copy is missing `balm`, `butter`, `candle`, `cleanser`, `conditioner`,
+`concealer`, `ampoule`, `booster`.
+
+> **Sections 4, 5 and 6 of one diagnostic answer one question three different ways, and
+> nothing in the output says so.** A reader comparing "supplements in this path" across
+> sections is comparing three rules and cannot tell.
+
+**No cross-file sweep would ever have found this.** Every previous instance of the shape —
+four orderings (item 66), seven label maps (item 65), three navs (item 68) — was found by
+**adding a category**, which forces every copy to be visited. **These three copies are in
+one file, so adding a category touches them together or not at all.** This one was found
+only because a figure it produced turned out to describe the wrong thing.
+
+**Fourth instance of the shape, and the first with a different discovery mechanism.**
+
+#### CORRECTION, PLAINLY: `feed-diag` DOES NOT IMPORT `_shared/categorisation`
+
+**It was reported that `feed-diag` "already imports it and reimplemented anyway".** That
+was wrong — the grep matched a comment. Its only shared import is `match-key`.
+
+**The real situation is simpler and worse.** Simpler, because there is no puzzle about why
+a file with the import available still wrote its own rule; it never had the import.
+Worse, because the fix is not "use what you already pull in" but "start importing at all",
+and because nothing in the file suggests the shipped rule was ever consulted.
+
+#### THE SEQUENCING IS A REASON, NOT A DEFERRAL
+
+**Technically the import is free and already proven.** `_shared/categorisation.ts` was
+imported into Node under `tsx` twice on 12 August to run the censuses in items 71 and 72.
+No Deno bindings, no shim, no build step. **One import line.**
+
+**Semantically it cannot happen yet, and this is the point.** The shipped function cannot
+emit `supplements` — it returns `skincare` or `EXCLUDED: supplement`. `feed-diag`'s sections
+were built to answer *"how many supplement-shaped rows are in this feed"* **before
+supplements existed as an output.** The reimplementation was not laziness; it answered a
+question the shipped code could not.
+
+> **Doing it before item 72 means writing a FOURTH implementation to bridge a gap that item
+> 72 closes.** Land 72, then delete the three copies and import. Once `supplements` is
+> emittable, `inferCategorisationForImport` answers the question directly and better — it
+> reports what will actually happen rather than what a parallel rule thinks should.
+
+#### THE GENERALISED REMEDY
+
+> **A diagnostic that reimplements shipped logic is measuring its own opinion.**
+
+And the rider that makes it workable, because sometimes reimplementation is genuinely
+necessary:
+
+> **Where a diagnostic MUST reimplement — because the shipped code cannot yet answer the
+> question — that belongs in the OUTPUT, not only in the source.** A reader should be able
+> to see which rule produced the number without opening the file.
+
+**This is why it matters more than the Boots work that occasioned it: every measurement
+this fortnight came from tools of exactly this kind.** The two postures had measurably
+different reliability, and nothing in any report distinguished them.
+
+---
+
 ### 74. Two changes in one window, and the attribution survived — structurally, not luckily
 
 **Raised:** 13 August 2026, on Escentual's first coalesce read · **The first time two
@@ -5813,6 +5930,9 @@ query, not a site trend.
 
 **The unfiltered Performance report, 15 May to date, is the thing that would answer it** —
 a different data set, being pulled by hand, because there is no instrument.
+
+---
+
 
 ---
 
