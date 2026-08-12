@@ -48,7 +48,7 @@ const STATIC_PAGES: UrlEntry[] = [
 
 // DB top_category values. Route slugs are derived via categoryToSlug (identity
 // except bath_body -> bath-and-body); queries filter on the raw value.
-const CATEGORIES = ['skincare', 'makeup', 'hair', 'fragrance', 'bath_body'];
+const CATEGORIES = ['skincare', 'makeup', 'hair', 'fragrance', 'bath_body', 'supplements'];
 
 function escapeXml(s: string): string {
   return s

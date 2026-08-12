@@ -2976,12 +2976,12 @@ wanted, both halves must come from the same corpus and the same code path.
 ### 47. A figure in an instruction is unsourced until a query produced it
 
 **Raised:** 7 August 2026 · **Fifth to eighth 8-9 August · Ninth 10 August · Tenth
-11 August** ·
-**A PROPERTY OF THE METHOD**, recorded because nine instances in six days is a pattern
-rather than nine mistakes. **Read instance 9 first: it is the one the remedy nearly
-missed.**
+11 August · Eleventh 12 August** ·
+**A PROPERTY OF THE METHOD**, recorded because eleven instances in six days is a pattern
+rather than eleven mistakes. **Read instance 9 first: it is the one the remedy nearly
+missed. Read instance 11 for the failure mode that costs the most.**
 
-**The ten:**
+**The eleven:**
 
 | | Figure | What it was |
 |---|---|---|
@@ -2998,6 +2998,48 @@ missed.**
 | 9 | "224 tier-1 links predicted for Beauty Flash, 4 for The Organic Pharmacy" — later restated as "1,208 against 224" and "1,140 against 4" | **No run ever produced any of them.** Every `would_link_via_ean` above 100 in the entire history is Stylevana (500s), Branded Beauty (125-162), Niche Beauty (237) and Beauty Flash today (681). No dry run was executed. The real numbers are **681 and 1** |
 
 | 10 | "Boots has been running 31,000-36,000 in-stock rows and is now 23,001 — a two-day oscillation present since 27 July" · and "KEPT_BY path branch at 4,177" | **Neither measured.** Boots `matched_count` since 27 July: min 22,161, max 22,346, **swing 185, standard deviation 58**. There is no cycle and never was. The 23,001/13,045 split falls exactly on the 7-day absence threshold. `KEPT_BY` read **8,189**, not 4,177 |
+
+| 11 | `barcode_ambiguous_skipped` read **null** on the Gorgeous Shop coalesce run, and a recorded stopping condition was invoked on it | **The field does not exist.** The counter is `tier1_ambiguous_skipped` and it read **1,342**, corroborated by 1,342 rows in `tier1_ean_skips` over 1,328 distinct barcodes. `barcode_ambiguous_skipped` appears nowhere — not in the importer, not in a migration, not in this file |
+
+#### INSTANCE 11: THE FIRST ONE THAT STOPPED WORK RATHER THAN MISDIRECTING IT
+
+**Every previous instance produced a false conclusion. This one produced a false alarm**,
+and that is a different and more expensive failure mode, because a false alarm is *designed*
+to be obeyed. A recorded stopping condition — "links far outside the band, or skips not
+appearing at all" — fired on a field name that had never existed, and a rollout stage
+halted on it. The halt was correct behaviour given the reading. **The reading was of
+nothing.**
+
+**A fabricated FIELD NAME is worse than a fabricated figure, because the database answers
+it politely.** A wrong number can be contradicted by a query. A wrong column name in
+`details->>'...'` returns `null` in Postgres — indistinguishable, at the call site, from a
+counter that ran and wrote nothing. **The instrument reports absence identically to the
+question being unaskable**, so the usual remedy ("which query produced this?") returns "this
+one, and it ran fine".
+
+**The reasoning built on top of it was sound, which is what made it durable.** Null-versus-
+zero *is* a real and important distinction; the series does show it working — `null`
+pre-deploy, `0` when the counter ran and found no ambiguity, `1,342` today. Beauty Flash
+reads `null` on 8 and 9 August for exactly the stated reason. **A correct piece of
+reasoning was attached to a reading that did not exist**, and the quality of the reasoning
+is what made the alarm credible.
+
+**The remedy is a new clause, because the existing ones do not reach this.**
+
+> **Before acting on a null, confirm the field exists.** `grep` the name in the repo. A
+> `jsonb` key that returns null has two causes — the counter did not write, or the key was
+> never real — and the database cannot tell you which. **Not-written and not-a-field are
+> the same value and opposite problems.**
+
+**Both halves again, and the assistant half is the one to fix.** The field name was invented
+human-side. But the reading was accepted and reported back assistant-side across two turns
+without once checking that the key existed, while a `grep` that would have settled it in
+seconds was available throughout — and item 60's own text, in this file, names the counter
+correctly.
+
+**Cheap, general, and not yet done: a diagnostic that rejects unknown keys.** Any read of
+`details->>'x'` where `x` is not a key the importer writes should raise rather than return
+null. Until then the guard is manual and belongs in the reading, not the write-up.
 
 #### INSTANCE 10: THE FIGURE PRODUCED A PROPOSED WORK ITEM
 
@@ -4085,9 +4127,376 @@ vendored-SDK change — call the inner method. **Instrumenting this is a script,
 project**, and the earlier note that the SDK discards the response object was true of one
 wrapper and not of the layer beneath it.
 
+#### 4. THE BARCODE TEST — the last unknown, and it passes
+
+**Measured 11 August 2026, one GetItems call, six ASINs from confirmed official brand
+stores.** `itemInfo.externalIds` exists as a resource and **returned EANs for all six**.
+
+| ASIN | Brand | Matched catalogue product | Size agreement | Live retailers |
+|---|---|---|---|---|
+| B01LEJ5MSK | COSRX | `7741` Advanced Snail 92 All In One Cream Tube 100g | Amazon says **1 g** — wrong | **7** |
+| B09JVNZVH3 | Beauty of Joseon | `7092` Relief Sun Rice + Probiotic SPF50 | 50 ml / 50ml | **7** |
+| B0D1G7XF9X | medicube | `4310` Zero Pore Blackhead Mud Mask 100g | 100 g / 100g | **4** |
+| B0CNCL35CH | Dr. Melaxin | `5880` Cemenrete Calcium Volume Multi Balm 9g | 9 g / 9g | **3** |
+| B0DM1VTB62 | COSRX | `83025` Advanced Snail Mucin Glass Glow Hydrogel Mask | 3 count / 34g | **2** |
+| **B00PBX3L7K** | COSRX | **NO MATCH** — Snail 96 Mucin Essence 100ml | — | — |
+
+**Five of six. The map is semi-automatic and a few hundred products is feasible** — not the
+20-30 manual map that was the fallback if barcodes were absent.
+
+#### THE JOIN IS ONE-TO-MANY BY NATURE. This is the finding, not a caution.
+
+**B01LEJ5MSK returned THIRTEEN EANs for one ASIN**, of which **exactly one matched**
+(`8809416470016`). An Amazon listing aggregates variants and many sellers' stock, so
+multiple manufacturer identifiers collapse onto a single ASIN.
+
+> **A pipeline written for one identifier per ASIN matches NOTHING on that product, and the
+> failure reads as a coverage gap rather than a design error.** Try every returned EAN;
+> accept the first catalogue hit.
+
+That is the difference between a map that covers COSRX's flagship cream and one that
+silently does not, and nothing in the output would say which you had built.
+
+#### SIZE IS CONFIRMATION ONLY, NEVER A GATE
+
+> **RULE: never reject a barcode match on a size mismatch.**
+
+B01LEJ5MSK reports `size: 1 g (Pack of 1)` for a **100g** cream — a correct match on a
+product carried by seven retailers, which any sensible size check would have rejected.
+B0DM1VTB62 reports `3 count` against our `34g`, also correct and also unrecognisable to a
+size comparison.
+
+Amazon's `size` is a merchandising field, not a spec. Use it to sanity-check a match a human
+is already reviewing; never to filter automatically.
+
+#### PARTIAL COVERAGE IS REAL, AND THE MANUAL PASS IS PART OF THE PIPELINE
+
+**The miss is COSRX Advanced Snail 96 Mucin Power Essence** — one of the best-known K-beauty
+products there is. Its two Amazon EANs (`8809419647347`, `0716053700353`) match nothing in
+our catalogue.
+
+**Official-store membership does not guarantee a match.** Five of six is a sample of six, so
+the true rate is unknown — but the miss landing on a flagship rather than an obscure product
+is the useful signal: **the non-matches are not a tail to be tidied up. Reviewing them is a
+standing part of the pipeline**, and it is where the products people actually search for may
+sit.
+
+#### WHY THIS IS ADDITIVE RATHER THAN DILUTIVE
+
+**Every one of the five matches sits on a product with 2 to 7 live retailers.**
+
+Amazon is an **extra column on rows that already work** — not a new orphan, not breadth. It
+deepens existing comparisons rather than adding single-stockist products, which is the
+opposite of the Boots supplements trade-off and the reason this needs no "breadth, not
+depth" caveat.
+
+#### The confirmed official-store set
+
+| Brand | Store | ASINs confirmed |
+|---|---|---|
+| COSRX | `42AB92B6…` | B00PBX3L7K, B01LEJ5MSK, B0DM1VTB62 |
+| medicube | `4EFC153A…` | B0D1G7XF9X, B0FKTKF8RB, B0DNMCJMBB |
+| Beauty of Joseon | `C6E0917D…` | B09JVNZVH3 |
+| Dr Melaxin | `9825D09E…` | B0CNCL35CH |
+| unnamed | `67C2B44D…` | B0CYS776TR |
+
+**Official stores are first-party distribution**, which removes the grey-market objection to
+linking. The 13-EAN listing illustrates why that matters: it is visibly an aggregation of
+many sellers' stock rather than one manufacturer SKU.
+
+Four of the five brands appear in the click-engagement top fifteen — the brand-led selection
+principle confirming itself from an independent direction.
+
 #### Status
 
 **Specified enough to build. Needs no further measurement.** Sequenced behind supplements.
+
+Pipeline shape, settled: enumerate ASINs from official brand stores -> `GetItems` in batches
+of **10** with `itemInfo.externalIds` -> match **any** returned EAN against
+`ean_normalised` -> confirm by title and brand -> store the ASIN -> **manual pass over
+non-matches**. Self-imposed throttle, backed off on failure; no header will tell you the
+rate.
+
+---
+
+### 61. Amazon joins the basket optimiser, and delivery stops being a property of the retailer
+
+**Raised:** 11 August 2026 · **Robbie's decision:** Amazon joins the basket optimiser, it
+does not sit beside it. **Item 60's cross-check is phase 1. This is phase 2.** Separate
+items because they are separate pieces of work with a hard ordering between them, not two
+halves of one.
+
+#### The design problem
+
+**Amazon's delivery is a property of the SHOPPER, not the retailer.** Prime members pay
+nothing. Non-members pay unless they clear a threshold. And the buy-box seller can change
+both, so the terms are not even fixed per product.
+
+Every other retailer has one threshold and one charge. That is not an informal
+observation — it is what the schema encodes and what two CHECK constraints enforce:
+
+```sql
+retailers_delivery_model_check   CHECK (delivery_model IN ('tiered','flat','unknown'))
+retailers_delivery_shape         CHECK (
+     (delivery_model = 'tiered'  AND delivery_threshold IS NOT NULL AND delivery_cost IS NOT NULL)
+  OR (delivery_model = 'flat'    AND delivery_threshold IS NULL     AND delivery_cost IS NOT NULL)
+  OR (delivery_model = 'unknown' AND delivery_threshold IS NULL     AND delivery_cost IS NULL))
+```
+
+Thirteen active retailers today: **11 tiered, 1 flat, 1 unknown.** The assumption has never
+been tested because it has never been false.
+
+**The sharpest statement of the problem is the function signature.**
+`deliveryFor(retailer, legTotal)` takes the retailer's terms and the leg subtotal, and
+nothing else. **There is no parameter that could carry the answer.** That is not an
+oversight to correct; it was correct for all thirteen.
+
+#### The answer: the Prime toggle
+
+**Ask once, store it with the routine, and Amazon's delivery becomes knowable.** One
+question, asked a single time, converts a case that cannot be priced into one that is
+priced exactly — not estimated, not averaged, not hedged with "delivery may apply".
+
+**That is the thing no UK comparison site does.** Everyone else either excludes Amazon,
+shows a goods price with delivery unresolved, or picks one assumption and applies it to
+every shopper. The toggle is cheap and the output is a delivered total that is true for
+the person reading it.
+
+#### What it touches, so the size is on record
+
+| Surface | The work |
+|---|---|
+| `delivery_model` | A fourth value, and **both** constraints change — the enum and, more substantially, `retailers_delivery_shape`, which has one arm per model. Amazon's arm is genuinely new: threshold and cost present like `tiered`, plus the member-pays-nothing fact, which no existing arm can express. |
+| The optimiser | **Branches on shopper state for the first time.** `deliveryFor` gains an argument and every call site passes it. |
+| The delivery rule | Two runtime copies — `lib/delivery.ts` and `supabase/functions/_shared/delivery.ts` — with `lib/__tests__/delivery.test.ts` asserting they agree case by case. The fourth model lands in all three or the test fails. The guard works as designed; it makes the change **wider but not riskier**. |
+| `RoutineBuilder` | Gains a persistent preference. `lib/routine-store.ts` is a `RoutineItem[]` in localStorage today with no preference field at all. |
+| The three readers | `scripts/generate-homepage-demo.mjs`, `send-routine-email`, and the savings calculation all read delivery, and **all three need handling.** |
+| The savings figure | The baseline is a *delivered* total, so a Prime shopper and a non-Prime shopper have **different savings on the same routine**. The headline number becomes shopper-relative. |
+
+#### The degradation path already exists, and it is `unknown`
+
+A shopper who has not answered is exactly the `unknown` case: goods stay visible, the
+retailer is never ranked on delivered total against one whose delivered total is known.
+That branch shipped 3 August for retailers mid-onboarding. **Phase 2 therefore has a safe
+default that is already written and already tested**, rather than one that has to be
+invented.
+
+One difference that must not be carried across: for a retailer, `unknown` is
+**transitional**, and `retailers_delivery_unknown` exists to catch anything that stays
+there. For a shopper, unanswered is a **permanent, legitimate state** — most people will
+never answer. The behaviour transfers; **the watch does not.**
+
+#### OPEN, with no clean answer yet
+
+**Amazon prices cannot be stored beyond 24 hours, but a saved routine is priced at a
+moment.**
+
+Re-pricing on view is fine — that fetch is live by construction. **Price-drop alerts are
+the problem**, and they are the problem precisely because they are the feature: the alert
+compares `baseline_price` against `current_price`, and both are stored. A price-drop alert
+without a held price is not a degraded alert, it is not an alert.
+
+- **Exclude Amazon from alerts** — then the retailer most likely to be a routine's cheapest
+  is the one silently absent from the feature that tells you a price moved.
+- **Re-fetch at alert time** — call volume scales with subscribers × routine size against a
+  rate limit that is **not discoverable from any response header** (item 60), and an
+  unreachable API becomes a *missing* alert rather than a stale one.
+
+**Neither is obviously right. Recorded open, and deliberately not decided now** — phase 1
+produces the fact that decides it.
+
+#### SEQUENCE: cross-check first
+
+Not caution — sequencing on an input. Phase 1 establishes the fetch, the ASIN map and the
+degradation, and it measures **how often Amazon actually wins.**
+
+**Building phase 2 first means designing for a case whose frequency is unknown.** A schema
+arm, a stored preference, two synchronised runtime copies and a shopper-relative savings
+figure are all justified if Amazon wins often, and are a question asked of every shopper to
+change a handful of baskets if it does not. **The frequency is an input to the design, and
+only phase 1 produces it.**
+
+**Both sequenced behind supplements.**
+
+---
+
+### 62. Tier 1 pre-empts tier 2, it does not acquire links — so `would_link_via_ean` is the wrong metric
+
+**Raised:** 12 August 2026, from the Gorgeous Shop coalesce read · **Supersedes the metric
+used for stages 1-3.**
+
+Gorgeous Shop's first coalesce run returned `would_link_via_ean` **1,133** against a
+recorded band of **150-600**. Nearly double the top, and a stopping condition fired. **The
+band was measuring the right quantity against the wrong counter.**
+
+| | via_ean | via_mpn | via_name | **link_total** |
+|---|---|---|---|---|
+| Beauty Flash, tier 1 off | 1 | 1,282 | 265 | 1,548 |
+| Beauty Flash, tier 1 on | **681** | 767 *(−515)* | 179 | 1,627 · **+79** |
+| Gorgeous Shop, coalesce off | 0 | 2,294 | 85 | 1,526 |
+| Gorgeous Shop, coalesce on | **1,133** | 1,126 *(−1,168)* | 40 *(−45)* | 1,735 · **+209** |
+
+**MPN fell by 1,168 while EAN rose by 1,133.** Tier 1 took essentially every one of its
+links off tiers 2-4. Net movement was **+209 — inside the band all along.**
+
+The prediction had been scaled as `681 ÷ 9,147 rows_with_ean = 7.4%`, applied to Gorgeous
+Shop's 8,323. **`rows_with_ean` is not the denominator.** Tier 1 does not acquire links from
+rows that carry a barcode; it re-decides rows the lower tiers were already matching. The
+population it draws from is the tier-2 population, and Gorgeous Shop's was nearly twice
+Beauty Flash's (2,294 vs 1,282 on comparable row counts) — which is the whole of the
+"surprise".
+
+> **METRIC FOR ALL REMAINING STAGES: net movement in `would_link_to_existing_product`.
+> Not `would_link_via_ean`.** The tier counters describe *which* tier resolved a row. Only
+> the total describes whether a row got linked that would not otherwise have been.
+
+#### Ground truth, which needs no counters at all
+
+The run's inserts form one contiguous id block, 488,652-489,676, sitting immediately above
+Boots' 04:30 maximum:
+
+- **552 rows inserted.** Prior days: 5, 31, 4, 3, 55, 4, then 178. All 552 carry a barcode.
+- **534** landed on a product that already had another live in-stock retailer.
+- **57** moved a product 1 → 2 · **476** added a price to an already-comparable product ·
+  **18** breadth-only, matching `would_create_new_product` exactly.
+- Comparison depth **12,355** against the 12,115 baseline, but Debenhams, Boots, Beauty Bay
+  and Beauty Flash all ran the same morning. **Gorgeous Shop's own contribution to depth is
+  the 57**, and quoting the +240 as its result would be the go-live attribution error again.
+
+Correctness spot-check on twelve of the new rows: every one sits on a product where one to
+three other retailers carry the **same barcode**. Creates also fell 79 → 18, so tier 1 is
+suppressing duplicate product creation as well as redirecting links.
+
+**`new_count` is not rows written.** It is `linksApplied + createsApplied` — 1,027 that day,
+of which 475 were upserts onto rows that already existed. Do not read it as acquisition.
+
+#### Escentual and Boots are the opposite case, and fill rate does not predict them either
+
+`feed-diag`, re-run read-only on 12 August, both stable against the 2 August figures:
+
+| | Feed rows | `ean` | `product_GTIN` | `mpn` |
+|---|---|---|---|---|
+| Escentual, fid 97233 | 7,980 | **0.0%** | **99.8%** (7,966) | 99.9% |
+| Boots, fid 115009 | 37,411 | **0.0%** | **96.8%** (36,217) | 100.0% |
+
+Boots' allowlist excludes 13,766 rows (36.8%), leaving 23,645 admitted.
+
+**Both have `would_link_via_mpn` = 0, so there is no tier-2 population to reallocate from —
+but that does not make tier 1's links net new at scale, because almost nothing reaches the
+tier ladder at all.** Both resolve on tier 0:
+
+| | Feed rows | tier-0 updates | pre-filtered | **rows reaching the tier ladder** |
+|---|---|---|---|---|
+| Gorgeous Shop | 9,706 | 5,740 | 1,647 | **2,319** |
+| Boots | 37,411 | 22,315 | 14,908 | **188** |
+| Escentual | 7,981 | 6,220 | 1,709 | **52** |
+
+Boots and Escentual match **99.2% of admitted rows on `external_product_id`** before tier 1
+is consulted. Gorgeous Shop matches 71%. **The addressable population is 12× and 44× smaller
+— not larger.**
+
+> **Predicted net link movement: tens, not hundreds. Escentual is bounded above by ~48 rows,
+> Boots by ~159.** `rows_with_mpn` reads 6,375 and 22,887 for the two, and `via_mpn` still
+> reads 0, because those rows exit at tier 0 and never see a tier. The same will be true of
+> tier 1.
+
+**So the fill rate answers a different question than the one it was asked for — and the
+answer is more valuable.** Barcodes are written on tier-0 *update* rows too, not only on
+new links. Flipping these two flags puts roughly **7,000 and 23,000 barcodes into the
+catalogue's index**, where they are read by *other* retailers' tier 1 on subsequent runs.
+Gorgeous Shop's 1,133 were matched against barcodes that Beauty Flash's 10 August flip had
+put there.
+
+> **The two remaining flags are supply-side, not demand-side.** Their own link movement is
+> tens. Their contribution is ~30,000 barcodes into the index that every other retailer's
+> tier 1 reads. **Judging them on their own `link_total` would retire them as failures.**
+
+Expected reads on a flip, therefore: `rows_with_ean` 0 → thousands, `ean_from_sibling` at
+roughly the fill rate, `barcode_rejected` non-trivial, `tier1_ambiguous_skipped` appearing —
+and `would_link_to_existing_product` **barely moving**. That last one is the success case,
+not the failure case, and it must be written down before the flip or it will read as a
+non-event.
+
+**Calibration for the barcode haircut, from Gorgeous Shop:** fill 98.6% → `rows_with_ean`
+85.8% of feed rows, because **13.0% of populated GTINs fail validation** — length_11,
+length_7 internal SKUs (`OW94SKU18155`), comma-joined pairs. Retailer-specific, so it is a
+warning that fill overstates usable barcodes, not a multiplier to apply blind.
+
+---
+
+### 63. The one counter that closes the import arithmetic is computed and never persisted
+
+**Raised:** 12 August 2026 · **A gap in the record, not in behaviour.** Nothing is
+mis-importing; the run simply cannot be reconciled afterwards.
+
+The tier counters do not sum to the link total. Gorgeous Shop, two consecutive days:
+
+| | Σ tiers | `would_link_to_existing_product` | unexplained |
+|---|---|---|---|
+| 11 Aug | 2,379 | 1,526 | **853** |
+| 12 Aug | 2,299 | 1,735 | **564** |
+
+Only two paths can consume a row between matching and linking: the shade-variant skip, which
+read **0** on both days, and the multipack guard. So the guard accounts for all of it, and
+the swing of **289** across a flag flip is a real behavioural change — plausibly tier 1
+landing on the correct product, whose name no longer trips the mismatch test — that cannot
+be confirmed.
+
+**Why it cannot:** `skipped_multipack_mismatch` is set on the **top level** of the importer's
+`result` object, while `scrape_log.details` persists only `result.counts`. The counter is
+computed, returned in the HTTP response, and discarded. Same for
+`multipack_name_unresolved` and `sample_skipped_multipack`.
+
+**This is item 47's retention point in a new place.** A figure derived from a feed becomes
+unauditable the instant the run ends unless it is written down at the moment of measurement
+— and here it *is* measured, deliberately, with a comment saying it is "reported so a guard
+that starts over- or under-firing is visible in the run output rather than silently changing
+the landed row count". **It is visible in the run output and invisible everywhere the run
+output is kept.**
+
+**Fix:** move the three fields into `counts`. One line. **On the import path, so not today**
+— and it needs a baseline captured first, because the day it lands is the day the
+unexplained gap stops being unexplained, and that transition should be attributable.
+
+---
+
+### 64. The last two coalesce flags pay off on other retailers, so the baseline had to come first
+
+**Raised:** 12 August 2026 · **Robbie's decision, made knowing the immediate reading will be
+flat.** Escentual flipped 12 August; Boots after Escentual's 04:00 read.
+**Baseline: `docs/coalesce-rollout-baseline.md`, captured before either flip.**
+
+**A link total in the tens is the SUCCESS case for these two.** Recorded before the flip and
+not after, because afterwards it is indistinguishable from a stage that did nothing. Both
+retailers resolve **99.2% of admitted rows on tier 0**, so only ~52 and ~188 rows reach the
+tier ladder at all — 12× and 44× fewer than Gorgeous Shop's 2,319.
+
+**Their contribution is supply-side.** Barcodes are written on tier-0 *update* rows, not only
+on new links, so the two flags put roughly **7,000 and 23,000 barcodes into an index that
+currently holds 79,833** — where every other retailer's tier 1 reads them. Boots would
+become the largest single holding in the fleet, above YesStyle's 13,690. Both sit at exactly
+**zero** today.
+
+**The mechanism is not a hypothesis; it has already been observed once.** Gorgeous Shop's
+1,133 tier-1 links on 12 August were matched against barcodes Beauty Flash's 10 August flip
+had put in the index. The flipped retailer supplies; someone else collects.
+
+#### The baseline is the deliverable, and its standard deviations are the useful half
+
+Escentual has not left **37-42** in a week (sd **1.6**); Boots has not left **148-154**
+(sd **2.1**). They are the two tightest series in the fleet, so a movement of even twenty
+rows would be unmissable — which is what makes "flat" a readable result rather than an
+absence of one.
+
+**Downstream, only three retailers can carry a verdict:** YesStyle (sd 4.4), Perfume Click
+(18.9) and Beauty Bay (38.3). Beauty Flash, Gorgeous Shop and Stylevana are marginal.
+**Debenhams (sd 1,320.9, two runs since recovery) and Niche Beauty (1,699.0, just live) are
+unusable** — attributing a barcode benefit to either would be inventing a mechanism to
+explain a gap their own variance already explains, which is instance 10 exactly.
+
+**Sequencing, and the reason for it:** Escentual first because it is smaller; Boots last and
+alone because it is the largest single barcode contribution available and the one whose
+downstream effect is worth isolating. One flag per run, each read before the next.
 
 ---
 

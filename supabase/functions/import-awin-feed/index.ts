@@ -457,6 +457,7 @@ async function triggerRevalidation(supa: any, retailerId: number, sinceIso: stri
       hair: "/hair",
       fragrance: "/fragrance",
       bath_body: "/bath-and-body",
+      supplements: "/supplements",
     };
     const paths = [
       ...Array.from(slugs).filter(Boolean).map((s) => `/brands/${s}`),
