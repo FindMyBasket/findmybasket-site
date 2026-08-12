@@ -4585,6 +4585,92 @@ reverted #232's edits to the files they share.
 
 ---
 
+### 66. `&amp;` is not decoded inside a script block, and a sweep scoped to what you are adding finds only that
+
+**Raised:** 12 August 2026, adding supplements to the homepage · Three findings, in
+descending order of how quietly they fail.
+
+#### THE ESCAPING TRAP: ONE PHRASE, THREE SOURCES, AND NOTHING COMPLAINS
+
+Six categories had to be named in five prose strings on `public/index.html`. The phrase
+renders identically in all five. **It cannot be written the same way in all five.**
+
+| Context | Source | Renders |
+|---|---|---|
+| `<meta content="…">` — og, twitter | `bath &amp; body` | bath & body |
+| **Inside `<script type="application/ld+json">`** | `bath & body` | bath & body |
+| Visible body copy | `bath &amp; body` | bath & body |
+
+**Script content is raw text. Character references are not decoded there.** Writing
+`&amp;` inside the JSON-LD does not produce an ampersand — it produces the five literal
+characters `&`, `a`, `m`, `p`, `;` inside the structured data Google reads.
+
+**Every downstream check passes anyway.** The JSON still parses. The page renders. The
+HTML validates. `view-source` shows exactly what a correct `&amp;` looks like everywhere
+else on the page, so it reads right. **The only signal is in the parsed value, and only
+if something parses it.**
+
+> **Verified by parsing, not by eye.** The check loads every `application/ld+json` block,
+> `json.loads` it, and asserts `'&amp;' not in description`. Reading the file cannot catch
+> this, because the wrong version and the right version look identical in source — the
+> difference is which context the source sits in, not what it says.
+
+**The general form, and it is not about ampersands.** `<script>` and `<style>` are raw
+text elements; everywhere else in HTML is not. **Any content templated into both — a
+brand name with an `&`, a product name with a `<`, an apostrophe — needs different
+escaping in each, and the wrong choice is invisible in the source and silent at runtime.**
+The catalogue is full of names containing `&`. This will recur the moment JSON-LD carries
+a product or brand name, which it already does on `/product/[id]`.
+
+#### BATH & BODY IS THE BETTER HALF OF THE SWEEP
+
+**7,808 live products, present in the two nav blocks and nowhere else.** No homepage card.
+No mention in the `og:description`, the `twitter:description`, the JSON-LD or the roadmap
+intro. The section headed *"Now live across beauty"* claimed four categories while six
+were live.
+
+**Two earlier sweeps missed it.** The 3 August sweep found the same savings claim in nine
+places under four wordings and rewrote all nine; it was looking for a figure. This one
+found Bath & Body **only because supplements needed adding to the same lists.**
+
+> **A sweep scoped to the thing you are adding finds only that.** Both prior passes were
+> scoped correctly for their own question and both were blind to a category that had been
+> missing the whole time. Nothing was looking for *absence*, because absence has no
+> keyword to grep for.
+
+**This is why the full sweep was the right scope.** Adding supplements alone would have
+put a 93-product category on the homepage while a 7,808-product one stayed off it — and
+the page would have gone from understating by two categories to understating by one,
+which reads as correct.
+
+**Practical form:** when adding an item to an enumerated list, **check the list against
+its source of truth, not against the item being added.** Here the source of truth is
+`ALL_CATEGORIES`; a diff of the rendered list against it would have surfaced Bath & Body
+on either earlier pass, in seconds.
+
+#### THE FOURTH ORDERING WAS THE ONE A VISITOR SEES
+
+Three orderings of the same four category names were known and being fixed — the
+og/twitter/JSON-LD form, the roadmap intro's, and the "how it works" step's. **The card
+grid was a fourth**, running `skincare, hair, makeup, fragrance`, and it is the only one
+of the four a visitor actually reads.
+
+It was not counted because the sweep enumerated *prose strings*, and the grid is markup.
+
+> **Four separately-maintained lists produce four orderings.** Not through carelessness —
+> each was correct when written, and nothing exists that could have disagreed with any of
+> them. All are now the order `ALL_CATEGORIES` already defined, which is also the nav
+> order; PR #234's guard covers the copies in code, and this file covers the ones in
+> `public/index.html`, which is static and outside its reach.
+
+**`public/index.html` is not guarded and cannot be by that test.** It is a static file
+with no import of `lib/queries`, so its six category names are a seventh copy in a
+different sense: not duplicated logic, but duplicated *content*. A future category will
+need it edited by hand again. That is a known, accepted cost and is recorded so the next
+person looks there.
+
+---
+
 ### 67. 102 brand pages were missing from the sitemap, and nothing could have told us
 
 **Raised:** 12 August 2026 · Production was red for roughly an hour — stale rather than
@@ -4729,6 +4815,9 @@ answer is the same, which is why the fix went ahead without waiting to find out.
 deliberately: 98 requests and 26 seconds is what made someone open the file, and section 1
 is what was in it. Had the build stayed inside the cap, nothing would have been fixed and
 nothing would have been wrong — visibly.
+
+---
+
 
 ---
 
