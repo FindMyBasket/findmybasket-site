@@ -4460,6 +4460,46 @@ unexplained gap stops being unexplained, and that transition should be attributa
 
 ---
 
+### 64. The last two coalesce flags pay off on other retailers, so the baseline had to come first
+
+**Raised:** 12 August 2026 · **Robbie's decision, made knowing the immediate reading will be
+flat.** Escentual flipped 12 August; Boots after Escentual's 04:00 read.
+**Baseline: `docs/coalesce-rollout-baseline.md`, captured before either flip.**
+
+**A link total in the tens is the SUCCESS case for these two.** Recorded before the flip and
+not after, because afterwards it is indistinguishable from a stage that did nothing. Both
+retailers resolve **99.2% of admitted rows on tier 0**, so only ~52 and ~188 rows reach the
+tier ladder at all — 12× and 44× fewer than Gorgeous Shop's 2,319.
+
+**Their contribution is supply-side.** Barcodes are written on tier-0 *update* rows, not only
+on new links, so the two flags put roughly **7,000 and 23,000 barcodes into an index that
+currently holds 79,833** — where every other retailer's tier 1 reads them. Boots would
+become the largest single holding in the fleet, above YesStyle's 13,690. Both sit at exactly
+**zero** today.
+
+**The mechanism is not a hypothesis; it has already been observed once.** Gorgeous Shop's
+1,133 tier-1 links on 12 August were matched against barcodes Beauty Flash's 10 August flip
+had put in the index. The flipped retailer supplies; someone else collects.
+
+#### The baseline is the deliverable, and its standard deviations are the useful half
+
+Escentual has not left **37-42** in a week (sd **1.6**); Boots has not left **148-154**
+(sd **2.1**). They are the two tightest series in the fleet, so a movement of even twenty
+rows would be unmissable — which is what makes "flat" a readable result rather than an
+absence of one.
+
+**Downstream, only three retailers can carry a verdict:** YesStyle (sd 4.4), Perfume Click
+(18.9) and Beauty Bay (38.3). Beauty Flash, Gorgeous Shop and Stylevana are marginal.
+**Debenhams (sd 1,320.9, two runs since recovery) and Niche Beauty (1,699.0, just live) are
+unusable** — attributing a barcode benefit to either would be inventing a mechanism to
+explain a gap their own variance already explains, which is instance 10 exactly.
+
+**Sequencing, and the reason for it:** Escentual first because it is smaller; Boots last and
+alone because it is the largest single barcode contribution available and the one whose
+downstream effect is worth isolating. One flag per run, each read before the next.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
