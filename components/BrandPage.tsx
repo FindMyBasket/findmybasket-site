@@ -9,7 +9,7 @@ import {
   getBrandProducts,
 } from '../lib/brand-queries';
 import { buildBreadcrumbJsonLd } from '../lib/breadcrumb';
-import { categoryToSlug } from '../lib/queries';
+import { categoryToSlug, categoryDisplay } from '../lib/queries';
 
 interface Props {
   slug: string;
@@ -19,15 +19,6 @@ interface Props {
 }
 
 const PAGE_SIZE = 48;
-
-const CATEGORY_DISPLAY: Record<string, string> = {
-  skincare: 'Skincare',
-  makeup: 'Makeup',
-  hair: 'Hair',
-  fragrance: 'Fragrance',
-  bath_body: 'Bath & Body',
-  supplements: 'Supplements',
-};
 
 function buildUrl(
   slug: string,
@@ -55,7 +46,7 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
   // `filterLabel` is what the page shows in headings/breadcrumbs; `hasFilter`
   // toggles the filtered-vs-unfiltered layout.
   const filterLabel =
-    productType ?? (category ? CATEGORY_DISPLAY[category] ?? category : undefined);
+    productType ?? (category ? categoryDisplay(category) : undefined);
   const hasFilter = Boolean(filterLabel);
 
   if (hasFilter && productResult.totalCount === 0) {
@@ -65,7 +56,7 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
   const totalPages = Math.ceil(productResult.totalCount / PAGE_SIZE);
 
   const catSummary = stats.category_breakdown
-    .map(({ category, count }) => `${CATEGORY_DISPLAY[category] ?? category} (${count})`)
+    .map(({ category, count }) => `${categoryDisplay(category)} (${count})`)
     .join(', ');
 
   // "Available in" categories. Apply the same >= 5 threshold as the cross-category
@@ -156,7 +147,7 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
                   href={`/${categoryToSlug(cat)}`}
                   className="text-ink underline decoration-border underline-offset-4 hover:decoration-gold transition-colors"
                 >
-                  {CATEGORY_DISPLAY[cat] ?? cat}
+                  {categoryDisplay(cat)}
                 </Link>
               </span>
             ))}
@@ -175,7 +166,7 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
                 className="group bg-warm-white border border-border rounded-2xl p-6 hover:border-gold transition-colors"
               >
                 <div className="font-serif text-2xl text-ink capitalize mb-1 group-hover:text-gold transition-colors">
-                  {CATEGORY_DISPLAY[cat] ?? cat}
+                  {categoryDisplay(cat)}
                 </div>
                 <div className="text-sm text-ink-light">
                   {count.toLocaleString()} products

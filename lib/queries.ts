@@ -31,9 +31,17 @@ export const CATEGORY_DISPLAY: Record<TopCategory, string> = {
   supplements: 'Supplements',
 };
 
-// Routine order for rendering a set of categories (e.g. "also in Skincare,
-// Makeup, Hair"). Unknown values sort to the end in their original order.
-const CATEGORY_DISPLAY_ORDER: TopCategory[] = ['skincare', 'makeup', 'hair', 'fragrance', 'bath_body', 'supplements'];
+// THE category list. Ordering is the display order for rendering a set of
+// categories (e.g. "also in Skincare, Makeup, Hair"); unknown values sort to the
+// end in their original order.
+//
+// Exported because the sitemap previously kept its own literal copy, which is the
+// same defect as the duplicated label maps: a new category is live on every page
+// and absent from the sitemap, and nothing fails. Import this rather than writing
+// the list again.
+export const ALL_CATEGORIES: TopCategory[] = ['skincare', 'makeup', 'hair', 'fragrance', 'bath_body', 'supplements'];
+
+const CATEGORY_DISPLAY_ORDER: TopCategory[] = ALL_CATEGORIES;
 
 export function sortCategories(cats: string[]): string[] {
   return [...cats].sort((a, b) => {

@@ -11,7 +11,7 @@ import {
   resolveCanonicalKeeper,
 } from '../../../lib/product-queries';
 import { buildBreadcrumbJsonLd } from '../../../lib/breadcrumb';
-import { SPECIALIST_IMPORTER_RETAILER_IDS, categoryToSlug } from '../../../lib/queries';
+import { SPECIALIST_IMPORTER_RETAILER_IDS, categoryToSlug, categoryDisplay } from '../../../lib/queries';
 import { displayProductTitle } from '../../../lib/format/product-name';
 import { ProductDescription } from '../../../components/ProductDescription';
 import { ClickOutLink } from '../../../components/ClickOutLink';
@@ -22,15 +22,6 @@ import { EBAY_RETAILER_ID } from '../../../lib/analytics';
 export const revalidate = 3600;
 
 const SITE_URL = 'https://www.findmybasket.co.uk';
-
-const CATEGORY_DISPLAY: Record<string, string> = {
-  skincare: 'Skincare',
-  makeup: 'Makeup',
-  hair: 'Hair',
-  fragrance: 'Fragrance',
-  bath_body: 'Bath & Body',
-  supplements: 'Supplements',
-};
 
 const AMAZON_TAG = 'findmybasket-21';
 const EBAY_CAMPID = '7221119';
@@ -213,7 +204,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
   ];
   if (product.top_category) {
     breadcrumbItems.push({
-      name: CATEGORY_DISPLAY[product.top_category] ?? product.top_category,
+      name: categoryDisplay(product.top_category),
       url: `/${categoryToSlug(product.top_category)}`,
     });
   }
@@ -272,7 +263,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
           {product.top_category && (
             <>
               <Link href={`/${categoryToSlug(product.top_category)}`} className="hover:text-ink transition-colors">
-                {CATEGORY_DISPLAY[product.top_category] ?? product.top_category}
+                {categoryDisplay(product.top_category)}
               </Link>
               <span>›</span>
             </>
