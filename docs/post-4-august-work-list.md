@@ -2976,12 +2976,13 @@ wanted, both halves must come from the same corpus and the same code path.
 ### 47. A figure in an instruction is unsourced until a query produced it
 
 **Raised:** 7 August 2026 · **Fifth to eighth 8-9 August · Ninth 10 August · Tenth
-11 August · Eleventh 12 August** ·
-**A PROPERTY OF THE METHOD**, recorded because eleven instances in six days is a pattern
-rather than eleven mistakes. **Read instance 9 first: it is the one the remedy nearly
-missed. Read instance 11 for the failure mode that costs the most.**
+11 August · Eleventh and twelfth 12 August** ·
+**A PROPERTY OF THE METHOD**, recorded because twelve instances in six days is a pattern
+rather than twelve mistakes. **Read instance 9 first: it is the one the remedy nearly
+missed. Read instance 11 for the failure mode that costs the most. Read INSTANCE 12 for
+the one the remedy had already caught once.**
 
-**The eleven:**
+**The twelve:**
 
 | | Figure | What it was |
 |---|---|---|
@@ -3000,6 +3001,51 @@ missed. Read instance 11 for the failure mode that costs the most.**
 | 10 | "Boots has been running 31,000-36,000 in-stock rows and is now 23,001 — a two-day oscillation present since 27 July" · and "KEPT_BY path branch at 4,177" | **Neither measured.** Boots `matched_count` since 27 July: min 22,161, max 22,346, **swing 185, standard deviation 58**. There is no cycle and never was. The 23,001/13,045 split falls exactly on the 7-day absence threshold. `KEPT_BY` read **8,189**, not 4,177 |
 
 | 11 | `barcode_ambiguous_skipped` read **null** on the Gorgeous Shop coalesce run, and a recorded stopping condition was invoked on it | **The field does not exist.** The counter is `tier1_ambiguous_skipped` and it read **1,342**, corroborated by 1,342 rows in `tier1_ean_skips` over 1,328 distinct barcodes. `barcode_ambiguous_skipped` appears nowhere — not in the importer, not in a migration, not in this file |
+
+| 12 | **5,663** supplement rows behind the Boots allowlist, plus "4,554 rows", "the remaining 1,109", "6,673 Personal Care > Health Care rows" and "78 MyProtein products including 43 protein" | **5,663 was retracted on this very list before being reinstated as a founding premise.** Measured: the whole `Health & Beauty > Health Care` subtree is **3,115 rows** holding **936** supplement-shaped; `Vitamins & Supplements` is **1,717**, not 4,554; the "second path" holds **91**, not 1,109; **`Personal Care > Health Care` does not exist in the feed**; MyProtein is **37 rows** on the admissible path, 19 sports-shaped. The category lifts to about **900**, not 5,700 |
+
+#### INSTANCE 12: A RETRACTED FIGURE RETURNING AS A FOUNDING ASSUMPTION
+
+**This is the worst shape yet, and it is worse for a specific reason: the control had
+already fired.** 5,663 was measured against, found unsourced, and recorded as retracted on
+this list. It then came back — not as a passing reference, but as **the premise a whole
+piece of work was scoped on**. "This lifts the category from 93 to roughly 5,700 and it is
+the reason the ceiling exists."
+
+> **A fresh unsourced figure has never been tested. A retracted one has been tested and
+> failed, and the retraction is the artefact that was supposed to stop exactly this.** When
+> a figure returns after retraction, the process did not merely fail to catch it — the
+> thing built to catch it was bypassed.
+
+**And a retracted figure is more dangerous than a fresh one, because it has provenance.**
+It has been discussed, written down, and argued about. It reads as established rather than
+asserted. Instance 9 recorded that a figure surviving one round trip acquires provenance it
+never had; **this is the same mechanism using the retraction itself as the source.**
+
+**What it would have cost.** The whole plan was scoped, sequenced and justified on ~5,700
+rows. The real number is about 900 — **a sixth**. Every downstream judgement rested on it:
+whether it was worth doing at all, whether it justified a shared-module deploy touching
+every retailer, and where it sat against Boots' coalesce flip. **None of the design changed
+when the figure did**, which is worth saying, because the decision to proceed at ~900 was
+made on the commercial argument rather than the count — but that only became visible once
+the count was correct.
+
+**The 78-MyProtein figure is folded in here rather than corrected separately**, at Robbie's
+direction, because it is the same instance rather than a second one: same brief, same
+absence of a query behind it. Measured, **37 on the admissible path**.
+
+**The remedy needs a clause the others do not imply:**
+
+> **When a figure is retracted, record it as retracted where it will be seen NEXT — not
+> only where it was caught.** Item 47 held the retraction. The brief that reused the figure
+> was written elsewhere. **The control sat somewhere the failure did not pass through**, so
+> it was never consulted — not overridden, not forgotten, simply out of the path. A
+> retraction filed only where it was caught protects the record and not the next decision.
+
+**This is the clause that generalises**, and it applies beyond figures: any control filed
+where the failure will not travel is decoration. The GONE_IDS list said in its own header
+to regenerate before the flip (item 51) and the flip happened elsewhere; the frozen-state
+rule is in a doc rather than in the files it governs. **Same shape, three times.**
 
 #### INSTANCE 11: THE FIRST ONE THAT STOPPED WORK RATHER THAN MISDIRECTING IT
 
@@ -5012,6 +5058,191 @@ recording them now is cheaper than discovering them during the migration.
 
 ---
 
+
+---
+
+### 70. The inversion of the quietly-incomplete family, and the harder half to catch
+
+**Raised:** 12 August 2026, during Boots supplements discovery · **`feed-diag` section 6.**
+
+> **Items 48, 51, 54, 56, 60 and 67 produce a clean result that is wrong. This produces an
+> alarming result that is meaningless. Both end at a signal nobody can act on.**
+
+**The second is harder to catch, and the reason is uncomfortable: the correct response to a
+95% distrust flag IS to discard the analysis.** Doing the right thing with the signal is
+what loses the finding. In the quietly-incomplete family the reader is deceived by a clean
+output; here the reader is behaving correctly and the instrument is wrong. **It nearly
+worked** — see the near-miss below.
+
+#### What the flag actually measures
+
+`feed-diag` flags names it believes the feed truncated, because truncation is the
+classifier's one known failure mode: the application word exists and the feed cut it off.
+On the Boots `Fitness & Nutrition` branch it flagged **1,719 of 1,808 rows — 95.1%**.
+
+**Almost none of them are truncated.** Its regex is
+`/(\s\S{1,3}|[a-z])$|\.\.\.$|…$|\s&$|\swith$/`, and the **`[a-z]$` alternative fires on any
+name ending in a lowercase letter.**
+
+| | rows | share |
+|---|---|---|
+| Flagged by the tool | 1,719 | **95.1%** |
+| Flagged **only** for ending in a lowercase letter | 1,161 | 64.2% |
+| Trailing short token that is a **size suffix** — `60g`, `60S`, `x3` | 436 | 24.1% |
+| **Genuinely cut off** | **127** | **7.0%** |
+
+*"Seven Seas Evening Primrose Oil + Starflower 1000Mg 30 Capsules"* is flagged and is
+complete. Genuine truncation looks like *"…Multivitamin Gummies For Adults, O"*.
+
+#### IT DOES NOT FAIL. IT TRAINS DISMISSAL.
+
+> **A guard that fires on 95% of rows is not a guard, it is background noise.** It never
+> reports an error, never breaks a build and is never wrong in a way anyone can point at —
+> it simply stops being read. **The failure mode is in the reader, not the tool**, which is
+> why nothing catches it and why it can sit for months looking like diligence.
+
+**It nearly cost a real finding.** The 45.4% disagreement between the name rule and Boots'
+own taxonomy — the entire evidential basis for path-first classification — arrived stamped
+*"names that LOOK TRUNCATED: 1,624 … review, do not trust"*. **The correct response to a
+95% distrust flag is to discard the analysis**, and that was very nearly the outcome.
+
+**It survived only because the flag was tested rather than believed:**
+
+| | n | name rule disagrees with Boots' path |
+|---|---|---|
+| Genuinely truncated | 127 | **48.0%** |
+| Clean names | 1,681 | **45.2%** |
+
+**The rate is the same in both populations**, so truncation is not what produces it. The
+finding stands on 1,681 clean names.
+
+#### The fix
+
+**Fix:** drop the `[a-z]$` alternative, and exempt a trailing size/count token
+(`\d+\s*(g|ml|mg|kg|s|caps?)`, `\d+S`, `x\d+`). That takes the flag from 95.1% to about
+7%, which is a number a reader can act on. **Read-only diagnostic, not the import path**, so
+it is not blocked by anything — but it is not urgent either, and it must not be bundled
+with the Boots change, whose evidence it was used to assess.
+
+---
+
+### 71. Retailer-conditional classification does not exist, and it is the real work
+
+**Raised:** 12 August 2026 · **Blocks item 72. Design item — scope before writing.**
+
+Boots supplements needs the topical veto to behave differently on a health path than on a
+beauty one. **That capability does not exist anywhere in the codebase today**, and it is
+larger than the path allowlist and the regex edit combined.
+
+#### Why the veto cannot simply be relaxed
+
+Path-first alone is not sufficient, and this inverts the original brief. **Boots' own
+`Vitamins & Supplements` path contains topicals:** *Anua Niacinamide TXA Brightening Toner
+250ml*, *Numbuzin No.5+ Glutathione Concentrated Toner 200ml*, *Olay Vitamin C Moisture
+Fluid*, *BetterYou Magnesium Muscle **Body Spray** 100ml*, *CBD Brothers Oil 5000mg*. **The
+veto must still fire, or the category imports toners as supplements.**
+
+#### Why it cannot simply be kept
+
+On the same path it is wrong the other way: *Boots Vegan Omega 3 Oil 1000 Mg, 60 Capsules*
+and *Seven Seas Evening Primrose Oil … 30 Capsules* both read **topical**. `oil`, `gel` and
+`pack` are **dosage forms in a health catalogue and application words in a beauty one** —
+item 57, 10 August: *the rule is fitted to the catalogue, not to the concept.*
+
+#### The shape, and its interaction with #226
+
+- **`oil`, `gel` and `pack` leave the application list on a health path only.**
+- **`capsuleIsTopical` must not fire on a health path at all.** Its purpose is Elizabeth
+  Arden ceramide capsules in *skincare*; on `Vitamins & Supplements` a capsule is the dose
+  form, always.
+- **`serum`, `toner`, `cream`, `spray`, `mask`, `shampoo` keep full strength everywhere** —
+  they are what catch the toners above.
+
+> **This is a GUARD CONDITION, not an edit to #226.** #226 stays exactly as written for
+> every other retailer. That preserves its "fix one, not both" scoping, which was the whole
+> point of how it was written — and a guard is reversible in a way a regex edit is not.
+
+**The unknown to scope:** what "a health path" means as a signal — the retailer id, the
+admitted path prefix, or a flag on `retailer_import_config` — and whether the classifier
+can see it at the point the veto runs. **That is the design question, and it is the reason
+this is an item rather than a paragraph inside item 72.**
+
+---
+
+### 72. Boots supplements: the atomic change, at ~900 rather than ~5,700
+
+**Raised:** 12 August 2026 · **Discovered and proposed, NOT applied.** Blocked by item 71.
+**Sequenced after Boots' coalesce flip**, and after Baseline A is retaken following
+Stylevana 03:30 and YesStyle 10:00.
+
+**Decision, taken knowing the corrected size** (item 47 instance 12): proceed at ~900.
+**The argument was never the row count.** A 93-product category is not something you show
+MyProtein; ~900 is ten times that and carries the sports-nutrition brands, which is the
+variance case and the commercial purpose. That arrives at 900 exactly as at 5,700.
+
+**Three parts, atomic — any one alone launches the category with a hole:**
+
+| | Change | Import path? |
+|---|---|---|
+| 1 | Admit `Health & Beauty > Health Care > Fitness & Nutrition > Vitamins & Supplements`. **NOT `Medicine & Drugs`** — 113 supplement-shaped rows inside it are an accepted loss, already on record | **Yes** — `retailer_import_config` row, no deploy |
+| 2 | `EXCLUDE_PATTERNS`: opening the path while leaving the regex loses **274 supplements (29.3%)**, including the entire Imedeen line | **Yes** — shared-module **deploy** |
+| 3 | Path-first classification plus the item-71 veto | **Yes** — shared-module **deploy** |
+
+**Parts 2 and 3 change classification for every retailer, not just Boots.** That is a wider
+blast radius than the coalesce flag, which is one boolean on one row — hence the sequencing.
+
+#### THE SPORTS SPLIT IS BY BRAND, AND THE DATA SUPPLIED THE JUSTIFICATION
+
+**`\bprotein\b` does not match "Myprotein".** There is no word boundary inside the brand
+name, so **any name-based sports rule silently misses the largest sports brand in the feed
+because of its own name.**
+
+> **That is the argument for a brand list — not the list itself.** It came out of the data
+> rather than the reasoning, it is structural rather than a coverage gap, and no amount of
+> tuning a name regex fixes it. A brand list also fails safe: an unlisted sports brand
+> lands in `supplements`, which is wrong but not absurd.
+
+**The allowlist, taken at the ≥70%-sports-shaped break in the distribution:**
+
+Optimum Nutrition · Grenade · Revival · Liquid IV · C4 · Misfits · Humantra · YOURLVLS ·
+Sci-Mx · Fulfil · Nicks · Barebells · ORS · Eleat · Warrior · Nuzest · Vidrate ·
+**MyProtein**
+
+**MyProtein is the stated exception** — 19 of 37 by name signal, but all 37 are MyProtein,
+and a MyProtein multivitamin in `sports` is defensible where the reverse is not.
+
+**A list from the data is not a list from memory, and the difference is measurable.**
+Of the eleven brands proposed from memory, **Bulk, SiS and Maximuscle are absent from the
+Boots feed entirely**, and PhD has **one** row. Meanwhile Revival (29 rows, 100% sports),
+Liquid IV (22, 95.5%), C4, Misfits, Sci-Mx, Fulfil, Nicks, ORS, Eleat and Warrior — all at
+or near 100% — were in neither list until the distribution was read. **Dropped from the
+proposal:** PhD, High5, Gatorade, USN, Applied Nutrition, at 1-15 rows and under 50%; they
+fail safe into `supplements`.
+
+#### What arrives alongside, and what does not
+
+Admitting the leaf path rather than the `Health Care` subtree keeps out **2,179
+non-supplement rows** — first aid, biometric monitors, incontinence aids, supports and
+braces, condoms.
+
+> **`bath_body` should not move at all.** No `Personal Care` rows arrive: `Cosmetics`,
+> `Hair Care` and `Shaving & Grooming` are already admitted and the rest of `Personal Care`
+> stays excluded. The expected 6,673-row `bath_body` movement **does not happen**, and that
+> is now a prediction to check rather than a risk to price.
+
+#### Baselines, 12 August, taken before
+
+| | |
+|---|---|
+| supplements | **93** (83 + 10) |
+| bath_body | **7,812** |
+| products_active | **97,677** |
+| brands | **2,400** |
+| comparable at 2+ | **12,379** |
+| Boots `retailer_prices` rows | 36,051 |
+
+**Baseline A must be retaken** after the current cycle completes; these are the
+category-side figures only.
 
 ---
 
