@@ -4821,6 +4821,80 @@ nothing would have been wrong — visibly.
 
 ---
 
+### 68. Two navs, three differences, none of them detectable from either side
+
+**Raised:** 12 August 2026, on finding Supplements missing from the homepage nav ·
+**The third time this shape has appeared on this page**, and the first time it was
+counted as a pattern rather than a one-off.
+
+The site has two independently maintained navigations: the static blocks in
+`public/index.html` (desktop and mobile, themselves two copies) and `NAV_LINKS` in
+`components/SiteNav.tsx`, which renders on every React route. They had **drifted in three
+separate ways**:
+
+| | index.html | SiteNav.tsx |
+|---|---|---|
+| **Supplements** | **absent** | present since #232 |
+| **Find** (`/finder`) | **absent from both blocks** | present, "a core feature" |
+| Build a routine | `/app` — **200** | `/app.html` — **308 hop** |
+
+#### WHY NONE OF THEM WAS DETECTABLE
+
+> **Each nav is internally consistent.** Open either one and it reads as a complete,
+> deliberate list. There is no position from which the two can be compared except
+> deliberately putting them side by side, which nobody does, because neither looks wrong.
+
+**Nothing fails.** Every link in both navs resolves. No build breaks, no test fails, no
+page 404s. Supplements was live on its route, in the sitemap, on the homepage cards, and
+in the React nav — **and a homepage visitor still had no way to click it.** The one
+surface with no link was the one surface that matters most, and every other signal said
+the category had shipped.
+
+#### THE FAMILY, AND WHY THIS IS THE THIRD INSTANCE
+
+| Where | Copies | Found by |
+|---|---|---|
+| Category **orderings** (item 66) | **four** — og/twitter/JSON-LD, roadmap intro, how-it-works step, and the card grid | adding a sixth category |
+| Category **label maps** (item 65, #234) | **seven** — two in `lib/queries`, three duplicates, the sitemap array, the importer's `catRoutes` | adding a sixth category |
+| **Navs** (this item) | **three** — two static blocks, one React | adding a sixth category |
+
+**All three were found by the same act, and none by a check.** Adding a category is
+currently the only instrument this codebase has for detecting its own duplicated content,
+which means the drift is discovered at the worst possible time — during a launch, when
+attribution is hardest.
+
+**#234's guard covers the label maps in code and cannot reach these**, for the reason
+already recorded in item 66: `public/index.html` is a static file with no import of
+`lib/queries`, so its category names are duplicated *content* rather than duplicated
+*logic*. **A nav is the same.** A test comparing `NAV_LINKS` against the HTML would have to
+parse the HTML — which is exactly what caught this, by hand, once.
+
+> **The cheap version is worth doing: parse both nav blocks out of `public/index.html`,
+> compare the href set against `NAV_LINKS`, and fail on a difference.** It is the same
+> instrument as the `catRoutes` assertion in `lib/__tests__/category-labels.test.ts` —
+> read the un-importable copy as text and assert it agrees. Not written here, because this
+> item is the record and that is a change.
+
+#### THE FINDER GAP IS ITS OWN PR, AND IT IS NOT "EVENTUALLY"
+
+**`/finder` returns 200 and has no link on the homepage in either block.** `SiteNav.tsx`'s
+own comment calls it *"A core feature, so it sits at normal weight just before the search
+icon"* — a claim that is true on every React route and false on the page most visitors
+arrive at. **Homepage visitors have no route to it at all.**
+
+That is a live gap in a shipped feature, not a tidy-up, and it should be a nav-only PR
+soon rather than being carried.
+
+#### THE `/app.html` HOP IS RECORDED, NOT SCHEDULED
+
+"Build a routine" points at `/app` from the static nav and `/app.html` from the React one.
+Both work; `/app` is a **200** and `/app.html` a **308** redirect, so every click from a
+React route takes an extra hop. **Smaller than the other two, no user-visible failure, and
+recorded here so it is not rediscovered as though it were new.** It does not need
+scheduling.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
