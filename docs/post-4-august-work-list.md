@@ -4895,6 +4895,126 @@ scheduling.
 
 ---
 
+### 69. Migrate the homepage off static HTML — a class fix, not a tidy-up
+
+**Raised:** 12 August 2026 · **Sequenced behind Boots supplements**, which has a
+commercial dependency this does not. **Not started. Scope the demo generator and the
+build cost before anything begins.**
+
+`public/index.html` is a hand-maintained static file. Every duplicated-content defect
+found in the last ten days lives on it, and the fix already exists in code that the file
+cannot reach.
+
+#### RESOLVE THIS FIRST: the file is both source and build output
+
+**`scripts/generate-homepage-demo.mjs` rewrites `public/index.html` in place at build
+time, and the rewritten file is what is committed.** The block between
+`<!-- FMB:DEMO:START -->` and `<!-- FMB:DEMO:END -->` has carried a **generated fallback**
+on `main` since #177 on 3 August. The checked-in state of the homepage therefore depends
+on what a build last wrote into it.
+
+> **This is the finding most likely to bite a migration, and it bites silently.** Anyone
+> migrating opens `public/index.html`, reads it as source — because it looks exactly like
+> source — and ports what they see. What they see includes a **stale generated demo**, and
+> it would be baked into a component as static markup. The result renders, passes review,
+> and quietly reintroduces the hand-written point-in-time block that #177 existed to
+> remove. `generate-homepage-demo.mjs`'s own header calls that block *"hand-written,
+> point-in-time and refreshed by nothing"*.
+
+**It is worse than a stale demo.** The generator's header records why: these baskets turn
+on a leg sitting a few pounds either side of a delivery threshold, so a frozen one
+displays a "best" basket that **is no longer best**. *"Stale is survivable; wrong is not."*
+
+**So the first task is not the migration. It is separating source from output** — the
+generator writing somewhere other than its own input, so there is a file that is
+unambiguously source. Until that is true, every later step is being read off an artefact.
+This is cheap to do now and expensive to discover halfway through.
+
+---
+
+#### The evidence is accumulated, not speculative
+
+| | The stale list | Found by |
+|---|---|---|
+| **Two navs, three divergences** (item 68) | Supplements absent, `/finder` absent, `/app` vs `/app.html` — **none detectable from either side, because both were internally consistent** | adding a category |
+| **Four category orderings** (item 66) | og/twitter/JSON-LD, roadmap intro, how-it-works step, and the card grid — **the fourth being the one visitors actually see** | adding a category |
+| **Seven duplicated label maps** (item 65, #234) | two in `lib/queries`, three component copies, the sitemap array, the importer's `catRoutes` | adding a category |
+| **Bath & Body absent** (item 66) | missing from a section headed *"Now live across beauty"* while carrying **7,808 products** — **missed by two prior sweeps** | adding a category |
+| **The same claim in nine places under four wordings** | the 3 August savings-figure sweep | a figure that was never true |
+| **Supplements needed edits in eleven places** | on that one page | adding a category |
+
+**Every one was a hand-maintained list going stale. Every one was found by accident rather
+than reported.** Not one was caught by a test, a build failure, a 404 or a warning —
+because none of them fails. A stale list renders perfectly.
+
+> **The frequency rises with each new category, because each one multiplies the surfaces.**
+> Six categories across eleven places is what made supplements expensive. A seventh is
+> worse, and the cost is paid during a launch, when attribution is hardest.
+
+#### The fix already exists, and the file cannot reach it
+
+`ALL_CATEGORIES`, `categoryDisplay()` and `SiteNav.tsx` are canonical, correct, and
+guarded by `lib/__tests__/category-labels.test.ts`. **A Next homepage consumes them and
+the divergence class disappears rather than being swept for.** No new abstraction is
+needed; the abstraction is written and shipped. `public/index.html` is simply outside it —
+a static file with no import, so its copies are duplicated *content* rather than
+duplicated *logic*, which is why #234's guard cannot reach it and why item 68 proposed
+parsing the HTML as a stopgap.
+
+**That stopgap becomes unnecessary if this lands**, which is the argument for doing this
+instead of building more parsers.
+
+#### CONSTRAINT 1: the demo generator moves, it does not disappear
+
+`scripts/generate-homepage-demo.mjs` (410 lines) is **the only part of that page with real
+logic in it.** It runs as a prebuild step, re-solves candidate baskets against live prices,
+and rewrites `public/index.html` in place between `<!-- FMB:DEMO:START -->` and `END`.
+
+Three properties that must survive, and are easy to lose:
+
+- **It re-solves rather than hardcoding**, deliberately. Its header records two candidates
+  that looked ideal by hand and demonstrated nothing when re-solved — *"you cannot tell by
+  looking. Re-solve, always."* A migration that snapshots its output reintroduces exactly
+  the defect it was built to remove.
+- **Its fallback writes copy without figures and shouts on stderr.** It never renders a
+  basket it cannot stand behind. That behaviour is load-bearing, not defensive.
+- **Its output must stop being its input**, per the section above — the generator should
+  emit *data* the page imports, not *HTML* it rewrites. That is what makes the rest of this
+  safe, which is why it is listed first rather than here.
+
+**Scope this before anything starts.** The likely shape is that it keeps running as a
+prebuild step and emits JSON the page imports, rather than becoming a query inside the
+page — which also keeps it outside the per-page timeout. That is a proposal, not a
+decision.
+
+#### CONSTRAINT 2: it joins the static pool that failed this morning
+
+**Today `public/index.html` costs the static generation pool nothing.** It is copied as an
+asset. The generator runs once, before `next build`, outside the 60-second per-page cap.
+
+A Next homepage is **the 20th page in a pool that failed at 19 this morning** (item 67),
+and it is the most-visited page on the site. The generator takes ~1 second today; that is
+cheap, but it is cheap *outside* the cap, and moving the solve inside a page render puts it
+under a limit it has never been subject to.
+
+> **Establish the build-time cost before adding to that pool.** The measurement that
+> matters is not the homepage's own render time but the pool's total, which is what
+> actually breached. Item 67's build had already drifted from 1 minute to 2 before
+> anything was added.
+
+**This is a cost to price, not a caveat to note.** The migration does not move a page from
+one renderer to another at zero cost: it takes a page that is currently free and makes it
+the twentieth member of a pool with a demonstrated failure at nineteen. That may well be
+worth paying — but it has a number, and the number should exist before the work starts.
+
+**Neither constraint blocks the work.** Both are unknowns that must be priced first, and
+recording them now is cheaper than discovering them during the migration.
+
+---
+
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
