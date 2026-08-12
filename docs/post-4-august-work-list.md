@@ -4585,6 +4585,153 @@ reverted #232's edits to the files they share.
 
 ---
 
+### 67. 102 brand pages were missing from the sitemap, and nothing could have told us
+
+**Raised:** 12 August 2026 · Production was red for roughly an hour — stale rather than
+broken, the previous deploy kept serving — and fixed by redeploying the identical commit
+alone. **The outage is the least valuable thing in this item.**
+
+#### 1. THE FINDING: A SUCCESSFUL SITEMAP THAT WAS QUIETLY INCOMPLETE
+
+`/sitemap-pages.xml` collected brand slugs by paging `products_active` with `.range()`
+**and no `ORDER BY`**. Postgres guarantees no stable row order across separate queries, so
+OFFSET paging over an unordered result **skips rows** — not an edge case, the documented
+consequence.
+
+Rendered old and new side by side against the live catalogue:
+
+| | brand URLs |
+|---|---|
+| old | **2,252** |
+| new | **2,354** |
+
+**A strict superset. Nothing dropped, 102 added.** `akt-london`, `bdk-parfums`,
+`authentic-beauty-concept`, `aevi`, `affinessence` and 97 others all return **HTTP 200**
+and had never appeared in the sitemap. **4.3% of brand pages, absent, for as long as the
+loop has existed.**
+
+##### Why nothing reported it, and nothing could have
+
+> **A sitemap missing entries is indistinguishable from a complete one.** It is valid XML.
+> It returns 200. It has the right shape, a plausible size, and thousands of correct URLs
+> in it. **There is no error, no warning, and no count to compare against** — the only
+> symptom is pages Google never learns about, which shows up as traffic that was never
+> there rather than traffic that fell.
+
+**It was found because a performance problem forced someone to read the code.** Nothing
+surfaced it, nothing could have surfaced it, and had the build not started timing out it
+would still be missing 102 pages — more each time the catalogue grew, since the skip rate
+scales with the number of pages.
+
+##### It belongs to a family, and that is the point
+
+**Items 48, 51, 54, 56 and 60 are the same shape: a well-formed, successful output that is
+quietly incomplete.**
+
+| Item | The output that looked fine |
+|---|---|
+| 48 | `feed-diag`'s overlap buckets read **zero** on any differently-named feed — a clean table of noes |
+| 51 | The same feed is two different feeds depending on which path fetched it |
+| 54 | A threshold derived from a log line rather than the artefact |
+| 56 | A report that cannot see its population returns a clean table of noes |
+| 60 | A pipeline written for one identifier per ASIN matches nothing, and **reads as a coverage gap rather than a design error** |
+| **67** | **A valid sitemap, 200, thousands of correct URLs, 102 missing** |
+
+**None of these fails. Every one succeeds and under-reports**, and in every case the wrong
+output is indistinguishable from the right one without an independent count. That is now
+six instances, which makes it the most common defect class on this list.
+
+> **The shared remedy is the only one that works: compare the output against a count
+> derived independently.** Not against itself, not against last time. #237's guard does
+> exactly that — the migration asserts the array length equals the distinct count, and the
+> route throws rather than emitting a brandless sitemap.
+
+**Resubmit the sitemap in Search Console** so the 102 are crawled rather than waiting for
+a natural recrawl.
+
+#### 2. THE SPACING RULE WAS RIGHT FOR A REASON NOBODY HAD
+
+`docs/` and the standing note both say **space unrelated deploys apart even when they
+cannot collide**, and the stated justification was attribution: if two changes ship
+together and something moves, you cannot tell which did it. **That justification was too
+weak, and the rule is load-bearing for a reason nobody had written down.**
+
+#232, #233, #234 and #235 were merged within about six seconds. Three production builds
+started at once, contended on one Postgres, and all three died on
+`/sitemap-pages.xml` after three 60-second attempts.
+
+**The control is exact:**
+
+| Commit | Build | Result |
+|---|---|---|
+| `47f3fba` — #235 branch head | preview, 09:21 | **READY in 1 min** |
+| `968c0a0` — the same tree squashed onto main | **production, 09:24** | **ERROR** |
+
+```
+git diff 47f3fbaa 968c0a00  →  empty
+```
+
+**Byte-identical trees, three minutes apart, green then red.** Then the same commit was
+redeployed alone and went green in 2 minutes and aliased to production. Nothing was
+changed to fix it.
+
+> **A rule kept for a weak reason still has to be kept.** "It buys attribution, not
+> safety" was the recorded justification and it was wrong on the second half. Concurrency
+> was not a reporting inconvenience; it was the failure. **Where a rule's stated reason is
+> weaker than the rule, the reason is what is wrong, not the rule.**
+
+#### 3. MERGING IS WHAT FIRES BUILDS, AND THEY DO NOT QUEUE
+
+The rule said *deploys*. Nothing here was deployed by hand. **Merging N pull requests
+triggers N production builds, and Vercel runs them concurrently rather than queueing
+them** — each one a full static generation issuing its own hundreds of queries against
+the same database.
+
+> **RESTATED: space MERGES, not just deploys.** Merge one, wait for the build to go
+> green, then merge the next. The gap is not politeness — concurrent builds are
+> concurrent load, and the last one to start is not the one that fails.
+
+**Nothing warns you.** GitHub merges instantly, four times in a row, and every merge looks
+successful; the failures surface minutes later in a different system. **The action and the
+consequence are in different tools, which is why the rule has to be a habit rather than a
+check.**
+
+#### 4. THE SEVEN-PAGE LIST WAS COLLATERAL, NOT A SYMPTOM
+
+The build named seven failing pages: `sitemap-pages.xml`, `makeup`, `skincare`,
+`supplements`, `edit/k-beauty`, `account`, `search`. **Only three of six category pages,
+which invites the question "what do those three share?" — and there is no answer, because
+the premise is wrong.**
+
+```
+⚠ Sending SIGTERM signal to static worker due to timeout of 60 seconds.
+  Subsequent errors may be a result of the worker exiting.
+```
+
+Next generated **9 of 19** pages, one worker breached 60 seconds, and the pool was killed.
+**The seven are simply the pages in flight at that moment.** `hair`, `fragrance` and
+`bath-and-body` were among the nine already finished. Only `/sitemap-pages.xml` was slow —
+it is the one Next names in the fatal error after three attempts.
+
+> **Reading that list as a symptom would have sent someone looking for what `/account`,
+> `/search` and three of six category pages have in common. Nothing. The list is a
+> snapshot of a worker pool, not a set of suspects.** Next says so itself, in the line
+> immediately above the list, and that line is easy to skip.
+
+#### The measurement that says it needed fixing regardless
+
+**The build had already gone from 1 minute to 2.** Green, inside the cap, and no longer
+comfortably — on a curve that only grows with the catalogue. If 12 August was contention,
+it fails on its own within weeks; if it was the query, it failed today. Either way the
+answer is the same, which is why the fix went ahead without waiting to find out.
+
+**The performance problem was the symptom, not the defect.** It is recorded last
+deliberately: 98 requests and 26 seconds is what made someone open the file, and section 1
+is what was in it. Had the build stayed inside the cap, nothing would have been fixed and
+nothing would have been wrong — visibly.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
