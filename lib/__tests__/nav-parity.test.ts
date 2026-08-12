@@ -47,11 +47,6 @@ const SITENAV = readFileSync(join(ROOT, 'components', 'SiteNav.tsx'), 'utf8');
  */
 const KNOWN_DIVERGENCES: { href: string; why: string }[] = [
   {
-    href: '/finder',
-    why: 'Item 68: the Product Finder has no link on the homepage in either static block, ' +
-      'though SiteNav calls it a core feature. A live gap in a shipped feature, and its own PR.',
-  },
-  {
     href: '/app.html',
     why: 'Item 68: "Build a routine" is /app in the static navs and /app.html in SiteNav. ' +
       'Both resolve; /app is a 200 and /app.html a 308 hop. Recorded, not scheduled.',
