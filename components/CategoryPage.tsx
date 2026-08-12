@@ -10,6 +10,7 @@ import {
   getCrossCategoryBrands,
   categoryToSlug,
   categoryDisplay,
+  subcategoryDisplay,
   type TopCategory,
 } from '../lib/queries';
 import { getProductTypes } from '../lib/subcategory-queries';
@@ -169,7 +170,7 @@ export async function CategoryPage({ category, displayName, intro }: Props) {
                 className="group bg-warm-white border border-border rounded-2xl p-6 hover:border-gold transition-colors"
               >
                 <div className="font-serif text-2xl text-ink capitalize mb-1 group-hover:text-gold transition-colors">
-                  {sub.name}
+                  {subcategoryDisplay(sub.name)}
                 </div>
                 <div className="text-sm text-ink-light">
                   {sub.count.toLocaleString()} products
@@ -229,8 +230,23 @@ export async function CategoryPage({ category, displayName, intro }: Props) {
           Stocked at multiple retailers. Compare prices and save.
         </p>
         {products.length === 0 ? (
+          // WHY THIS IS NOT "no products". getFeaturedProducts requires
+          // retailerCount >= 2, so this branch means "the category has products,
+          // none of them comparable yet" — not an empty category. The old copy
+          // ("No featured products available yet. Check back soon.") read as a
+          // broken page on a live category, which is exactly the state a small
+          // category launches in. Say what is actually true instead, using the
+          // count the page already loaded — no extra query.
           <div className="bg-warm-white border border-border rounded-2xl p-12 text-center text-ink-light">
-            No featured products available yet. Check back soon.
+            {stats.total_products > 0 ? (
+              <>
+                All {stats.total_products.toLocaleString()} products in{' '}
+                {displayName.toLowerCase()} are currently stocked at a single retailer, so
+                there is nothing to compare yet. We add retailers regularly.
+              </>
+            ) : (
+              <>This category is not stocked at any of our retailers right now.</>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

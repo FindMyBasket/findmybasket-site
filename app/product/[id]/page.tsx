@@ -29,6 +29,7 @@ const CATEGORY_DISPLAY: Record<string, string> = {
   hair: 'Hair',
   fragrance: 'Fragrance',
   bath_body: 'Bath & Body',
+  supplements: 'Supplements',
 };
 
 const AMAZON_TAG = 'findmybasket-21';

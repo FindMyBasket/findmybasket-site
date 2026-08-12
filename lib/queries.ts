@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { getActiveRetailerIds } from './retailers';
 
-export type TopCategory = 'skincare' | 'makeup' | 'hair' | 'fragrance' | 'bath_body';
+export type TopCategory = 'skincare' | 'makeup' | 'hair' | 'fragrance' | 'bath_body' | 'supplements';
 
 // User-facing route slug for each top_category. Identity for all except
 // bath_body, whose DB value carries an underscore but whose route is the
@@ -13,6 +13,7 @@ export const CATEGORY_SLUGS: Record<TopCategory, string> = {
   hair: 'hair',
   fragrance: 'fragrance',
   bath_body: 'bath-and-body',
+  supplements: 'supplements',
 };
 
 export function categoryToSlug(cat: string): string {
@@ -27,11 +28,12 @@ export const CATEGORY_DISPLAY: Record<TopCategory, string> = {
   hair: 'Hair',
   fragrance: 'Fragrance',
   bath_body: 'Bath & Body',
+  supplements: 'Supplements',
 };
 
 // Routine order for rendering a set of categories (e.g. "also in Skincare,
 // Makeup, Hair"). Unknown values sort to the end in their original order.
-const CATEGORY_DISPLAY_ORDER: TopCategory[] = ['skincare', 'makeup', 'hair', 'fragrance', 'bath_body'];
+const CATEGORY_DISPLAY_ORDER: TopCategory[] = ['skincare', 'makeup', 'hair', 'fragrance', 'bath_body', 'supplements'];
 
 export function sortCategories(cats: string[]): string[] {
   return [...cats].sort((a, b) => {
@@ -39,6 +41,25 @@ export function sortCategories(cats: string[]): string[] {
     const bi = CATEGORY_DISPLAY_ORDER.indexOf(b as TopCategory);
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
   });
+}
+
+// Display labels for subcategories whose raw DB value does not read well as a
+// heading. Deliberately SPARSE: 'face', 'cleanse', 'scent' and the rest read
+// fine title-cased, so they are absent and fall through unchanged.
+//
+// WHY THIS EXISTS AT ALL. Supplements' two values are 'supplements' and
+// 'sports'. Rendered raw, the category page offers "Browse by area >
+// Supplements" inside Supplements, and the destination page is headed "Beauty
+// supplements" — the same thing named two ways one click apart. That is the
+// exact failure mode duplicated label maps produce, so the label lives here and
+// both surfaces read it rather than each carrying its own copy.
+export const SUBCATEGORY_DISPLAY: Record<string, string> = {
+  supplements: 'Beauty supplements',
+  sports: 'Sports nutrition',
+};
+
+export function subcategoryDisplay(sub: string): string {
+  return SUBCATEGORY_DISPLAY[sub] ?? sub;
 }
 
 export function categoryDisplay(cat: string): string {
