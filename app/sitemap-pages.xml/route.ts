@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 // queries filter on the raw value.
 import { brandSlug, categoryToSlug, ALL_CATEGORIES as CATEGORIES } from '../../lib/queries';
 import { listEdits } from '../../lib/edits';
+import { requireBrandNames } from '../../lib/sitemap-brands';
 
 // Sitemap for non-product pages: static HTML, categories, subcategories,
 // brand pages, edit pages. Should be ~1,500 URLs total.
@@ -108,25 +109,23 @@ export async function GET() {
   }
 
   // Brand pages: /brands/cerave etc.
-  // Pull paginated to handle the full 1,500+ brands.
-  const PAGE_SIZE = 1000;
-  let offset = 0;
-  const brandSlugs = new Set<string>();
-  while (true) {
-    const { data, error } = await supabase
-      .from('products_active')
-      .select('normalised_brand')
-      .not('normalised_brand', 'is', null)
-      .range(offset, offset + PAGE_SIZE - 1);
-    if (error || !data || data.length === 0) break;
-    for (const row of data) {
-      if (row.normalised_brand) {
-        brandSlugs.add(brandSlug(row.normalised_brand));
-      }
-    }
-    if (data.length < PAGE_SIZE) break;
-    offset += PAGE_SIZE;
-  }
+  //
+  // ONE REQUEST, NOT NINETY-EIGHT. This used to page products_active a thousand rows
+  // at a time — 97,645 rows and ~26 seconds of serial round-trips to derive 2,400
+  // distinct brands, because PostgREST caps a response at 1,000 rows. Next kills a
+  // static page at 60 seconds, so the page sat inside the cap only while the
+  // catalogue was small enough, and the request count grew with it.
+  //
+  // fmb_active_brand_names() returns the distinct set as ONE ROW containing an
+  // array, which sidesteps the row cap entirely rather than reducing the number of
+  // pages. Measured 187ms. Slugification stays here, using the same brandSlug() that
+  // builds the links, so the sitemap cannot drift from the routes it advertises —
+  // and passing DISTINCT names rather than every row is exactly equivalent, because
+  // these go into a Set.
+  const { data: brandData, error: brandError } = await supabase.rpc('fmb_active_brand_names');
+  // Throws rather than emitting a brandless sitemap. See lib/sitemap-brands.ts for
+  // why a failed build is the intended outcome here.
+  const brandSlugs = new Set<string>(requireBrandNames(brandData, brandError).map(brandSlug));
 
   for (const slug of brandSlugs) {
     entries.push({
