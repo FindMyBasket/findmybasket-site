@@ -6385,90 +6385,112 @@ consent"*. That reasoning applies to that cookie and not to this field.
 
 ---
 
-### 82. `session_id` has been NULL since inception, and the funnel it exists for has never worked
+### 82. A decision that lapsed, not a defect — and the lapse was the right outcome by accident
 
-**Raised:** 13 August 2026 · **A DEFECT, and it CANNOT SHIP AS A BUG FIX.** Blocked on a
-consent decision that is Robbie's, not an implementation choice.
+**Raised 13 August 2026 as a defect. REWRITTEN THE SAME DAY as a lapsed decision, and
+closed WILL-NOT-FIX.** `ensureSessionId` removed; `session_id` stays as a column.
 
-#### THE FULL SIZE OF IT
+#### THE LAPSED DECISION
 
-| | rows | with `session_id` |
-|---|---|---|
-| `outbound_clicks` | **406** | **0** |
-| `search_events` | **769** | **0** |
+`lib/session.ts` carried its own instruction, and it was deliberate, reasoned and correct:
 
-**Both null since inception.** And `lib/session.ts` states the capability in its own header:
+> *"When in doubt, ship the event logging WITHOUT the cookie first (session_id = null); you
+> still get totals (searches, clickouts, zero-result rate), just not per-session stitching.
+> **Add the cookie once consent handling is confirmed.**"*
 
-> *"Anonymous session id for stitching funnel events (search -> clickout) without PII… This
-> lets you answer 'of the sessions that searched, how many clicked out' without identifying
-> anyone."*
+**Consent handling WAS confirmed.** The banner shipped, the analytics toggle works, the
+consent record is versioned in `localStorage`, and `platform_changes` id 30 documents five
+GA4 definitions registered by hand. **Nothing carried the note forward.** `ensureSessionId`
+was never called, `session_id` stayed NULL on 406 `outbound_clicks` and 769 `search_events`,
+and the capability the module's header states as its purpose has never once worked.
 
-**That question has never been answerable. Not once.**
+> **This is item 77's expired-hold shape on a different surface.** *"Add the cookie once
+> consent handling is confirmed"* has no more mechanism behind it than *"deferred until
+> minutes reset"* did. Both are honest, dated, conditional deferrals; both had their
+> condition met; neither had anything watching for it. **A conditional deferral with no
+> mechanism is a permanent decision written in the language of a temporary one.**
 
-#### THE CAUSE IS ONE MISSING CALL
+**AND THIS TIME THE LAPSE WAS THE RIGHT OUTCOME BY ACCIDENT.** Item 77's expired hold cost
+two weeks of a series that had to be recovered. This one prevented a change that should not
+have been made — see below. **The mechanism failed identically in both cases and the
+outcomes were opposite, which is the argument for fixing the mechanism rather than judging
+it by results.**
 
-Everything else is wired:
+#### WHY NOT FIXED: THREE ARGUMENTS, THE THIRD DECISIVE
 
-- `app/api/track/outbound/route.ts:24` passes `sessionId: getSessionId()`
-- `lib/events.ts:69,92` writes `session_id: e.sessionId ?? null`
-- `lib/session.ts` exports **`ensureSessionId()`**, which sets the `fmb_sid` cookie
+Three options were considered — a consented 180-day cookie, a `sessionStorage` id, and a
+server-derived hash.
 
-**`ensureSessionId()` is called from nowhere.** So `getSessionId()` reads a cookie nothing
-sets and returns `null` every time. The plumbing is complete except for the one call that
-creates the value it carries.
+**`sessionStorage` cannot answer the question.** `app/search/page.tsx` is an `async` SERVER
+component that calls `logSearch` during render. A server component cannot read
+`sessionStorage`, so a client-only id reaches the click and never the search — and *"of the
+sessions that searched, how many clicked out"* stays unanswerable. **The deciding constraint
+is the server/client split, not the privacy posture.**
 
-#### THE COMMENT THAT ALREADY KNEW — ITEM 75'S SHAPE, THIRD INSTANCE
+**Moving search logging client-side is the wrong trade.** It would buy the funnel by making
+the search log lose bots, prefetches and JS-disabled visitors, and by re-establishing the
+committed-search guarantee in a client effect. **Redesigning the most reliable event in the
+system to enable a metric is not worth it.**
 
-`app/app/RoutineBuilder.tsx:220` says so, correctly, and **cites 335 rows against today's
-406 — which dates it.** Someone diagnosed this exactly, wrote it down accurately, and filed
-it in the routine builder, **where the failure does not pass.**
+**THE CONSENTED COOKIE IS REDUNDANT, AND THIS IS THE DECISIVE ONE.** The banner has exactly
+one non-essential toggle, `analytics`, so a consented cookie gates on it — meaning it covers
+**precisely the population GA4 already covers.** And GA4 already has both ends:
+`trackSearch` fires a standard `search` event, `retailer_click` and `affiliate_clickout`
+fire on the click, both behind that same toggle, and **GA4 stitches events into sessions
+natively.**
 
-| | Correct diagnosis, filed where the failure never travels |
-|---|---|
-| 1 | `fmb_resolve_product`'s comment on `products_active` not filtering `in_stock` — item 75 |
-| 2 | `GONE_IDS`' own header saying to regenerate before the flip, while the flip happened elsewhere — item 51 |
-| 3 | **`RoutineBuilder.tsx:220` on `session_id` being NULL** |
+> **A consented cookie would rebuild, server-side, a capability GA4 already provides, for
+> exactly the same people, gated on exactly the same toggle. Its one distinguishing property
+> — covering refusers — is precisely what the consent gate removes.**
 
-> **Three instances. The pattern is not that people fail to diagnose problems — they
-> diagnose them correctly and write them down somewhere the next person will not be
-> standing.** In all three the right place was the artefact itself: the view, the list, the
-> session module.
+**And the confound settles it.** The consenting share moved **65% → 52% → 34%** in three
+weeks. A funnel visible only to that subset has a denominator whose composition is moving,
+so **a falling conversion rate and falling consent would be indistinguishable in the
+series** — the exact confound that took three days to unpick on the AWIN clicks
+(`platform_changes` id 34), rebuilt deliberately into a new metric.
 
-#### THE OPTIONS, REPORTED RATHER THAN CHOSEN
+#### WHAT ANSWERS THE QUESTION INSTEAD — A LIMIT, NOT A GAP
 
-The consent posture differs per option and so does the analytical value. **This is Robbie's
-decision.**
+**For consenting visitors: GA4, which stitches sessions natively.** The question is already
+answerable there and needs nothing built.
 
-| Option | Privacy posture | Analytical value |
-|---|---|---|
-| **Consented first-party cookie** (`ensureSessionId` as written, 180 days) | Needs banner consent, so it only exists for consenting visitors — **the same population GA4 already covers**, which is the group we least need it for | Full cross-session funnel, but on a biased subset |
-| **`sessionStorage` identifier, dies with the tab** | No consent needed under most readings — not persistent, not cross-site | Single-visit funnel only. Answers "of the sessions that searched, how many clicked out" for one visit, which is the question the header actually poses |
-| **Server-derived** (hashed IP + user-agent + salt, rotating daily) | Set by us, never stored raw; still likely personal data under UK GDPR, and the salt rotation is the whole argument | Works for non-consenting visitors, which is precisely the gap — but the strongest claim to defend |
+**For refusing visitors: it is not available by any means we would accept.** Not a gap
+waiting on effort — a limit. Answering it for refusers requires either an identifier they
+did not consent to or a fingerprint, and both are rejected on their own terms rather than on
+cost.
 
-**The middle option deserves noting for one property the others lack: it covers refusing
-visitors without a consent gate**, because it never persists. Whether that is sufficient
-depends on the question being asked, and the module header's question is single-visit.
+> **Record it as a limit so nobody re-opens it as a gap.** A missing returning-visitor or
+> refuser funnel is not a defect, and the absence of a metric is not evidence that one is
+> owed.
 
-**Do not implement any of them as part of item 81.** They are different changes with
-different arguments, and 81's field needs no consent decision precisely because it adds no
-identifier.
+#### `ensureSessionId` REMOVED; `session_id` KEPT
 
-#### DEPENDENCY, NAMED SO IT IS NOT DISCOVERED LATER
+**The function is gone.** An unused function that sets a 180-day cookie, one call site away
+from falsifying `privacy.html` §2.2's *"sets no cookies of its own"*, is exactly the trap the
+wording narrowing exists to avoid — and the narrowing itself was forced by `getSessionId`
+reading a cookie *by design* while being inert *by defect*. **Inert code that reads a cookie
+is what made a published sentence false in intent.**
 
-**If any of these three lands, `public/privacy.html` §2.2 must be revised IN THE SAME PR.**
-That section now ends *"and it is not linked to you"* — the strongest true statement
-available today, and true only because `session_id` is NULL on every row.
+**The column stays, with 406 and 769 NULLs, and the reason is now in the schema comment** —
+because without it the next person proposes populating it, which is how this item started.
+`getSessionId` also stays: it reads a cookie that nothing sets, returns `null`, and is the
+one honest way to keep the call sites' shape without reintroducing the writer.
 
-- The **consented cookie** falsifies it outright: a 180-day identifier links the row to a
-  browser, and it also falsifies *"sets no cookies of its own"*.
-- **`sessionStorage`** falsifies it within a visit.
-- The **server-derived** option falsifies it while arguably not setting a cookie at all,
-  which is the most easily missed of the three.
+**NULL means never recorded, not "no session".** Any funnel rate computed across a future
+boundary would silently divide by a period that could not participate — the
+quietly-incomplete family, and the same boundary the `consent` column records for itself.
 
-**A defect fix that changes what a legal page truthfully says is not a defect fix.** That is
-the whole reason this item cannot ship as one.
+#### THE DISAGREEMENT IS PART OF THE RECORD
 
----
+**The instruction was to build the consented cookie. It was not built.** The report came back
+recommending against all three options, and the recommendation was accepted.
+
+> **The third argument — that GA4 already provides this for the same population — was not
+> available to the person giving the instruction, and would not have been without opening
+> `lib/analytics.ts`.** Stopping to argue was the right move, and the argument was right.
+> **An instruction to build is not an instruction to stop thinking**, and the cost of being
+> wrong about that is one report nobody needed.
+
 
 ### 83. Server-side click logging has never been disclosed
 

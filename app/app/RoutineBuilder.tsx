@@ -217,8 +217,9 @@ export default function RoutineBuilder() {
   // event. The same string reaches outbound_clicks.source via sendOutboundBeacon,
   // so both pipelines get the distinction from this one line and neither needs a
   // schema change, a session cookie, or the consent question that would come with
-  // one. (session_id is NULL on all 335 rows of outbound_clicks: ensureSessionId
-  // is never called, so a click cannot be linked to an arrival server-side.)
+  // one. (session_id is NULL on every row of outbound_clicks and search_events, by
+  // DECISION rather than omission — the writer was removed 13 Aug 2026, work-list
+  // item 82. A click cannot be linked to an arrival server-side, and will not be.)
   const [preloadCase, setPreloadCase] = useState<PreloadCase | null>(null);
 
   // `optimiser_shop_button` -> `optimiser_shop_button_preload_merged`. Suffixing
