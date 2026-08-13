@@ -447,11 +447,12 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
     } else {
       // Stored side: external_product_id -> product name, for this retailer.
       const stored = new Map<string, string>();
+      const storedIds = new Map<string, number>();
       let from = 0;
       for (;;) {
         const { data, error } = await sb
           .from("retailer_prices")
-          .select("external_product_id, products!inner(name)")
+          .select("external_product_id, product_id, products!inner(name)")
           .eq("retailer_id", rid)
           .not("external_product_id", "is", null)
           .range(from, from + 999);
@@ -460,7 +461,10 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
         for (const r of data as any[]) {
           const k = String(r.external_product_id ?? "").trim();
           const nm = r.products?.name;
-          if (k && typeof nm === "string" && nm) stored.set(k, nm);
+          if (k && typeof nm === "string" && nm) {
+            stored.set(k, nm);
+            if (r.product_id != null) storedIds.set(k, Number(r.product_id));
+          }
         }
         if (data.length < 1000) break;
         from += 1000;
@@ -490,6 +494,7 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
       const bump = (k: string) => buckets.set(k, (buckets.get(k) ?? 0) + 1);
       const dist = new Map<number, number>();
       const zeroRows: { id: string; feed: string; stored: string }[] = [];
+      const allZeroProductIds: number[] = [];
 
       for (const r of body) {
         const key = String(r[idIdx] ?? "").trim();
@@ -504,7 +509,11 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
         for (const t of a) if (b.has(t)) shared++;
         bump("compared");
         dist.set(shared, (dist.get(shared) ?? 0) + 1);
-        if (shared === 0 && zeroRows.length < 60) zeroRows.push({ id: key, feed: feedName, stored: storedName });
+        if (shared === 0) {
+          const pid = storedIds.get(key);
+          if (pid != null) allZeroProductIds.push(pid);
+          if (zeroRows.length < 60) zeroRows.push({ id: key, feed: feedName, stored: storedName });
+        }
       }
 
       console.log("\n  EVERY ROW ACCOUNTED FOR:");
@@ -530,6 +539,34 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
       for (const z of zeroRows) {
         console.log("   " + z.id.padEnd(14) + " feed: " + z.feed.slice(0, 58));
         console.log("   " + "".padEnd(14) + " db  : " + z.stored.slice(0, 58));
+      }
+
+      // THE DIVERGENT PRODUCT IDS, PRINTED IN FULL. The split is NOT computed here.
+      //
+      // This block used to compute a "recoverable split" via a PostgREST embed
+      // (`retailers!inner(active)` with `.eq("retailers.active", true)`). It returned
+      // NOTHING for all 137 products and printed that as "0 recoverable". SQL over the
+      // same ids found survivors in 4 of the first 12 checked. A lookup that resolved
+      // nothing and an answer of genuinely none produced the SAME OUTPUT — which is
+      // work-list item 84's rule, broken by the very query written to apply it.
+      //
+      // It was also asking the WRONG QUESTION, which matters more than the broken join.
+      // "Has a row at another active retailer" is not the recoverable condition. "Is
+      // still present in that retailer's CURRENT FEED" is. A retailer_prices row
+      // persists long after the product leaves a feed — that is what the absence
+      // threshold exists to handle — and such a row re-sources nothing. Product 7547 is
+      // the worked example: its only survivor was a YesStyle row last confirmed 30 May,
+      // so nothing was overwriting Stylevana's wrong image.
+      //
+      // So this prints ids and stops. The split belongs in SQL, where the join is
+      // inspectable, the intermediate counts can be read, and row freshness can be
+      // tested against each retailer's own last successful import rather than guessed.
+      if (allZeroProductIds.length) {
+        const ids = [...new Set(allZeroProductIds)].sort((a, b) => a - b);
+        console.log("\n  DIVERGENT PRODUCT IDS — " + ids.length + " distinct. Derive the split in SQL:");
+        for (let i = 0; i < ids.length; i += 20) {
+          console.log("   " + ids.slice(i, i + 20).join(","));
+        }
       }
     }
   }
