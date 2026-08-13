@@ -72,8 +72,18 @@ name: ga4-weekly-pull
   # handles GA4's processing lag, so the previous week being provisional at this
   # hour is expected and self-correcting rather than a reason to run later.
   #
-  # schedule:
-  #   - cron: '0 6 * * 1'
+  # ARMED 13 August 2026, step 3 of the sequence in the header. Steps 1 and 2 ran
+  # that day: the dry run was read, the real run wrote four weeks, and the rows
+  # were confirmed in metrics_ga4_weekly. Arming is its own PR by design, so that
+  # it is a reviewable act rather than a side effect of building the puller.
+  #
+  # WHY IT WAS NOT DELAYED FURTHER. The puller reaches four TRAILING weeks — a GA4
+  # constraint, at most four date ranges per request, not a setting. Any week this
+  # is not armed for falls out of range and needs a different tool to recover. A
+  # week of silence costs series permanently; the open question it would have
+  # waited on (see platform_changes id 34) is prevented by a boundary row instead.
+  schedule:
+    - cron: '0 6 * * 1'
 
 permissions:
   contents: read
@@ -112,7 +122,18 @@ jobs:
           GA4_PROPERTY_ID: '415465396'
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
+          # A `schedule` event carries NO inputs, so `github.event.inputs.dry_run`
+          # is empty and the `|| 'true'` fallback would make EVERY SCHEDULED RUN A
+          # DRY RUN. The workflow would fire weekly, go green, print a table and
+          # write nothing — a failure indistinguishable from success in the logs,
+          # and only visible as metrics_ga4_weekly quietly not advancing.
+          #
+          # So the default is chosen by EVENT: a manual dispatch defaults to the
+          # safe 'true' (the input's own default), and a scheduled run defaults to
+          # 'false' because writing is the entire reason it is scheduled. Caught
+          # while arming; the expression was correct for the dispatch-only world it
+          # was written in. Work-list item 77.
+          DRY_RUN: ${{ github.event.inputs.dry_run || (github.event_name == 'schedule' && 'false' || 'true') }}
           WEEKS: ${{ github.event.inputs.weeks || '4' }}
         run: |
           # No `set -x`: this step holds a service-account private key and a
