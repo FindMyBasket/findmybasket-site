@@ -6172,6 +6172,52 @@ Result: **26 hits of 1,808, no false positives, all four named targets caught.**
 > nine-token regex. Writing it into the branch first would have made each one a
 > code-review question rather than a measurement, and code review is what missed all three.
 
+#### THE RULE WORKING ON ITSELF: A VETO THAT FIRES ON REAL SUPPLEMENTS
+
+Measuring each regex separately — item 79's own instruction, applied to the regexes written
+under item 79 — found this:
+
+> **`DEVICE` matches SEVEN rows, not five.** Five are the Soma Lives *Pelvic Floor Vaginal
+> Toner* range, which is what it was written for. **The other two are
+> *Jude Collagen & Creatine Pelvic Floor Supplements* — genuine, correctly-classified
+> supplements.**
+
+**They are not excluded, and the reason is worth stating precisely: it is correct by
+accident, not by design.** `NARROW` never matches those rows — no `serum`, `toner`, `cream`
+or any other form word — so the veto is never consulted for them. **The veto fires and its
+verdict is discarded because nothing asked.**
+
+##### THE PROPERTY IT DEPENDS ON, STATED SO IT CAN BE PROTECTED
+
+> **The vetoes only ever suppress rows `NARROW` has already matched.** `DEVICE` and
+> `FLAVOUR` are filters on the topical set, not classifiers in their own right.
+
+**If that ordering is ever inverted — a veto consulted before or independently of `NARROW`
+— two real supplements are excluded and nothing would report it.** They would not 404, they
+would not error, they would simply not become supplements: the quietly-incomplete family
+again (items 48, 51, 54, 56, 60, 67), on a rule written this afternoon.
+
+**Recorded at the veto in code as well as here**, because item 66's clause applies: a
+control filed only where the decision was made is filed where the failure will not pass.
+The person who inverts the ordering will be reading `categorisation.ts`, not this list.
+
+#### NO7 ARRIVED FREE, AND THAT IS THE EVIDENCE THE CORRECTION IS RIGHT
+
+The glued-size defect was diagnosed from two named rows — *Anua … Toner250 ml* and
+*Numbuzin … Toner200 ml*. The digit-boundary correction caught a third that nobody had
+named: **No7 Radiance+ Vitamin C Glow Toner200 ml**, plus *Umberto Giannini … Shampoo2* and
+*Fushi Organic Black Seed Oil250*.
+
+> **That is the difference between fixing two cases and fixing a class.** A correction
+> shaped around its two examples catches exactly those two; a correction shaped around the
+> *cause* catches rows nobody had looked at. **The free catch is the evidence that the
+> digit-boundary rule is right rather than merely sufficient.**
+
+**And it is a cheap test to reuse:** after fixing a defect from named examples, check
+whether the fix catches anything unnamed. **If it catches nothing new, the fix is probably
+fitted to the examples rather than to the cause** — which is item 57's shape arriving from a
+different direction.
+
 #### ZERO COLLISIONS, MEASURED RATHER THAN ASSUMED
 
 **No row is both a sports-allowlist brand and topical: 0 of 1,808.**
