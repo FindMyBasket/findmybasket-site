@@ -6554,6 +6554,170 @@ artefact. **The difference here is where a wrong one ends up published.**
 
 ---
 
+### 84. A guard that excludes is a guard that lies; a guard that categorises cannot
+
+**Raised:** 14 August 2026, sizing the reassignment detector · **Two findings from one
+broken query, and the second is the more dangerous.**
+
+#### FINDING ONE: `n_slug > 0` IS THE YESSTYLE POLL AGAIN, AN HOUR LATER
+
+A read-only analysis compared URL slugs against stored product names, per retailer, to size
+the detector's confirmatory signal. It guarded with `WHERE n_slug > 0 AND n_name > 0`.
+
+**Beauty Bay URLs end in a trailing slash**, so "last path segment" extracted an empty
+string. Every row was excluded by that guard and the retailer reported **zero
+zero-overlap rows** — which reads as *perfectly clean* and means *never examined*. Perfume
+Click and The Organic Pharmacy the same. **YesStyle reported 13,800 of 13,800, 100%**, which
+is not a catastrophe but a parser that does not fit their format at all.
+
+> **The filter dropped unparseable rows instead of counting them, so UNMEASURED and CLEAN
+> produced identical output.** That is item 70's family — a diagnostic whose failure is
+> indistinguishable from its success — and the YesStyle run-poll's exact shape, written **an
+> hour after that lesson was recorded in this file.**
+
+##### THE GENERAL FORM, WHICH OUTLIVES THIS QUERY
+
+> **A guard that EXCLUDES is a guard that lies. A guard that CATEGORISES cannot.**
+>
+> Every row must land in a named bucket — matched, no-overlap, **could-not-parse** — and the
+> could-not-parse bucket must be reported alongside the others. An excluded row leaves no
+> trace; a categorised row cannot hide.
+
+**This is structural, not attentional.** "Be careful with filters" does not survive the next
+tired hour; a query that cannot silently drop a row does. Applies to every diagnostic in
+`scripts/`, and to the SQL in this file.
+
+#### FINDING TWO: 117 AGAINST 121, THE MOST PERSUASIVE WRONG NUMBER OF THE FORTNIGHT
+
+The same broken query reported **117 zero-overlap rows for Stylevana**, against **121**
+recorded in commit `a43e2ed` as the size of the reassignment cohort. **Four apart.**
+
+The parser was demonstrably broken on three other retailers and **had never been checked
+against Stylevana's URL format at all.**
+
+> **It was persuasive precisely because it nearly matched something true.** An obviously
+> wrong number gets discarded on sight. A number four away from a known quantity gets
+> BELIEVED, and would have been quoted as corroboration that the design was sound.
+
+**AND THE TWO HALVES OF THE ERROR CONCEALED EACH OTHER.** The same result set showed the
+parser failing on Beauty Bay, Perfume Click and The Organic Pharmacy — and reported those
+failures as **zeroes**, which read as those retailers being clean. So the evidence that the
+instrument was broken appeared, in the same table, as evidence that the catalogue was
+healthy.
+
+> **Two broken things agreeing on a number is not agreement.**
+
+**Nothing about the near-match was evidence.** The 121 came from a zero-token-overlap
+comparison of *feed names to stored names*; the 117 came from *URL slugs to stored names*
+through a parser that fit one retailer by accident. They are different measurements of
+different things, and their proximity is coincidence.
+
+#### THE MEASUREMENT: THE TROUGH IS WHY THE THRESHOLD IS ZERO
+
+Run against Stylevana's live feed, 14 August, on the rule that will ship (feed name vs
+stored name, brand tokens normalised across spacing). **Every row accounted for; no
+could-not-parse bucket fired, and it would have been reported if it had.**
+
+```
+ 15607  not in catalogue (new or unmatched row)
+  8796  compared
+ 24403  TOTAL (feed rows: 24403)
+```
+
+| shared tokens | rows | |
+|---|---|---|
+| **0** | **137** | ← the cohort |
+| 1 | 19 | |
+| 2 | 6 | |
+| 3 | 13 | |
+| 4 | 20 | |
+| 5 | 90 | |
+| 6-8 | 1,026 | |
+| **9+** | **7,485** | ← normal matching |
+
+> **ZERO-OVERLAP IS A SEPARABLE POPULATION, AND THAT IS THE REASON THE THRESHOLD IS ZERO.**
+> Not "zero seemed right". A monotonic fall from zero would have meant naming drift with
+> reassignments buried in its tail and **no principled cut anywhere**. What the data shows
+> is 137, then a valley of 19 / 6 / 13 / 20, then a mountain at 9+. **The cut is where the
+> data is empty**, and loosening to ≤1 would add 19 rows while crossing no boundary.
+
+**The zero rows are true positives**, checked against the false-positive table below, which
+was written before any results: *Romand Lip Mate Pencil* / **Dasique Melting Candy Balm**,
+*La Mer Eye Balm* / **Pyunkang Yul Balancing Gel**, *Clarins Double Serum* / **Rohto
+Mentholatum hair treatment**. Coherent names on both sides naming different products —
+`a43e2ed`'s exact shape, and matching no row of that table.
+
+##### THE BRAND-TOKEN FIX MOVED EXACTLY ONE ROW, AND THAT IS THE ANSWER
+
+`ByWishtrend` versus `By Wishtrend` tokenise to `{bywishtrend}` and `{by, wishtrend}` —
+nothing shared. Joining adjacent words before comparison makes the spellings meet without
+touching the threshold. **The count went 138 → 137.**
+
+> **One row. So the false-positive rate the brand quirk was hiding is 1 in 138 — 0.7%** —
+> and it was itself a true positive tripping for partly the wrong reason. **Measuring the
+> fix's effect was worth more than the fix**: it converted "a false positive is waiting
+> somewhere in here" into a number.
+
+**And the fix sharpened the separation rather than blurring it.** Before normalisation the
+mid-range read 44 / 273 / 904; after, 6 / 13 / 20, with the mass moved to 9+ where it
+belongs. **A change that improves a signal's contrast while barely moving its count is
+evidence the signal is real.**
+
+#### REFUSING A COMFORTABLE NUMBER, ON THE DAY THIS ITEM WAS WRITTEN
+
+The first run returned **138** against the **121** recorded in `a43e2ed`. Seventeen apart,
+same direction, same measurement type — and it would have been comfortable to report as
+corroboration that the cohort was stable.
+
+**It was not reported as corroboration**, because 121 was measured on 12 August and 138 on
+14 August, and reassignments accumulate: the numbers are two observations of a moving
+quantity, not one quantity observed twice. **Proximity is not agreement**, which is this
+item's own finding applied within hours of writing it, to a number that would have flattered
+the work.
+
+#### A PREDICTION, LABELLED AS ONE
+
+**Not a measurement.** The false-positive rate of the primary signal cannot be measured from
+stored data, because feed names are not retained — item 47's retention point again.
+
+What code inspection establishes, and it narrows what the measurement should find:
+
+- **Both name transforms preserve core tokens.** Debenhams' `cleanDebenhamsName` STRIPS
+  (gender tags, `" in {variant}"`, `" | Size:"`); Beauty Flash's
+  `reconstructBeautyFlashName` EXPANDS a truncated name from the URL slug. Removing tokens
+  cannot reach zero overlap while any product word survives; adding them can only raise it.
+- **The June rebrand moved `brand`, not `name`.** 94,037 of 98,127 active products have
+  `brand` differing from `normalised_brand`, so canonicalisation is near-universal — while
+  **90,820 names still start with their brand** and 91,502 contain it.
+
+> **So the three candidate false-positive sources — brand aliasing, shade extraction, size
+> canonicalisation — are weaker than they looked. PREDICTION: the measured rate comes back
+> low.** Recorded as a prediction so that if the measurement disagrees, the disagreement is
+> visible rather than absorbed.
+
+#### WHAT A FALSE POSITIVE WOULD LOOK LIKE, NAMED BEFORE THE RESULTS
+
+Stated in advance so the results cannot be rationalised afterwards. A trip is a FALSE
+POSITIVE, not a reassignment, if:
+
+| Shape | Why it is not a reassignment |
+|---|---|
+| Stored name is a **different language or script** for the same product | K-beauty feeds carry Korean and romanised names for one item |
+| Stored name is a **retailer's house naming** of the same product created by another retailer | Product created by YesStyle, matched by Stylevana; both correct, no shared words |
+| Feed name is **all-brand, stored name is all-product**, or the reverse | "Isntree" vs "Hyaluronic Acid Daily Sun Gel" — zero overlap, same item |
+| A **shade or size** is the only content on one side | "Taupe" vs "Brow Definer" |
+| The stored name was **rebuilt** by name-reconstruction and the feed still ships the truncated original | Beauty Flash specifically |
+
+**A true positive looks like `a43e2ed`:** a coherent product name on both sides, naming two
+DIFFERENT products — Isntree sunscreen against Euthymol toothbrush set — with the url, image
+and description all having moved together.
+
+**If the measurement returns a rate dominated by the table above, the primary signal needs a
+brand-token exemption before it ships. If it returns cases like `a43e2ed`, it ships as
+designed.**
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row

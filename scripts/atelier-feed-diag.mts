@@ -416,3 +416,121 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
     }
   }
 }
+
+// === 7. REASSIGNMENT DETECTOR SIZING ==================================================
+// WHY: work-list item 84. Sizes the reassignment detector's PRIMARY signal — the feed
+// row's name against the stored product's name, zero token overlap — WITHOUT building
+// the detector. This is the only honest measurement of its false-positive rate, because
+// feed names are not retained: only one side of the comparison survives an import, so
+// it cannot be reconstructed from stored data afterwards (item 47's retention point).
+//
+// The defect it exists to catch: commit a43e2ed. Stylevana reassigned
+// merchant_product_id 112499 from an Isntree sunscreen to a Euthymol toothbrush set.
+// Tier 0 matches on external_product_id and returns BEFORE the tier ladder, so it
+// overwrote url, image_url and description while the sticky-EAN COALESCE preserved the
+// old barcode. 121 rows share the shape, and 121 is a floor.
+//
+// EVERY ROW LANDS IN A NAMED BUCKET, and could-not-parse is REPORTED rather than
+// filtered. That is item 84's general form: a guard that excludes is a guard that lies;
+// a guard that categorises cannot. The previous attempt at this measurement used
+// `WHERE n_slug > 0` and reported three retailers as clean when they were unexamined.
+//
+// Set REASSIGN_RETAILER_ID to the retailer whose feed this is. Read-only.
+{
+  const rid = Number(process.env.REASSIGN_RETAILER_ID || 0);
+  const matchCol = process.env.REASSIGN_MATCH_COLUMN || "merchant_product_id";
+  if (rid > 0) {
+    const idIdx = col(matchCol);
+    console.log("\n=== 7. REASSIGNMENT DETECTOR SIZING (retailer " + rid + ", match column " + matchCol + ") ===");
+    if (idIdx < 0) {
+      console.log("  feed has no " + matchCol + " column — cannot size");
+    } else {
+      // Stored side: external_product_id -> product name, for this retailer.
+      const stored = new Map<string, string>();
+      let from = 0;
+      for (;;) {
+        const { data, error } = await sb
+          .from("retailer_prices")
+          .select("external_product_id, products!inner(name)")
+          .eq("retailer_id", rid)
+          .not("external_product_id", "is", null)
+          .range(from, from + 999);
+        if (error) { console.log("  stored-side read failed:", error.message); break; }
+        if (!data || !data.length) break;
+        for (const r of data as any[]) {
+          const k = String(r.external_product_id ?? "").trim();
+          const nm = r.products?.name;
+          if (k && typeof nm === "string" && nm) stored.set(k, nm);
+        }
+        if (data.length < 1000) break;
+        from += 1000;
+      }
+      console.log("  stored rows with an ext id and a product name:", stored.size);
+
+      // Tokens: alphabetic, length >= 3, so sizes and ids can never create overlap.
+      //
+      // PLUS ADJACENT-PAIR CONCATENATIONS, because brands are spelled inconsistently
+      // across a feed and its catalogue: "ByWishtrend" tokenises to {bywishtrend} and
+      // "By Wishtrend" to {by, wishtrend}, which share NOTHING. That pair is a true
+      // reassignment either way, but it trips for partly the wrong reason — and the
+      // same inconsistency on a genuinely-matching pair is a false positive waiting.
+      // Joining adjacent words (by+wishtrend -> bywishtrend) makes the two spellings
+      // meet without loosening the threshold. Item 84.
+      const toks = (s: string) => {
+        const words = s.toLowerCase().replace(/[^a-z]+/g, " ").split(" ").filter(Boolean);
+        const out = new Set(words.filter(t => t.length >= 3));
+        for (let i = 0; i + 1 < words.length; i++) {
+          const j = words[i] + words[i + 1];
+          if (j.length >= 6) out.add(j);
+        }
+        return out;
+      };
+
+      const buckets = new Map<string, number>();
+      const bump = (k: string) => buckets.set(k, (buckets.get(k) ?? 0) + 1);
+      const dist = new Map<number, number>();
+      const zeroRows: { id: string; feed: string; stored: string }[] = [];
+
+      for (const r of body) {
+        const key = String(r[idIdx] ?? "").trim();
+        const feedName = get(r, "product_name");
+        if (!key)                      { bump("could-not-parse: feed row has no match id"); continue; }
+        const storedName = stored.get(key);
+        if (storedName === undefined)  { bump("not in catalogue (new or unmatched row)");   continue; }
+        if (!feedName)                 { bump("could-not-parse: feed row has no name");      continue; }
+        const a = toks(feedName), b = toks(storedName);
+        if (!a.size || !b.size)        { bump("could-not-parse: no usable tokens either side"); continue; }
+        let shared = 0;
+        for (const t of a) if (b.has(t)) shared++;
+        bump("compared");
+        dist.set(shared, (dist.get(shared) ?? 0) + 1);
+        if (shared === 0 && zeroRows.length < 60) zeroRows.push({ id: key, feed: feedName, stored: storedName });
+      }
+
+      console.log("\n  EVERY ROW ACCOUNTED FOR:");
+      let total = 0;
+      for (const [k, v] of [...buckets.entries()].sort((a, b) => b[1] - a[1])) {
+        console.log("   " + String(v).padStart(7) + "  " + k); total += v;
+      }
+      console.log("   " + String(total).padStart(7) + "  TOTAL (feed rows: " + body.length + ")");
+
+      console.log("\n  TOKEN-OVERLAP DISTRIBUTION over compared rows:");
+      const maxK = Math.max(...[...dist.keys()], 0);
+      let cum = 0;
+      const compared = buckets.get("compared") ?? 0;
+      for (let k = 0; k <= Math.min(maxK, 8); k++) {
+        const v = dist.get(k) ?? 0; cum += v;
+        console.log("   " + String(k).padStart(2) + " shared: " + String(v).padStart(7) +
+                    "  cum " + (100 * cum / Math.max(compared, 1)).toFixed(2) + "%");
+      }
+      const tail = [...dist.entries()].filter(([k]) => k > 8).reduce((s, [, v]) => s + v, 0);
+      if (tail) console.log("   9+ shared: " + String(tail).padStart(7));
+
+      console.log("\n  ZERO-OVERLAP ROWS — hand-check against item 84's false-positive table:");
+      for (const z of zeroRows) {
+        console.log("   " + z.id.padEnd(14) + " feed: " + z.feed.slice(0, 58));
+        console.log("   " + "".padEnd(14) + " db  : " + z.stored.slice(0, 58));
+      }
+    }
+  }
+}

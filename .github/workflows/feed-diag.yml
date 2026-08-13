@@ -53,6 +53,16 @@ name: feed-diag (read-only)
         required: false
         default: '40'
         type: string
+      reassign_retailer_id:
+        description: "Section 7: size the reassignment detector for this retailer id. Blank = skip. Read-only."
+        required: false
+        default: ''
+        type: string
+      reassign_match_column:
+        description: "Section 7: the feed column holding the retailer's product id (default merchant_product_id)."
+        required: false
+        default: 'merchant_product_id'
+        type: string
 
 jobs:
   diag:
@@ -121,6 +131,8 @@ jobs:
           # Section 6 only. Paths whose rows to classify with the supplements rule.
           SAMPLE_PATHS: ${{ inputs.sample_paths }}
           SAMPLE_N: ${{ inputs.sample_n }}
+          REASSIGN_RETAILER_ID: ${{ inputs.reassign_retailer_id }}
+          REASSIGN_MATCH_COLUMN: ${{ inputs.reassign_match_column }}
           SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
           SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           # github.event.inputs is the reliable source here; the `inputs` context
