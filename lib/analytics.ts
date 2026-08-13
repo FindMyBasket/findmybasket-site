@@ -73,6 +73,49 @@ export function awinMidFromHref(href: string): string | null {
 // hiccup can never stop the user reaching the retailer. The service-role write and
 // the (consent-gated, currently-null) session id are both resolved server-side in
 // /api/track/outbound — nothing identifying is sent from here.
+/**
+ * The visitor's answer to the cookie banner, as three values.
+ *
+ * WHY THIS IS RECORDED. The GA4-over-server-side click ratio has four inputs —
+ * refusals, ad blockers, client-capture regressions and bot traffic — and three
+ * of them share one signature: gtag never ran. Consent is the only one that has
+ * never been measurable at all, because a refusal is a purely client-side event
+ * that reaches no server. A `granted` beacon arriving while GA4 stays silent is
+ * a BLOCKER; a `denied` beacon is a REFUSAL. That single distinction separates
+ * the two causes the ratio conflates today. Work-list item 81, platform_changes
+ * id 34.
+ *
+ * WHY IT IS NOT A PRIVACY EXPANSION. This annotates a row that already exists.
+ * The click record already carries product, retailer, price, page and time; the
+ * banner state adds no new identifier, no third-party transmission and no new
+ * category of data. It is strictly LESS information than the row it describes.
+ *
+ * 'undecided' is not padding: item 17's entire analysis turns on the visitor who
+ * has not yet answered the banner, and that population is currently invisible on
+ * both sides of the ratio.
+ *
+ * Reads the same localStorage record public/fmb-cookie-banner.js writes, and
+ * treats a version mismatch as undecided exactly as getConsent() there does — a
+ * stale record is not an answer to the current question.
+ */
+type ConsentState = 'granted' | 'denied' | 'undecided';
+
+const CONSENT_STORAGE_KEY = 'fmb-cookie-consent';
+const CONSENT_VERSION = 1; // must track CONSENT_VERSION in public/fmb-cookie-banner.js
+
+export function readConsentState(): ConsentState {
+  try {
+    const raw = window.localStorage.getItem(CONSENT_STORAGE_KEY);
+    if (!raw) return 'undecided';
+    const parsed = JSON.parse(raw) as { version?: number; analytics?: boolean };
+    if (parsed.version !== CONSENT_VERSION) return 'undecided';
+    return parsed.analytics ? 'granted' : 'denied';
+  } catch {
+    // localStorage disabled, or a malformed record. Not an answer either way.
+    return 'undecided';
+  }
+}
+
 export function sendOutboundBeacon(params: {
   productId?: number | null;
   retailerId?: number | null;
@@ -89,6 +132,7 @@ export function sendOutboundBeacon(params: {
       price: params.price ?? null,
       source: params.source ?? null,
       path: window.location.pathname,
+      consent: readConsentState(),
     });
     navigator.sendBeacon?.(
       '/api/track/outbound',

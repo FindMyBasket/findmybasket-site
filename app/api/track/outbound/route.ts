@@ -21,6 +21,8 @@ export async function POST(request: Request) {
       price: typeof body.price === 'number' ? body.price : null,
       source: typeof body.source === 'string' ? body.source : null,
       path: typeof body.path === 'string' ? body.path : null,
+      // Three values only; anything else is treated as no answer. See item 81.
+      consent: body.consent === 'granted' || body.consent === 'denied' ? body.consent : 'undecided',
       sessionId: getSessionId(),
     });
   } catch (err) {

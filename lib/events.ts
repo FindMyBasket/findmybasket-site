@@ -50,6 +50,7 @@ export type OutboundClick = {
   price?: number | null;
   source?: string | null;   // 'product_page' | 'search_results' | 'comparison' | 'brand_hub'
   sessionId?: string | null;
+  consent?: string | null;
   path?: string | null;
 };
 
@@ -90,6 +91,7 @@ export async function logOutboundClick(e: OutboundClick): Promise<void> {
       price: e.price ?? null,
       source: e.source ?? null,
       session_id: e.sessionId ?? null,
+      consent: e.consent ?? null,
       path: e.path ?? null,
     });
   } catch (err) {
