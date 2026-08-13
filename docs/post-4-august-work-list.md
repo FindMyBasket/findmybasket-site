@@ -6865,3 +6865,107 @@ rows, does not go near the import path, and the recurrence check that watches it
 already installed and red. Sequence is in
 `supabase/migrations/20260730140000_catalog_health_brand_norm_check.sql`: confirm
 the 09:45 capture is red, backfill, confirm the next capture goes green.
+
+---
+
+### 86. "Has another retailer's row" was never the recoverable condition — "is still in that feed" is
+
+**Raised:** 13 August 2026 · **Read-only. Nothing applied, nothing deployed, nothing proposed.**
+
+#### THE REFRAMING, WHICH IS THE FINDING
+
+The Stylevana re-source plan rested on a predicate that was never the right one:
+
+> **"Has another active retailer's row" is not the recoverable condition. "Is still present
+> in that retailer's CURRENT FEED" is.**
+
+A `retailer_prices` row persists long after the product leaves a retailer's feed — that is
+exactly what `absence_threshold_days` exists to handle — and **such a row re-sources
+nothing.** Only rows the importer matched *this run* produce an image write:
+`updateActions.filter(u => u.image_url)`. A row nobody touched writes nothing, forever.
+
+**This explains product 7547 correctly for the first time.** Commit `a43e2ed` recorded that
+its only survivor was a YesStyle row *last confirmed 30 May*. Nothing was overwriting
+Stylevana's wrong image because **the product had left YesStyle's feed months earlier**. The
+earlier reading — that this was an import-ordering race — was wrong.
+
+**YesStyle makes this its own class rather than an accident:** `absence_threshold_days =
+9999`. Its rows are never aged out. A YesStyle row is the weakest possible evidence that a
+product is still stocked, and it is the survivor in the majority of this cohort.
+
+#### THE ORDERING FACT, WHICH IS WHAT MAKES THE REFRAMING POSSIBLE
+
+`bulk_update_product_images` **overwrites unconditionally**. The only predicate is
+`AND (p.image_url IS DISTINCT FROM s.image_url)` — a no-op-write optimisation, **not a null
+guard**. Whichever retailer imports last wins the image, every night.
+
+And the order is fixed by cron, with **Stylevana first**:
+
+    03:30 Stylevana · 04:00 Escentual · 04:30 Boots · 05:00 Branded Beauty · 05:30 TOP
+    06:00 Gorgeous Shop · 06:30 Beauty Bay · 07:00 Beauty Flash · 07:30 Perfume Click
+    07:47 Atelier · 08:00 Niche Beauty · 10:00 YesStyle
+
+**Every other retailer runs after Stylevana.** So any product with a live survivor has
+already had Stylevana's image overwritten before the day is out. Measured, not assumed:
+
+| current image | products | with a LIVE survivor row |
+|---|---:|---:|
+| another retailer's | 2,752 | **2,547 (92.6%)** |
+| Stylevana's | 8,745 | **9 (0.1%)** |
+
+#### WHAT THAT MEANS FOR THE FIX — AND IT IS NOT THE HOPED-FOR ANSWER
+
+The self-healing is **real and already complete**. Bucket A (2,752 products) is its
+footprint. But the corollary runs the other way:
+
+> **The divergent set is, by construction, exactly the set that cannot self-heal.** Anything
+> with a live later survivor has already left it. So the remainder is not a residue the fix
+> could clear — it is the population the fix has nothing to work with.
+
+Divergent products, split by survivor state:
+
+| bucket | products |
+|---|---:|
+| 1. no other retailer row at all — **deploy scope** (GONE_IDS + redirects), not a data edit | **77** |
+| 2. survivor row exists but is **STALE** — re-sources nothing | **15** |
+| 3. survivor **LIVE** in its current feed — would already be self-healing | **0** |
+
+**Bucket 3 is empty, and the 92.6/0.1 split says that is structural rather than luck.** The
+re-source approach is not a coin toss — the ordering is deterministic and favourable — but
+there is nothing left for it to fix. It was measured for rather than assumed against; the
+answer is simply not the good one.
+
+#### THE COUNT WAS 95% TOKENISER, AND THAT IS ITEM 84 FOR THE THIRD TIME
+
+First pass: **1,640 divergent**. Corrected: **92**. The difference was never in the data.
+
+Zero-overlap was being scored against slugs like `skitbdn00001-1`, `skitvtc00067-1`,
+`bkitmix00296-1` — **opaque SKU codes carrying no words at all.** Zero overlap is
+*guaranteed* for those and says nothing whatever about correctness. 1,555 of 1,647 were this.
+
+The token filter that let them through excluded empty tokens and pure digits. `skitbdn00001`
+is neither. So:
+
+> **"Could not parse" is not only the empty case. A token set can be non-empty, well-formed,
+> and still carry no information the test can use.** Requiring tokens is not the same as
+> requiring *words*, and only the second is a parse.
+
+Those 1,555 are **unmeasured, not clean** — their images may be right or wrong and the slug
+cannot say. Recording them as a named bucket rather than folding them into either answer.
+
+#### AND THE BROKEN DIAGNOSTIC WAS WORSE THAN REPORTED
+
+The recoverable split in `scripts/atelier-feed-diag.mts` was attributed to the PostgREST
+embed. The larger cause: it selected `retailer_prices.image_url`, and **that column does not
+exist.** There is no per-retailer image stored anywhere — `products.image_url` is a single
+last-writer-wins column. So the query could never have answered the question it was named
+for, and it printed `0 recoverable` rather than failing.
+
+Fixed on `diag/stylevana-recoverable-split`: the block no longer computes a split. **It
+prints the divergent ids and stops**, and the derivation moves to SQL where the join is
+inspectable and the intermediate counts can be read.
+
+#### STATUS
+
+Read-only. **Nothing proposed on these numbers.** The 77 no-other-offer products remain
+deploy scope and are unchanged in that respect. The Boots gate closes at 04:30.

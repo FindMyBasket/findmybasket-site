@@ -541,36 +541,32 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
         console.log("   " + "".padEnd(14) + " db  : " + z.stored.slice(0, 58));
       }
 
-      // RECOVERABLE SPLIT. A divergent row is RECOVERABLE if its product still has a
-      // live offer at another ACTIVE retailer: image and description can be re-sourced
-      // from the survivor rather than the product being detached and 404'd. Rows with
-      // no other offer are a deploy (GONE_IDS + redirects), not a data edit.
-      // Re-derived here rather than carried forward — the cohort moves with every import.
+      // THE DIVERGENT PRODUCT IDS, PRINTED IN FULL. The split is NOT computed here.
+      //
+      // This block used to compute a "recoverable split" via a PostgREST embed
+      // (`retailers!inner(active)` with `.eq("retailers.active", true)`). It returned
+      // NOTHING for all 137 products and printed that as "0 recoverable". SQL over the
+      // same ids found survivors in 4 of the first 12 checked. A lookup that resolved
+      // nothing and an answer of genuinely none produced the SAME OUTPUT — which is
+      // work-list item 84's rule, broken by the very query written to apply it.
+      //
+      // It was also asking the WRONG QUESTION, which matters more than the broken join.
+      // "Has a row at another active retailer" is not the recoverable condition. "Is
+      // still present in that retailer's CURRENT FEED" is. A retailer_prices row
+      // persists long after the product leaves a feed — that is what the absence
+      // threshold exists to handle — and such a row re-sources nothing. Product 7547 is
+      // the worked example: its only survivor was a YesStyle row last confirmed 30 May,
+      // so nothing was overwriting Stylevana's wrong image.
+      //
+      // So this prints ids and stops. The split belongs in SQL, where the join is
+      // inspectable, the intermediate counts can be read, and row freshness can be
+      // tested against each retailer's own last successful import rather than guessed.
       if (allZeroProductIds.length) {
-        const ids = [...new Set(allZeroProductIds)];
-        const withOther = new Set<number>();
-        const imgFrom = new Map<number, string>();
-        for (let i = 0; i < ids.length; i += 200) {
-          const slice = ids.slice(i, i + 200);
-          const { data, error } = await sb
-            .from("retailer_prices")
-            .select("product_id, retailer_id, image_url, retailers!inner(active)")
-            .in("product_id", slice)
-            .eq("retailers.active", true)
-            .neq("retailer_id", rid);
-          if (error) { console.log("  recoverable split failed:", error.message); break; }
-          for (const r of (data ?? []) as any[]) {
-            withOther.add(Number(r.product_id));
-            if (r.image_url && !imgFrom.has(Number(r.product_id))) imgFrom.set(Number(r.product_id), String(r.retailer_id));
-          }
+        const ids = [...new Set(allZeroProductIds)].sort((a, b) => a - b);
+        console.log("\n  DIVERGENT PRODUCT IDS — " + ids.length + " distinct. Derive the split in SQL:");
+        for (let i = 0; i < ids.length; i += 20) {
+          console.log("   " + ids.slice(i, i + 20).join(","));
         }
-        console.log("\n  RECOVERABLE SPLIT over " + ids.length + " distinct divergent products:");
-        console.log("   " + String(withOther.size).padStart(5) + "  RECOVERABLE — another active retailer holds a live row");
-        console.log("   " + String(ids.length - withOther.size).padStart(5) + "  no other offer — deploy scope, not a data edit");
-        console.log("   " + String([...withOther].filter(id => imgFrom.has(id)).length).padStart(5) +
-                    "  ...of the recoverable, the OTHER retailer already carries an image_url");
-        console.log("   " + String([...withOther].filter(id => !imgFrom.has(id)).length).padStart(5) +
-                    "  ...of the recoverable, NO other retailer image — clearing would 404 until a feed supplies one");
       }
     }
   }
