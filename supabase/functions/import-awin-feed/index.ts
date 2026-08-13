@@ -338,6 +338,41 @@ function parseRow(line: string): string[] {
 
 // Category filter: returns true if any exclude string appears (case-insensitive)
 // anywhere in the combined category text.
+/**
+ * Shared name tokens between a feed row's name and the stored product's name.
+ *
+ * Tokens are alphabetic and at least three characters, so sizes ("50ml"), pack
+ * counts and ids can never manufacture an overlap.
+ *
+ * ADJACENT WORDS ARE ALSO JOINED, because brands are spelled inconsistently across
+ * a feed and its catalogue: "ByWishtrend" tokenises to {bywishtrend} and
+ * "By Wishtrend" to {by, wishtrend}, which share nothing. Joining pairs makes the
+ * two spellings meet WITHOUT loosening the zero threshold. Measured on Stylevana:
+ * adding this moved the zero-overlap count 138 -> 137 — one row — and sharpened the
+ * mid-range from 44/273/904 to 6/13/20, so it improved the signal's contrast while
+ * barely touching its count. Work-list item 84.
+ */
+function sharedNameTokens(feedName: string, storedName: string): number {
+  const toks = (v: string): Set<string> => {
+    const words = v.toLowerCase().replace(/[^a-z]+/g, " ").split(" ").filter(Boolean);
+    const out = new Set<string>(words.filter((t) => t.length >= 3));
+    for (let i = 0; i + 1 < words.length; i++) {
+      const j = words[i] + words[i + 1];
+      if (j.length >= 6) out.add(j);
+    }
+    return out;
+  };
+  const a = toks(feedName);
+  const b = toks(storedName);
+  // No usable tokens on either side is NOT zero overlap — it is unmeasurable, and
+  // returning 0 would report it as a trip. -1 so the caller can tell them apart;
+  // the caller tests `=== 0`. Item 84: a guard that excludes is a guard that lies.
+  if (a.size === 0 || b.size === 0) return -1;
+  let shared = 0;
+  for (const t of a) if (b.has(t)) shared++;
+  return shared;
+}
+
 function isExcludedCategory(categoryPath: string, categoryName: string, excludes: string[]): { excluded: boolean; matched_term?: string } {
   const haystack = `${categoryPath} ${categoryName}`.toLowerCase();
   for (const term of excludes) {
@@ -551,6 +586,13 @@ serve(async (req) => {
     ? config.category_path_must_contain
     : [];
   const existingBrandsOnly: boolean = config.existing_brands_only === true;
+  // REASSIGNMENT DETECTOR, count-log-and-write. Opt-in per retailer, default off.
+  // A merchant that reassigns an external_product_id from one product to another
+  // silently repoints tier 0: the row keeps its product_id and its (COALESCEd)
+  // barcode while url, image and description follow the NEW product. Commit
+  // a43e2ed is the worked example — an Isntree sunscreen became a Euthymol
+  // toothbrush set. Work-list item 84.
+  const reassignmentDetect: boolean = config.reassignment_detect === true;
   // Skip rows whose deeplink advertises a multipack while the product name
   // describes a single item — the price would misrepresent the product. Opt-in
   // per retailer: only merchants that actually sell "buy two" under the single
@@ -1499,6 +1541,8 @@ serve(async (req) => {
   const sampleSkippedShadeVariant: any[] = [];
   let countCreateNew = 0;
   let countSkippedNewBrand = 0;
+  let countReassignmentSuspect = 0;
+  const sampleReassignmentSuspect: any[] = [];
   let countSizeMismatchRejected = 0;
   // Pattern E: Beauty Flash truncated-name reconstructions (retailer 27 only).
   let countBeautyFlashRebuilt = 0;
@@ -2049,6 +2093,55 @@ serve(async (req) => {
     if (existing) {
       countUpdate++;
       if (isOrdinary) ordinaryDiagnostic.matched_existing++;
+
+      // REASSIGNMENT DETECTOR — COUNT, LOG, AND STILL WRITE. Deliberately does not
+      // skip the write. A count-only mode that skipped would already be acting, so
+      // there would be no untouched period to measure the rate against and the
+      // per-retailer rate this exists to establish would be unobtainable. One
+      // bounded cycle of continued corruption on rows already corrupted buys a
+      // clean baseline. Work-list item 84.
+      //
+      // PRIMARY SIGNAL ONLY: feed name against the stored product's name, zero
+      // token overlap. The URL-slug confirmatory signal was designed and DROPPED —
+      // it needs a slug parser per retailer, maintained against URL formats that
+      // change silently, whose only failure signal is the detector going quiet.
+      //
+      // THE THRESHOLD IS ZERO BECAUSE THE DATA IS EMPTY THERE, not because zero
+      // seemed right. Measured on Stylevana's live feed: 137 rows at zero shared
+      // tokens, then 19, 6, 13, 20 — a valley — then 7,485 at nine or more. A
+      // monotonic fall would have meant naming drift with reassignments buried in
+      // its tail and no principled cut anywhere.
+      //
+      // NOT SWITCHED ON FOR BOOTS, and that is the scope's reason rather than a
+      // caveat. Boots inverts the distribution: 1 at zero, then 7, 46, 56 — it
+      // RISES out of zero, so there is no gap to cut at and the threshold has no
+      // evidence there. Rates: Stylevana 1.56%, Beauty Flash 0.16%, Escentual
+      // 0.04%, Boots 0.004%. That spread is not one defect with varying incidence;
+      // it is a Stylevana behaviour, consistent with a merchant reassigning
+      // merchant_product_id.
+      if (reassignmentDetect) {
+        const storedName = productNameById.get(existing.product_id);
+        if (storedName) {
+          const shared = sharedNameTokens(name, storedName);
+          if (shared === 0) {
+            countReassignmentSuspect++;
+            if (sampleReassignmentSuspect.length < 200) {
+              sampleReassignmentSuspect.push({
+                rp_id: existing.id,
+                product_id: existing.product_id,
+                external_product_id: matchValue,
+                feed_name: name,
+                stored_name: storedName,
+                feed_url: rawMerchantUrl || wrappedUrl,
+                feed_image: imageUrl,
+                stored_ean: rawEan || null,
+                price,
+              });
+            }
+          }
+        }
+      }
+
       updateActions.push({ rp_id: existing.id, product_id: existing.product_id, price, url: wrappedUrl, in_stock: inStock, ean: rawEan, mpn: rawMpn, image_url: imageUrl });
       if (description) { descBuffer.push({ product_id: existing.product_id, description }); if (descBuffer.length >= DESC_FLUSH) await flushDescriptions(); }
       continue;
@@ -2471,6 +2564,10 @@ serve(async (req) => {
     skipped_multipack_mismatch: countSkippedMultipack,
     multipack_name_unresolved: countMultipackUnresolved,
     sample_skipped_multipack: sampleSkippedMultipack,
+    // Persisted into scrape_log.details so the trips are INSPECTABLE INDIVIDUALLY
+    // rather than only totalled — 137 rows nobody can read is a number, not a
+    // finding. Capped at 200; the counter is uncapped.
+    sample_reassignment_suspect: sampleReassignmentSuspect,
     dry_run: dryRun,
     feed_total_rows: feedRows,
     feed_fetch_ms: fetchMs,
@@ -2481,6 +2578,7 @@ serve(async (req) => {
       excluded_no_match_id: countNoMatchId,
       excluded_out_of_stock: countOOS,
       skipped_new_brand: countSkippedNewBrand,
+      reassignment_suspect: countReassignmentSuspect,
       size_mismatch_rejected: countSizeMismatchRejected,
       v6_excluded: countV6Excluded,
       would_update_existing: countUpdate,
