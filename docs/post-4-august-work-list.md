@@ -3006,6 +3006,31 @@ the one the remedy had already caught once.**
 
 | 13 | "the 92-product dark set from item 71" | **No such set exists.** Item 71 is retailer-conditional classification and contains no dark set; "92" appears twice in the work list, both unrelated. The figure came from the **withdrawn detachment plan for the 121 Stylevana rows** — an option that was rejected |
 
+#### THE SAME SHAPE WITH NO NUMBER IN IT: A REPEATED CHARACTERISATION
+
+**"The GA4 puller has been built and unarmed since 5 August" was repeated for a fortnight.
+All three of its claims are wrong**, and none of them is a figure:
+
+| Claimed | Measured |
+|---|---|
+| Built **5 August** | Built **29 July**, commit `9ac8f0d`, untouched since. 5 August is a *different* GA4 event — five custom definitions registered by hand, `platform_changes` id 30 |
+| **Unarmed** | **Never run at all.** Step 1 of its own arming sequence — a dry run — has not happened |
+| Blocked | **Blocker expired 1 August.** Two of its three stated conditions no longer hold |
+
+> **Two GA4 events on two dates were merged into one sentence, and the sentence was
+> repeated until it read as established.** That is instances 9, 12 and 13's mechanism
+> operating on a *characterisation* rather than a *quantity* — and it is harder to catch,
+> because "which query produced this number?" has no purchase on a claim with no number in
+> it.
+
+**The remedy has to widen.** The existing clause is *ask which query produced the figure*.
+It does not reach "built and unarmed since 5 August", which is checkable in a different way:
+
+> **A claim about the STATE of an artefact is checkable against the artefact.** `git log`
+> for when, the file's own header for what it is waiting on, and the run history for whether
+> it has ever executed. **Three commands, none of them a query, all of them available every
+> time the claim was repeated.**
+
 #### INSTANCE 13: A FIGURE FROM AN ABANDONED PLAN, WHICH IS INSTANCE 12'S SHAPE
 
 **Second time in one week that a figure has been cited from a plan that was dropped.**
@@ -5673,6 +5698,121 @@ markup is right.
 **The page already shows those retailers and prices to a human.** The JSON-LD currently
 tells Google there are none. **Option three makes the two agree** — the warning is the
 occasion, not the reason.
+
+---
+
+### 77. A hold whose condition expired, and eight metrics tables with no rows
+
+**Raised:** 13 August 2026, looking for a traffic series to check a Search Console
+impression decline against · **Attaches to `docs/dashboard-build-brief.md` Steps 4-6 and to
+item 43.**
+
+#### THE HOLD THAT OUTLIVED ITS CONDITION
+
+`ga4-weekly-pull.yml`, written 29 July, carries this in its header:
+
+> *"HELD 29 July: GitHub Actions minutes are close to exhausted, so step 1 is deferred
+> until they reset."*
+
+**Actions minutes reset monthly. They reset on 1 August.** `feed-diag` was dispatched three
+times across 12-13 August without difficulty. **The condition lapsed twelve days ago and
+the hold has held ever since.**
+
+> **A hold whose condition has expired is indistinguishable from one that still applies,
+> because nothing re-checks the condition.** The note is honest, dated and specific — and
+> **that is exactly what makes it stay true-looking forever.** A vague hold invites someone
+> to ask whether it still stands. A precise one reads as settled.
+
+**THE GENERAL FORM, and it is broader than this file:**
+
+> **Any deferral written with a condition needs the condition CHECKABLE and DATED, or it
+> becomes permanent by default.** "Deferred until minutes reset" is a condition nothing
+> evaluates. "Deferred until minutes reset — recheck after 1 August" is the same sentence
+> with an expiry, and it costs one clause.
+
+**This is item 66 on a decision rather than a document.** There the control was filed where
+the failure would not travel; here the control is filed correctly and has no mechanism to
+notice it is satisfied. **Both fail open and neither reports.**
+
+The header's second stated blocker — *"the token cannot dispatch it (`gh workflow run`
+returns 403)"* — is **also stale**; `feed-diag` was dispatched with this token on both days.
+**Two of three blockers expired.** The third stands: *do not arm a writer that has never
+executed on a timer* — which is why step 1 is a dry run, and why that dry run is the
+unblocking action rather than uncommenting the schedule.
+
+#### THE FINDING THAT MADE ANYONE LOOK
+
+| Table | rows |
+|---|---|
+| `metrics_ga4_weekly` | **0** |
+| `metrics_quality_weekly` | **0** |
+| `metrics_awin_weekly` | **0** |
+| `metrics_amazon_monthly` | **0** |
+| `metrics_social_weekly` | **0** |
+| `metrics_rakuten_weekly` | **0** |
+| `metrics_retailer_quality_weekly` | **0** |
+| `metrics_brand_spotlight_weekly` | **0** |
+
+**Eight metrics tables. Zero rows in all eight. The schema exists and the series does not.**
+
+> **Every "nobody has looked at the traffic" observation in this project has been describing
+> a missing INSTRUMENT rather than a missing HABIT.** Nobody looked because there was
+> nothing to look at. That is a different problem with a different fix, and the two get
+> confused because they produce the same sentence.
+
+`canonical-comparison-depth.md` already records this exact shape for one of the eight —
+*"the definition is stored, the series is not"*, `metrics_quality_weekly` holding the
+canonical comparison-depth definition in its table comment and no rows. **It is not one
+table's oversight. It is the state of the whole measurement layer.**
+
+**The retrospective cost:** every reading of comparison depth this fortnight was ad-hoc,
+which is why no two are comparable after the fact and why an unsourced baseline
+(`11,480`) circulated unchallenged. That was diagnosed as a documentation problem. **It is
+the same absent instrument.**
+
+#### WHAT THIS MAKES LOAD-BEARING
+
+**Dashboard Steps 4-6 are what turn eight tables from a schema into a series**, and they
+have looked like reporting polish. They are not: **they are the only thing that would let
+anyone answer "is traffic falling?" from inside this project.** Today that question had to
+go to a human with a Search Console login, and the answer could not be cross-checked
+against anything.
+
+#### CORRECTIONS TO THE PREMISE, BOTH LOAD-BEARING
+
+**The GA4 puller was built 29 July, not 5 August**, and the two dates are different things:
+
+| | |
+|---|---|
+| **29 July** | `ga4-weekly-pull.yml` written, deliberately unscheduled — commit 9ac8f0d, untouched since |
+| **5 August** | Five GA4 **custom definitions** registered by hand in the GA4 admin, `platform_changes` id 30 |
+
+**And it is not merely unarmed — it has never run at all.** The workflow's own header
+records the sequence: dispatch with `dry_run=true`, read the table, then dispatch for real,
+then arm the schedule in a PR of its own. **Step 1 has not happened.** The file states the
+resting state plainly: *"Unarmed with an empty table is the correct resting state, not a
+stalled one."*
+
+**The recorded blocker is the subject of the section above.** Two of its three conditions
+have expired; the third — do not arm a never-executed writer on a timer — stands, and makes
+the dry run the correct next act.
+
+#### THE FIGURE THAT PROMPTED THIS, AND WHY IT WAS MISREAD
+
+The Search Console structured-data report showed impressions falling **604 (15 May) → 120
+(1 Aug) → 36 (11 Aug)**, read as a three-month site-wide decline.
+
+**Valid items in that report run 2 to 4 across the whole period.** The series therefore
+measures the fortunes of **two to four URLs** — a fall from 604 to 36 is one page losing one
+query, not a site trend.
+
+> **Same shape as reading `feed-diag`'s regexes as the classifier's** (item 47, instance
+> 12): a real figure, correctly computed, describing a much smaller population than the one
+> it was quoted about. **The structured-data tab's impressions are not the Performance
+> report's impressions**, and nothing in the export says so.
+
+**The unfiltered Performance report, 15 May to date, is the thing that would answer it** —
+a different data set, being pulled by hand, because there is no instrument.
 
 ---
 
