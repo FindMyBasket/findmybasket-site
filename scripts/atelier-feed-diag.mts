@@ -468,8 +468,23 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
       console.log("  stored rows with an ext id and a product name:", stored.size);
 
       // Tokens: alphabetic, length >= 3, so sizes and ids can never create overlap.
-      const toks = (s: string) =>
-        new Set(s.toLowerCase().replace(/[^a-z]+/g, " ").split(" ").filter(t => t.length >= 3));
+      //
+      // PLUS ADJACENT-PAIR CONCATENATIONS, because brands are spelled inconsistently
+      // across a feed and its catalogue: "ByWishtrend" tokenises to {bywishtrend} and
+      // "By Wishtrend" to {by, wishtrend}, which share NOTHING. That pair is a true
+      // reassignment either way, but it trips for partly the wrong reason — and the
+      // same inconsistency on a genuinely-matching pair is a false positive waiting.
+      // Joining adjacent words (by+wishtrend -> bywishtrend) makes the two spellings
+      // meet without loosening the threshold. Item 84.
+      const toks = (s: string) => {
+        const words = s.toLowerCase().replace(/[^a-z]+/g, " ").split(" ").filter(Boolean);
+        const out = new Set(words.filter(t => t.length >= 3));
+        for (let i = 0; i + 1 < words.length; i++) {
+          const j = words[i] + words[i + 1];
+          if (j.length >= 6) out.add(j);
+        }
+        return out;
+      };
 
       const buckets = new Map<string, number>();
       const bump = (k: string) => buckets.set(k, (buckets.get(k) ?? 0) + 1);
