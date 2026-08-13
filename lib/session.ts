@@ -1,19 +1,45 @@
 // lib/session.ts
 //
-// Anonymous session id for stitching funnel events (search -> clickout) without PII.
-// A random opaque id stored in a first-party cookie. No email, no user id, no fingerprint.
-// This lets you answer "of the sessions that searched, how many clicked out" without
-// identifying anyone. Safe under UK GDPR as first-party, non-identifying analytics, but
-// confirm your cookie/consent posture (see note at bottom).
+// READS an anonymous session id from a first-party cookie. DOES NOT WRITE ONE, and
+// deliberately provides no way to. `session_id` is NULL on every row of both
+// outbound_clicks and search_events and is expected to stay that way.
+//
+// WHY THERE IS NO WRITER. This file used to export ensureSessionId(), which set a
+// 180-day httpOnly cookie. It was never called from anywhere, and it was REMOVED on
+// 13 August 2026 rather than left inert. Two reasons:
+//
+//   1. public/privacy.html section 2.2 states that the click record "sets no cookies
+//      of its own". An unused function that sets a 180-day cookie sits one call site
+//      away from falsifying a published sentence, and inert code that TOUCHES a cookie
+//      is what made an earlier draft of that sentence false in intent.
+//   2. Populating session_id was considered in full and rejected. See work-list item
+//      82. Briefly: a consented cookie gates on the same `analytics` toggle GA4 does,
+//      so it covers exactly the population GA4 already covers — and GA4 already
+//      stitches sessions natively for those visitors. Its one distinguishing property,
+//      covering refusers, is precisely what the consent gate removes. Meanwhile the
+//      consenting share moved 65% -> 52% -> 34% in three weeks, so a funnel visible
+//      only to that subset cannot separate a falling conversion rate from falling
+//      consent.
+//
+// WHAT ANSWERS THE FUNNEL QUESTION INSTEAD. For consenting visitors, GA4: trackSearch
+// fires `search` and retailer_click fires on the clickout, both behind the same
+// toggle, and GA4 sessionises them. For refusing visitors it is NOT AVAILABLE BY ANY
+// MEANS WE WOULD ACCEPT — that is a limit, not a gap, and a missing refuser funnel is
+// not a defect owed work.
+//
+// getSessionId() is kept so the two call sites keep their shape without reintroducing
+// a writer. It reads a cookie nothing sets and returns null.
 
 import { cookies } from "next/headers";
 
 const COOKIE = "fmb_sid";
-const MAX_AGE = 60 * 60 * 24 * 180; // 180 days
 
 /**
  * Read the current session id from the request cookie, or null if none.
- * Use in server components / route handlers.
+ *
+ * Returns null on every request today: nothing sets this cookie, by decision rather
+ * than by omission. Do not "fix" that by adding a writer — read work-list item 82
+ * first, and privacy.html section 2.2 second.
  */
 export function getSessionId(): string | null {
   try {
@@ -22,32 +48,3 @@ export function getSessionId(): string | null {
     return null;
   }
 }
-
-/**
- * Ensure a session id exists, setting the cookie if absent. Returns the id.
- * Call from a route handler or middleware where setting cookies is allowed.
- */
-export function ensureSessionId(): string {
-  const store = cookies();
-  const existing = store.get(COOKIE)?.value;
-  if (existing) return existing;
-  const id = crypto.randomUUID();
-  store.set(COOKIE, id, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    maxAge: MAX_AGE,
-    path: "/",
-  });
-  return id;
-}
-
-// CONSENT NOTE:
-// This is a first-party, httpOnly, non-identifying id used purely for funnel analytics.
-// It is not shared with third parties and carries no personal data. Under PECR/UK GDPR
-// this is a lower-risk cookie than marketing/tracking cookies, but if your cookie banner
-// currently blocks all non-essential cookies until consent, gate ensureSessionId() behind
-// that consent, or classify it as strictly-necessary analytics per your privacy policy.
-// When in doubt, ship the event logging WITHOUT the cookie first (session_id = null);
-// you still get totals (searches, clickouts, zero-result rate), just not per-session
-// stitching. Add the cookie once consent handling is confirmed.
