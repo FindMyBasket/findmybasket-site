@@ -5818,67 +5818,6 @@ occasion, not the reason.
 
 ---
 
-### 78. Boots coalesce flip: the before-readings
-
-**Taken 13 August 2026, 10:45 UTC, cycle complete** — YesStyle ran 10:00:02, the last of the
-day. **Recorded BEFORE the flip**, because item 74's finding is that an after-the-fact
-reading of the first change cannot be reconstructed once a second lands.
-
-#### The replacement check (item 74)
-
-The 61,913 sole-source check was dropped as unsourceable. **This is the derivable version:
-barcodes in `ean_product_index` supplied by exactly one active, enabled retailer.**
-
-| | |
-|---|---|
-| **Sole-supplier barcodes** | **49,356** |
-| Multi-supplier barcodes | 12,967 |
-| Total indexed barcodes | **62,323** |
-| Sole-supplier share | **79.2%** |
-
-**The movement is the check, not the level.** Boots contributes ~23,000 barcodes to an index
-of 62,323, essentially none of which it currently holds, so sole-supplier share should
-*rise* on the flip — Boots-only barcodes arriving faster than Boots barcodes that match an
-existing supplier. **A fall would mean Boots is duplicating the catalogue rather than
-extending it**, which is the opposite of the supply-side case in item 64.
-
-#### Baseline A, retaken with the complete cycle
-
-| Retailer | runs | mean | range | **sd** |
-|---|---|---|---|---|
-| Debenhams | 3 | 8,882 | 8,175-10,043 | 1,013.2 |
-| Niche Beauty | 6 | 3,155 | 410-4,017 | 1,355.1 |
-| Stylevana | 7 | 1,756 | 1,513-2,470 | 335.3 |
-| Beauty Flash | 7 | 1,326 | 932-1,627 | 322.1 |
-| Gorgeous Shop | 7 | 1,113 | 897-1,735 | 359.0 |
-| Beauty Bay | 7 | 262 | 243-349 | 38.6 |
-| **Boots** | **7** | **153** | **148-159** | **3.4** |
-| Perfume Click | 7 | 74 | 52-100 | 19.2 |
-| YesStyle | 7 | 49 | 43-55 | 4.8 |
-| Escentual | 7 | 40 | 37-**47** | 3.4 |
-| The Organic Pharmacy | 7 | 0 | 0-2 | 0.8 |
-| Atelier De Glow | 7 | 0 | 0-0 | 0.0 |
-
-**Boots: 153 ± 10 for three sigma.** The sd widened 2.1 → 3.4 as the window rolled to
-include Escentual's flip week; Escentual's own series now carries its 47 and its sd doubled
-to 3.4 for the same reason. **Both are the window absorbing a real event, not drift.**
-
-**Downstream detectors, unchanged in ranking:** YesStyle (4.8), Perfume Click (19.2),
-Beauty Bay (38.6) can carry a verdict. Debenhams and Niche Beauty still cannot.
-
-#### What to expect
-
-Per items 62 and 64, and confirmed twice now on Gorgeous Shop and Escentual:
-
-- **`rows_with_ean` 0 → ~23,000**; barcodes stored, from zero. **This is the contribution.**
-- **Net link movement near zero** — Boots resolves 99.2% of admitted rows on tier 0, so only
-  ~188 reach the tier ladder. **A flat 153 is the success case, not a non-event.**
-- `tier1_ambiguous_skipped` appearing from nothing.
-- The fill-versus-stored gap, which is retailer-specific: Gorgeous Shop lost 13.0% of
-  populated GTINs to validation, Escentual 0.08%. **Boots is not predictable from either.**
-
----
-
 ### 77. A hold whose condition expired, and eight metrics tables with no rows
 
 **Raised:** 13 August 2026, looking for a traffic series to check a Search Console
@@ -6063,8 +6002,67 @@ a different data set, being pulled by hand, because there is no instrument.
 
 ---
 
-<<<<<<< HEAD
-=======
+### 78. Boots coalesce flip: the before-readings
+
+**Taken 13 August 2026, 10:45 UTC, cycle complete** — YesStyle ran 10:00:02, the last of the
+day. **Recorded BEFORE the flip**, because item 74's finding is that an after-the-fact
+reading of the first change cannot be reconstructed once a second lands.
+
+#### The replacement check (item 74)
+
+The 61,913 sole-source check was dropped as unsourceable. **This is the derivable version:
+barcodes in `ean_product_index` supplied by exactly one active, enabled retailer.**
+
+| | |
+|---|---|
+| **Sole-supplier barcodes** | **49,356** |
+| Multi-supplier barcodes | 12,967 |
+| Total indexed barcodes | **62,323** |
+| Sole-supplier share | **79.2%** |
+
+**The movement is the check, not the level.** Boots contributes ~23,000 barcodes to an index
+of 62,323, essentially none of which it currently holds, so sole-supplier share should
+*rise* on the flip — Boots-only barcodes arriving faster than Boots barcodes that match an
+existing supplier. **A fall would mean Boots is duplicating the catalogue rather than
+extending it**, which is the opposite of the supply-side case in item 64.
+
+#### Baseline A, retaken with the complete cycle
+
+| Retailer | runs | mean | range | **sd** |
+|---|---|---|---|---|
+| Debenhams | 3 | 8,882 | 8,175-10,043 | 1,013.2 |
+| Niche Beauty | 6 | 3,155 | 410-4,017 | 1,355.1 |
+| Stylevana | 7 | 1,756 | 1,513-2,470 | 335.3 |
+| Beauty Flash | 7 | 1,326 | 932-1,627 | 322.1 |
+| Gorgeous Shop | 7 | 1,113 | 897-1,735 | 359.0 |
+| Beauty Bay | 7 | 262 | 243-349 | 38.6 |
+| **Boots** | **7** | **153** | **148-159** | **3.4** |
+| Perfume Click | 7 | 74 | 52-100 | 19.2 |
+| YesStyle | 7 | 49 | 43-55 | 4.8 |
+| Escentual | 7 | 40 | 37-**47** | 3.4 |
+| The Organic Pharmacy | 7 | 0 | 0-2 | 0.8 |
+| Atelier De Glow | 7 | 0 | 0-0 | 0.0 |
+
+**Boots: 153 ± 10 for three sigma.** The sd widened 2.1 → 3.4 as the window rolled to
+include Escentual's flip week; Escentual's own series now carries its 47 and its sd doubled
+to 3.4 for the same reason. **Both are the window absorbing a real event, not drift.**
+
+**Downstream detectors, unchanged in ranking:** YesStyle (4.8), Perfume Click (19.2),
+Beauty Bay (38.6) can carry a verdict. Debenhams and Niche Beauty still cannot.
+
+#### What to expect
+
+Per items 62 and 64, and confirmed twice now on Gorgeous Shop and Escentual:
+
+- **`rows_with_ean` 0 → ~23,000**; barcodes stored, from zero. **This is the contribution.**
+- **Net link movement near zero** — Boots resolves 99.2% of admitted rows on tier 0, so only
+  ~188 reach the tier ladder. **A flat 153 is the success case, not a non-event.**
+- `tier1_ambiguous_skipped` appearing from nothing.
+- The fill-versus-stored gap, which is retailer-specific: Gorgeous Shop lost 13.0% of
+  populated GTINs to validation, Escentual 0.08%. **Boots is not predictable from either.**
+
+---
+
 ### 79. Three word-boundary defects in one design pass, and the third was in the fix
 
 **Raised:** 13 August 2026, designing item 71's narrow topical list · **Report only, nothing
@@ -6154,7 +6152,6 @@ the 26 topicals — *Anua Toner250*, *Numbuzin Toner200*, *Olay Moisture Fluid*,
 > **B is what stops a completely broken change passing A.** A change that does nothing at
 > all satisfies A perfectly, and "inert by construction" is exactly the claim A is meant to
 > substantiate — so without B the test proves the opposite of what it is for.
->>>>>>> 804eeab (docs: item 79 — three word-boundary defects in one design pass, and the third was in the fix)
 
 ---
 
