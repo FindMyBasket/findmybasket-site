@@ -447,11 +447,12 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
     } else {
       // Stored side: external_product_id -> product name, for this retailer.
       const stored = new Map<string, string>();
+      const storedIds = new Map<string, number>();
       let from = 0;
       for (;;) {
         const { data, error } = await sb
           .from("retailer_prices")
-          .select("external_product_id, products!inner(name)")
+          .select("external_product_id, product_id, products!inner(name)")
           .eq("retailer_id", rid)
           .not("external_product_id", "is", null)
           .range(from, from + 999);
@@ -460,7 +461,10 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
         for (const r of data as any[]) {
           const k = String(r.external_product_id ?? "").trim();
           const nm = r.products?.name;
-          if (k && typeof nm === "string" && nm) stored.set(k, nm);
+          if (k && typeof nm === "string" && nm) {
+            stored.set(k, nm);
+            if (r.product_id != null) storedIds.set(k, Number(r.product_id));
+          }
         }
         if (data.length < 1000) break;
         from += 1000;
@@ -490,6 +494,7 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
       const bump = (k: string) => buckets.set(k, (buckets.get(k) ?? 0) + 1);
       const dist = new Map<number, number>();
       const zeroRows: { id: string; feed: string; stored: string }[] = [];
+      const allZeroProductIds: number[] = [];
 
       for (const r of body) {
         const key = String(r[idIdx] ?? "").trim();
@@ -504,7 +509,11 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
         for (const t of a) if (b.has(t)) shared++;
         bump("compared");
         dist.set(shared, (dist.get(shared) ?? 0) + 1);
-        if (shared === 0 && zeroRows.length < 60) zeroRows.push({ id: key, feed: feedName, stored: storedName });
+        if (shared === 0) {
+          const pid = storedIds.get(key);
+          if (pid != null) allZeroProductIds.push(pid);
+          if (zeroRows.length < 60) zeroRows.push({ id: key, feed: feedName, stored: storedName });
+        }
       }
 
       console.log("\n  EVERY ROW ACCOUNTED FOR:");
@@ -530,6 +539,38 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
       for (const z of zeroRows) {
         console.log("   " + z.id.padEnd(14) + " feed: " + z.feed.slice(0, 58));
         console.log("   " + "".padEnd(14) + " db  : " + z.stored.slice(0, 58));
+      }
+
+      // RECOVERABLE SPLIT. A divergent row is RECOVERABLE if its product still has a
+      // live offer at another ACTIVE retailer: image and description can be re-sourced
+      // from the survivor rather than the product being detached and 404'd. Rows with
+      // no other offer are a deploy (GONE_IDS + redirects), not a data edit.
+      // Re-derived here rather than carried forward — the cohort moves with every import.
+      if (allZeroProductIds.length) {
+        const ids = [...new Set(allZeroProductIds)];
+        const withOther = new Set<number>();
+        const imgFrom = new Map<number, string>();
+        for (let i = 0; i < ids.length; i += 200) {
+          const slice = ids.slice(i, i + 200);
+          const { data, error } = await sb
+            .from("retailer_prices")
+            .select("product_id, retailer_id, image_url, retailers!inner(active)")
+            .in("product_id", slice)
+            .eq("retailers.active", true)
+            .neq("retailer_id", rid);
+          if (error) { console.log("  recoverable split failed:", error.message); break; }
+          for (const r of (data ?? []) as any[]) {
+            withOther.add(Number(r.product_id));
+            if (r.image_url && !imgFrom.has(Number(r.product_id))) imgFrom.set(Number(r.product_id), String(r.retailer_id));
+          }
+        }
+        console.log("\n  RECOVERABLE SPLIT over " + ids.length + " distinct divergent products:");
+        console.log("   " + String(withOther.size).padStart(5) + "  RECOVERABLE — another active retailer holds a live row");
+        console.log("   " + String(ids.length - withOther.size).padStart(5) + "  no other offer — deploy scope, not a data edit");
+        console.log("   " + String([...withOther].filter(id => imgFrom.has(id)).length).padStart(5) +
+                    "  ...of the recoverable, the OTHER retailer already carries an image_url");
+        console.log("   " + String([...withOther].filter(id => !imgFrom.has(id)).length).padStart(5) +
+                    "  ...of the recoverable, NO other retailer image — clearing would 404 until a feed supplies one");
       }
     }
   }
