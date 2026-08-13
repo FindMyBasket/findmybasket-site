@@ -2976,9 +2976,9 @@ wanted, both halves must come from the same corpus and the same code path.
 ### 47. A figure in an instruction is unsourced until a query produced it
 
 **Raised:** 7 August 2026 · **Fifth to eighth 8-9 August · Ninth 10 August · Tenth
-11 August · Eleventh and twelfth 12 August · Thirteenth 13 August** ·
-**A PROPERTY OF THE METHOD**, recorded because thirteen instances in seven days is a
-pattern rather than thirteen mistakes. **Read instance 9 first: it is the one the remedy nearly
+11 August · Eleventh and twelfth 12 August · Thirteenth and fourteenth 13 August** ·
+**A PROPERTY OF THE METHOD**, recorded because fourteen instances in seven days is a
+pattern rather than fourteen mistakes. **Read instance 9 first: it is the one the remedy nearly
 missed. Read instance 11 for the failure mode that costs the most. Read INSTANCE 12 for
 the one the remedy had already caught once.**
 
@@ -3030,6 +3030,70 @@ It does not reach "built and unarmed since 5 August", which is checkable in a di
 > for when, the file's own header for what it is waiting on, and the run history for whether
 > it has ever executed. **Three commands, none of them a query, all of them available every
 > time the claim was repeated.**
+
+| 14 | "Boots is the only `storage_passthrough` retailer in the rollout. Beauty Flash, Gorgeous Shop, Escentual and Organic Pharmacy are all inline." Robbie's, in the brief; repeated assistant-side into a report and adopted as the leading hypothesis | **All four are `storage_passthrough`.** `retailer_import_config.staging_mode` reads `storage_passthrough` for retailers 8, 23, 27 AND 30. The premise was false, and it was the entire reason the hypothesis was plausible |
+
+#### INSTANCE 14: A HYPOTHESIS DISPROVED BY THE FACT THAT MADE IT PLAUSIBLE
+
+**Boots' first post-flip barcode read came back all zeroes. The leading hypothesis was that
+the coalesce path is not reached under `storage_passthrough` staging, and the argument for
+it was structural: Boots was said to be the ONLY passthrough retailer in the rollout, so the
+rollout had tested one staging mode four times and the other once — and the one had failed.**
+
+That is a good argument. It is also built entirely on a premise nobody checked.
+
+> **`staging_mode` is `storage_passthrough` for Escentual, Boots, Beauty Flash AND Gorgeous
+> Shop. All four.** The rollout tested `storage_passthrough` four times and inline never.
+
+##### THE SHAPE IS DIFFERENT FROM THE OTHER THIRTEEN, AND THE REMEDY IS DIFFERENT
+
+In instances 1-13 the figure was wrong and the work built on it was wasted. **Here the check
+and the refutation are the same act.** One `select staging_mode from retailer_import_config`
+would have tested the hypothesis — and that same query dissolves it, because it shows the
+comparison group does not exist.
+
+> **The remedy is not "test the hypothesis". It is TEST THE PREMISE BEFORE THE HYPOTHESIS,
+> because the premise is usually cheaper to check and sometimes settles both at once.**
+
+**A hypothesis whose plausibility rests on one factual claim is only as tested as that
+claim**, and the claim is almost always the smaller query. Here the hypothesis would have
+required reading the staging code paths, the column-index resolution and the slice format;
+the premise was one column of one table.
+
+**Both sides produced it.** It was asserted human-side in the brief, then repeated
+assistant-side into a written report as *"Boots is the only storage_passthrough retailer"*
+and adopted as the leading suspect — **from a config table both parties had queried
+repeatedly that same day for other reasons.** Familiarity with a table is not knowledge of a
+column.
+
+##### AND THE CHEAPEST CHECK WAS IN THE ROW ALREADY BEING READ
+
+The 04:30 run's own output recorded **`details.counts.sibling_coalesce = "false"`**, in the
+same JSON object as the zeroes that prompted the investigation.
+
+**The run said it had not read the flag.** Both parties read the zeroes beside it and
+reasoned outward toward a mechanism — staging modes, column resolution, deploy ordering —
+rather than reading the one field that states the cause. **The flag was flipped at ~10:45
+UTC; the run was at 04:30. It predated the change by six hours.**
+
+> **When a diagnostic reports both a result and the configuration it ran under, read the
+> configuration first.** A null result under a flag that was off is not a null result, it is
+> a run of the old code — and the counter that says so costs nothing to read because it is
+> already on screen.
+
+##### RESOLUTION: THE RISK IS STRUCK, NOT LEFT OPEN
+
+`storage_passthrough` is **proven, not untested**. Under that exact staging mode:
+
+| Retailer | barcodes stored, first post-flip run |
+|---|---|
+| Beauty Flash | **0 → 6,951** |
+| Gorgeous Shop | **0 → 5,972** |
+| Escentual | **0 → 6,253** |
+
+**Three for three.** The untested-combination risk does not exist and is struck rather than
+carried as an open question. Nothing about Boots' staging is implicated, nothing needs
+fixing, and the first genuine post-flip read is 04:30 on 14 August.
 
 #### INSTANCE 13: A FIGURE FROM AN ABANDONED PLAN, WHICH IS INSTANCE 12'S SHAPE
 
@@ -6715,6 +6779,65 @@ and description all having moved together.
 **If the measurement returns a rate dominated by the table above, the primary signal needs a
 brand-token exemption before it ships. If it returns cases like `a43e2ed`, it ships as
 designed.**
+
+---
+
+### 85. The Boots coalesce read was a pre-flip run, and the gate is still closed
+
+**Raised:** 13 August 2026 · **Not a defect. Not a null result. The wrong run.**
+
+#### WHAT HAPPENED
+
+Boots' `sibling_coalesce` was flipped at **~10:45 UTC on 13 August**, after YesStyle's 10:00
+run and the Baseline A retake. Boots' scheduled import runs at **04:30**. The 13 August run
+therefore **predated the flip by about six hours**, and was read as the first post-flip
+result.
+
+Its counters, correctly, were all zero: `rows_with_ean` 0, `ean_from_sibling` 0,
+`barcode_rejected` 0, `tier1_ambiguous_skipped` 0, `would_link_via_ean` 0. Net links 159,
+inside the 153 ± 10 band.
+
+> **Flat links with zero barcodes read as "nothing happened", because nothing had.** The
+> band was the success case GIVEN barcodes landing; without them it describes an ordinary
+> pre-flip day, which is what it was.
+
+**The run's own output said so: `details.counts.sibling_coalesce = "false"`.** See item 47,
+instance 14 — that field sat in the same JSON object as the zeroes and neither party read it
+before reasoning toward a mechanism.
+
+#### WHY IT MATTERS BEYOND THE MISREAD
+
+**Item 78's expectations are untested, not falsified.** `rows_with_ean` 0 → ~23,000, net
+links flat at 153 ± 10, `tier1_ambiguous_skipped` appearing from nothing, and the
+fill-versus-stored gap all still stand exactly as recorded before the flip. Nothing about
+them has been checked.
+
+**The sole-supplier before-reading also stands**: 49,356 of 62,323 (79.2%), taken 13 August
+with the cycle complete. It remains the correct "before" because no post-flip Boots run has
+happened.
+
+> **A pre-flip run read as post-flip does not merely waste a day — it consumes the baseline
+> if anyone records it as the "after".** Nothing was recorded, so nothing was lost, and the
+> before-readings are intact.
+
+#### THE STAGING HYPOTHESIS IS STRUCK
+
+`storage_passthrough` was suspected and is **disproved**: all four flipped retailers use it,
+and three have already gone from zero barcodes to thousands under it. `feed_url` is null for
+all four, so every one builds its URL through `buildFeedUrl` with the same 20-column list
+including `product_GTIN`; `staging_mode` governs how downloaded bytes are staged into
+slices, not which columns are requested. Full account in item 47, instance 14.
+
+#### THE GATE
+
+**Closes at 04:30 UTC on 14 August**, not on the 13th. Held behind it, unchanged:
+
+- the supplements path migration and deploy (items 71, 72)
+- the reassignment detector migration and deploy, Stylevana only (item 84)
+
+**Read the Boots run against item 78 before either.** And per the standing instruction on
+the detector's first cycle: **read the sample rows before the count** — 137 is the
+prediction, and matching it proves less than the rows looking like `a43e2ed` does.
 
 ---
 
