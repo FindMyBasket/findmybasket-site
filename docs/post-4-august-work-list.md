@@ -5342,6 +5342,122 @@ check, not a risk to price.
 
 ---
 
+### 74. Two changes in one window, and the attribution survived — structurally, not luckily
+
+**Raised:** 13 August 2026, on Escentual's first coalesce read · **The first time two
+changes landed in the same window and the attribution held.** Item 67 is the case where
+concurrency cost a build; this is the case where it cost nothing, and the reason is worth
+more than the outcome.
+
+#### What landed together
+
+| | When |
+|---|---|
+| `ean_product_index_live_retailers_only` — the index restricted to active, enabled retailers | **12 Aug 13:44 UTC** |
+| Escentual's `sibling_coalesce` flip, first read | **13 Aug 04:00 UTC** |
+
+Both inside one cycle. **Under item 67's rule this is exactly the situation the spacing
+exists to prevent**, and the expectation was that the +8 in Escentual's link total could
+not be assigned to either.
+
+#### The read
+
+| | 12 Aug | 13 Aug |
+|---|---|---|
+| via_ean | 0 | **18** |
+| via_mpn | 0 | 2 |
+| name_exact | 18 | **10** |
+| name_stripped | 21 | **17** |
+| **link_total** | **39** | **47** |
+
+**+20 to tiers 1-2, −12 from the name tiers, net +8** — item 62's reallocation shape at
+small scale. Against a baseline of 39 with sd 1.6, five sigma: real, not noise.
+
+#### WHY THE ATTRIBUTION SURVIVED
+
+> **Escentual had `rows_with_ean` = 0 before the flip. Tier 1 cannot fire for a retailer
+> with no stored barcodes, whatever the index contains.** The index filter was
+> **structurally incapable** of producing a single tier-1 link for Escentual. All 18 are the
+> flip's, and no measurement was needed to establish it — only the observation that one
+> input was zero.
+
+**And the filter's effect was negative, not positive.** Escentual's 6,253 barcodes, scored
+against the rest of the catalogue only — excluding its own rows, which would otherwise
+contaminate the ambiguity count:
+
+| | barcodes |
+|---|---|
+| Unambiguous before **and** after — tier 1 fires either way | **3,291** |
+| No target anywhere in the catalogue | 2,699 |
+| **Target removed by the filter** | **331** |
+| Ambiguous both ways — skipped regardless | 223 |
+| **Made linkable by the filter** | **40** |
+
+**Net −291.** The filter cost Escentual 331 potential targets and gained it 40. The 18 links
+came out of the 3,291 pool, which the filter did not touch.
+
+> **So the spacing failure UNDERSTATED the flip rather than confounding it.** The
+> conservative direction, by accident — but the reason it is knowable is not accidental.
+
+#### THE GENERALISABLE PART
+
+**Attribution survives concurrency when one of the changes cannot produce the observed
+effect at all.** Not "probably did not" — *cannot*, because an input it depends on was zero,
+or the code path was unreachable, or the population was empty.
+
+> **Before assuming two changes are confounded, check whether either is structurally
+> incapable of the effect.** It is a cheaper test than any statistical one, it gives a
+> definite answer rather than a probable one, and it costs a single query. Here it was
+> `rows_with_ean = 0` on the prior run.
+
+**This is the same property item 72 relies on** — the inert deploy, unreachable because
+`supplements_path_prefixes` is empty. **Structural inertness is what makes a change safe to
+land beside another**, and it is worth designing for deliberately rather than noticing
+afterwards.
+
+**It does not repeal the spacing rule.** Item 67's failure was resource contention, which no
+structural argument prevents, and most changes are not structurally inert. This is the
+exception that can be recognised, not a general licence.
+
+#### THE MEASUREMENT WAS ENTANGLED EVEN THOUGH THE OUTCOME WAS NOT
+
+A count of **477** newly-unambiguous barcodes was recorded for the filter. Re-measured on
+13 August it reads **759**, and **the difference is not drift — it is contamination.**
+Escentual's 6,253 barcodes landed *after* the filter, and they change which barcodes are
+ambiguous, so any count taken now includes the second change inside the measurement of the
+first.
+
+> **477 is no longer reproducible, and cannot be made so.** The outcome separated cleanly;
+> the measurement did not. **Two changes in one window can leave the causation legible while
+> destroying the ability to measure the first one's size** — those are different losses and
+> only one of them was avoided here.
+
+**The lesson for Boots:** take the "before" reading when the cycle is complete and *before*
+the flip, because a reading taken afterwards cannot be reconstructed.
+
+#### A CHECK DROPPED FOR BEING UNSOURCEABLE
+
+A sole-source check against **61,913** was carried into this session. **No definition
+reproduces it:**
+
+| Definition | count |
+|---|---|
+| Root products, live + in stock, exactly 1 retailer | **72,601** |
+| `products_active`, live + in stock | 72,163 |
+| Root products, stock ignored | 84,009 |
+| `products_active`, stock ignored | 83,383 |
+
+The nearest is **10,250 above**. The figure appeared in the 12 August exchange and neither
+side can source it now, so it is **dropped rather than reconciled** — item 47's discipline
+applied before use rather than after.
+
+> **Replaced with the version that can be derived: barcodes in `ean_product_index` supplied
+> by exactly one retailer, measured before the Boots flip and again after.** The **movement**
+> is what the check was always for; the absolute figure never was. A check whose baseline
+> cannot be sourced is not a check.
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
