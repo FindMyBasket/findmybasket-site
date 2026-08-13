@@ -5586,6 +5586,42 @@ resolves a warning and leaves the cause in place.
 **Raised:** 13 August 2026 · **Downstream of item 75.** Search Console, Product snippets:
 *"Either offers, review, or aggregateRating should be specified."*
 
+#### THE FLAGGED COUNT IS ONE ITEM. NOT 13,335.
+
+**Search Console export, read 13 August: ONE affected item, first seen 12 August.** Valid
+items run **2 to 4** across the whole period, so Google has parsed a handful of product
+pages, not the catalogue.
+
+> **13,335 is the POPULATION AT RISK. The flagged count is 1.** They are different numbers
+> answering different questions — what currently qualifies, versus what Google has crawled
+> and parsed — and the gap between them is the crawl schedule, not a discrepancy.
+
+**This changes the urgency and not the fix.** Everything below stands and is still correct:
+the markup is wrong, it contradicts what the page shows a human, and it should be fixed.
+**But it is a correctness fix, not an incident**, and nothing about it competes with the
+import-path queue.
+
+**Recorded explicitly so nobody reads 13,335 as the flagged number** — including whoever
+next opens this item looking for the size of the problem.
+
+#### TWO FURTHER ISSUES, ACCEPTED RATHER THAN OPEN
+
+The same export carries two non-critical items, **2 each**:
+
+| Issue | Status |
+|---|---|
+| Missing field `aggregateRating` | **ACCEPTED — will not fix** |
+| Missing field `review` | **ACCEPTED — will not fix** |
+
+**Both are legitimately absent: we have no reviews and no ratings.** They are optional
+fields and Google reports them as non-critical for exactly that reason.
+
+> **Neither may be fabricated, and this is worth stating rather than assuming.** Synthesised
+> ratings or reviews on a comparison site would be invention presented as user testimony —
+> and the warning is Google noting an absence, not reporting a defect. **The correct state
+> of these two fields is empty**, and they should not be re-opened as work each time the
+> report is read.
+
 #### Confirmed, and it is deliberate
 
 `app/product/[id]/page.tsx:179` — `offers: inStockOffers.length > 0 ? [ … ] : undefined`.
