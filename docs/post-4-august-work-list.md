@@ -2976,9 +2976,9 @@ wanted, both halves must come from the same corpus and the same code path.
 ### 47. A figure in an instruction is unsourced until a query produced it
 
 **Raised:** 7 August 2026 · **Fifth to eighth 8-9 August · Ninth 10 August · Tenth
-11 August · Eleventh and twelfth 12 August** ·
-**A PROPERTY OF THE METHOD**, recorded because twelve instances in six days is a pattern
-rather than twelve mistakes. **Read instance 9 first: it is the one the remedy nearly
+11 August · Eleventh and twelfth 12 August · Thirteenth 13 August** ·
+**A PROPERTY OF THE METHOD**, recorded because thirteen instances in seven days is a
+pattern rather than thirteen mistakes. **Read instance 9 first: it is the one the remedy nearly
 missed. Read instance 11 for the failure mode that costs the most. Read INSTANCE 12 for
 the one the remedy had already caught once.**
 
@@ -3003,6 +3003,29 @@ the one the remedy had already caught once.**
 | 11 | `barcode_ambiguous_skipped` read **null** on the Gorgeous Shop coalesce run, and a recorded stopping condition was invoked on it | **The field does not exist.** The counter is `tier1_ambiguous_skipped` and it read **1,342**, corroborated by 1,342 rows in `tier1_ean_skips` over 1,328 distinct barcodes. `barcode_ambiguous_skipped` appears nowhere — not in the importer, not in a migration, not in this file |
 
 | 12 | **5,663** supplement rows behind the Boots allowlist, plus "4,554 rows", "the remaining 1,109", "6,673 Personal Care > Health Care rows" and "78 MyProtein products including 43 protein" | **5,663 was retracted on this very list before being reinstated as a founding premise.** Measured: the whole `Health & Beauty > Health Care` subtree is **3,115 rows** holding **936** supplement-shaped; `Vitamins & Supplements` is **1,717**, not 4,554; the "second path" holds **91**, not 1,109; **`Personal Care > Health Care` does not exist in the feed**; MyProtein is **37 rows** on the admissible path, 19 sports-shaped. The category lifts to about **900**, not 5,700 |
+
+| 13 | "the 92-product dark set from item 71" | **No such set exists.** Item 71 is retailer-conditional classification and contains no dark set; "92" appears twice in the work list, both unrelated. The figure came from the **withdrawn detachment plan for the 121 Stylevana rows** — an option that was rejected |
+
+#### INSTANCE 13: A FIGURE FROM AN ABANDONED PLAN, WHICH IS INSTANCE 12'S SHAPE
+
+**Second time in one week that a figure has been cited from a plan that was dropped.**
+Instance 12 was a *retracted* figure returning; this is a figure from a *rejected option*
+returning. **The mechanism is identical and it is the one that makes both durable:**
+
+> **A number produced by real analysis carries that analysis's provenance, and keeps it
+> after the plan the analysis served is abandoned.** The 92 was computed properly. The
+> detachment plan was reasoned properly. **Dropping the plan does not retract the number**,
+> because the number never depended on the plan being adopted — it was an input, not a
+> conclusion.
+
+**That is why it reads as established.** It has a derivation, a context and a date. Nothing
+about it looks provisional, and the one fact that would disqualify it — *the work it
+belonged to was not done* — lives nowhere near the figure.
+
+**The remedy is item 66's, in a new place:** when an option is rejected, the figures it
+produced need retiring **where they will be quoted next**, not only in the decision that
+rejected them. A dropped plan leaves live numbers behind, and they are the most credible
+kind of wrong figure there is.
 
 #### INSTANCE 12: A RETRACTED FIGURE RETURNING AS A FOUNDING ASSUMPTION
 
@@ -5455,6 +5478,165 @@ applied before use rather than after.
 > by exactly one retailer, measured before the Boots flip and again after.** The **movement**
 > is what the check was always for; the absolute figure never was. A check whose baseline
 > cannot be sourced is not a check.
+
+---
+
+### 75. The definition of the public catalogue is not in the repository
+
+**Raised:** 13 August 2026, from a Search Console Product-snippets warning · **The warning
+is the smaller half.** The view it led to is the object every catalogue figure on this list
+depends on, and its current definition exists only in the live database.
+
+#### THE FINDING
+
+`products_active` **live**:
+
+```sql
+WHERE merged_into IS NULL AND parent_product_id IS NULL
+  AND image_url IS NOT NULL AND image_url <> ''
+  AND EXISTS (SELECT 1 FROM retailer_prices rp
+              JOIN retailers r ON r.id = rp.retailer_id
+              WHERE rp.product_id = p.id AND r.active = true)
+```
+
+`products_active` **as last committed** (`20260703150000`, whose own comment reads
+*"Definition otherwise verbatim"*):
+
+```sql
+  AND EXISTS (SELECT 1 FROM retailer_prices rp WHERE rp.product_id = p.id)
+```
+
+**`r.active` is in the live view and in no migration.** Verified exhaustively: two
+migrations redefine the view, neither carries the filter; one further migration mentions
+both `products_active` and `r.active` and only *references* the view. **The active-retailer
+filter was applied to production outside version control.**
+
+> **This is not a stale record. It is an absent one, on the object every catalogue figure
+> depends on.** A stale record can be diffed. This cannot: the repo's version is not an old
+> definition of the live view, it is a **different view** that no longer exists anywhere.
+
+#### THE CONSEQUENCE THAT PROMPTED THE SEARCH, AND WHY IT WAS UNANSWERABLE
+
+The question was *"what was `products_active`'s `in_stock` omission FOR?"* — a fair
+question with a defensible likely answer (an out-of-stock product should still have a page
+rather than 404).
+
+**The reason could never have been found, because the artefact could not be found.** The
+view comment documents four filters and their purpose and does not mention stock at all;
+the filter it *does* describe is **price-presence — "orphans"** — which answers a different
+question: *does anyone list this?* rather than *can anyone buy it?*
+
+**On that reading the omission may never have been a decision at all.** Stock may simply
+never have been in scope, because the question being answered was about orphans. **Nobody
+can tell**, and nobody could have told, because the thing to inspect is not in the
+repository.
+
+#### IT WAS KNOWN. THE KNOWLEDGE WAS IN THE WRONG PLACE.
+
+`20260727180000_fmb_resolve_product.sql`, line 104 — **two weeks before this surfaced**:
+
+```sql
+-- products_active does NOT filter on in_stock, so the resolver applies its
+-- own predicate. A basket tool must not offer an unbuyable row.
+```
+
+**Someone hit this, understood it exactly, worked around it correctly, and recorded it in a
+comment inside an unrelated function.** The fact was documented. It was documented where
+the next person to need it would not pass.
+
+> **Item 66's clause again, on a new surface: a control recorded where the failure will not
+> travel is decoration.** The resolver's author protected the basket tool and had no way to
+> protect the JSON-LD, the sitemap, or any of this fortnight's measurements — because the
+> place that would have reached all of them is the view, and the view is not reviewable.
+
+#### THE RETROSPECTIVE CONSEQUENCE
+
+**Every measurement this fortnight that read `products_active` read a definition nobody
+could review.** Comparison depth, sole-source counts, the 97,677 and 98,114 catalogue
+figures, the supplements baselines, `bath_body` movement, the sitemap's brand set.
+
+> **The figures are right. They came from the live view, which is the thing that actually
+> serves the site.** What nobody could check is **what they meant** — which products the
+> denominator contained, and on what basis. A number whose population is undocumented is
+> precise and uninterpretable at the same time.
+
+**Four consequences from one undocumented decision** — pages that cannot be removed by
+going out of stock (line 1479, 3 August), a resolver forced to carry its own predicate
+(27 July), Product JSON-LD with no `offers` (today), and every catalogue denominator on
+this list resting on an unreviewable definition.
+
+#### THE FIX, AND IT IS ITS OWN CHANGE
+
+**Bring the live definition into a migration, verbatim, changing nothing.** Not a
+correction — a *capture*. The migration should assert that the resulting view matches what
+production already returns (row count identical before and after), so it is provably a
+no-op.
+
+**Then, separately, document the `in_stock` decision on the view comment** — either as
+deliberate with its reason, or as "never considered, retained because removing it would
+deindex 13,335 pages", which is an honest and sufficient answer.
+
+**The schema fix is downstream of this and must not lead.** Fixing the JSON-LD first
+resolves a warning and leaves the cause in place.
+
+---
+
+### 76. The Product schema was reasoned against the standard rather than the consumer
+
+**Raised:** 13 August 2026 · **Downstream of item 75.** Search Console, Product snippets:
+*"Either offers, review, or aggregateRating should be specified."*
+
+#### Confirmed, and it is deliberate
+
+`app/product/[id]/page.tsx:179` — `offers: inStockOffers.length > 0 ? [ … ] : undefined`.
+`JSON.stringify` drops `undefined`, so **the key is absent entirely** — not an empty array,
+not a null price. Verified live on product 131:
+
+```
+keys emitted: ['@context','@type','brand','description','image','name','sku']
+offers: false · review: false · aggregateRating: false
+```
+
+**All three names in Google's message, all absent.** The code comment states the reasoning:
+
+> *"an Offer requires price/priceSpecification; a priceless OutOfStock offer is invalid and
+> Google flags it. Product schema permits a Product with no offers."*
+
+> **Right about schema.org, wrong about Google.** schema.org does permit a Product with no
+> offers; Google's Product guidance requires one of the three for rich-result eligibility.
+> **The code was reasoned against the standard rather than against the consumer of the
+> standard** — and those are different specifications with different requirements.
+
+**And the risk it was avoiding is empty in fact.** The "priceless OutOfStock offer" does not
+occur here: of the **13,335** products with no in-stock offer, **13,335 have an
+out-of-stock row at an active retailer and 13,335 have a price on it. None lacks one.** The
+concern was sound in principle and inapplicable in practice, and one query would have shown
+it.
+
+#### The fix: option three, two shapes
+
+| State | Emit |
+|---|---|
+| Something in stock | `AggregateOffer` (low/high/count, `InStock`) **plus** one `Offer` per in-stock retailer |
+| **Nothing in stock** | **one `Offer` per out-of-stock retailer, `OutOfStock`, real price — and NO aggregate** |
+
+**Two shapes, not one parameterised block.** An `AggregateOffer` over out-of-stock rows
+publishes a `lowPrice` for something nobody can buy, which feeds a shopping snippet
+advertising an unbuyable price. **That is worse than emitting no offer at all** — the
+current behaviour is silent, and a wrong price is not.
+
+**No `noindex`. No sitemap marking.** Both treat out-of-stock as a defect. It is not: a
+product out of stock today at a retailer that stocks it is a real product with a real page.
+Correct markup already gives Google the signal it needs and lets it decide. **Suppressing
+the page to resolve a warning that correct markup fixes is the wrong trade**, and it would
+withdraw 13.6% of the catalogue from the index for a reason that no longer applies once the
+markup is right.
+
+#### Why it is worth doing beyond the warning
+
+**The page already shows those retailers and prices to a human.** The JSON-LD currently
+tells Google there are none. **Option three makes the two agree** — the warning is the
+occasion, not the reason.
 
 ---
 
