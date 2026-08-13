@@ -160,14 +160,47 @@ export default async function ProductPage({ params }: { params: { id: string } }
     ? Math.round(((nextBestPrice - lowestPrice) / nextBestPrice) * 100)
     : null;
 
-  // Product JSON-LD. An AggregateOffer (price range + count) so Google can render
-  // the "£X to £Y" shopping snippet, followed by one Offer per in-stock retailer
-  // so the named multi-retailer panel still resolves. When nothing is in stock we
-  // have no valid price to publish, so we omit the offers block entirely (an Offer
-  // requires price/priceSpecification; a priceless OutOfStock offer is invalid and
-  // Google flags it). Product schema permits a Product with no offers.
+  // Product JSON-LD, in TWO SHAPES.
+  //
+  //   in stock      AggregateOffer (price range + count) so Google can render the
+  //                 "£X to £Y" snippet, then one Offer per in-stock retailer so the
+  //                 named multi-retailer panel resolves.
+  //   nothing in    one Offer per OUT-OF-STOCK retailer, availability OutOfStock,
+  //   stock         real prices, and NO AggregateOffer.
+  //
+  // WHY NO AGGREGATE ON THE SECOND SHAPE. lowPrice over rows nobody can buy feeds a
+  // shopping snippet advertising an unbuyable price. That is worse than emitting no
+  // offer at all: the current behaviour is silent, and a wrong price is not.
+  //
+  // THIS BLOCK USED TO OMIT `offers` ENTIRELY when nothing was in stock, reasoning:
+  // "an Offer requires price/priceSpecification; a priceless OutOfStock offer is
+  // invalid and Google flags it. Product schema permits a Product with no offers."
+  //
+  // THAT REASONING IS RIGHT ABOUT SCHEMA.ORG AND WRONG ABOUT GOOGLE, and the
+  // distinction is worth keeping because it is the obvious thought to have. schema.org
+  // does permit a Product with no offers. GOOGLE'S PRODUCT GUIDANCE REQUIRES ONE OF
+  // offers / review / aggregateRating for rich-result eligibility, and Search Console
+  // reports the absence — "Either offers, review, or aggregateRating should be
+  // specified". The code was reasoned against the standard rather than against the
+  // consumer of the standard, and they are different specifications.
+  //
+  // AND THE RISK IT AVOIDED IS EMPTY IN THIS DATA. Measured 14 August 2026: of 13,335
+  // products with no in-stock offer, 13,335 have an out-of-stock row at an active
+  // retailer AND a price above zero. Zero have neither; zero have a row without a
+  // price. The priceless OutOfStock offer does not occur here. If that ever changes,
+  // the guard belongs on the individual Offer, not on the whole block — hence the
+  // per-offer price filter below rather than a branch around the whole thing.
+  //
+  // The page already renders these retailers and prices under an "Out of stock"
+  // heading. Before this change the markup told Google there were none.
   const jsonLdName = displayProductTitle(product.name, product.brand);
   const inStockPrices = inStockOffers.map(o => o.price);
+  // Per-offer guard rather than a branch around the whole block: a single priceless
+  // row must drop that Offer, not silence the markup for the product. Measured zero
+  // today; this is what keeps that true if it ever stops being.
+  const outOfStockPricedOffers = outOfStockOffers.filter(
+    o => typeof o.price === 'number' && o.price > 0,
+  );
   const productJsonLd = {
     '@context': 'https://schema.org/',
     '@type': 'Product',
@@ -195,7 +228,16 @@ export default async function ProductPage({ params }: { params: { id: string } }
             seller: { '@type': 'Organization', name: o.retailer_name },
           })),
         ]
-      : undefined,
+      : outOfStockPricedOffers.length > 0
+        ? outOfStockPricedOffers.map(o => ({
+            '@type': 'Offer',
+            url: `${SITE_URL}/product/${product.id}`,
+            priceCurrency: 'GBP',
+            price: o.price.toFixed(2),
+            availability: 'https://schema.org/OutOfStock',
+            seller: { '@type': 'Organization', name: o.retailer_name },
+          }))
+        : undefined,
   };
 
   // BreadcrumbList JSON-LD
