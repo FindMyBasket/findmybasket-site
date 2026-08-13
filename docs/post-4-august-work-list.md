@@ -6612,6 +6612,69 @@ comparison of *feed names to stored names*; the 117 came from *URL slugs to stor
 through a parser that fit one retailer by accident. They are different measurements of
 different things, and their proximity is coincidence.
 
+#### THE MEASUREMENT: THE TROUGH IS WHY THE THRESHOLD IS ZERO
+
+Run against Stylevana's live feed, 14 August, on the rule that will ship (feed name vs
+stored name, brand tokens normalised across spacing). **Every row accounted for; no
+could-not-parse bucket fired, and it would have been reported if it had.**
+
+```
+ 15607  not in catalogue (new or unmatched row)
+  8796  compared
+ 24403  TOTAL (feed rows: 24403)
+```
+
+| shared tokens | rows | |
+|---|---|---|
+| **0** | **137** | ← the cohort |
+| 1 | 19 | |
+| 2 | 6 | |
+| 3 | 13 | |
+| 4 | 20 | |
+| 5 | 90 | |
+| 6-8 | 1,026 | |
+| **9+** | **7,485** | ← normal matching |
+
+> **ZERO-OVERLAP IS A SEPARABLE POPULATION, AND THAT IS THE REASON THE THRESHOLD IS ZERO.**
+> Not "zero seemed right". A monotonic fall from zero would have meant naming drift with
+> reassignments buried in its tail and **no principled cut anywhere**. What the data shows
+> is 137, then a valley of 19 / 6 / 13 / 20, then a mountain at 9+. **The cut is where the
+> data is empty**, and loosening to ≤1 would add 19 rows while crossing no boundary.
+
+**The zero rows are true positives**, checked against the false-positive table below, which
+was written before any results: *Romand Lip Mate Pencil* / **Dasique Melting Candy Balm**,
+*La Mer Eye Balm* / **Pyunkang Yul Balancing Gel**, *Clarins Double Serum* / **Rohto
+Mentholatum hair treatment**. Coherent names on both sides naming different products —
+`a43e2ed`'s exact shape, and matching no row of that table.
+
+##### THE BRAND-TOKEN FIX MOVED EXACTLY ONE ROW, AND THAT IS THE ANSWER
+
+`ByWishtrend` versus `By Wishtrend` tokenise to `{bywishtrend}` and `{by, wishtrend}` —
+nothing shared. Joining adjacent words before comparison makes the spellings meet without
+touching the threshold. **The count went 138 → 137.**
+
+> **One row. So the false-positive rate the brand quirk was hiding is 1 in 138 — 0.7%** —
+> and it was itself a true positive tripping for partly the wrong reason. **Measuring the
+> fix's effect was worth more than the fix**: it converted "a false positive is waiting
+> somewhere in here" into a number.
+
+**And the fix sharpened the separation rather than blurring it.** Before normalisation the
+mid-range read 44 / 273 / 904; after, 6 / 13 / 20, with the mass moved to 9+ where it
+belongs. **A change that improves a signal's contrast while barely moving its count is
+evidence the signal is real.**
+
+#### REFUSING A COMFORTABLE NUMBER, ON THE DAY THIS ITEM WAS WRITTEN
+
+The first run returned **138** against the **121** recorded in `a43e2ed`. Seventeen apart,
+same direction, same measurement type — and it would have been comfortable to report as
+corroboration that the cohort was stable.
+
+**It was not reported as corroboration**, because 121 was measured on 12 August and 138 on
+14 August, and reassignments accumulate: the numbers are two observations of a moving
+quantity, not one quantity observed twice. **Proximity is not agreement**, which is this
+item's own finding applied within hours of writing it, to a number that would have flattered
+the work.
+
 #### A PREDICTION, LABELLED AS ONE
 
 **Not a measurement.** The false-positive rate of the primary signal cannot be measured from
