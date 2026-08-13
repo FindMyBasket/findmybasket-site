@@ -1218,7 +1218,11 @@ export const ENABLED_EXTENDED_CATEGORIES: ReadonlySet<ExtendedTopCategory> =
 // Import-only category set. Deliberately a SEPARATE type from the canonical
 // TopCategory so the live categoriser's enum is left untouched (no new enum
 // values added to inferCategorisation's contract).
-export type ImportTopCategory = TopCategory | ExtendedTopCategory;
+// `supplements` is a real top_category (live since #232, 93 products) but it is
+// NOT an ExtendedTopCategory: that union is specifically the fragrance /
+// bath_body detector's output and is gated by ENABLED_EXTENDED_CATEGORIES.
+// Supplements is assigned by path, not detected, so it joins here directly.
+export type ImportTopCategory = TopCategory | ExtendedTopCategory | "supplements";
 
 export type ImportCategorisation = {
   top_category: ImportTopCategory | null;
@@ -1234,12 +1238,146 @@ export type ImportCategorisation = {
 // holding, so a behaviour change here fails that probe loudly rather than silently
 // making its output wrong. If you change this function's verdicts, read those
 // assertions and update both ends together. See the CONTRACT block in that file.
+// ============================================================================
+// SUPPLEMENTS PATH CLASSIFICATION (work-list items 71, 72, 79)
+//
+// WHY THIS EXISTS. Boots' feed carries 1,808 rows under
+// `Health & Beauty > Health Care > Fitness & Nutrition`. Run through the
+// classifier unchanged, 1,425 of them (78.8%) become `skincare` — protein
+// powder, glucosamine and multivitamins on the skincare page — and 315 are
+// dropped by the `supplement` denylist. NONE become supplements, because
+// nothing assigns that category. The 1,425 is the defect; the 315 is the
+// smaller half.
+//
+// THE BRANCH SITS ABOVE inferCategorisation, NOT INSIDE IT. #226's
+// capsuleIsTopical is not touched, guarded or conditioned — it is literally
+// unmodified, which is a stronger guarantee than a guard and preserves that
+// PR's "fix one, not both" scoping. Reverting this is deleting a branch;
+// there is no regex to restore.
+//
+// THE LISTS ARE BOOTS-SHAPED. They were built and measured against Boots'
+// 1,808 rows before this branch was written (item 79). `cream` is a product
+// form at Beauty Flash and a FLAVOUR at Boots, because Boots sells protein
+// powder: an unvetoed `cream` classified nine sports-nutrition rows as
+// topical. APPLYING THESE TO ANOTHER RETAILER REQUIRES RE-MEASURING AGAINST
+// THAT RETAILER'S ROWS, NOT RE-REASONING. The tokens may well be identical;
+// that has to be demonstrated.
+// ============================================================================
+
+/**
+ * Topical forms, on a supplements path only.
+ *
+ * `oil`, `gel` and `pack` are DELIBERATELY ABSENT: they are dosage forms in a
+ * health catalogue and application words in a beauty one (work-list item 57).
+ * "Boots Vegan Omega 3 Oil 1000 Mg, 60 Capsules" is a supplement.
+ *
+ * The `(?=\d|\b)` termination is load-bearing. The feed glues the form word to
+ * its size — "Toner250 ml", "Shampoo2", "Oil250" — so a plain `\b` misses them.
+ * Diagnosed on two rows and it caught a third nobody had named (No7 Toner200),
+ * which is the evidence it fixes the class rather than the examples.
+ */
+const SUPP_TOPICAL_FORM =
+  /\b(?:serum|toner|cream|lotion|mask|shampoo|conditioner|moistur\w*|body spray)(?=\d|\b)/i;
+
+/**
+ * `cream` is a flavour word in a health catalogue: "Vanilla Ice Cream",
+ * "Cookies & Cream", "Strawberries And Cream" — nine rows of whey protein and
+ * protein bars. Vetoed ONLY when `cream` is the sole form word present, so
+ * "Cleanser & Day Cream" survives.
+ *
+ * NO LEADING \b. `&` is a non-word character, so `\b` before it requires a word
+ * character immediately prior and NEVER MATCHES " & Cream". That defect was
+ * introduced by the first attempt at this very fix — see item 79.
+ */
+const SUPP_FLAVOUR = /(ice cream|(?:&|and)\s+cream|cream\s+(?:flavour|shake))/i;
+
+/**
+ * "Toner" as a muscle device, not a skincare form: Soma Lives' Pelvic Floor
+ * Vaginal Toner range.
+ *
+ * ORDERING IS LOAD-BEARING, AND THIS VETO IS NOT SAFE ON ITS OWN. It matches
+ * SEVEN rows in the Boots feed, and two of them — "Jude Collagen & Creatine
+ * Pelvic Floor Supplements" — ARE GENUINE SUPPLEMENTS. They survive only
+ * because SUPP_TOPICAL_FORM never matches them, so this veto is never
+ * consulted for them.
+ *
+ * THE VETOES ONLY EVER SUPPRESS ROWS SUPP_TOPICAL_FORM HAS ALREADY MATCHED.
+ * They are filters on the topical set, not classifiers. If that ordering is
+ * ever inverted — this consulted before or independently of the form test —
+ * two real supplements are silently excluded: no error, no 404, they simply
+ * stop becoming supplements. Keep the guard clause below in this order.
+ */
+const SUPP_DEVICE = /\b(pelvic floor|vaginal toner|muscle toner)\b/i;
+
+/** True when a row on a supplements path is an applied product, not an ingested one. */
+export function isSupplementPathTopical(name: string): boolean {
+  if (!SUPP_TOPICAL_FORM.test(name)) return false;      // must run FIRST — see SUPP_DEVICE
+  if (SUPP_DEVICE.test(name)) return false;
+  if (SUPP_FLAVOUR.test(name) && !SUPP_TOPICAL_FORM.test(name.replace(SUPP_FLAVOUR, " "))) return false;
+  return true;
+}
+
+/**
+ * Sports-nutrition brands, for the `sports` subcategory.
+ *
+ * A BRAND LIST RATHER THAN A NAME RULE, and the reason came from the data:
+ * `\bprotein\b` DOES NOT MATCH "Myprotein" — there is no word boundary inside
+ * the brand name — so any name-based sports rule silently misses the largest
+ * sports brand in the feed because of its own name. Structural, not a coverage
+ * gap, and no tuning fixes it.
+ *
+ * Taken at the >=70%-sports-shaped break in Boots' brand distribution.
+ * MyProtein is the stated exception: 19 of its 37 rows carry a sports token,
+ * but all 37 are MyProtein, and a MyProtein multivitamin in `sports` is
+ * defensible where the reverse is not.
+ *
+ * Fails safe: an unlisted sports brand lands in `supplements`, which is wrong
+ * but not absurd.
+ */
+const SPORTS_BRANDS: ReadonlySet<string> = new Set([
+  "optimum nutrition", "grenade", "revival", "liquid iv", "c4", "misfits",
+  "humantra", "yourlvls", "sci-mx", "fulfil", "nicks", "barebells", "ors",
+  "eleat", "warrior", "nuzest", "vidrate", "myprotein",
+]);
+
+/** `sports` for a listed sports-nutrition brand, else `supplements`. */
+export function supplementSubcategory(brand: string): "sports" | "supplements" {
+  return SPORTS_BRANDS.has(brand.trim().toLowerCase()) ? "sports" : "supplements";
+}
+
 export function inferCategorisationForImport(
   name: string,
   brand: string = "",
   enabled: boolean = EXTENDED_CATEGORIES_ENABLED,
+  /**
+   * True when this feed row arrived on a retailer's configured supplements path
+   * (`retailer_import_config.supplements_path_prefixes`). Defaults to FALSE, so
+   * every existing caller — the AWIN, Shopify and Rakuten importers and the two
+   * harness scripts, all of which pass two arguments — is byte-identical.
+   * That inertness is asserted, not claimed: see
+   * lib/__tests__/supplements-path.test.ts, direction A.
+   */
+  onSupplementsPath: boolean = false,
 ): ImportCategorisation {
   const base = inferCategorisation(name, brand);
+
+  // A row on a supplements path resolves HERE, above the shared logic. The
+  // denylist verdict in `base` is deliberately discarded rather than edited:
+  // `excludeChecks["supplement"]` drops 315 of Boots' rows, and this branch
+  // stops that without touching a regex every other retailer reads.
+  // `product_type` is kept from `base` because the inference is still useful.
+  if (onSupplementsPath && !isSupplementPathTopical(name)) {
+    const subcategory = supplementSubcategory(brand);
+    return {
+      top_category: "supplements",
+      product_type: base.product_type,
+      subcategory,
+      tags: ["supplements", subcategory],
+    };
+  }
+  // A topical on a supplements path falls through to normal classification,
+  // which sends Anua's toner and Olay's moisture fluid to skincare, correctly.
+
   if (!enabled) return base;
 
   // Resolve the import classification: the base, or the extended detector's
