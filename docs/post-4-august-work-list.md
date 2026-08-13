@@ -5194,6 +5194,51 @@ own taxonomy — the entire evidential basis for path-first classification — a
 **The rate is the same in both populations**, so truncation is not what produces it. The
 finding stands on 1,681 clean names.
 
+#### THE GENERAL FORM, ADDED 13 AUGUST: A LOUD FAILURE INTO A DEAF PIPELINE
+
+> **A script that fails loudly into a pipeline that does not read its exit status is a
+> script that fails silently.**
+
+**Two instances landed on 13 August, in different tools, and the second after the first was
+already understood.** That is the argument for a class rather than two mistakes.
+
+| | Tool | What it did | What the caller concluded |
+|---|---|---|---|
+| 1 | YesStyle run-poll | received `{"code":"42501","message":"permission denied for table scrape_log"}` and tested `!= "[]"` | **"YesStyle ran"** |
+| 2 | Work-list conflict resolver | raised `IndexError` mid-resolution, refused to continue | **rebase, push, PR CLEAN, merge — all "fine"** |
+
+**THE SECOND IS WORSE, AND IT IS WORSE FOR AN UNCOMFORTABLE REASON: THE SCRIPT DID
+EVERYTHING RIGHT.** It detected an input it could not handle. It raised. It stopped. It
+refused to write a resolution it could not compute. **There is no improvement available to
+that script.** The failure was entirely in the four layers above, each of which inferred
+success from the absence of an exception **it never checked for** — the file had been staged
+before the throw, so `git rebase --continue` had nothing to object to, and everything after
+it agreed in turn.
+
+> **This is not "handle errors better". The error WAS handled, by the only component in a
+> position to detect it.** The defect is that raising is only a signal if something reads
+> it, and four consecutive tools read only the side-effects.
+
+**It belongs in this item rather than its own** because it is the same inversion: item 70's
+subject is an instrument that fires wrongly and trains dismissal; this is an instrument that
+fires correctly into something that cannot hear it. **Both end where the family ends — a
+signal nobody acts on** — and neither produces a failure anyone can point at afterwards.
+
+##### THE MISSING HALF OF ITEM 67'S SEQUENTIAL-MERGE RULE
+
+Item 67 established: **merge one at a time.** That rule was followed exactly on 13 August
+and the marker still reached `main`, because the rule stops at the merge.
+
+> **MERGE ONE AT A TIME *AND* VERIFY THE RESULT BEFORE THE NEXT.** Sequencing buys
+> attribution; it does not buy correctness. Four signals agreed the merge was good —
+> `rebase --continue`, the push, the PR going CLEAN, the merge itself — **and all four were
+> downstream of the one thing that had failed.** Agreement among downstream signals is not
+> corroboration.
+
+The verification is cheap and specific: **grep the merged file for conflict markers.** One
+line, at the point of resolution rather than three merges later. It was caught only because
+a crashed script prompted someone to look at what it had produced.
+
 #### The fix
 
 **Fix:** drop the `[a-z]$` alternative, and exempt a trailing size/count token
