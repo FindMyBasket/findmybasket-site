@@ -6063,6 +6063,98 @@ a different data set, being pulled by hand, because there is no instrument.
 
 ---
 
+<<<<<<< HEAD
+=======
+### 79. Three word-boundary defects in one design pass, and the third was in the fix
+
+**Raised:** 13 August 2026, designing item 71's narrow topical list · **Report only, nothing
+built.** The list is not the finding.
+
+#### THE THREE
+
+| | Defect | Cause | Found by |
+|---|---|---|---|
+| 1 | **`\bprotein\b` does not match "Myprotein"** | no word boundary inside the brand name | measuring the sports distribution |
+| 2 | **`\btoner\b` does not match "Toner250 ml"** | the feed glues the form word to the size | measuring the topical list against the rows |
+| 3 | **`\b(&\|and)\s+cream` never matches " & Cream"** | `\b` before `&` requires a word char immediately prior; a space is not one | measuring the FIX for defects 1 and 2 |
+
+**Different causes. Same class. Each invisible to reading and caught only by measuring.**
+
+#### THE THIRD IS THE ONE THAT MATTERS: IT WAS INTRODUCED BY THE FIX
+
+Defect 3 did not exist until a regex was written **specifically to correct defects 1 and 2**.
+It was authored by someone who had just spent an hour on word boundaries, in the sentence
+whose entire purpose was to handle a word-boundary failure, and it silently let nine rows
+through.
+
+> **So the remedy is NOT "be careful with boundaries".** Care was at its maximum and the
+> defect still landed. **The remedy is: measure every regex against the corpus — including
+> the ones you just wrote to fix a boundary.**
+
+**A fix for a measurement failure is itself a measurement candidate.** Nothing about having
+just diagnosed the class confers immunity to it; if anything the confidence is the risk.
+
+#### `cream` IS A FLAVOUR WORD, AND IT WOULD HAVE SHIPPED
+
+The proposed list caught **38 rows, 16 of them false — 42%**:
+
+- **Nine sports-nutrition rows classified as topical because of a flavour name** —
+  *Optimum Nutrition Gold Standard Whey **Vanilla Ice Cream*** (×3), *Cookies & Cream*
+  protein bars from Fulfil, Barebells, Forest Feast, Paediasure and Slim Fast.
+- **Five pelvic-floor devices**, because *Soma Lives Soma Flex **Pelvic Floor Vaginal
+  Toner*** contains "toner".
+
+**And it missed two of its own four named targets** — *Anua … Toner250 ml* and *Numbuzin …
+Toner200 ml* — for defect 2.
+
+> **A list adapted from another retailer's vocabulary fails on this one's data, which is
+> item 57 exactly: the rule is fitted to the catalogue, not to the concept.** `cream` is a
+> product form at Beauty Flash and a flavour at Boots, because Boots sells protein powder
+> and Beauty Flash does not.
+
+> **THIS LIST IS BOOTS-SHAPED. Applying it to Escentual or Beauty Flash requires
+> RE-MEASURING, NOT RE-REASONING.** The tokens may well be identical; that has to be
+> demonstrated against their rows, not inferred from these.
+
+#### THE CORRECTED LIST, AND THE PLAN CHANGE
+
+Corrections approved and measured: **digit-or-boundary termination** `(?:serum|toner|…)(?=\d|\b)`
+· **flavour veto conditional on `cream` being the sole form word present**, so
+*Boots Dermacare Acne Cleanser & Day Cream* survives it · **pelvic-floor veto**.
+
+Result: **26 hits of 1,808, no false positives, all four named targets caught.**
+
+> **PLAN CHANGE, ADOPTED: build and test the topical list against the data BEFORE the
+> branch is written, not into it.** Today's pass found three boundary defects in a
+> nine-token regex. Writing it into the branch first would have made each one a
+> code-review question rather than a measurement, and code review is what missed all three.
+
+#### ZERO COLLISIONS, MEASURED RATHER THAN ASSUMED
+
+**No row is both a sports-allowlist brand and topical: 0 of 1,808.**
+
+Recorded as a **measured property, not a lucky one**, because it removes a design decision
+that would otherwise need justifying — *which rule wins when both fire?* **There is no such
+row, so the two rules compose in either order**, and any future change that creates one is
+a real change rather than an edge case. **The split: 1,523 `supplements` · 259 `sports` ·
+26 topical falling through to normal classification.**
+
+All 18 allowlist brands are present in the feed.
+
+#### THE GOLDEN FILE, BOTH DIRECTIONS
+
+**A** — inert: the two-argument form byte-identical across ≥2,000 stratified
+`products_active` names plus all 1,808 Boots rows, compared field by field against values
+generated on `main` before the branch exists.
+
+**B** — effective: with the path supplied, **1,523 → `supplements`**, **259 → `sports`**, and
+the 26 topicals — *Anua Toner250*, *Numbuzin Toner200*, *Olay Moisture Fluid*,
+*BetterYou Body Spray* named explicitly — **unmoved**.
+
+> **B is what stops a completely broken change passing A.** A change that does nothing at
+> all satisfies A perfectly, and "inert by construction" is exactly the claim A is meant to
+> substantiate — so without B the test proves the opposite of what it is for.
+>>>>>>> 804eeab (docs: item 79 — three word-boundary defects in one design pass, and the third was in the fix)
 
 ---
 
