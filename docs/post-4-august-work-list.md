@@ -6230,6 +6230,28 @@ a real change rather than an edge case. **The split: 1,523 `supplements` · 259 
 
 All 18 allowlist brands are present in the feed.
 
+#### THE THREE SABOTAGES, RUN 13 AUGUST — AND THE MIDDLE ONE IS THE ARGUMENT
+
+Each applied to the real code, run, and reverted:
+
+| Sabotage | Result |
+|---|---|
+| Default `onSupplementsPath` to `true` | **A fails** — 2,829 of 3,601 rows moved without a path |
+| **Make the branch a no-op** | **A PASSES. B fails.** |
+| Invert the veto ordering | **B fails by name**: *"Jude Collagen & Creatine Pelvic Floor Supplements was vetoed as topical"* |
+
+> **The middle one is the whole argument for direction B, demonstrated rather than
+> asserted.** A branch made a no-op passes direction A perfectly — **which is exactly what
+> "inert by construction" looks like when it is broken.** The two are indistinguishable to
+> A, and A is the test that was going to license the deploy.
+
+**The third turns item 79's correct-by-accident property into something executable.** That
+`SUPP_DEVICE` matches two genuine supplements and is harmless only because the form test
+runs first was, until this test existed, **a property nobody had designed and nothing
+enforced** — true by luck and documented in a comment. **It is now a property something
+checks**, and inverting the ordering fails the suite by naming the row it would have
+silently excluded.
+
 #### THE GOLDEN FILE, BOTH DIRECTIONS
 
 **A** — inert: the two-argument form byte-identical across ≥2,000 stratified
@@ -6243,6 +6265,73 @@ the 26 topicals — *Anua Toner250*, *Numbuzin Toner200*, *Olay Moisture Fluid*,
 > **B is what stops a completely broken change passing A.** A change that does nothing at
 > all satisfies A perfectly, and "inert by construction" is exactly the claim A is meant to
 > substantiate — so without B the test proves the opposite of what it is for.
+
+---
+
+### 80. A cast that silences a type error is evidence the type is wrong
+
+**Raised:** 13 August 2026, writing the supplements-path branch · **Sits beside items 70 and
+73**, and is the sharpest instance of the family so far.
+
+#### WHAT HAPPENED
+
+The branch needed to return a new top category. The first draft wrote:
+
+```ts
+top_category: "supplements" as ImportTopCategory,
+```
+
+**`tsc --noEmit` passed.** `ImportTopCategory` was
+`"skincare" | "makeup" | "hair" | "fragrance" | "bath_body"` — **`"supplements"` was not in
+it.** The cast silenced exactly the error the typechecker existed to raise.
+
+#### WHY IT IS SHARPER THAN ITEMS 70 AND 73
+
+| | The gap between disabling and claiming |
+|---|---|
+| Item 70 — a flag firing at 95% | the flag and the reader are different things, one file apart |
+| Item 73 — a diagnostic reimplementing shipped logic | the copy and the original are different files |
+| Item 70's addendum — a script raising into a deaf pipeline | four tools, four layers |
+| **Item 80 — this** | **none. The disabling and the assertion are the same expression.** |
+
+> **`x as T` is simultaneously the claim "this value is a T" and the instruction "do not
+> check whether it is".** Every other instance in this family has some distance between the
+> broken instrument and the confident conclusion — a file, a layer, a tool. Here they are
+> the same eleven characters, and the check ran, was satisfied, and had been disabled by the
+> thing it was checking.
+
+**Nothing downstream would have caught it either.** The value is a legal string; the
+importer writes it to a column with no CHECK constraint (item 75's `products_active` is not
+the only place `top_category` is unconstrained); and the row would have appeared in the
+database as a category the TypeScript union says cannot exist.
+
+#### THE REMEDY
+
+> **A cast that makes a type error go away is evidence the TYPE is wrong, not that the
+> VALUE is fine.** The question to ask is never "is this cast safe?" but "why does the type
+> not already permit this?" — and the answer is usually that the type is stale and the
+> program has moved on.
+
+Here it was exactly that. `supplements` has been a real `top_category` since #232, live with
+93 products, in the nav, the sitemap and `ALL_CATEGORIES` — **and the importer's union had
+never been told.** The fix was one word in the type, not a cast at the call site:
+
+```ts
+export type ImportTopCategory = TopCategory | ExtendedTopCategory | "supplements";
+```
+
+**Deliberately NOT added to `ExtendedTopCategory`**, which is specifically the
+fragrance/bath_body detector's output and is gated by `ENABLED_EXTENDED_CATEGORIES`.
+Supplements is assigned by path, not detected. **A cast would have hidden that distinction
+too** — the second thing it was concealing, and the one nobody would ever have found.
+
+#### THE COST OF THE HABIT, NOT THE INSTANCE
+
+This one was caught within a minute, by checking what the type actually contained rather
+than trusting that a green `tsc` meant agreement. **The general risk is that a codebase
+accumulates casts at exactly the points where its types have drifted from its behaviour** —
+so the typechecker stays green *precisely where the model is most wrong*, and every one of
+those casts was written by someone who had just satisfied themselves the value was fine.
 
 ---
 
