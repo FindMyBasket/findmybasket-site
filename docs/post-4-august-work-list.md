@@ -5818,6 +5818,67 @@ occasion, not the reason.
 
 ---
 
+### 78. Boots coalesce flip: the before-readings
+
+**Taken 13 August 2026, 10:45 UTC, cycle complete** — YesStyle ran 10:00:02, the last of the
+day. **Recorded BEFORE the flip**, because item 74's finding is that an after-the-fact
+reading of the first change cannot be reconstructed once a second lands.
+
+#### The replacement check (item 74)
+
+The 61,913 sole-source check was dropped as unsourceable. **This is the derivable version:
+barcodes in `ean_product_index` supplied by exactly one active, enabled retailer.**
+
+| | |
+|---|---|
+| **Sole-supplier barcodes** | **49,356** |
+| Multi-supplier barcodes | 12,967 |
+| Total indexed barcodes | **62,323** |
+| Sole-supplier share | **79.2%** |
+
+**The movement is the check, not the level.** Boots contributes ~23,000 barcodes to an index
+of 62,323, essentially none of which it currently holds, so sole-supplier share should
+*rise* on the flip — Boots-only barcodes arriving faster than Boots barcodes that match an
+existing supplier. **A fall would mean Boots is duplicating the catalogue rather than
+extending it**, which is the opposite of the supply-side case in item 64.
+
+#### Baseline A, retaken with the complete cycle
+
+| Retailer | runs | mean | range | **sd** |
+|---|---|---|---|---|
+| Debenhams | 3 | 8,882 | 8,175-10,043 | 1,013.2 |
+| Niche Beauty | 6 | 3,155 | 410-4,017 | 1,355.1 |
+| Stylevana | 7 | 1,756 | 1,513-2,470 | 335.3 |
+| Beauty Flash | 7 | 1,326 | 932-1,627 | 322.1 |
+| Gorgeous Shop | 7 | 1,113 | 897-1,735 | 359.0 |
+| Beauty Bay | 7 | 262 | 243-349 | 38.6 |
+| **Boots** | **7** | **153** | **148-159** | **3.4** |
+| Perfume Click | 7 | 74 | 52-100 | 19.2 |
+| YesStyle | 7 | 49 | 43-55 | 4.8 |
+| Escentual | 7 | 40 | 37-**47** | 3.4 |
+| The Organic Pharmacy | 7 | 0 | 0-2 | 0.8 |
+| Atelier De Glow | 7 | 0 | 0-0 | 0.0 |
+
+**Boots: 153 ± 10 for three sigma.** The sd widened 2.1 → 3.4 as the window rolled to
+include Escentual's flip week; Escentual's own series now carries its 47 and its sd doubled
+to 3.4 for the same reason. **Both are the window absorbing a real event, not drift.**
+
+**Downstream detectors, unchanged in ranking:** YesStyle (4.8), Perfume Click (19.2),
+Beauty Bay (38.6) can carry a verdict. Debenhams and Niche Beauty still cannot.
+
+#### What to expect
+
+Per items 62 and 64, and confirmed twice now on Gorgeous Shop and Escentual:
+
+- **`rows_with_ean` 0 → ~23,000**; barcodes stored, from zero. **This is the contribution.**
+- **Net link movement near zero** — Boots resolves 99.2% of admitted rows on tier 0, so only
+  ~188 reach the tier ladder. **A flat 153 is the success case, not a non-event.**
+- `tier1_ambiguous_skipped` appearing from nothing.
+- The fill-versus-stored gap, which is retailer-specific: Gorgeous Shop lost 13.0% of
+  populated GTINs to validation, Escentual 0.08%. **Boots is not predictable from either.**
+
+---
+
 ### 77. A hold whose condition expired, and eight metrics tables with no rows
 
 **Raised:** 13 August 2026, looking for a traffic series to check a Search Console
@@ -5856,6 +5917,75 @@ returns 403)"* — is **also stale**; `feed-diag` was dispatched with this token
 **Two of three blockers expired.** The third stands: *do not arm a writer that has never
 executed on a timer* — which is why step 1 is a dry run, and why that dry run is the
 unblocking action rather than uncommenting the schedule.
+
+#### RESOLVED 13 AUGUST: STEPS 1 AND 2 RUN, SCHEDULE STILL UNARMED
+
+**`metrics_ga4_weekly` has rows. Seven of the eight tables are still empty; this one is
+not.** Step 1 (dry run) and step 2 (`dry_run=false`) both executed on 13 August. **Step 3 —
+uncommenting `schedule:` — deliberately NOT done in the same action**, per the workflow's
+own design: arming is a reviewable act in its own PR, and one manual write before scheduling
+is the point of the sequence.
+
+| week (ISO Mon) | sessions | qualified | comparison views | awin | amazon | other | searches (view) | searches (custom) |
+|---|---|---|---|---|---|---|---|---|
+| 2026-07-20 | 135 | **null** | **null** | 78 | 6 | 1 | 16 | **null** |
+| 2026-07-27 | 159 | 73 | 114 | 26 | 8 | 1 | 19 | **null** |
+| 2026-08-03 | 145 | 85 | 129 | 17 | 12 | 3 | 20 | 20 |
+| 2026-08-10 *(partial)* | 29 | 17 | 19 | 1 | 1 | 0 | 0 | 0 |
+
+**The 10 August row is four days, not a collapse** — 10-13 August, with GA4's 24-48h
+processing lag on top. It is exactly why the puller re-pulls four trailing weeks.
+
+##### THE `[ok]` DOES NOT MEAN WHAT IT LOOKS LIKE
+
+The self-check prints **`[ok] by-network columns sum exactly for every written week`**.
+
+> **That confirms INTERNAL CONSISTENCY ACROSS THE FOUR WEEKS PULLED. It does NOT confirm
+> resolution against the 2026-06-24 boundary, which is out of range.** The puller takes four
+> *trailing* weeks, so the earliest available is 20 July.
+
+**The four-week ceiling is a GA4 constraint — at most four date ranges per request — not a
+setting anyone chose.** Testing the June boundary needs a backfill, not a parameter change.
+**Recorded because `[ok]` beside a boundary discussion will otherwise be read as boundary
+confirmation**, and it is not.
+
+##### THE FIRST BOUNDARY VISIBLE IN THE DATA IT DESCRIBES
+
+`searches_custom_event` is **null for 20 and 27 July, then 20 from 3 August**.
+
+**That is the 5 August custom-definition registration appearing in a data series.** GA4 does
+not backfill a definition, so the column begins when the definition was created — and
+`platform_changes` id 30 says so in prose.
+
+> **Boundaries have been documented all fortnight — in migrations, in comments, in
+> `platform_changes` rows. This is the first one anyone has seen in the data it describes.**
+> A boundary you can see in the series is a different object from a boundary you have to be
+> told about: the first survives the person who wrote it down.
+
+`qualified_sessions` and `comparison_views` null in the 20 July week only is the same thing
+for the earlier definitions — the boundary is *in the data*, not merely beside it.
+
+#### THE TRAFFIC QUESTION IS SETTLED, AND IT WAS ONE EMAIL FROM BECOMING A PREMISE
+
+**Sessions across the three complete weeks: 135, 159, 145. Flat.**
+
+Three independent signals now agree:
+
+| Signal | Reading |
+|---|---|
+| GA4 sessions, 3 complete weeks | **135 · 159 · 145 — flat** |
+| `search_events` / `outbound_clicks` day-rates, Jul → Aug | ~18.3 → ~15.2 and ~9.1 → ~9.4 — **flat within noise** |
+| Search Console structured-data impressions | 604 → 36, **on 2-4 URLs** — one page losing one query |
+
+> **"Traffic is collapsing" was one email away from becoming a premise**, and it would have
+> been a good premise: dated, sourced, from Google, pointing one way for three months. **It
+> was wrong because the series measured two to four URLs**, and nothing in the export said
+> so.
+
+**Recorded plainly because the near-miss is the point.** The figure was real, the reading was
+careful, and the conclusion was still false — and the only thing that caught it was asking
+what population the number described. That is instance 12's question applied before the
+number was used rather than after.
 
 #### THE FINDING THAT MADE ANYONE LOOK
 
