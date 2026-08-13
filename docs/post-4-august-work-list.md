@@ -6335,6 +6335,203 @@ those casts was written by someone who had just satisfied themselves the value w
 
 ---
 
+### 81. Record consent state on the outbound beacon — the only thing that separates four causes
+
+**Raised:** 13 August 2026, from the GA4 client-capture ratio · **Approved to build.**
+`platform_changes` id 34 is the boundary row this item exists to make unnecessary.
+
+#### WHY IT IS THE ONLY MOVE THAT SEPARATES ANYTHING
+
+The GA4-over-server-side ratio has four inputs — refusals, ad blockers, client-capture
+regressions and bot traffic — and **three of them share one signature: gtag never ran.**
+Nothing stored can tell them apart, and consent is the one that has never been measurable
+at all: **a refusal is a purely client-side event that reaches no server, ever.**
+
+> **A `granted` beacon arriving while GA4 stays silent is a BLOCKER. A `denied` beacon is a
+> REFUSAL.** That single distinction splits the two causes people actually want to
+> separate, and it is unavailable today because the click row does not say which.
+
+#### THE CHANGE, AND IT IS SMALL
+
+`sendOutboundBeacon` already posts `{ productId, retailerId, awinMid, price, source, path }`.
+**One field** — `consent`, read from `localStorage['fmb-cookie-consent']` in the same page —
+**one column**, **one line** in `app/api/track/outbound/route.ts`. Three values: `granted`,
+`denied`, `undecided`.
+
+`undecided` matters as much as the other two: item 17's whole analysis turns on the visitor
+who has not yet answered the banner, and that population is currently invisible on both
+sides of the ratio.
+
+#### THE PRIVACY REASONING, STATED RATHER THAN ASSUMED
+
+> **Recording "this visitor declined" is strictly LESS information than the click row
+> already carries.** The row already records that a specific person clicked a specific
+> product to a specific retailer at a specific time. Adding their banner state introduces
+> **no new identifier, no third-party transmission, and no new category of data** — it
+> annotates a record that already exists with a fact about how it was collected.
+
+**That reasoning belongs in the PR, not only here**, because it is the kind of change that
+looks like a privacy expansion at a glance and is not. It must be argued in the open rather
+than slipped in under a metrics heading.
+
+**And the banner copy must be checked against it before writing.** If the banner claims
+anything that this contradicts, the copy is the constraint and the field is the thing that
+changes.
+
+**Contrast with item 82, which is the reason these are separate items.** This adds a field
+to a beacon that already fires without consent. **Item 82 would set a 180-day cookie**, and
+the banner's own design note says consent is stored in `localStorage` *"since cookies need
+consent"*. That reasoning applies to that cookie and not to this field.
+
+---
+
+### 82. `session_id` has been NULL since inception, and the funnel it exists for has never worked
+
+**Raised:** 13 August 2026 · **A DEFECT, and it CANNOT SHIP AS A BUG FIX.** Blocked on a
+consent decision that is Robbie's, not an implementation choice.
+
+#### THE FULL SIZE OF IT
+
+| | rows | with `session_id` |
+|---|---|---|
+| `outbound_clicks` | **406** | **0** |
+| `search_events` | **769** | **0** |
+
+**Both null since inception.** And `lib/session.ts` states the capability in its own header:
+
+> *"Anonymous session id for stitching funnel events (search -> clickout) without PII… This
+> lets you answer 'of the sessions that searched, how many clicked out' without identifying
+> anyone."*
+
+**That question has never been answerable. Not once.**
+
+#### THE CAUSE IS ONE MISSING CALL
+
+Everything else is wired:
+
+- `app/api/track/outbound/route.ts:24` passes `sessionId: getSessionId()`
+- `lib/events.ts:69,92` writes `session_id: e.sessionId ?? null`
+- `lib/session.ts` exports **`ensureSessionId()`**, which sets the `fmb_sid` cookie
+
+**`ensureSessionId()` is called from nowhere.** So `getSessionId()` reads a cookie nothing
+sets and returns `null` every time. The plumbing is complete except for the one call that
+creates the value it carries.
+
+#### THE COMMENT THAT ALREADY KNEW — ITEM 75'S SHAPE, THIRD INSTANCE
+
+`app/app/RoutineBuilder.tsx:220` says so, correctly, and **cites 335 rows against today's
+406 — which dates it.** Someone diagnosed this exactly, wrote it down accurately, and filed
+it in the routine builder, **where the failure does not pass.**
+
+| | Correct diagnosis, filed where the failure never travels |
+|---|---|
+| 1 | `fmb_resolve_product`'s comment on `products_active` not filtering `in_stock` — item 75 |
+| 2 | `GONE_IDS`' own header saying to regenerate before the flip, while the flip happened elsewhere — item 51 |
+| 3 | **`RoutineBuilder.tsx:220` on `session_id` being NULL** |
+
+> **Three instances. The pattern is not that people fail to diagnose problems — they
+> diagnose them correctly and write them down somewhere the next person will not be
+> standing.** In all three the right place was the artefact itself: the view, the list, the
+> session module.
+
+#### THE OPTIONS, REPORTED RATHER THAN CHOSEN
+
+The consent posture differs per option and so does the analytical value. **This is Robbie's
+decision.**
+
+| Option | Privacy posture | Analytical value |
+|---|---|---|
+| **Consented first-party cookie** (`ensureSessionId` as written, 180 days) | Needs banner consent, so it only exists for consenting visitors — **the same population GA4 already covers**, which is the group we least need it for | Full cross-session funnel, but on a biased subset |
+| **`sessionStorage` identifier, dies with the tab** | No consent needed under most readings — not persistent, not cross-site | Single-visit funnel only. Answers "of the sessions that searched, how many clicked out" for one visit, which is the question the header actually poses |
+| **Server-derived** (hashed IP + user-agent + salt, rotating daily) | Set by us, never stored raw; still likely personal data under UK GDPR, and the salt rotation is the whole argument | Works for non-consenting visitors, which is precisely the gap — but the strongest claim to defend |
+
+**The middle option deserves noting for one property the others lack: it covers refusing
+visitors without a consent gate**, because it never persists. Whether that is sufficient
+depends on the question being asked, and the module header's question is single-visit.
+
+**Do not implement any of them as part of item 81.** They are different changes with
+different arguments, and 81's field needs no consent decision precisely because it adds no
+identifier.
+
+#### DEPENDENCY, NAMED SO IT IS NOT DISCOVERED LATER
+
+**If any of these three lands, `public/privacy.html` §2.2 must be revised IN THE SAME PR.**
+That section now ends *"and it is not linked to you"* — the strongest true statement
+available today, and true only because `session_id` is NULL on every row.
+
+- The **consented cookie** falsifies it outright: a 180-day identifier links the row to a
+  browser, and it also falsifies *"sets no cookies of its own"*.
+- **`sessionStorage`** falsifies it within a visit.
+- The **server-derived** option falsifies it while arguably not setting a cookie at all,
+  which is the most easily missed of the three.
+
+**A defect fix that changes what a legal page truthfully says is not a defect fix.** That is
+the whole reason this item cannot ship as one.
+
+---
+
+### 83. Server-side click logging has never been disclosed
+
+**Raised:** 13 August 2026, while writing item 81 · **Live since the beacon shipped.**
+**Made visible by that change rather than caused by it**, which is the only reason it is
+being recorded now rather than earlier.
+
+#### THE GAP
+
+`public.outbound_clicks` has **406 rows**, written on every outbound click **regardless of
+consent**, carrying product, retailer, `awin_mid`, price, **`path`**, `source` and
+timestamp.
+
+**`privacy.html` §2.2, "Information we collect automatically", listed two things:** analytics
+data via GA4 *"but only if you accept analytics cookies"*, and cookie preferences stored
+locally. **Server-side click logging appeared nowhere in the policy.**
+
+> **`path` is the material omission.** §2.2 promises *"pages viewed"* only under GA4 and only
+> with consent. **`outbound_clicks.path` records a page view by another name, without
+> consent** — `/product/8288`, `/app`. A disclosure that omitted `path` would have left
+> standing the exact claim it existed to correct.
+
+#### WHY THIS CHANGE FORCED IT
+
+Item 81 adds a `consent` column. **A row saying `denied` documents collection from someone
+who declined** — lawful on legitimate interest, but far harder to defend against an
+*undisclosed* collection than a disclosed one. The field did not create the exposure; it
+made it legible.
+
+**The policy sentence therefore ships in item 81's PR**, not after it.
+
+#### THE WORDING HISTORY, RECORDED BECAUSE IT IS THE FORTNIGHT'S SHAPE ON A LEGAL PAGE
+
+Two drafts were approved and both were wrong. Neither was careless; both were corrected by
+**measuring against the row rather than reasoning about it.**
+
+| Draft | What it claimed | How it failed |
+|---|---|---|
+| First | *"the product, the retailer and the price shown… does not use cookies or third-party analytics"* | **Omitted `path`, `source` and `session_id`.** The omission was the material one — see above |
+| Second | *"…does not use cookies"* | **True in effect, false in intent.** `getSessionId()` reads `fmb_sid` BY DESIGN; it returns null only because item 82's defect means nothing sets it |
+| Shipped | *"sets no cookies of its own and is not shared with third-party analytics, and it is not linked to you"* | Verifiable, and survives item 82 being fixed |
+
+> **A claim that rests on a bug changes when the bug is fixed.** *"Does not use cookies"* was
+> load-bearing on `ensureSessionId` never being called. **"Sets no cookies of its own" is a
+> statement about the code's behaviour rather than about the defect's**, and stays true
+> either way.
+
+**And the reader's-eye failure is the one that nearly shipped.** `sendBeacon` is same-origin,
+so the browser attaches whatever cookies exist — Supabase auth cookies on `/product/*`. The
+route ignores them entirely. *"Does not use cookies"* invites a reader to conclude none are
+involved, and in the HTTP sense they are.
+
+**This is the same shape as everything else this fortnight, arriving on a legal page.** A
+claim that reads as obviously true, is approved by the person who owns it, and turns out to
+describe something narrower than the artefact it is about — caught only by opening the
+artefact. **The difference here is where a wrong one ends up published.**
+
+---
+
+
+
+---
+
 ## Referenced, not duplicated: these are boundaries, not tasks
 
 Both are already recorded in `platform_changes` with their sequencing in the row
