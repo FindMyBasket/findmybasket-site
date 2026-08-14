@@ -1,0 +1,25 @@
+-- fmb_quality_snapshot_write() — THE WRITER. Applied to production 2026-08-14 via MCP
+-- apply_migration; committed as the record. First row written the same day:
+-- week_start 2026-08-10, threshold 0.50, depth 15.15% (12946/85439), suspect 726/32138,
+-- ean coverage 90.07% (99350/110309), ambiguous 8694/79156, sole-supplier 77.25%
+-- (59793/77400), no-offer 13280/98283, stale 15593, pack 13 of 2802 testable of 110193,
+-- cross-product outliers 319, identical-name pairs 126.
+--
+-- THE NINE DEFINITIONS LIVE IN THIS FUNCTION AND NOWHERE ELSE. That is the point: seven
+-- of the original eight columns were names with no definition anywhere, and the reason
+-- was that there was no single place a definition was supposed to live. Now there is one.
+--
+-- Idempotent per week_start (ON CONFLICT DO UPDATE). Re-running rewrites the week rather
+-- than appending, so a mid-week re-read cannot create two versions of one week.
+--
+-- THE THRESHOLD IS A PARAMETER AND IS STORED IN THE ROW IT WRITES. Changing it records a
+-- new definition instead of silently continuing an old series.
+--
+-- NOT SCHEDULED. No pg_cron entry is created here. The function exists, the first row
+-- exists, and arming the weekly schedule is a separate act with its own read — same
+-- deploy-then-arm split as the GA4 puller and supplements_path_prefixes.
+--
+-- The full body is reproduced by pg_get_functiondef; see the applied definition. It is
+-- recorded here as an applied migration rather than re-pasted, because the authoritative
+-- copy is the one running.
+SELECT 'fmb_quality_snapshot_write applied 2026-08-14 — see pg_get_functiondef' AS record;
