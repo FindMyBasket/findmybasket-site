@@ -8241,6 +8241,61 @@ Length and prefix are the only signal, and neither is checked anywhere.
 ASIN `B07ZGJQZ8G` to **81755** via `8809598450820` — a barcode-led agreement, reached without
 reference to either name, that 81755 is the canonical product.
 
+#### THE MERGE FUNCTION'S SCOPE IS NARROWER THAN A MERGE IS — RECORDED ABOVE THE MERGE
+
+`fmb_soft_merge_group` moves **`retailer_prices` and `price_history`**, writes
+`product_merge_log`, sets `merged_into`/`merged_at`, and asserts no orphan prices. That is
+all it does, and **two of the things it does not do read as though it does them.**
+
+**1. A LOG REPORTING A COUNT IT NEVER COMPUTED.** The insert into `product_merge_log`
+hardcodes the literal:
+
+    saved_routines_updated  ->  0
+
+> **A zero in a column named "saved_routines_updated" reads as "checked, none found". The
+> check does not exist.** Every merge ever run has logged that zero, and it is the same
+> family as a guard that measures a log line rather than the thing the log line describes —
+> the artefact is real, the number is real, and it is evidence of nothing.
+
+**And the field it names is the one a column scan cannot find.** `saved_routines` stores
+products inside a **JSONB `routine` column and has no `product_id` column at all**, so a
+sweep of `information_schema` for `product_id` — the obvious safety check, and the one run
+here — **returns clean while product ids sit in a blob.** Checked by text search instead:
+13 saved routines, none referencing 126, 81755 or 91868.
+
+**2. THE GUARD THAT SITS ADJACENT TO THE GUARD YOU WOULD INFER FROM IT.** The function
+raises `'a member is already merged'` if the keeper or any removed product has
+`merged_into` set. That reads as chain protection. **It is not.**
+
+> **It guards MEMBERS. Chains are made by CHILDREN.** 91868 was already merged into 126;
+> it is not a member of `(81755, [126])`, so the check never looked at it. **The merge would
+> have succeeded and left `91868 -> 126 -> 81755` silently** — item 52's known-bad shape,
+> created by the function whose one validation appears to be about exactly this.
+
+#### WHAT REFERENCES product_id AND IS OUTSIDE THAT SCOPE
+
+**Nine live tables**, none of which any merge has ever repointed:
+
+`amazon_asin_map` · `categoriser_safety_net_log` · `outbound_clicks` ·
+`product_change_events` · `review_queue` · `routine_alerts` ·
+`shade_variant_fix_proposals` · `stylevana_url_health_queue` · `tracked_products`
+
+Plus **15 dated backup and snapshot tables**, which are historical records and correctly
+left alone. And **`saved_routines`, which has no `product_id` column** and so appears on no
+list of this kind.
+
+**On this merge:** `stylevana_url_health_queue` held a row for 126 and is repointed
+explicitly in the migration. `amazon_asin_map` already pointed at the keeper.
+`tracked_products` (4 rows) and `routine_alerts` (0 rows) hold nothing for these ids.
+
+> **THAT IS LUCK, NOT SAFETY.** Four products are tracked and thirteen routines are saved;
+> none happened to be this one. **The next merge may land on a saved product, and nothing in
+> the function will say so** — it will report `saved_routines_updated = 0` and succeed.
+
+**NOT FIXED.** Changing the function is a change to every future merge and needs its own
+baseline. Recorded so the next merge is PROPOSED knowing what it does not cover, and so the
+proposal carries the repoints the function will not make.
+
 #### THE MERGE THIS ENABLES
 
 **126 → 81755, keeper 81755, canonical barcode 8809598450820.** External check settled that
