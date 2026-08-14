@@ -7766,6 +7766,19 @@ The residual **4** are genuine single products Amazon holds no barcode for: COSR
 Whitehead Power Liquid, medicube Salmon DNA PDRN mask, and two Dr.Melaxin TX items. Those
 *are* manual-pass work.
 
+#### THE TABLE SHIPS IN A MIGRATION; THE 250 ROWS DO NOT
+
+`20260814160000_amazon_asin_map.sql` creates the table and loads nothing. The rows went in
+separately and are reloadable from `scripts/amazon-asin-map.mjs`.
+
+> **Harvest output is re-derivable MEASUREMENT. Shipping it as DDL freezes a dated snapshot
+> into schema history**, where it can never be corrected without a second migration and where
+> it will still be asserted as fact years after the listings have rotated.
+
+The table is the artefact worth version-controlling; its contents are a reading taken on
+14 August. Same rule that keeps counts, prices and product ids out of committed copy — this
+is the schema-history instance of it.
+
 #### THE TRUNCATION BOUND — 155 IS A FLOOR
 
 | brand | ASINs enumerated | complete? |
@@ -7805,14 +7818,57 @@ partnerTag**. The error names a field the caller supplied, so it reads as a cred
 
 > **Every brand then reports "0 items" and the harvest looks like four brands with no
 > products.** The only thing separating "this brand has nothing" from "this call was never
-> validly made" was printing the 400 body — which is the same family as items 84 and 87, and
-> the reason the harvester logs the error rather than counting the result.
+> validly made" was printing the 400 body.
+
+**AND THAT IS THE SAME SHAPE AS EVERYTHING ELSE ON THIS LIST.**
+
+> **A failure that renders as a plausible empty result.** Items 48, 51, 54 and 56 are clean
+> outputs that are quietly incomplete. Item 84 is a lookup returning nothing scored as "the
+> answer is none". Item 87 is a whitelist addition that admits nothing counted as though it
+> would. Item 91 is an unwired feature indistinguishable from a dormant one. **This is a
+> 400 on an unsent field rendering as four empty brands.**
+>
+> The mechanisms are unrelated. **The signature is identical every time: zero, arriving
+> without complaint, in a shape the reader was already prepared to accept.** A harvest of a
+> brand with no products, a category with no rows, a config with no effect — each is a
+> perfectly ordinary thing to find, which is precisely why none of them prompts a second
+> look.
+
+The harvester therefore **logs the error body rather than counting the result**, and prints
+`enumerated / returned / absent / no identifier` separately so a zero in any one of them has
+a neighbour to be checked against.
 
 ---
 
 ### 96. One barcode, several products: 8,606 EANs, and it is ours
 
 **Raised:** 14 August 2026 · **Surfaced by Amazon, caused by us.** Read-only.
+
+#### THE SPLIT LEADS, BECAUSE IT DECIDES WHAT THIS IS
+
+**8,606 barcodes resolve to more than one product. They are not one population:**
+
+| | EANs | what they are |
+|---|---:|---|
+| all products share one brand | **7,907 — 91.9%** | **duplicate products — MERGE CANDIDATES** |
+| products span brands | **699 — 8.1%** | **mostly NORMALISATION ARTEFACTS** |
+
+> **A GENUINE BARCODE COLLISION AND AN UNNORMALISED BRAND STRING PRODUCE IDENTICAL ROWS.**
+> Counting them together overstates the alarming class by roughly **twelvefold**.
+
+Sampled, the cross-brand cases are the same duplicate wearing two brand spellings:
+`Aramis Intuition EDP` filed under both **Aramis** and **Estee Lauder**; `Colour Me Black`
+under **Colour Me** and **Milton Lloyd**; Metal Detox under **L'Oréal Paris** and **L'Oréal
+Professionnel**; `NUXE Reve de Miel` under **NUXE** and **`Gorgeous Shop`** — *a retailer
+name sitting in a brand field*.
+
+**One case in the sample is a real collision:** `192608243214` on a Doll Smash lip oil and a
+Morphe lip mousse.
+
+> **So ~92%, and most of the remaining 8%, are one defect: THE SAME PRODUCT ENTERED TWICE.**
+> The barcode is not wrong. The catalogue has two rows for one thing.
+
+#### HOW IT SURFACED
 
 The ASIN harvest hit 8 ASINs whose barcode resolved to more than one catalogue product. The
 worst is **`8809525246014` on FOUR Beauty of Joseon products** — Ground Rice and Honey Glow
@@ -7831,33 +7887,17 @@ Mask, plus **three** separate Centella Asiatica Calming Mask rows (3075, 142666,
 
 **This is the same population tier 1 refuses to link.** Boots' 14 August run skipped
 **1,069** rows as `tier1_ambiguous_skipped`, and item 93 records that the coalesce flip's
-largest effect was suppressing 217 duplicate creates. **The guard is behaving correctly and
-it is not the fix** — it declines to guess, every night, on a defect that is not getting
+largest effect was suppressing 217 duplicate creates.
+
+> **THE TIER-1 GUARD IS CORRECT AND IT IS NOT THE FIX. It refuses to link them, which is
+> right. It leaves them unresolved, which is the item.**
+
+A guard that declines to guess is doing its job; it is not doing anyone's else's. Every night
+it re-encounters the same 8,606 barcodes, makes the same correct refusal, and the underlying
+duplication is unchanged in the morning. **Nothing in the counter distinguishes "skipped
+because ambiguous" from "skipped because ambiguous for the four hundredth time"** — it
+declines to guess, every night, on a defect that is not getting
 smaller.
-
-#### THE SPLIT MATTERS, AND MOST OF IT IS NOT WHAT IT LOOKS LIKE
-
-| | EANs | |
-|---|---:|---|
-| all products share one brand | **7,907 (91.9%)** | duplicate products — **merge candidates** |
-| products span brands | **699 (8.1%)** | looks alarming, mostly is not |
-
-**Sampled, the cross-brand cases are overwhelmingly BRAND-NORMALISATION artefacts of the
-same duplicate, not two products sharing a barcode:**
-
-- `Aramis Intuition EDP 50ml` filed under both **Aramis** and **Estee Lauder**
-- `Colour Me Black EDP` under both **Colour Me** and **Milton Lloyd**
-- Metal Detox under **L'Oréal Paris** and **L'Oréal Professionnel**
-- `NUXE Reve de Miel` under **NUXE** and — **`Gorgeous Shop`**, a *retailer name sitting in a
-  brand field*
-
-> **A cross-brand barcode collision and a brand string we failed to normalise produce exactly
-> the same row.** Counting them as one population overstates the scary class roughly
-> twelvefold, and the honest reading is that ~92% and most of the remaining 8% are the same
-> defect: **the same product entered twice.**
-
-Only one sampled case looks like a genuine collision: `192608243214` on a Doll Smash lip oil
-and a Morphe lip mousse.
 
 #### NOT ACTIONED
 
