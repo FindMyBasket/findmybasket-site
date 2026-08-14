@@ -3032,6 +3032,7 @@ It does not reach "built and unarmed since 5 August", which is checkable in a di
 > time the claim was repeated.**
 
 | 14 | "Boots is the only `storage_passthrough` retailer in the rollout. Beauty Flash, Gorgeous Shop, Escentual and Organic Pharmacy are all inline." Robbie's, in the brief; repeated assistant-side into a report and adopted as the leading hypothesis | **All four are `storage_passthrough`.** `retailer_import_config.staging_mode` reads `storage_passthrough` for retailers 8, 23, 27 AND 30. The premise was false, and it was the entire reason the hypothesis was plausible |
+| 15 | "Zero plumbing" — that `inferCategorisationForImport`'s new 4th argument needed no wiring at the AWIN call site, because `categoryPath` is already in scope there. Robbie's, in item 72's plumbing note, citing the call site as line **2193** | **The call is at 2286, and it passed TWO arguments.** `categoryPath` being in scope is necessary and not sufficient: nothing read `supplements_path_prefixes` and nothing passed it. The line reasoned about was not the line that runs, so the check confirmed a fact about the wrong statement. Wired 14 Aug 2026 — item 91 |
 
 #### INSTANCE 14: A HYPOTHESIS DISPROVED BY THE FACT THAT MADE IT PLAUSIBLE
 
@@ -7251,3 +7252,137 @@ omits **746 of 2,228** values as unmeasured; one day's feed, with measured drift
 
 **Boots remains the first source and its sequence is unchanged.** One retailer's supplements
 launch at a time.
+
+---
+
+### 91. A guard whose passing is consistent with two opposite states
+
+**Raised:** 14 August 2026 · **Fixed the same day.** `import-awin-feed/index.ts`,
+`lib/__tests__/supplements-path.test.ts`
+
+> **AN INERTNESS PROOF AND A WIRING GAP ARE INDISTINGUISHABLE FROM OUTSIDE. BOTH OUTPUT
+> "NOTHING CHANGED".**
+
+`supplements_path_prefixes` shipped in `#256`. Between then and 14 August:
+
+    grep "supplements_path_prefixes|onSupplementsPath" import-awin-feed/index.ts  -> nothing
+    grep "inferCategorisationForImport"                import-awin-feed/index.ts  -> (name, brand)
+
+**No caller anywhere passed the fourth argument.** `onSupplementsPath` took its `false`
+default on every row of every retailer, the branch was unreachable, and **writing a prefix
+into Boots' config would have produced a clean, silent, entirely convincing no-op** — the
+change that the migration itself calls "the change that carries risk".
+
+#### THE SHAPE, WHICH IS THE FINDING
+
+This is not the familiar failure. **It is not a guard that cannot fail** — items 48, 51, 54,
+56, 60, 67 — and it is not item 70's guard that fires so often it trains dismissal.
+
+> **It is a guard whose PASSING is consistent with two opposite states: the feature is safely
+> dormant, or the feature was never connected.** The assertion is true in both. Nothing about
+> a green result distinguishes them, and the deploy/activation split rested entirely on
+> reading it as the first.
+
+`supplements-path.test.ts` direction A asserts the two-argument form is byte-identical across
+3,601 rows. **That is exactly what "no caller passes four arguments" looks like.** The test
+built to prove the deploy was safe doubles as proof the feature was never plugged in, and it
+cannot tell you which it is proving.
+
+**The file had already anticipated half of this.** Its own header says: *"WITHOUT B, A IS
+SATISFIED PERFECTLY BY A CHANGE THAT DOES NOTHING AT ALL."* Direction B was added for that
+reason and it is correct — but **B supplies the argument itself.** B closes the gap at the
+FUNCTION boundary and leaves it open at the CALL-SITE boundary, and a unit test cannot see a
+call site.
+
+> **Knowing the shape was not enough to be safe from it.** The author reasoned the failure
+> through, built the guard it implied, and the guard landed one boundary short of where the
+> failure actually lived.
+
+#### DIRECTION C
+
+A **source** assertion, because that is where the defect was:
+
+    assert.ok(argCounts.some(n => n >= 4),
+      "...DIRECTION A WILL STILL PASS IN THIS STATE — that is why this test exists.")
+
+**Verified by reverting the call to two arguments: C fails, A still passes.** A guard never
+seen to fail is a guard nobody has tested.
+
+#### THE SECOND HALF: TWO CONFIG VALUES THAT MUST MOVE TOGETHER
+
+`category_path_must_contain` is applied at `index.ts:1979` and `continue`s the row **before
+the classifier is reached at 2350**. Boots has one, chosen for beauty, and its intended
+supplements leaf is not in it. **So even fully wired, setting `supplements_path_prefixes`
+alone still changes nothing** — and nothing in the migration, item 71 or item 72 said so.
+
+Now self-reporting: the importer computes which configured prefixes `category_path_must_contain`
+excludes, `console.warn`s them, and returns `supplements_path_unreachable` in the response
+alongside a new `on_supplements_path` counter.
+
+> **A zero on that counter is the signature of an unwired feature as much as an inactive one
+> — which is the whole finding, so the counter ships with the list that tells them apart.**
+
+#### MATCHER SEMANTICS, STATED RATHER THAN ASSUMED
+
+`isOnSupplementsPath` uses case-insensitive **`startsWith`**; `isPathIncluded` uses
+case-insensitive **`includes`**. Deliberate: the column is named *prefixes*, and this one
+drives a classification override that bypasses the supplement denylist, so a substring match
+would give it a wider blast radius than the column's own comment promises. **Documented at
+both sites, because a silent mismatch between two path matchers in one importer is the class
+of defect this whole change came out of.**
+
+#### STATUS
+
+**Wired, tested, not activated.** The migration is still unapplied and every retailer's
+prefix list is still empty. Nothing is on the import path.
+
+---
+
+### 92. Boots resized on the shipped rule: ~1,715, not ~900
+
+**Raised:** 14 August 2026 · **Read-only.** feed-diag runs `31790827267`, `31791017515`.
+
+Section 5 no longer reimplements the rule — it **imports `isSupplementPathTopical`**. Same
+feed, same prefix, the shipped classifier:
+
+| Boots leaf `… Fitness & Nutrition > Vitamins & Supplements` | rows |
+|---|---:|
+| admitted by the prefix | **1,743** |
+| supplements per the shipped rule | **1,715** |
+| topical rows arriving alongside | **28** |
+| of the supplements, `EXCLUDE_PATTERNS.supplements` would drop | 312 (18.2%) |
+
+**~900 → ~1,715.** The old figure came from a v1.0 copy with no sports tokens — sports moved
+into scope two days *before* that measurement — and a topical veto containing `oil`, `gel`,
+`butter`, `wash`, which are application words on a beauty path and **dosage forms on a health
+one**.
+
+**Copying v1.1 would NOT have fixed it.** v1.1's `APPLY` list still contains `oil` and `gel`.
+The shipped path-first branch uses the far narrower `SUPP_TOPICAL_FORM`
+(`serum|toner|cream|lotion|mask|shampoo|conditioner|moistur*|body spray`) precisely because a
+row already known to be on a supplements path needs a different question asked of it.
+
+> **That is the substance of the feature, and no reimplementation was going to capture it by
+> matching regexes. The fix was not a better copy — it was to stop keeping one.**
+
+#### AND IT INVERTS THE MIGRATION'S REASON FOR EXCLUDING THE SUBTREE
+
+The column comment justified the leaf over the subtree as *"the Health Care subtree would
+admit 2,179 non-supplement rows"*. Measured on the shipped rule, the subtree admits **3,145
+rows of which 3,072 classify as SUPPLEMENTS** — blood-pressure monitors, incontinence aids,
+supports and braces among them — with only 73 rejected as topical.
+
+**The shipped path-first rule has no name-based supplement test at all. It trusts the path.**
+So the danger is not that the subtree admits non-supplements alongside; it is that the rule
+would **call almost all of them supplements**.
+
+> **Right conclusion, wrong mechanism, and the wrong mechanism was the one written down.**
+> Anyone re-deriving "is the subtree safe?" from the stated reason would have been looking
+> for a contamination ratio, and the real answer is that the ratio is not the question.
+
+#### WHAT DOES NOT MOVE
+
+**The decision.** Item 47 instance 12 records that proceeding at ~900 was decided on the
+commercial argument rather than the count, and doubling a number that nothing rested on
+changes nothing. **The figure should simply stop being quoted as measured** — including in
+the migration comment, now amended to say so.
