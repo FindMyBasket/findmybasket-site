@@ -7907,3 +7907,137 @@ measurement. Recorded so the next person to meet `tier1_ambiguous_skipped` finds
 what it is skipping, and so the Amazon map's 8 `ambiguous` rows are read as a symptom rather
 than a mapping failure. Their `product_id` is the **lowest matching id and explicitly not a
 decision** — the row's `notes` says so.
+
+---
+
+### 98. A guard correct by design and blind to the case that motivated it
+
+**Raised:** 14 August 2026 · **Robbie found the defect on the site.** Nothing detached.
+
+The ASIN name matcher gained a pack-count discriminator on 14 August, written for exactly
+one failure family: **a single mapped onto a multi-pack.** Hours later that family turned up
+live on product 6174 — and the discriminator does not catch it.
+
+| row on 6174 | product pack | row states | flagged? | clickout |
+|---|---:|---:|---|---|
+| Stylevana **£5.90** | 4 | **nothing** | **NO** | one mask |
+| Atelier De Glow £14.00 | 4 | 1 | yes | one sheet |
+
+> **IT CATCHES THE £14 ROW NOBODY WOULD CLICK AND MISSES THE £5.90 ROW THAT IS THE HEADLINE
+> PRICE.** The one it flags is the eighth-cheapest of nine and invisible in the comparison.
+> The one it misses is the number on the page.
+
+#### AND THE DESIGN CHOICE THAT CAUSES IT IS STILL CORRECT
+
+The rule penalises a pack mismatch **only when both sides state a count** — *"an unstated
+count is unknown, not one."* Stylevana's row states none, so it never fires.
+
+**Treating "unstated" as 1 would catch this row and misfire on every single-unit product
+that simply does not say so** — which is most of them. The alternative is worse, measurably
+and by a wide margin. **The rule should not change.**
+
+> **THIS IS ITS OWN SHAPE, NOT A TUNING PROBLEM. A guard can be correct by design, sound in
+> its reasoning, right to keep — and blind to the exact case that motivated it.**
+>
+> It is not item 91's *passing is consistent with two opposite states*: this guard's silence
+> is truthful, because the data genuinely does not say what pack the row is. It is not
+> item 70's *fires so often it trains dismissal*: it fires rarely and accurately. **It is a
+> guard whose precondition — that both sides state a count — is absent precisely where the
+> damage is greatest**, because a retailer selling a single under a multi-pack's name has no
+> reason to state the count at all.
+
+**Where the correction has to come from instead:** the row carries no `ean` and no `mpn`, so
+it reached 6174 through name or URL matching with no identifier to check it against. The
+signal that would have caught it is not in the name at all — it is that **Stylevana lists
+this product three times and we placed the three listings on three different products**
+(46269 → 982 correctly, 68593 → **6174 wrongly**, 84491 → 93127 correctly). A same-retailer
+duplicate-listing check sees that; a pack-count comparison never could.
+
+---
+
+### 99. Pack-size mismatch across the catalogue: seven confirmed inside a 2.8% window
+
+**Raised:** 14 August 2026 · **Read-only. A floor on a class of unknown size.**
+
+> **THE BOUND LEADS, NOT THE COUNT. Only 3,658 of 129,506 live retailer rows — 2.8% — state
+> a pack count on BOTH the product name and the row's URL, which is what the test requires.
+> Everything below is measured inside that window.**
+>
+> **The case that started this is not in the window.** 6174's Stylevana row states no count
+> in its URL and therefore cannot be tested by the very detector written to find it.
+
+| | |
+|---|---:|
+| live rows scanned | 129,506 |
+| **testable at all (both sides state a count)** | **3,658 — 2.8%** |
+| mismatched | 81 rows / 77 products |
+| mismatched **and smaller** **and the cheapest in-stock row** | 19 |
+| **of those 19, confirmed genuine by eye** | **7** |
+
+**The seven** — all the same shape as 6174, all with the cheap wrong row as the headline
+price: four **COW soap** multi-packs against Stylevana `…-1-pc` rows (£4.79–£7.79);
+**81482** ETUDE 5-mask bundle against a Stylevana **`deal-…-1pc`** row at **£1.69**;
+**94098** NINELESS 5ea against `…-1ea` at £1.44; **92401** numbuzin 5-pack against `…-4pc`.
+
+**37% precision on the sharpest bucket. The eleven false positives, every cause:**
+
+| cause | example |
+|---|---|
+| decimal split by hyphen normalisation | `4x2.5g` → "4x2 5g" → read as 2 |
+| decimal split, again | `6 x 1.8ml` → read as 1 |
+| "one pack **of** N" read as pack 1 | `1pack 48 patches` |
+| same | `1pack 60pcs` |
+| pack token in the PRODUCT name | Milk Touch `6s` against url `60pcs` |
+| transposed dimensions | `10 x 6ml` vs `6 x 10ml` (×3 rows) |
+| **a year read as a pack count** | `Beauty Box **2025**` → 2,025 |
+| multiplicative count | `16pcs 5ea` = 80, read as 16 |
+| **matched inside a UUID** | `…-07ea-4095-8ae4-…` → read as "7ea" |
+
+> **THE UUID CASE IS ITEM 95'S OPAQUE-IDENTIFIER TRAP IN A NEW PLACE.** There it was
+> `skitbdn00001` scored as a zero-token name; here it is a GUID fragment scored as a pack
+> count. **Same mistake, different regex, different file, three weeks apart: a run of
+> characters that merely LOOKS like the thing being extracted.** Any extractor run over an
+> opaque identifier will find something, and finding something is not evidence.
+
+**Not built, not scheduled.** The detector exists only as the query in this item. At 37%
+precision it is a research aid, not a guard, and shipping it as one would put a 63%
+false-positive stream in front of whoever reads it — item 70's failure mode exactly.
+
+#### STYLEVANA IS 15 OF THE 19, AND `deal-` APPEARS IN TWO SEPARATE CASES
+
+Both 6174 and 81482 are Stylevana `deal-` prefixed listings that duplicate a single-unit
+product onto a multi-pack. **Noted, not investigated.** It looks like a specific feed
+behaviour rather than a general matching problem, and it deserves its own scope.
+
+#### 92406 — FOUND BY A DETECTOR LOOKING FOR SOMETHING ELSE
+
+Product 92406 is *numbuzin No.1 Pantothenic B5 Hyaluronic Active Cleansing*; its Stylevana
+URL is `…numbuzin-no-1-dewy-glow-spa-sheet-mask-27g-4ea`. **A different product entirely.**
+
+> **That is a MIS-ATTACHMENT, not a pack mismatch**, and it is in this list only because the
+> two numbers happened to disagree. A detector aimed at pack counts surfaced a wrong-product
+> match as a side effect — **which says the wrong-product population is not being measured by
+> anything, and turned up here by luck.**
+
+---
+
+### 100. One product, two manufacturer barcodes — the inverse of item 96
+
+**Raised:** 14 August 2026 · **Benign. Recorded so it is not mistaken for item 96.**
+
+Product 6174 carries **two distinct EANs across its retailers** — `8800256114399` (Gorgeous
+Shop, Beauty Flash, YesStyle, Atelier) and `8800289474873` (Debenhams, Perfume Click,
+Beauty Bay, Superdrug) — **both on genuine 4-packs.**
+
+| | |
+|---|---|
+| **item 96** | many products sharing ONE barcode — 8,606 barcodes, 11.1%. Ambiguous, blocks tier 1 |
+| **this** | ONE product with TWO barcodes, split cleanly across retailers |
+
+**This costs almost nothing.** Both codes resolve to the same product, tier 1 links either
+correctly, and no ambiguity arises. **The only cost is that neither code alone finds all
+nine retailers** — a barcode-keyed query for this product returns a partial retailer set
+depending on which code it starts from, with nothing indicating the set is incomplete.
+
+Worth knowing before anyone builds a barcode-keyed coverage measure and reads a partial
+answer as a complete one.
