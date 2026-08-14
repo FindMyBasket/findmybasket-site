@@ -7294,9 +7294,18 @@ reason and it is correct — but **B supplies the argument itself.** B closes th
 FUNCTION boundary and leaves it open at the CALL-SITE boundary, and a unit test cannot see a
 call site.
 
-> **Knowing the shape was not enough to be safe from it.** The author reasoned the failure
-> through, built the guard it implied, and the guard landed one boundary short of where the
-> failure actually lived.
+> **KNOWING THE SHAPE WAS NOT ENOUGH TO BE SAFE FROM IT.** The author reasoned the failure
+> through, wrote it into the header in plain terms, built the guard it implied — and the
+> guard landed **one boundary short** of where the failure actually lived.
+
+**That is the part worth carrying, because it is not a lapse.** The header is correct. B is
+correct. The gap is that **B closes it at the FUNCTION boundary and the failure lived at the
+CALL-SITE boundary**, and no unit test can reach that: a unit test calls the function, so it
+always supplies the arguments itself, so it can never observe that nobody else does.
+
+> **A test suite cannot see its own call sites. Anything that must be true of the CALLERS has
+> to be asserted somewhere other than a unit test** — which is why direction C reads source
+> rather than behaviour.
 
 #### DIRECTION C
 
@@ -7308,7 +7317,11 @@ A **source** assertion, because that is where the defect was:
 **Verified by reverting the call to two arguments: C fails, A still passes.** A guard never
 seen to fail is a guard nobody has tested.
 
-#### THE SECOND HALF: TWO CONFIG VALUES THAT MUST MOVE TOGETHER
+#### THE OPERATIVE HALF: TWO CONFIG VALUES THAT MUST MOVE TOGETHER
+
+**This half, not the missing argument, is what still blocks activation.** Wiring the fourth
+argument was necessary and it is not sufficient: **step 2 remains a no-op even fully wired**,
+because Boots' `category_path_must_contain` excludes Boots' own supplements leaf.
 
 `category_path_must_contain` is applied at `index.ts:1979` and `continue`s the row **before
 the classifier is reached at 2350**. Boots has one, chosen for beauty, and its intended
@@ -7331,16 +7344,77 @@ would give it a wider blast radius than the column's own comment promises. **Doc
 both sites, because a silent mismatch between two path matchers in one importer is the class
 of defect this whole change came out of.**
 
+#### THE MIGRATION COMMENT WAS AMENDED IN PLACE, AND THAT IS BOUNDED
+
+`20260813180000` was corrected in place rather than by a follow-up migration — the `113`
+that should read `115`, the "accepted loss" that should read "oral medicines", and the
+now-false claim that step 2 is where the risk sits.
+
+**In place is right here for one reason only: the object has never been created.** The column
+does not exist in production, so a correction migration would assert against nothing and
+report success — the same defect as `WHERE id = 34` matching no rows.
+
+> **The convention reverts the moment it is applied anywhere. Saying so is what stops a
+> justified exception becoming a habit** — "we amended that one in place" is exactly the
+> precedent that gets cited later, by someone who has not checked whether the object exists.
+
 #### STATUS
 
-**Wired, tested, not activated.** The migration is still unapplied and every retailer's
+**Wired, tested, NOT ACTIVATED.** The migration is still unapplied and every retailer's
 prefix list is still empty. Nothing is on the import path.
+
+**Activation still needs BOTH config values**, in this order, after the gated sequence:
+apply the migration, deploy, confirm a clean cycle with `on_supplements_path: 0` and an empty
+`supplements_path_unreachable`, then write **`category_path_must_contain` and
+`supplements_path_prefixes` together**, and read the same two fields again.
 
 ---
 
-### 92. Boots resized on the shipped rule: ~1,715, not ~900
+### 92. The subtree was excluded for the wrong reason, and Boots is ~1,715 not ~900
 
 **Raised:** 14 August 2026 · **Read-only.** feed-diag runs `31790827267`, `31791017515`.
+
+#### THE LEAF-OVER-SUBTREE DECISION WAS JUSTIFIED ON A CONTAMINATION RATIO
+
+The shipped column comment gave the reason for taking the single leaf rather than the whole
+`Health & Beauty > Health Care` subtree as: *"the Health Care subtree would admit 2,179
+non-supplement rows"*. A contamination argument — most of what arrives is not a supplement.
+
+Measured on the **shipped** rule, over the same feed:
+
+| `Health & Beauty > Health Care` subtree | rows |
+|---|---:|
+| admitted by the prefix | 3,145 |
+| classify as **SUPPLEMENTS** | **3,072** |
+| rejected as topical | 73 |
+
+Among the 3,072: **blood-pressure monitors, incontinence aids, supports and braces, first
+aid.** The reason is not a tuning failure —
+
+> **The shipped path-first rule has NO NAME-BASED SUPPLEMENT TEST AT ALL. It trusts the
+> path.** That is the whole design: a row on a configured supplements path is a supplement
+> unless it is visibly topical. Feed it a subtree that is not a supplements path and it will
+> faithfully call a wheelchair a supplement.
+
+So the danger was never that non-supplements arrive *alongside*. It is that the rule
+**calls almost all of them supplements**.
+
+> **RIGHT CONCLUSION, WRONG MECHANISM — AND THE WRONG MECHANISM IS WHAT WAS WRITTEN DOWN.**
+
+#### WHY THAT IS WORSE THAN AN ORDINARY STALE COMMENT
+
+**Anyone re-deriving "is the subtree safe?" from the stated reason would go looking for a
+contamination ratio — and would find a reassuring one.** 73 topical rows in 3,145 is **2.3%**.
+On the recorded criterion the subtree looks *cleaner* than the leaf, which shows 28 in 1,743
+(1.6%) but at a fifteenth of the volume. A reader checking the stated reason, correctly,
+against real data, gets a green light for the exact change the decision exists to prevent.
+
+> **A justification that names the wrong mechanism does not merely fail to help — it aims the
+> next reader's measurement at a number that will reassure them.** The stale-comment failure
+> mode is silence; this one answers, confidently, and in the wrong direction.
+
+The right question is not a ratio at all. It is: **is this path one where "on it" means
+"ingested"?** For the leaf, yes. For the subtree, no. No proportion of anything can answer it.
 
 Section 5 no longer reimplements the rule — it **imports `isSupplementPathTopical`**. Same
 feed, same prefix, the shipped classifier:
@@ -7364,21 +7438,6 @@ row already known to be on a supplements path needs a different question asked o
 
 > **That is the substance of the feature, and no reimplementation was going to capture it by
 > matching regexes. The fix was not a better copy — it was to stop keeping one.**
-
-#### AND IT INVERTS THE MIGRATION'S REASON FOR EXCLUDING THE SUBTREE
-
-The column comment justified the leaf over the subtree as *"the Health Care subtree would
-admit 2,179 non-supplement rows"*. Measured on the shipped rule, the subtree admits **3,145
-rows of which 3,072 classify as SUPPLEMENTS** — blood-pressure monitors, incontinence aids,
-supports and braces among them — with only 73 rejected as topical.
-
-**The shipped path-first rule has no name-based supplement test at all. It trusts the path.**
-So the danger is not that the subtree admits non-supplements alongside; it is that the rule
-would **call almost all of them supplements**.
-
-> **Right conclusion, wrong mechanism, and the wrong mechanism was the one written down.**
-> Anyone re-deriving "is the subtree safe?" from the stated reason would have been looking
-> for a contamination ratio, and the real answer is that the ratio is not the question.
 
 #### WHAT DOES NOT MOVE
 
