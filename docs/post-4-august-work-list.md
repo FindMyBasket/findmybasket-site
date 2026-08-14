@@ -4470,6 +4470,53 @@ The two tranches share the pipeline shape below entirely; nothing about tranche 
 speculative work, it is the same script pointed at a different brand list once the rows
 exist. **This is a sequencing decision, not a scope reduction.**
 
+#### TRANCHE 2 HAS TWO POTENTIAL CATALOGUE SOURCES, NOT ONE — AND ONLY ONE IS SIZED
+
+The ~1,715 above is **Boots**. It is not the whole of what supplements could be, and the
+second source is in a materially different state:
+
+| Source | State | What it would contribute |
+|---|---|---|
+| **Boots** | **Scoped and wired**, gated on **two config values moving together** — `category_path_must_contain` and `supplements_path_prefixes` (item 91) | **~1,715** products once the path prefix lands (item 92, measured 14 August on the shipped rule) |
+| **Debenhams** | **PARKED** (item 90). Nothing added to any allowlist | **Unknown, and not derivable from what has been measured** |
+
+**What is known about Debenhams**, from item 90's 14 August read: **~1,581 rows** across the
+three `Fitness & Nutrition` merchant_category values (1,560 Vitamins & Supplements, 14
+Nutrition Bars, 7 Nutrition Drinks & Shakes), including **Applied Nutrition at 549 rows**, of
+which the catalogue currently holds **zero**.
+
+**Why 1,581 is not a size.** Branch 1 of `is_beauty()` rejects a row with a populated
+non-beauty path **before** the tier-1 `merchant_category` branch is reached, so **adding the
+value to the whitelist rescues only the empty-path subset** (item 87). `T1-ABLE` exists to
+count exactly that subset and now drives the report's sort — **but the figure for this value
+has not been recorded here.** Until it is, the contribution is bounded above by 1,549 and
+bounded below by nothing.
+
+> **The supplements ASIN map sizes differently depending on which source lands, and the
+> second source's size is unknown for a mechanism reason rather than an effort one.**
+> **Debenhams needs its own investigation before anyone knows what it would admit.**
+
+**Recorded here, in the map scope, rather than as a queued task — because it is not queued.**
+It is parked, and *parked* is the accurate word: the blocker is a question about how the
+whitelist interacts with branch 1, not a position in a priority order. Nothing starts moving
+on it by working through a backlog.
+
+#### IF DEBENHAMS EVER SHIPS, ITEM 89 GOES LIVE — AND APPLIED NUTRITION IS THE CASE
+
+Item 89 records that `SPORTS_BRANDS`' *"fails safe: an unlisted sports brand lands in
+`supplements`, which is wrong but not absurd"* is a judgement about a scale that was never
+stated. **Debenhams is that scale.**
+
+> **Applied Nutrition is absent from `SPORTS_BRANDS` and carries 549 Debenhams rows. All 549
+> would classify `supplements` rather than `sports` — the single largest misclassification in
+> the category.**
+
+Inert today, and it stays inert for Boots: Applied Nutrition has ~15 rows there, which is
+where "wrong but not absurd" is true. **The list needs no change now.** But the two facts
+must not be met separately — **whoever investigates Debenhams meets item 89 as a live
+defect on arrival, not as a general caution**, and the fix is one brand added to a list
+before the first import rather than 549 rows recategorised after it.
+
 #### Status
 
 **Tranche 1 (K-beauty): specified enough to build, needs no further measurement, and is no
@@ -7644,3 +7691,41 @@ should have been specified as two numbers from the start.
 **Caveat that travels with it:** this is a whole-cycle delta, not a Boots-attributable one.
 Eleven other retailers ran between the readings and ~697 of the sole-supplier movement does
 not reconcile to Boots alone.
+
+---
+
+### 94. `updated_at` on an edge function is not a version
+
+**Raised:** 14 August 2026, during the gated deploy · **Caught before acting on it.**
+
+`list_edge_functions` reported `import-awin-feed` last updated **9 Aug 14:09 UTC**. Commit
+`bacc711` (#206, "tier 1 never fired — skip ambiguity") landed **9 Aug 15:02**, 53 minutes
+later. On the timestamp, #206 was undeployed.
+
+**It was deployed.** `tier1_ambiguous_skipped` — a counter that commit introduced — reads
+**1,069** in today's Boots run and is present in the deployed body. The timestamp is behind
+the code it describes.
+
+> **A deploy timestamp answers "when did this record change", not "what source is running".
+> They are different questions and only one of them decides whether to deploy.**
+
+Had the timestamp been trusted, the plan would have been "deploy six undeployed commits" when
+the real answer was three. Both numbers produce the same command; they produce **very
+different attribution** if the next cycle looks wrong.
+
+**What settled it was grepping the deployed body for a marker unique to each change:**
+
+| marker | before deploy | after (v154) |
+|---|---:|---:|
+| `tier1_ambiguous_skipped` (#206) | present | present |
+| `reassignment_detect` (#264) | **0** | 1 |
+| `isSupplementPathTopical` (#256) | **0** | 2 |
+| `isOnSupplementsPath` (#268) | **0** | 2 |
+
+**Note `capsuleIsTopical` was present in BOTH and proves nothing** about #226, which modified
+an existing function rather than adding one. **A marker only works if it did not exist
+before** — presence of a name the commit merely edited is not evidence it shipped, and that
+is the easy mistake in this method.
+
+Same family as item 84's rule, one level out: **"the record says X" and "X is true" are
+different claims, and infrastructure metadata is exactly where they diverge quietly.**
