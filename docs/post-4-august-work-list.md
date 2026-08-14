@@ -8320,3 +8320,104 @@ sellers, not 4** — Gorgeous Shop and Beauty Flash are one operator (item 103).
 **A side effect worth having:** the merged product carries **both** codes across its rows, so
 `ean_product_index` resolves either to it. The reseller code is not deleted; it stops
 defining a product of its own.
+
+---
+
+### 105. The human pass on the ASIN map, and what disagreeing with the machine found
+
+**Raised:** 14 August 2026 · **Applied.** 49 rows reviewed by Robbie; nothing promoted into
+`products.amazon_asin`.
+
+| verdict | rows |
+|---|---:|
+| accepted the proposed candidate | **28** |
+| corrected to a different product | **9** — 5 of them my own runner-up, 4 named by neither candidate |
+| **not carried on FindMyBasket** | **12** |
+| left undecided | **0** |
+
+**Final state:** 36 `matched_by_name` (verified, with a product), 12 `confirmed_absent`
+(verified, no product), 1 held. `match_state` gained **`matched_by_name`** and
+**`confirmed_absent`**, because the manual pass produces two outcomes the original CHECK
+could not express and 36 rows would otherwise have sat at `unmatched` while carrying a
+`product_id`. **The identifier-side outcome is preserved in `notes`** rather than being
+overwritten — a row that reads `matched_by_name` still records that Amazon returned no
+barcode for it.
+
+#### THE LIST WENT STALE UNDER THE VERDICT, AND WE ARE THE ONES WHO STALED IT
+
+`B0B1QTYTGJ` was reviewed and accepted against product **126**. **We merged 126 into 81755
+four hours after the file was produced.** The verdict was correct when made and wrong when
+read, and nothing in the file could have said so.
+
+> **THIS IS THE FROZEN-SNAPSHOT PROPERTY ARRIVING ON A WORKING FILE.** The same rule that
+> keeps counts and prices out of committed copy applies to any artefact that names product
+> ids and then sits still while the catalogue moves.
+>
+> **It is the argument for the map being a table rather than a file**, made concrete: had
+> the review been done against `amazon_asin_map` directly, the merge would have carried the
+> row with it — `fmb_soft_merge_group` moves `retailer_prices`, and a foreign key would have
+> been visible to it. A CSV cannot be moved by a merge.
+
+**Caught by checking every cited id against `products.merged_into` before applying.** It was
+the only stale id of 44. **One in 44 over four hours** is the rate to remember before
+treating an exported working file as current.
+
+#### TWO MATCHER GAPS, BOTH FOUND BY A HUMAN DISAGREEING WITH THE MACHINE
+
+**1. NO `-ise`/`-ize` NORMALISATION.** `B0G6KTMKSR` was corrected to **14684**, *"Beauty of
+Joseon Revive Firming Moisturi**s**er 60ml"* — **three live retailers**, and it **never
+scored at all** against Amazon's *"Moisturi**z**er"*. My two candidates were 94046 (10ml) and
+94047 (60ml, one retailer). **The best row in the catalogue was invisible to the matcher on a
+single letter.**
+
+**2. NO UNIT CONVERSION.** `B01M4GQO8W` was flagged `size_agrees = NO` — Amazon *"1.7 fl
+oz"* against our *"50ml"*. **1.7 fl oz IS 50ml.** The flag was mine and it was wrong; the
+acceptance was right.
+
+> **Both are corpus-measurable against the 155 EAN-confirmed pairs, and neither was found by
+> measuring. They were found by a person looking at rows the measurement had already scored
+> and disagreeing.** The instrument was tuned on the corpus it was measured against, so the
+> failures it shares with that corpus are invisible from inside it.
+
+#### THE SIZE FLAG DID ITS JOB AND THE BUCKET DID NOT
+
+**Both `No` verdicts on rows bucketed `RELISTING` are the exact two flagged in the handover:**
+`B0H1V579M4` (Amazon's 50ml travel size against our 100ml) and `B0GTXQ8H18` (a *facial*
+cream against our *eye* cream). Both were inside the measured 94% band on score and margin.
+
+> **The band put them in the confirmations. The size flag said look again. The flag was
+> right both times.** A secondary signal disagreeing with the primary one is worth surfacing
+> even when the primary one is well measured — the 94% was measured on rows where size
+> agreed and disagreed alike, so it never had a reason to separate them.
+
+#### THE VITAMIN C CASE, AND HOW THE BARCODE BLOCK SETTLED IT
+
+`B0BS8M8Q5L` is *"Pure Vitamin C **13%** Serum"*. All three proposed ids were Vitamin C
+**23** — a different product COSRX also sells, where **the number is the product name.**
+
+Two candidates carry 13: `1775` *"The Vitamin C 13 Serum (20ml)"* and `84154` *"…13 Serum
+**2026 Version**"*. Neither holds the ASIN's identifier `8809598455238`, so it could not be
+matched directly. **Resolved on the prefix block:** across the harvest, `8800311…` codes sit
+consistently on **2026-version** COSRX rows (84155 is *"Advanced The Vitamin C 23 Serum 2026
+Version"* on `8800311121256`), while `88095984…` sits on the older packaging. The ASIN's code
+is in the **older block**, so **1775**, not 84154.
+
+**Recorded as an inference, not a confirmation.** 1775 carries no barcode at all, so nothing
+verifies it directly; the reasoning is a pattern across sibling codes.
+
+#### STILL HELD
+
+`B08PTX9BYJ` — Amazon *"Deep Vita C Serum 2.0"* against `82252` *"Deep Vita C Ampoule **Set**
+10g x 3 pcs"* and `91501` *"Ampoule 2.0 - 10g*3ea"*. **A single mapped onto a three-pack is
+this morning's 6174 shape.** Left unverified with the reason in `notes`.
+
+#### SEPARATE WORK, NOT TOUCHED
+
+**Eight duplicate pairs** flagged during the pass: `110261/108246`, `988/6177`,
+`14906/93640` (twice), `14684/94047`, `7740/82606`, `578/129360/14993`, `3325/80536`.
+
+**Two data notes:** product `143273` is mislabelled as a cream; `B091SZYV6T`'s row *"goes to
+YesStyle 150ml but is labelled 50ml"*.
+
+**Nothing promoted.** `products.amazon_asin` is untouched; promotion is a separate step now
+that 36 rows are verified.
