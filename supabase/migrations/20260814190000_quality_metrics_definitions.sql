@@ -8,7 +8,7 @@
 -- The definitions were supposed to come from Step 7 of the dashboard brief, which is
 -- REPORT ONLY and never ran. Step 8 (the puller) and Step 9 (the panel) both depend on it.
 -- THE SCHEMA LANDED AND THE MEANINGS DID NOT, and the table has held zero rows since
--- 5 August. Work-list item 110.
+-- 5 August. Work-list item 111.
 --
 -- ── WHAT CHANGED, AND WHY ──────────────────────────────────────────────────────
 --
@@ -103,7 +103,7 @@ COMMENT ON COLUMN public.metrics_quality_weekly.suspect_price_threshold IS
   '0.50 on 14 Aug 2026, derived from three real defects rather than chosen for roundness: '
   'at 0.35 the rule catches one of the three, at 0.50 it catches two. This is a REVIEW '
   'QUEUE a human works, not an alert stream, so manageable volume is not the constraint. '
-  'Work-list item 110.';
+  'Work-list item 111.';
 
 COMMENT ON COLUMN public.metrics_quality_weekly.cross_product_price_outliers IS
   'Pairs of root in-stock products, same brand, names differing by exactly one NUMERIC or '
