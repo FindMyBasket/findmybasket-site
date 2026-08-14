@@ -8095,3 +8095,228 @@ dependent needs one; both scan a feed's own rows.
 
 **Not built, and not proposed here.** Recorded so the next person to hit it finds two
 dependents rather than one, and does not scope it as a detector improvement.
+
+---
+
+### 102. Pattern D answered: NO, on the distribution rather than on caution
+
+**Raised and closed:** 14 August 2026 · **Nothing merged.**
+
+**Pattern D** — same brand, both products without a usable EAN, names differing by exactly
+one token. Population: **22,603 products** have a live retailer row and no usable barcode
+(20.9% of 108,324). Within it, **1,724 pairs** where one name is the other plus one token.
+
+**The question was whether the differing token is marketing (a normalisation rule) or a real
+distinction (not one). It is a real distinction, and not marginally:**
+
+| the differing token is | pairs | share |
+|---|---:|---:|
+| **OTHER** — 569 distinct tokens | **830** | **48.1%** |
+| NUMBER — size, shade code, pack count | 651 | 37.8% |
+| FORM/QUANTITY — refill, double, mini, travel | 123 | 7.1% |
+| SHADE-LIKE — light, medium, dark, taupe | 114 | 6.6% |
+| **MARKETING/VERSION** | **5** | **0.3%** |
+
+**Sampled, `OTHER` is overwhelmingly SHADE NAMES:** `n26`, `porcelain`, `fudge`, `cockney`,
+`taupe`, `caramel`, `bubblicious`, `c10.5` — plus real formulation words (`waterproof`,
+`rich`, `plumping`, `cleansing`).
+
+> **`M.A.C Lustreglass Sheer-Shine Lipstick Cockney` collapsing into `M.A.C Lustreglass
+> Sheer-Shine Lipstick` IS THE BULK OF THIS POPULATION, NOT AN EDGE CASE.** A merge rule on
+> one-token difference would destroy shade-level SKUs at scale.
+
+**Closed as answered NO — on the measured distribution, not on caution.** The 0.3% that is
+marketing does not support a rule; it supports four hand-checked merges, and those are
+covered below.
+
+#### THE REFILL CORRECTION, WHICH IS THE PROCESS FINDING
+
+`refill` was classified as **MARKETING/VERSION** in the first pass. **A refill is not a
+marketing variant of the thing it refills — it is a different product**, sold without the
+container. It was **63 pairs, the second-largest single token**, and moved to FORM/QUANTITY
+before any number was quoted.
+
+> **Had it stayed, "actionable" would have read 68 pairs instead of 5 — a TWELVEFOLD
+> inflation, and every one of the extra 63 a merge that destroys a real product.**
+
+**A classifier's own category labels are a place this mistake gets made, and the only thing
+that catches it is reading them.** No test fails; the bucket has a plausible name, a
+plausible count, and a wrong member. Same family as item 99's eleven false-positive causes,
+but one level up: not a bad extraction, a bad *category*.
+
+#### WHAT WAS NOT MEASURED
+
+**Only the SUPERSET case** — one name's tokens plus one extra. **Substitution pairs**
+(`rose` ↔ `beige`, same length) were not measured.
+
+> **They would strengthen the NO rather than change it**, since substitution is where shade
+> variants live most densely — but **1,724 is not the whole one-token population**, and the
+> conclusion is drawn from a measured part of it.
+
+#### THE FOUR `[DEAL]` PAIRS BELONG TO ITEMS 98 AND 99
+
+All four marketing-token pairs are Stylevana `[DEAL]`-prefixed duplicates —
+`[DEAL]Arencia Holy Hyssop`, `[DEAL]Round Lab 1025 Collection`,
+`[DEAL]BEAUTY OF JOSEON Relief Sun`. **Each is 1 retailer against 1 retailer, so none costs
+a split comparison.** Noted against items 98 and 99 rather than opened.
+
+> **AND THE `deal-` PATTERN HAS NOW PRODUCED A THIRD KIND OF DAMAGE.** In item 99 it
+> mis-attached a row to the wrong product (6174, 81482). Here it created **an entire
+> duplicate product**: product `126` is Stylevana's
+> `deal-cosrx-full-fit-propolis-light-ampoule-30ml`. Same feed behaviour, three distinct
+> failure modes, and only the first was ever scoped.
+
+---
+
+### 103. Two storefronts, one catalogue: Gorgeous Shop and Beauty Flash
+
+**Raised:** 14 August 2026 · **Measured, not actioned. Bears on every depth claim.**
+
+Investigating 81755's price spread surfaced that its Gorgeous Shop and Beauty Flash rows
+carry the **same `external_product_id` (39795)** and the **same URL slug on different
+domains**. Product 6174 showed the same thing (both `45918`). Measured across everything the
+two retailers share:
+
+| | |
+|---|---:|
+| products carried by both | 7,243 |
+| **carrying the SAME `external_product_id`** | **6,383 — 88.1%** |
+| of those, priced differently | 3,926 |
+| mean price gap where ids match | **£6.05** |
+
+Their AWIN merchant ids are adjacent (53379, 53381).
+
+> **88.1% is not a coincidence of numbering. These are two storefronts over one product
+> catalogue, priced independently.**
+
+**Why it matters, and it is not that anything is wrong.** Both are real shops a shopper can
+buy from, and their prices genuinely differ. But **a product showing four retailers where two
+are these may offer three distinct sellers**, and two expensive rows from one operator are
+not two independent signals about the market price.
+
+**Not actioned.** Nothing here says to drop or merge a retailer. Recorded so that comparison
+DEPTH figures — "carried by N retailers" — are known to overstate seller diversity on the
+6,383 products where these two overlap, and so nobody derives a market-price confidence from
+what is effectively one source counted twice.
+
+---
+
+### 104. One manufacturer code and one reseller code — a property of a feed, not of barcodes
+
+**Raised:** 14 August 2026 · **Recorded above the merge it enables, because it outlives it.**
+
+Products `126` and `81755` are the same COSRX ampoule under two barcodes. That looked like
+**item 100** — one product, two manufacturer codes, benign. **It is not.**
+
+| code | on | shape |
+|---|---|---|
+| **8809598450820** | YesStyle, Gorgeous Shop, Beauty Flash | 13-digit EAN-13, **Korean GS1 prefix 880** |
+| 648722973372 | Stylevana only | **12-digit, US-style, not the manufacturer** |
+
+**Measured across every active retailer — how many of each supplier's barcodes are 12-digit
+reseller-style codes rather than manufacturer EANs:**
+
+| retailer | barcodes | reseller-style 12-digit | Korean 880 |
+|---|---:|---:|---:|
+| **Stylevana** | 6,668 | **967** | 3,209 |
+| Perfume Click | 10,073 | 271 | 306 |
+| Boots | 21,851 | 327 | 553 |
+| **YesStyle** | 13,812 | **5** | 7,893 |
+| **Atelier De Glow** | 547 | **0** | 544 (99.5%) |
+
+> **THIS IS NOT "TWO BARCODES MEANS TWO PRODUCTS". IT IS ONE MANUFACTURER CODE AND ONE
+> RESELLER CODE SITTING IN THE SAME FIELD.**
+>
+> **It is a property of one retailer's feed, not a property of barcodes**, and it materially
+> weakens "different barcode → different product" as a rule. A code that no manufacturer
+> issued is not the manufacturer saying anything.
+
+**Why this matters beyond one merge.** A different barcode is normally the strongest possible
+evidence that two rows are different products, and it is the reason tier 1 is trusted above
+every name rule. **On a feed that supplies reseller codes, that evidence is not present even
+though the field is populated** — and nothing on the row says which kind of code it is.
+Length and prefix are the only signal, and neither is checked anywhere.
+
+**Independent corroboration, from a different direction:** `amazon_asin_map` already resolves
+ASIN `B07ZGJQZ8G` to **81755** via `8809598450820` — a barcode-led agreement, reached without
+reference to either name, that 81755 is the canonical product.
+
+#### THE MERGE FUNCTION'S SCOPE IS NARROWER THAN A MERGE IS — RECORDED ABOVE THE MERGE
+
+`fmb_soft_merge_group` moves **`retailer_prices` and `price_history`**, writes
+`product_merge_log`, sets `merged_into`/`merged_at`, and asserts no orphan prices. That is
+all it does, and **two of the things it does not do read as though it does them.**
+
+**1. A LOG REPORTING A COUNT IT NEVER COMPUTED.** The insert into `product_merge_log`
+hardcodes the literal:
+
+    saved_routines_updated  ->  0
+
+> **A zero in a column named "saved_routines_updated" reads as "checked, none found". The
+> check does not exist.** Every merge ever run has logged that zero, and it is the same
+> family as a guard that measures a log line rather than the thing the log line describes —
+> the artefact is real, the number is real, and it is evidence of nothing.
+
+**And the field it names is the one a column scan cannot find.** `saved_routines` stores
+products inside a **JSONB `routine` column and has no `product_id` column at all**, so a
+sweep of `information_schema` for `product_id` — the obvious safety check, and the one run
+here — **returns clean while product ids sit in a blob.** Checked by text search instead:
+13 saved routines, none referencing 126, 81755 or 91868.
+
+**2. THE GUARD THAT SITS ADJACENT TO THE GUARD YOU WOULD INFER FROM IT.** The function
+raises `'a member is already merged'` if the keeper or any removed product has
+`merged_into` set. That reads as chain protection. **It is not.**
+
+> **It guards MEMBERS. Chains are made by CHILDREN.** 91868 was already merged into 126;
+> it is not a member of `(81755, [126])`, so the check never looked at it. **The merge would
+> have succeeded and left `91868 -> 126 -> 81755` silently** — item 52's known-bad shape,
+> created by the function whose one validation appears to be about exactly this.
+
+#### WHAT REFERENCES product_id AND IS OUTSIDE THAT SCOPE
+
+**Nine live tables**, none of which any merge has ever repointed:
+
+`amazon_asin_map` · `categoriser_safety_net_log` · `outbound_clicks` ·
+`product_change_events` · `review_queue` · `routine_alerts` ·
+`shade_variant_fix_proposals` · `stylevana_url_health_queue` · `tracked_products`
+
+Plus **15 dated backup and snapshot tables**, which are historical records and correctly
+left alone. And **`saved_routines`, which has no `product_id` column** and so appears on no
+list of this kind.
+
+**On this merge:** `stylevana_url_health_queue` held a row for 126 and is repointed
+explicitly in the migration. `amazon_asin_map` already pointed at the keeper.
+`tracked_products` (4 rows) and `routine_alerts` (0 rows) hold nothing for these ids.
+
+> **THAT IS LUCK, NOT SAFETY.** Four products are tracked and thirteen routines are saved;
+> none happened to be this one. **The next merge may land on a saved product, and nothing in
+> the function will say so** — it will report `saved_routines_updated = 0` and succeed.
+
+**NOT FIXED.** Changing the function is a change to every future merge and needs its own
+baseline. Recorded so the next merge is PROPOSED knowing what it does not cover, and so the
+proposal carries the repoints the function will not make.
+
+#### THE MERGE THIS ENABLES
+
+**126 → 81755, keeper 81755, canonical barcode 8809598450820.** External check settled that
+`NEW` is repackaging and not reformulation: identical INCI across every listing found, a
+retailer describing it as the "new look" and an "upgraded version… kept the price same".
+**Our data could not have settled that** — it needed a source outside the catalogue.
+
+**91868 is repointed in the same transaction.** It is already merged into 126, and
+`fmb_soft_merge_group` does not repoint children, so the merge alone would leave
+`91868 → 126 → 81755` — the two-hop chain item 52 records the merge functions mishandling.
+
+**And a table the merge function does not cover:** `stylevana_url_health_queue` holds a row
+for 126. The function's scope is `retailer_prices` and `price_history` only; **it also
+hardcodes `saved_routines_updated = 0` in its own log**, which is worth knowing before the
+next merge lands on a product someone has saved. Nothing here is affected — `tracked_products`
+and `routine_alerts` both hold zero rows for these ids — but the gap is real and was found by
+checking rather than by the function complaining.
+
+**After the merge:** 4 retailer rows, **best price £10.52** (from £10.72), and **3 distinct
+sellers, not 4** — Gorgeous Shop and Beauty Flash are one operator (item 103).
+
+**A side effect worth having:** the merged product carries **both** codes across its rows, so
+`ean_product_index` resolves either to it. The reseller code is not deleted; it stops
+defining a product of its own.
