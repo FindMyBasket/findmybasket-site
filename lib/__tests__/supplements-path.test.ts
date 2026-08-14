@@ -150,3 +150,78 @@ test('the sports brand list is matched on brand, not on the name', () => {
   assert.equal(supplementSubcategory('Bulk'), 'supplements');
   assert.equal(supplementSubcategory('Seven Seas'), 'supplements');
 });
+
+/**
+ * DIRECTION C — WIRED. At least one production importer must actually PASS the
+ * path argument.
+ *
+ * WHY A AND B ARE NOT ENOUGH, WHICH IS THE WHOLE POINT OF THIS FILE.
+ *
+ * A asserts the two-argument form is unchanged. B asserts the function behaves
+ * correctly WHEN GIVEN a path. Both passed continuously between #256 and 14 Aug
+ * 2026 — a period in which NO CALLER ANYWHERE PASSED THE ARGUMENT, the branch was
+ * unreachable, and writing a prefix into a retailer's config would have changed
+ * nothing at all.
+ *
+ * A AND B ARE BOTH SATISFIED BY A CORRECTLY-BUILT FEATURE THAT IS NOT PLUGGED IN.
+ * A is satisfied because every caller passes two arguments — which is exactly what
+ * "no caller passes four" looks like. B is satisfied because B supplies the
+ * argument ITSELF; it tests the function, and a unit test cannot see a call site.
+ *
+ * So the suite could not distinguish "safe because dormant" from "dead because
+ * unplumbed". Both output "nothing changed", and the deploy/activation split was
+ * resting on that indistinguishability without knowing it.
+ *
+ * This test closes it at the only boundary that matters — the call site — and it is
+ * a SOURCE assertion rather than a behavioural one, because that is where the
+ * failure lived. It fails on the exact state main was in for two days.
+ *
+ * Work-list item 91, instance 15.
+ */
+test('DIRECTION C: a production importer passes the path argument', () => {
+  const src = readFileSync(
+    join(ROOT, 'supabase/functions/import-awin-feed/index.ts'), 'utf8');
+
+  // 1. The config column is read at all.
+  assert.ok(
+    src.includes('supplements_path_prefixes'),
+    'import-awin-feed does not read supplements_path_prefixes: the column can be ' +
+    'set on any retailer and the importer will never know. This is the defect ' +
+    'this test exists to catch.',
+  );
+
+  // 2. inferCategorisationForImport is called with FOUR arguments somewhere.
+  //    Counted by top-level commas so a nested call cannot fake it.
+  const calls: string[] = [];
+  const NEEDLE = 'inferCategorisationForImport(';
+  for (let i = src.indexOf(NEEDLE); i !== -1; i = src.indexOf(NEEDLE, i + 1)) {
+    let depth = 0;
+    for (let j = i + NEEDLE.length - 1; j < src.length; j++) {
+      if (src[j] === '(') depth++;
+      else if (src[j] === ')') {
+        depth--;
+        if (depth === 0) { calls.push(src.slice(i + NEEDLE.length, j)); break; }
+      }
+    }
+  }
+  assert.ok(calls.length > 0, 'no call to inferCategorisationForImport found at all');
+
+  const argCounts = calls.map((a) => {
+    let depth = 0, n = 1;
+    for (const ch of a) {
+      if (ch === '(' || ch === '[' || ch === '{') depth++;
+      else if (ch === ')' || ch === ']' || ch === '}') depth--;
+      else if (ch === ',' && depth === 0) n++;
+    }
+    return a.trim() === '' ? 0 : n;
+  });
+
+  assert.ok(
+    argCounts.some((n) => n >= 4),
+    `every call to inferCategorisationForImport in import-awin-feed passes fewer ` +
+    `than four arguments (found arities: ${argCounts.join(', ')}). onSupplementsPath ` +
+    `takes its false default on every row, the path-first branch is unreachable, and ` +
+    `setting supplements_path_prefixes on a retailer will silently do nothing. ` +
+    `DIRECTION A WILL STILL PASS IN THIS STATE — that is why this test exists.`,
+  );
+});
