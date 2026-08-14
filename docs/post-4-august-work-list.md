@@ -8421,3 +8421,263 @@ YesStyle 150ml but is labelled 50ml"*.
 
 **Nothing promoted.** `products.amazon_asin` is untouched; promotion is a separate step now
 that 36 rows are verified.
+
+---
+
+### 106. The `[DEAL]` marker is present where the damage is least and absent where it is worst
+
+**Raised:** 14 August 2026 · **Diagnosis only. Nothing on the import path, nothing fixed.**
+
+#### THE MARKER GAP, WHICH IS THE FINDING
+
+Stylevana's promotional listings carry **two** markers, and they select for opposite things:
+
+| marker | where it lives | rows |
+|---|---|---:|
+| **`/deal-` path segment** | the ROW's URL | **1,680** of 11,512 (14.6%) |
+| **`[DEAL]` prefix** | the PRODUCT's name | 222 products, **191** with a deal row |
+
+> **A `[DEAL]` NAME SURVIVES ONLY WHEN THE LISTING CREATED ITS OWN PRODUCT. When it attaches
+> to a product that already exists, the name is that product's name and the marker is
+> invisible.**
+>
+> **So the name marker is present where the damage is LEAST — a duplicate product nobody has
+> linked to — and absent where it is WORST: a promotional single sitting on a real
+> multi-retailer page as the headline price.**
+
+That is not a hypothesis. It is exactly why **6174, 81482 and 126 all have URL markers and
+no name marker**, and those are the three cases with live user harm. Validated on all seven
+known instances: **the URL marker catches 7/7, the name marker 4/7**, and the three it misses
+are the three that mattered.
+
+**A better finding than any of the counts below**, because it says the obvious marker — the
+one visible in a product name, the one a person would notice — is systematically the wrong
+one to search on.
+
+#### WHY THE FIRST QUERY RETURNED ZERO
+
+`retailer_prices.url` is an AWIN deeplink wrapper with the merchant URL **percent-encoded**
+inside `ued=`:
+
+    ...&ued=https%3A%2F%2Fwww.stylevana.com%2Fen_GB%2Fdeal-medicube-...
+
+**`/` is stored as `%2F`, so `/deal-` never appears literally.** A search for `%2Fdeal-`, or
+a decode first, is required. Zero false positives once decoded: "deal" appears nowhere else
+in a Stylevana URL.
+
+#### THE FOUNDING INSTANCE FAILS BOTH DETECTORS
+
+**6174's row — the one that caused a live mispricing this morning — is caught by neither
+test built here.** Its slug shares nearly every token with the product name, so it is not
+mode (a). Its URL states no pack count, so it is not testable for mode (c).
+
+> **It was found by a person reading a page.** The 3 and the 9 below are **floors inside a
+> window that excludes the case that started this**, and no amount of tuning either detector
+> would have surfaced it.
+
+#### THE THREE MODES
+
+**(a) ATTACHED TO THE WRONG PRODUCT — 9 rows, 7 of them the cheapest on their page.** Not
+subtle:
+
+| product | the deal row actually points at |
+|---|---|
+| Shiseido ULTIMUNE Concentrate | `romand cheek … c02 blueberry` |
+| Shiseido ULTIMUNE Concentrate | `romand cheek … c03 fig chip` |
+| FRUDIA Hand Cream | `… panthensoside sheet mask 5ea set` |
+| Round Lab Birch Pad | `derma b fresh moisture body lotion 400ml` |
+| EMBRYOLISSE Lait Crème | `madeca time reverse boosting toner 250ml` |
+| Rohto Lip Balm | `some by mi clear spot patch 20ea set` |
+
+> **A PREDICTION, RECORDED BEFORE THE RUN. Mode (a) is not a new population — it is the
+> REASSIGNMENT population.** Products 2015 and 2167 are the exact ULTIMUNE/romand pairs the
+> zero-shared-token image analysis surfaced, and the detector armed this afternoon
+> (`reassignment_detect`, Stylevana only) is pointed at precisely this shape.
+>
+> **These nine should appear in tomorrow's 03:30 sample. If they do not, that is a finding
+> about the detector rather than about the rows** — and it is worth more than a confirmation
+> would be, because the detector has no other independent test.
+
+**(b) CREATED A DUPLICATE PRODUCT — 191 rows, and the true figure is unknown and larger.**
+191 is what the *name* marker catches. **Product 126 was mode (b) and carried no `[DEAL]`
+name at all** — it became a whole duplicate product and was merged today. So the marker
+misses an unmeasured share of its own class, and 191 is a floor with no known ceiling.
+
+**(c) A SINGLE PACK AS THE HEADLINE PRICE — 3 found, testable on 18.4% of rows.** The window
+belongs with the number, not after it: mode (c) needs a pack count stated on **both** the
+product name and the URL slug, and that is true of **309 of 1,680** rows.
+
+| product | states | deal row says | price |
+|---|---:|---:|---:|
+| **ETUDE Moistfull Collagen Bundle Set** | **5** | **1pc** | **£1.69** |
+| numbuzin No.5+ Glutathione Mask | 5 | 4pc | £8.08 |
+| numbuzin No.1 Pantothenic B5 | 5 | 4ea | £7.55 |
+
+All three are the cheapest in-stock row on their page.
+
+#### THE DEFECT PROPAGATES INTO OTHER RETAILERS' ROWS
+
+**YesStyle carries 4 products with a `[DEAL]` name and no deal URL; Atelier De Glow carries
+2.** Those are products a Stylevana promotional listing created, which other retailers then
+matched onto.
+
+> **A feed defect in one retailer becomes a product other retailers attach to.** The
+> duplicate stops being Stylevana's once a second retailer joins it, and removing it is no
+> longer a question about one feed.
+
+#### STATUS
+
+**Nothing fixed, nothing proposed.** Every one of the 1,680 rows lands in a named bucket
+including the untestable remainder; no row is silently dropped. The counts are floors and
+are labelled as such.
+
+---
+
+### 107. The discriminator already catches this one, and nothing consumes it
+
+**Raised:** 14 August 2026 · **Second live defect motivating the same durable fix.**
+
+Product **81482**, *"ETUDE Moistfull Collagen Deep Sheet Mask Bundle Set 37ml x 5 sheets"*,
+two rows:
+
+| retailer | price | barcode | URL says | last confirmed |
+|---|---:|---|---|---|
+| **Stylevana** | **£1.69** | `8809668018110` | `deal-…-**1pc**` | today |
+| YesStyle | £16.39 | `8809668018110` | — | **1 July — 44 days** |
+
+#### THE FINDING: THE MECHANISM EXISTS, FIRES CORRECTLY, AND ITS OUTPUT GOES NOWHERE
+
+**Unlike 6174, this row is INSIDE the testable window.** The URL states a pack count of 1
+and the product name states 5 — **both sides stated**, which is exactly the precondition
+item 98 records the discriminator as needing.
+
+> **Item 98's pack-count discriminator identifies this row correctly. It was measured,
+> written down, and never built. Nothing consumes its output.**
+>
+> Item 98 recorded the discriminator as *"correct by design and blind to the case that
+> motivated it"* — true of 6174, which states no count. **This case is the other half: the
+> guard is not blind here, it simply is not connected to anything.** A rule that fires
+> correctly into a void is a different failure from a rule that cannot fire.
+
+**At 37% precision (item 99) it should FLAG rather than ACT — but flagging is not what it
+does either.** There is no surface on which its verdict appears: no counter in the import
+response, no row in a queue, no line in `scrape_log`. It exists as a measurement in a
+markdown file and as a scoring term in a script that runs by hand.
+
+**Two live user-facing defects in one day now motivate the same durable fix**, where this
+morning there was one. 6174 argued for it by escaping it; 81482 argues for it by being
+caught and ignored.
+
+#### THE 6174 PRECEDENT DOES NOT TRANSFER, AND THE REASON IS CONSEQUENCE NOT CAUSE
+
+Both rows carry the SAME barcode as the product, so **this matched on tier 1** — Stylevana
+assigned the five-pack's EAN to a single-sheet listing, exactly as Atelier De Glow did on
+6174. **Atelier's row was deliberately left alone**, on the argument that detaching it
+treats a retailer's data defect as ours.
+
+> **Same cause, opposite consequence. Atelier's row was £14 and eighth of nine — invisible.
+> This one is the headline price on a two-row page at 90% below the real one.**
+
+Stylevana also lists the single correctly as product **147989** (£1.72, same barcode a third
+time), so the row in question duplicates a listing that already sits in the right place.
+
+#### THE STALE FALLBACK IS AN ACCEPTED TRADE, NOT AN OVERSIGHT
+
+After a detach, 81482 shows **£16.39 from a YesStyle row last confirmed 1 July**.
+YesStyle's `absence_threshold_days = 9999` (item 53), so its rows never age out and this one
+still reads in stock.
+
+> **A STALE-BUT-RIGHT PRICE BEATS A FRESH-BUT-WRONG ONE WHEN THE WRONG ONE IS WHAT A
+> VISITOR CLICKS.** £16.39 for five sheets is plausible against £1.72 for one.
+
+**Recorded so the unconfirmed price is not later read as an accident.** The page will show a
+44-day-old figure and that is the deliberate choice.
+
+#### AND THE DETACH IS EXPECTED TO REVERSE ITSELF
+
+6174's row carried no barcode, so its return depended on a name match. **This row carries a
+valid barcode that the product also carries.** On the next Stylevana import, tier 0 will not
+find `68454`, and **tier 1 will match it straight back onto 81482 — correctly, by the rules,
+on a barcode the retailer supplied.**
+
+#### THE DECISION WAS NOT TO DETACH, AND THE REASON IS THE POINT
+
+**Robbie's call, 14 August. The diff is written, verified against the schema, and filed
+UNAPPLIED at `docs/proposed/detach-81482-stylevana-single-sheet.sql`** — deliberately not
+in `supabase/migrations/`, so no runner can pick it up.
+
+> **6174 was detached because its return depended on a NAME match and detaching it was how
+> we find out. This row carries the product's own barcode, so tier 1 rematches it at 03:30
+> tomorrow — correctly, by the rules.** One day's reprieve on a page with ZERO CLICKS, paid
+> for with a snapshot table, a migration record and a reversal to explain in the morning.
+
+**The defect is worth more as evidence than as a repair.**
+
+> **A rule with no surface — no counter, no queue row, no `scrape_log` line — is a
+> measurement in a markdown file.** Detaching a row the discriminator has ALREADY IDENTIFIED
+> would be doing by hand what it should be doing by output, and it would remove the clearest
+> demonstration of why the output is missing.
+
+**81482 stays wrong, visibly, with zero clicks, until the discriminator has somewhere to
+report.** That is a choice and it is recorded as one.
+
+**No clicks have gone through this row**, unlike 6174's, which is what makes the choice
+affordable. It would not be if someone were clicking it.
+
+---
+
+### 108. Give the discriminator a surface — scoped, not built
+
+**Raised:** 14 August 2026 · **Next piece of work, after tomorrow's reads.** Design only.
+
+**Two live user-facing defects in one day motivate one fix.** 6174 argues for it by escaping
+the discriminator; 81482 argues for it by being caught and ignored (items 98, 107).
+
+#### WHAT IS ACTUALLY MISSING
+
+The pack-count comparison is measured (item 99), correct on the cases it can see (item 107),
+and **has no output anywhere.** Not a counter, not a queue, not a log line. It exists as a
+scoring term in a hand-run script and a table in a markdown file.
+
+> **THE FIX IS NOT A BETTER RULE. IT IS A PLACE FOR THE RULE'S ANSWER TO GO.**
+
+#### IT MUST FLAG, NEVER ACT — AND THE PRECISION IS WHY
+
+**Measured precision is 37% on the sharpest bucket** (item 99: 7 genuine of 19). A detector
+that acted on that would be wrong twice for every time it was right, on live pricing.
+
+And a 63% false-positive stream shown as alerts is **item 70's failure mode exactly** — a
+guard that fires so often it trains dismissal. **So: a review queue a human works, not a
+notification, and never a mutation.**
+
+**Same posture as the reassignment detector: count, log, and still write.** Never skip, never
+detach, never suppress — so the population stays measurable against an untouched baseline.
+
+#### SHAPE
+
+**1. A counter in the import response and `scrape_log.details.counts`** — e.g.
+`pack_mismatch_suspect`, alongside `tier1_ambiguous_skipped` and `on_supplements_path`.
+Per-run, per-retailer, visible in the same place every other counter already is.
+
+**2. A queue table**, holding one row per suspect: the `retailer_prices` id, product id,
+retailer, the pack count each side stated, the price, whether it is the cheapest in-stock
+row, when it was detected, and a `reviewed` flag. **The cheapest-row test is what separates
+a curiosity from live harm** and belongs in the row, not in a later query.
+
+**3. Opt-in per retailer, default off**, exactly like `reassignment_detect` — so the deploy
+is inert and the first read is one retailer's worth of rows rather than the fleet's.
+
+#### WHAT IT WILL NOT CATCH, STATED UP FRONT
+
+**Only 18.4% of Stylevana's deal rows are testable at all** (item 106), and **6174 — the case
+that started this — is not among them**, because its URL states no pack count. Catalogue-wide
+the testable share is **2.8%** (item 99).
+
+> **This surface makes a rule that sees 2.8% of rows visible. It does not make the rule see
+> more.** Anyone reading the queue must know that an empty queue means "nothing found in the
+> tested slice", not "nothing wrong".
+
+#### NOT BUILT
+
+No table, no counter, no config column. Recorded so the next session starts from a scoped
+design rather than from two defects and an argument.
