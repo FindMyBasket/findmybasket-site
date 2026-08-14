@@ -8041,3 +8041,57 @@ depending on which code it starts from, with nothing indicating the set is incom
 
 Worth knowing before anyone builds a barcode-keyed coverage measure and reads a partial
 answer as a complete one.
+
+---
+
+### 101. The feed-name retention gap now blocks two durable fixes, not one
+
+**Raised:** 14 August 2026 · **Not built. Re-scoped, not re-specified.**
+
+`retailer_prices` stores what we DERIVED from a feed row — `product_id`, `ean_normalised`,
+`external_product_id`, `url` — and **not the feed's own product name.** The name is read
+during import, used for matching and categorisation, and discarded.
+
+**It was already recorded as the durable target for the reassignment detector** (item 84):
+the detector's primary signal is shared name tokens between the feed row and the stored
+product, and **that signal cannot be replayed after the fact**, because one side of the
+comparison no longer exists. Every re-derivation has to re-fetch the feed.
+
+**It has now acquired a second dependent, and that changes what it is.**
+
+> **Option (c) for product 6174 — a `name_excludes` entry that drops Stylevana's `deal-`
+> duplicate at import — is the durable fix, and it is blocked on the same missing field.**
+> `name_excludes` matches on the feed's product name. We hold the URL slug
+> (`deal-medicube-pdrn-pink-collagen-gel-mask-28g`) and not the name the rule would test.
+> Excluding on `"deal"` alone would drop every Stylevana promotional listing, including
+> legitimately discounted products.
+
+> **TWO INDEPENDENT DURABLE FIXES, DIFFERENT ITEMS, DIFFERENT MECHANISMS, BLOCKED ON THE
+> SAME ABSENT COLUMN. That stops it being the exact version of one item and makes it a
+> blocker.**
+
+#### WHAT IT WOULD COST — measured 14 August 2026
+
+| | |
+|---|---|
+| schema | **one nullable `text` column** on `retailer_prices` |
+| write path | **one assignment at import**, on the insert and the bulk-update paths |
+| rows | 161,960 (129,506 on live retailers with URLs) |
+| current heap | **54 MB**; 101 MB with indexes |
+| current row width | ~350 bytes |
+| catalogue name length | avg **52.4** chars, max 223 — feed names run longer, call it ~65 |
+| **estimated growth** | **~11 MB heap, +19% row width, +11% total with indexes** |
+
+**No TOAST pressure**: names of this length stay inline. **No index** is implied — neither
+dependent needs one; both scan a feed's own rows.
+
+#### THE COST THAT IS NOT STORAGE
+
+> **THE COLUMN UNBLOCKS NOTHING RETROACTIVELY.** Every existing row would have it NULL, so
+> both dependent fixes stay blocked until at least one import cycle per retailer has run —
+> and the reassignment detector's baseline could not be recomputed for any period before it
+> shipped. **It buys future replay, never past replay**, which is the same property that
+> made item 78's before-readings have to be taken before the flip rather than after.
+
+**Not built, and not proposed here.** Recorded so the next person to hit it finds two
+dependents rather than one, and does not scope it as a detector improvement.
