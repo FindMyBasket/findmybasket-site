@@ -8530,3 +8530,77 @@ matched onto.
 **Nothing fixed, nothing proposed.** Every one of the 1,680 rows lands in a named bucket
 including the untestable remainder; no row is silently dropped. The counts are floors and
 are labelled as such.
+
+---
+
+### 107. The discriminator already catches this one, and nothing consumes it
+
+**Raised:** 14 August 2026 · **Second live defect motivating the same durable fix.**
+
+Product **81482**, *"ETUDE Moistfull Collagen Deep Sheet Mask Bundle Set 37ml x 5 sheets"*,
+two rows:
+
+| retailer | price | barcode | URL says | last confirmed |
+|---|---:|---|---|---|
+| **Stylevana** | **£1.69** | `8809668018110` | `deal-…-**1pc**` | today |
+| YesStyle | £16.39 | `8809668018110` | — | **1 July — 44 days** |
+
+#### THE FINDING: THE MECHANISM EXISTS, FIRES CORRECTLY, AND ITS OUTPUT GOES NOWHERE
+
+**Unlike 6174, this row is INSIDE the testable window.** The URL states a pack count of 1
+and the product name states 5 — **both sides stated**, which is exactly the precondition
+item 98 records the discriminator as needing.
+
+> **Item 98's pack-count discriminator identifies this row correctly. It was measured,
+> written down, and never built. Nothing consumes its output.**
+>
+> Item 98 recorded the discriminator as *"correct by design and blind to the case that
+> motivated it"* — true of 6174, which states no count. **This case is the other half: the
+> guard is not blind here, it simply is not connected to anything.** A rule that fires
+> correctly into a void is a different failure from a rule that cannot fire.
+
+**At 37% precision (item 99) it should FLAG rather than ACT — but flagging is not what it
+does either.** There is no surface on which its verdict appears: no counter in the import
+response, no row in a queue, no line in `scrape_log`. It exists as a measurement in a
+markdown file and as a scoring term in a script that runs by hand.
+
+**Two live user-facing defects in one day now motivate the same durable fix**, where this
+morning there was one. 6174 argued for it by escaping it; 81482 argues for it by being
+caught and ignored.
+
+#### THE 6174 PRECEDENT DOES NOT TRANSFER, AND THE REASON IS CONSEQUENCE NOT CAUSE
+
+Both rows carry the SAME barcode as the product, so **this matched on tier 1** — Stylevana
+assigned the five-pack's EAN to a single-sheet listing, exactly as Atelier De Glow did on
+6174. **Atelier's row was deliberately left alone**, on the argument that detaching it
+treats a retailer's data defect as ours.
+
+> **Same cause, opposite consequence. Atelier's row was £14 and eighth of nine — invisible.
+> This one is the headline price on a two-row page at 90% below the real one.**
+
+Stylevana also lists the single correctly as product **147989** (£1.72, same barcode a third
+time), so the row in question duplicates a listing that already sits in the right place.
+
+#### THE STALE FALLBACK IS AN ACCEPTED TRADE, NOT AN OVERSIGHT
+
+After a detach, 81482 shows **£16.39 from a YesStyle row last confirmed 1 July**.
+YesStyle's `absence_threshold_days = 9999` (item 53), so its rows never age out and this one
+still reads in stock.
+
+> **A STALE-BUT-RIGHT PRICE BEATS A FRESH-BUT-WRONG ONE WHEN THE WRONG ONE IS WHAT A
+> VISITOR CLICKS.** £16.39 for five sheets is plausible against £1.72 for one.
+
+**Recorded so the unconfirmed price is not later read as an accident.** The page will show a
+44-day-old figure and that is the deliberate choice.
+
+#### AND THE DETACH IS EXPECTED TO REVERSE ITSELF
+
+6174's row carried no barcode, so its return depended on a name match. **This row carries a
+valid barcode that the product also carries.** On the next Stylevana import, tier 0 will not
+find `68454`, and **tier 1 will match it straight back onto 81482 — correctly, by the rules,
+on a barcode the retailer supplied.**
+
+**Applied knowing that.** It is not a fix; it is a day's reprieve on a visible mispricing
+while the thing that would actually hold — a connected discriminator — remains unbuilt.
+
+**No clicks have gone through this row**, unlike 6174's.
