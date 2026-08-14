@@ -7054,3 +7054,200 @@ deploy-scope population** (GONE_IDS + redirects), unchanged by any of this and *
 scope tonight**. The 1,555 unparseable remain unmeasured.
 
 The Boots gate closes at 04:30.
+
+---
+
+### 87. A report column that overstated admission, and the ordering that hid it
+
+**Raised:** 14 August 2026 · **Fixed in the same PR.** `scripts/debenhams-taxonomy-report.py`
+
+The report's header described `NEW` as *"rows admitting this value would add — the number
+that matters"*. It is computed `not is_beauty(row)`, which is **"rows this value does not
+currently keep"**. Different quantity.
+
+They diverge by the order of branches in `is_beauty()`. Branch 1 tests
+`merchant_product_category_path`: a row with a **populated** non-beauty path returns `False`
+there, and the tier-1 `merchant_category` branch **is never reached for it**. So:
+
+> **Adding a value to `TIER1_MERCHANT_CATEGORIES` can only rescue rows whose path is EMPTY.
+> For every other row the addition is a no-op, and `NEW` counts them anyway.**
+
+`Fitness & Nutrition > Vitamins & Supplements` reported `rows 1,560 / already 11 / NEW
+1,549` on 14 August. **1,549 is an upper bound on what admitting it would do, not an
+estimate of it**, and nothing in the output said so.
+
+#### THE FIX, AND THE PART OF IT THAT IS NOT THE COLUMN
+
+A `T1-ABLE` column now counts, of the `NEW` rows, those with an empty path — the subset a
+tier-1 addition could actually rescue. Always `<= NEW`; the gap is what branch 1 kills.
+
+**The default sort changed too, and that is half the repair.** The table sorted by `NEW`,
+which put values at the top that a tier-1 addition cannot touch. **A number that was an
+upper bound was also the thing ranking the list**, so the most prominent rows were the ones
+most likely to be unreachable. It now sorts by `T1-ABLE`.
+
+> **A misleading column is a reading error waiting to happen; a misleading sort order is one
+> that has already been made for you.**
+
+Where `T1-ABLE` is 0, admitting the value changes nothing at all, however large `NEW` is.
+Verified against the real 14 August feed plus two controlled rows: `NEW 2 / T1-ABLE 1`,
+separating a path-populated row from a path-empty one.
+
+#### BOUNDS NOW PRINTED WITH THE TABLE
+
+Three caveats were being carried by whoever remembered them, so they are in the footer:
+brand lists are **capped at top-five per value** (absent ≠ absent from the feed);
+`--min-rows` omits small values as **unmeasured, not empty**; and counts drift — this value
+read **1,496 on 10 Aug and 1,560 on 14 Aug**.
+
+---
+
+### 88. The ~900 did not come from that report — and step 2 of the plan is a no-op
+
+**Raised:** 14 August 2026 · **Read-only. Nothing applied, nothing deployed.**
+
+The instruction was to check whether Boots' ~900 sizing carried item 87's defect **before the
+path prefix ships**. It does not. **It came from a different tool, with a different and
+larger defect — and underneath both sits something worse.**
+
+#### THE PREMISE WAS WRONG, WHICH IS WHY IT WAS WORTH CHECKING
+
+The ~900 was **not** produced by `debenhams-taxonomy-report.py`. That script reads
+`merchant_category` from a Debenhams feed and hard-errors without it. Boots was sized by
+**`scripts/atelier-feed-diag.mts` section 5, "ADMISSION PREVIEW"**, lines 341-348. The
+fingerprint is decisive: the migration comment's **2,179** is line 348's
+`admitted.length - supp.length`, and 3,115 − 936 = 2,179 exactly.
+
+#### THE DEFECT IT DOES HAVE IS BIGGER
+
+Section 5's `isSupp` is a **reimplementation of definition v1.0**, and the same file carries
+a v1.1 copy 45 lines later:
+
+| | line 335 (produced the 936) | line 383, same file |
+|---|---|---|
+| sports tokens | **none** | `whey`, `creatine`, `pre-?workout`, `bcaa`, `protein powder`… |
+| dosage forms in the topical veto | `oil`, `gel`, `mask`, `spray`, `butter`, `wash` | same list, but never applied to this count |
+
+Two consequences, **both pushing 936 down and 2,179 up**:
+
+1. **Sports nutrition moved IN scope on 10 August** — two days *before* the 12 August
+   measurement. The v1.0 copy has no sports tokens, so **the entire MyProtein / Optimum
+   Nutrition population that item 72's brand allowlist exists to route to `sports` was
+   counted as non-supplement.**
+2. **The topical veto vetoes dosage forms.** `docs/supplements-definition.md:265` already
+   lists the measured misfires — *Seven Seas Evening Primrose **Oil** 30 Capsules*, *Boots
+   IBS Relief 30 Soft **Gel** Capsules*. Every one is subtracted from the 936.
+
+Additionally `startsWith` (line 341) is not the importer's matcher: `isPathIncluded`
+(`index.ts:391-399`) uses **case-insensitive `includes`**. Prefix vs substring.
+
+> **The work list already recorded that `feed-diag` and `categorisation.ts` are two copies
+> of the supplements rule that have diverged. The ~900 was never re-derived after that
+> finding — it was produced by the divergent copy, in the same session, and carried into a
+> shipped column comment.**
+
+#### THE THING THAT OUTRANKS THE SIZING: NOTHING READS THE COLUMN
+
+`retailer_import_config.supplements_path_prefixes` shipped in `#256`.
+
+    $ grep -n "supplements_path_prefixes\|onSupplementsPath" import-awin-feed/index.ts
+    (no matches)
+
+    $ grep -n "inferCategorisationForImport" import-awin-feed/index.ts
+    2286:    const cat = inferCategorisationForImport(name, brand);   <- TWO arguments
+
+**No branch in the repository wires it.** And the column does not yet exist in production —
+the migration is merged but unapplied.
+
+> **The migration's activation plan says step 2 is "write the path prefix into Boots' row —
+> that is the change that carries risk". As built, step 2 does nothing.** The importer never
+> reads the column and never passes the fourth argument, so `onSupplementsPath` is always
+> `false`. Boots rows are also dropped at `index.ts:1979` by `category_path_must_contain`
+> before the classifier is reached at 2286, so **two config values must move together and
+> nothing says so.**
+
+**AND THE SAFETY PROOF IS WHAT CONCEALS IT.** `supplements-path.test.ts` direction A asserts
+that two-argument callers are byte-identical — deliberately, as the inertness guarantee.
+That assertion holds just as perfectly when **no caller ever passes the fourth argument at
+all**.
+
+> **An inertness proof and a wiring gap are indistinguishable from outside: both output
+> "nothing changed".** The test cannot tell "safe because dormant" from "dead because
+> unplumbed", and it was written to prove the first.
+
+Item 72's plumbing note concluded *"Zero plumbing"* and cited the call site as line **2193**;
+it is **2286**. The line it reasoned about is not the line that runs.
+
+#### ALSO, IN A SHIPPED COLUMN COMMENT
+
+The migration says *"Medicine & Drugs, whose **113** supplement-shaped rows are an accepted
+loss"*. `docs/supplements-definition.md:307-325` measured **115** and argues at length that
+**they are not supplements** — they are oral medicines, and excluding them "forgoes almost
+nothing we want". The comment disagrees with its own source on both the number and the
+characterisation, and it is the version that shipped.
+
+#### WHAT THIS DOES NOT CHANGE
+
+**None of it moves the decision.** Item 47 instance 12 already records that proceeding at
+~900 was decided on the commercial argument rather than the count. The sizing being soft in
+the *generous* direction does not threaten a decision that did not rest on it. **The wiring
+gap does**, and that is the one to act on before the prefix is written.
+
+---
+
+### 89. "Fails safe" was a claim about scale, stated without one
+
+**Raised:** 14 August 2026 · **Not actionable for Boots. Live if Debenhams ever ships.**
+
+`SPORTS_BRANDS` (`_shared/categorisation.ts:1337`) holds 18 brands and routes a listed brand
+to `sports`, else `supplements`. Its comment:
+
+> *"Fails safe: an unlisted sports brand lands in `supplements`, which is wrong but not
+> absurd."*
+
+**True at the scale it was written for and untrue at another, with nothing in it saying
+which.** Debenhams carries **Applied Nutrition at 549 rows** in one merchant_category value,
+and Applied Nutrition is **not on the list**. Every row would classify `supplements`.
+
+> **"Wrong but not absurd" is a judgement about a small number wearing the clothes of a
+> judgement about a rule.** At 15 rows it is a rounding error; at 549 it would be the single
+> largest misclassification in the category. **The reasoning is scale-dependent and the
+> scale was never stated**, so nothing in the comment tells a future reader when it stops
+> being true.
+
+**No change to the list.** Applied Nutrition has ~15 rows at Boots, so this is inert for the
+agreed first source. Recorded so that the fail-safe argument is not re-quoted at a scale it
+was never tested at.
+
+---
+
+### 90. Debenhams supplements: present, parked, and not fixed the way Boots is
+
+**Raised:** 14 August 2026 · **Parked. Nothing added to any allowlist.**
+
+Debenhams **does** carry sports nutrition — the observation that started this was correct,
+and the catalogue holds **zero** Applied Nutrition products.
+
+| merchant_category | rows | kept | top brands |
+|---|---:|---:|---|
+| `… Fitness & Nutrition > Vitamins & Supplements` | 1,560 | 11 | **Applied Nutrition ×549**, New leaf health ×184, Nature's Truth ×91 |
+| `… Fitness & Nutrition > Nutrition Bars` | 14 | 0 | Applied Nutrition ×12 |
+| `… Fitness & Nutrition > Nutrition Drinks & Shakes` | 7 | 0 | Swan ×7 — **kettle bundles**, marketplace mis-filing |
+| `Food… > Snack Foods > Chips` | 6 | 0 | Applied Nutrition ×6 (protein chips) |
+
+The 11 kept rows decompose exactly and confirm the mechanism: **9 by path** — Debenhams has a
+real `Beauty > Skin > Supplements` path — and **2 by brand fallback** (medicube, the only one
+of these brands in `BEAUTY_BRANDS`).
+
+**Three reasons it is not a second Boots.** It is **not a second MyProtein source** —
+MyProtein does not appear. **Zero of the 18 `SPORTS_BRANDS` are present**; the single
+`Warrior` hit is a workwear brand under `Business & Industrial > Protective Aprons`. And the
+mechanism differs: **branch 1 kills path-populated rows before the whitelist is consulted**,
+so admitting the value would rescue only the empty-path subset — see item 87's `T1-ABLE`.
+
+Bounds: top-five brand capping means an absent brand is **not proven absent**; `--min-rows 5`
+omits **746 of 2,228** values as unmeasured; one day's feed, with measured drift (1,496 on
+10 Aug → 1,560 on 14 Aug).
+
+**Boots remains the first source and its sequence is unchanged.** One retailer's supplements
+launch at a time.

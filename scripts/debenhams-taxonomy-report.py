@@ -23,10 +23,38 @@ So: no value gets added to the allow-list until this report says what it admits.
 WHAT IT REPORTS, per merchant_category value:
   rows            total raw rows carrying that value
   already         rows the CURRENT filter keeps anyway (via path or the fallback)
-  NEW             rows admitting this value would add — the number that matters
+  NEW             rows this value does not currently keep. READ THE WARNING BELOW:
+                  this is NOT the number a tier-1 addition would admit.
+  T1-ABLE         of those NEW rows, how many a tier-1 addition COULD actually
+                  rescue — i.e. how many have an EMPTY merchant_product_category_path.
+                  THIS is the number that matters when deciding whether to admit
+                  a value. It is always <= NEW, and the gap is rows branch 1 kills.
   flagged         of those NEW rows, how many hit NON_BEAUTY_NAME_HINTS
   no-size         of those NEW rows, how many state no volume/weight and no
                   fragrance descriptor (weak beauty signal; worth eyeballing)
+
+WHY T1-ABLE EXISTS, AND WHY NEW ALONE MISLEADS (added 14 Aug 2026).
+
+Until now this header called NEW "rows admitting this value would add — the number
+that matters". IT IS NOT THAT NUMBER. NEW is computed as `not is_beauty(row)`, which
+is "rows this value does not currently keep" — a different quantity, and the two
+diverge by exactly the rows that carry a populated non-beauty path.
+
+The reason is the ORDER OF BRANCHES in is_beauty(). Branch 1 tests
+merchant_product_category_path: a row with a non-empty path that does not start with
+'beauty' returns False THERE, and the tier-1 merchant_category branch is never
+reached for it. So adding a value to TIER1_MERCHANT_CATEGORIES can only ever rescue
+rows whose path is EMPTY. For every other row the addition is a no-op.
+
+Measured on the 14 Aug 2026 feed, Fitness & Nutrition > Vitamins & Supplements
+reported rows 1,560 / already 11 / NEW 1,549 — and NEW was read as the size of the
+population an addition would admit. It is an upper bound on it. This column is the
+difference between sizing a change and sizing a hypothesis.
+
+A REPORT THAT OVERSTATES ADMISSION IS THE SAME FAMILY AS ONE THAT UNDERSTATES IT.
+The header above already warns that extending a whitelist inverts the risk. The
+warning was about which rows get admitted; this is about how many, and the tool was
+quietly answering a question adjacent to the one it was asked.
 
 It imports the live filter module rather than reimplementing it, so its verdict
 cannot drift from what an import would actually do. Same contract idea as
@@ -76,7 +104,7 @@ def main() -> int:
     # value -> counters + samples. Samples are taken from NEW rows only, because
     # the already-kept ones are not what the decision is about.
     stats = collections.defaultdict(
-        lambda: {"rows": 0, "already": 0, "new": 0, "flagged": 0,
+        lambda: {"rows": 0, "already": 0, "new": 0, "t1able": 0, "flagged": 0,
                  "weak": 0, "brands": collections.Counter(), "samples": []})
     total = 0
     blank = 0
@@ -101,6 +129,11 @@ def main() -> int:
                 s["already"] += 1
             else:
                 s["new"] += 1
+                # Only an EMPTY path can be rescued by a tier-1 addition: a populated
+                # non-beauty path returns False at branch 1, before tier 1 is reached.
+                # Read from the same key is_beauty() reads, not a re-derived one.
+                if not (row.get("merchant_product_category_path") or "").strip():
+                    s["t1able"] += 1
                 name = (row.get("product_name") or "").strip()
                 s["brands"][(row.get("brand_name") or "").strip()] += 1
                 if flagged(name):
@@ -114,13 +147,16 @@ def main() -> int:
 
     print(f"\nraw rows: {total:,}   with a merchant_category: {total-blank:,}   "
           f"blank: {blank:,}   distinct values: {len(stats):,}\n")
-    print(f"{'rows':>8} {'already':>8} {'NEW':>8} {'flagged':>8} {'no-size':>8}  value")
-    print("-" * 100)
+    print(f"{'rows':>8} {'already':>8} {'NEW':>8} {'T1-ABLE':>8} {'flagged':>8} {'no-size':>8}  value")
+    print("-" * 108)
 
-    for val, s in sorted(stats.items(), key=lambda kv: -kv[1]["new"]):
+    # Sorted by T1-ABLE, not NEW. The ordering is part of the fix: sorting by NEW puts
+    # values at the top that a tier-1 addition cannot touch, which is how a number that
+    # was an upper bound got read as a target.
+    for val, s in sorted(stats.items(), key=lambda kv: (-kv[1]["t1able"], -kv[1]["new"])):
         if s["rows"] < args.min_rows:
             continue
-        print(f"{s['rows']:>8} {s['already']:>8} {s['new']:>8} "
+        print(f"{s['rows']:>8} {s['already']:>8} {s['new']:>8} {s['t1able']:>8} "
               f"{s['flagged']:>8} {s['weak']:>8}  {val}")
         if s["new"]:
             top = ", ".join(f"{b or '(blank)'} x{c}" for b, c in s["brands"].most_common(5))
@@ -130,7 +166,18 @@ def main() -> int:
         print()
 
     print("READ THE SAMPLES. 'flagged' and 'no-size' are hints, not verdicts, and a\n"
-          "value with clean counters can still be the wrong thing to admit.")
+          "value with clean counters can still be the wrong thing to admit.\n"
+          "\n"
+          "SIZE A TIER-1 ADDITION ON T1-ABLE, NEVER ON NEW. NEW counts rows this value\n"
+          "does not currently keep; T1-ABLE counts the subset a tier-1 addition could\n"
+          "actually rescue. Where T1-ABLE is 0 the value is unreachable from tier 1 no\n"
+          "matter how large NEW is, and admitting it would change nothing at all.\n"
+          "\n"
+          "TWO BOUNDS THAT TRAVEL WITH EVERY FIGURE HERE. Brand lists are capped at the\n"
+          "top five per value, so a brand absent from this report is NOT proven absent\n"
+          "from the feed. And --min-rows omits small values entirely — they are\n"
+          "unmeasured, not empty. Counts drift day to day: Vitamins & Supplements read\n"
+          "1,496 on 10 Aug and 1,560 on 14 Aug.")
     return 0
 
 
