@@ -3033,6 +3033,7 @@ It does not reach "built and unarmed since 5 August", which is checkable in a di
 
 | 14 | "Boots is the only `storage_passthrough` retailer in the rollout. Beauty Flash, Gorgeous Shop, Escentual and Organic Pharmacy are all inline." Robbie's, in the brief; repeated assistant-side into a report and adopted as the leading hypothesis | **All four are `storage_passthrough`.** `retailer_import_config.staging_mode` reads `storage_passthrough` for retailers 8, 23, 27 AND 30. The premise was false, and it was the entire reason the hypothesis was plausible |
 | 15 | "Zero plumbing" — that `inferCategorisationForImport`'s new 4th argument needed no wiring at the AWIN call site, because `categoryPath` is already in scope there. Robbie's, in item 72's plumbing note, citing the call site as line **2193** | **The call is at 2286, and it passed TWO arguments.** `categoryPath` being in scope is necessary and not sufficient: nothing read `supplements_path_prefixes` and nothing passed it. The line reasoned about was not the line that runs, so the check confirmed a fact about the wrong statement. Wired 14 Aug 2026 — item 91 |
+| 16 | "Boots contributes ~23,000 barcodes to an index of 62,323, **essentially none of which it currently holds**, so sole-supplier share should *rise* on the flip." Robbie's, in item 78, and the direction of the whole check was derived from it | **Boots shares 7,447 of its 21,827 barcodes — 34% — with an existing supplier.** The share FELL, 79.2% -> 77.3%, exactly as a false premise predicts. The check itself was sound and did its job: it detected the premise. Item 93 |
 
 #### INSTANCE 14: A HYPOTHESIS DISPROVED BY THE FACT THAT MADE IT PLAUSIBLE
 
@@ -4426,9 +4427,58 @@ many sellers' stock rather than one manufacturer SKU.
 Four of the five brands appear in the click-engagement top fifteen — the brand-led selection
 principle confirming itself from an independent direction.
 
+#### SCOPE AMENDED, 14 AUGUST 2026: SUPPLEMENTS JOIN THE MAP, ALONGSIDE K-BEAUTY
+
+**Robbie's decision.** The ASIN map covers **two** populations, not one: the K-beauty brands
+above, and **supplements**.
+
+**The supplements reason is a different argument from the K-beauty one, and it should not be
+collapsed into it.** K-beauty is in scope because we know it converts and because delivery
+thresholds bite hardest where unit prices are low (`docs/strategy.md:44`). Supplements are
+in scope because of **what the goods are**:
+
+> **Supplements are commodity goods with repeat purchase and price transparency. That is
+> precisely where Amazon competes hardest — and where people price-check by habit rather
+> than by research.**
+
+A tub of whey or a multivitamin is the same object wherever it is bought; the only variable
+is the delivered price, the purchase recurs, and the shopper has bought it before and
+remembers what it cost. Every one of those properties is an Amazon strength, and each one is
+also a reason a shopper will notice Amazon's absence from a comparison without being told to
+look.
+
+#### THE BUILD SPLITS IN TWO, AND THE SPLIT IS ABOUT WHICH CATALOGUE EXISTS TODAY
+
+| Tranche | Population | When | Why then |
+|---|---|---|---|
+| **1** | **K-beauty** — COSRX, medicube, Beauty of Joseon, Dr Melaxin and the unnamed fifth store `67C2B44D…` | **Now** | The products exist, the five official stores are confirmed, and five of six test ASINs matched live catalogue rows carrying 2-7 retailers each. **Nothing is owed; it is buildable today.** |
+| **2** | **Supplements** | **After the Boots supplements path prefix lands** — step 6 | The catalogue it would map does not meaningfully exist yet. |
+
+**The counts are the whole argument for that ordering, and they are measured, not estimated:**
+
+| Supplements catalogue | products |
+|---|---:|
+| today, 12 August baseline (item 72) | **93** |
+| of those, comparable | **23** — from three brands: Vida Glow 15, Solgar 6, Hair Gain 2 (item 65) |
+| after the Boots prefix is activated | **~1,715** (item 92, measured 14 August on the shipped rule) |
+
+> **Building the supplements ASIN map before step 6 means mapping 23 comparable rows and
+> then doing it again against ~1,715.** Not a slightly incomplete map — a map of a catalogue
+> that is about to be replaced by one seventy-five times its size.
+
+The two tranches share the pipeline shape below entirely; nothing about tranche 2 is
+speculative work, it is the same script pointed at a different brand list once the rows
+exist. **This is a sequencing decision, not a scope reduction.**
+
 #### Status
 
-**Specified enough to build. Needs no further measurement.** Sequenced behind supplements.
+**Tranche 1 (K-beauty): specified enough to build, needs no further measurement, and is no
+longer sequenced behind supplements** — amended 14 August 2026. It was, on the reading that
+the whole map was one piece of work; split in two, its half has no dependency to wait on.
+
+**Tranche 2 (supplements): gated on step 6**, the Boots supplements path prefix activation —
+which itself still needs the migration applied and **both** config values written together
+(item 91).
 
 Pipeline shape, settled: enumerate ASINs from official brand stores -> `GetItems` in batches
 of **10** with `itemInfo.externalIds` -> match **any** returned EAN against
@@ -4524,6 +4574,34 @@ without a held price is not a degraded alert, it is not an alert.
 **Neither is obviously right. Recorded open, and deliberately not decided now** — phase 1
 produces the fact that decides it.
 
+#### THE CONSTRAINT BITES HARDEST IN SUPPLEMENTS, AND IT ARRIVES WITH THEM
+
+**Added 14 August 2026, when supplements joined the ASIN map scope (item 60).** Noted here
+rather than left to be rediscovered when the first protein comparison renders.
+
+**Protein is heavy.** Delivery is not a rounding error on top of the goods price, it is a
+large share of what it costs to receive the product at all — and heavier goods are where a
+threshold-based delivery charge stops being a nuisance and starts being the difference
+between two sellers.
+
+**And Amazon cannot join the basket optimiser** — that is what this item exists to change,
+and until it does, the comparison surface has no way to say what it needs to say:
+
+> **A 2kg tub with Prime, against a UK retailer's £3.99 delivery, is a real difference — and
+> the basket total is the one number that cannot express it.** One side's delivery depends
+> on who the shopper is; the other's is a property of the retailer. The totals are not
+> comparable, and nothing about their presentation says so.
+
+That is the Prime toggle question arriving in the category where it matters most. It was
+raised as a design problem in the abstract on 11 August, on thirteen retailers whose terms
+happen to be uniform. **Supplements are where it stops being abstract**: the goods are heavy,
+the delivery share is high, the purchase repeats, and the shopper already knows what they
+paid last time.
+
+**It does not change the sequence below** — phase 1 still runs first, and it now has a
+sharper question to answer, because *how often Amazon wins* will read differently in a
+category where the win is often a delivery win rather than a goods-price one.
+
 #### SEQUENCE: cross-check first
 
 Not caution — sequencing on an input. Phase 1 establishes the fetch, the ASIN map and the
@@ -4535,7 +4613,10 @@ figure are all justified if Amazon wins often, and are a question asked of every
 change a handful of baskets if it does not. **The frequency is an input to the design, and
 only phase 1 produces it.**
 
-**Both sequenced behind supplements.**
+~~**Both sequenced behind supplements.**~~ **Amended 14 August 2026 when item 60's build
+split in two:** item 60 **tranche 1 (K-beauty) runs now**; item 60 tranche 2 (supplements
+ASINs) is gated on step 6; **this item is unchanged — still behind phase 1**, which is now
+tranche 1 rather than the whole map.
 
 ---
 
@@ -7445,3 +7526,121 @@ row already known to be on a supplements path needs a different question asked o
 commercial argument rather than the count, and doubling a number that nothing rested on
 changes nothing. **The figure should simply stop being quoted as measured** — including in
 the migration comment, now amended to say so.
+
+---
+
+### 93. The effect was in a column nobody was watching
+
+**Raised:** 14 August 2026 · **Boots coalesce, after-readings. Rollout complete: five
+retailers, all confirmed.** scrape_log 278 against 266.
+
+> **THE AGREED METRIC WAS `would_link_to_existing_product`. THE CHANGE IT WAS MEASURING
+> SHOWED UP IN `would_create_new_product`.**
+
+| | 13 Aug (flag false) | 14 Aug (flag true) | Δ |
+|---|---:|---:|---:|
+| `would_link_to_existing_product` | 159 | 171 | **+12** |
+| **`would_create_new_product`** | **249** | **32** | **−217** |
+| `tier1_ambiguous_skipped` | 0 | 1,069 | +1,069 |
+
+**The flip's largest effect on Boots is suppressing 217 duplicate product creations**, and it
+appears nowhere in the number the rollout was judged on. Item 78 set the success criterion as
+movement in net links, with a ±10 band; three retailers were read against that column, and on
+the fourth the column moved 12 while the real effect moved 217 in a different one.
+
+> **PREDICTING THE METRIC IS NOT THE SAME AS PREDICTING THE EFFECT.** The prediction that
+> links would move was correct. The belief that links were WHERE THE CHANGE WOULD BE was not,
+> and nothing in a link count can tell you it is the wrong column — a plausible reading of
+> +12 is "small effect, as expected", and it would have been wrong by an order of magnitude.
+
+**This is not the guard-that-cannot-fail family and not item 91's two-states-one-signal.** The
+instrument worked, the number was real, the band was reasonable. **The metric was simply
+narrower than the phenomenon**, and a metric agreed in advance is the hardest kind to notice
+that about, because agreeing it in advance is exactly what makes it credible.
+
+#### THE TIER DECOMPOSITION (item 62 treatment), WHICH IS ORDINARY
+
+Tiers sum exactly on both days, so the +18 against the 153 mean decomposes cleanly:
+
+| tier | 13 Aug | 14 Aug | Δ |
+|---|---:|---:|---:|
+| EAN | 0 | **66** | **+66** |
+| MPN | 0 | 0 | 0 |
+| name exact | 42 | 24 | −18 |
+| name stripped | 117 | 81 | −36 |
+| **total** | **159** | **171** | **+12** |
+
+**54 of the 66 EAN links are REALLOCATION** — rows that already linked, now linking on a
+barcode instead of a name, which is better provenance for the same link. **Net new is +12
+against yesterday**, +18 against the multi-day mean (yesterday was itself 159, +1.8σ).
+
+**The 217 are deferred, not resolved.** They neither create nor link: they are now recognised
+as matching an existing barcode ambiguously and skipped. That is strictly better than
+creating duplicates and it is not the same as being matched.
+
+#### FINDING 2: A COUNTER READING ZERO, ACCURATELY, WHILE ROWS WERE LOST
+
+`barcode_rejected: 0` against `rows_with_ean` 22,457 and 21,851 stored. **The 606 is two
+gaps with different causes, and only one of them is interesting.**
+
+**586 — by design, and already documented** at `index.ts:2118`: `rowsWithEan` counts rows
+*reaching the decision tree*, and several paths `continue` after it. `v6_excluded` 434 +
+`skipped_shade_variant` 77 = 511 of them. The residual ~75 is not attributable, because **no
+counter records "this row carried an EAN" at the point it was dropped.**
+
+**20 — a different stage entirely.** Every one is a 13-digit string with six leading zeros
+(`0000006808785`, `0000007441677`): Boots SKUs left-padded into the EAN field, stripping to
+7 significant digits and falling under the EAN-8 floor in `normaliseEan`.
+
+> **`barcode_rejected: 0` IS ACCURATE AND DOES NOT MEAN NOTHING WAS LOST.** Gorgeous Shop
+> lost 13% at *validation*. Boots lost 0% at validation and 20 rows at *normalisation* — one
+> stage on, where there is no rejection counter at all. A zero on a rejection counter reports
+> the health of the stage it watches, and says nothing whatever about the stages it does not.
+
+**The floor's own comment predicted this exactly** — *"It recurs on any feed carrying EAN-8"*
+— and it recurred, on the next retailer to be flipped. The rejection is correct: these are
+not barcodes. Recording it because a prediction that comes true is worth as much as one that
+fails, and this one names its own recurrence condition.
+
+#### A COUNTER THAT INCREMENTS BEFORE THE FILTER IT PRECEDES
+
+`ean_from_sibling` is **22,478** — *higher* than `rows_with_ean` at **22,457**. The coalesce
+counter increments when a sibling column supplies a value, before that value is validated and
+normalised, so **21 coalesced values were counted and then discarded.**
+
+Harmless at this size and worth writing down: it means `ean_from_sibling` is an upper bound
+on coalesce's contribution, not a measurement of it. **Two counters describing one pipeline
+from opposite sides of a filter will disagree, and neither is wrong** — the same shape as
+item 87's `NEW` versus `T1-ABLE`, and the same remedy: say which side of the filter you mean.
+
+#### FINDING 3: A RATIO CANNOT SEPARATE EXTENDING FROM DUPLICATING
+
+Same definition, complete cycle both times (all twelve retailers, YesStyle last at 10:01):
+
+| | 13 Aug | 14 Aug |
+|---|---:|---:|
+| Sole-supplier | 49,356 | **59,832** |
+| Multi-supplier | 12,967 | 17,568 |
+| Total indexed | 62,323 | 77,400 |
+| **Share** | **79.2%** | **77.3%** |
+
+**The share fell. The prediction was that it would rise. The premise is what failed** — see
+instance 16: Boots shares **7,447 of its 21,827 barcodes, 34%**, with an existing supplier,
+against a stated "essentially none".
+
+**THE CORRECTED RULE:**
+
+> **A SINGLE RATIO CANNOT SEPARATE EXTENDING FROM DUPLICATING. THE DECOMPOSITION IS THE
+> MEASUREMENT: 66% genuinely new, 34% shared.**
+
+Sole-supplier barcodes rose **10,476 — up 21% in absolute terms**, the largest single
+extension the barcode index has had. The share fell anyway because multi-supplier grew 35%
+off a smaller base. **That is arithmetic, not a finding**, and a decision rule that reads
+"fall = duplicating" converts arithmetic into a false verdict.
+
+Boots both extended and duplicated the catalogue. Those are not alternatives, and the check
+should have been specified as two numbers from the start.
+
+**Caveat that travels with it:** this is a whole-cycle delta, not a Boots-attributable one.
+Eleven other retailers ran between the readings and ~697 of the sole-supplier movement does
+not reconcile to Boots alone.
