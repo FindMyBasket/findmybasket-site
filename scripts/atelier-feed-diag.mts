@@ -370,10 +370,10 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
     const supp = admitted.filter(r => isSupp(get(r, "product_name")));
     const clash = supp.filter(r => EXCLUDE_SUPP.test(get(r, "product_name")));
     console.log("  rows admitted by this prefix        :", admitted.length);
-    console.log("  of those, supplements per v1.0      :", supp.length);
+    console.log("  of those, supplements per SHIPPED rule:", supp.length);
     console.log("  ** of those supplements, EXCLUDE_PATTERNS.supplements would DROP:", clash.length,
                 "(" + (100 * clash.length / Math.max(supp.length, 1)).toFixed(1) + "%) **");
-    console.log("  non-supplement rows arriving alongside:", admitted.length - supp.length);
+    console.log("  topical rows arriving alongside      :", admitted.length - supp.length);
     const seg3 = new Map<string, number>();
     for (const r of admitted) {
       const k = ((r[pathCol] ?? "").split(">").slice(0, 3).map(x => x.trim()).join(" > ")) || "(empty)";
