@@ -8790,3 +8790,186 @@ four of them `[Deal]` products, item 106's mode (b), already merged once.
 
 **`saved_routines` checked by TEXT SEARCH, not by column** — it has no `product_id`, so no
 column-based sweep can see it. 13 routines, none mentions any of the fifteen.
+
+---
+
+### 110. `/app` is missing supplements too, and the eleven was a floor
+
+**Raised:** 14 August 2026 · **Not started. Not investigated — deliberately.** Recorded
+against item 69, whose evidence table this belongs in.
+
+**`/app`'s category browse does not offer supplements.** That is a **third surface**,
+separate from the two navs (item 68) and the homepage cards (item 66), and **it was not
+among the eleven places the supplements sweep enumerated.**
+
+#### THE FINDING IS THE COUNT, NOT THE SURFACE
+
+Supplements missing from one more list is an edit. What it costs an hour to fix and what
+it is worth recording are different things:
+
+> **Eleven was a floor, not a total.** The sweep that produced it was scoped to the places
+> it already knew about, and `/app` was outside that scope — so the number described the
+> sweep's reach, not the surface area of the problem. **Nothing about the eleven ever
+> claimed to be exhaustive; it was read as though it did**, including in item 69, which
+> prices the migration off it.
+
+**The same will be true of the seventh category.** Whatever number the next sweep produces
+is the number of places it looked, and there is still nothing that can report a list which
+is silently short — item 66's *"absence has no keyword to grep for"*, one surface later
+and now with an instance behind it.
+
+#### WHAT TO ANSWER WHEN THIS IS PICKED UP
+
+**Is `/app`'s category list hardcoded, derived from `ALL_CATEGORIES`, or something else?**
+Left unopened on purpose so the answer arrives with the work rather than as a guess here.
+
+- **Hardcoded** → it is another copy, it goes in item 69's evidence table, and the count of
+  duplicated category lists rises again.
+- **Derived from `ALL_CATEGORIES`** → the omission has a different cause entirely, and the
+  consolidation argument does not gain from it. **Check this before assuming the first
+  case**, which is the more attractive answer and therefore the one to distrust.
+
+#### TWO DETAILS RECORDED BECAUSE THEY WERE OFF
+
+Neither changes the finding; both would mislead someone reconciling this entry later.
+
+- **Item 69's evidence table has six rows, not three.** The "three" is inside one of them —
+  *"three component copies"* in the seven-duplicated-label-maps row (item 65, #234). A
+  fourth hardcoded copy would extend **that row**, not the table.
+- **The eleven-places sweep is dated 12 August in this file**, not 13 — items 65 and 66,
+  both raised while adding supplements. The 13 August work was elsewhere.
+
+---
+
+### 110. The threshold is a column, and seven columns waited nine days for a report
+
+**Raised and closed:** 14 August 2026 · **Applied.** `metrics_quality_weekly` reshaped,
+`fmb_quality_snapshot_write()` created, first row written. **Cron NOT armed.**
+
+#### THE THRESHOLD IS A COLUMN, NOT A CONSTANT
+
+`suspect_price_threshold` is stored **in every row the writer produces**, set to **0.50**.
+
+> **A future change of threshold RECORDS A NEW DEFINITION instead of silently continuing an
+> old series.**
+
+**That is the failure mode this fortnight produced over and over, and it is now closed
+structurally rather than by discipline.** The sole-supplier figure was derived twice and
+abandoned once because no definition reproduced it. `ambiguous_ean_groups` reads **8,694**
+here against item 96's **8,606** — *definitional, not drift*: item 96 required active **and**
+enabled, this reads `retailer_prices_live`, which is active only. **Two metrics with the same
+name and different retailer predicates is exactly what this fortnight kept finding**, and a
+column that carries its own predicate cannot do it again.
+
+**Why 0.50 rather than the brief's 0.35**, recorded as a decision with its basis:
+
+| threshold | rows flagged | of today's three known defects |
+|---:|---:|---|
+| 0.35 | 167 | **1** (81482 only) |
+| **0.50** | **726** | **2** (81482 and 6174) |
+
+> **Derived from three real instances, not chosen for roundness. And the case for 0.35 is
+> manageable volume, which matters for a NOTIFICATION and not for a QUEUE.** This is a
+> review queue a human works. **All three known defects were found by a person reading a
+> page, so a wider net is the point.**
+
+#### NINE DAYS OF A SCHEMA WAITING ON A REPORT
+
+`metrics_quality_weekly` was created 28 July and has held **zero rows since 5 August**. Seven
+of its eight metric columns had **no definition anywhere** — no SQL, no view, no script, no
+workflow. They appeared in exactly three places: the migration declaring them, the brief
+restating them, and `platform_changes.metrics_affected`, where they are used as **string
+labels**.
+
+**The definitions were Step 7 of the dashboard brief. Step 7 is REPORT ONLY and never ran.
+Step 8 (the puller) and Step 9 (the panel) both depend on it.**
+
+> **THE SCHEMA LANDED AND THE MEANINGS DID NOT.** `review_queue` was created by the same
+> migration, so the *storage* half of Step 8 shipped while the *compute* half did not. A
+> table with columns and no queries looks finished from every angle except the one that
+> matters.
+
+Even the single defined column was only half defined: the canonical query returns a **count**
+and the column is a **percentage**. The denominator existed as prose in a table comment and
+had never been written as SQL. **Running both halves for the first time gave 12,946 / 85,439
+= 15.15%** — a number that had never existed, on the platform's headline metric.
+
+#### WHAT WAS WRONG WITH THE ORIGINAL EIGHT
+
+> **THERE WAS NOT ONE RELATIONAL COLUMN IN THE SET. It answered "is the data clean?". Every
+> failure this fortnight was relational: is this row on the right product, and is this price
+> comparable to the ones beside it.**
+
+- **Three views of barcode PRESENCE** — `ean_coverage_pct`, `null_ean_product_pct`,
+  `placeholder_ean_count` — and **none of barcode COLLISION**, the defect that blocks tier 1
+  on 8,694 codes and thousands of products every night.
+- **Every figure the fortnight kept re-deriving was absent from all eight**: sole-supplier
+  share (2 derivations, 1 abandoned, ~7 citations), cross-retailer duplicate EAN groups,
+  products with no in-stock offer (1 derivation, quoted 6 times), stale rows against each
+  retailer's own import.
+- **`bad_price_count` DROPPED.** No definition at all; the only recorded property was "reads
+  0". The brief argued to keep it as a regression detector — *"a metric that is zero today
+  and non-zero later"*. **A zero from an undefined query cannot go non-zero. It is a blank
+  tile, not an alarm.**
+
+**Kept 3, added 6.** Every ratio now stores its own numerator and denominator, so a reader
+can check a percentage rather than trust it, and can tell a moved denominator from a moved
+numerator.
+
+#### THE METRIC-9 CORRECTIONS, BOTH FOUND BEFORE ANYTHING WAS QUOTED
+
+**1. A JOIN WRITTEN TO CATCH A SPECIFIC PAIR, MADE BLIND TO THAT PAIR BY ITS OWN TOKEN
+FILTER.** `cross_product_price_outliers` exists because 80536 is structurally invisible to
+`suspect_price_count`. Its first form used `length(token) > 2` — which **drops the token
+`24`**, making `3325` *"Acne Pimple Master Patch x 24"* and `80536` *"Acne Pimple Master
+Patch"* **token-identical**. The join requires exactly one extra token, so it never saw them.
+
+> **The filter that made the names comparable is the filter that removed the difference.**
+> Found by running it against the known pair first, per item 79 — not by reading it.
+
+**2. RESTRICTING THE DIFFERING TOKEN TO NUMERIC OR PACK UNITS.** Unrestricted, the rule
+returned **902 pairs** — the population item 102 measured as dominated by shade names, where
+a 2x price gap between two shades is ordinary. Restricted: **319 pairs, and the founding case
+survives.** 583 shade and formulation pairs drop out.
+
+**A separate higher-signal bucket, stored in its own column:** **126 identical-name pairs**
+— same brand, same token set, >2x price gap. **It does not contain the founding case**, so it
+is stored beside the 319 rather than summed with it.
+
+#### WHAT THE MEASUREMENTS SAY ABOUT THEIR OWN LIMITS
+
+**`pack_mismatch_suspects` stores `pack_mismatch_testable`**: only **2,802 of 110,193** live
+rows — **2.5%** — state a pack count on both sides. **An empty result must read as "nothing
+found in the tested slice", never as "nothing wrong"**, and the column that says so ships
+with the column that counts.
+
+#### LIVE VERSUS BARE: FOLLOWED FROM `dq_snapshot`, NOT COPIED
+
+> **A departed retailer's rows must show in coverage and freshness, and must never show in
+> comparison depth.**
+
+`dq_snapshot` is the only executable data-quality SQL in the repo, and the brief warns
+against copying it wholesale because its split is deliberate and half of it is the wrong half
+for headline metrics. **The split was read and the reasoning adopted; the SQL was not.**
+Metrics 1-6 and 8-9 read `retailer_prices_live`; `stale_in_stock_rows` reads the bare table
+by design, and against **each retailer's own last import** rather than a fixed day bucket —
+because YesStyle's `absence_threshold_days = 9999` makes fixed buckets meaningless for it
+(item 53).
+
+#### FIRST ROW, WRITTEN TODAY
+
+`week_start 2026-08-10`, threshold 0.50 — depth **15.15%** (12,946/85,439) · suspect **726**
+/32,138 · EAN coverage **90.07%** (99,350/110,309) · ambiguous **8,694**/79,156 ·
+sole-supplier **77.25%** (59,793/77,400) · no-offer **13,280**/98,283 · stale **15,593** ·
+pack **13** of 2,802 testable · cross-product **319** · identical-name **126**.
+
+#### NOT SCHEDULED, DELIBERATELY
+
+**No `pg_cron` entry.** Tomorrow already carries four reads on the import path — 6174's
+possible return, the first Stylevana detector cycle, the clean-cycle confirmation, and 81482
+standing unchanged. **A scheduled writer would be a fifth thing moving in that window.**
+
+> **It costs a day and it keeps tomorrow attributable.**
+
+Step 9's panel is the remaining piece, and it now has **a series to render rather than a
+schema**.
