@@ -8095,3 +8095,106 @@ dependent needs one; both scan a feed's own rows.
 
 **Not built, and not proposed here.** Recorded so the next person to hit it finds two
 dependents rather than one, and does not scope it as a detector improvement.
+
+---
+
+### 102. Pattern D answered: NO, on the distribution rather than on caution
+
+**Raised and closed:** 14 August 2026 · **Nothing merged.**
+
+**Pattern D** — same brand, both products without a usable EAN, names differing by exactly
+one token. Population: **22,603 products** have a live retailer row and no usable barcode
+(20.9% of 108,324). Within it, **1,724 pairs** where one name is the other plus one token.
+
+**The question was whether the differing token is marketing (a normalisation rule) or a real
+distinction (not one). It is a real distinction, and not marginally:**
+
+| the differing token is | pairs | share |
+|---|---:|---:|
+| **OTHER** — 569 distinct tokens | **830** | **48.1%** |
+| NUMBER — size, shade code, pack count | 651 | 37.8% |
+| FORM/QUANTITY — refill, double, mini, travel | 123 | 7.1% |
+| SHADE-LIKE — light, medium, dark, taupe | 114 | 6.6% |
+| **MARKETING/VERSION** | **5** | **0.3%** |
+
+**Sampled, `OTHER` is overwhelmingly SHADE NAMES:** `n26`, `porcelain`, `fudge`, `cockney`,
+`taupe`, `caramel`, `bubblicious`, `c10.5` — plus real formulation words (`waterproof`,
+`rich`, `plumping`, `cleansing`).
+
+> **`M.A.C Lustreglass Sheer-Shine Lipstick Cockney` collapsing into `M.A.C Lustreglass
+> Sheer-Shine Lipstick` IS THE BULK OF THIS POPULATION, NOT AN EDGE CASE.** A merge rule on
+> one-token difference would destroy shade-level SKUs at scale.
+
+**Closed as answered NO — on the measured distribution, not on caution.** The 0.3% that is
+marketing does not support a rule; it supports four hand-checked merges, and those are
+covered below.
+
+#### THE REFILL CORRECTION, WHICH IS THE PROCESS FINDING
+
+`refill` was classified as **MARKETING/VERSION** in the first pass. **A refill is not a
+marketing variant of the thing it refills — it is a different product**, sold without the
+container. It was **63 pairs, the second-largest single token**, and moved to FORM/QUANTITY
+before any number was quoted.
+
+> **Had it stayed, "actionable" would have read 68 pairs instead of 5 — a TWELVEFOLD
+> inflation, and every one of the extra 63 a merge that destroys a real product.**
+
+**A classifier's own category labels are a place this mistake gets made, and the only thing
+that catches it is reading them.** No test fails; the bucket has a plausible name, a
+plausible count, and a wrong member. Same family as item 99's eleven false-positive causes,
+but one level up: not a bad extraction, a bad *category*.
+
+#### WHAT WAS NOT MEASURED
+
+**Only the SUPERSET case** — one name's tokens plus one extra. **Substitution pairs**
+(`rose` ↔ `beige`, same length) were not measured.
+
+> **They would strengthen the NO rather than change it**, since substitution is where shade
+> variants live most densely — but **1,724 is not the whole one-token population**, and the
+> conclusion is drawn from a measured part of it.
+
+#### THE FOUR `[DEAL]` PAIRS BELONG TO ITEMS 98 AND 99
+
+All four marketing-token pairs are Stylevana `[DEAL]`-prefixed duplicates —
+`[DEAL]Arencia Holy Hyssop`, `[DEAL]Round Lab 1025 Collection`,
+`[DEAL]BEAUTY OF JOSEON Relief Sun`. **Each is 1 retailer against 1 retailer, so none costs
+a split comparison.** Noted against items 98 and 99 rather than opened.
+
+> **AND THE `deal-` PATTERN HAS NOW PRODUCED A THIRD KIND OF DAMAGE.** In item 99 it
+> mis-attached a row to the wrong product (6174, 81482). Here it created **an entire
+> duplicate product**: product `126` is Stylevana's
+> `deal-cosrx-full-fit-propolis-light-ampoule-30ml`. Same feed behaviour, three distinct
+> failure modes, and only the first was ever scoped.
+
+---
+
+### 103. Two storefronts, one catalogue: Gorgeous Shop and Beauty Flash
+
+**Raised:** 14 August 2026 · **Measured, not actioned. Bears on every depth claim.**
+
+Investigating 81755's price spread surfaced that its Gorgeous Shop and Beauty Flash rows
+carry the **same `external_product_id` (39795)** and the **same URL slug on different
+domains**. Product 6174 showed the same thing (both `45918`). Measured across everything the
+two retailers share:
+
+| | |
+|---|---:|
+| products carried by both | 7,243 |
+| **carrying the SAME `external_product_id`** | **6,383 — 88.1%** |
+| of those, priced differently | 3,926 |
+| mean price gap where ids match | **£6.05** |
+
+Their AWIN merchant ids are adjacent (53379, 53381).
+
+> **88.1% is not a coincidence of numbering. These are two storefronts over one product
+> catalogue, priced independently.**
+
+**Why it matters, and it is not that anything is wrong.** Both are real shops a shopper can
+buy from, and their prices genuinely differ. But **a product showing four retailers where two
+are these may offer three distinct sellers**, and two expensive rows from one operator are
+not two independent signals about the market price.
+
+**Not actioned.** Nothing here says to drop or merge a retailer. Recorded so that comparison
+DEPTH figures — "carried by N retailers" — are known to overstate seller diversity on the
+6,383 products where these two overlap, and so nobody derives a market-price confidence from
+what is effectively one source counted twice.
