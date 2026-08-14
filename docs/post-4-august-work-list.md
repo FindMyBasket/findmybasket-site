@@ -8198,3 +8198,70 @@ not two independent signals about the market price.
 DEPTH figures — "carried by N retailers" — are known to overstate seller diversity on the
 6,383 products where these two overlap, and so nobody derives a market-price confidence from
 what is effectively one source counted twice.
+
+---
+
+### 104. One manufacturer code and one reseller code — a property of a feed, not of barcodes
+
+**Raised:** 14 August 2026 · **Recorded above the merge it enables, because it outlives it.**
+
+Products `126` and `81755` are the same COSRX ampoule under two barcodes. That looked like
+**item 100** — one product, two manufacturer codes, benign. **It is not.**
+
+| code | on | shape |
+|---|---|---|
+| **8809598450820** | YesStyle, Gorgeous Shop, Beauty Flash | 13-digit EAN-13, **Korean GS1 prefix 880** |
+| 648722973372 | Stylevana only | **12-digit, US-style, not the manufacturer** |
+
+**Measured across every active retailer — how many of each supplier's barcodes are 12-digit
+reseller-style codes rather than manufacturer EANs:**
+
+| retailer | barcodes | reseller-style 12-digit | Korean 880 |
+|---|---:|---:|---:|
+| **Stylevana** | 6,668 | **967** | 3,209 |
+| Perfume Click | 10,073 | 271 | 306 |
+| Boots | 21,851 | 327 | 553 |
+| **YesStyle** | 13,812 | **5** | 7,893 |
+| **Atelier De Glow** | 547 | **0** | 544 (99.5%) |
+
+> **THIS IS NOT "TWO BARCODES MEANS TWO PRODUCTS". IT IS ONE MANUFACTURER CODE AND ONE
+> RESELLER CODE SITTING IN THE SAME FIELD.**
+>
+> **It is a property of one retailer's feed, not a property of barcodes**, and it materially
+> weakens "different barcode → different product" as a rule. A code that no manufacturer
+> issued is not the manufacturer saying anything.
+
+**Why this matters beyond one merge.** A different barcode is normally the strongest possible
+evidence that two rows are different products, and it is the reason tier 1 is trusted above
+every name rule. **On a feed that supplies reseller codes, that evidence is not present even
+though the field is populated** — and nothing on the row says which kind of code it is.
+Length and prefix are the only signal, and neither is checked anywhere.
+
+**Independent corroboration, from a different direction:** `amazon_asin_map` already resolves
+ASIN `B07ZGJQZ8G` to **81755** via `8809598450820` — a barcode-led agreement, reached without
+reference to either name, that 81755 is the canonical product.
+
+#### THE MERGE THIS ENABLES
+
+**126 → 81755, keeper 81755, canonical barcode 8809598450820.** External check settled that
+`NEW` is repackaging and not reformulation: identical INCI across every listing found, a
+retailer describing it as the "new look" and an "upgraded version… kept the price same".
+**Our data could not have settled that** — it needed a source outside the catalogue.
+
+**91868 is repointed in the same transaction.** It is already merged into 126, and
+`fmb_soft_merge_group` does not repoint children, so the merge alone would leave
+`91868 → 126 → 81755` — the two-hop chain item 52 records the merge functions mishandling.
+
+**And a table the merge function does not cover:** `stylevana_url_health_queue` holds a row
+for 126. The function's scope is `retailer_prices` and `price_history` only; **it also
+hardcodes `saved_routines_updated = 0` in its own log**, which is worth knowing before the
+next merge lands on a product someone has saved. Nothing here is affected — `tracked_products`
+and `routine_alerts` both hold zero rows for these ids — but the gap is real and was found by
+checking rather than by the function complaining.
+
+**After the merge:** 4 retailer rows, **best price £10.52** (from £10.72), and **3 distinct
+sellers, not 4** — Gorgeous Shop and Beauty Flash are one operator (item 103).
+
+**A side effect worth having:** the merged product carries **both** codes across its rows, so
+`ean_product_index` resolves either to it. The reseller code is not deleted; it stops
+defining a product of its own.
