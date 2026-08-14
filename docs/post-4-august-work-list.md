@@ -8364,6 +8364,9 @@ treating an exported working file as current.
 
 #### TWO MATCHER GAPS, BOTH FOUND BY A HUMAN DISAGREEING WITH THE MACHINE
 
+**1. NO `-ise`/`-ize` NORMALISATION** — see also item 109 group D, where the same pair
+reappears as a merge candidate and the spelling is the whole of the name difference.
+
 **1. NO `-ise`/`-ize` NORMALISATION.** `B0G6KTMKSR` was corrected to **14684**, *"Beauty of
 Joseon Revive Firming Moisturi**s**er 60ml"* — **three live retailers**, and it **never
 scored at all** against Amazon's *"Moisturi**z**er"*. My two candidates were 94046 (10ml) and
@@ -8681,3 +8684,109 @@ the testable share is **2.8%** (item 99).
 
 No table, no counter, no config column. Recorded so the next session starts from a scoped
 design rather than from two defects and an argument.
+
+---
+
+### 109. Eight duplicate pairs triaged: one merged, six held, one reclassified
+
+**Raised:** 14 August 2026 · **One merge applied. Nothing else touched.** Each pair was a
+separate decision and they did not come out the same way.
+
+#### MERGED: 108246 -> 110261, medicube Collagen Glow Sunscreen 50ml
+
+**Keeper 110261 holds the ONLY barcode** (`8800289461552`); 108246 had none. Same principle
+the propolis merge established: **the side carrying the manufacturer code survives.**
+
+Verified: 2 in-stock rows, best **£17.93** (from £22.95 on the keeper alone), no orphans, no
+chain, logged. **The single `outbound_clicks` row was repointed in the same transaction** —
+`fmb_soft_merge_group` does not carry it (item 104), and a click record left on a merged
+product is history pointing at nothing.
+
+#### THE ADJACENT-BARCODE QUESTION, WHICH ANSWERS TWO PAIRS AND MORE
+
+Groups C (`14906`/`93640`, codes `…325**23**`/`…325**16**`) and D (`14684`/`94047`, codes
+`…331**93**`/`…331**79**`) both carry **sequential manufacturer codes**. Measured across the
+catalogue, grouping every 13-digit barcode by its first 11 digits:
+
+| | groups |
+|---|---:|
+| prefix groups | 28,900 |
+| **with sibling codes on DIFFERENT products** | **12,298** — 45,749 products |
+| with sibling codes on the SAME product | **3** |
+
+> **A shared 11-digit prefix is the signature of a PRODUCT LINE, not of a duplicate. The
+> ratio is roughly 4,100 to 1.**
+
+Sampled, the sibling blocks are exactly that — shade and variant ranges:
+
+- **Isle of Paradise**: Self-Tanning Water *Light* / *Medium*, Mousse *Medium* / *Dark*
+- **Mylee Gel Polish**: *Head Girl* / *Drama Club* / *Lecture Notes*
+- **Beauty of Joseon** `88099681331`: Revive Firming Moisturiser **and** Calming Barrier
+  Serum 2026 — two unrelated products in the same block as group D's two codes
+
+**So adjacency is weak evidence AGAINST merging, not for it**, and it removes the one thing
+that made C and D look mechanical. **Both held.**
+
+**What it does not settle:** in C and D the *names* are near-identical while the *barcodes*
+are adjacent-but-distinct. **The two signals now point opposite ways**, which is the
+definition of a case needing a human, not a rule.
+
+#### E — THE KEEPER IS THE BARCODE HOLDER, NOT THE CHEAPER ROW
+
+`7740` (£5.92, **no barcode**, 1 child) against `82606` (£6.18, `8809598455405`).
+
+> **Keeper is 82606. A price that may be stale should not override a manufacturer code.**
+> The propolis merge settled this: the barcode is evidence, a name match is an inference.
+> The ASIN pass had pointed at 7740, and that verdict is superseded here on the stronger
+> signal.
+
+**Held behind C and D**, because the same adjacency question applies to any COSRX pair.
+
+#### F — HOLD, AND THE EXPECTATION ABOUT IT WAS WRONG IN AN INFORMATIVE WAY
+
+`578` / `129360` / `14993` were expected to be a 13-versus-23 confusion. **They are not:
+all three are Vitamin C 23.** That confusion belonged to ASIN `B0BS8M8Q5L`, which was
+redirected to `1775` during the human pass — **the annotation travelled with the row, not
+with the products.**
+
+**But the group should still not be merged**, for a different reason:
+
+| | 578 | 14993 |
+|---|---|---|
+| name | `The Vitamin C 23 Serum` | **`Advanced`** `The Vitamin C 23` |
+| best | **£26.00** | **£9.88** |
+| barcode | two | none |
+
+> **2.6x on a stated 20ml is not what repackaging looks like.** `Advanced` is the same token
+> class as `NEW` on the propolis ampoule, and that only resolved on an **external check** of
+> the ingredient list. **Do that check before proposing anything.**
+
+`129360` is plausibly the same as `578` — Beauty Flash's URL for 578 ends `-20g`, matching
+129360's name.
+
+#### G IS NOT A MERGE. IT IS THE THIRD PACK-MISMATCH DEFECT.
+
+`3325` *"Acne Pimple Master Patch **x 24**"* (£5.25) against `80536` *"Acne Pimple Master
+Patch"*, no count stated, **£1.85**, and **6 outbound clicks — the most of any product in
+this set.**
+
+> **Merging would put a single-patch price on a 24-patch page.** It is the 6174 shape with
+> more traffic behind it. **Moved to item 108's population.**
+
+**AND IT IS AGAIN OUTSIDE THE DISCRIMINATOR'S TESTABLE WINDOW**, because 80536 states no
+count at all.
+
+> **Three live instances now — 6174, 81482, 80536 — and TWO OF THE THREE ARE INVISIBLE TO
+> THE RULE.** The one it can see (81482) is the one deliberately left unfixed as evidence.
+> The rule's blind spot is not a tail; it is the majority of the known population.
+
+#### WHAT `fmb_soft_merge_group` WOULD NOT HAVE CARRIED
+
+Across the fifteen products: **9 `amazon_asin_map` rows** (five human-verified hours
+earlier), **11 `outbound_clicks`**, **3 `stylevana_url_health_queue`**, and **6 children** —
+four of them `[Deal]` products, item 106's mode (b), already merged once.
+`tracked_products`, `routine_alerts`, `review_queue`, `product_change_events`,
+`shade_variant_fix_proposals` and `categoriser_safety_net_log` are all zero here.
+
+**`saved_routines` checked by TEXT SEARCH, not by column** — it has no `product_id`, so no
+column-based sweep can see it. 13 routines, none mentions any of the fifteen.
