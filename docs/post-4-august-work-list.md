@@ -8600,7 +8600,84 @@ valid barcode that the product also carries.** On the next Stylevana import, tie
 find `68454`, and **tier 1 will match it straight back onto 81482 — correctly, by the rules,
 on a barcode the retailer supplied.**
 
-**Applied knowing that.** It is not a fix; it is a day's reprieve on a visible mispricing
-while the thing that would actually hold — a connected discriminator — remains unbuilt.
+#### THE DECISION WAS NOT TO DETACH, AND THE REASON IS THE POINT
 
-**No clicks have gone through this row**, unlike 6174's.
+**Robbie's call, 14 August. The diff is written, verified against the schema, and filed
+UNAPPLIED at `docs/proposed/detach-81482-stylevana-single-sheet.sql`** — deliberately not
+in `supabase/migrations/`, so no runner can pick it up.
+
+> **6174 was detached because its return depended on a NAME match and detaching it was how
+> we find out. This row carries the product's own barcode, so tier 1 rematches it at 03:30
+> tomorrow — correctly, by the rules.** One day's reprieve on a page with ZERO CLICKS, paid
+> for with a snapshot table, a migration record and a reversal to explain in the morning.
+
+**The defect is worth more as evidence than as a repair.**
+
+> **A rule with no surface — no counter, no queue row, no `scrape_log` line — is a
+> measurement in a markdown file.** Detaching a row the discriminator has ALREADY IDENTIFIED
+> would be doing by hand what it should be doing by output, and it would remove the clearest
+> demonstration of why the output is missing.
+
+**81482 stays wrong, visibly, with zero clicks, until the discriminator has somewhere to
+report.** That is a choice and it is recorded as one.
+
+**No clicks have gone through this row**, unlike 6174's, which is what makes the choice
+affordable. It would not be if someone were clicking it.
+
+---
+
+### 108. Give the discriminator a surface — scoped, not built
+
+**Raised:** 14 August 2026 · **Next piece of work, after tomorrow's reads.** Design only.
+
+**Two live user-facing defects in one day motivate one fix.** 6174 argues for it by escaping
+the discriminator; 81482 argues for it by being caught and ignored (items 98, 107).
+
+#### WHAT IS ACTUALLY MISSING
+
+The pack-count comparison is measured (item 99), correct on the cases it can see (item 107),
+and **has no output anywhere.** Not a counter, not a queue, not a log line. It exists as a
+scoring term in a hand-run script and a table in a markdown file.
+
+> **THE FIX IS NOT A BETTER RULE. IT IS A PLACE FOR THE RULE'S ANSWER TO GO.**
+
+#### IT MUST FLAG, NEVER ACT — AND THE PRECISION IS WHY
+
+**Measured precision is 37% on the sharpest bucket** (item 99: 7 genuine of 19). A detector
+that acted on that would be wrong twice for every time it was right, on live pricing.
+
+And a 63% false-positive stream shown as alerts is **item 70's failure mode exactly** — a
+guard that fires so often it trains dismissal. **So: a review queue a human works, not a
+notification, and never a mutation.**
+
+**Same posture as the reassignment detector: count, log, and still write.** Never skip, never
+detach, never suppress — so the population stays measurable against an untouched baseline.
+
+#### SHAPE
+
+**1. A counter in the import response and `scrape_log.details.counts`** — e.g.
+`pack_mismatch_suspect`, alongside `tier1_ambiguous_skipped` and `on_supplements_path`.
+Per-run, per-retailer, visible in the same place every other counter already is.
+
+**2. A queue table**, holding one row per suspect: the `retailer_prices` id, product id,
+retailer, the pack count each side stated, the price, whether it is the cheapest in-stock
+row, when it was detected, and a `reviewed` flag. **The cheapest-row test is what separates
+a curiosity from live harm** and belongs in the row, not in a later query.
+
+**3. Opt-in per retailer, default off**, exactly like `reassignment_detect` — so the deploy
+is inert and the first read is one retailer's worth of rows rather than the fleet's.
+
+#### WHAT IT WILL NOT CATCH, STATED UP FRONT
+
+**Only 18.4% of Stylevana's deal rows are testable at all** (item 106), and **6174 — the case
+that started this — is not among them**, because its URL states no pack count. Catalogue-wide
+the testable share is **2.8%** (item 99).
+
+> **This surface makes a rule that sees 2.8% of rows visible. It does not make the rule see
+> more.** Anyone reading the queue must know that an empty queue means "nothing found in the
+> tested slice", not "nothing wrong".
+
+#### NOT BUILT
+
+No table, no counter, no config column. Recorded so the next session starts from a scoped
+design rather than from two defects and an argument.
