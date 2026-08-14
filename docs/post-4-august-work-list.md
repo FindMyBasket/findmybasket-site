@@ -8421,3 +8421,112 @@ YesStyle 150ml but is labelled 50ml"*.
 
 **Nothing promoted.** `products.amazon_asin` is untouched; promotion is a separate step now
 that 36 rows are verified.
+
+---
+
+### 106. The `[DEAL]` marker is present where the damage is least and absent where it is worst
+
+**Raised:** 14 August 2026 · **Diagnosis only. Nothing on the import path, nothing fixed.**
+
+#### THE MARKER GAP, WHICH IS THE FINDING
+
+Stylevana's promotional listings carry **two** markers, and they select for opposite things:
+
+| marker | where it lives | rows |
+|---|---|---:|
+| **`/deal-` path segment** | the ROW's URL | **1,680** of 11,512 (14.6%) |
+| **`[DEAL]` prefix** | the PRODUCT's name | 222 products, **191** with a deal row |
+
+> **A `[DEAL]` NAME SURVIVES ONLY WHEN THE LISTING CREATED ITS OWN PRODUCT. When it attaches
+> to a product that already exists, the name is that product's name and the marker is
+> invisible.**
+>
+> **So the name marker is present where the damage is LEAST — a duplicate product nobody has
+> linked to — and absent where it is WORST: a promotional single sitting on a real
+> multi-retailer page as the headline price.**
+
+That is not a hypothesis. It is exactly why **6174, 81482 and 126 all have URL markers and
+no name marker**, and those are the three cases with live user harm. Validated on all seven
+known instances: **the URL marker catches 7/7, the name marker 4/7**, and the three it misses
+are the three that mattered.
+
+**A better finding than any of the counts below**, because it says the obvious marker — the
+one visible in a product name, the one a person would notice — is systematically the wrong
+one to search on.
+
+#### WHY THE FIRST QUERY RETURNED ZERO
+
+`retailer_prices.url` is an AWIN deeplink wrapper with the merchant URL **percent-encoded**
+inside `ued=`:
+
+    ...&ued=https%3A%2F%2Fwww.stylevana.com%2Fen_GB%2Fdeal-medicube-...
+
+**`/` is stored as `%2F`, so `/deal-` never appears literally.** A search for `%2Fdeal-`, or
+a decode first, is required. Zero false positives once decoded: "deal" appears nowhere else
+in a Stylevana URL.
+
+#### THE FOUNDING INSTANCE FAILS BOTH DETECTORS
+
+**6174's row — the one that caused a live mispricing this morning — is caught by neither
+test built here.** Its slug shares nearly every token with the product name, so it is not
+mode (a). Its URL states no pack count, so it is not testable for mode (c).
+
+> **It was found by a person reading a page.** The 3 and the 9 below are **floors inside a
+> window that excludes the case that started this**, and no amount of tuning either detector
+> would have surfaced it.
+
+#### THE THREE MODES
+
+**(a) ATTACHED TO THE WRONG PRODUCT — 9 rows, 7 of them the cheapest on their page.** Not
+subtle:
+
+| product | the deal row actually points at |
+|---|---|
+| Shiseido ULTIMUNE Concentrate | `romand cheek … c02 blueberry` |
+| Shiseido ULTIMUNE Concentrate | `romand cheek … c03 fig chip` |
+| FRUDIA Hand Cream | `… panthensoside sheet mask 5ea set` |
+| Round Lab Birch Pad | `derma b fresh moisture body lotion 400ml` |
+| EMBRYOLISSE Lait Crème | `madeca time reverse boosting toner 250ml` |
+| Rohto Lip Balm | `some by mi clear spot patch 20ea set` |
+
+> **A PREDICTION, RECORDED BEFORE THE RUN. Mode (a) is not a new population — it is the
+> REASSIGNMENT population.** Products 2015 and 2167 are the exact ULTIMUNE/romand pairs the
+> zero-shared-token image analysis surfaced, and the detector armed this afternoon
+> (`reassignment_detect`, Stylevana only) is pointed at precisely this shape.
+>
+> **These nine should appear in tomorrow's 03:30 sample. If they do not, that is a finding
+> about the detector rather than about the rows** — and it is worth more than a confirmation
+> would be, because the detector has no other independent test.
+
+**(b) CREATED A DUPLICATE PRODUCT — 191 rows, and the true figure is unknown and larger.**
+191 is what the *name* marker catches. **Product 126 was mode (b) and carried no `[DEAL]`
+name at all** — it became a whole duplicate product and was merged today. So the marker
+misses an unmeasured share of its own class, and 191 is a floor with no known ceiling.
+
+**(c) A SINGLE PACK AS THE HEADLINE PRICE — 3 found, testable on 18.4% of rows.** The window
+belongs with the number, not after it: mode (c) needs a pack count stated on **both** the
+product name and the URL slug, and that is true of **309 of 1,680** rows.
+
+| product | states | deal row says | price |
+|---|---:|---:|---:|
+| **ETUDE Moistfull Collagen Bundle Set** | **5** | **1pc** | **£1.69** |
+| numbuzin No.5+ Glutathione Mask | 5 | 4pc | £8.08 |
+| numbuzin No.1 Pantothenic B5 | 5 | 4ea | £7.55 |
+
+All three are the cheapest in-stock row on their page.
+
+#### THE DEFECT PROPAGATES INTO OTHER RETAILERS' ROWS
+
+**YesStyle carries 4 products with a `[DEAL]` name and no deal URL; Atelier De Glow carries
+2.** Those are products a Stylevana promotional listing created, which other retailers then
+matched onto.
+
+> **A feed defect in one retailer becomes a product other retailers attach to.** The
+> duplicate stops being Stylevana's once a second retailer joins it, and removing it is no
+> longer a question about one feed.
+
+#### STATUS
+
+**Nothing fixed, nothing proposed.** Every one of the 1,680 rows lands in a named bucket
+including the untestable remainder; no row is silently dropped. The counts are floors and
+are labelled as such.
