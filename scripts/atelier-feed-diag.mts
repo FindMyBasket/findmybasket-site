@@ -14,6 +14,10 @@ import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import { createClient } from "@supabase/supabase-js";
 import { buildMatchKey, normaliseForMatch } from "../supabase/functions/_shared/match-key.ts";
+// Section 5 sizes admissions with THE SHIPPED RULE, not a copy of it. See the
+// comment at section 5 for why: the Boots ~900 was produced by a local v1.0
+// reimplementation that had already diverged from what the importer does.
+import { isSupplementPathTopical } from "../supabase/functions/_shared/categorisation.ts";
 
 // Credentials come from the process environment when present (CI), falling back
 // to .env.local for local runs. CI has no .env.local, so reading it
@@ -332,20 +336,44 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
   if (pathCol >= 0 && PREFIX.length) {
     // The live shared constant, copied verbatim from _shared/categorisation.ts.
     const EXCLUDE_SUPP = /\b(supplement|vitamin tablet|capsule|gummies|protein shake|meal replacement|powder drink|fish oil|cod liver oil|effervescent tablet)\b/i;
-    const FORM = /\b(supplement|supplements|multivitamin|probiotic|prebiotic|capsules|tablets|softgels|gummies|effervescent|lozenges)\b/i;
-    const BOUND = /\b(collagen|biotin|keratin)\b[^,]{0,30}\b(powder|drink|sachets|shots)\b/i;
-    const TOPICAL = /\b(serum|cream|lotion|balm|butter|mask|gel|oil|spray|mist|toner|essence|cleanser|shampoo|conditioner|scrub|candle|perfume|eau de|soap|wash|foundation|lipstick|mascara|polish)\b/i;
-    const isSupp = (n: string) => (FORM.test(n) || BOUND.test(n)) && !TOPICAL.test(n);
+    // THE SHIPPED RULE, IMPORTED. Not a copy — this used to be a local
+    // reimplementation of definition v1.0 and it is what produced the Boots sizing
+    // (3,115 admitted / 936 supplement-shaped / 2,179 alongside, 12 Aug 2026).
+    //
+    // WHAT THE COPY GOT WRONG, both errors pushing the supplement count DOWN and
+    // the "arriving alongside" count UP:
+    //
+    //   1. NO SPORTS TOKENS. Sports nutrition moved into scope on 10 Aug 2026, two
+    //      days BEFORE that measurement. The whole MyProtein / Optimum Nutrition
+    //      population that item 72's brand allowlist exists to route to `sports`
+    //      was counted as non-supplement.
+    //   2. IT VETOED DOSAGE FORMS AS TOPICALS. Its veto list held `oil`, `gel`,
+    //      `butter`, `wash` — application words on a beauty path, dosage forms on a
+    //      health one. "Seven Seas Evening Primrose Oil 30 Capsules" and "Boots IBS
+    //      Relief 30 Soft Gel Capsules" were both subtracted from the 936.
+    //
+    // THE SHIPPED RULE DOES NOT WORK THAT WAY, and copying v1.1's APPLY list would
+    // NOT have fixed it — that list still contains `oil` and `gel`. The path-first
+    // branch uses the far narrower SUPP_TOPICAL_FORM (serum|toner|cream|lotion|
+    // mask|shampoo|conditioner|moistur*|body spray) precisely because a row already
+    // known to be on a supplements path needs a different question asked of it.
+    // That is the substance of the feature, and a reimplementation could not have
+    // captured it by regex-matching alone.
+    //
+    // So section 5 no longer reimplements: ON A SUPPLEMENTS PATH, A ROW IS A
+    // SUPPLEMENT UNLESS THE SHIPPED TOPICAL TEST SAYS OTHERWISE. If the rule
+    // changes, this number changes with it. Work-list item 88.
+    const isSupp = (n: string) => !isSupplementPathTopical(n);
 
     console.log("\n=== 5. ADMISSION PREVIEW (prefix: " + PREFIX.join(" | ") + ") ===");
     const admitted = body.filter(r => { const p = (r[pathCol] ?? "").trim(); return PREFIX.some(x => p.startsWith(x)); });
     const supp = admitted.filter(r => isSupp(get(r, "product_name")));
     const clash = supp.filter(r => EXCLUDE_SUPP.test(get(r, "product_name")));
     console.log("  rows admitted by this prefix        :", admitted.length);
-    console.log("  of those, supplements per v1.0      :", supp.length);
+    console.log("  of those, supplements per SHIPPED rule:", supp.length);
     console.log("  ** of those supplements, EXCLUDE_PATTERNS.supplements would DROP:", clash.length,
                 "(" + (100 * clash.length / Math.max(supp.length, 1)).toFixed(1) + "%) **");
-    console.log("  non-supplement rows arriving alongside:", admitted.length - supp.length);
+    console.log("  topical rows arriving alongside      :", admitted.length - supp.length);
     const seg3 = new Map<string, number>();
     for (const r of admitted) {
       const k = ((r[pathCol] ?? "").split(">").slice(0, 3).map(x => x.trim()).join(" > ")) || "(empty)";

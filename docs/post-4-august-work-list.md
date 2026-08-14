@@ -3032,6 +3032,7 @@ It does not reach "built and unarmed since 5 August", which is checkable in a di
 > time the claim was repeated.**
 
 | 14 | "Boots is the only `storage_passthrough` retailer in the rollout. Beauty Flash, Gorgeous Shop, Escentual and Organic Pharmacy are all inline." Robbie's, in the brief; repeated assistant-side into a report and adopted as the leading hypothesis | **All four are `storage_passthrough`.** `retailer_import_config.staging_mode` reads `storage_passthrough` for retailers 8, 23, 27 AND 30. The premise was false, and it was the entire reason the hypothesis was plausible |
+| 15 | "Zero plumbing" — that `inferCategorisationForImport`'s new 4th argument needed no wiring at the AWIN call site, because `categoryPath` is already in scope there. Robbie's, in item 72's plumbing note, citing the call site as line **2193** | **The call is at 2286, and it passed TWO arguments.** `categoryPath` being in scope is necessary and not sufficient: nothing read `supplements_path_prefixes` and nothing passed it. The line reasoned about was not the line that runs, so the check confirmed a fact about the wrong statement. Wired 14 Aug 2026 — item 91 |
 
 #### INSTANCE 14: A HYPOTHESIS DISPROVED BY THE FACT THAT MADE IT PLAUSIBLE
 
@@ -7251,3 +7252,196 @@ omits **746 of 2,228** values as unmeasured; one day's feed, with measured drift
 
 **Boots remains the first source and its sequence is unchanged.** One retailer's supplements
 launch at a time.
+
+---
+
+### 91. A guard whose passing is consistent with two opposite states
+
+**Raised:** 14 August 2026 · **Fixed the same day.** `import-awin-feed/index.ts`,
+`lib/__tests__/supplements-path.test.ts`
+
+> **AN INERTNESS PROOF AND A WIRING GAP ARE INDISTINGUISHABLE FROM OUTSIDE. BOTH OUTPUT
+> "NOTHING CHANGED".**
+
+`supplements_path_prefixes` shipped in `#256`. Between then and 14 August:
+
+    grep "supplements_path_prefixes|onSupplementsPath" import-awin-feed/index.ts  -> nothing
+    grep "inferCategorisationForImport"                import-awin-feed/index.ts  -> (name, brand)
+
+**No caller anywhere passed the fourth argument.** `onSupplementsPath` took its `false`
+default on every row of every retailer, the branch was unreachable, and **writing a prefix
+into Boots' config would have produced a clean, silent, entirely convincing no-op** — the
+change that the migration itself calls "the change that carries risk".
+
+#### THE SHAPE, WHICH IS THE FINDING
+
+This is not the familiar failure. **It is not a guard that cannot fail** — items 48, 51, 54,
+56, 60, 67 — and it is not item 70's guard that fires so often it trains dismissal.
+
+> **It is a guard whose PASSING is consistent with two opposite states: the feature is safely
+> dormant, or the feature was never connected.** The assertion is true in both. Nothing about
+> a green result distinguishes them, and the deploy/activation split rested entirely on
+> reading it as the first.
+
+`supplements-path.test.ts` direction A asserts the two-argument form is byte-identical across
+3,601 rows. **That is exactly what "no caller passes four arguments" looks like.** The test
+built to prove the deploy was safe doubles as proof the feature was never plugged in, and it
+cannot tell you which it is proving.
+
+**The file had already anticipated half of this.** Its own header says: *"WITHOUT B, A IS
+SATISFIED PERFECTLY BY A CHANGE THAT DOES NOTHING AT ALL."* Direction B was added for that
+reason and it is correct — but **B supplies the argument itself.** B closes the gap at the
+FUNCTION boundary and leaves it open at the CALL-SITE boundary, and a unit test cannot see a
+call site.
+
+> **KNOWING THE SHAPE WAS NOT ENOUGH TO BE SAFE FROM IT.** The author reasoned the failure
+> through, wrote it into the header in plain terms, built the guard it implied — and the
+> guard landed **one boundary short** of where the failure actually lived.
+
+**That is the part worth carrying, because it is not a lapse.** The header is correct. B is
+correct. The gap is that **B closes it at the FUNCTION boundary and the failure lived at the
+CALL-SITE boundary**, and no unit test can reach that: a unit test calls the function, so it
+always supplies the arguments itself, so it can never observe that nobody else does.
+
+> **A test suite cannot see its own call sites. Anything that must be true of the CALLERS has
+> to be asserted somewhere other than a unit test** — which is why direction C reads source
+> rather than behaviour.
+
+#### DIRECTION C
+
+A **source** assertion, because that is where the defect was:
+
+    assert.ok(argCounts.some(n => n >= 4),
+      "...DIRECTION A WILL STILL PASS IN THIS STATE — that is why this test exists.")
+
+**Verified by reverting the call to two arguments: C fails, A still passes.** A guard never
+seen to fail is a guard nobody has tested.
+
+#### THE OPERATIVE HALF: TWO CONFIG VALUES THAT MUST MOVE TOGETHER
+
+**This half, not the missing argument, is what still blocks activation.** Wiring the fourth
+argument was necessary and it is not sufficient: **step 2 remains a no-op even fully wired**,
+because Boots' `category_path_must_contain` excludes Boots' own supplements leaf.
+
+`category_path_must_contain` is applied at `index.ts:1979` and `continue`s the row **before
+the classifier is reached at 2350**. Boots has one, chosen for beauty, and its intended
+supplements leaf is not in it. **So even fully wired, setting `supplements_path_prefixes`
+alone still changes nothing** — and nothing in the migration, item 71 or item 72 said so.
+
+Now self-reporting: the importer computes which configured prefixes `category_path_must_contain`
+excludes, `console.warn`s them, and returns `supplements_path_unreachable` in the response
+alongside a new `on_supplements_path` counter.
+
+> **A zero on that counter is the signature of an unwired feature as much as an inactive one
+> — which is the whole finding, so the counter ships with the list that tells them apart.**
+
+#### MATCHER SEMANTICS, STATED RATHER THAN ASSUMED
+
+`isOnSupplementsPath` uses case-insensitive **`startsWith`**; `isPathIncluded` uses
+case-insensitive **`includes`**. Deliberate: the column is named *prefixes*, and this one
+drives a classification override that bypasses the supplement denylist, so a substring match
+would give it a wider blast radius than the column's own comment promises. **Documented at
+both sites, because a silent mismatch between two path matchers in one importer is the class
+of defect this whole change came out of.**
+
+#### THE MIGRATION COMMENT WAS AMENDED IN PLACE, AND THAT IS BOUNDED
+
+`20260813180000` was corrected in place rather than by a follow-up migration — the `113`
+that should read `115`, the "accepted loss" that should read "oral medicines", and the
+now-false claim that step 2 is where the risk sits.
+
+**In place is right here for one reason only: the object has never been created.** The column
+does not exist in production, so a correction migration would assert against nothing and
+report success — the same defect as `WHERE id = 34` matching no rows.
+
+> **The convention reverts the moment it is applied anywhere. Saying so is what stops a
+> justified exception becoming a habit** — "we amended that one in place" is exactly the
+> precedent that gets cited later, by someone who has not checked whether the object exists.
+
+#### STATUS
+
+**Wired, tested, NOT ACTIVATED.** The migration is still unapplied and every retailer's
+prefix list is still empty. Nothing is on the import path.
+
+**Activation still needs BOTH config values**, in this order, after the gated sequence:
+apply the migration, deploy, confirm a clean cycle with `on_supplements_path: 0` and an empty
+`supplements_path_unreachable`, then write **`category_path_must_contain` and
+`supplements_path_prefixes` together**, and read the same two fields again.
+
+---
+
+### 92. The subtree was excluded for the wrong reason, and Boots is ~1,715 not ~900
+
+**Raised:** 14 August 2026 · **Read-only.** feed-diag runs `31790827267`, `31791017515`.
+
+#### THE LEAF-OVER-SUBTREE DECISION WAS JUSTIFIED ON A CONTAMINATION RATIO
+
+The shipped column comment gave the reason for taking the single leaf rather than the whole
+`Health & Beauty > Health Care` subtree as: *"the Health Care subtree would admit 2,179
+non-supplement rows"*. A contamination argument — most of what arrives is not a supplement.
+
+Measured on the **shipped** rule, over the same feed:
+
+| `Health & Beauty > Health Care` subtree | rows |
+|---|---:|
+| admitted by the prefix | 3,145 |
+| classify as **SUPPLEMENTS** | **3,072** |
+| rejected as topical | 73 |
+
+Among the 3,072: **blood-pressure monitors, incontinence aids, supports and braces, first
+aid.** The reason is not a tuning failure —
+
+> **The shipped path-first rule has NO NAME-BASED SUPPLEMENT TEST AT ALL. It trusts the
+> path.** That is the whole design: a row on a configured supplements path is a supplement
+> unless it is visibly topical. Feed it a subtree that is not a supplements path and it will
+> faithfully call a wheelchair a supplement.
+
+So the danger was never that non-supplements arrive *alongside*. It is that the rule
+**calls almost all of them supplements**.
+
+> **RIGHT CONCLUSION, WRONG MECHANISM — AND THE WRONG MECHANISM IS WHAT WAS WRITTEN DOWN.**
+
+#### WHY THAT IS WORSE THAN AN ORDINARY STALE COMMENT
+
+**Anyone re-deriving "is the subtree safe?" from the stated reason would go looking for a
+contamination ratio — and would find a reassuring one.** 73 topical rows in 3,145 is **2.3%**.
+On the recorded criterion the subtree looks *cleaner* than the leaf, which shows 28 in 1,743
+(1.6%) but at a fifteenth of the volume. A reader checking the stated reason, correctly,
+against real data, gets a green light for the exact change the decision exists to prevent.
+
+> **A justification that names the wrong mechanism does not merely fail to help — it aims the
+> next reader's measurement at a number that will reassure them.** The stale-comment failure
+> mode is silence; this one answers, confidently, and in the wrong direction.
+
+The right question is not a ratio at all. It is: **is this path one where "on it" means
+"ingested"?** For the leaf, yes. For the subtree, no. No proportion of anything can answer it.
+
+Section 5 no longer reimplements the rule — it **imports `isSupplementPathTopical`**. Same
+feed, same prefix, the shipped classifier:
+
+| Boots leaf `… Fitness & Nutrition > Vitamins & Supplements` | rows |
+|---|---:|
+| admitted by the prefix | **1,743** |
+| supplements per the shipped rule | **1,715** |
+| topical rows arriving alongside | **28** |
+| of the supplements, `EXCLUDE_PATTERNS.supplements` would drop | 312 (18.2%) |
+
+**~900 → ~1,715.** The old figure came from a v1.0 copy with no sports tokens — sports moved
+into scope two days *before* that measurement — and a topical veto containing `oil`, `gel`,
+`butter`, `wash`, which are application words on a beauty path and **dosage forms on a health
+one**.
+
+**Copying v1.1 would NOT have fixed it.** v1.1's `APPLY` list still contains `oil` and `gel`.
+The shipped path-first branch uses the far narrower `SUPP_TOPICAL_FORM`
+(`serum|toner|cream|lotion|mask|shampoo|conditioner|moistur*|body spray`) precisely because a
+row already known to be on a supplements path needs a different question asked of it.
+
+> **That is the substance of the feature, and no reimplementation was going to capture it by
+> matching regexes. The fix was not a better copy — it was to stop keeping one.**
+
+#### WHAT DOES NOT MOVE
+
+**The decision.** Item 47 instance 12 records that proceeding at ~900 was decided on the
+commercial argument rather than the count, and doubling a number that nothing rested on
+changes nothing. **The figure should simply stop being quoted as measured** — including in
+the migration comment, now amended to say so.

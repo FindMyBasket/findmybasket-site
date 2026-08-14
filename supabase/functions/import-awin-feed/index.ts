@@ -399,6 +399,25 @@ function isPathIncluded(categoryPath: string, mustContain: string[]): { included
   return { included: false, reason: "path_not_in_scope" };
 }
 
+// Is this row on one of the retailer's configured supplements paths?
+// `retailer_import_config.supplements_path_prefixes`, empty for every retailer
+// until deliberately set. Feeds the 4th argument of inferCategorisationForImport.
+//
+// PREFIX, NOT SUBSTRING — AND DELIBERATELY NOT THE SAME MATCHER AS isPathIncluded
+// ABOVE. That one uses case-insensitive `includes`, because it answers "is this row
+// anywhere in scope". This answers "is this row ON a specific leaf", and it drives a
+// classification OVERRIDE that bypasses the supplement denylist. A substring match
+// would let any path merely CONTAINING the leaf text take the override, which is a
+// wider blast radius than the column's own comment promises ("path prefixes").
+//
+// The difference is stated here because a silent mismatch between two path matchers
+// in one importer is precisely the class of defect this whole change came out of.
+function isOnSupplementsPath(categoryPath: string, prefixes: string[]): boolean {
+  if (prefixes.length === 0) return false;
+  const haystack = categoryPath.toLowerCase();
+  return prefixes.some((p) => haystack.startsWith(p.toLowerCase()));
+}
+
 // Name filter: returns true if any exclude string appears (case-insensitive)
 // in the product name. Used for retailers whose feeds don't populate
 // merchant_product_category_path (e.g. Stylevana).
@@ -586,6 +605,35 @@ serve(async (req) => {
     ? config.category_path_must_contain
     : [];
   const existingBrandsOnly: boolean = config.existing_brands_only === true;
+  // Feed paths whose rows classify as top_category=supplements. Empty for every
+  // retailer until deliberately set, which is what makes the branch unreachable
+  // and the deploy inert. Work-list items 71, 72, 91.
+  const supplementsPathPrefixes: string[] = Array.isArray(config.supplements_path_prefixes)
+    ? config.supplements_path_prefixes
+    : [];
+
+  // TWO CONFIG VALUES THAT MUST MOVE TOGETHER, AND NOTHING USED TO SAY SO.
+  //
+  // category_path_must_contain is applied to every row BEFORE the classifier is
+  // reached — the row is `continue`d out of the loop. So a supplements prefix whose
+  // path the must-contain filter does not admit describes rows that never survive
+  // long enough to be classified. Boots is exactly this case: its must-contain list
+  // was chosen for beauty, and its intended supplements leaf is not in it.
+  //
+  // Setting supplements_path_prefixes ALONE therefore produces no change, no error
+  // and no signal — the same output as a correct inert deploy. This makes the
+  // combination self-reporting instead: it lands in the response and in the log.
+  const supplementsPathUnreachable: string[] = supplementsPathPrefixes.filter(
+    (p) => !isPathIncluded(p, categoryPathMustContain).included,
+  );
+  if (supplementsPathUnreachable.length > 0) {
+    console.warn(
+      `[config] supplements_path_prefixes has ${supplementsPathUnreachable.length} ` +
+      `prefix(es) that category_path_must_contain EXCLUDES, so no row on them can ever ` +
+      `reach the classifier. Both values must be set together. Unreachable: ` +
+      JSON.stringify(supplementsPathUnreachable),
+    );
+  }
   // REASSIGNMENT DETECTOR, count-log-and-write. Opt-in per retailer, default off.
   // A merchant that reassigns an external_product_id from one product to another
   // silently repoints tier 0: the row keeps its product_id and its (COALESCEd)
@@ -1554,6 +1602,10 @@ serve(async (req) => {
   const sampleDebenhamsCleaned: Array<{ raw: string; cleaned: string; shade: string | null }> = [];
   // v6 counters
   let countV6Excluded = 0;
+  // Rows matched by supplements_path_prefixes. Zero for every retailer with an
+  // empty prefix list; the FIRST thing to read on the activation cycle, because a
+  // zero here is the signature of an unwired feature as much as an inactive one.
+  let countOnSupplementsPath = 0;
   const v6ExclusionBreakdown: Record<string, number> = {};
 
   const sampleExcluded: any[] = [];
@@ -2283,7 +2335,19 @@ serve(async (req) => {
     }
 
     // ─── v6: classify the new product before deciding to create ──────────
-    const cat = inferCategorisationForImport(name, brand);
+    // The 4th argument is the whole of the path-first supplements feature. Until
+    // 14 Aug 2026 this call passed TWO arguments, so `onSupplementsPath` took its
+    // `false` default for every row of every retailer and the branch added in #256
+    // was unreachable — writing a prefix into a retailer's config would have done
+    // nothing, silently. See work-list item 91 and instance 15.
+    //
+    // The 3rd argument is passed as `undefined` on purpose: it means "take the
+    // EXTENDED_CATEGORIES_ENABLED default", and that constant is not exported here.
+    // Positional defaults are why the gap existed; naming it is cheaper than a
+    // second import.
+    const onSupplementsPath = isOnSupplementsPath(categoryPath, supplementsPathPrefixes);
+    if (onSupplementsPath) countOnSupplementsPath++;
+    const cat = inferCategorisationForImport(name, brand, undefined, onSupplementsPath);
 
     // Skip products on the v6 denylist (fragrance, period_care, etc.)
     if (cat.excluded) {
@@ -2581,6 +2645,8 @@ serve(async (req) => {
       reassignment_suspect: countReassignmentSuspect,
       size_mismatch_rejected: countSizeMismatchRejected,
       v6_excluded: countV6Excluded,
+      on_supplements_path: countOnSupplementsPath,
+      supplements_path_unreachable: supplementsPathUnreachable,
       would_update_existing: countUpdate,
       would_link_to_existing_product: countLinkExisting,
       skipped_shade_variant: countSkippedShadeVariant,
