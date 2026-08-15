@@ -9380,3 +9380,81 @@ carry a candidate population of **84,213** products, stored separately and never
 Added to the writer rather than to a companion, because a second writer would put two of the
 eleven numbers somewhere else, and the whole design rests on there being **one place a
 meaning can change**.
+
+---
+
+### 117. A constraint asserted about deploy ordering, without checking the mechanism
+
+**Raised and closed:** 15 August 2026 · **Both deploys shipped, auth first, verified in
+production.**
+
+The panel and its Basic Auth were correctly split into two deploys, because
+`middleware.ts`'s `config.matcher` is shared with the Superdrug 410 gate and **adding one
+path puts every product page in the blast radius**. That reasoning was right and is
+unchanged.
+
+**The ORDER was given as page first, on the stated grounds that "an unprotected page is live
+between them either way."**
+
+> **It is not. Next.js middleware runs BEFORE routing, so a matcher takes effect whether or
+> not a route exists at that path.** Deploying auth first means the exposure window never
+> exists: the page is protected from its first request rather than from its second deploy.
+
+**Robbie's, and recorded at his instruction: a constraint about deploy ordering was asserted
+without checking how middleware matching relates to route existence.** The premise was the
+only thing making page-first defensible, and it was checkable in one request.
+
+**Verified in production after the auth-only deploy, before the page existed:**
+
+    /ops/quality                401     <- protected before the route existed
+    /ops/does-not-exist         401     <- matcher fires on a path with no route at all
+    /product/6174               200     x-fmb-superdrug-gate: on-passthrough
+    /supplements                200
+
+**The second line is the proof.** A 401 on a path that has no route demonstrates the
+mechanism directly rather than by argument, and it is what the ordering turned on. The third
+line is the isolated deploy doing its other job: the shared matcher was extended and the
+Superdrug gate still reports `on-passthrough`, with nothing else in the deploy to confuse
+the attribution.
+
+#### FAILING CLOSED IS THE DECIDING PROPERTY
+
+With `OPS_BASIC_AUTH` unset, every `/ops` request is refused.
+
+> **A MISSING ENV VAR IS EXACTLY WHAT A FIRST DEPLOY HAS.** The opposite default publishes
+> an internal panel at the worst possible moment — the one moment the variable is
+> guaranteed absent.
+
+The 401s above were served with the variable not yet set, which is the failure mode working
+rather than a problem to fix.
+
+Also decided and recorded: **the gate is not Supabase Auth**, which is a customer surface
+here — four users, three of them not the operator, and no role model. Gating on "logged in"
+would have shown catalogue diagnostics to customers. And the data is protected twice over:
+`metrics_quality_weekly` and `platform_changes` carry **no `anon` or `authenticated` grants
+at all**, so there is no PostgREST path to either regardless of whether the middleware is
+right.
+
+#### TWO ADDITIONS BEYOND THE BRIEF, BOTH KEPT
+
+**1. Each card states whether ANY boundary row names that metric**, in warning colour when
+none does.
+
+> **It makes "no marker" distinguishable from "no change".** The same distinction as
+> `on_supplements_path: 0` with an empty `supplements_path_unreachable` versus zero with a
+> populated one — in both cases the number is identical and the meaning is opposite, and
+> only the second field separates them.
+
+**2. An empty table renders "This is not 'everything is fine'."**
+
+> **The panel refuses to be read as a clean bill of health.** A quality dashboard with no
+> rows looks like a quality dashboard with nothing wrong, and the writer having never run is
+> indistinguishable from the catalogue being clean unless the page says so.
+
+#### THE LOCAL BUILD FAILURE IS NOT THIS CHANGE
+
+`npm run build` on a machine without Supabase env vars fails collecting page data for
+`/sitemap-products/[part]`. **Pre-existing:** every route importing `lib/supabase` throws at
+import when `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` are absent. Compilation succeeds;
+Vercel has the vars and its check is the real test. Noted on both PRs so a red local build is
+not later attributed to the panel.
