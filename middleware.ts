@@ -3,11 +3,55 @@ import { get } from '@vercel/edge-config';
 import { createServerClient } from '@supabase/ssr';
 import { GONE_IDS, REDIRECTS, GONE_HTML } from './lib/superdrug-removed';
 
-// Two independent jobs share this middleware:
+// THREE independent jobs share this middleware:
 //   /product/*  — Superdrug-removed gate (below, unchanged)
 //   /account/*  — auth session refresh, so the /account Server Component sees
 //                 a live session even after the access token expires (1h)
-export const config = { matcher: ['/product/:path*', '/account/:path*'] };
+//   /ops/*      — Basic Auth on the internal panels (added 15 Aug 2026)
+//
+// THE MATCHER IS SHARED, AND THAT IS THE RISK IN THIS FILE. Adding one path here puts
+// every product page in the blast radius of the change, because the same function now
+// runs for both. The /ops branch returns before any Superdrug logic is reached, and this
+// deploy carries NOTHING ELSE, so if product pages misbehave the cause is unambiguous.
+export const config = { matcher: ['/product/:path*', '/account/:path*', '/ops/:path*'] };
+
+// Basic Auth for /ops/*. One env var, no roles table, no coupling to Supabase Auth —
+// which is a CUSTOMER surface here (four users, three of them not the operator) and would
+// show catalogue diagnostics to customers if used as the gate.
+//
+// FAIL CLOSED. If OPS_BASIC_AUTH is unset, every /ops request is refused. The opposite
+// default would turn a missing env var into a public internal panel, and a missing env
+// var is exactly what a first deploy has.
+function opsAuth(req: NextRequest): NextResponse {
+  const expected = process.env.OPS_BASIC_AUTH; // "user:password"
+  const deny = new NextResponse('Unauthorized', {
+    status: 401,
+    headers: { 'WWW-Authenticate': 'Basic realm="fmb-ops", charset="UTF-8"' },
+  });
+  if (!expected) return deny;
+
+  const header = req.headers.get('authorization') ?? '';
+  if (!header.startsWith('Basic ')) return deny;
+
+  let supplied: string;
+  try {
+    supplied = atob(header.slice(6));
+  } catch {
+    return deny;
+  }
+
+  // Length-independent comparison. The strings are short and the endpoint is not
+  // rate-limited, so a naive === leaks length and prefix through timing.
+  const a = new TextEncoder().encode(supplied);
+  const b = new TextEncoder().encode(expected);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < Math.max(a.length, b.length); i++) diff |= (a[i] ?? 0) ^ (b[i] ?? 0);
+  if (diff !== 0) return deny;
+
+  const res = NextResponse.next();
+  res.headers.set('x-robots-tag', 'noindex, nofollow');
+  return res;
+}
 
 // Refresh the Supabase auth session cookies. getUser() forces a token refresh
 // when the access token is expired; setAll writes the rotated cookies onto
@@ -67,6 +111,12 @@ function pass(state: string): NextResponse {
 }
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
+  // FIRST, and before anything that can throw. /ops must never fall through to a
+  // pass-through branch because something above it errored.
+  if (req.nextUrl.pathname.startsWith('/ops')) {
+    return opsAuth(req);
+  }
+
   if (req.nextUrl.pathname.startsWith('/account')) {
     return refreshSession(req);
   }
