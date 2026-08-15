@@ -97,11 +97,19 @@ jobs:
           probe "1. PROGRAMMES - simplest authenticated call, proves the token works" \
                 "https://api.awin.com/publishers/$PUB/programmes?relationship=joined"
 
+          # RUN 1 RETURNED 400: "invalid region code list, expecting sth. like [FR,CA,DE]: []".
+          # The PATH is right; regionCodes is REQUIRED and undocumented in our recollection.
           probe "2. AGGREGATED BY ADVERTISER - the report the puller would use" \
-                "https://api.awin.com/publishers/$PUB/reports/advertiser?startDate=$START&endDate=$END&timezone=UTC"
+                "https://api.awin.com/publishers/$PUB/reports/advertiser?startDate=$START&endDate=$END&timezone=UTC&regionCodes=GB"
 
-          probe "3. TRANSACTIONS - per-transaction, carries commissionStatus" \
-                "https://api.awin.com/publishers/$PUB/transactions/?startDate=${START}T00%3A00%3A00&endDate=${END}T00%3A00%3A00&timezone=UTC"
+          # RUN 1 RETURNED 400: "This endpoint only supports a date range of 31 days."
+          # The PATH is right; the window must be chunked. A 12-week trailing pull is
+          # therefore SIX requests per run, not one -- comfortably inside 20 calls/minute.
+          probe "3. TRANSACTIONS - per-transaction, carries commissionStatus (31-day window)" \
+                "https://api.awin.com/publishers/$PUB/transactions/?startDate=2026-07-16T00%3A00%3A00&endDate=2026-08-15T00%3A00%3A00&timezone=UTC"
+
+          probe "5. TRANSACTIONS by VALIDATION date - what moves a settled week" \
+                "https://api.awin.com/publishers/$PUB/transactions/?startDate=2026-07-16T00%3A00%3A00&endDate=2026-08-15T00%3A00%3A00&timezone=UTC&dateType=validation"
 
           probe "4. COMMISSION GROUPS - the rate card, if it exists on this path" \
                 "https://api.awin.com/publishers/$PUB/commissiongroups?advertiserId=15448"
