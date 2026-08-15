@@ -4395,6 +4395,21 @@ is already reviewing; never to filter automatically.
 products there is. Its two Amazon EANs (`8809419647347`, `0716053700353`) match nothing in
 our catalogue.
 
+> **CORRECTED 14 AUGUST 2026, AND THE CORRECTION INVERTS WHAT WAS CONCLUDED FROM IT.**
+>
+> **We carry that product.** It is `123`, *"CosRx Advanced Snail 96 Mucin Power Essence
+> 100ml"*, with **nine live retailers**. Its two Amazon barcodes match nothing; **the product
+> was never missing.**
+>
+> **A BARCODE ABSENCE WAS READ AS A PRODUCT ABSENCE.** The sentence above is true of the
+> identifiers and false of the thing they identify. `B00PBX3L7K` scores **1.00** against
+> `123` on name, size agreeing (100ml against Amazon's "3.38 fl.oz / 100ml") — it was one
+> query away throughout.
+>
+> **The inference this example was carrying — that the non-matches are where the products
+> people actually search for sit — rested on this row, and this row does not support it.**
+> What survives, and what does not, is measured in **item 97**.
+
 **Official-store membership does not guarantee a match.** Five of six is a sample of six, so
 the true rate is unknown — but the miss landing on a flagship rather than an obscure product
 is the useful signal: **the non-matches are not a tail to be tidied up. Reviewing them is a
@@ -7907,6 +7922,123 @@ measurement. Recorded so the next person to meet `tier1_ambiguous_skipped` finds
 what it is skipping, and so the Amazon map's 8 `ambiguous` rows are read as a symptom rather
 than a mapping failure. Their `product_id` is the **lowest matching id and explicitly not a
 decision** — the row's `notes` says so.
+### 97. What survives of item 60's partial-coverage finding, and a matcher measured against ground truth
+
+**Raised:** 14 August 2026 · **Read-only. Nothing promoted, `human_verified` false on all 250.**
+
+#### THE INSTRUMENT, WHICH IS THE REASON ANY OF THIS IS QUOTABLE
+
+The 155 EAN-confirmed rows are **ground truth, not a sample the matcher was tuned on**: their
+`product_id` was established by barcode and never by name. Running a name matcher over them
+says exactly how often it would have been right on its own.
+
+| | top-1 | band: score ≥0.80 **and** margin ≥0.20 |
+|---|---|---|
+| first pass | 70.3% | — |
+| + set-ness and pack-count discriminators | **74.8%** | **94.1% precision** |
+| + size tiebreak | 76.1% | **92.0% — REJECTED** |
+
+**The predicted boundary family broke it, and broke it at the top.** The first pass's
+*highest-confidence* errors were a single mapped onto a **ten-pack** (3073 against 3074,
+score **1.00**) and a product mapped onto a **gift set** (7741 against "…(3ea) Set", 0.93) —
+because pack count lived in exactly the tokens the size stripper had already removed.
+
+> **THE SIZE TIEBREAK WAS REJECTED ON THE MEASUREMENT: +2 rows overall while band precision
+> fell 94.1% to 92.0%. A CHANGE THAT IMPROVES THE AVERAGE BY DEGRADING THE PART YOU ACT ON
+> IS NOT AN IMPROVEMENT.**
+
+Nothing is proposed from the average. Everything is proposed from the band, so the band is
+the number the change has to justify itself against — and it did not.
+
+> **MARGIN, NOT SCORE, IS THE DISCRIMINATOR. Near-ties (margin < 0.05) are 64% correct AT
+> ANY SCORE, including 1.00.** A perfect score against two catalogue rows says the product is
+> certain and the row is not — which is item 96 arriving from a different direction.
+
+#### WHAT SURVIVES OF THE PARTIAL-COVERAGE FINDING
+
+Item 60 measured 5 of 6 and read the miss as a coverage gap. Over 250 ASINs, with the 38
+bundles excluded as out of scope by construction (item 95), **212 in scope**:
+
+| | ASINs | share |
+|---|---:|---:|
+| matched by barcode | **163** | 76.9% |
+| product present, barcode absent — relisting + row-choice | **20** | 9.4% |
+| product likely present, row uncertain — variant | 4 | 1.9% |
+| **unknown, needs a human** | **23** | 10.8% |
+| **confirmed absent** | **2** | **0.9%** |
+
+> **SURVIVES: barcode coverage is genuinely partial — 163 of 212, and 49 rows carry no usable
+> barcode link. That is a bigger gap than 5-of-6 implied, not a smaller one.**
+>
+> **DOES NOT SURVIVE: the inference that the gap is a PRODUCT gap.** Product presence is
+> established at **≥86.3%** and confirmed absence is **0.9%**. The flagship example the
+> inference rested on is in the catalogue with nine retailers.
+
+**The two genuine absences are a Beauty of Joseon colour-correcting sunscreen and a
+Dr.Melaxin TX Ampoule RX.** Neither is a flagship. The claim that non-matches are where
+sought-after products sit now has **no supporting instance**.
+
+**STRENGTHENED, not weakened: the manual pass is part of the pipeline.** 23 unknown, 8
+row-choices and 4 variants is more human work than item 60 anticipated — it is just a
+different kind. **The work is disambiguating rows we already have, not sourcing products we
+lack.**
+
+#### THE FOUR NO-IDENTIFIER SINGLES, VERIFIED BY EYE
+
+**All four checked individually, including the two the band called clean.** A 94% band is a
+different proposition where there is no barcode to catch the 6%: for these rows the name is
+not corroboration, it is the entire evidence.
+
+| ASIN | verdict |
+|---|---|
+| `B00OZ9WOD8` AHA 7 Whitehead Power Liquid | **CONFIRMED → 172.** Name verbatim, size agrees (3.38 fl.oz = 100ml), 6 live retailers, two catalogue barcodes of its own |
+| `B0DSFT57NC` TX Peeling Toner | **CONFIRMED → 81323.** Distinctive name matches, size agrees at 150ml. **Sole retailer is YesStyle — checked for staleness given `absence_threshold_days = 9999` (item 53) and the row was touched by today's run.** |
+| `B0H7F9WXJD` Salmon DNA PDRN jelly mask | **UNCLEAR, left for a human.** Candidates 93127 (Stylevana only, **no barcode at all**) and 6174 (nine retailers) look like duplicates of each other, and 6174 is already mapped from a different ASIN. Promoting would add a second ASIN to a product that has one — harmless, but a decision |
+| `B0DSFKRMG9` TX Ampoule RX | **CONFIRMED ABSENT.** The catalogue holds **11 Dr.Melaxin ampoules and no TX ampoule**; the TX line runs Cream, Peeling Toner, Serum Cleanser and two Astaxanthin items. Nearest scored 0.40 |
+
+**The eye check changed one of the two "clean" verdicts into a caveat** — 81323's only
+retailer is the one whose rows never age out — which is the argument for doing it.
+
+#### STATUS
+
+Nothing promoted. `human_verified` stays false on all 250 until Robbie works the list.
+Promotion into `products.amazon_asin` is a separate step after that.
+#### AMENDED 15 AUGUST: BOTH GAPS FIXED BEFORE THE SCRIPT WAS MERGED
+
+This item was written on a branch that stayed open. **In the meantime the human pass found
+the two matcher gaps it names, and the branch still carried the matcher without them** — so
+merging as-was would have committed a matcher already known to miss cases a person had
+found. Both are now fixed in the same PR, and re-measured per item 79:
+
+|  | top-1 | band (>=0.80, margin >=0.20) |
+|---|---|---|
+| as committed on the branch | 116/155 (74.8%) | n=51, **94.1%** |
+| **with both gaps fixed** | **117/155 (75.5%)** | n=51, **94.1%** |
+
+**A strict improvement** — one row gained, nothing lost on the band anything is proposed
+from. Contrast the size tiebreak, which gained two and cost 2.1 points and was rejected.
+
+> **BUT NOTE HOW LITTLE THE CORPUS SAYS ABOUT IT.** Both gaps were found in the 49 UNMATCHED
+> rows, not in the 155 EAN-confirmed pairs the matcher is measured against. The corpus moves
+> by **one row**. **The same reason these defects were not found by measuring is the reason
+> measuring barely confirms the fix: the corpus cannot see what it does not contain.**
+>
+> The justification is the two named cases. The measurement's only job here was to prove
+> nothing was broken in exchange.
+
+#### AND THE ITEM NUMBER WAS A HOLE FOR A DAY
+
+Item 97 existed only on this branch while items 98 to 116 were written and merged around it,
+so `main` read 95, 96, **98**.
+
+> **A hollow item number is worse than a missing one: the list reads as complete while the
+> item exists only in a branch.** Same shape as a document that is named but not linked —
+> the reference resolves to nothing and nothing says so — arriving in the numbering itself.
+
+
+
+---
+
 
 ---
 
