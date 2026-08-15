@@ -348,6 +348,30 @@ Two specific concerns follow. **GA4's outbound click count has fallen to near ze
 
 The strategic spine still holds — the blended rate improves through the mix of who arrives, not through anything done inside the comparison — but it now has a precondition that was invisible before this measurement: **the high rate partners have to convert at all.**
 
+## **Two things the rate card says that no summary of it would**
+
+**[Read 15 August 2026, group level]**
+
+### **The headline rate is the new customer rate, and most traffic will not be new**
+
+Where an advertiser's card splits by customer status, the split is large. Gorgeous Shop and Beauty Flash both pay eight percent on a new customer, **four on an existing one and one to three on anything with a voucher**. YesStyle pays ten percent new and **five existing**. Boots, Debenhams, Stylevana and Beauty Bay do not split at all.
+
+> **Quoting six and a half to ten percent for the high rate partners quotes their best case.** The rate a maturing site earns from repeat visitors is nearer half that, and the difference is roughly the entire gap between the two P&L versions all over again.
+
+This also cuts against voucher and deal led acquisition specifically, which is worth knowing before any discounting strategy is built: at Gorgeous Shop and Beauty Flash a voucher sale pays **one percent to an existing customer**, against eight for a clean new one.
+
+### **Boots pays nothing at all on prestige, and prestige is what the Prestige Edit routes to Boots**
+
+Twenty six of Boots's eighty seven commission groups pay zero. They are not obscure. Six are **named brand and product exclusions — Chanel, Dior, Dyson and Fitbit, Jo Malone, Apple and baby milk** — and a further twelve are Cardlytics customer segments that also pay nothing.
+
+**This is live in the catalogue rather than theoretical.** Boots currently carries **eighty seven in stock Chanel rows and thirty five Dior rows**, averaging fifty three and sixty pounds — among the highest priced items anywhere in the catalogue, and **every one of them earns zero commission**.
+
+> **The most expensive products we show at our largest retailer are the ones that pay us nothing.** A shopper routed to a hundred pound Chanel purchase at Boots generates the same revenue as one who does not click at all.
+
+That is a direct and previously invisible conflict with the Prestige Edit and the prestige brand hub positioning, both of which are designed to attract exactly this shopper. **It does not invalidate them** — a prestige audience is still the right audience, and prestige brands buying Spotlights is a fee based revenue line that does not depend on CPA at all. **But the affiliate half of the prestige case is worth zero at Boots specifically**, and any model that assumed otherwise was assuming it silently.
+
+The practical response is a partner question rather than a product one: prestige sales need a retailer that pays on them, or a direct brand relationship, and neither is Boots. **The comparison itself must not change** — that is the spine, and hiding or demoting a zero commission Boots row would be exactly the manipulation the spine forbids.
+
 # **8. Partnership strategy**
 
 ## **The qualifying rules**
@@ -848,6 +872,7 @@ These are unresolved positions rather than tasks. Each one changes the shape of 
 | ~~Which P&L commission assumption is correct, two percent or eight percent?~~ **ANSWERED 15 August 2026: neither. The realised blended rate is 3.45 percent and average order value is thirty two pounds ninety eight rather than forty, giving one pound fourteen per sale and break even between a hundred and forty and two hundred and thirty five sales a month.** | Kept visible rather than deleted, because the answer moved the question. Resolving the rate left the cost base unresolved, and the two versions always differed on both. See section 6. |
 | Which cost base is real, a hundred and sixty pounds a month or two hundred and sixty eight? | This is now the whole of the remaining spread in the break even figure, and it is the half of the disagreement nobody was arguing about. |
 | Why do the high commission advertisers convert nothing? | A hundred and sixty outbound clicks across eleven complete weeks to advertisers paying six and a half to ten percent, and zero tracked sales against about eight expected. Broken tracking, broken deeplinks and low intent traffic imply completely different responses, and the difference is worth more than the commission rate question was. |
+| Where do prestige sales earn anything? | Boots zero rates Chanel, Dior, Jo Malone and others, and carries a hundred and twenty two in stock rows across the first two at the highest prices in the catalogue. The Prestige Edit routes its best shopper to a retailer that pays nothing on the purchase. The answer is a partner or a direct brand relationship, never a change to the comparison. |
 | Which outbound click count is real, ours, GA4's or AWIN's? | They disagree by up to seven times and move in three different directions. Commission per click is the steering metric for the whole funnel and this is its denominator. Nothing downstream of it can be trusted more than it is. |
 | What lifts comparison depth fastest: more retailers, better matching, or narrowing the catalogue to items with real depth? | 86.2% single stockist coverage is the core constraint. These three routes have very different costs and very different timelines. |
 | Should the paid Spotlight tier be defined and priced now, or after the first hub proves out? | Defining it early risks selling something undelivered. Defining it late means the Prestige Edit launches without a price. |
