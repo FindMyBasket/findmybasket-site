@@ -8982,7 +8982,7 @@ schema**.
 
 ---
 
-### 111. The comment claims a persistence the pipeline does not perform
+### 112. The comment claims a persistence the pipeline does not perform
 
 **Raised:** 15 August 2026, first Stylevana detector cycle · **Not fixed here. Its own change,
 after the Boots flip.**
@@ -9029,7 +9029,7 @@ detector flagged them is exactly what the discarded samples would have said.
 
 ---
 
-### 112. An unrun experiment listed among results
+### 113. An unrun experiment listed among results
 
 **Raised:** 15 August 2026 · **Robbie's, and recorded at his instruction.**
 
@@ -9057,7 +9057,7 @@ tier 0 and no identifier existed for tier 1, so it matched on **name or URL**.
 
 ---
 
-### 113. Boots supplements activated: both config values, one statement
+### 114. Boots supplements activated: both config values, one statement
 
 **Raised and applied:** 15 August 2026 · **Baseline A taken first.**
 
