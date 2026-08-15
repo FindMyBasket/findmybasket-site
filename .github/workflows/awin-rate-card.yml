@@ -1,0 +1,86 @@
+name: awin rate card (read-only)
+
+# THE ADVERTISED COMMISSION RATE FOR EVERY JOINED ADVERTISER, PRINTED. Writes nothing.
+#
+# WHY THIS EXISTS. metrics_awin_weekly now carries the REALISED rate — commission divided
+# by sale value, measured. But realised is only defined where there were sales, and on the
+# first pull that is 6 advertisers out of 15. The other 9 carry 41% of all outbound clicks
+# (YesStyle 109, Perfume Click 126, Beauty Flash 75, Beauty Bay 67) and have no measured
+# rate at all.
+#
+#   REALISED SAYS WHAT THE CURRENT MIX PAYS. THE RATE CARD SAYS WHAT A DIFFERENT MIX WOULD.
+#
+# The strategy's central economic claim — that the blended rate improves through who
+# arrives rather than through anything done inside the comparison — is a claim about the
+# second number, and the second number has never been read.
+#
+# Every commission-rate benchmark in the strategy work is currently carried and marked
+# unverified. This is the endpoint that settles them.
+#
+# CREDENTIAL. AWIN_OAUTH_TOKEN and only that. AWIN_API_KEY is the FEED credential, read by
+# eight live paths against productdata.awin.com; it is never sent here.
+#
+# INTERNAL ONLY. Strategy line 314: commission rate benchmarks are never disclosed
+# externally. This prints to an Actions log, which is not a public surface, but the output
+# is covered by that rule wherever it is copied to.
+
+"on":
+  workflow_dispatch:
+
+jobs:
+  rate-card:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read the rate card for every joined advertiser
+        env:
+          TOKEN: ${{ secrets.AWIN_OAUTH_TOKEN }}
+        run: |
+          set -uo pipefail
+          PUB=2841268
+
+          if [ -z "${TOKEN:-}" ]; then
+            echo "AWIN_OAUTH_TOKEN is empty in this context. Nothing was called."
+            exit 1
+          fi
+
+          auth () { curl -s -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' "$1"; }
+
+          # Enumerate from AWIN rather than from our own tables, so the list is AWIN's
+          # truth about who we are joined to. A programme we think is live and AWIN does
+          # not is itself a finding.
+          auth "https://api.awin.com/publishers/$PUB/programmes?relationship=joined" > /tmp/progs.json
+          echo "joined programmes: $(jq 'length' /tmp/progs.json)"
+          echo
+
+          # The first record's keys, once, so an unexpected shape is visible rather than
+          # silently producing blank columns.
+          echo "COMMISSION GROUP FIELD NAMES (first advertiser that returns any):"
+          FIRST=$(jq -r '.[0].id' /tmp/progs.json)
+          auth "https://api.awin.com/publishers/$PUB/commissiongroups?advertiserId=$FIRST" \
+            | jq -r 'if type=="object" then (.commissionGroups[0] // {}) else (.[0] // {}) end
+                     | to_entries[] | "    \(.key) : \(.value|type)"'
+          echo
+
+          printf '%-28s %-22s %8s %-10s\n' ADVERTISER GROUP RATE TYPE
+          printf '%s\n' "--------------------------------------------------------------------------"
+
+          jq -r '.[] | "\(.id)\t\(.name)"' /tmp/progs.json | while IFS=$'\t' read -r id name; do
+            body=$(auth "https://api.awin.com/publishers/$PUB/commissiongroups?advertiserId=$id")
+            n=$(echo "$body" | jq -r 'if type=="object" then (.commissionGroups|length) else (.|length) end' 2>/dev/null || echo 0)
+            if [ "${n:-0}" = "0" ] || [ "$n" = "null" ]; then
+              # NO GROUPS IS NOT ZERO PERCENT. It means the rate is not exposed on this
+              # endpoint for this advertiser, which is a different fact and must not be
+              # averaged in as if it were a rate.
+              printf '%-28s %-22s %8s %-10s\n' "${name:0:27}" "(none returned)" "-" "-"
+            else
+              echo "$body" | jq -r --arg nm "${name:0:27}" \
+                'if type=="object" then .commissionGroups else . end
+                 | .[] | [$nm, (.name//"?"|.[0:21]), ((.percentage//.amount//"?")|tostring), (.type//"?")]
+                 | @tsv' \
+              | while IFS=$'\t' read -r a g r t; do printf '%-28s %-22s %8s %-10s\n' "$a" "$g" "$r" "$t"; done
+            fi
+            sleep 0.4   # AWIN allows 20 calls/min
+          done
+
+          echo
+          echo "Read-only. Nothing was written."
