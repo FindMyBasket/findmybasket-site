@@ -9596,3 +9596,152 @@ that actually works is `grep` on `main` AND `gh pr list --state open`** — and 
 the one that keeps being skipped, because a number that does not exist yet is invisible to
 every tool except the PR list.
 
+### 119. Three counts of one event, and the question is which one is the denominator
+
+**Raised:** 15 August 2026 · **Diagnosis complete, nothing changed.**
+
+Commission per click is the steering metric for the whole funnel — **3.7p, and break even
+sits at four thousand three hundred to seven thousand two hundred clicks a month against a
+run rate near a hundred and eighty.** Putting the three available counts of that
+denominator side by side for the first time shows they have never agreed.
+
+Corrected to compare like with like: our own figure is filtered to rows carrying an
+`awin_mid`, because `outbound_clicks` also logs Amazon and eBay click-outs and the other
+two columns are AWIN only.
+
+| Week beginning | Ours (AWIN only) | GA4 | AWIN |
+| --- | --- | --- | --- |
+| 13 July | 43 | — | 40 |
+| 20 July | 120 | 78 | 62 |
+| 27 July | 50 | 26 | 57 |
+| 3 August | 50 | 17 | 170 |
+| 10 August, **partial** | 71 | 1 | 544 |
+
+#### WHAT EACH ONE ACTUALLY COUNTS
+
+**OURS — `outbound_clicks`. Written server-side, TRIGGERED CLIENT-SIDE, and that
+distinction is the whole finding.** `/api/track/outbound` is a service-role write behind a
+route that always returns 204 and never throws, so the write itself is solid. But the
+trigger is `ClickOutLink`'s `onClick` handler firing `sendOutboundBeacon`, and the anchor's
+`href` is **the direct affiliate URL with no redirect hop** — a deliberate choice, recorded
+in the route, so the link stays clean for AWIN and for SEO.
+
+> **The navigation does not depend on the beacon, so the beacon can fail and the click
+> still happens.** Ad blockers, disabled JavaScript, and right-click-open-in-new-tab or
+> copy-link — neither of which fires `onClick` at all — are all invisible to us and fully
+> visible to AWIN.
+>
+> **Our count is a FLOOR, not a measurement.** Calling it server-side is right about where
+> the row is written and wrong about what decides whether there is a row.
+
+**It is genuinely free of the consent gate, and that part holds.** The route records
+`granted`, `denied` or `undecided` and **gates on none of them**. Worth noting the column
+only began carrying values in the week of 10 August; every earlier row is null, so consent
+is not available as an explanatory variable before then.
+
+**GA4 — client-side and consent-gated, and its shortfall is ALREADY A RECORDED BOUNDARY.**
+`platform_changes` id 34, 13 August: *"GA4 outbound-click columns are a client-capture
+ratio, not a consent rate."* GA4 is **below ours in every single week** — 65%, 52%, 34%,
+1.4% of our figure — which is exactly what a consent-gated client-side subset of a
+non-gated client-triggered count should look like.
+
+> **GA4 is not a third opinion. It is a known subset of ours, and it is documented as one.**
+> The reconciliation is really a two-source problem wearing three columns.
+
+The monotonic collapse of that ratio is still a defect worth its own investigation, but it
+is a defect in a series already labelled as not measuring what its name suggests.
+
+**AWIN — their servers, their filtering, and it sees what we cannot.** Every href fetch
+reaches AWIN whether or not our JavaScript ran. That explains AWIN above ours. It does not
+explain **twenty July, where ours is 120 and AWIN is 62** — ours nearly double theirs, the
+opposite direction — and no single mechanism explains both weeks.
+
+#### THE ANSWER ON THE DENOMINATOR
+
+**Ours, and the steer is right, with one correction to the reason.** It is the only count
+of our own event not passed through a third party's filter, and it is the only one whose
+collection rules we can read. Standardise on it.
+
+> **But adopt it as a FLOOR that is knowingly incomplete, not as the true count.** The
+> reason to prefer it is that its errors are ours and legible; not that it is complete,
+> because a beacon that the navigation does not depend on cannot be.
+
+**What would make it authoritative is a server-side redirect hop** — `/go/...` logging on
+the navigation path itself rather than beside it. That was deliberately avoided to keep the
+affiliate href clean, so this is a real trade and not an oversight. **Not proposed here.**
+
+**Until then, every commission-per-click figure is an upper bound**, because the
+denominator is a floor. 3.7p is the most favourable reading of the unit economics
+available, and the break-even click figures are correspondingly optimistic.
+
+#### WHAT IS NOT WRONG
+
+**GA4 has not been written since 13 August and that is EXPECTED, not broken.** Checked
+rather than assumed. `ga4-weekly-pull.yml` carries a live `schedule:` at line 85,
+`cron: '0 6 * * 1'`, and the run history holds exactly two runs, both `workflow_dispatch`
+on 13 August. **The first scheduled run is Monday 17 August at 06:00 UTC**, half an hour
+before AWIN's. Nothing has failed; nothing has been skipped.
+
+**The file's own header comment says the opposite** — *"NOT SCHEDULED YET, DELIBERATELY.
+The `schedule:` block below is commented out"* — while the block is live thirty lines
+further down. Fixed separately. **A comment that contradicts the code it sits above is
+worse than no comment**, because it is what a reader checks instead of the code.
+
+### 120. The most expensive products at our largest retailer pay us nothing
+
+**Raised:** 15 August 2026 · **Commercial finding. No engineering change proposed.**
+
+The AWIN commission-group endpoint was read for every joined advertiser on 15 August.
+**Twenty six of Boots's eighty seven groups pay zero per cent, and they are not obscure.**
+
+- **Six are named brand and product exclusions:** `CHANEL_EXCLUSIONS`, `CHANEL_EXCLUSIONS_2`,
+  `DIOR_EXCLUSIONS`, `DYSON_FITBIT_EXCLUSIONS`, `Baby_Milk_Exclusions`, `Exclusions`.
+- **Eight more name brands directly** across new and existing customers: Apple, Dyson,
+  Jo Malone, FansToShop.
+- **Twelve are Cardlytics customer segments** — acquisition, lapsed, and existing at high,
+  medium and low share of wallet — all at zero.
+
+**This is live in the catalogue, not theoretical.**
+
+| Brand | In-stock Boots rows | Average price |
+| --- | --- | --- |
+| Chanel | 87 | £53.21 |
+| Dior | 35 | £60.11 |
+
+> **A hundred and twenty two live rows, at the highest prices anywhere in the catalogue,
+> earning zero commission.** A shopper routed to a hundred pound Chanel purchase at Boots
+> generates exactly the same revenue as one who never clicked.
+
+#### THE CONFLICT WITH THE PRESTIGE EDIT, STATED PRECISELY
+
+The Prestige Edit and the prestige brand hubs are designed to attract exactly the shopper
+who buys a sixty pound Dior product. **That shopper is worth nothing to us at Boots.**
+
+**Spotlight fees do not depend on CPA, so the Edit is not invalidated.** A flat placement
+fee from a prestige brand is revenue whether or not a single affiliate sale follows, and
+the prestige audience is still the right audience for the reasons it always was.
+
+> **But the affiliate half of the prestige case is worth zero at Boots specifically, and
+> the response is a partner question rather than a product one.** Prestige sales need a
+> retailer that pays on them, or a direct brand relationship. Neither of those is Boots.
+
+**AND THE COMPARISON MUST NOT CHANGE.** This is the point at which the finding becomes
+dangerous, because it suggests an obvious and forbidden action.
+
+> **Demoting or hiding a zero-commission Boots row is exactly the manipulation the
+> proposition forbids.** If Boots is the best price on a Chanel product, Boots is shown
+> first, and it earns us nothing. The comparison is the only asset the platform has, and
+> the moment its ordering answers to commission it is worth nothing to anyone.
+
+The economics are shaped upstream of the comparison — by who arrives and which retailers
+are partnered with — never inside it.
+
+#### WHY THIS WAS INVISIBLE UNTIL NOW
+
+Every commission-rate figure in the strategy work was carried and marked unverified,
+because **no call to `api.awin.com` had ever been made from this project** before 15 August.
+The exclusions have presumably been in Boots's card the entire time.
+
+**It was not a wrong assumption. It was an assumption in a place nobody had looked**, and
+one read of a documented endpoint settled it.
+
