@@ -1,0 +1,61 @@
+name: awin weekly pull
+
+# Weekly AWIN publisher performance into metrics_awin_weekly. Dashboard brief Step 4.
+#
+# Runs here rather than pg_cron-to-edge because AWIN_OAUTH_TOKEN lives in the Actions
+# secret store and GitHub secrets are write-only by design.
+#
+# NOT SCHEDULED YET, DELIBERATELY. The `schedule:` block below is commented out, so
+# ARMING IT IS A VISIBLE DIFF IN A PR OF ITS OWN rather than a property of the file that
+# introduced the puller. Same three acts as the GA4 puller:
+#
+#   1. Dispatch manually with dry_run = true. Read the printed table. Check the weeks,
+#      the advertiser names and whether pending/confirmed look like a validation lag
+#      rather than like zeroes.
+#   2. Dispatch with dry_run = false. Confirm the rows in metrics_awin_weekly.
+#   3. Only then uncomment `schedule:` in a PR of its own.
+#
+# THE DRY_RUN DEFAULT IS EVENT-AWARE, AND THAT IS NOT COSMETIC. A manual dispatch defaults
+# to DRY; a scheduled run defaults to WRITE. The defect this avoids was found when the GA4
+# schedule was armed: a schedule that inherits the manual default runs dry forever, writes
+# nothing, and reports success every week. A puller that never writes and never fails is
+# indistinguishable from one that works until someone reads the table.
+
+"on":
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'true = print only, false = write'
+        required: false
+        default: 'true'
+      weeks:
+        description: 'Trailing ISO weeks to re-pull (1-16)'
+        required: false
+        default: '12'
+  # schedule:
+  #   # Mondays 06:30 UTC, after the week has closed. UNCOMMENT IN ITS OWN PR.
+  #   - cron: '30 6 * * 1'
+
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Pull AWIN weekly performance
+        env:
+          # THE REPORTING CREDENTIAL. Never AWIN_API_KEY — that is the FEED credential,
+          # read by eight live paths against productdata.awin.com, and overwriting it
+          # breaks the nightly imports.
+          AWIN_OAUTH_TOKEN: ${{ secrets.AWIN_OAUTH_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          WEEKS: ${{ github.event.inputs.weeks || '12' }}
+          # Copied verbatim from ga4-weekly-pull.yml. Manual dispatch honours its input;
+          # a scheduled run writes; anything else is dry.
+          DRY_RUN: ${{ github.event.inputs.dry_run || (github.event_name == 'schedule' && 'false' || 'true') }}
+        run: node scripts/awin-weekly-pull.mjs
