@@ -111,15 +111,30 @@ Not proposed as a rule, and no retailer decision should be made on it as written
 
 ## Not verified here
 
-**Commission rates are not in the database.** `retailers` holds `id, name,
-base_url, affiliate_tag, delivery_threshold, delivery_cost, active` and no rate
-column, and `metrics_awin_weekly` is empty. That Boots sits at the bottom of the
-commission range is Robbie's, carried as stated and **not confirmed by
-measurement**. The depth figures above are measured; the commission position is
-not.
+**[Resolved 15 August 2026. The two claims below were carried for a fortnight and
+both were checkable by one authenticated call.]**
 
-The £1.33 average commission per sale likewise comes from the 1 August brief, not
-from this database.
+**"Boots sits at the bottom of the commission range" is CONFIRMED, and it was
+understated.** Boots's standard commission groups top out at **2.00 per cent** —
+the lowest ceiling of all sixteen joined advertisers, against 3.00 per cent for
+the next lowest and 15 per cent at the top. It also carries **26 groups paying
+zero**, including named exclusions for Chanel, Dior, Dyson and Jo Malone, which no
+other advertiser has. See work-list item 120.
+
+**The £1.33 average commission per sale is CLOSED at £1.14 measured**, or £1.19
+over complete weeks only — so the carried figure was 12 to 17 per cent high. From
+`metrics_awin_weekly`, which now holds 93 rows over 12 weeks.
+
+**Still true: commission rates are not in the database.** `retailers` has no rate
+column. The rate card was read from `api.awin.com/publishers/{id}/commissiongroups`
+and **printed to an Actions log rather than stored**, so it is not queryable and
+this file's successor will have to read it again. That is the remaining gap and it
+is now a cheap one: the endpoint is confirmed and the puller pattern exists.
+
+> **Marking something unverified is not the same as verifying it, and the marker
+> has a shelf life.** This section did its job — it was honest, specific, and named
+> the claim's owner — and the claim was still quoted downstream for a fortnight,
+> because a marker records a debt without ever calling it in.
 
 ## Deliberately not answered
 

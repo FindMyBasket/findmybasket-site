@@ -986,8 +986,17 @@ Step 5, GATED. Build the AWIN Publisher API weekly puller writing clicks, sales,
 > Step 5 as written already pulls the third. The first is the addition, and it is
 > cheap while the auth and client are being built anyway.
 >
-> **UNVERIFIED. These endpoint names and shapes are recalled, not observed** — no
-> call to `api.awin.com` has ever been made from this project. Confirm against the
+> **[CLOSED 15 August 2026 by a read-only probe. This warning was right, and it was
+> right about the specific thing that mattered.]** All four endpoints were called.
+> `commissiongroups` is the rate card exactly as described above. But
+> `reports/advertiser` **returns the four commission statuses as COLUMNS of one
+> record, not as rows**, which contradicted the recalled primary key — so the table
+> designed from recollection would have shipped with a grain its own source denies.
+> **A table can survive a missing column; it cannot survive a grain that contradicts
+> its source.** See work-list item 118.
+>
+> ~~UNVERIFIED. These endpoint names and shapes are recalled, not observed~~ — no
+> call to `api.awin.com` had ever been made from this project. Confirm against the
 > live API before designing a table around them, and treat a shape mismatch as
 > expected rather than surprising. Publisher id `2841268`
 > (`supabase/functions/import-awin-feed/index.ts:265`); the reader is
