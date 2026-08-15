@@ -8841,9 +8841,15 @@ Neither changes the finding; both would mislead someone reconciling this entry l
 
 ---
 
-### 110. The threshold is a column, and seven columns waited nine days for a report
+### 111. The threshold is a column, and seven columns waited nine days for a report
 
 **Raised and closed:** 14 August 2026 · **Applied.** `metrics_quality_weekly` reshaped,
+
+**Numbered 111, not 110.** It was written as 110 by counting from the previous item
+rather than from the file, where a 110 already existed. Caught because two production
+COMMENTs cite the number — `suspect_price_threshold` and `fmb_quality_snapshot_write` —
+and a stale citation there points a future reader at the wrong item with nothing to
+indicate it.
 `fmb_quality_snapshot_write()` created, first row written. **Cron NOT armed.**
 
 #### THE THRESHOLD IS A COLUMN, NOT A CONSTANT
