@@ -94,17 +94,42 @@ jobs:
             echo
           }
 
-          probe "1. PROGRAMMES - simplest authenticated call, proves the token works" \
-                "https://api.awin.com/publishers/$PUB/programmes?relationship=joined"
+          # RUN 2: regionCodes=GB STILL returned the same 400, echoing an empty list.
+          # The parameter NAME is wrong, not its value, so this run tries the variants.
+          # THE CLICKS QUESTION IS THE ONE THIS SETTLES: transactions carry no clicks at
+          # all (run 2, 31 fields, none of them a click count), so clicks can only come
+          # from an aggregated report, and that report is the endpoint still refusing us.
+          for v in "regionCodes=GB" "regionCode=GB" "region=GB" "regionCodes%5B%5D=GB" \
+                   "regionCodes=%5BGB%5D" "regionCodes=GB,IE" "" ; do
+            u="https://api.awin.com/publishers/$PUB/reports/advertiser?startDate=$START&endDate=$END&timezone=UTC"
+            [ -n "$v" ] && u="$u&$v"
+            c=$(curl -s -o /tmp/v.json -w '%{http_code}' -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' "$u")
+            echo "  reports/advertiser  [${v:-none}] -> HTTP $c  $(head -c 120 /tmp/v.json | tr -d '\n')"
+            if [ "$c" = "200" ]; then cp /tmp/v.json /tmp/agg.json; echo "    ^^ WORKS"; fi
+          done
+          echo
+          if [ -f /tmp/agg.json ]; then
+            echo "  AGGREGATED REPORT FIELD NAMES AND TYPES:"
+            jq -r 'if type=="array" then .[0] else . end | paths(scalars) as $p | "    \($p|join(".")) : \(getpath($p)|type)"' /tmp/agg.json | sort -u
+            echo "  ONE FULL RECORD:"; jq 'if type=="array" then .[0] else . end' /tmp/agg.json | sed 's/^/    /'
+            echo "  RECORD COUNT: $(jq 'if type=="array" then length else 1 end' /tmp/agg.json)"
+          else
+            echo "  NO VARIANT WORKED - clicks are not obtainable from this endpoint as called."
+          fi
+          echo
 
-          probe "2. AGGREGATED BY ADVERTISER - the report the puller would use" \
-                "https://api.awin.com/publishers/$PUB/reports/advertiser?startDate=$START&endDate=$END&timezone=UTC"
-
-          probe "3. TRANSACTIONS - per-transaction, carries commissionStatus" \
-                "https://api.awin.com/publishers/$PUB/transactions/?startDate=${START}T00%3A00%3A00&endDate=${END}T00%3A00%3A00&timezone=UTC"
-
-          probe "4. COMMISSION GROUPS - the rate card, if it exists on this path" \
-                "https://api.awin.com/publishers/$PUB/commissiongroups?advertiserId=15448"
-
+          echo "=============================================================="
+          echo "TRANSACTIONS: the vocabulary, across every record not just the first"
+          curl -s -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' \
+            "https://api.awin.com/publishers/$PUB/transactions/?startDate=2026-07-16T00%3A00%3A00&endDate=2026-08-15T00%3A00%3A00&timezone=UTC" > /tmp/tx.json
+          echo "  records: $(jq length /tmp/tx.json)"
+          echo "  commissionStatus values : $(jq -r '[.[].commissionStatus]|unique|join(", ")' /tmp/tx.json)"
+          echo "  type values             : $(jq -r '[.[].type]|unique|join(", ")' /tmp/tx.json)"
+          echo "  saleAmount currencies   : $(jq -r '[.[].saleAmount.currency]|unique|join(", ")' /tmp/tx.json)"
+          echo "  commission currencies   : $(jq -r '[.[].commissionAmount.currency]|unique|join(", ")' /tmp/tx.json)"
+          echo "  advertiserIds present   : $(jq -r '[.[].advertiserId]|unique|map(tostring)|join(", ")' /tmp/tx.json)"
+          echo "  customerAcquisition     : $(jq -r '[.[].customerAcquisition]|unique|join(", ")' /tmp/tx.json)"
+          echo "  any field matching click: $(jq -r '[.[0]|paths(scalars)|join(".")]|map(select(test("click";"i")))|join(", ")' /tmp/tx.json)"
+          echo
           echo "=============================================================="
           echo "Probe complete. Nothing was written anywhere."
