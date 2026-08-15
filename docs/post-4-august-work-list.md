@@ -9670,9 +9670,42 @@ collection rules we can read. Standardise on it.
 the navigation path itself rather than beside it. That was deliberately avoided to keep the
 affiliate href clean, so this is a real trade and not an oversight. **Not proposed here.**
 
-**Until then, every commission-per-click figure is an upper bound**, because the
-denominator is a floor. 3.7p is the most favourable reading of the unit economics
-available, and the break-even click figures are correspondingly optimistic.
+#### THE CORRECTION CHANGES THE MEANING, NOT THE VALUE
+
+Nothing about the click counts moved. `outbound_clicks` holds what it always held and the
+weekly figures are unchanged.
+
+> **What changed is what the column is entitled to be used for.** It was being read as a
+> count of outbound clicks. It is a count of outbound clicks **whose beacon fired**, and
+> the navigation does not depend on the beacon firing.
+
+**Every commission-per-click figure is therefore an upper bound**, because the denominator
+is a floor. 3.7p is the most favourable reading of the unit economics available, and the
+break-even click figures are correspondingly optimistic.
+
+**AND THE TRAFFIC MULTIPLE IS THE THING THAT MOVES.** Break even sits at four thousand
+three hundred to seven thousand two hundred clicks a month against a run rate near a
+hundred and eighty — twenty four to forty times.
+
+> **The true multiple is LARGER than that, and the multiple is the binding constraint.**
+> The commission rate question is settled and worth a factor of about four at most. The
+> traffic gap is at least twenty four times and is now known to be understated.
+> **Every correction found so far has moved the constraint the same way, and none of them
+> has moved it in ours.**
+
+#### THE /go/ REDIRECT IS A TRADE THAT WAS MADE, NOT ONE THAT WAS MISSED
+
+Recorded so nobody reopens this as a defect.
+
+A server-side redirect — `/go/...` logging on the navigation path itself — would make the
+count authoritative. It was **deliberately not built**. The route's own comment states the
+reason: *"the click itself proceeds via the anchor's direct href (no redirect hop, so the
+affiliate link stays clean for AWIN and SEO)"*.
+
+> **A clean affiliate href was chosen, knowingly, over a complete click count.** That is a
+> defensible trade and it may still be the right one. It is not an oversight, and the
+> correct response to finding the count incomplete is to say so on every figure derived
+> from it — which the panel now does — not to treat the original decision as a bug.
 
 #### WHAT IS NOT WRONG
 
@@ -9744,4 +9777,32 @@ The exclusions have presumably been in Boots's card the entire time.
 
 **It was not a wrong assumption. It was an assumption in a place nobody had looked**, and
 one read of a documented endpoint settled it.
+
+#### THIS IS A DIFFERENT FAILURE FROM THE REST OF THIS LIST, AND THE DIFFERENCE MATTERS
+
+Nearly every other item here is a **belief that was checkable and was checked wrongly** —
+a docstring that did not match its query, a matcher quoted before it was measured, a
+primary key recalled instead of read, a comment that contradicted the code thirty lines
+below it. Those share a shape: the evidence was available, somebody looked at it, and the
+reading was wrong.
+
+> **This one has no wrong reading in it.** Nobody misread Boots's commission card. Nobody
+> had ever opened it. The endpoint was documented, the credential existed, and the question
+> had never been asked.
+
+**The two failures need different defences.** Wrong readings are caught by checking against
+the corpus, by tests, by re-reading the source — all the habits this list has been
+accumulating. **An unexamined assumption is caught by none of them**, because there is no
+artefact to check and nothing looks wrong. It survives every review that only inspects what
+was written down.
+
+The only thing that finds it is asking what a figure rests on and discovering the answer is
+nothing. **The four unverified-commission markers in the strategy work were doing exactly
+that job**, honestly and for weeks, and were the reason this was findable at all. The
+defect was not that the assumption existed; it was that it sat marked-as-unverified for
+long enough to be quoted anyway.
+
+> **Marking something unverified is not the same as verifying it, and the marker has a
+> shelf life.** One authenticated call closed a question that four documents had been
+> hedging around.
 
