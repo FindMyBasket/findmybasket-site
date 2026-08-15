@@ -1,0 +1,19 @@
+-- APPLIED to production 2026-08-15 via MCP apply_migration; committed as the record.
+-- Verified after apply: exactly one such row, 8 affected metrics, comparison_depth_pct named.
+--
+-- Boundary row for the Boots supplements activation, written THE DAY OF THE CHANGE and
+-- BEFORE THE STEP EXISTS. metrics_quality_weekly held exactly one row when this landed;
+-- the next weekly row is the first the series can draw a line between, and it will contain
+-- a step caused by this change.
+--
+-- WITHOUT IT, THE FIRST STEP THIS SERIES EVER SHOWS WOULD BE CAUSED BY A CHANGE THE
+-- BOUNDARY TABLE DOES NOT KNOW ABOUT, IN WEEK TWO.
+--
+-- The row's centrepiece is a DIRECTION, not a list. Its load-bearing sentence:
+--   "comparison_depth_pct EXPECTED TO FALL ... A FALLING HEADLINE METRIC HERE IS THE
+--    CHANGE WORKING, NOT A REGRESSION. This is the one that will be misread."
+-- because ~1,715 mostly single-stockist products enter the denominator.
+--
+-- Full description text is in the applied row; see platform_changes. Recorded here rather
+-- than re-pasted, because the authoritative copy is the one in the database.
+SELECT 'platform_changes: Boots supplements activation boundary, applied 2026-08-15' AS record;

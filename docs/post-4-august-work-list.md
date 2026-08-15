@@ -9157,3 +9157,94 @@ than living only here.
 Markdown to HTML on the template · the `.disclosure` paragraph · delete the `noindex` meta ·
 slug matching across `<title>`, `canonical`, `og:url` and JSON-LD · a `savings-hub.html` card
 · a `sitemap-pages.xml` entry. **Five steps, four articles, one act.**
+
+---
+
+### 116. A label that never resolved is not a label that stopped resolving
+
+**Raised and applied:** 15 August 2026 · **Three database changes, made before the panel and
+recorded before it.** All five migrations committed the same day.
+
+#### THE NAME-DRIFT DISTINCTION, WHICH IS THE FINDING
+
+`platform_changes.metrics_affected` is a text array of metric names, and a panel marks a
+boundary by joining a metric name against it. Row id 3 cited `unmatched_row_rate` and
+`placeholder_ean_count` — **both dropped from `metrics_quality_weekly` on 14 August** (item
+111). As of that day, the row silently marked two metrics that do not exist.
+
+But the array also holds `catalogue_size`, `total_brands`, `sole_source_barcodes` and a
+dozen GA4 event names. **None of those was ever a column of this table either.**
+
+> **A LABEL THAT NEVER RESOLVED IS NOT THE SAME DEFECT AS A LABEL THAT STOPPED RESOLVING.**
+> **Deleting the first destroys what someone meant at the time. Leaving the second silently
+> marks nothing.** They need opposite treatment — and **in a join they look identical**,
+> because both simply fail to match.
+
+So the line drawn was narrow and deliberate: **remove only names that referenced columns OF
+THIS TABLE and were dropped**; leave every label that was always aspirational or belongs to
+another series. Six rows then gained current metric names where the change mechanically
+moves them.
+
+**Asserted after apply: zero rows cite a dropped column, and all nine current metrics are
+named by at least one boundary row.** Eight were covered by existing history.
+`suspect_price_count` had none — correctly, since no recorded change had moved it — so it
+got the boundary it genuinely belongs to: **a series-start row dated 14 August**, which is
+also the row recording that the threshold was SET rather than inherited.
+
+#### THE BOOTS ROW: A DIRECTION, NOT A LIST
+
+Written the day of the change and **before the step exists**. Its load-bearing sentence:
+
+> **`comparison_depth_pct` EXPECTED TO FALL. About 1,715 products enter the denominator and
+> most will have a single stockist, because Boots is the first supplements source. A FALLING
+> HEADLINE METRIC HERE IS THE CHANGE WORKING, NOT A REGRESSION. This is the one that will be
+> misread.**
+
+Also carried: two honest unknowns (`ean_coverage_pct`'s direction depends on Boots' barcode
+coverage in that branch, never separately measured) and the failure condition —
+`supplements_path_unreachable` must stay empty, or the flip is inert.
+
+**Without the row, the first step this series ever shows would be caused by a change the
+boundary table does not know about, in week two.**
+
+#### TODAY'S MOVEMENT IS NOT THE FLIP
+
+Re-running the writer the same day moved several metrics:
+
+| metric | earlier today | now |
+|---|---:|---:|
+| `comparison_depth_pct` | 15.15% | **15.33%** |
+| `suspect_price_count` | 726 | **762** |
+| `no_in_stock_offer_count` | 13,280 | **13,498** |
+| `sole_supplier_share_pct` | 77.25% | 76.93% |
+
+> **NONE OF THIS IS THE BOOTS SUPPLEMENTS ACTIVATION. It is one day of ordinary imports, and
+> the flip has not reached the catalogue** — supplements still stands at 93. The first Boots
+> effect appears at tomorrow's 04:30 run.
+>
+> Recorded explicitly because a reader meeting a moved figure the morning after a flip will
+> attribute it to the flip. **The row was rewritten in place, same `week_start`, which is the
+> writer working as designed and not a second observation.**
+
+#### THE METHOD, WHICH SHOULD BE THE DEFAULT
+
+`fmb_quality_snapshot_write()` needed four lines changed in about two hundred. The live
+definition was fetched with `pg_get_functiondef`, patched programmatically, and re-applied.
+**It was never retyped.**
+
+> **Retyping a long function to change a few lines invites transcription drift in the lines
+> that were not meant to change, and nothing would report it.** Same property the
+> `products_active` capture relied on: **an identical rendering is PROOF of fidelity rather
+> than a promise of it.**
+
+Worth being the default for any change to a live function, not a one-off.
+
+#### AND THE DENOMINATORS THEMSELVES
+
+`stale_in_stock_rows` shipped as a bare count — **15,433 of what?** Now 15,433 of **110,504**.
+`cross_product_price_outliers` and `cross_product_identical_pairs` are **pair** counts and now
+carry a candidate population of **84,213** products, stored separately and never summed.
+
+Added to the writer rather than to a companion, because a second writer would put two of the
+eleven numbers somewhere else, and the whole design rests on there being **one place a
+meaning can change**.
