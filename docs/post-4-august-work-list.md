@@ -9458,3 +9458,134 @@ none does.
 import when `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` are absent. Compilation succeeds;
 Vercel has the vars and its check is the real test. Noted on both PRs so a red local build is
 not later attributed to the panel.
+
+---
+
+### 118. The probe changed the design, and the part it changed was the primary key
+
+**Raised and applied:** 15 August 2026 · **Table redesigned, puller built, acts 1 and 2 run.
+Schedule NOT armed.**
+
+`metrics_awin_weekly` was created 28 July from a **recalled** API shape and had held zero
+rows since. On 15 August the first authenticated call to `api.awin.com` in this project's
+history was made — a read-only probe, four candidate endpoints, deliberately before any
+table change.
+
+#### THE PROBE'S OWN JUSTIFICATION
+
+The plan had been to fix the table first: add `advertiser_id`, `sale_value`, `currency`, a
+`status` CHECK and column comments. **Every one of those was right.** The observed response
+confirmed all four.
+
+> **And it would still have shipped a broken table, because the primary key was the thing
+> recollection got wrong.** `(week_start, advertiser, status)` assumes the API returns a row
+> per status. **It returns the four statuses as COLUMNS of one record.** Honouring that key
+> means exploding one record into four rows and then either duplicating the period's clicks
+> across all four or attaching them arbitrarily to one.
+>
+> **Three right answers and one structurally wrong one — and the wrong one was the primary
+> key.** A table can survive a missing column; it cannot survive a grain that contradicts
+> its source.
+
+**Clicks confirmed as recalled, twice over:** one `clicks` number per advertiser per region
+per period with no status, *and* no click count anywhere in the transactions endpoint, which
+carries `clickDate` and `clickDevice` but nothing to sum.
+
+#### THE REGION GRAIN, WHICH NOBODY PREDICTED
+
+The response carries `region`, and an advertiser can report under more than one.
+
+> **`(week_start, advertiser)` is not unique on its own — a defect INDEPENDENT of the status
+> question**, and one the recalled design would still have had after every other correction
+> was applied. It was not in anyone's list because nobody knew the field existed.
+
+New key: **`(week_start, advertiser_id, region)`**, four status triples as columns, clicks
+and impressions at their natural grain.
+
+#### APPROVED VERSUS CONFIRMED: THE TRAP A CHECK WOULD HAVE ENSHRINED
+
+The aggregate report calls a validated sale **`confirmed`**. The transactions endpoint calls
+the same state **`approved`**.
+
+> **Two names for one concept, across two endpoints of the same API, and visible only from
+> the probe.** A `status` CHECK written from either endpoint alone would have rejected the
+> other's vocabulary as invalid data — and the table would have been *more* wrong for having
+> a constraint than for having none.
+
+Recorded in the table comment rather than enforced, because there is no single correct
+vocabulary to enforce.
+
+#### `region=GB`, AND AN ERROR MESSAGE THAT NAMES THE WRONG PARAMETER
+
+    {"error":"invalid.userinput",
+     "description":"invalid region code list, expecting sth. like [FR,CA,DE]: []"}
+
+Returned identically for `regionCodes=GB`, `regionCode=GB`, `regionCodes[]=GB`,
+`regionCodes=[GB]`, `regionCodes=GB,IE` **and for omitting it entirely**. The parameter that
+works is **`region=GB`** — bare, singular, and not a list.
+
+> **The error names a parameter that does not exist and demands a format that is not
+> accepted.** Seven variants were needed to find the one that works.
+
+**This lives as a comment at the call site, not as a note in an item**, with an explicit
+instruction not to "correct" it on the strength of the error text — which is exactly what
+the error text invites the next reader to do.
+
+#### WHAT THE FIRST PULL FOUND
+
+**93 rows, 12 weeks, 15 advertisers, back to 25 May** — history that was recoverable only
+because nobody had thrown it away, and would have started aging out eventually.
+
+| | |
+|---|---:|
+| clicks | **993** |
+| sales, pending / confirmed | **5 / 11** |
+| commission, pending / confirmed | **£3.41 / £14.82** |
+| sale value | **£527.72** |
+| **realised commission rate** | **3.45%** |
+
+**The validation lag is visible in the data rather than argued about:** Boots' most recent
+weeks show 1 pending sale and 0 confirmed, while June's weeks have confirmed and no pending.
+**That is the same rows moving from one column to the other over about six weeks**, and it
+is why the trailing window is 12 weeks against GA4's 4, and why `updated_at` is load-bearing.
+
+#### THE RATE CARD IS NOW MEASURABLE
+
+`GET /publishers/{id}/commissiongroups?advertiserId=…` returns real rates — YesStyle's
+**"NEW" group at 10.0%**, with `groupCode`, `groupName`, `percentage`, `conditions` and
+`ratesStart`.
+
+> **Commission position has been a CARRIED assumption throughout this project.** "Boots sits
+> at the bottom of the commission range" is marked *"Not verified here"* in
+> `commercial-finding-catalogue-depth.md`; The Fragrance Shop's 2% ranking in the partnership
+> tracker rests on it; the £1.33 average commission per sale comes from a brief rather than
+> from this database. **All of that is now checkable**, and the realised 3.45% above is the
+> first commission figure this project has measured rather than carried.
+
+Not pulled yet — the puller reads the aggregate report only. Recorded as the next cheap
+addition while the auth and client already exist.
+
+#### STATUS
+
+**Acts 1 and 2 done**, 93 rows written and verified. **The schedule is commented out**, so
+arming it is a visible diff in its own PR. `DRY_RUN` is event-aware, copied verbatim from
+the GA4 workflow — a manual dispatch defaults to dry, a scheduled run writes, which is the
+defect found when GA4's schedule was armed.
+
+**The probe workflow is kept.** It is read-only, it changed a design today, and the next API
+surprise wants the same instrument.
+
+#### A NOTE ON THIS ITEM'S NUMBER, BECAUSE IT IS THE FOURTH TIME
+
+This was written as 117 and is 118. Item 117 existed only in an open PR while this was
+being written, so `main` did not yet show it.
+
+> **The work list's numbering lives in two places at once: the file on `main`, and every
+> open PR that appends to it.** Checking `main` alone is checking half of it, and the half
+> that moves.
+
+Four collisions in two days, all the same cause and all caught before merge. **The check
+that actually works is `grep` on `main` AND `gh pr list --state open`** — and the second is
+the one that keeps being skipped, because a number that does not exist yet is invisible to
+every tool except the PR list.
+
