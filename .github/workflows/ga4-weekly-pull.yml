@@ -9,7 +9,14 @@ name: ga4-weekly-pull
 # second unverified copy of a credential. That is the AWIN_API_KEY / SKEW_IGNORE
 # pattern this project has already decided not to repeat.
 #
-# NOT SCHEDULED YET, DELIBERATELY. The `schedule:` block below is commented out.
+# ARMED. The `schedule:` block below is LIVE (Mondays 06:00 UTC).
+#
+# This comment previously said "NOT SCHEDULED YET, DELIBERATELY... commented out" and kept
+# saying it after the block was uncommented. On 15 August it was read as evidence that the
+# puller was unarmed, which was wrong, and only the run history settled it.
+# A COMMENT THAT CONTRADICTS THE CODE BELOW IT IS WORSE THAN NO COMMENT: it is what a
+# reader checks INSTEAD of the code. The three acts below are kept as the record of how it
+# was armed, not as a statement that it has not been.
 # This job WRITES to production, and nothing in this repository has ever seen it
 # run against the real API: it cannot be run locally (the credential is not
 # available outside Actions) and the token here cannot dispatch it
