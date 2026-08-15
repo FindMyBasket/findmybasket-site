@@ -8979,3 +8979,114 @@ standing unchanged. **A scheduled writer would be a fifth thing moving in that w
 
 Step 9's panel is the remaining piece, and it now has **a series to render rather than a
 schema**.
+
+---
+
+### 112. The comment claims a persistence the pipeline does not perform
+
+**Raised:** 15 August 2026, first Stylevana detector cycle · **Not fixed here. Its own change,
+after the Boots flip.**
+
+The reassignment detector fired for the first time. The instruction was to **read the sample
+rows before the count**. The sample rows do not exist.
+
+`scrape_log.details` holds `counts`, `duration_ms`, `excluded_total` and nothing else, because
+`_shared/run-metrics.ts:75` writes exactly that:
+
+    details: { duration_ms: durationMs, excluded_total: excludedTotal, counts: o.counts ?? null }
+
+`sample_reassignment_suspect` is a **sibling of `counts` in the HTTP response**, and the cron
+discards the response body. Meanwhile the importer's own comment, three lines above the field:
+
+> *"Persisted into scrape_log.details so the trips are INSPECTABLE INDIVIDUALLY rather than
+> only totalled — **137 rows nobody can read is a number, not a finding**."*
+
+> **THE DEPLOYED CODE CLAIMS AN OUTPUT THAT DOES NOT SURVIVE, and the sentence written to
+> prevent an unreadable number now DESCRIBES THE SHIPPED STATE.** It even names the figure —
+> 137 — that the samples were supposed to make readable.
+
+**This is item 91's family from a new angle.** There the log reported a count it never
+computed; here the comment reports a destination the value never reaches. **Both are
+assertions about plumbing, made in the place a reader checks instead of the plumbing.**
+
+**Fix, as its own change and deliberately not folded into the Boots flip:** persist the
+samples into `scrape_log.details` alongside `counts`, so the comment becomes true. One
+retailer's activation and one observability fix must not land in the same window.
+
+#### THE 60 IS A HYPOTHESIS AND IS LABELLED ONE
+
+The detector counted **60**; the sizing predicted **137**. **Ruled out:** a partial run —
+5,246 Stylevana rows were touched against 12,206 stored, and yesterday's measurement put the
+fresh population at ~5,235, so that is normal coverage.
+
+**Likely, and undemonstrated:** the 137 came from the diagnostic's tokeniser and the shipped
+detector uses the fixed one. A narrower rule finding fewer rows is what success looks like.
+**It cannot be shown without the samples**, which is the same gap.
+
+**The mode (a) prediction is untestable for the same reason.** Products 2015 and 2167 still
+carry `romand-…-cheek` URLs and Stylevana images, so they remain divergent; whether the
+detector flagged them is exactly what the discarded samples would have said.
+
+---
+
+### 113. An unrun experiment listed among results
+
+**Raised:** 15 August 2026 · **Robbie's, and recorded at his instruction.**
+
+Yesterday's four checks included: *"Was 81482's Stylevana row rematched by tier 1 as
+predicted?"* — but **we had deliberately decided not to detach it.** The row was never
+removed, so nothing could be rematched. Its id is unchanged and it was updated in place by
+tier 0.
+
+> **AN UNRUN EXPERIMENT LISTED AMONG RESULTS IMPLIES A FINDING WHERE THERE IS NO
+> OBSERVATION.** A checklist of four reads reads as four measurements. Three of them were.
+
+The tier-1 rematch prediction **remains untested**, and it is the load-bearing assumption
+behind holding the detach — the reason 81482 stays wrong is that detaching it is believed to
+be futile. **That belief is still a prediction.**
+
+#### CHECK 1, BY CONTRAST, IS A CLEAN CONFIRMATION
+
+6174's row returned within one cycle: **new row id 522597**, `external_product_id` 68593,
+**no barcode**, £5.90, and it is the best price on the product again. No prior row existed for
+tier 0 and no identifier existed for tier 1, so it matched on **name or URL**.
+
+> **The mechanism is now demonstrated rather than reasoned, which is what the detach bought.**
+> 6174 is live-wrong at £5.90 and stays that way until something stops the rematch — and that
+> "something" is now specified by evidence rather than by argument.
+
+---
+
+### 114. Boots supplements activated: both config values, one statement
+
+**Raised and applied:** 15 August 2026 · **Baseline A taken first.**
+
+**Clean-cycle confirmation passed on all twelve retailers** — `on_supplements_path: 0` and
+`supplements_path_unreachable: []` everywhere, Boots included at 04:31 with an empty prefix
+list. **The inert deploy ran a full cycle and the two states were distinguishable**, which is
+what #268 existed to make true.
+
+**Baseline A**, in `fmb_boots_supplements_baseline_20260815`, taken immediately before the
+write: supplements **93** (23 comparable) · products_active **98,404** · Boots rows **36,409**
+· Boots today links **107**, creates **10**, excluded_path **14,010**, on_supplements_path
+**0** · comparison_depth **15.15%**.
+
+**Both values written in ONE statement**, because either alone is a silent no-op (item 91).
+
+#### AND THE TWO LISTS ARE STORED TWO DIFFERENT WAYS
+
+`category_path_must_contain` is **jsonb**; `supplements_path_prefixes` is **text[]**. The
+first attempt failed on `operator does not exist: jsonb || text[]`.
+
+> **Two lists that must move together, stored in two different representations, so the
+> statement that moves them needs two different operators.** Writing one by analogy with the
+> other fails — loudly this time, which is the good case.
+
+**Assertions in the migration**, so a broken combination cannot land and wait a day to say so:
+four must-contain entries, one prefix, the leaf present, **the prefix reachable through
+must-contain**, and no other retailer holding a prefix.
+
+**The read is tomorrow's 04:30.** Expected: supplements **93 → about 1,715** (item 92,
+measured on the shipped rule); `on_supplements_path` 0 → a real number;
+`supplements_path_unreachable` **must stay `[]`** — if the prefix text does not match the
+feed's path, that field is now what says so.
