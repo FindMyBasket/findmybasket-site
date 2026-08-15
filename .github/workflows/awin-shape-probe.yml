@@ -1,0 +1,110 @@
+name: awin shape probe (read-only)
+
+# ONE AUTHENTICATED READ against api.awin.com, to establish the ACTUAL response shape
+# before anything is designed around it.
+#
+# WHY THIS EXISTS RATHER THAN A DESIGN. Every field name in the dashboard brief's Step 5
+# section is marked UNVERIFIED — "these endpoint names and shapes are recalled, not
+# observed", and no call to api.awin.com has ever been made from this project. Designing
+# metrics_awin_weekly against recollection is exactly what produced seven columns with
+# names and no meanings on the quality table (work-list item 111).
+#
+# CREDENTIAL. Reads AWIN_OAUTH_TOKEN and ONLY that. AWIN_API_KEY is the FEED credential,
+# read by eight live paths against productdata.awin.com; it is never sent here and must
+# never be overwritten with a reporting token.
+#
+# WRITES NOTHING. No database, no storage, no import trigger. It prints.
+#
+# THE ENDPOINT PATH IS ITSELF UNVERIFIED, so this tries several and reports which respond.
+# A 404 on a recalled path is a finding, not a failure.
+
+"on":
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: 'Report start date, YYYY-MM-DD'
+        required: false
+        default: '2026-07-01'
+      end_date:
+        description: 'Report end date, YYYY-MM-DD'
+        required: false
+        default: '2026-08-15'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe api.awin.com and print the shape
+        env:
+          TOKEN: ${{ secrets.AWIN_OAUTH_TOKEN }}
+          START: ${{ github.event.inputs.start_date || '2026-07-01' }}
+          END: ${{ github.event.inputs.end_date || '2026-08-15' }}
+        run: |
+          set -uo pipefail
+          PUB=2841268
+
+          if [ -z "${TOKEN:-}" ]; then
+            echo "AWIN_OAUTH_TOKEN is empty in this context. Nothing was called."
+            exit 1
+          fi
+          echo "token present, length ${#TOKEN}"   # length only; never the value
+          echo "publisher $PUB, window $START to $END"
+          echo
+
+          # Endpoint candidates. Each is recalled, not observed. Reporting the status of
+          # every one settles the path question as a by-product of settling the shape.
+          probe () {
+            local label="$1" url="$2"
+            echo "=============================================================="
+            echo "$label"
+            echo "  $url"
+            code=$(curl -s -o /tmp/body.json -w '%{http_code}' \
+                     -H "Authorization: Bearer $TOKEN" \
+                     -H 'Accept: application/json' "$url")
+            echo "  HTTP $code   $(wc -c < /tmp/body.json) bytes"
+
+            if [ "$code" != "200" ]; then
+              echo "  body (first 300 chars):"
+              head -c 300 /tmp/body.json; echo
+              return
+            fi
+
+            # EMPTY IS NOT PROOF OF A BAD TOKEN. The brief records up to 10 minutes for a
+            # newly generated token to propagate, so an empty 200 is retried once before
+            # anything is concluded from it.
+            if [ "$(jq 'if type=="array" then length else 1 end' /tmp/body.json)" = "0" ]; then
+              echo "  EMPTY on first call - waiting 60s and retrying once before concluding"
+              sleep 60
+              curl -s -o /tmp/body.json -H "Authorization: Bearer $TOKEN" \
+                   -H 'Accept: application/json' "$url" >/dev/null
+              echo "  after retry: $(jq 'if type=="array" then length else 1 end' /tmp/body.json) record(s)"
+            fi
+
+            echo "  top-level type : $(jq -r 'type' /tmp/body.json)"
+            echo "  record count   : $(jq 'if type=="array" then length else 1 end' /tmp/body.json)"
+            echo
+            echo "  FIELD NAMES AND TYPES (from the first record):"
+            jq -r 'if type=="array" then .[0] else . end
+                   | select(. != null)
+                   | paths(scalars) as $p
+                   | "    \($p | join(".")) : \(getpath($p) | type)"' /tmp/body.json | sort -u
+            echo
+            echo "  ONE FULL RECORD:"
+            jq -C 'if type=="array" then .[0] else . end' /tmp/body.json | sed 's/^/    /'
+            echo
+          }
+
+          probe "1. PROGRAMMES - simplest authenticated call, proves the token works" \
+                "https://api.awin.com/publishers/$PUB/programmes?relationship=joined"
+
+          probe "2. AGGREGATED BY ADVERTISER - the report the puller would use" \
+                "https://api.awin.com/publishers/$PUB/reports/advertiser?startDate=$START&endDate=$END&timezone=UTC"
+
+          probe "3. TRANSACTIONS - per-transaction, carries commissionStatus" \
+                "https://api.awin.com/publishers/$PUB/transactions/?startDate=${START}T00%3A00%3A00&endDate=${END}T00%3A00%3A00&timezone=UTC"
+
+          probe "4. COMMISSION GROUPS - the rate card, if it exists on this path" \
+                "https://api.awin.com/publishers/$PUB/commissiongroups?advertiserId=15448"
+
+          echo "=============================================================="
+          echo "Probe complete. Nothing was written anywhere."
