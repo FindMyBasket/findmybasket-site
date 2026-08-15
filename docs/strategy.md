@@ -297,9 +297,80 @@ Brand hubs also exist on two commercial bases, and the distinction protects both
 
 ## **Unit economics**
 
-Two P&L versions exist with materially different commission assumptions, and the correct one should be confirmed before any figure is relied on. The conservative version assumes a two percent blended rate, roughly eighty pence per sale on a forty pound average order value, monthly costs around two hundred and sixty eight pounds and break even near three hundred and thirty five sales a month. The optimistic version assumes eight percent, three pounds twenty per sale, lower costs and break even near fifty sales a month. Year one runs August 2026 to July 2027 and the base case does not reach break even within it.
+**[Measured 15 August 2026] The commission rate is no longer an assumption.** The AWIN publisher API was read for the first time on 15 August, twelve trailing weeks back to 25 May: 993 outbound clicks, sixteen tracked sales, five hundred and twenty seven pounds seventy two of sale value, eighteen pounds twenty three of commission. **The realised blended rate is 3.45 percent.** Every commission figure below this line is now measured rather than carried.
 
-Brand partner rates at fifteen percent, and the ten percent brand partner CPA benchmark, are what make the optimistic end reachable. That is the practical argument for the strategic spine: the blended rate improves through the mix of who arrives, not through anything done inside the comparison.
+Two P&L versions exist. The conservative version assumes a two percent blended rate, roughly eighty pence per sale on a forty pound average order value, monthly costs around two hundred and sixty eight pounds and break even near three hundred and thirty five sales a month. The optimistic version assumes eight percent, three pounds twenty per sale, costs near a hundred and sixty pounds and break even near fifty sales a month. Year one runs August 2026 to July 2027 and the base case does not reach break even within it.
+
+**Neither break even figure survives the measurement, and both were wrong in the same direction on two separate inputs.**
+
+- **The rate sat between them, nearer the pessimistic end.** 3.45 percent against assumptions of two and eight.
+- **Average order value is thirty two pounds ninety eight, not forty.** This was wrong in both versions and it compounds with the rate, because commission per sale is the product of the two. An eighteen percent error in order value is worth as much as a large error in the rate and nobody was arguing about it.
+- **Commission per sale is therefore one pound fourteen**, against eighty pence conservative and three pounds twenty optimistic.
+
+Substituting one pound fourteen, and holding each version's own cost base: **break even is two hundred and thirty five sales a month on the conservative cost base and a hundred and forty on the optimistic one.** The range narrows from fifty to three hundred and thirty five, a factor of nearly seven, down to a hundred and forty to two hundred and thirty five, a factor of one point seven.
+
+**What remains uncertain is now the cost base rather than the commission rate.** The two versions differed on both, and that was never stated: a four times rate difference multiplied by a one point seven times cost difference is what produced the seven times spread. Resolving the commission question was always going to leave most of the cost question untouched, and it has.
+
+**The measurement rests on sixteen sales and should be read with that in mind.** A single hundred and eighty two pound order at The Organic Pharmacy is a third of all sale value; removing it moves commission per sale to eighty five pence and break even back to three hundred and fifteen. Taking confirmed sales only gives one pound thirty five and a hundred and ninety nine. The defensible range is roughly a hundred and twenty to three hundred and fifteen sales a month, and it will narrow on its own as the weekly pull accumulates.
+
+**Sales are the wrong instrument for steering in any case, because nothing upstream controls them directly.** On complete weeks the measured figure is three point seven pence of commission per outbound click. Break even is therefore between four thousand three hundred and seven thousand two hundred outbound clicks a month, against a current run rate near a hundred and eighty. **That is a twenty four to forty times increase in qualified clicks, and it is the binding constraint by a wide margin.** No achievable improvement in commission rate closes a gap of that size; only traffic does.
+
+The multiple is the robust part of this. Computing it on all twelve weeks rather than the eleven complete ones roughly doubles both the click count and the click rate and lands in the same twenty four to forty times range, and the break even sales figures move only from two hundred and thirty five to two hundred and twenty five, and from a hundred and forty to a hundred and thirty four. **The break even conclusions survive the click count dispute; the segment level conversion claims do not.**
+
+**[Verified 15 August 2026] Brand partner rates at fifteen percent are real.** The AWIN commission group endpoint was read for every joined advertiser on 15 August. Abib, iLĀPOTHECARY and Evolve Beauty all carry fifteen percent; Beauty Bay, YesStyle, Niche-Beauty and Forever Feeling carry ten. This is the first time the benchmark has been read rather than recalled, and it holds. The optimistic end is reachable in the sense that the rates exist.
+
+**But the card also shows why the realised rate is 3.45 and not eight, and the reason is not the one the mix argument predicts.** Boots is the anchor: fifty eight of its eighty seven commission groups pay two percent, twenty six pay nothing, and Boots produced seven of the sixteen sales. The conservative two percent assumption was never a pessimistic guess. **It was Boots's rate, and Boots is the mix.**
+
+**The finding that outranks both is that the high rate advertisers convert nothing at all.** YesStyle, Beauty Bay, Perfume Click, Beauty Flash, Gorgeous Shop and Niche-Beauty carry card rates of six and a half to ten percent. Across the eleven **complete** weeks they took a hundred and sixty outbound clicks between them and produced **zero sales**, against roughly eight expected at the conversion rate the rest of the estate achieves. That is about a one in two thousand eight hundred outcome: not conclusive on its own, but well past the point where random is the comfortable explanation.
+
+> **This changes the shape of the mix argument.** The blended rate is not low because high commission partners receive too little traffic. They receive a third of all outbound clicks and convert none of it.
+
+**The figure was first computed as four hundred and forty four clicks and a one in five hundred thousand outcome, and that was wrong by two orders of magnitude.** It included the current partial week, in which AWIN reports a click spike that our own first party logging does not corroborate — see the click count disagreement below. The corrected figure is weaker and is the one to use. **The lesson is that the segment claim was quoted before the series was checked for anomalies, which is the same discipline failure the matcher work has a standing rule against.**
+
+That said, a conversion or tracking failure is still worth more than the rate question: if those clicks converted at the estate's own rate and earned their card rates, commission per click would roughly double, comparable to the distance between the two P&L versions' commission assumptions. **Whether the cause is broken tracking, broken deeplinks, or genuinely lower intent traffic is unknown and is the single highest value open question in the unit economics.** It should be answered before any further argument about commission mix.
+
+## **Three sources count outbound clicks and none of them agree**
+
+**[Found 15 August 2026]** The same event — a visitor leaving for a retailer — is now counted in three independent places, and putting them beside each other for the first time shows they have never agreed.
+
+| Week beginning | Our own `outbound_clicks` | GA4 | AWIN |
+| --- | --- | --- | --- |
+| 20 July | 128 | 78 | 62 |
+| 27 July | 64 | 26 | 57 |
+| 3 August | 71 | 17 | 170 |
+| 10 August, partial | 77 | 1 | 544 |
+
+**GA4's count is collapsing while AWIN's is rising, and our own is flat.** Three sources moving in three directions is not a reconciliation problem; it means at least two of them are wrong, and the flat first party series is the most credible of the three.
+
+Two specific concerns follow. **GA4's outbound click count has fallen to near zero and the GA4 table has not been written since 13 August**, so the panel's traffic figures cannot currently be trusted. **AWIN's five hundred and forty four clicks in a partial week, concentrated in Stylevana and Perfume Click, is seven times our own count for the same week**, which raises the possibility that a material share of AWIN reported clicks are not visitors we sent.
+
+**This is now upstream of the unit economics rather than beside them.** Commission per click is the steering metric, and its denominator is the quantity in dispute.
+
+The strategic spine still holds — the blended rate improves through the mix of who arrives, not through anything done inside the comparison — but it now has a precondition that was invisible before this measurement: **the high rate partners have to convert at all.**
+
+## **Two things the rate card says that no summary of it would**
+
+**[Read 15 August 2026, group level]**
+
+### **The headline rate is the new customer rate, and most traffic will not be new**
+
+Where an advertiser's card splits by customer status, the split is large. Gorgeous Shop and Beauty Flash both pay eight percent on a new customer, **four on an existing one and one to three on anything with a voucher**. YesStyle pays ten percent new and **five existing**. Boots, Debenhams, Stylevana and Beauty Bay do not split at all.
+
+> **Quoting six and a half to ten percent for the high rate partners quotes their best case.** The rate a maturing site earns from repeat visitors is nearer half that, and the difference is roughly the entire gap between the two P&L versions all over again.
+
+This also cuts against voucher and deal led acquisition specifically, which is worth knowing before any discounting strategy is built: at Gorgeous Shop and Beauty Flash a voucher sale pays **one percent to an existing customer**, against eight for a clean new one.
+
+### **Boots pays nothing at all on prestige, and prestige is what the Prestige Edit routes to Boots**
+
+Twenty six of Boots's eighty seven commission groups pay zero. They are not obscure. Six are **named brand and product exclusions — Chanel, Dior, Dyson and Fitbit, Jo Malone, Apple and baby milk** — and a further twelve are Cardlytics customer segments that also pay nothing.
+
+**This is live in the catalogue rather than theoretical.** Boots currently carries **eighty seven in stock Chanel rows and thirty five Dior rows**, averaging fifty three and sixty pounds — among the highest priced items anywhere in the catalogue, and **every one of them earns zero commission**.
+
+> **The most expensive products we show at our largest retailer are the ones that pay us nothing.** A shopper routed to a hundred pound Chanel purchase at Boots generates the same revenue as one who does not click at all.
+
+That is a direct and previously invisible conflict with the Prestige Edit and the prestige brand hub positioning, both of which are designed to attract exactly this shopper. **It does not invalidate them** — a prestige audience is still the right audience, and prestige brands buying Spotlights is a fee based revenue line that does not depend on CPA at all. **But the affiliate half of the prestige case is worth zero at Boots specifically**, and any model that assumed otherwise was assuming it silently.
+
+The practical response is a partner question rather than a product one: prestige sales need a retailer that pays on them, or a direct brand relationship, and neither is Boots. **The comparison itself must not change** — that is the spine, and hiding or demoting a zero commission Boots row would be exactly the manipulation the spine forbids.
 
 # **8. Partnership strategy**
 
@@ -798,7 +869,11 @@ These are unresolved positions rather than tasks. Each one changes the shape of 
 
 | **Question** | **Why it matters** |
 | --- | --- |
-| Which P&L commission assumption is correct, two percent or eight percent? | The two versions imply break even points roughly seven times apart, which changes whether the business is close to viable or a long way from it. |
+| ~~Which P&L commission assumption is correct, two percent or eight percent?~~ **ANSWERED 15 August 2026: neither. The realised blended rate is 3.45 percent and average order value is thirty two pounds ninety eight rather than forty, giving one pound fourteen per sale and break even between a hundred and forty and two hundred and thirty five sales a month.** | Kept visible rather than deleted, because the answer moved the question. Resolving the rate left the cost base unresolved, and the two versions always differed on both. See section 6. |
+| Which cost base is real, a hundred and sixty pounds a month or two hundred and sixty eight? | This is now the whole of the remaining spread in the break even figure, and it is the half of the disagreement nobody was arguing about. |
+| Why do the high commission advertisers convert nothing? | A hundred and sixty outbound clicks across eleven complete weeks to advertisers paying six and a half to ten percent, and zero tracked sales against about eight expected. Broken tracking, broken deeplinks and low intent traffic imply completely different responses, and the difference is worth more than the commission rate question was. |
+| Where do prestige sales earn anything? | Boots zero rates Chanel, Dior, Jo Malone and others, and carries a hundred and twenty two in stock rows across the first two at the highest prices in the catalogue. The Prestige Edit routes its best shopper to a retailer that pays nothing on the purchase. The answer is a partner or a direct brand relationship, never a change to the comparison. |
+| Which outbound click count is real, ours, GA4's or AWIN's? | They disagree by up to seven times and move in three different directions. Commission per click is the steering metric for the whole funnel and this is its denominator. Nothing downstream of it can be trusted more than it is. |
 | What lifts comparison depth fastest: more retailers, better matching, or narrowing the catalogue to items with real depth? | 86.2% single stockist coverage is the core constraint. These three routes have very different costs and very different timelines. |
 | Should the paid Spotlight tier be defined and priced now, or after the first hub proves out? | Defining it early risks selling something undelivered. Defining it late means the Prestige Edit launches without a price. |
 | Does the platform stay a consumer destination, or eventually become infrastructure others route through? | Beauty-Shelf routing through Cosmetify shows that consolidation shape exists. Premature today, but it changes what is worth building. |
