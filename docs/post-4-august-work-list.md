@@ -9090,3 +9090,70 @@ must-contain**, and no other retailer holding a prefix.
 measured on the shipped rule); `on_supplements_path` 0 → a real number;
 `supplements_path_unreachable` **must stay `[]`** — if the prefix text does not match the
 feed's path, that field is now what says so.
+
+---
+
+### 115. One clause of a three-clause rule, treated as the rule
+
+**Raised:** 15 August 2026 · **Robbie's, recorded at his instruction.** Four supplements
+articles held in `docs/drafts/`.
+
+The brief was two fixes to make the articles publish-ready: the scare-quoted "cheaper", and
+the internal link convention. **Both were already correct in the supplied files** — corrected
+artefacts were produced rather than instructions, so the fix arrived inside the thing to be
+fixed. **Checking rather than applying was the right response**, and it is the only reason
+the third clause surfaced.
+
+#### THE DISCLOSURE CLAUSE IS THE FINDING
+
+`docs/article-template.html:15` carries the house rule in full:
+
+> *Copy conventions (house rules): **no em dashes**, never "cheapest" / "cheaper"; use "best
+> value" / "best price". **Keep the .disclosure line**.*
+
+**Three clauses. One was quoted, and the quote was treated as the rule.**
+
+> **The unquoted clause is the one that is not about style. `.disclosure` is the AFFILIATE
+> DISCLOSURE** — *"FindMyBasket may earn a small commission when you shop through our links,
+> at no extra cost to you."* **Four articles carrying affiliate links with no disclosure line
+> is a different order of problem from a wrong link**, and "publish-ready" as scoped would
+> have shipped exactly that.
+
+**Measured on the held drafts, all three clauses:** zero em dashes, zero "cheaper"/"cheapest",
+zero `/app.html`, every article link `/articles/{slug}.html`. The copy is clean. **The
+compliance line cannot be present at all**, because these are markdown and the disclosure
+lives in the HTML template.
+
+**"Publish-ready" was never two text fixes. It is a conversion**, and the template's five
+steps are all downstream of the copy being finished.
+
+#### THE SITEMAP STEP IS THE SECOND
+
+Step 5 of the template adds a line to `app/sitemap-pages.xml/route.ts`. **Four cross-linked
+articles absent from the sitemap is item 47's 102 missing brand pages in a new place** — and
+the cluster makes it worse, because the four reference each other, so a crawler would find
+internal links to pages the sitemap never declares.
+
+#### PUBLISH TOGETHER OR NOT AT ALL
+
+All four cross-link to each other. **A partial publish leaves dead internal links in whichever
+went first**, so the five template steps apply to all four **as a single act**, not four times
+over.
+
+#### THE GATE IS THE READ, NOT THE FLIP
+
+The articles route to `/supplements` and promise a comparison "across multiple stockists".
+
+> **Boots' two config values were written today and the catalogue has not moved.** The
+> category stands at **93 products, 23 comparable, 19 of those one brand's flavour variants**.
+> **Publication is gated on tomorrow's 04:30 READ confirming the move to roughly 1,715 — not
+> on the flip having happened.**
+
+Recorded at the top of each held draft, so the dependency travels with the artefact rather
+than living only here.
+
+#### WHAT REMAINS, AND NONE OF IT IS THE COPY
+
+Markdown to HTML on the template · the `.disclosure` paragraph · delete the `noindex` meta ·
+slug matching across `<title>`, `canonical`, `og:url` and JSON-LD · a `savings-hub.html` card
+· a `sitemap-pages.xml` entry. **Five steps, four articles, one act.**
