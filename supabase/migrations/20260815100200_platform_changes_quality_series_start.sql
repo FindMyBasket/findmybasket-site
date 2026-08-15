@@ -1,0 +1,16 @@
+-- APPLIED to production 2026-08-15 via MCP apply_migration; committed as the record.
+-- Verified after apply: zero current metrics remain unnamed by any boundary row.
+--
+-- SERIES START, dated 14 August 2026. Every one of the nine quality metrics begins there
+-- and there is nothing before it to be continuous with.
+--
+-- It is also the ONLY boundary suspect_price_count has, and it is a definitional one: the
+-- threshold was SET to 0.50 here, chosen against three real defects rather than for
+-- roundness. Stored per row, so a future change records a new definition rather than
+-- silently continuing the old series (item 111).
+--
+-- The row states, so a panel cannot be built that plots them:
+--   "Figures for some of these quantities appear in the work list from earlier in August
+--    ... but they were DERIVED AD-HOC BY DIFFERENT ROUTES and are not series members. They
+--    may be shown as annotations. They must not be plotted as points."
+SELECT 'platform_changes: quality series start 2026-08-14, applied 2026-08-15' AS record;

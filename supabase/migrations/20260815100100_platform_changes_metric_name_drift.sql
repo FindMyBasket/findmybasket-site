@@ -1,0 +1,26 @@
+-- APPLIED to production 2026-08-15 via MCP apply_migration; committed as the record.
+-- Verified after apply: zero rows cite a dropped column; all nine current metrics are
+-- named by at least one boundary row.
+--
+-- metrics_affected NAME DRIFT. The panel marks a boundary by joining a metric name against
+-- this array, so a name that no longer corresponds to a column MARKS NOTHING AND WARNS
+-- NOBODY. Row id 3 cited unmatched_row_rate and placeholder_ean_count, both dropped from
+-- metrics_quality_weekly on 14 August (item 111).
+--
+-- THE LINE IS NARROW ON PURPOSE:
+--
+--   A LABEL THAT NEVER RESOLVED IS NOT THE SAME DEFECT AS A LABEL THAT STOPPED RESOLVING.
+--
+-- Removed: names that referenced columns OF THIS METRIC TABLE and were dropped.
+-- Left exactly as they are: catalogue_size, total_brands, sole_source_barcodes and the GA4
+-- event names, which never were columns here. They are labels for other series and for
+-- series that do not exist yet, and deleting them would destroy what someone meant at the
+-- time.
+--
+-- Applied statements:
+--   id 3   -> ['ean_coverage_pct','comparison_depth_pct','ambiguous_ean_groups','sole_supplier_share_pct']
+--   id 33  += sole_supplier_share_pct   (ean_product_index IS its denominator)
+--   id 29  += stale_in_stock_rows, no_in_stock_offer_count   (absence step-down 30 -> 7d)
+--   id 26  += no_in_stock_offer_count, sole_supplier_share_pct  (retailer withdrawn)
+--   id 4,27,32 += sole_supplier_share_pct, ambiguous_ean_groups  (retailer go-lives)
+SELECT 'platform_changes: metric name drift cleared, applied 2026-08-15' AS record;
