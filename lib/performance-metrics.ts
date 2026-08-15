@@ -81,13 +81,29 @@ export async function getAwinWeeks(limit = 12): Promise<AwinWeek[]> {
   return [...by.values()].sort((a, b) => (a.week_start < b.week_start ? 1 : -1)).slice(0, limit);
 }
 
-/** Our own first-party outbound click log, weekly. */
+/**
+ * Our own first-party outbound click log, weekly, FILTERED TO AWIN.
+ *
+ * THE FILTER IS THE POINT. outbound_clicks logs every click-out, including Amazon
+ * cross-checks and eBay searches, while both columns it is compared against count AWIN
+ * only. Unfiltered it ran 10-20% high against them and the comparison was not like for
+ * like — found the day the reconciliation was built, by reading what the table contains
+ * rather than what its name suggests.
+ *
+ * WHAT THIS COUNT IS NOT. The row is written server-side, but it is TRIGGERED by
+ * ClickOutLink's onClick beacon, and the anchor navigates via the direct affiliate href
+ * with no redirect hop. The navigation does not depend on the beacon, so ad blockers,
+ * disabled JavaScript and right-click-open-in-new-tab are all invisible here and fully
+ * visible to AWIN. This is a FLOOR, not a measurement, and every commission-per-click
+ * figure derived from it is therefore an upper bound. See work-list item 119.
+ */
 export async function getOurClicks(sinceWeeks = 12): Promise<Map<string, number>> {
   const since = new Date();
   since.setUTCDate(since.getUTCDate() - sinceWeeks * 7 - 7);
   const { data, error } = await supabase
     .from('outbound_clicks')
     .select('created_at')
+    .not('awin_mid', 'is', null)
     .gte('created_at', since.toISOString());
   if (error) throw new Error(`outbound_clicks read failed: ${error.message}`);
 

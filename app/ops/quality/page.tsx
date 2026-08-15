@@ -296,11 +296,21 @@ export default async function OpsPanel() {
             })}
           </tbody>
         </table>
-        <p style={{ fontSize: 12, color: C.warn, margin: '14px 0 0', lineHeight: 1.6, maxWidth: 760 }}>
-          <strong>These have never agreed.</strong> GA4&rsquo;s count is falling, AWIN&rsquo;s is rising and ours is
-          roughly flat. Three sources moving in three directions does not mean they need
-          reconciling — it means at least two of them are wrong, and the flat first-party
-          series is the most credible of the three.
+        <p style={{ fontSize: 12, color: C.mid, margin: '14px 0 0', lineHeight: 1.6, maxWidth: 760 }}>
+          <strong>&ldquo;Ours&rdquo; is AWIN-only</strong>, because <code>outbound_clicks</code> also logs Amazon
+          and eBay while the other two columns do not. <strong>It is also a floor rather than a count:</strong>{' '}
+          the row is written server-side but triggered by an onClick beacon the navigation does not
+          depend on, so ad blockers, disabled JavaScript and right-click-open-in-new-tab are invisible
+          here and visible to AWIN. <strong>Every commission-per-click figure above is therefore an upper bound.</strong>
+        </p>
+        <p style={{ fontSize: 12, color: C.mid, margin: '10px 0 0', lineHeight: 1.6, maxWidth: 760 }}>
+          <strong>GA4 is a known subset, not a third opinion</strong> — below ours in every week, and
+          already labelled by <code>platform_changes</code> id 34 as &ldquo;a client-capture ratio, not a
+          consent rate&rdquo;. The real disagreement is two-sided.
+        </p>
+        <p style={{ fontSize: 12, color: C.warn, margin: '10px 0 0', lineHeight: 1.6, maxWidth: 760 }}>
+          <strong>What no single mechanism explains</strong> is that AWIN runs far above ours in August
+          and BELOW ours in July. Client-side loss explains one direction only.
           {ga4Stale !== null && ga4Stale > 3 && (
             <> <strong>GA4 has not been written for {Math.floor(ga4Stale)} days</strong>, so its column is stale as well as low.</>
           )}
