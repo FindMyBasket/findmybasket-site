@@ -9690,8 +9690,25 @@ hundred and eighty — twenty four to forty times.
 > **The true multiple is LARGER than that, and the multiple is the binding constraint.**
 > The commission rate question is settled and worth a factor of about four at most. The
 > traffic gap is at least twenty four times and is now known to be understated.
-> **Every correction found so far has moved the constraint the same way, and none of them
-> has moved it in ours.**
+
+#### A CAUTION ABOUT DIRECTION, WHICH IS NOT A CONCLUSION
+
+**Every correction this fortnight has moved the constraint against us and none in our
+favour.** The rate landed below the optimistic case, order value below both cases, the
+click denominator turned out to be a floor, and the segment conversion claim survived only
+in a weaker form.
+
+It is tempting to read a pattern into that. **The honest reading is that this is what an
+instrument looks like the first time it is pointed at something.** Carried figures are
+assembled from best cases, briefs and recollection, and best cases are systematically
+optimistic; the first measurement is not biased pessimistic, it is simply the first thing
+in the chain that had no reason to flatter.
+
+> **Worth remembering when figures eventually move the other way.** A favourable
+> correction will arrive and it will feel like evidence that the pessimism was overdone. It
+> will not be. The direction of a correction says nothing about its truth, and the
+> temptation to trust the pleasant ones more than these will be strongest exactly when
+> there is finally something to lose.
 
 #### THE /go/ REDIRECT IS A TRADE THAT WAS MADE, NOT ONE THAT WAS MISSED
 
@@ -9778,7 +9795,15 @@ The exclusions have presumably been in Boots's card the entire time.
 **It was not a wrong assumption. It was an assumption in a place nobody had looked**, and
 one read of a documented endpoint settled it.
 
-#### THIS IS A DIFFERENT FAILURE FROM THE REST OF THIS LIST, AND THE DIFFERENCE MATTERS
+#### MARKING SOMETHING UNVERIFIED IS NOT THE SAME AS VERIFYING IT, AND THE MARKER HAS A SHELF LIFE
+
+> **That is the line that generalises furthest, and it is why this item is a different
+> failure from the rest of this list.**
+
+One authenticated call closed a question four documents had been hedging around for a
+fortnight. The marker was doing its job perfectly — it was honest, it was specific, it
+named the file that held the claim — and it still let the claim be quoted, because **a
+marker records a debt without ever calling it in.**
 
 Nearly every other item here is a **belief that was checkable and was checked wrongly** —
 a docstring that did not match its query, a matcher quoted before it was measured, a
@@ -9796,13 +9821,32 @@ accumulating. **An unexamined assumption is caught by none of them**, because th
 artefact to check and nothing looks wrong. It survives every review that only inspects what
 was written down.
 
-The only thing that finds it is asking what a figure rests on and discovering the answer is
-nothing. **The four unverified-commission markers in the strategy work were doing exactly
-that job**, honestly and for weeks, and were the reason this was findable at all. The
-defect was not that the assumption existed; it was that it sat marked-as-unverified for
-long enough to be quoted anyway.
+> **The defence is a different act: go and look at something nobody has looked at.**
+> Not check the reading, not re-run the test, not measure against the corpus. Open the
+> thing. The markers already say which thing.
 
-> **Marking something unverified is not the same as verifying it, and the marker has a
-> shelf life.** One authenticated call closed a question that four documents had been
-> hedging around.
+#### WHAT THE MARKERS WERE WORTH, MEASURED
+
+Swept `docs/` — **25 markdown files plus 2 at the repository root. Code comments and
+`~/amazon-api-watch` were outside the sweep**, so this is a floor on the marker count and
+not a census.
+
+Four commission markers were named across `commercial-finding-catalogue-depth.md`,
+`dashboard-build-brief.md` and `partnership-tracker.md`. **Three closed on 15 August, each
+by a single dispatch:**
+
+| Marker | Status |
+| --- | --- |
+| *"Boots sits at the bottom of the commission range"* — carried, not confirmed | **CONFIRMED, and understated.** Boots's standard groups top out at 2.00%: the lowest CEILING of all sixteen advertisers, against 3.00% for the next lowest. It also carries 26 zero-rated groups that no other advertiser has. |
+| *"£1.33 average commission per sale"* — from the 1 August brief, not the database | **CLOSED at £1.14 measured**, £1.19 on complete weeks. The carried figure was 12 to 17 per cent high. |
+| *"These endpoint names and shapes are recalled, not observed"* | **CLOSED.** All four probed. `commissiongroups` confirmed as the rate card exactly as predicted; `reports/advertiser` contradicted the recalled primary key. |
+| *"Commission rates are not in the database"* | **STILL TRUE.** The card was printed to an Actions log, not stored. |
+
+**The fourth is now the cheapest finding on the list**, because everything it needs already
+exists: the endpoint is confirmed, the credential works, the puller and its table pattern
+are built. It is a table and a loop.
+
+> **A marker is a question someone already identified and nobody has asked.** Three of
+> these took one dispatch each. That is the going rate, and it is why the remaining ones
+> should be read as a work queue rather than as caveats.
 
