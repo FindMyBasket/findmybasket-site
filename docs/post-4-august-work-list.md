@@ -9463,8 +9463,8 @@ not later attributed to the panel.
 
 ### 118. The probe changed the design, and the part it changed was the primary key
 
-**Raised and applied:** 15 August 2026 · **Table redesigned, puller built, acts 1 and 2 run.
-Schedule NOT armed.**
+**Raised and applied:** 15 August 2026 · **Table redesigned, puller built, all three acts
+run. Schedule armed 15 August in a diff of its own.**
 
 `metrics_awin_weekly` was created 28 July from a **recalled** API shape and had held zero
 rows since. On 15 August the first authenticated call to `api.awin.com` in this project's
@@ -9484,8 +9484,15 @@ confirmed all four.
 > across all four or attaching them arbitrarily to one.
 >
 > **Three right answers and one structurally wrong one — and the wrong one was the primary
-> key.** A table can survive a missing column; it cannot survive a grain that contradicts
-> its source.
+> key.**
+
+That is the probe's whole justification, and it generalises past this table:
+
+> ### A table can survive a missing column; it cannot survive a grain that contradicts its source.
+
+A missing column is found the first time somebody wants it and added in an afternoon. A
+wrong grain is found only by whoever eventually disbelieves a number, and by then everything
+built on top of it is wrong too. **The cheap check goes before the design, not after it.**
 
 **Clicks confirmed as recalled, twice over:** one `clicks` number per advertiser per region
 per period with no status, *and* no click count anywhere in the transactions endpoint, which
