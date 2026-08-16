@@ -88,19 +88,31 @@ END $$;
 --     AND top_category = 'supplements'
 --     AND (subcategory IS NULL OR subcategory IN ('supplements','general'));
 --
--- 125 written. THREE DECLINED, AND NONE WAS THEORETICAL:
---   148826, 149612  ORS Hydration electrolyte tablets, already `sports`. Item 128 as a
---                   collision: we decided hydration is sports, BOOTS FILES IT UNDER
---                   WOMEN'S HEALTH. Reading a retailer's taxonomy does not end the
---                   argument about where a row belongs; it gives it a second participant.
---   24682           Philip Kingsley Density Preserving Scalp Drops -- top_category `hair`,
---                   which Boots files under Women's Health (hair loss for women). Declined
---                   ONLY because `treatment` is a specific value. Had it been NULL this
---                   would have published /hair/womens-health.
+-- 125 written. THREE DECLINED, AND NONE WAS THEORETICAL. THE FIRST IS WHY THE
+-- `top_category` GUARD EXISTS AT ALL:
 --
--- WHICH IS WHY THE `top_category` GUARD IS THERE. The overwrite rule constrains the OLD
--- value and never looked at the category. A MAP SCOPED TO ONE CATEGORY MUST ASSERT THAT
--- SCOPE ON THE ROW rather than assume it from the feed it was built on.
+--   24682   Philip Kingsley Density Preserving Scalp Drops. OUR top_category is `hair`.
+--           Boots files it under Health & Pharmacy > Women's Health -- hair loss for
+--           women, correct from their side. Declined ONLY because `treatment` is a
+--           specific value and therefore not overwritable. HAD ITS SUBCATEGORY BEEN NULL,
+--           as thousands of rows are, this would have written a supplements subcategory
+--           onto a hair product and PUBLISHED /hair/womens-health.
+--
+--           The overwrite rule was constraining the OLD VALUE and never looked at the
+--           category, so the catch was incidental to its purpose.
+--
+--           A MAP SCOPED TO ONE CATEGORY MUST ASSERT THAT SCOPE ON THE ROW, NOT ASSUME IT
+--           FROM THE FEED IT WAS BUILT ON. The assumption was invisible because the feed
+--           and the scope agreed everywhere else: all 1,771 admitted rows came off a
+--           supplements path, so "these are supplements" held for 1,770 of them and was
+--           never a claim anyone had to make. product_type describes BOOTS' SHELF, not our
+--           catalogue, and the two agree until they do not.
+--
+--   148826, 149612  ORS Hydration electrolyte tablets, already `sports`. Item 128 as a
+--           collision: we decided hydration is sports, BOOTS FILES IT UNDER WOMEN'S
+--           HEALTH. READING product_type GIVES THE ARGUMENT A SECOND PARTICIPANT RATHER
+--           THAN ENDING IT -- where the retailer's filing and ours disagree, "the retailer
+--           already filed the row" offers no way to choose.
 --
 -- VERIFIED AFTER: supplements 1,517 -> 1,400 · sports 202 -> 202, UNTOUCHED ·
 --                 womens-health 117 live (125 written, 8 in product_exclusions).

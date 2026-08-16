@@ -12454,46 +12454,99 @@ taxonomy worth reading.
 > it do not.** Re-read this when a second supplements retailer onboards or when Boots' feed
 > shifts, and re-derive the floor only if the site's own smallest deliberate page moves.
 
-#### APPLIED, AND THE GUARD FIRED THREE TIMES IN THE APPROVED BATCH
+#### APPLIED — AND THE SHARPEST FINDING IS PRODUCT 24682
 
-`products_subcategory_check` gained `womens-health` — one value. Then the backfill:
+`products_subcategory_check` gained `womens-health`. Then the guarded backfill ran, and
+declined three rows. **One of them is the finding.**
+
+| id | product | `top_category` | existing subcategory |
+|---|---|---|---|
+| **24682** | **Philip Kingsley Density Preserving Scalp Drops** | **`hair`** | `treatment` |
+
+Boots files it under `Health & Pharmacy > Women's Health` — hair loss for women. Correct, from
+their side. **Our product is a hair product.**
+
+Decision 2 declined it. **But decision 2 was written to stop a supplements map overwriting a
+more specific SUPPLEMENTS value, and it declined this row because `treatment` happens not to be
+in the overwritable list.** Had 24682 carried a NULL subcategory — as thousands of rows do —
+the batch would have written `womens-health` onto a hair product and **published
+`/hair/womens-health`**, a page in a category the map has never been near.
+
+> **THE GUARD THAT CAUGHT IT WAS CONSTRAINING THE OLD VALUE AND NEVER LOOKING AT THE CATEGORY.
+> THE CATCH WAS INCIDENTAL TO ITS PURPOSE.** That is the second time in one batch that a defect
+> was found by a mechanism aimed at something else — the CHECK constraint caught the sports
+> overwrite the same way. **Two for two on luck.**
+
+**THE DURABLE OUTPUT:**
+
+> **A MAP SCOPED TO ONE CATEGORY MUST ASSERT THAT SCOPE ON THE ROW, NOT ASSUME IT FROM THE FEED
+> IT WAS BUILT ON.**
+
+**The assumption was invisible because the feed and the scope agreed everywhere else.** Every
+one of the 1,771 admitted rows came off a supplements path, so "these are supplements" held for
+1,770 of them and was never a claim anyone had to make. The one row where it failed is a
+product that two retailers file in two different categories, and nothing in the feed says so —
+`product_type` describes Boots' shelf, not our catalogue, and the two agree until they do not.
+
+The applied statement carries `AND top_category = 'supplements'` as an explicit second guard,
+added before running it.
+
+#### THE OTHER TWO DECLINES: ITEM 128 AS A COLLISION
+
+| id | product | existing |
+|---|---|---|
+| 148826 | ORS Hydration Blackcurrant Electrolyte Tablets | `sports` |
+| 149612 | ORS Hydration Lemon Electrolyte Tablets | `sports` |
+
+We decided hydration is sports. **Boots files hydration under Women's Health.** The retailer's
+taxonomy and our own decision disagree about the same two products, and decision 2 resolves it
+in favour of the existing more-specific value.
+
+> **READING `product_type` GIVES THE ARGUMENT A SECOND PARTICIPANT RATHER THAN ENDING IT.** The
+> premise of parts 1 and 2 was "the retailer already filed the row, so stop guessing". Where
+> the retailer's filing and ours disagree, that premise offers no way to choose — it just
+> supplies another opinion, held with equal confidence and better formatting.
+
+#### 130 → 117: THE CAVEAT COST 13 ROWS ON ITS FIRST USE
 
 | stage | rows | lost to |
 |---|---:|---|
 | mapped by `product_type` | **130** | — |
-| joined to a stored product | **128** | 2 feed rows with no catalogue row |
-| passed both guards | **125** | 3 declines, below |
+| joined to a stored product | 128 | 2 feed rows with no catalogue row |
+| passed both guards | 125 | the 3 declines above |
 | **live on the page** | **117** | 8 in `product_exclusions` |
 
-**130 → 117.** Item 144's "a backfill reaches only what the catalogue admitted" is not a
-caveat about some future batch; it cost 13 rows in the first one, through three different
-mechanisms, none of which is a defect.
+**Item 144 arriving immediately rather than eventually.** "A backfill reaches only what the
+catalogue admitted" was written this afternoon as a permanent property of future work.
+**It cost 13 rows in the very first batch, through three independent mechanisms, none of which
+is a defect** — a feed/catalogue gap, a correctness guard, and an exclusion list.
 
-**The three declines, and none was theoretical:**
-
-| id | product | existing | why declined |
-|---|---|---|---|
-| 148826 | ORS Hydration Blackcurrant Electrolyte Tablets | `sports` | more specific than what the map produced |
-| 149612 | ORS Hydration Lemon Electrolyte Tablets | `sports` | same |
-| 24682 | **Philip Kingsley Density Preserving Scalp Drops** | `hair` / `treatment` | **not a supplement at all** |
-
-> **THE TWO ORS ROWS ARE ITEM 128 ARRIVING AS A COLLISION.** We decided hydration is sports.
-> **Boots files hydration under Women's Health.** The retailer's own taxonomy and our own
-> decision disagree about the same two products, and decision 2 resolves it in favour of the
-> existing more-specific value. Reading `product_type` does not end the argument about where
-> a row belongs; it just gives the argument a second participant.
-
-**And 24682 is a third defect, which decision 2 caught by luck.** Boots files a Philip Kingsley
-scalp treatment under `Health & Pharmacy > Women's Health` — hair loss for women. The product's
-`top_category` is `hair`. Decision 2 declined it only because `treatment` happens to be a
-specific value; **had it been NULL, the batch would have written `womens-health` onto a hair
-product and published `/hair/womens-health`.**
-
-> **DECISION 2 CONSTRAINS THE OLD VALUE AND NEVER LOOKED AT `top_category`.** A supplements
-> map has no business writing to a hair product and nothing in the rule said so. The applied
-> statement carries `AND top_category = 'supplements'` as a second guard, added before running
-> it — **and the rule generalises: a map scoped to one category must assert that scope on the
-> row, not assume it from the feed it was built on.**
+> **A caveat that costs 10% on its first use is not a caveat. It is the shape of the
+> measurement**, and the 130 should never have been said without the 117 beside it.
 
 The category after: `supplements` 1,517 → **1,400**, `sports` **202 → 202, untouched**,
 `womens-health` **117**.
+
+#### AND A CONCLUSION THAT SURVIVED ON CHANGED GROUNDS
+
+I wrote that there was **no gate at all** between writing a subcategory value and publishing a
+page. **There is one:** `SubcategoryPage` calls `getValidSubcategories(category)` and
+`notFound()`s on an unknown slug, then again on zero products.
+
+**The conclusion did not move. The reason did.**
+
+| | what I said | what is true |
+|---|---|---|
+| mechanism | no gate exists | a gate exists |
+| what it tests | — | **existence, not sufficiency** |
+| effect on a thin page | nothing stops it | **nothing stops it** |
+
+`getValidSubcategories` returns every distinct value any product carries, so **one product
+passes it.** A gate that rejects zero and accepts one is not a floor — it is exactly strict
+enough to catch a typo'd URL and exactly loose enough to miss a one-product page.
+
+> **DECISION 1 REMAINS THE ONLY LEVER, FOR A DIFFERENT REASON THAN I GAVE.** Worth recording
+> as its own shape: **a right conclusion resting on a wrong mechanism is not a correct
+> finding, it is a coincidence that has not been tested.** Had the gate happened to test a
+> count, the whole floor argument would have been unnecessary and I would not have known —
+> I checked the gate only because the page 404'd for an unrelated reason.
