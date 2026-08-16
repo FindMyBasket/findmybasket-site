@@ -12088,3 +12088,154 @@ this one resolves by looking at two products.
 > **Two rows is small enough that a rule costs more than a person, and ambiguous enough that a
 > rule would be a guess wearing a prefix.** It is not blocked on anything and it is not going
 > in the map until it is answered.
+
+
+---
+
+### 144. The map produced a vocabulary, and the vocabulary is a URL surface
+
+**Raised:** 16 August 2026, preparing the Boots group A backfill · **The backfill did not run.
+Reporting instead of applying.** · **Answers item 143's question 4 by measurement.**
+
+#### THE BACKFILL IS BLOCKED, AND THE BLOCK IS CORRECT
+
+The generated batch — 1,614 product ids across 12 subcategory values — **cannot be applied.**
+`products.subcategory` carries `products_subcategory_check`, a 16-value allowlist:
+
+```
+face, body, both, hand, foot, lips, eyes, nails,
+cleanse, condition, treatment, style, colour, scent,
+supplements, sports
+```
+
+**None of `general`, `womens-health`, `beauty`, `childrens`, `mens-health`, `multivitamins`,
+`joint-and-bone`, `immunity`, `brain-and-eyes`, `weight-management`, `energy` or
+`sleep-and-calm` is in it.** Every UPDATE would have been rejected.
+
+**This is the second time that constraint has caught this exact class**, and its own migration
+comment predicted the first: *"the backfill writes both, so without this it fails on the
+constraint rather than landing partially — which is the good failure mode, and the reason
+this was caught before the write rather than during it."* Written on 12 August about `sports`
+and `supplements`. It applies verbatim four days later to twelve more values.
+
+#### AND THE VALUES ARE URLs, WHICH IS THE PART THAT IS NOT AN IMPLEMENTATION DETAIL
+
+`app/supplements/[subcategory]/page.tsx` is a live route. **A subcategory value is a page.**
+
+So the map I proposed does not "file 306 rows more precisely". It **creates twelve new URLs**,
+one of which is `/supplements/general` and would hold **1,330 products — 75% of the category**
+behind a page named for having nothing to say about them.
+
+> **I PRESENTED A MAP AND IT WAS ACTUALLY A SITE STRUCTURE.** The work read as an importer
+> change because that is where the code went, and every measurement I took was of the feed.
+> Nothing in the taxonomy, the config columns, the prefix matcher or the backfill SQL touches
+> a URL — and the output of all four is a routing key.
+
+**That is why this stops here.** Widening the CHECK is a one-line migration and it is the
+smallest part of the decision. The decision is what the supplements category's subcategory
+vocabulary IS, and that is a category-shape question, the same class as the scope question
+Robbie already pulled out of the exclusion batch.
+
+**The 12 August migration comment also warned about the widening itself:** *"a value added
+here is a value the classifier may start writing, and an unused permitted value is
+indistinguishable from an intended one."*
+
+#### THE CONFIG COULD NOT BE SET EITHER, AND THAT ONE WOULD HAVE BROKEN THE IMPORT
+
+Setting `subcategory_prefix_map` on Boots before widening the CHECK would have left the
+importer writing unpermitted values on every new supplements product. **Not inert — a broken
+nightly import**, failing on a constraint, in a code path that only fires on creates and so
+would have looked fine until Boots next listed something.
+
+> **The inert landing and the map are not the same act, and only the first one was safe.**
+> Parts 1 and 2 are deployed and genuinely inert. The map is not a configuration change; it
+> is the thing the configuration was built to carry, and it needs the vocabulary decided
+> first.
+
+#### A SECOND DEFECT, WHICH THE FIRST ONE HID
+
+Boots' supplements rows today:
+
+| current subcategory | products |
+|---|---:|
+| `supplements` | 1,489 |
+| **`sports`** | **194** |
+
+**The generated batch would have overwritten those 194 with `general`.** Group A maps Active
+Nutrition to `general` — deliberately, because group B is deferred — and the UPDATEs are keyed
+on product id with no regard for what is already there.
+
+"Group B stays out" was a decision not to ship a **new** name rule. **It is not a decision to
+un-file 194 rows the existing inference already filed**, and the backfill would have done
+exactly that without anything in it saying so.
+
+> **The constraint stopped the batch before this could be observed.** If the vocabulary had
+> happened to be permitted, the sports loss would have shipped clean — no error, no warning,
+> 194 rows quietly relabelled. **One guard caught the first defect, and sitting behind it was
+> a second defect that no guard would have caught.**
+
+The rule this needs, whenever the vocabulary is settled: **a backfill that assigns a value
+must say what it refuses to overwrite.**
+
+#### ITEM 143'S QUESTION 4, NOW MEASURED
+
+Reported as inapplicable this morning because `product_type` was unstored. Section 8 of the
+diag answers it from the feed directly. **The prediction was recorded first, and it was
+wrong:**
+
+| | predicted | actual |
+|---|---:|---:|
+| exclusions **suppressed** by the map (out-of-scope node) | ~6 | **14** |
+| exclusions **kept** by the map (group A node) | ~45 | **37** |
+| exclusions not in the admitted feed at all | — | 0 |
+
+**Wrong by 2.3×, and right in direction.** By reason:
+
+| reason | suppressed | kept |
+|---|---:|---:|
+| `not_a_supplement` | 12 | 12 |
+| `device` | 2 | 11 |
+| `medicine` | 0 | **9** |
+| `veterinary` | 0 | **5** |
+
+> **THE CONCLUSION HOLDS AND THE NUMBER DID NOT. Both mechanisms are needed.** Every medicine
+> and every veterinary row — 14 of 14 — sits in a node group A keeps. `product_exclusions` is
+> not redundant under the map and the map is not redundant under it.
+
+**What I got wrong was the map's reach, not its shape.** I estimated the overlap by reading
+node names off a list; the cosmetics class is wider than the four nodes I could name.
+
+#### AND THE EXCLUSIONS FOUND NODES THE MAP SHOULD SUPPRESS — THE RECIPROCAL
+
+The 37 kept exclusions are filed by Boots in nodes group A treats as supplements. Three of
+those nodes are **plainly not supplement nodes at all**:
+
+| node | excluded rows in it | total rows |
+|---|---:|---:|
+| `H&P > Sexual Pleasure & Wellbeing` | 4 | 6 |
+| `H&P > Lifestyle & Wellbeing > Homeware & Home Accessories` | 1 | 2 |
+| `H&P > Lifestyle & Wellbeing > Alternative Therapy` | 1 | 3 |
+
+I built the out-of-scope list from **root segments** — `Beauty & Skincare`, `Toiletries`,
+`Electrical` — because that is what the enumeration made obvious. These three are *inside*
+`Health & Pharmacy` and invisible to that method.
+
+> **The worked list found nodes the map should suppress, which is the exact reverse of the
+> prediction I wrote.** I said the map would catch a class the worked list missed. It does —
+> and the worked list also catches a class the map missed. **The two mechanisms are not
+> merely both necessary; each one is a detector for the other's blind spot.**
+
+~5 non-excluded rows sit in those three nodes and would currently be filed `general`. Left
+unchanged and reported, not fixed inline — the out-of-scope list is part of the vocabulary
+decision, not separate from it.
+
+#### THE MAP'S REACH IS BOUNDED BY WHAT THE IMPORTER ADMITTED, NOT BY THE FEED
+
+**34 of the 1,771 admitted feed rows have no stored row at Boots**, so nothing to backfill.
+They are not junk — *Boots Omega Oils 3 6 & 9 180 Capsules*, *Myprotein Impact Whey Isolate*,
+*Optimum Nutrition Protein Shake Vanilla*, *Ocuvite Lutein*. Real supplements, dropped
+upstream by some earlier filter (price, stock, denylist) or newer than the last import.
+
+> **A map over a feed measures the feed. A backfill over a catalogue reaches only what the
+> catalogue admitted.** 1,771 became 1,737 joined and 1,614 assignable, and the gap is
+> invisible unless the unjoined rows are printed. Section 8 prints them.
