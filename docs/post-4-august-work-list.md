@@ -12088,3 +12088,412 @@ this one resolves by looking at two products.
 > **Two rows is small enough that a rule costs more than a person, and ambiguous enough that a
 > rule would be a guess wearing a prefix.** It is not blocked on anything and it is not going
 > in the map until it is answered.
+
+
+---
+
+### 144. One guard caught the first defect, and a second sat behind it that no guard would have caught
+
+**Raised:** 16 August 2026, preparing the Boots group A backfill · **The backfill did not run.
+Reporting instead of applying.** · **Answers item 143's question 4 by measurement.**
+
+#### THE DEFECT NOTHING WOULD HAVE CAUGHT
+
+Boots' supplements rows, before anything was applied:
+
+| current subcategory | products |
+|---|---:|
+| `supplements` | 1,489 |
+| **`sports`** | **194** |
+
+**The generated batch would have overwritten those 194 with `general`.** Group A maps Active
+Nutrition to `general` — deliberately, because group B is deferred — and the UPDATEs are keyed
+on product id with no regard for what is already there.
+
+> **"GROUP B STAYS OUT" MEANT DO NOT SHIP A NEW NAME RULE. IT DID NOT MEAN UN-FILE WHAT THE
+> EXISTING INFERENCE ALREADY FILED.** The backfill would have done the second thing while
+> claiming to do the first, and nothing in it said so.
+
+**The only reason this was seen is that a different, unrelated guard fired first.** The
+subcategory CHECK constraint rejects all twelve of the map's values, so the batch could never
+have run at all. Had the vocabulary happened to be permitted, the batch would have applied
+cleanly: no error, no warning, 194 rows silently relabelled, and `/supplements/sports`
+emptied of most of its catalogue.
+
+> **One guard caught the first defect. Sitting behind it was a second defect that no guard
+> would have caught** — because there is no constraint on *overwriting a more specific value
+> with a less specific one*, and there is nothing that could reasonably be one.
+
+**The rule this produces, and it is now a decision:** *a backfill that assigns a value must
+say what it refuses to overwrite.* Recorded in item 145.
+
+**And the near-miss is the point, not the outcome.** The defect was found by a guard that
+exists for another reason entirely. That is luck with a good process around it, not a process
+that catches this.
+
+#### THE REFRAMING: THE MAP IS A SITE STRUCTURE, NOT A CONFIGURATION
+
+The generated batch — 1,614 product ids across 12 subcategory values — **cannot be applied.**
+`products.subcategory` carries `products_subcategory_check`, a 16-value allowlist:
+
+```
+face, body, both, hand, foot, lips, eyes, nails,
+cleanse, condition, treatment, style, colour, scent,
+supplements, sports
+```
+
+**None of `general`, `womens-health`, `beauty`, `childrens`, `mens-health`, `multivitamins`,
+`joint-and-bone`, `immunity`, `brain-and-eyes`, `weight-management`, `energy` or
+`sleep-and-calm` is in it.**
+
+`app/supplements/[subcategory]/page.tsx` is a live route. **A subcategory value is a page** —
+verified: `/supplements/supplements` and `/supplements/sports` both return 200,
+`/supplements/general` returns 404 today because no product carries the value.
+
+**Two surfaces sit between the value and the page, and NEITHER of them is a threshold.**
+
+`active_category_subcategories` is `select distinct top_category, subcategory … where
+subcategory is not null`, and it drives the sitemap. No allowlist, no threshold.
+
+There IS a render-time gate, and **I said there was not** — `SubcategoryPage` calls
+`getValidSubcategories(category)` and `notFound()`s if the slug is absent, plus a second
+`notFound()` on `stats.total_products === 0`. So a typo'd URL is refused.
+
+> **BUT THE GATE TESTS EXISTENCE, NOT SUFFICIENCY.** `getValidSubcategories` is
+> `select subcategory from products_active where top_category = $1` — every distinct value
+> that any product carries. **One product carrying a value passes the gate**, renders a page
+> and puts it in the sitemap.
+>
+> **A gate that rejects zero and accepts one is not a floor.** It is exactly strict enough to
+> catch the mistake nobody makes and exactly loose enough to miss the one this work would
+> have made. So the floor still has to be enforced by not writing the value — but the reason
+> is that the existing gate asks the wrong question, not that no gate exists.
+
+So the map does not "file 306 rows more precisely". It creates twelve URLs, one of which is
+`/supplements/general` holding **1,330 products — 75% of the category** — behind a page named
+for having nothing to say about them.
+
+> **I PRESENTED A MAP AND IT WAS ACTUALLY A SITE STRUCTURE.** The work read as an importer
+> change because that is where the code went, and every measurement I took was of the feed.
+> Nothing in the taxonomy, the config columns, the prefix matcher or the backfill SQL touches
+> a URL — **and the output of all four is a routing key.**
+
+**This is the second time that constraint has caught this class**, and its own migration
+comment predicted the first: *"the backfill writes both, so without this it fails on the
+constraint rather than landing partially — which is the good failure mode, and the reason this
+was caught before the write rather than during it."* Written on 12 August about `sports` and
+`supplements`. It applies verbatim four days later to twelve more values. The same comment
+warned about the widening too: *"a value added here is a value the classifier may start
+writing, and an unused permitted value is indistinguishable from an intended one."*
+
+#### THE CONFIG COULD NOT BE SET EITHER, AND THAT ONE WOULD HAVE BROKEN THE IMPORT
+
+Setting `subcategory_prefix_map` on Boots before widening the CHECK would have left the
+importer writing unpermitted values on every new supplements product. **Not inert — a broken
+nightly import**, failing on a constraint, in a code path that only fires on creates and so
+would have looked fine until Boots next listed something.
+
+> **The inert landing and the map are not the same act, and only the first one was safe.**
+> Parts 1 and 2 are deployed and genuinely inert. The map is not a configuration change; it is
+> the thing the configuration was built to carry.
+
+#### ITEM 143'S QUESTION 4: A 2.3× MISS WITH THE DIRECTION RIGHT
+
+Reported as inapplicable this morning because `product_type` was unstored. Section 8 of the
+diag answers it from the feed directly. **The prediction was recorded first, and it was wrong
+by more than twice:**
+
+| | predicted | actual |
+|---|---:|---:|
+| exclusions **suppressed** by the map (out-of-scope node) | ~6 | **14** |
+| exclusions **kept** by the map (group A node) | ~45 | **37** |
+| exclusions not in the admitted feed at all | — | 0 |
+
+By reason:
+
+| reason | suppressed | kept |
+|---|---:|---:|
+| `not_a_supplement` | 12 | 12 |
+| `device` | 2 | 11 |
+| `medicine` | 0 | **9** |
+| `veterinary` | 0 | **5** |
+
+> **THE CONCLUSION HELD AND THE NUMBER DID NOT.** Every medicine and every veterinary row —
+> 14 of 14 — sits in a node group A keeps, so `product_exclusions` is not redundant under the
+> map. **The prediction was right about the thing it was written to decide and wrong about
+> the quantity it expressed that in**, which is worth separating: a directional call that
+> survives a 2.3× error in its own numbers was load-bearing on something other than those
+> numbers.
+
+**What I got wrong was the map's reach, not its shape.** I estimated the overlap by reading
+node names off a list, and the cosmetics class is wider than the four nodes I could name.
+
+#### THE REVERSE FINDING, WHICH IS THE BETTER ONE
+
+The 37 kept exclusions sit in nodes group A treats as supplements. **Three of those nodes are
+plainly not supplement nodes at all:**
+
+| node | excluded rows in it | total rows |
+|---|---:|---:|
+| `H&P > Sexual Pleasure & Wellbeing` | 4 | 6 |
+| `H&P > Lifestyle & Wellbeing > Homeware & Home Accessories` | 1 | 2 |
+| `H&P > Lifestyle & Wellbeing > Alternative Therapy` | 1 | 3 |
+
+I built the out-of-scope list from **root segments** — `Beauty & Skincare`, `Toiletries`,
+`Electrical` — because that is what the enumeration made obvious. These three are *inside*
+`Health & Pharmacy`, and a method that works by root segment cannot see them at all.
+
+> **THE WORKED LIST FOUND NODES THE MAP SHOULD SUPPRESS, WHICH IS THE EXACT REVERSE OF WHAT I
+> PREDICTED.** I said the map would catch a class the worked list missed. It does — and the
+> worked list catches a class the map's method is structurally blind to.
+>
+> **This is a stronger argument for keeping both than the prediction was.** "Both are
+> necessary" is an argument about coverage, and coverage arguments lose to a better single
+> mechanism. **"Each is a detector for the other's blind spot" is an argument about
+> METHOD**, and it does not lose to a better map: any map built by reading node names has
+> this blind spot, and a hand-worked list is how it gets found.
+
+~5 non-excluded rows sit in those three nodes and would currently be filed `general`. Left
+unchanged and reported, not fixed inline — the out-of-scope list is part of the vocabulary
+decision, not separate from it.
+
+#### A BACKFILL REACHES ONLY WHAT THE CATALOGUE ADMITTED, PERMANENTLY
+
+**34 of the 1,771 admitted feed rows have no stored row at Boots**, so there is nothing to
+backfill. They are not junk — *Boots Omega Oils 3 6 & 9 180 Capsules*, *Myprotein Impact Whey
+Isolate*, *Optimum Nutrition Protein Shake Vanilla*, *Ocuvite Lutein*. Real supplements,
+dropped upstream by an earlier filter (price, stock, denylist) or newer than the last import.
+
+1,771 admitted → 1,737 joined → 1,614 assignable.
+
+> **THIS IS A PERMANENT PROPERTY, NOT A GAP TO CLOSE.** A map over a feed measures the feed. A
+> backfill over a catalogue reaches only what the catalogue admitted, and the two populations
+> are never the same because the importer's filters sit between them. **Every future
+> feed-derived backfill will have this shape**, and the number will be different each time
+> because it depends on what the feed happened to contain on the day.
+
+The failure mode is reporting the feed number as though it were the catalogue number — item
+139's shape again, and the third measurement today where the bigger figure was the one already
+said out loud. **Section 8 prints the unjoined rows for exactly this reason:** an unreported
+join loss reads as complete coverage.
+
+
+---
+
+### 145. A subcategory floor, derived from the pages that already shipped
+
+**Raised:** 16 August 2026 · **Robbie's decisions on item 144, plus the consolidated set they
+ask for.** · **Nothing applied.**
+
+#### THE NUMBER THAT MATTERS MOST HERE IS NOT ABOUT SUBCATEGORIES AT ALL
+
+| | products | with 2+ retailers | |
+|---|---:|---:|---:|
+| `supplements/supplements` | 1,517 | **32** | **2.1%** |
+| `supplements/sports` | 202 | **2** | 1.0% |
+
+**Supplements is 92% one retailer** — Boots 1,632 products, the other seven combined 132.
+
+> **A COMPARISON-DEPTH FLOOR WOULD HAVE REJECTED SUPPLEMENTS WHOLESALE**, not sized its
+> subcategories. At 2.1% even the 1,517-product page has 32 comparable rows. That is a fact
+> about the CATEGORY, not about how it is subdivided, and it was found while looking for
+> something else.
+
+**This is the number to put in front of the second supplements retailer's assessment**, and it
+is the strongest argument for onboarding one. Every other lever — a richer taxonomy, a better
+map, more subcategories — divides 1,764 products that are 98% single-sourced. **A second
+retailer changes what the category IS; nothing else on this list does.**
+
+It also reframes what today's work could ever have achieved. A subcategory page here is a
+browse page, and it was always going to be, because there is nothing to compare.
+
+#### THE DECISIONS
+
+**1. NO `/supplements/general`.** A page named for having nothing to say about 75% of the
+category is worse than no page. Those 1,330 rows stay at `top_category = supplements` with
+**no subcategory**, rather than acquire a URL that advertises the classifier's limit.
+
+> The map still classifies them — `general` remains the honest internal answer for a row on a
+> bare parent. **It stops being written to a column that publishes URLs.** Those are two
+> different jobs that `products.subcategory` currently does at once, and the ceiling is the
+> reason they came apart.
+
+**2. NOTHING OVERWRITES AN EXISTING SPORTS FILING.** The backfill sets `subcategory` only
+where it is currently NULL or `general`, and **never where the existing value is more specific
+than what the map produces.** Item 144's second defect, as a rule.
+
+**3. THE ELEVEN SPECIFIC VALUES ARE TOO THIN FOR ELEVEN URLs** at 306 products between them.
+
+#### THE FLOOR IS OTHERWISE UNENFORCEABLE, WHICH IS WHY DECISION 1 IS THE ONLY LEVER
+
+Recorded here rather than only in item 144, because a floor is worthless without the mechanism
+that makes it the sole point of control:
+
+- **The sitemap has no gate.** `active_category_subcategories` is a bare `DISTINCT` over
+  `products_active`.
+- **The page has a gate, and it tests existence.** `getValidSubcategories` returns every
+  distinct value any product carries; `SubcategoryPage` 404s only on an absent slug or zero
+  products.
+
+> **ONE PRODUCT CARRYING A VALUE PASSES BOTH.** A gate that rejects zero and accepts one is
+> not a floor. **There is no point downstream at which a thin page can be declined**, so the
+> floor exists only at the moment of writing the value — which is what makes decision 1 the
+> whole enforcement, not a preference.
+
+#### WHAT THE FLOOR SHOULD BE: 100 PRODUCTS
+
+**Derived from the pages that already shipped, not chosen for roundness.** Every live
+subcategory in `products_active`:
+
+| products | page | |
+|---:|---|---|
+| 45,031 | `skincare/face` | |
+| 11,311 | `fragrance/scent` | |
+| 10,122 | `makeup/face` | |
+| 6,796 | `bath_body/body` | |
+| 5,126 | `makeup/eyes` | |
+| 4,453 | `makeup/lips` | |
+| 3,801 | `hair/treatment` | |
+| 3,732 | `hair/cleanse` | |
+| 2,148 | `hair/condition` | |
+| 1,517 | `supplements/supplements` | |
+| 1,473 | `makeup/nails` | |
+| 1,019 | `bath_body/hand` | |
+| 766 | `hair/style` | |
+| 509 | `hair/colour` | |
+| **202** | **`supplements/sports`** | **smallest page launched as a decision** |
+| 156 | `fragrance/body` | leakage — fragrance filed as `body` |
+| **113** | **`bath_body/foot`** | **smallest deliberate page** |
+| 59 | `makeup/scent` | leakage — makeup filed as `scent` |
+
+> **EVERY DELIBERATELY-CREATED SUBCATEGORY PAGE HOLDS AT LEAST 113 PRODUCTS. Both pages below
+> that are classification leakage, not decisions** — nobody chose to publish 59 makeup
+> products under "scent". The floor is not an invention; it is a line the site has already
+> drawn eighteen times and crossed twice by accident.
+
+**100, just under the smallest deliberate page.** Rounder than 113, and the gap between 100
+and 113 is smaller than the error in any of these counts.
+
+**And it cannot be a comparison-depth floor**, which would otherwise be the better test on a
+comparison site — see the 2.1% above. The floor has to be a browse-page floor.
+
+#### THE CONSOLIDATED SET
+
+Applying a 100-product floor to the 306:
+
+| proposed value | products | clears 100 | |
+|---|---:|:---:|---|
+| **`womens-health`** | **130** | **yes** | `H&P > Women's Health` (all 3 nodes) + `Women's > H&P` |
+| `beauty` | 43 | no | |
+| `childrens` | 32 | no | |
+| `mens-health` | 30 | no | |
+| `multivitamins` | 26 | no | |
+| `joint-and-bone` | 12 | no | |
+| `immunity` | 10 | no | |
+| `brain-and-eyes` | 8 | no | |
+| `weight-management` | 7 | no | |
+| `energy` | 4 | no | |
+| `sleep-and-calm` | 4 | no | |
+
+**Exactly one of the eleven clears the floor.** And the merges do not rescue the rest:
+
+- the six small health values together — joint, immunity, brain-and-eyes, energy, sleep,
+  weight-management — reach **45**;
+- adding `mens-health`, `childrens` and `multivitamins` reaches **133**, and that bucket
+  contains men's, children's, joint health and sleep with no name that is not a synonym for
+  "supplements";
+- `beauty` + `childrens` + `mens-health` + `multivitamins` = **131**, same problem.
+
+> **A merge that clears the floor only by combining things a shopper would not look for
+> together has not found a page. It has found a number.** The only honest merge of the small
+> values is back into the parent, which is where they already are.
+
+**PROPOSED SET — three values, two of them already live:**
+
+| value | products | status |
+|---|---:|---|
+| `sports` | 202 | **live, untouched.** Nothing overwrites it |
+| `supplements` | ~1,387 | **live.** The 1,330 `general` rows plus the ten sub-floor values |
+| **`womens-health`** | **130** | **new. One new URL, one new CHECK value** |
+
+#### PARTS 1 AND 2 BUY ONE PAGE
+
+Stated plainly, because softening it would be the fourth time today a number got reported as
+larger than it is.
+
+**`product_type` is 100% filled. It is richer than every sibling column — 88 distinct values
+against 1, 1 and a shallow path. It resolves ONE shopper-meaningful grouping above the site's
+own floor.** That is the whole return on parts 1 and 2 as measured in pages.
+
+Not a disappointment to be explained away and not a reason the work was wrong. It is what the
+column contains, and the only way to have known was to read it.
+
+#### WHAT IS STILL WORTH HAVING, GIVEN THAT
+
+The map's value was never only the URLs:
+
+- **133 out-of-scope rows** identified by the retailer's own filing — makeup, toiletries,
+  homeware, a Bluetooth speaker — which no name rule was going to find. That feeds part 3.
+- **The three nodes the worked list found** (item 144), which the root-segment method was
+  blind to.
+- **A stored, inspectable reason** for why a row is filed where it is, instead of an inference
+  nobody can audit.
+
+**None of those needs a URL**, which is the distinction the `general` decision draws and the
+one this work did not have until today.
+
+#### THE FLOOR IS A DECISION AT TODAY'S VOLUMES AND SHOULD BE RE-READ, NOT RE-DERIVED
+
+`beauty` at 43 is the value most likely to move: the seven non-Boots supplements retailers are
+all beauty retailers — Niche Beauty 52 products, Beauty Flash 24, Gorgeous Shop 21 — and their
+supplements are collagen and skin-hair-nails rather than multivitamins. **Their rows are not
+mapped**, because `subcategory_source_field` is a per-retailer setting and only Boots has a
+taxonomy worth reading.
+
+> **A floor derived from shipped pages stays correct as volumes change; the values that clear
+> it do not.** Re-read this when a second supplements retailer onboards or when Boots' feed
+> shifts, and re-derive the floor only if the site's own smallest deliberate page moves.
+
+#### APPLIED, AND THE GUARD FIRED THREE TIMES IN THE APPROVED BATCH
+
+`products_subcategory_check` gained `womens-health` — one value. Then the backfill:
+
+| stage | rows | lost to |
+|---|---:|---|
+| mapped by `product_type` | **130** | — |
+| joined to a stored product | **128** | 2 feed rows with no catalogue row |
+| passed both guards | **125** | 3 declines, below |
+| **live on the page** | **117** | 8 in `product_exclusions` |
+
+**130 → 117.** Item 144's "a backfill reaches only what the catalogue admitted" is not a
+caveat about some future batch; it cost 13 rows in the first one, through three different
+mechanisms, none of which is a defect.
+
+**The three declines, and none was theoretical:**
+
+| id | product | existing | why declined |
+|---|---|---|---|
+| 148826 | ORS Hydration Blackcurrant Electrolyte Tablets | `sports` | more specific than what the map produced |
+| 149612 | ORS Hydration Lemon Electrolyte Tablets | `sports` | same |
+| 24682 | **Philip Kingsley Density Preserving Scalp Drops** | `hair` / `treatment` | **not a supplement at all** |
+
+> **THE TWO ORS ROWS ARE ITEM 128 ARRIVING AS A COLLISION.** We decided hydration is sports.
+> **Boots files hydration under Women's Health.** The retailer's own taxonomy and our own
+> decision disagree about the same two products, and decision 2 resolves it in favour of the
+> existing more-specific value. Reading `product_type` does not end the argument about where
+> a row belongs; it just gives the argument a second participant.
+
+**And 24682 is a third defect, which decision 2 caught by luck.** Boots files a Philip Kingsley
+scalp treatment under `Health & Pharmacy > Women's Health` — hair loss for women. The product's
+`top_category` is `hair`. Decision 2 declined it only because `treatment` happens to be a
+specific value; **had it been NULL, the batch would have written `womens-health` onto a hair
+product and published `/hair/womens-health`.**
+
+> **DECISION 2 CONSTRAINS THE OLD VALUE AND NEVER LOOKED AT `top_category`.** A supplements
+> map has no business writing to a hair product and nothing in the rule said so. The applied
+> statement carries `AND top_category = 'supplements'` as a second guard, added before running
+> it — **and the rule generalises: a map scoped to one category must assert that scope on the
+> row, not assume it from the feed it was built on.**
+
+The category after: `supplements` 1,517 → **1,400**, `sports` **202 → 202, untouched**,
+`womens-health` **117**.

@@ -73,6 +73,21 @@ name: feed-diag (read-only)
         required: false
         default: 'merchant_product_id'
         type: string
+      subcat_preview:
+        description: "Section 8: preview the group A subcategory map and PRINT the backfill SQL. Set to 1. Still read-only."
+        required: false
+        default: ''
+        type: string
+      subcat_retailer_id:
+        description: "Section 8: retailer id whose stored rows to join against (Boots = 23)."
+        required: false
+        default: ''
+        type: string
+      subcat_match_column:
+        description: "Section 8: the feed column matching retailer_prices.external_product_id (default merchant_product_id)."
+        required: false
+        default: 'merchant_product_id'
+        type: string
 
 jobs:
   diag:
@@ -149,6 +164,12 @@ jobs:
           TAXONOMY_ROWS: ${{ inputs.taxonomy_rows }}
           REASSIGN_RETAILER_ID: ${{ inputs.reassign_retailer_id }}
           REASSIGN_MATCH_COLUMN: ${{ inputs.reassign_match_column }}
+          # Section 8: subcategory map preview + backfill SQL. STILL READ-ONLY — it
+          # PRINTS an UPDATE batch and does not execute one, so the write goes through
+          # a presented diff like the exclusion batch and the departure gone-sets did.
+          SUBCAT_PREVIEW: ${{ inputs.subcat_preview }}
+          SUBCAT_RETAILER_ID: ${{ inputs.subcat_retailer_id }}
+          SUBCAT_MATCH_COLUMN: ${{ inputs.subcat_match_column }}
           SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
           SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           # github.event.inputs is the reliable source here; the `inputs` context

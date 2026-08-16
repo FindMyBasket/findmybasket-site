@@ -689,3 +689,218 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
     }
   }
 }
+
+// === 8. SUBCATEGORY MAP PREVIEW AND BACKFILL SQL =====================================
+// READ-ONLY, like every other section here. It prints an UPDATE batch; it does not run
+// one. The write goes through a presented diff, which is the same standard the exclusion
+// batch and the departure gone-sets were held to.
+//
+// Answers three things in one pass over the feed:
+//   (a) what the group A map actually does to the admitted rows, against the PREDICTION
+//       written down before it ran (306 specific / 1,330 general / 133 out of scope);
+//   (b) the backfill itself — product_id -> subcategory, joined through the retailer's
+//       match column, with every row that fails to join REPORTED rather than dropped;
+//   (c) work-list item 143's question 4, which could not be answered while product_type
+//       was unstored: do the product_exclusions ids sit in nodes the map suppresses?
+//
+// Set SUBCAT_PREVIEW=1 and SUBCAT_RETAILER_ID. Uses ADMIT_PREFIX for the leaf.
+{
+  const rid = Number(process.env.SUBCAT_RETAILER_ID || 0);
+  const on = process.env.SUBCAT_PREVIEW === "1";
+  const PREFIX = (process.env.ADMIT_PREFIX || "").split("|").map(s => s.trim()).filter(Boolean);
+  const matchCol = process.env.SUBCAT_MATCH_COLUMN || "merchant_product_id";
+  if (on && rid > 0 && PREFIX.length) {
+    const { BOOTS_SUBCATEGORY_MAP, matchSubcategory } = await import("./boots-subcategory-map.ts");
+    const pathCol = col("merchant_product_category_path");
+    const ptCol = col("product_type");
+    const idIdx = col(matchCol);
+    console.log("\n=== 8. SUBCATEGORY MAP PREVIEW (retailer " + rid + ", " +
+                BOOTS_SUBCATEGORY_MAP.length + " map entries) ===");
+    if (pathCol < 0 || ptCol < 0 || idIdx < 0) {
+      console.log("  missing a required column (path/product_type/" + matchCol + ") — cannot preview");
+    } else {
+      const admitted = body.filter(r => { const p = (r[pathCol] ?? "").trim(); return PREFIX.some(x => p.startsWith(x)); });
+      console.log("  admitted rows:", admitted.length);
+
+      // (a) THE MAP AGAINST THE PREDICTION.
+      const bySub = new Map<string, number>();
+      let oos = 0, unmatched = 0, emptySource = 0;
+      const unmatchedValues = new Map<string, number>();
+      const oosByPrefix = new Map<string, number>();
+      for (const r of admitted) {
+        const v = (r[ptCol] ?? "").trim();
+        if (!v) { emptySource++; continue; }
+        const hit = matchSubcategory(v);
+        if (!hit.matched) {
+          unmatched++;
+          unmatchedValues.set(v, (unmatchedValues.get(v) ?? 0) + 1);
+        } else if (hit.subcategory === null) {
+          oos++;
+          oosByPrefix.set(hit.prefix!, (oosByPrefix.get(hit.prefix!) ?? 0) + 1);
+        } else {
+          bySub.set(hit.subcategory, (bySub.get(hit.subcategory) ?? 0) + 1);
+        }
+      }
+      const specific = [...bySub.entries()].filter(([k]) => k !== "general").reduce((a, [, n]) => a + n, 0);
+      const general = bySub.get("general") ?? 0;
+      console.log("\n  --- (a) MAP OUTPUT vs PREDICTION ---");
+      console.log("                        predicted   actual");
+      console.log("    specific subcategory      306   " + String(specific).padStart(6));
+      console.log("    general (bare parent)   1,330   " + String(general).padStart(6));
+      console.log("    out of scope (null)       133   " + String(oos).padStart(6));
+      console.log("    unmatched on purpose        2   " + String(unmatched).padStart(6));
+      console.log("    source column empty         0   " + String(emptySource).padStart(6));
+      console.log("\n    by subcategory:");
+      for (const [k, n] of [...bySub.entries()].sort((a, b) => b[1] - a[1])) {
+        console.log("      " + k.padEnd(20) + String(n).padStart(6));
+      }
+      console.log("\n    out of scope by prefix:");
+      for (const [k, n] of [...oosByPrefix.entries()].sort((a, b) => b[1] - a[1])) {
+        console.log("      " + String(n).padStart(5) + "  " + k);
+      }
+      console.log("\n    UNMATCHED VALUES (each one is an open question, not a defect):");
+      for (const [k, n] of [...unmatchedValues.entries()].sort((a, b) => b[1] - a[1])) {
+        console.log("      " + String(n).padStart(5) + "  " + k);
+      }
+
+      // (b) THE JOIN. Feed match id -> stored product_id, for this retailer.
+      const storedIds = new Map<string, number>();
+      let from = 0;
+      for (;;) {
+        const { data, error } = await sb
+          .from("retailer_prices")
+          .select("external_product_id, product_id")
+          .eq("retailer_id", rid)
+          .not("external_product_id", "is", null)
+          .range(from, from + 999);
+        if (error) { console.log("  stored-side read failed:", error.message); break; }
+        if (!data || !data.length) break;
+        for (const r of data as any[]) {
+          const k = String(r.external_product_id ?? "").trim();
+          if (k && r.product_id != null) storedIds.set(k, Number(r.product_id));
+        }
+        if (data.length < 1000) break;
+        from += 1000;
+      }
+      console.log("\n  --- (b) BACKFILL JOIN ---");
+      console.log("    stored rows for retailer " + rid + " with an ext id:", storedIds.size);
+
+      const assign = new Map<number, string>();   // product_id -> subcategory
+      const nodeOf = new Map<number, string>();   // product_id -> raw product_type
+      let noJoin = 0;
+      const noJoinSample: string[] = [];
+      for (const r of admitted) {
+        const key = String(r[idIdx] ?? "").trim();
+        const v = (r[ptCol] ?? "").trim();
+        const pid = storedIds.get(key);
+        if (pid === undefined) {
+          noJoin++;
+          if (noJoinSample.length < 10) noJoinSample.push(key + "  " + get(r, "product_name").slice(0, 60));
+          continue;
+        }
+        nodeOf.set(pid, v);
+        const hit = matchSubcategory(v);
+        if (hit.matched && hit.subcategory) assign.set(pid, hit.subcategory);
+      }
+      console.log("    feed rows that JOINED to a product      :", admitted.length - noJoin);
+      console.log("    feed rows with NO stored row (REPORTED) :", noJoin);
+      for (const s of noJoinSample) console.log("        " + s);
+      console.log("    distinct product ids to update          :", assign.size);
+
+      // (c) ITEM 143 QUESTION 4, now a measurement rather than an inference.
+      console.log("\n  --- (c) ITEM 143 Q4: product_exclusions UNDER THE MAP ---");
+      const { data: excl, error: exErr } = await sb
+        .from("product_exclusions")
+        .select("product_id, reason");
+      if (exErr) {
+        console.log("    product_exclusions read failed:", exErr.message);
+      } else {
+        const rows = (excl ?? []) as any[];
+        console.log("    exclusion rows:", rows.length);
+        let suppressed = 0, kept = 0, absent = 0;
+        const byReason = new Map<string, { suppressed: number; kept: number; absent: number }>();
+        const keptNodes = new Map<string, number>();
+        for (const e of rows) {
+          const pid = Number(e.product_id);
+          const reason = String(e.reason ?? "?");
+          const b = byReason.get(reason) ?? { suppressed: 0, kept: 0, absent: 0 };
+          const v = nodeOf.get(pid);
+          if (v === undefined) { absent++; b.absent++; }
+          else {
+            const hit = matchSubcategory(v);
+            if (hit.matched && hit.subcategory === null) { suppressed++; b.suppressed++; }
+            else { kept++; b.kept++; keptNodes.set(v, (keptNodes.get(v) ?? 0) + 1); }
+          }
+          byReason.set(reason, b);
+        }
+        console.log("\n    PREDICTION (written before this ran): ~6 suppressed, ~45 kept.");
+        console.log("      suppressed by the map (out-of-scope node):", suppressed);
+        console.log("      KEPT by the map (group A node)           :", kept);
+        console.log("      not in the admitted feed rows at all     :", absent);
+        console.log("\n      by reason:");
+        for (const [k, b] of [...byReason.entries()].sort()) {
+          console.log("        " + k.padEnd(20) + " suppressed " + String(b.suppressed).padStart(3) +
+                      "  kept " + String(b.kept).padStart(3) + "  absent " + String(b.absent).padStart(3));
+        }
+        console.log("\n      nodes the map KEEPS that hold an excluded product:");
+        for (const [k, n] of [...keptNodes.entries()].sort((a, b) => b[1] - a[1])) {
+          console.log("        " + String(n).padStart(4) + "  " + k);
+        }
+      }
+
+      // (d) THE SQL, PRINTED NOT RUN.
+      //
+      // TWO DECISIONS FROM ITEM 145 ARE ENCODED HERE, NOT LEFT TO THE READER OF THE OUTPUT.
+      //
+      // 1. `general` IS NEVER WRITTEN. products.subcategory publishes a URL — one product
+      //    carrying a value puts it in active_category_subcategories and therefore in the
+      //    sitemap, with no threshold anywhere in between. /supplements/general would be a
+      //    page named for having nothing to say about 75% of the category. `general` stays
+      //    the honest INTERNAL answer for a row on a bare parent and stops being written to
+      //    the column that publishes pages.
+      //
+      // 2. NOTHING OVERWRITES A MORE SPECIFIC EXISTING VALUE. Item 144's second defect: the
+      //    first draft of this batch would have relabelled 194 products already filed
+      //    `sports` as `general`, silently, because the UPDATEs were keyed on product id
+      //    alone. "Group B stays out" meant do not ship a new name rule; it did not mean
+      //    un-file what the existing inference already filed.
+      //
+      // THE SPECIFICITY ORDER IS EXPLICIT BECAUSE IT IS NOT OBVIOUS. NULL, `general` and
+      // `supplements` all mean "no subcategory information" and are overwritable; anything
+      // else is a real classification and is not. Writing the guard as "only where NULL"
+      // would have written nothing at all, since every Boots row already carries
+      // `supplements`.
+      const OVERWRITABLE = ["supplements", "general"];
+      console.log("\n  --- (d) BACKFILL SQL (printed, NOT executed) ---");
+      const byTarget = new Map<string, number[]>();
+      let declinedGeneral = 0;
+      for (const [pid, sub] of assign) {
+        if (sub === "general") { declinedGeneral++; continue; }
+        const a = byTarget.get(sub) ?? [];
+        a.push(pid);
+        byTarget.set(sub, a);
+      }
+      console.log("    DECLINED, decision 1: " + declinedGeneral + " rows that map to `general` " +
+                  "and would publish /supplements/general. They keep whatever they have.");
+      console.log("    GUARDED, decision 2: every UPDATE writes only where the existing value " +
+                  "is one of " + JSON.stringify(OVERWRITABLE) + " or NULL.");
+      const guard = " AND (subcategory IS NULL OR subcategory IN (" +
+                    OVERWRITABLE.map(v => JSON.stringify(v)).join(",") + "))";
+      console.log("BEGIN;");
+      for (const [sub, ids] of [...byTarget.entries()].sort()) {
+        ids.sort((a, b) => a - b);
+        console.log("-- " + sub + ": " + ids.length + " products offered");
+        for (let i = 0; i < ids.length; i += 200) {
+          console.log("UPDATE public.products SET subcategory = " + JSON.stringify(sub) +
+                      " WHERE id IN (" + ids.slice(i, i + 200).join(",") + ")" + guard + ";");
+        }
+      }
+      console.log("COMMIT;");
+      // A GUARD THAT SILENTLY WRITES FEWER ROWS THAN IT WAS GIVEN IS THE SAME DEFECT ONE
+      // LEVEL UP, so print the count to check the applied result against.
+      console.log("\n-- CHECK AFTER APPLYING: rows offered per value, above. A statement that");
+      console.log("-- updates FEWER rows than offered means the guard declined some, which is");
+      console.log("-- correct behaviour and must still be reported rather than noticed.");
+    }
+  }
+}
