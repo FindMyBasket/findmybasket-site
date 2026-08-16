@@ -13064,3 +13064,201 @@ Before publishing a subcategory: **sample its members and check they are what th
 
 **Not built here.** One instance is not enough to design a check, and item 147's warning
 applies to this item too: naming a gap is not closing it.
+
+
+---
+
+### 151. A suppression list hid the signal that a column was wrong
+
+**Raised:** 16 August 2026, Robbie reporting `/supplements/supplements` as visibly broken ·
+**Three defects, both supplements pages, all live.** · **Fixed; "8 retailers" deliberately not.**
+
+#### THE FINDING UNDERNEATH THE FACET BUG
+
+`getProductTypes` suppresses a list of values it calls junk:
+
+```ts
+const JUNK_TYPES = new Set(['Skincare', 'Makeup', 'Hair', 'Fragrance']);
+```
+
+On the supplements pages the column contained:
+
+| value | `/supplements/supplements` | `/supplements/sports` |
+|---|---:|---:|
+| **Skincare** | **1,104** | **193** |
+| *(empty string)* | 335 | 5 |
+| Hair Care | 39 | — |
+| Oil | 32 | — |
+| Moisturiser | 4 | 4 |
+| Eye Care | 2 | — |
+| Foundation | 1 | — |
+
+**`Skincare` — 76% of the page — is on the junk list.** So it never rendered, and what a visitor
+saw was the tail: *Foundation 1*, *Moisturiser 4*, *Eye Care 2*.
+
+> **WITHOUT THE SUPPRESSION LIST THE CHIP WOULD HAVE READ "SKINCARE 1,104" ON A SUPPLEMENTS
+> PAGE AND BEEN CAUGHT THE SAME HOUR.** The list exists to hide noise. **It hid the signal that
+> the column was wrong there**, and left behind exactly the residue that reads as a small
+> cosmetic glitch rather than a category-wide fault.
+
+**The absurd tail is what made it reportable, and the absurd tail is 1% of the problem.** A
+defect is found at the size someone can see, not the size it is.
+
+#### DEFECT 1: THE COLUMN, AND ITS CAUSE
+
+`_shared/categorisation.ts` — the supplements branch returned `product_type: base.product_type`
+under the comment *"`product_type` is kept from `base` because the inference is still useful."*
+
+`base` is `inferCategorisation()`, **the beauty classifier**. The branch overrides its
+`top_category` and its `subcategory` precisely because they are wrong for a supplement, and
+then reads a third field off the same verdict.
+
+> **THE 340 EMPTIES ARE THE SHARP CASE.** Those rows hit the denylist return —
+> `{top_category: null, product_type: "", excluded: reason}`. **This branch exists to DISCARD
+> that verdict** and was still reading a field out of it. **It kept half of a result it had
+> just declared invalid.**
+
+The comment was not wrong when written; it was never checked against its own output. Nobody
+had to be careless — **a claim about a value's usefulness needs the value printed once**, and
+that never happened between writing the branch and a visitor landing on the page.
+
+**NULLED, not repopulated from Boots' own `product_type`.** That column is parsed now, but it
+describes Boots' shelf, is 57% bare parents, and is per-retailer — it would give one merchant's
+rows a facet nobody else's could fill. **An empty facet is honest; a facet built from one
+merchant's aisle names is not.**
+
+Backfilled: **1,770 rows** to NULL on both `product_type` and `category`. Both, because the
+`sync_product_type_from_category` trigger repopulates `product_type` from `category` on INSERT —
+leaving `category` set would have restored the defect on the next import.
+
+#### DEFECT 2: THE HEADING
+
+`Compare {subDisplay} {categoryDisplay} prices` → **"Compare supplements supplements prices"**.
+`/supplements/sports` renders *"sports supplements"* correctly **from the same template, by
+luck** — the two words happen to compose.
+
+Collapsed generally rather than special-cased: the phrase drops the repetition whenever
+subcategory and category are the same word. **A rule naming `supplements` would be wrong again
+the next time a subcategory is named after its parent, and nothing prevents that** —
+`supplements` became a subcategory value of `supplements` without anyone deciding it should.
+
+Same family as this morning's `${sub}` duplication in the article template.
+
+#### DEFECT 3: NOT FIXED TONIGHT, AND WHY
+
+"8 retailers" measures **active retailers holding a price row on a product in this
+subcategory**. Verified independently: supplements **8**, sports **3**. Both correct; 11 is the
+site-wide active count.
+
+> **THE NUMBER IS RIGHT AND THE LABEL IS AMBIGUOUS**, which is a copy decision rather than a
+> defect, and it is not being changed at the end of a day that has already changed a lot.
+> Recorded, not fixed.
+
+#### AND THE READ UNDER ALL OF IT WAS FIXED FIRST
+
+`getProductTypes`, and the brand and retailer counts, all used the unordered `.range()`
+pagination of item 146 — **the displayed values were right by luck and nothing kept them
+right.** Eight call sites across `lib/queries.ts` and `lib/subcategory-queries.ts` now carry
+`.order('id')`.
+
+> **FIXING A DISPLAYED VALUE WHILE THE READ BENEATH IT IS NONDETERMINISTIC FIXES THE VISIBLE
+> HALF.** The order of these four fixes was the instruction and it was the right one.
+
+**`lib/brand-queries.ts` and `lib/edit-queries.ts` already ordered theirs.** So the pattern was
+known, written correctly twice, and omitted eight times — **item 65's shape for the second time
+today**, at a larger scale than the sitemap-versus-page case.
+
+#### MY OWN MEASUREMENT DEFECT, SIXTH INSTANCE TODAY
+
+Checking whether `product_type` was reliable catalogue-wide, I tested `makeup/Foundation`
+against `foundation|bb cream|cc cream` and got **66% agreement**, and nearly reported Foundation
+as a soft spot.
+
+Reading the rows: *skin tint*, *cushion*, *tinted moisturiser*, *complexion*. **All correctly
+typed. My regex was too narrow.** Foundation is ~99% right.
+
+> **A REGEX TOO NARROW, INSIDE THE MEASUREMENT CHECKING FOR REGEXES THAT ARE TOO NARROW.**
+> Sixth instance of item 79's class today — after `\yprotein\y`/Myprotein, `men` matching
+> *supplement*, `men's` matching *Women's*, `\ymen\y` missing *Wellman*, and `Men's Health`
+> matching `Women's Health`.
+>
+> **The instances are no longer notable individually. What is notable is the rate**: six in one
+> day, in work by someone who spent the day recording that this happens.
+
+
+---
+
+### 152. The junk list held a value that has never existed, in place of the one that does
+
+**Raised:** 16 August 2026, checking whether the broken facet had a catalogue-wide twin ·
+**It does, and it is the plausible-looking kind.** · **Fixed.**
+
+#### THE ANSWER TO "IS `product_type` UNRELIABLE EVERYWHERE"
+
+**No.** Outside supplements the column agrees with the product name at **92–100%**:
+
+| | agreement | | | agreement |
+|---|---:|---|---|---:|
+| Eau de Parfum | 100% | | Lipstick | 98% |
+| Shampoo | 100% | | Hair Colour | 97% |
+| Mascara | 100% | | Mask | 97% |
+| Serum | 98% | | Cleanser | 96% |
+| Moisturiser | 96% | | Deodorant | 94% |
+| **skincare / Oil** | **99%** (788 of 794) | | Conditioner | 92% |
+
+The specific worry — *skincare showing Oil is plausible-looking and would not have been
+noticed* — is unfounded. `Oil` in skincare is 788 face and body oils out of 794.
+
+**Supplements was not a bad instance of a general problem. It was a different problem**: every
+other category's `product_type` comes from a classifier built for it, and supplements' came
+from a classifier built for something else.
+
+#### BUT THE FACET HAD A CATALOGUE-WIDE DEFECT ANYWAY, AND IT IS THE QUIET KIND
+
+`JUNK_TYPES` suppresses the **category-name defaults** — the value a classifier emits when it
+has no better answer. Measured against the column:
+
+| default | category | products | on the list? |
+|---|---|---:|:---:|
+| `Skincare` | skincare | 16,539 | yes |
+| **`Hair Care`** | **hair** | **2,753** | **NO** |
+| `Makeup` | makeup | 682 | yes |
+| `Fragrance` | fragrance | 266 | yes |
+| **`Hair`** | *(nothing)* | **0** | yes |
+
+**`Hair Care` is the hair classifier's default** (`categorisation.ts:419`), covers **100% of
+every hair row that reached a default**, and rendered live on `/hair/treatment` as a chip
+reading **"Hair Care 2753"**, linking to `?type=Hair+Care`.
+
+> **AND `Hair` MATCHES ZERO ROWS. THE CLASSIFIER HAS NEVER EMITTED IT.** The list held a value
+> that has never existed **in place of** the one that does — one word short — while three of
+> the four defaults were correct.
+
+#### WHY THIS ONE IS WORSE THAN FOUNDATION-ON-A-SUPPLEMENTS-PAGE
+
+*Foundation* on a supplements page is absurd, so it got reported within a day of the category
+launching. **"Hair Care" on a hair page is plausible.** It is a real phrase, it is the right
+domain, the count is large and confident, and it links to a page that returns 2,753 genuine
+hair products.
+
+> **NOTHING ABOUT IT LOOKS WRONG. It is a default bucket wearing the costume of a type**, and
+> it has been offering shoppers a browse path meaning "everything we could not classify" for
+> as long as the facet has existed.
+
+**The absurd defect and the plausible defect are the same defect.** One category made it
+visible. The other three-quarters of the catalogue carried it silently, and the only reason it
+surfaced today is that somebody went looking for a twin after finding the loud one.
+
+> **A LIST THAT SUPPRESSES BY VALUE MUST BE DERIVED FROM THE VALUES, NOT FROM MEMORY OF THEM.**
+> Every entry on this list was plausible; four of five were right; the fifth was a word off and
+> the sixth was missing. **Nothing short of running it against the column distinguishes those
+> cases**, and it had never been run against the column.
+
+#### FIXED
+
+`JUNK_TYPES` gains `Hair Care`. `Hair` is kept — it suppresses nothing today and covers a
+future classifier that emits it — **and is now labelled as dead rather than left to read as
+load-bearing**, which is item 135's trap 2.
+
+The counts are written into the comment so the next reader can see what it was verified
+against, and re-derive it rather than trusting it.

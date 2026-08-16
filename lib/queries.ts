@@ -174,6 +174,10 @@ export function summarisePriceRows(
 
 const PAGE_SIZE = 1000;
 
+// EVERY CALLER MUST .order() A UNIQUE COLUMN BEFORE .range() -- see the long note in
+// lib/subcategory-queries.ts. Unordered LIMIT/OFFSET has no stability guarantee across
+// pages, and the failure returns the RIGHT TOTAL from the WRONG ROWS, so no count-based
+// check detects it. Work-list items 146, 151.
 async function fetchAllRows<T>(
   build: (offset: number) => PromiseLike<{ data: T[] | null; error: any }>,
 ): Promise<T[]> {
@@ -203,6 +207,7 @@ export async function getCategoryStats(category: TopCategory): Promise<CategoryS
       .eq('top_category', category)
       .not('normalised_brand', 'is', null)
       .not('tags', 'cs', '{cleanup_remove}')
+      .order('id')
       .range(offset, offset + PAGE_SIZE - 1),
   );
 
@@ -220,6 +225,7 @@ export async function getCategoryStats(category: TopCategory): Promise<CategoryS
       .eq('top_category', category)
       .is('merged_into', null)
       .is('parent_product_id', null)
+      .order('id')
       .range(offset, offset + PAGE_SIZE - 1),
   );
 
@@ -259,7 +265,8 @@ export async function getTopBrands(category: TopCategory, limit = 16): Promise<T
         .eq('top_category', category)
         .not('normalised_brand', 'is', null)
         .not('tags', 'cs', '{cleanup_remove}')
-        .range(offset, offset + PAGE_SIZE - 1),
+        .order('id')
+      .range(offset, offset + PAGE_SIZE - 1),
   );
 
   const brandCounts = new Map<string, { display: string; count: number }>();
@@ -419,6 +426,7 @@ export async function getSubcategories(category: TopCategory): Promise<{ name: s
       .eq('top_category', category)
       .not('subcategory', 'is', null)
       .not('tags', 'cs', '{cleanup_remove}')
+      .order('id')
       .range(offset, offset + PAGE_SIZE - 1),
   );
 

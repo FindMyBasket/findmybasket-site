@@ -62,6 +62,22 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
 
   const totalPages = Math.ceil(productResult.totalCount / PAGE_SIZE);
   const subDisplay = displaySub(subcategory);
+
+  // "supplements supplements". The template interpolates subcategory then category, which
+  // reads correctly whenever the two words differ and duplicates when they do not --
+  // /supplements/supplements is the case where a category's only real subdivision is
+  // itself. "sports supplements" on the sibling page composes correctly by luck, from
+  // the same template.
+  //
+  // COLLAPSED GENERALLY, NOT SPECIAL-CASED FOR SUPPLEMENTS. A rule naming this category
+  // would be wrong again the next time a subcategory is named after its parent, and
+  // nothing prevents that -- `supplements` became a subcategory value of `supplements`
+  // without anyone deciding it should be. Same family as this morning's ${sub}
+  // duplication in the article template. Work-list item 152.
+  const scopePhrase =
+    subDisplay.toLowerCase() === categoryDisplay.toLowerCase()
+      ? categoryDisplay.toLowerCase()
+      : `${subDisplay.toLowerCase()} ${categoryDisplay.toLowerCase()}`;
   // Route slug (identity except bath_body -> bath-and-body). Queries above use the
   // raw `category` DB value; every link/canonical below uses `slug`.
   const slug = categoryToSlug(category);
@@ -100,11 +116,11 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
         <p className="text-base md:text-lg text-ink-light max-w-2xl mx-auto mb-10 leading-relaxed">
           {productType ? (
             <>
-              Compare {productType.toLowerCase()} prices in {subDisplay.toLowerCase()} {categoryDisplay.toLowerCase()} across UK retailers. {productResult.totalCount.toLocaleString()} products.
+              Compare {productType.toLowerCase()} prices in {scopePhrase} across UK retailers. {productResult.totalCount.toLocaleString()} products.
             </>
           ) : (
             <>
-              Compare {subDisplay.toLowerCase()} {categoryDisplay.toLowerCase()} prices across UK retailers. {stats.total_products.toLocaleString()} products from {stats.total_brands.toLocaleString()} brands.
+              Compare {scopePhrase} prices across UK retailers. {stats.total_products.toLocaleString()} products from {stats.total_brands.toLocaleString()} brands.
             </>
           )}
         </p>
