@@ -88,6 +88,26 @@ name: feed-diag (read-only)
         required: false
         default: 'merchant_product_id'
         type: string
+      cohort_rx:
+        description: "Section 9: name regex defining a cohort, e.g. men's-health tokens. Blank = skip."
+        required: false
+        default: ''
+        type: string
+      cohort_exclude_rx:
+        description: "Section 9: name regex vetoing a match (e.g. women|female)."
+        required: false
+        default: ''
+        type: string
+      cohort_node_rx:
+        description: "Section 9: product_type regex for the retailer's own node(s) for this cohort, to compare MEMBERSHIP not just size."
+        required: false
+        default: ''
+        type: string
+      cohort_label:
+        description: "Section 9: label for the report header."
+        required: false
+        default: ''
+        type: string
 
 jobs:
   diag:
@@ -170,6 +190,12 @@ jobs:
           SUBCAT_PREVIEW: ${{ inputs.subcat_preview }}
           SUBCAT_RETAILER_ID: ${{ inputs.subcat_retailer_id }}
           SUBCAT_MATCH_COLUMN: ${{ inputs.subcat_match_column }}
+          # Section 9: name-cohort x product_type cross-tab, with a membership comparison
+          # rather than only a size comparison. Item 146's shape applied to a category.
+          COHORT_RX: ${{ inputs.cohort_rx }}
+          COHORT_EXCLUDE_RX: ${{ inputs.cohort_exclude_rx }}
+          COHORT_NODE_RX: ${{ inputs.cohort_node_rx }}
+          COHORT_LABEL: ${{ inputs.cohort_label }}
           SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
           SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           # github.event.inputs is the reliable source here; the `inputs` context

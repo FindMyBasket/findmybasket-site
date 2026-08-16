@@ -39,10 +39,21 @@
 //   the two below it are classification leakage rather than decisions. Of the eleven
 //   specific values below, exactly ONE clears it -- `womens-health` at 130.
 //
-//   THE OTHER TEN ARE KEPT IN THIS MAP AND NOT WRITTEN. They are correct classifications
-//   and they are not pages. Deleting them would lose the reasoning; writing them would
-//   publish ten thin URLs. AWAITING THE CONSOLIDATED SET being confirmed before this file
-//   collapses them -- until then the backfill's decision-1 filter is what holds the line.
+//   NONE OF THE ELEVEN IS WRITTEN. Not ten -- eleven. `womens-health` was published on
+//   16 August at 117 live products and WITHDRAWN THE SAME DAY (item 149): 37 of the 117 had
+//   no gender signal at all, because Boots shelves BRANDS under Women's Health rather than
+//   classifying products -- GP Nutrition's entire eleven-product range, and enough of New
+//   Leaf's to include a testosterone booster.
+//
+//   SO PARTS 1 AND 2 BUY ZERO SUBCATEGORY PAGES. A category page here is a claim about what
+//   products ARE, not about where one retailer shelves them, and every honest narrowing of
+//   womens-health (75 explicitly women's, 68 in the taxonomy-and-name intersection) falls
+//   below the 100 floor. It qualified only at its widest and least accurate definition.
+//
+//   THE ELEVEN VALUES STAY IN THIS FILE ANYWAY. They are correct classifications and they
+//   are not pages; deleting them would lose the reasoning, writing them would publish thin
+//   or dishonest URLs. What parts 1 and 2 DID buy is below: the 133 out-of-scope rows, and
+//   an auditable reason per filing. NEITHER NEEDS A URL, which is the whole distinction.
 
 export type SubcategoryMapEntry = { prefix: string; subcategory: string | null };
 
