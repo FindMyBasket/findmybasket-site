@@ -53,6 +53,11 @@ name: feed-diag (read-only)
         required: false
         default: '40'
         type: string
+      bare_nodes:
+        description: "Section 5c: pipe-separated product_type values whose CONTENTS to dump (bare parent nodes). Blank = skip."
+        required: false
+        default: ''
+        type: string
       reassign_retailer_id:
         description: "Section 7: size the reassignment detector for this retailer id. Blank = skip. Read-only."
         required: false
@@ -131,6 +136,9 @@ jobs:
           # Section 6 only. Paths whose rows to classify with the supplements rule.
           SAMPLE_PATHS: ${{ inputs.sample_paths }}
           SAMPLE_N: ${{ inputs.sample_n }}
+          # Section 5c only. product_type values whose contents to dump, for the bare
+          # parent nodes a hierarchical column stops at. Empty = section 5c skipped.
+          BARE_NODES: ${{ inputs.bare_nodes }}
           REASSIGN_RETAILER_ID: ${{ inputs.reassign_retailer_id }}
           REASSIGN_MATCH_COLUMN: ${{ inputs.reassign_match_column }}
           SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
