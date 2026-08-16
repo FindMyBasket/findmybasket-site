@@ -262,23 +262,35 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
   <h2>Who we partner with</h2>
 
   <!--
-    RETAILER LIST — keep in step with `retailers` where active = true, EXCEPT for
-    the deliberate divergence recorded below. Last verified 2026-08-02.
+    RETAILER LIST — 12 names. Last verified 2026-08-16.
 
-    DELIBERATE DIVERGENCE, DO NOT "CORRECT" IT: this list has 11 names. The table
-    has 12 rows where active = true. The twelfth is Branded Beauty, which closed
-    its UK affiliate programme on 30 July 2026 and must NOT be listed, but whose
-    `active = false` flip is held until after the 4 August 2026 Boots read.
-    Following "match the table" before that flip lands re-adds a retailer whose
-    programme is closed. Once the flip lands, list and table agree at 11 and this
-    paragraph can go.
+    THE COUNT IS EXPECTED TO MOVE, AND DOWN. Do not read 12 as a target.
+      - Atelier De Glow (r29) is DEPARTING: its AWIN programme closed, but it is
+        still `active = true` and still selling, so listing it today is CORRECT.
+        When the flip lands, remove it and the count goes to 11.
+      - Branded Beauty is `active = true` and is NOT listed, deliberately. Its UK
+        affiliate programme closed 30 July 2026, so listing it would name a
+        retailer we cannot send anyone to. Its `active = false` flip has been held
+        since 2 August.
 
-    History: Superdrug removed (retired 27 July 2026, r12); Gorgeous Shop, Atelier
-    De Glow and Perfume Click added, all three live and missing from this list.
-    A retailer retirement MUST sweep this block. See the copy-sweep step in
+    SO THE TABLE AND THIS LIST DO NOT AGREE, AND SHOULD NOT. `retailers` has 13
+    rows at active = true; this list has 12. The difference is Branded Beauty.
+    "Match the table" is the wrong rule and following it re-adds a closed
+    programme. The right rule is: active = true AND the programme still pays.
+
+    VERIFY THE LIST, NEVER THE COUNT. On 16 August this page read "11 UK
+    retailers" over a list of 11 — internally consistent, and wrong, because it
+    omitted Niche Beauty (live 9 August). A count that matches its own list says
+    nothing about whether the list is right. Diff the <li> set against
+    `retailers`, not the number against `count(*)`. Work-list items 121 and 129.
+
+    History: Superdrug retired 27 July 2026 (r12). Gorgeous Shop, Atelier De Glow
+    and Perfume Click added and were missing from this list for days. Niche
+    Beauty went live 9 August and was missing for seven. A retailer change MUST
+    sweep this block; nothing detects it. See the copy-sweep step in
     docs/superdrug-removal-plan.md.
   -->
-  <p>Currently live across 11 UK retailers covering skincare, makeup, hair and fragrance:</p>
+  <p>Currently live across 12 UK retailers covering skincare, makeup, hair and fragrance:</p>
 
   <ul>
     <li>Boots</li>
@@ -292,6 +304,7 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
     <li>Gorgeous Shop</li>
     <li>Atelier De Glow</li>
     <li>Perfume Click</li>
+    <li>Niche Beauty</li>
   </ul>
 
   <p>More retailers are being added throughout the year. If you're a brand or retailer interested in partnering, <a href="/work-with-us">get in touch</a>.</p>
