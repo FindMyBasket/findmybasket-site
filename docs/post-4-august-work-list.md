@@ -10884,6 +10884,22 @@ is departing, and omits Niche Beauty, which has been live since 9 August.
 > twice.** Being recorded is not being fixed, and a second sighting of the same defect is
 > evidence about the queue rather than about the page.
 
+#### AND THE MAINTENANCE INSTRUCTION PRODUCED THE ERROR IT EXISTED TO PREVENT
+
+`about.html`'s comment block told the next reader to *"keep in step with `retailers` where
+active = true"*. **Following that instruction on 16 August adds Branded Beauty**, whose
+programme closed on 30 July — naming a retailer we cannot send anyone to, on the page whose
+entire job is saying who we compare.
+
+> **A maintenance instruction that produces the error it exists to prevent.** It was correct
+> when written, and `retailers` grew a thirteenth active row underneath it. The instruction
+> encoded a rule (`active = true`) that was never the real rule — the real one is
+> **`active = true` AND the programme still pays** — and the shortcut held only while the two
+> agreed.
+
+Now written down with both exceptions named, which is why the block also had to explain that
+the count is expected to move down when Atelier flips.
+
 #### THE SWEEP SPECIFICATION IS ITSELF A SWEEP SCOPE
 
 **This is the finding that outlives the list.**
@@ -11071,6 +11087,36 @@ predicted the exact retailer class that would trip it, and stopped one wire shor
 > THAN ONE — because it also consumes the belief that the case is covered.** The 3 August
 > migration reads, correctly and in good faith, as though this state were now watched.
 
+#### THE SEND CONDITION WAS THE PART THAT WOULD HAVE BITTEN
+
+Wiring the view into the monitor's **email body** would have looked complete and done
+nothing.
+
+> **A retailer with unrecorded delivery terms has a PERFECTLY HEALTHY FEED.** It imports on
+> schedule, reports `ok`, and is never stale. **It is invisible to every check the monitor
+> performs**, so `failures.length === 0 && stale.length === 0` is true and the function
+> returns before an email is composed.
+
+**Body-only would have reproduced the original defect one layer up: detected, formatted, and
+never sent.** So `deliveryUnknown.length === 0` is part of the early-return test, not
+decoration on the template. **The section that renders is the easy half; the condition that
+sends is the feature.**
+
+#### AND THE `all_healthy` ZERO IS ASSERTED, NOT OMITTED — THIRD INSTANCE
+
+The healthy JSON payload now carries `delivery_unknown: 0` rather than leaving it out.
+
+**Same shape, third instance:**
+
+| | |
+|---|---|
+| **item 104** — `saved_routines_updated -> 0` hardcoded into `product_merge_log` | **the negative case.** A zero in a column named for a check that does not exist. *"Checked, none found"* is what it reads as; evidence of nothing is what it is. |
+| **item 114** — `on_supplements_path: 0` **with** `supplements_path_unreachable: []` | the positive case. #268 existed to make the inert and active states **distinguishable**, and the empty list is what proves the check ran. |
+| **here** — `delivery_unknown: 0` in `all_healthy` | **an absent field and a zero field are different claims.** Absent means nobody asked. Zero means somebody asked and the answer was none. |
+
+**A zero is only worth printing if its absence would have meant something else.** That is the
+test, and it separates all three instances cleanly.
+
 #### THE 1 AUGUST AUDIT IS RECORDED EXACTLY, AND CORROBORATES THE ACCOUNT
 
 `delivery_terms_observed_at` holds **eleven active retailers, every one dated 2026-08-01** —
@@ -11206,3 +11252,108 @@ Step 7's barcode assessment (**already zero here, because `enabled = false` did 
 **Not flipped.** It is a departure operation and it needs the doctrine run against it, not a
 flag toggled at the end of an afternoon.
 
+---
+
+### 134. The doctrine run against Branded Beauty, and a zero that is a finding
+
+**Raised:** 16 August 2026 · **REPORT ONLY. Nothing flipped.** Doctrine:
+`docs/superdrug-removal-plan.md`.
+
+#### PRE-FLIP RECORD (Step 0 requires this before `active = false`, after which nothing surfaces it)
+
+| | |
+|---|---|
+| `last_import_status` / `last_import_error` | **`ok` / NULL** |
+| `last_imported_at` = `last_attempt_at` | 2026-08-01 05:00:17 UTC |
+| `enabled` | **`false`** since 2 August |
+| AWIN merchant / feed | 48313 / 48313 · `storage_passthrough` |
+| delivery | `tiered / 30.00 / 0.00`, **terms never observed** — the self-contradictory shape of item 132 |
+
+**A clean retirement**, like Atelier: the programme closed while the feed was healthy. Unlike
+Skin Cupid, there is no buried error to lose.
+
+#### THE HOLD IS NOW COSTING, NOT PRESERVING
+
+**Held since 2 August, past the 4 August Boots read. That was twelve days ago.**
+
+> **ITEM 77'S SHAPE, ON AN OPERATION RATHER THAN A DEFERRAL.** Item 77 found
+> `ga4-weekly-pull.yml` held for Actions minutes that reset on 1 August, and the hold held
+> for twelve days after its condition lapsed. **This is the same defect against a catalogue
+> operation, and — coincidentally and exactly — also twelve days.**
+>
+> A hold records a condition and then stops being about it. Nothing re-reads the condition,
+> so the hold survives the reason. **The difference here is direction: item 77's hold cost a
+> missing dataset, this one costs 1,821 live pages.**
+
+#### STEP 1 — CATALOGUE LOSS AND COMPARISON-DEPTH LOSS, ASSESSED SEPARATELY
+
+| | |
+|---|---:|
+| products in `products_active` touching r6 | 2,136 |
+| **catalogue loss** (r6 is their only active retailer) | **1,821** |
+| survivors | 315 |
+| **comparison-depth loss** | **0** |
+
+> **THE COMPARISON-DEPTH LOSS IS ZERO, AND THAT IS THE WHOLE CHARACTER OF THIS DEPARTURE.**
+> Branded Beauty has **no in-stock rows** — its offers were withdrawn on 1 August. **No
+> product loses a live offer, because none has had one for fifteen days. The depth loss
+> already happened; the flip only collects it.**
+
+**All 1,821 leaving are ALREADY offerless.** Every one is a live, indexable page rendering
+nothing buyable. **The hold preserves pages, not inventory.**
+
+#### STEP 7 — SUPPLY-SIDE BARCODE LOSS IS ZERO, AND THE ZERO IS THE FINDING
+
+| | |
+|---|---:|
+| distinct barcodes Branded Beauty holds | **2,154** |
+| **codes it contributes to `ean_product_index`** | **0** |
+
+**`ean_product_index` requires `active AND enabled`. `enabled` went false on 2 August**, and
+the index gained that predicate on 12 August (`platform_changes` id 33). **Branded Beauty's
+2,154 codes left the index then. Flipping `active` removes nothing.**
+
+> **STATED RATHER THAN SKIPPED, BECAUSE A ZERO ON A STEP THAT USUALLY MATTERS IS A FINDING.**
+> Atelier's identical step cost 547 codes and 67 sole-supplier. Here it costs none, and the
+> reason is *not* that Branded Beauty is small — it holds four times Atelier's barcodes.
+> **It is that the two-flag predicate already did the work, seventeen days ahead of the
+> flip.** Skipping the step would have left that unexplained, and the next reader would
+> reasonably assume 2,154 codes were about to go.
+
+**This is the two-flag rule paying off rather than catching someone out**, which is the first
+time it has been recorded doing so.
+
+#### STEP 8 — 36 BRAND PAGES, THE LARGEST YET, AND ONLY ONE IS AN ARTEFACT
+
+**494 products sit on brands that go to zero.** Seven carry ten or more:
+
+| brand | products |
+|---|---:|
+| **Essie** | **179** |
+| **Bourjois** | **119** |
+| **Sally Hansen** | **63** |
+| Miss Sporty | 39 |
+| Burberry | 21 |
+| Revolution | 13 |
+| Branded Beauty (own label) | 10 |
+
+**35 are real page losses. One is a slug collision** with a brand that survives, so its URL
+lives on — the normalisation-split caveat firing once in thirty-six.
+
+**Against Atelier's three brand pages, of which only one was real, this is thirty-five.**
+Essie alone is 179 products. These are the curated-301 population, and Step 6 requires the
+GSC read before the flip, not after.
+
+#### THE OTHER STEPS
+
+- **Step 5 copy sweep: already clean.** `about.html` deliberately does not list Branded
+  Beauty and now says so in its own comment. Nothing else names it.
+- **Step 6 `GONE_IDS`: 1,821 ids to regenerate ON THE DAY**, and the script is still
+  hardcoded to `SUPERDRUG = 12` (the unkept promise recorded in the doctrine). **That is the
+  blocking task**, not the flip.
+- **Step 2 kill-switch:** a second departure behind `superdrug_removed` — the decision the
+  doctrine says must be taken deliberately rather than by default.
+
+**Recommendation: run Step 6 first.** At 1,821 ids and 36 brand pages this is the biggest
+departure since Superdrug's 24,484, and the one thing that made Superdrug expensive was
+`GONE_IDS` being generated eight days before it was used.
