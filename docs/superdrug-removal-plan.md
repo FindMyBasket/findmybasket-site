@@ -192,6 +192,35 @@ that is likewise never reported, for the same reason.
 - Retained `retailer_prices` rows are irrelevant to this — Superdrug keeps 29,547 and is
   silent; Branded Beauty has 2,166 and alerts.
 
+#### A DEPARTURE HELD OPEN DOES NOT PRESERVE WHAT IT IS HOLDING
+
+**Added 16 August 2026, measured on Branded Beauty: held from 2 August past a 4 August
+condition, flipped on the 16th.** A hold reads as conservative — nothing deleted, the rows
+all still there, the decision still open. **It is not conservative. It is a slower version of
+the same loss, with the loss already taken.**
+
+| | at the flip |
+|---|---|
+| **Comparison depth** | **Zero.** Branded Beauty had no in-stock rows: its offers were withdrawn 1 August. No product lost a live offer, because none had had one for a fortnight. |
+| **Search equity** | **Gone with it.** The GSC curation found **22** product pages worth redirecting, against Superdrug's **54** from a drop set thirteen times larger. Fifteen days of thin pages had cost the ranking before the flip was considered. |
+| **What the hold preserved** | **1,821 live, indexable pages rendering nothing buyable.** |
+
+> **THE FLIP COLLECTS A LOSS ALREADY TAKEN. IT DOES NOT CAUSE ONE.** Superdrug was flipped
+> eight days after its feed died and kept 54 redirects' worth of equity. Branded Beauty was
+> held fifteen days and kept 22. **The hold is the cost, and it is measurable on both the
+> catalogue and the search side.**
+
+**So the question at a hold is never "is it safe to flip yet?"** That answer drifts toward
+yes on its own as the inventory dies, which makes it feel like patience is working. The
+question is **"what is still being preserved?"** — and once the answer is *nothing*, holding
+is the more destructive option, because it is the one that keeps thin pages indexed and
+ranking away.
+
+**Record the condition AND its expiry date when a hold is taken.** Branded Beauty's condition
+was the 4 August Boots read; it passed twelve days before anyone re-read the hold. That is
+work-list item 77's shape — a hold outliving its condition — on an operation rather than a
+deferral.
+
 **Live instance:** Branded Beauty was parked 2026-08-02 (jobid 18 inactive,
 `sync-bb-feed.yml` disabled, `enabled = false`) with the `active = false` flip deliberately
 held past the 4 August Boots read. It has alerted since and will continue to until the flip.
