@@ -10466,6 +10466,31 @@ name carries no product information at all). **`product_type` is 100% filled, so
 product_type-derived set has a residual of zero by construction.** What remains is a mapping
 over a finite list, not an inference with an open tail.
 
+#### THE HONEST LIMIT: TRUE OF A QUESTION, NOT OF A RETAILER
+
+**Measured 16 August, feed-diag 31950328936, and it belongs here rather than only in item
+126.** The column that reproduced a working session of human judgement **does not separate
+sports at all**: 142 sports-token rows under Medicines & Treatments, 98 under Lifestyle &
+Wellbeing, 75 under Active Nutrition. **The node named for sports holds 22%.** Boots files
+Phizz hydration under Medicines and Liquid IV hydration under Lifestyle — the same product
+class, two parents.
+
+> **"Their taxonomy beats our inference" is true of a QUESTION, not of a RETAILER.**
+> Comprehensive on out-of-scope detection and on the named subcategories. **It loses on
+> sports.** Stating only the first half turns a measured result into a slogan, and a slogan
+> is what gets applied to the next retailer without measuring.
+
+#### AND THE METHOD POINT: REFUSING TO ADOPT HALF A MAP
+
+Group A is mappable from `product_type` today; group B is not. **The available shortcut was
+to ship the half that works and describe the whole thing as taxonomy-derived.**
+
+> **That would have made the claim about the METHOD rather than about the RESULT, and the
+> method is the thing that transfers.** A half-map called taxonomy-derived teaches the next
+> reader that reading a retailer's column is sufficient. It is sufficient for some questions.
+> Whoever inherits this needs to know which — and a description that quietly averages the
+> half that worked with the half that did not destroys exactly that information.
+
 #### THREE CAUTIONS, ALL OF WHICH WOULD MISLEAD A LATER READER
 
 **1. TWO POPULATIONS, TWO SETS OF NUMBERS.** The figures that first drew attention are
@@ -10694,4 +10719,140 @@ off.
 the mapped nodes — safe, because the population is bounded — or a decision from Robbie about
 where hydration sits. **Do not adopt half a map and describe it as derived from the
 retailer's taxonomy.**
+
+
+---
+
+### 127. Hydration is sports, and the name rule that files it is bounded by the taxonomy
+
+**Decided by Robbie, 16 August 2026.** Resolves the open question in item 126.
+
+**Whey, creatine and electrolytes are one shopper and one purchase pattern.** The four
+articles published this morning name hydration alongside protein and creatine as sports
+nutrition, so **splitting it would make copy wrong that was corrected the same day** — the
+anchors were fixed at 13:5x and a split would have re-broken the bodies.
+
+Boots cannot answer this: it files Phizz hydration under Medicines & Treatments and Liquid IV
+hydration under Lifestyle & Wellbeing. **A retailer inconsistent about one product class
+cannot arbitrate that class**, so this was always a decision rather than a lookup.
+
+#### THE RISK PROFILE OF A NAME RULE CHANGES WITH ITS INPUT SET
+
+Group B is therefore a **name rule scoped INSIDE the mapped `product_type` nodes**, and that
+scoping is the whole of the argument for it:
+
+| | name rule over the CORPUS | name rule over a TAXONOMY-BOUNDED set |
+|---|---|---|
+| input | anything in the feed | rows Boots already filed as health/wellbeing/nutrition |
+| worst failure | **sildenafil filed as a supplement**, live with a price | **a whey protein filed as general health** |
+| who notices | nobody, until someone looks | a shopper browsing the wrong subcategory |
+| cost | compliance | a filing error |
+
+> **A name rule operating on a taxonomy-bounded set is a different risk from one operating on
+> the corpus, and the difference is not degree.** The bound removes the failure mode that
+> made name rules unacceptable in the first place. What remains is mis-filing, which is
+> visible, reversible and does not put a P-medicine on a beauty site.
+
+**This is not a licence to reintroduce name rules generally.** It is specifically that
+`isSupplementPathTopical`-style inference is acceptable *downstream of* a retailer's own
+filing and unacceptable *instead of* it. Record the bound with the rule whenever one is
+written, because a rule copied out of its bound is a rule without the property that made it
+safe — item 92's `oil`/`gel` veto was exactly that.
+
+**Order from here:** part 2 (importer reads the field), backfill, read one cycle, then decide
+part 3 deliberately. **Nothing resumes until the claim sweep in item 128 has a decision.**
+
+---
+
+### 128. The claim sweep the doctrine asked for on a calendar, run for the first time
+
+**Raised:** 16 August 2026 · **REPORT ONLY, nothing changed.** The doctrine's Step 5 records
+a second half that is *not* departure-driven — *"grep for the SHAPES rather than the names: a
+percentage next to the word save, a currency figure in hand-written markup, a month name, and
+any sentence asserting what the optimiser accounts for. Run it on a calendar, not on a
+departure."* **It had never been run.** Shapes 5 and 6 are added from `docs/strategy.md`'s
+positioning register.
+
+**Findings are ranked by brand consequence, not by count.** The full list is below; these are
+the ones that are wrong rather than merely dated.
+
+#### 1. "FIND THE BEST DEAL" IS GENERATED ONTO EVERY SUBCATEGORY PAGE
+
+`app/edit/[slug]`, `app/fragrance/[subcategory]`, `app/hair/[subcategory]`,
+`app/makeup/[subcategory]`, `app/skincare/[subcategory]` — five route files, each writing
+`Find the best deal` into a `<meta name="description">` **generated across every
+subcategory**, so this is on hundreds of indexed pages.
+
+> `docs/strategy.md`: *"FindMyBasket is **not a discount destination and should never be
+> framed as one**."*
+>
+> **This is the largest register violation on the site by surface area, and it is the
+> cheapest to fix, because it is generated.** Five strings correct every page at once. Every
+> other item in this sweep is hand-written and has to be fixed one at a time.
+
+#### 2. THE DELIVERY-THRESHOLD MECHANISM CLAIM IS FALSE FOR TWO LIVE RETAILERS
+
+`public/index.html:588` — *"We factor in each retailer's free delivery threshold, so you
+always see the true total cost."*
+
+| retailer | threshold | cost | |
+|---|---|---|---|
+| **Debenhams** | **NULL** | £3.99 | flat rate. **There is no free-delivery threshold to factor in.** |
+| **Niche Beauty** | **NULL** | **NULL** | `unknown`. Live since 9 August with 8,838 in-stock rows and **we do not know its delivery terms at all.** |
+
+The 3 August note flagged this claim as *"a mechanism claim, wrong for one retailer"*. **It is
+now wrong for two, and the second is worse**: `unknown` is a state the
+`retailers_delivery_shape` CHECK deliberately makes someone *choose*, and it was chosen by
+default when Niche Beauty was onboarded.
+
+**The invented-figures bug is NOT back.** `RoutineBuilder.tsx:495-499` carries terms verbatim
+with the `?? '25'` / `?? '3.95'` coercion removed, so nulls stay null. **The claim is wrong;
+the arithmetic is not.**
+
+#### 3. EIGHT ARTICLES CLAIM "UPDATED APRIL 2026" AND WERE NOT
+
+`cerave`, `clarins`, `cosrx`, `elemis`, `k-beauty`, `lookfantastic-vs-boots`,
+`overpaying-for-skincare`, `skincare-routine-under-40`, `the-ordinary` all carry
+**`Updated April 2026`** in the byline. Four of them were materially edited on 1 August to add
+supersession notices, and **the byline still says April**. A freshness claim that the edit
+itself falsified.
+
+`public/terms.html:96` — **`Last updated: April 2025`**, sixteen months old.
+
+#### 4. TWO COUNTS THAT UNDERSTATE, AND ONE THAT IS STILL WRONG
+
+| claim | where | actual |
+|---|---|---|
+| `80,000+` products tracked | `public/index.html:387` | **100,214** |
+| `80,000+` product catalogue | `public/work-with-us.html:297` | **100,214** |
+| `Currently live across 11 UK retailers` | `public/about.html:281` | **still unfixed from item 121** — count right, list wrong |
+
+#### 5. ONE POINT-IN-TIME PRICE PAIR OUTSIDE AN ARTICLE
+
+`public/savings-hub.html:285` — *"A 5-product CosRx routine costs £114 at one UK retailer and
+£74 at another"* — in a hub card excerpt. **The article it links to carries a supersession
+notice; the card does not.**
+
+#### WHAT THE SWEEP CLEARED
+
+Recorded because a sweep that only lists problems reads as though everything else was checked
+and failed:
+
+- **All four articles with hand-written `<td>£` price tables** (clarins 5, cosrx 15, elemis
+  12, k-beauty 5) **carry supersession notices.** No unnotified price table exists.
+- **The `?? '25'` / `?? '3.95'` delivery fallback is gone**, as recorded on 1 August.
+- **Savings percentages are range-based**, per the register: *"can save another 10-30%"*,
+  *"even a 10% variation"*. No point-in-time savings claim survives on any page.
+- **The supplements anchors** were corrected earlier today and are clean.
+
+#### THE LIST IS LONGER THAN THE SHAPES PREDICTED, AND THAT IS THE FINDING
+
+The doctrine named four shapes. **Two of the five findings above came from the two shapes
+added from `strategy.md` rather than from the doctrine's four** — the register violation
+(#1), which is the biggest, and the stale-count pair (#4).
+
+> **A sweep specification is itself a sweep scope, and item 110's rule applies to it: the
+> shapes describe the reach of whoever wrote them.** The doctrine's four shapes were derived
+> from one page on one day in August. They do not reach a `<meta>` description written by a
+> `.tsx` template, because the person writing them was looking at hand-written HTML.
 
