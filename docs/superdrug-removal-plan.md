@@ -65,9 +65,36 @@ So the next departure is far simpler:
 3. Curate 301s from GSC for the traffic tail; everything else 410s.
 4. Step E revalidation + monitor.
 5. **Copy sweep — MANDATORY, and it was missed on 27 July 2026.** See below.
+6. Regenerate `GONE_IDS` **on the day**, not on the following Sunday. See below.
+7. **Assess the supply-side barcode loss** — codes leaving `ean_product_index`, and how
+   many of them nobody else supplies. This is not about the departing retailer's pages.
+   See below. **First measured on Atelier De Glow (r29), 15 August 2026.**
+8. **Check for brand pages going to zero live products**, and separate the real losses
+   from normalisation splits before touching anything. See below.
 No view change, no query-filtering work, no new infra needed — those were one-time and
 are now permanent. The listing-query active filtering (Step C) also already covers every
 future inactive retailer.
+
+#### TWO PROMISES IN THIS LIST DO NOT HOLD. MEASURED 15 AUGUST 2026, r29.
+
+Both were written as though the work were done. Neither is, and both were discovered by
+reading the code the list points at rather than by running it.
+
+| Promise | Reality |
+|---|---|
+| Step 2: *"reuse `scripts/regen-superdrug-gone-ids.mts` with the retailer id parameterised"* | **It is not parameterised.** `const SUPERDRUG = 12` is hardcoded at line 25 and the id is threaded through the whole script — `r12Products`, the `POST_FLIP` branch, the log lines. Parameterising it is real work to schedule before step 6, not a flag to pass. |
+| Step 2: *"the middleware + Edge Config kill-switch are already in place"* | **In place, but singular.** `middleware.ts:101` reads **one** key, `superdrug_removed`, gating **one** `GONE_IDS` set. |
+
+**The kill-switch consequence is the one to decide deliberately, because it is not a
+defect.** Adding a second departure's ids to `GONE_IDS` puts them behind the first
+departure's switch. The key is currently `true`, so it works. What it costs is that
+**rollback becomes all-or-nothing across both departures**: flipping `superdrug_removed`
+to `false` to un-410 one retailer's orphans un-410s the other's at the same time.
+
+Two ways out, and the choice belongs to whoever runs the next departure rather than here:
+a second key and a second id set (more infra, independent rollback), or one set and one
+key with the tradeoff accepted and written down. **What must not happen is the ids being
+merged in without the decision being made**, which is the default if nobody reads this.
 
 ### Step 0 — expect a daily alert for the whole parked-but-not-retired window
 
@@ -252,7 +279,8 @@ Nothing detects this. There is no test, no lint, no query that compares copy aga
 |---|---|---|
 | Homepage logo strip | `public/index.html` (~line 288) | hardcoded `<span class="hero-trust-card">` per retailer; **not data-driven**, does not read `retailers.active` |
 | **Homepage demo basket** | **`public/index.html`, the `demo-card` block** | `basket-retailer` names AND every figure. Named "Boots + Superdrug" for 13 days after r12. Rebuilt 2026-08-01 as Escentual + Boots with real catalogue prices; the block carries its own comment explaining that it is hand-written, point-in-time, refreshed by nothing, and that naming retailers is what makes it break at every departure. **Changing the retailer means recomputing all nine figures**, not just swapping the name — the leg subtotals, both single-retailer totals and both savings lines all move together, and they are shown on the card so a reader can check them. |
-| **Partner list and count** | **`public/about.html`** | **the count sentence AND the `<ul>`; these are the core factual claim** |
+| **Partner list and count** | **`public/about.html`** | **the `<ul>` FIRST, then the count sentence. VERIFY THE LIST, NEVER THE COUNT** — on 15 Aug the count was correct and the eleven names were wrong (item 121). Also check the maintenance comment at ~265-279; it is itself stale. |
+| **Partnerships stat grid** | **`public/work-with-us.html` (~lines 264-280)** | **ADDED 15 Aug 2026, after being absent from this table while carrying four wrong figures — item 121.** Four hand-written stats: retailer count, products tracked, comparison count, and a `~25%` savings claim that is the figure removed from the homepage on 3 Aug. Indexed via `/partners.html` → `/work-with-us`. |
 | Article price tables | `public/articles/*.html` | hand-written, point-in-time, nothing refreshes them |
 | Meta / OG descriptions | `public/**/*.html` | retailer names appear inside `<meta name="description">` |
 | Logo assets | `public/logos/`, `public/*.webp` | leave in place; harmless, and removal breaks nothing but risks a 404 if still referenced |
@@ -304,6 +332,207 @@ gh workflow run gone-ids-drift.yml          # same day as the flip, then merge t
 legitimately move thousands of ids, so expect to raise `fail_threshold` for this run
 deliberately — and only once the number has been reconciled against the flip you just
 performed.
+
+### Step 7 — Supply-side barcode loss (added 2026-08-15, first departure where it exists)
+
+**Every departure before this one predated the barcode work. Atelier De Glow (r29) is the
+first retirement where this consequence is real, which is why no earlier entry mentions it
+and why its absence from steps 1–6 is not an oversight to apologise for.**
+
+> **THE DEPARTING RETAILER'S BARCODES ARE NOT ABOUT THE DEPARTING RETAILER'S PAGES.**
+> Steps 1–4 all ask what happens to products the retailer sold. This asks what happens to
+> **other retailers' matching**, and the answer has nothing to do with the departing
+> retailer's catalogue, traffic or URLs.
+
+`ean_product_index` is what tier 1 resolves against. Its predicate:
+
+```sql
+WHERE ean_normalised IS NOT NULL AND product_id IS NOT NULL
+  AND r.active AND COALESCE(c.enabled, false)
+```
+
+`r.active` is in there, so **flipping the departure flag empties the departing retailer
+out of the index in the same statement that retires it.** Nothing else has to run.
+
+#### COUNT THE INDEX ROWS, NOT THE IN-STOCK ROWS
+
+**There is no `in_stock` filter in that view.** Out-of-stock rows carrying barcodes are in
+the index today and leave with the rest, so the in-stock row count — the number every
+other step in this runbook is measured in — is the wrong denominator here and is smaller
+than the truth.
+
+| r29, 15 August 2026 | |
+|---|---:|
+| in-stock rows carrying barcodes (**the wrong number**) | 516 |
+| **distinct codes actually leaving `ean_product_index`** | **547** |
+| **of those, sole-supplier — no other active+enabled retailer provides them** | **67** |
+| the same measured in-stock-only (**also the wrong number**) | 61 |
+
+**Use 547 and 67.** The index does not know about stock, so 61 understates by exactly the
+31 out-of-stock barcoded rows that were never counted.
+
+#### THE 67 SPLIT INTO TWO POPULATIONS AND ONLY ONE OF THEM MATTERS
+
+| | codes | what happens |
+|---|---:|---|
+| point at a product that **also leaves** the catalogue | 48 | code and page go together. **Nothing can arrive to mismatch.** Not a problem. |
+| **point at a product that SURVIVES the flip** | **19** | **the page stays live and its barcode bridge is gone.** |
+
+> **The 19 are the finding.** A future feed row carrying one of those codes can no longer
+> tier-1 resolve to the product that is still sitting there. It falls to tier-2 name
+> matching or **creates a duplicate of a product we already have a live page for** —
+> which is item 96's population, arrived at from the supply side instead of the data side.
+
+The failure is silent and deferred: nothing breaks at the flip, and the cost is paid the
+next time any retailer's feed happens to carry one of those 19 codes. **No job reports it
+and no query will surface it after the fact**, because a duplicate created this way looks
+identical to a duplicate created any other way.
+
+#### THE QUERY, PARAMETERISED ON THE DEPARTING ID
+
+Definition matches the house sole-supplier metric — `fmb_quality_snapshot_write` §5,
+migration `20260815100400`, *distinct active+enabled retailers per code = 1*. **Do not
+invent a second one**; same-sounding numbers with different retailer predicates are what
+`metrics_quality_weekly` exists to stop.
+
+```sql
+WITH qual AS (   -- exactly ean_product_index's retailer predicate
+  SELECT r.id FROM retailers r
+  LEFT JOIN retailer_import_config c ON c.retailer_id = r.id
+  WHERE r.active AND COALESCE(c.enabled, false)),
+leaving AS (     -- every code the departing retailer supplies. NO in_stock filter.
+  SELECT DISTINCT rp.ean_normalised AS ean, rp.product_id
+    FROM retailer_prices rp
+   WHERE rp.retailer_id = <DEPARTING_ID> AND rp.ean_normalised IS NOT NULL
+     AND rp.product_id IS NOT NULL),
+sole AS (
+  SELECT * FROM leaving x WHERE NOT EXISTS (
+    SELECT 1 FROM retailer_prices rp JOIN qual q ON q.id = rp.retailer_id
+     WHERE rp.ean_normalised = x.ean AND rp.retailer_id <> <DEPARTING_ID>))
+SELECT count(*) AS codes_leaving_index FROM leaving
+UNION ALL SELECT count(*) FROM sole                                    -- sole-supplier
+UNION ALL SELECT count(*) FROM sole WHERE EXISTS (                     -- ...product survives
+  SELECT 1 FROM retailer_prices rp JOIN retailers rr ON rr.id = rp.retailer_id
+   WHERE rp.product_id = sole.product_id AND rr.active AND rr.id <> <DEPARTING_ID>);
+```
+
+#### THE FLEET LOSES IDENTIFIER QUALITY, AND IT DOES NOT SHOW UP IN THE SHARES
+
+**Do not assess this by looking at the fleet composition, because the fleet composition
+will tell you nothing happened.** Removing 547 codes from 77,552 moves the index's Korean
+GS1 share 13.54% → 13.47% and its 12-digit share 22.32% → 22.34%. **Both are noise.**
+
+The loss is that **r29 was the only feed in the fleet whose barcode field was effectively
+all manufacturer-issued** — 544 of 547 Korean GS1 880, **one** 12-digit reseller code,
+99.5% / 0.2%. Re-measured 15 August against every active+enabled retailer:
+
+| retailer | barcodes | 12-digit reseller | Korean 880 | reseller % |
+|---|---:|---:|---:|---:|
+| **Atelier De Glow** | 547 | **1** | 544 | **0.2** |
+| YesStyle | 13,789 | 360 | 7,886 | 2.6 |
+| Stylevana | 6,396 | 2,559 | 3,087 | **40.0** |
+| Boots | 21,861 | 6,304 | 553 | 28.8 |
+| Beauty Bay | 7,922 | 3,112 | 524 | 39.3 |
+| Niche Beauty | 8,889 | 3,296 | 187 | 37.1 |
+| **fleet** | 103,301 | 24,230 | 13,618 | 23.5 |
+
+**What that bought us, concretely: 77 products carry an Atelier 880 code alongside a
+Stylevana 12-digit reseller code.** On each of those, Atelier was the manufacturer-code
+witness — the row that settles which of the two codes is the real identifier, which is
+exactly the judgement item 104 had to make by hand. **After the flip nothing arbitrates
+them.**
+
+Redundancy is mostly but not wholly covered, and the mitigation is worth recording next to
+the loss: **YesStyle shares 443 of the 547 codes and is itself only 2.6% reseller.**
+Stylevana shares 156, Perfume Click 78, Beauty Bay 70, Boots 53. So the fleet keeps a
+clean-ish Korean reference; it stops having a spotless one.
+
+> **The general rule for the next departure: a small retailer can be the fleet's best
+> source of something.** r29 was 553 rows — 0.5% of the catalogue and the second-smallest
+> live retailer — and the highest-quality identifier feed we had. **Row count does not
+> rank a retailer's value as a source**, and every count in steps 1–4 ranks by rows.
+
+### Step 8 — Brand pages that go to zero (added 2026-08-15)
+
+**A product leaving the catalogue is step 1. A brand leaving the catalogue is not, and
+nothing in steps 1–7 reports it.** This is the same class as the 450 brand-page 404s: an
+undecided side effect of a retirement rather than a decision.
+
+For r29, **three `normalised_brand` values drop to zero live products — and they fail in
+three different ways. Only one is a real loss, and only two are pages at all.**
+
+| `normalised_brand` | live now | live after | its slug | what actually happens |
+|---|---:|---:|---|---|
+| **`arocell`** | 6 | **0** | `/brands/arocell` | **REAL WHOLE-BRAND LOSS.** Sole page, all six products Atelier-only. This one needs a 301 or a 410. |
+| `clear dea` | 1 | **0** | `/brands/clear-dea` | **A page zeroes; the brand does not leave the site.** `cleardea` is the same brand under a different normalisation and keeps **19** products at `/brands/cleardea`. |
+| `tia'm` | 1 | **0** | `/brands/tiam` | **NOT A PAGE OF ITS OWN.** `brandSlug()` strips apostrophes, so `tia'm` and `tiam` produce the **same slug**. The URL survives either way. |
+
+> **THE NORMALISATION-SPLIT CAVEAT: A ZERO IN THAT LAST COLUMN IS NOT A PAGE LOSS UNTIL
+> YOU HAVE CHECKED THE SLUG.** Two of these three needed no action and one of them is not
+> even addressable.
+
+**Resolve every zero to a slug before deciding anything**, because `normalised_brand` and
+the page URL are not one-to-one in either direction:
+
+- **`brandSlug()` is applied to `normalised_brand`, not to `brand`** — `findBrandBySlug`
+  matches `brandSlug(row.normalised_brand) === slug` and every downstream query is
+  `.eq('normalised_brand', …)` (`lib/brand-queries.ts:24-64`).
+- **It strips apostrophes and punctuation**, so distinct `normalised_brand` values can
+  collide on one slug. `tiam` and `tia'm` both slug to `tiam`. **`findBrandBySlug` returns
+  the first match it encounters, so which of the two a visitor sees is unspecified** — a
+  pre-existing latent bug this departure brushes against rather than causes. Do not fix it
+  inside a retirement; file it.
+- **It does not strip spaces to nothing** — `clear dea` → `clear-dea` and `cleardea` →
+  `cleardea` really are two URLs for one brand.
+
+**So a 301 for `/brands/clear-dea` points at `/brands/cleardea`** — the same brand under a
+different normalisation. A correct redirect that also quietly documents a normalisation
+bug nobody has filed.
+
+```sql
+-- GROUP BY normalised_brand ALONE. See the warning below before changing this line.
+SELECT p.normalised_brand,
+       min(p.brand)            AS a_spelling,
+       count(DISTINCT p.brand) AS brand_spellings,
+       count(*)                AS live_now,
+       count(*) FILTER (WHERE EXISTS (
+         SELECT 1 FROM retailer_prices rp JOIN retailers rr ON rr.id = rp.retailer_id
+          WHERE rp.product_id = p.id AND rr.active AND rr.id <> <DEPARTING_ID>)) AS live_after
+  FROM products_active p
+ WHERE p.normalised_brand IN (
+   SELECT DISTINCT pr.normalised_brand FROM products pr
+    JOIN retailer_prices rp ON rp.product_id = pr.id
+   WHERE rp.retailer_id = <DEPARTING_ID> AND pr.normalised_brand IS NOT NULL)
+ GROUP BY 1 ORDER BY live_after, live_now;
+```
+
+> **DO NOT ADD `p.brand` TO THE `GROUP BY`. IT MANUFACTURES BRANDS THAT ARE NOT LOSING
+> ANYTHING.** Caught 15 August 2026 by running both versions — the grouped-by-brand
+> variant reported **four** zeroing brands for r29 and the correct one reports **three**.
+>
+> The phantom was **Colorgram**. Product 127480 is spelled `Colorgram` and was Atelier-only;
+> its ~90 siblings are spelled `colorgram` and are YesStyle and Stylevana. **Same
+> `normalised_brand`, therefore the same brand page**, which keeps ~90 products and is
+> completely unaffected. Grouping by `brand` splits one page into two rows and one of the
+> halves reads as a total loss.
+>
+> **`brandSlug()` derives the page URL from a lowercased, punctuation-stripped brand, so
+> the page is keyed on the normalised value. Group on the thing the page is keyed on.**
+
+#### THE CHECK HAS TWO HALVES AND THE SECOND IS THE ONE THAT GETS SKIPPED
+
+1. **Run the query** to find the `normalised_brand` values that zero. One dispatch.
+2. **Resolve each to its slug by hand** and establish which of three things happened —
+   a brand left, a page left, or nothing left.
+
+**All three of r29's surprises lived in the second half**, and the query cannot do any of
+it: it has no notion that `clear dea` and `cleardea` are one brand, or that `tia'm` has no
+URL of its own. Reporting three whole-brand losses would have been wrong by a factor of
+three, and the 301 target, the GSC resubmission and whether it is worth telling anyone all
+differ across the three cases.
+
+**Every retirement will produce a different mix**, because the mix is a property of how
+that retailer's brand strings happen to normalise, not of the retirement.
 
 ### Two worked examples, and the test that separates them
 
