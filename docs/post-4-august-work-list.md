@@ -10856,3 +10856,91 @@ added from `strategy.md` rather than from the doctrine's four** — the register
 > from one page on one day in August. They do not reach a `<meta>` description written by a
 > `.tsx` template, because the person writing them was looking at hand-written HTML.
 
+
+#### FINDING 1 FIXED SAME DAY; AND ONE THING THE FIX EXPOSED
+
+Seven strings, `best deal` → `best value`, merged and live. **The replacement was not
+invented**: `app/bath-and-body/[subcategory]` already shipped the identical sentence with the
+compliant word, so the newer route files were right and the older five had simply never been
+swept.
+
+**Exposed by the fix, not fixed by it:** the same templates interpolate `${sub}` twice, and
+the second one is wrong. Live right now:
+
+| page | rendered `<meta name="description">` |
+|---|---|
+| `/makeup/lips` | *"Find the best value on **lips foundation**, lipstick, mascara"* |
+| `/hair/cleanse` | *"Find the best value on **cleanse shampoo**, conditioner"* |
+| `/skincare/face` | *"face cleansers, serums, moisturisers"* — reads correctly by luck |
+
+**A subcategory name is not an adjective for the product nouns that follow it.** Dropping the
+second `${sub}` fixes every one, and `bath-and-body` — the file that was already right on the
+register — is also the one that does not duplicate. **The same file was right twice.**
+Queued, not fixed.
+
+#### NICHE BEAUTY'S TERMS ARE HALF-KNOWABLE, MEASURED FROM THEIR SITE
+
+Finding 2 asked whether fixing the data beats softening the claim. **Partly.**
+
+| | |
+|---|---|
+| free-delivery threshold | **£75.00**, stated plainly and confirmed on two separate pages of `niche-beauty.com/en-gb` |
+| standard UK delivery cost below it | **NOT PUBLISHED ANYWHERE** — reachable only by building a basket and going to checkout |
+
+**£75 would be the highest threshold in the fleet by half** — the next highest are Perfume
+Click and YesStyle at £50, and the median is £30. That is materially different for basket
+optimisation, so leaving it `unknown` is not a neutral placeholder.
+
+> **But the shape CHECK will not accept a threshold without a cost**, and it is right not to.
+> `tiered` requires both. **Writing £75 with a NULL cost recreates the exact shape the
+> 1 August work called self-contradictory** — free above a threshold and free below it, which
+> no retailer means.
+
+**So the options are: run a checkout to obtain the cost, or leave it `unknown` and stop
+claiming the mechanism.** What must not happen is a threshold entered without its cost,
+because that is the 1 August defect with a fresher date on it.
+
+#### `about.html` IS NOW TWICE-FLAGGED AND STILL WRONG
+
+**Item 121 recorded it on 16 August. This sweep found it again the same day.** The page still
+reads *"Currently live across 11 UK retailers"* over a list that names Atelier De Glow, which
+is departing, and omits Niche Beauty, which has been live since 9 August.
+
+> **Item 121 is open while the page makes a false claim, and the claim is now in the record
+> twice.** Being recorded is not being fixed, and a second sighting of the same defect is
+> evidence about the queue rather than about the page.
+
+#### THE SWEEP SPECIFICATION IS ITSELF A SWEEP SCOPE
+
+**This is the finding that outlives the list.**
+
+**Two of the five findings came from the two shapes added from `strategy.md`, not from the
+doctrine's four** — the register violation, which was the largest by surface, and the stale
+counts. The doctrine's four shapes are: a percentage next to *save*, a currency figure in
+hand-written markup, a month name, and a sentence asserting what the optimiser accounts for.
+
+**They were derived on 3 August from ONE PAGE — `public/index.html` — on ONE DAY.** Every one
+of them describes something that page happened to contain. **None of them can reach a
+`<meta>` description written by a `.tsx` template**, because the person deriving them was
+reading hand-written HTML and the failure they were cataloguing was hand-written HTML.
+
+> **Item 110's rule applies to sweep specifications, not just to sweeps: the shapes describe
+> the reach of whoever wrote them.** A shape list is a floor. The doctrine presents its four
+> as though they were the categories of stale claim, and they are the categories of stale
+> claim *on one page*.
+
+**And the second half, which is worse:**
+
+> **A SWEEP THAT HAS NEVER RUN HAS NEVER BEEN TESTED.** The doctrine has carried these four
+> shapes since 3 August as a standing instruction, and today was the first time anything ran
+> against them. **Thirteen days of a specification nobody had exercised**, presented in the
+> runbook with the same confidence as the steps that had been executed repeatedly. Its two
+> gaps were not discoverable by reading it — they were discoverable only by running it and
+> noticing that the interesting results came from elsewhere.
+
+**Consequence for Step 5:** the shape list must be **re-derived from the current surface
+area, not reused**. Specifically it needs shapes for generated copy (`<meta>` in `.tsx`
+templates, JSON-LD, `generateMetadata`) which did not exist in the form it does now when the
+list was written. **Re-derive on each run and record what the run added**, because the
+addition is the measurement of how stale the list had become.
+

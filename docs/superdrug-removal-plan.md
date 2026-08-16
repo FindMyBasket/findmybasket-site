@@ -261,6 +261,21 @@ hand-written copy is where the site makes its factual claims about who we compar
 > optimiser accounts for. Run it on a calendar, not on a departure, because nothing
 > about a departure causes those claims to rot and nothing about them will surface on
 > its own.
+>
+> **RE-DERIVE THIS LIST, DO NOT REUSE IT. Added 16 August 2026, from the first time it was
+> ever run.** These four shapes were derived on 3 August from ONE page on ONE day, and each
+> describes something that page happened to contain. **They cannot reach a `<meta>`
+> description written by a `.tsx` template**, which is where the largest violation on the
+> site turned out to be: `Find the best deal` generated onto hundreds of subcategory pages
+> against a positioning register that says we are never framed as a discount destination.
+> Two of the first run's five findings came from shapes added from `docs/strategy.md`, not
+> from these four.
+>
+> **A SWEEP THAT HAS NEVER RUN HAS NEVER BEEN TESTED.** This list sat here for thirteen days
+> as a standing instruction with the same authority as the steps that get executed every
+> departure, and its gaps were not visible by reading it. **Item 110 applies to sweep
+> specifications too: a shape list describes the reach of whoever wrote it.** Work-list
+> item 128.
 
 **This was missed on 27 July 2026 and went unnoticed for eight days.** After Superdrug
 was retired, `public/about.html` continued to claim *"Currently live across 10 UK
