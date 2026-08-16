@@ -11109,3 +11109,100 @@ total** for a retailer with unknown terms.
 - **The zero-cost shape is not CHECK-detectable**, so if it should be forbidden that is a new
   constraint (`cost > 0 WHEN threshold IS NOT NULL`), not an existing one being enforced.
 
+
+---
+
+### 132. Proximity to a constraint confers the appearance of one
+
+**Raised:** 16 August 2026, from item 131 · **A documentation defect, not a data one.**
+
+`retailers_delivery_shape`:
+
+```sql
+CHECK ( (delivery_model = 'tiered'  AND threshold IS NOT NULL AND cost IS NOT NULL)
+     OR (delivery_model = 'flat'    AND threshold IS NULL     AND cost IS NOT NULL)
+     OR (delivery_model = 'unknown' AND threshold IS NULL     AND cost IS NULL) )
+```
+
+**It tests NULL-ness and agreement with `delivery_model`. It does not test meaning.**
+
+- `tiered / 30.00 / 0.00` — free above £30 and free below £30 — **satisfies the first branch
+  completely and would be accepted today on a fresh insert.** Branded Beauty and Skin Cupid
+  both carry it.
+- Amazon and eBay carry `tiered / 0.00 / 0.00`, which says **"free above nothing"** and is
+  equally legal.
+
+#### THE READING RULE THAT LOOKED LIKE A CONSTRAINT
+
+The 1 August work recorded two things in the same section:
+
+> **"The `retailers_delivery_shape` CHECK added on 2026-08-01 is what stops the sixth."**
+>
+> **"Treat threshold-with-zero-cost as unverified, never as free delivery."**
+
+**The first is a constraint. The second is an instruction to a human. Nothing in the section
+distinguishes them, and they are one paragraph apart.**
+
+> **A rule written next to a constraint is read as enforced by it.** Both sentences are about
+> delivery shapes, both are imperative, both are in a section headed by a CHECK that was
+> genuinely added — and only one of them is in the database. **The reader supplies the
+> connection because the layout implies it, and the layout was not designed to imply
+> anything.**
+
+**This is why item 130 asked whether the two rows predate the constraint or slipped past it.
+Both options assume the constraint covers the case. It never did**, and no amount of care
+reading that section would have revealed it — only reading `pg_get_constraintdef` did.
+
+**The rule for the next one:** when a document states a data rule next to a constraint, say
+which enforces it. *"Enforced by `retailers_delivery_shape`"* and *"not enforced anywhere;
+check by eye"* are different sentences, and the difference is invisible unless written.
+
+**If the zero-cost shape should be forbidden, that is a NEW constraint** —
+`CHECK (delivery_cost > 0 OR delivery_threshold IS NULL)` or similar — **not an existing one
+being enforced.** Recorded as an option, not a recommendation: both rows are inactive or
+parked, and Amazon and eBay's `0.00 / 0.00` may be deliberate.
+
+---
+
+### 133. Branded Beauty's held flip is now a 1,821-product departure
+
+**Raised:** 16 August 2026 · **Report only.** The flip has been held since 2 August.
+
+**The reason it was held has expired.** `platform_changes` and the doctrine both record it:
+the `active = false` flip was *"deliberately held past the 4 August 2026 Boots read"*. **That
+read was twelve days ago.**
+
+#### WHAT FLIPPING IT DOES NOW
+
+| | |
+|---|---:|
+| `products_active` today | 100,214 |
+| products touching Branded Beauty | 2,136 |
+| **would LEAVE `products_active`** | **1,821** |
+| Branded Beauty price rows retained | 2,166 |
+| **of which in stock** | **0** |
+| barcodes leaving `ean_product_index` | **0** — `enabled = false` already excludes it |
+
+**All 1,821 are already offerless.** Branded Beauty last imported 1 August and has zero
+in-stock rows, so every one of those pages is live, indexable, and has nothing buyable on it.
+**The held flip is not preserving inventory. It is preserving 1,821 thin pages.**
+
+**And 36 brand pages go to zero**, including names with real search demand: **MAC Cosmetics,
+Elemis, Burberry, Olay, Nuxe, Bourjois, Valentino, Hermès, Sally Hansen, Simple, Essie,
+Piz Buin, Christophe Robin, Grow Gorgeous**.
+
+#### THIS IS A DEPARTURE, NOT A FLAG FLIP
+
+**At 1,821 products and 36 brand pages it is thirty times Atelier's 59** and needs the full
+doctrine: `GONE_IDS` regenerated on the day, curated 301s from GSC for the traffic tail,
+Step 7's barcode assessment (**already zero here, because `enabled = false` did that work on
+12 August**), Step 8's brand-page check (**36, the largest yet**), and the copy sweep
+(**already clean — `about.html` deliberately does not list Branded Beauty**).
+
+> **The longer it is held the larger it gets, and it is already the biggest departure since
+> Superdrug.** Every day of the hold is another day of 1,821 pages that render, index and
+> sell nothing.
+
+**Not flipped.** It is a departure operation and it needs the doctrine run against it, not a
+flag toggled at the end of an afternoon.
+
