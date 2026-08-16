@@ -262,18 +262,39 @@ export async function getSubcategoryProducts(
   };
 }
 
+// Reads active_category_subcategories, the view that does the DISTINCT in SQL.
+//
+// THIS IS THE SAME BUG THE SITEMAP HAD, AND THE SAME FIX. That view was created on
+// 29 June for the sitemap, whose comment reads: "The sitemap previously enumerated
+// subcategories with an un-paginated `select subcategory from products_active where
+// top_category = $1`, which hits PostgREST's default 1,000-row cap." The sitemap was
+// migrated onto the view. THIS CALLER, WHICH IS THE SAME QUERY, WAS NOT.
+//
+// Paginating it did not fix it, it changed the failure. `.range()` WITHOUT `.order()`
+// is unordered LIMIT/OFFSET, and Postgres gives no stability guarantee across such
+// pages -- rows can be missed and others returned twice. MEASURED 16 August on
+// supplements: the two-page scan returned 1,719 rows, exactly the right TOTAL, while
+// containing only 102 of the 117 `womens-health` rows. Right count, wrong rows.
+//
+// The consequence was a page that 404'd and 200'd for the same URL minutes apart,
+// because SubcategoryPage notFound()s when the value is absent from this list -- and a
+// subcategory whose rows are few enough can miss the sample entirely. IT ALSO PUT THE
+// SITEMAP AND THE PAGE INTO DISAGREEMENT, with the sitemap right: /supplements/
+// womens-health was listed for crawling while the page it points at returned 404.
+//
+// A count that matches is not evidence that a paginated read is complete. Nothing here
+// could have revealed that; only comparing the rows against a SQL DISTINCT does.
+// Work-list item 146.
 export async function getValidSubcategories(category: TopCategory): Promise<string[]> {
-  const data = await fetchAllRows<{ subcategory: string | null }>(offset =>
-    supabase
-      .from('products_active')
-      .select('subcategory')
-      .eq('top_category', category)
-      .not('subcategory', 'is', null)
-      .range(offset, offset + PAGE_SIZE - 1),
-  );
+  const { data, error } = await supabase
+    .from('active_category_subcategories')
+    .select('subcategory')
+    .eq('top_category', category);
+
+  if (error || !data) return [];
 
   const unique = new Set<string>();
-  for (const row of data) {
+  for (const row of data as { subcategory: string | null }[]) {
     if (row.subcategory) unique.add(row.subcategory);
   }
   return Array.from(unique);
