@@ -41,7 +41,7 @@ export async function generateMetadata({
   if (searchParams.type) {
     return {
       title: `${edit.display_name} ${searchParams.type} best prices UK | FindMyBasket`,
-      description: `Compare ${edit.display_name} ${searchParams.type.toLowerCase()} prices across UK retailers. Find the best deal.`,
+      description: `Compare ${edit.display_name} ${searchParams.type.toLowerCase()} prices across UK retailers. Find the best value.`,
       alternates: { canonical },
     };
   }
