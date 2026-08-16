@@ -98,11 +98,60 @@ const REDIRECTS_SUPERDRUG: Readonly<Record<number, string>> = {
   95286: '/brands/amuse',
 };
 
+// CURATED 16 August 2026 from the GSC Pages export (Web, last 3 months). 778 /product/
+// URLs in the export, of which 22 are in the 1,821 departing set, carrying 24 clicks and
+// 202 impressions between them.
+//
+// EVERY TARGET PASSED BOTH HALVES OF THE TEST, and the second half is the one that does
+// the work:
+//   1. returns 200 today                    -- reassurance
+//   2. has products in products_active AFTER the flip -- the actual test
+//
+// A LIVE 200 IS A FALSE GREEN HERE. /brands/betrue and /brands/miss-sporty both return
+// 200 right now, because those brands still have products right now. After the flip they
+// have zero, findBrandBySlug reads products_active, returns null, and the page 404s. A
+// 301 pointing at them would be A REDIRECT INTO A 404 -- strictly worse than the 410 it
+// replaces. Both are routed to their category instead. Work-list item 137.
+//
+// The earlier note here said 36 brand pages go to zero. That was wrong: it is 14, and the
+// error was counting only Branded Beauty's slice of each brand. See item 136.
 const REDIRECTS_BRANDED_BEAUTY: Readonly<Record<number, string>> = {
-  // Populate from GSC before the flip. 36 brand pages go to zero, seven of them with
-  // ten or more products (Essie 179, Bourjois 119, Sally Hansen 63), so the surviving
-  // -brand-page test that Superdrug's targets passed CANNOT be assumed here: verify each
-  // destination is still live rather than reusing the earlier method's conclusion.
+  // L'Oreal Paris — brand keeps 1,101 products after the flip
+  20641: '/brands/lor-al-paris',
+  20759: '/brands/lor-al-paris',
+  20814: '/brands/lor-al-paris',
+  21033: '/brands/lor-al-paris',
+  123350: '/brands/lor-al-paris',
+  134580: '/brands/lor-al-paris',
+  // Maybelline — keeps 595
+  20596: '/brands/maybelline',
+  20622: '/brands/maybelline',
+  20873: '/brands/maybelline',
+  21313: '/brands/maybelline',
+  21772: '/brands/maybelline',
+  109423: '/brands/maybelline',
+  // Revolution — keeps 585
+  21266: '/brands/revolution',
+  // NYX Professional Makeup — keeps 499
+  20564: '/brands/nyx-professional-makeup',
+  // Dove — keeps 319
+  22225: '/brands/dove',
+  // Simple — keeps 219
+  20679: '/brands/simple',
+  // Essie — keeps 214. Loses 179 of 393 to this flip and still survives comfortably,
+  // which is exactly the case the corrected Step 8 query exists to distinguish.
+  21380: '/brands/essie',
+  // Sally Hansen — keeps 175
+  22096: '/brands/sally-hansen',
+  // Bourjois — keeps 6. Thin, but non-zero, so the brand page survives. Worth re-checking
+  // before the next departure rather than assuming it stays above zero.
+  22132: '/brands/bourjois',
+  22337: '/brands/bourjois',
+  // --- BRAND ZEROES AFTER THE FLIP: category target, NOT the brand page ---
+  // BeTrue keeps 0. 28 impressions, the highest single figure in this set.
+  20685: '/makeup/eyes',
+  // Miss Sporty keeps 0 (39 products today, all Branded Beauty's).
+  22393: '/makeup/nails',
 };
 
 interface Departure {

@@ -11504,4 +11504,81 @@ property that should have.
 step. Steps 7 and 8 both ship parameterised queries. Step 8's exists precisely because the
 brand-page question has a known trap — and I fell into a *different* trap in a query written
 to avoid the documented one.
+### 137. A check that passes for a reason that expires at the moment of the change
+
+**Raised:** 16 August 2026, curating Branded Beauty's 301s · **22 redirects written, not
+yet generated or flipped.**
+
+#### THE FALSE GREEN
+
+Every proposed redirect target was live-verified. **All eleven returned 200, including the
+two that must not be used.**
+
+> **`/brands/betrue` returns 200 today because BeTrue has products today.** After the flip it
+> has none. `findBrandBySlug` reads `products_active`, finds nothing, returns null, and the
+> page **404s**. A 301 pointing there would be **a redirect into a 404 — strictly worse than
+> the 410 it replaces**, because a 410 is a correct terminal answer and a 301-to-404 is two
+> wrong hops that also burn the crawl budget getting there.
+
+Same for `/brands/miss-sporty`: 39 products today, all Branded Beauty's, **zero after**.
+
+**The live check did not fail. It answered a different question than the one being asked** —
+*"is this page live?"* rather than *"will this page be live when the redirect starts firing?"*
+
+#### FOURTH INSTANCE TODAY OF A CHECK PASSING FOR A REASON THAT EXPIRES
+
+| # | the check | why it passed | when it expires |
+|---|---|---|---|
+| 1 | `about.html`'s count matched its own list | 11 names, 11 in the sentence | it was never about the count |
+| 2 | the `supp %` column read ~100% | the shipped rule says supplement on a supplements path **by construction** | it never varied |
+| 3 | the delivery CHECK "prevents an accidental 410" | true while the gate was **off** | at the flip, which inverted it |
+| 4 | **`/brands/betrue` returns 200** | **the brand has products today** | **at the flip, which removes them** |
+
+> **All four are checks whose truth is conditional on a state the change is about to end.
+> They cannot be caught by running them more carefully, because they pass correctly.** The
+> only defence is asking what the check depends on and whether the change touches it.
+
+#### WHAT CAUGHT IT: THE RESTATED TEST
+
+Superdrug's method was *"verify the target returns 200 today AND the brand has >=1 product in
+`products_active` post-flip"*. **Both halves shipped; only the first is visible.**
+
+> **The post-flip brand count does the work. The live check reassures.** Running only the
+> reassuring half returns a clean pass on exactly the targets that would fail, and it is the
+> half a person naturally reaches for because it is the one you can see in a browser.
+
+The two zeroing brands are routed to their category instead — `/makeup/eyes` and
+`/makeup/nails`, both verified 200 and both structurally durable, since a category page does
+not depend on one retailer's inventory.
+
+#### THE COVERAGE CLAIM, BECAUSE 22 WILL OTHERWISE READ AS A SAMPLE
+
+The GSC Pages export caps at 1,000 rows and **that is not a gap here.**
+
+**GSC sorts by clicks, then impressions. The last row in the export carries 0 clicks and 63
+impressions.** So every page with at least one click ranks above the cut, and:
+
+> **EVERY PRODUCT PAGE WITH AT LEAST ONE CLICK IN THE LAST THREE MONTHS IS IN THIS EXPORT.**
+> The truncated tail is zero-click pages below ~63 impressions in three months — pages with
+> no equity to preserve, which is the only thing curation exists to do.
+
+**Coverage is complete for the purpose.** 22 is the answer, not a sample of it.
+
+#### AND WHY 22 RATHER THAN SUPERDRUG'S 54
+
+Not because the departure is smaller — 1,821 against 24,484 is smaller, but the ratio does
+not explain it.
+
+> **Branded Beauty's pages have had no live offer since 1 August. Fifteen days of thin pages
+> had already cost the ranking, so most of the equity was gone before the flip was
+> considered.**
+
+**This is the zero-depth-loss finding again, on a different measure.** Item 134 recorded that
+the comparison-depth loss is zero because the offers were withdrawn on 1 August and *the flip
+collects a loss already taken*. The search equity went the same way and for the same reason.
+
+> **A departure held open does not preserve what it is holding.** Superdrug was flipped eight
+> days after its feed died and kept 54 redirects' worth of equity. Branded Beauty has been
+> held fifteen days and kept 22. **The hold is the cost, and it is measurable in both
+> catalogue and search terms.**
 
