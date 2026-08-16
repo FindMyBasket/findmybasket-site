@@ -387,6 +387,52 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
       console.log("\n  sample of the supplements EXCLUDE_PATTERNS would drop:");
       clash.slice(0, 10).forEach(r => console.log("   x " + get(r, "product_name").slice(0, 80)));
     }
+
+    // --- 5b. SIBLING TAXONOMY CROSS-TAB ---------------------------------------------
+    //
+    // WHY THIS EXISTS. Section 5 above groups the admitted rows by the path we FILTER
+    // ON, and for Boots that path is flat: it terminates at "Vitamins & Supplements"
+    // with no fifth segment, so grouping by it tells you nothing about what is inside.
+    // Measured 16 Aug 2026 on fid 115009: 1,771 admitted rows, zero occurrences of
+    // "Vitamins & Supplements >".
+    //
+    // BUT AN ADVERTISER SHIPS MORE THAN ONE TAXONOMY. Boots populates product_type on
+    // 100.0% of 38,077 rows with a DIFFERENT and visibly richer hierarchy --
+    // "Health & Pharmacy > Medicines & Treatments" (1,761 rows), "Health & Pharmacy >
+    // Lifestyle & Wellbeing" (924), "Baby & Child > Feeding" (647). The importer reads
+    // merchant_product_category_path and never product_type, so that hierarchy has
+    // never been looked at.
+    //
+    // THIS IS THE PATH FINDING ON A SECOND FIELD: the retailer's own filing beating our
+    // inference. If one of these columns separates medicines, paediatric and sports
+    // inside the leaf, the subcategory set is DERIVED from it rather than from name
+    // tokens -- and a name-token set leaves a 14% residual that no token list closes,
+    // because the tail is long-tail single actives and opaque brand codes.
+    //
+    // The supplement-shaped count per value is the discriminating measure, not the row
+    // count: a value is USEFUL when it is nearly all supplements or nearly none, and
+    // useless when it splits down the middle.
+    for (const field of ["product_type", "merchant_category", "category_name"]) {
+      const fc = col(field);
+      if (fc < 0) { console.log(`\n  [5b] ${field}: column not requested`); continue; }
+      const filled = admitted.filter(r => (r[fc] ?? "").trim()).length;
+      const tab = new Map<string, { n: number; supp: number }>();
+      for (const r of admitted) {
+        const k = ((r[fc] ?? "").trim()) || "(empty)";
+        const e = tab.get(k) ?? { n: 0, supp: 0 };
+        e.n++;
+        if (isSupp(get(r, "product_name"))) e.supp++;
+        tab.set(k, e);
+      }
+      console.log(`\n  [5b] ADMITTED ROWS BY ${field}  (filled ${filled}/${admitted.length}` +
+                  `, ${tab.size} distinct value(s))`);
+      if (tab.size === 1) console.log("       -> SINGLE VALUE: this column cannot discriminate inside the leaf.");
+      for (const [k, e] of [...tab.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 30)) {
+        const pct = (100 * e.supp / Math.max(e.n, 1)).toFixed(0);
+        console.log("   " + String(e.n).padStart(6) + "  supp " + String(e.supp).padStart(5) +
+                    " (" + pct.padStart(3) + "%)  " + k.slice(0, 78));
+      }
+    }
   }
 }
 
