@@ -2635,6 +2635,26 @@ serve(async (req) => {
     dry_run: dryRun,
     feed_total_rows: feedRows,
     feed_fetch_ms: fetchMs,
+    // BEFORE ADDING A COUNTER HERE, APPLY THIS TEST:
+    //
+    //   A ZERO IS ONLY WORTH PRINTING IF ITS ABSENCE WOULD HAVE MEANT SOMETHING ELSE.
+    //
+    // Three recorded instances, and they separate cleanly on exactly that:
+    //
+    //   NEGATIVE  product_merge_log.saved_routines_updated is hardcoded to 0. It reads
+    //             as "checked, none found". The check does not exist, and every merge
+    //             ever run has logged that zero. Work-list item 104.
+    //   POSITIVE  on_supplements_path: 0 alongside supplements_path_unreachable: [].
+    //             The empty list is what proves the check RAN, which is what made the
+    //             inert and active states distinguishable. #268, work-list item 114.
+    //   POSITIVE  monitor-retailer-feeds returns delivery_unknown: 0 in its all_healthy
+    //             payload rather than omitting the field. An absent field and a zero
+    //             field are different claims: absent means nobody asked, zero means
+    //             somebody asked and the answer was none. Work-list item 131.
+    //
+    // So: if the counter can only ever be zero, it is decoration. If a reader could not
+    // otherwise tell whether the code path ran, print it — and if the answer depends on
+    // a list being empty rather than a number being zero, print the list too.
     counts: {
       excluded_path_not_in_scope: countExcludedPathNotInScope,
       excluded_by_category: countExcluded,
