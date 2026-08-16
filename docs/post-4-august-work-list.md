@@ -10627,8 +10627,71 @@ it invisibly.
 3. **`updateActions` carries `subcategory` (and `top_category`) so re-filing propagates.**
    Without this the feature is a backfill with extra steps.
 
-**Part 3 is a change to the hot path**, so it needs the same care as the coalesce work: it
-makes every import a potential recategoriser, and a bad map would then move products every
-night rather than once. **Land 1 and 2, backfill, measure, and only then decide on 3** — but
-record now that stopping at 2 is choosing a one-off.
+#### PART 3 IS A DECISION, NOT A DEFAULT — AND HERE IS WHAT IT COSTS
+
+**Recorded as a framing rather than a recommendation, because the framing is the part that
+survives.**
+
+> **Stopping at part 2 is CHOOSING a one-off.** It is not a smaller version of the feature
+> and it is not "part 3 later" unless someone writes down that it is. An importer that reads
+> the retailer's taxonomy on CREATE only files new products correctly and **never corrects an
+> existing one**, so the mapping is right on the day it ships and drifts silently from then
+> on. If Boots re-files a product tomorrow, nothing sees it. **That is a legitimate choice.
+> It is not a default, and it must not become one by nobody deciding.**
+
+**What part 3 costs, stated so the decision is made against it rather than against nothing:**
+
+- **Every import becomes a potential recategoriser.** Today categorisation is written once,
+  at creation, so a bad rule mis-files new rows and leaves the catalogue alone. With
+  `updateActions` carrying `subcategory`, **a bad map moves products every night rather than
+  once**, across the whole retailer, silently, on the schedule.
+- **The map has never run against live data.** It is derived from one read-only feed
+  measurement. Extending the hot path to trust it before it has produced a single import is
+  the same order of risk as the coalesce work took, without the coalesce work's evidence.
+- **The failure is quiet.** A mis-filed subcategory produces a page that renders, sells and
+  ranks. There is no error, no alert and no count that goes wrong — the same property that
+  let the medicines sit inside the 1,715.
+
+**So the sequence is the one everything else took: land it inert, backfill, read one cycle,
+then decide.** Part 1 is applied (migration `20260816140000`, both columns NULL for all 15
+retailers, CHECK enforcing the pair). Part 2 is the importer read. **Part 3 is deferred with
+its cost written down, which is the difference between deferring and forgetting.**
+
+#### THE SPORTS HALF OF THE MAP CANNOT BE ADOPTED — MEASURED 16 AUGUST
+
+**The tension above resolved, and against the mapping.** feed-diag run 31950328936, section
+5b `sport` column and section 5c:
+
+| `product_type` node | rows | sports-token rows |
+|---|---:|---:|
+| Health & Pharmacy > Medicines & Treatments | 607 | **142** |
+| Health & Pharmacy > Lifestyle & Wellbeing | 405 | **98** |
+| **… > Active Nutrition** (+ Protein Powder) | 92 | **75** |
+
+> **THE NODE NAMED FOR SPORTS HOLDS 22% OF THE SPORTS POPULATION.** A map that routes
+> `Active Nutrition` to sports would capture 75 rows and miss roughly 240.
+
+**And the rows elsewhere are not token false positives.** Section 5c prints them:
+`Applied Nutrition Creatine Monohydrate`, `C4 Original Pre-Workout`, `Xtend Original BCAA`
+and `Phizz … Hydration, Electrolytes` under **Medicines & Treatments**;
+`Optimum Nutrition Gold Standard 100% Whey`, `Myprotein Clear Whey` and
+`Liquid IV Hydration Multiplier` under **Lifestyle & Wellbeing**. These are unambiguous
+sports nutrition, filed by Boots under two nodes that are not about sport.
+
+**Boots files Phizz hydration under Medicines and Liquid IV hydration under Lifestyle — the
+same product class, two different parents.** So the retailer is not merely coarse here, it is
+*inconsistent*, and where hydration belongs is a decision to make rather than one to read
+off.
+
+> **THIS IS THE HONEST LIMIT OF ITEM 125's FINDING, AND IT BELONGS NEXT TO IT.** The
+> retailer's taxonomy beat our inference on out-of-scope detection and on the named
+> subcategories, comprehensively. **It loses on sports.** "Their taxonomy beats our
+> inference" is true of a question, not of a retailer, and the second half of that sentence
+> is the part that stops it becoming a slogan.
+
+**Consequence for the set:** group A (health and beauty supplements) can be mapped from
+`product_type` now. **Group B (sports) cannot**, and needs either a name rule scoped INSIDE
+the mapped nodes — safe, because the population is bounded — or a decision from Robbie about
+where hydration sits. **Do not adopt half a map and describe it as derived from the
+retailer's taxonomy.**
 
