@@ -418,6 +418,40 @@ function isOnSupplementsPath(categoryPath: string, prefixes: string[]): boolean 
   return prefixes.some((p) => haystack.startsWith(p.toLowerCase()));
 }
 
+// PART 2 of the retailer-taxonomy subcategory work. Work-list items 125, 126, 140, 142.
+//
+// Files a row's subcategory from the RETAILER'S OWN taxonomy column
+// (`subcategory_source_field`) instead of from our name inference, by longest-prefix
+// match against `subcategory_prefix_map`. Both columns are NULL for every retailer, so
+// this returns null for every row until one is deliberately configured.
+//
+// LONGEST PREFIX WINS, and that is the whole reason this is prefix matching and not an
+// exact lookup: Boots ships 88 distinct product_type values inside one leaf, 58 of which
+// hold 120 rows between them. A deep tail inherits from its mapped parent, so the map
+// does not have to enumerate every value and does not break on the next one the retailer
+// invents. Exact matching would drop the tail on the floor silently.
+//
+// A NULL SUBCATEGORY ON A MATCHED ENTRY IS A MEASUREMENT, NOT AN EXCLUSION. Entries like
+// `Beauty & Skincare > Makeup` exist to say "this prefix is deliberately out of scope",
+// and they are COUNTED AND REPORTED AND NOTHING ELSE. Whether an out-of-scope match should
+// remove the row is part 3 and is a separate decision — see item 142. Stated here because
+// item 135 trap 2 is exactly this: a mechanism that looks like it does something.
+type SubcategoryMapEntry = { prefix: string; subcategory: string | null };
+function matchSubcategoryPrefix(
+  value: string,
+  map: SubcategoryMapEntry[],
+): { matched: boolean; subcategory: string | null; prefix?: string } {
+  if (map.length === 0 || !value) return { matched: false, subcategory: null };
+  const haystack = value.toLowerCase();
+  let best: SubcategoryMapEntry | undefined;
+  for (const e of map) {
+    if (!haystack.startsWith(e.prefix.toLowerCase())) continue;
+    if (!best || e.prefix.length > best.prefix.length) best = e;
+  }
+  if (!best) return { matched: false, subcategory: null };
+  return { matched: true, subcategory: best.subcategory ?? null, prefix: best.prefix };
+}
+
 // Name filter: returns true if any exclude string appears (case-insensitive)
 // in the product name. Used for retailers whose feeds don't populate
 // merchant_product_category_path (e.g. Stylevana).
@@ -634,6 +668,47 @@ serve(async (req) => {
       JSON.stringify(supplementsPathUnreachable),
     );
   }
+  // PART 2: the retailer's own taxonomy as the subcategory source. Items 125, 126, 140, 142.
+  //
+  // A DB CHECK (retailer_subcategory_map_pair) already makes a half-configured retailer
+  // impossible, so the pair cannot arrive broken from the table. It is re-checked here
+  // anyway because the CHECK constrains the ROW and this code constrains the RUN, and a
+  // future caller with a hand-built config object does not go through the table at all.
+  const subcategorySourceField: string | null =
+    typeof config.subcategory_source_field === "string" && config.subcategory_source_field
+      ? config.subcategory_source_field
+      : null;
+  const subcategoryPrefixMap: SubcategoryMapEntry[] = Array.isArray(config.subcategory_prefix_map)
+    ? (config.subcategory_prefix_map as SubcategoryMapEntry[]).filter(
+        (e) => e && typeof e.prefix === "string" && e.prefix.length > 0,
+      )
+    : [];
+  // Item 91's rule: EITHER ALONE IS A SILENT NO-OP, so say so rather than behaving like a
+  // correct inert deploy. A source field with no map classifies nothing; a map with no
+  // source field has nothing to read.
+  const subcategoryMapHalfSet =
+    (subcategorySourceField !== null) !== (subcategoryPrefixMap.length > 0);
+  if (subcategoryMapHalfSet) {
+    console.warn(
+      `[config] subcategory_source_field and subcategory_prefix_map must be set TOGETHER. ` +
+      `source_field=${JSON.stringify(subcategorySourceField)}, ` +
+      `map_entries=${subcategoryPrefixMap.length}. Feature OFF for this run.`,
+    );
+  }
+  const subcategoryMapEnabled =
+    !subcategoryMapHalfSet && subcategorySourceField !== null && subcategoryPrefixMap.length > 0;
+  // Resolved against the feed's header row once it is parsed, below. -1 until then, and
+  // -1 also means "configured column is not in this feed", which turns the feature OFF
+  // rather than falling back to name inference silently. FAILING CLOSED IS THE POINT:
+  // the column's own comment says this MUST NOT be satisfied by a name rule, because a
+  // fallback would reintroduce the inference this replaces and nothing would say so.
+  let subcategorySourceIdx = -1;
+  let countSubcategoryFromMap = 0;      // matched, mapped to a real subcategory
+  let countSubcategoryMapOutOfScope = 0; // matched a deliberately-null entry (MEASUREMENT ONLY)
+  let countSubcategoryMapUnmatched = 0;  // value present, no prefix matched
+  let countSubcategoryMapSourceEmpty = 0; // source column blank on this row
+  const subcategoryMapBreakdown: Record<string, number> = {};
+
   // REASSIGNMENT DETECTOR, count-log-and-write. Opt-in per retailer, default off.
   // A merchant that reassigns an external_product_id from one product to another
   // silently repoints tier 0: the row keeps its product_id and its (COALESCEd)
@@ -1554,6 +1629,24 @@ serve(async (req) => {
     };
   }
 
+  // PART 2: resolve the configured taxonomy column against THIS feed's header row.
+  //
+  // BY NAME, DIRECTLY, AND NEVER THROUGH coalesceField. Item 142: product_type is already
+  // wired as `category_name_alt`, i.e. the fallback for `category_name` — and on Boots
+  // category_name is 100% filled with the single constant "Health", so that fallback is
+  // unreachable by construction. coalesceField ranks by PRESENCE, not by INFORMATION.
+  // Routing this through it would reproduce the shadowing and produce a clean zero.
+  if (subcategoryMapEnabled && subcategorySourceField) {
+    subcategorySourceIdx = columns.indexOf(subcategorySourceField);
+    if (subcategorySourceIdx === -1) {
+      console.warn(
+        `[config] subcategory_source_field ${JSON.stringify(subcategorySourceField)} is NOT ` +
+        `a column in this feed. Columns: ${JSON.stringify(columns)}. Subcategory mapping ` +
+        `OFF for this run — deliberately NOT falling back to name inference.`,
+      );
+    }
+  }
+
   // Helper for Google Shopping format: parse "1.59 GBP" → 1.59
   // Also handles plain numeric strings (legacy AWIN format).
   function parsePrice(raw: string): number {
@@ -2384,6 +2477,38 @@ serve(async (req) => {
       finalTags = [topCategoryDefault, ...cat.tags.slice(1)];
     }
 
+    // PART 2: file the subcategory from the retailer's own taxonomy where the map says so.
+    //
+    // CREATES ONLY, because categorisation in this importer has ALWAYS been creates-only:
+    // updateActions and linkActions do not write tags/top_category/subcategory (items 105,
+    // 125). That is what makes product_exclusions durable and it is what makes THIS
+    // durable too — but it also means this change does NOTHING for the 1,771 rows already
+    // in the table. Those need the backfill. A run that reports zero here on an existing
+    // retailer is reporting "no new products", not "the map did nothing".
+    let finalSubcategory: string | null = cat.subcategory;
+    if (subcategoryMapEnabled && subcategorySourceIdx !== -1) {
+      const sourceValue = (fields[subcategorySourceIdx] || "").trim();
+      if (!sourceValue) {
+        countSubcategoryMapSourceEmpty++;
+      } else {
+        const hit = matchSubcategoryPrefix(sourceValue, subcategoryPrefixMap);
+        if (!hit.matched) {
+          countSubcategoryMapUnmatched++;
+        } else if (hit.subcategory === null) {
+          // Deliberately out of scope. COUNTED AND REPORTED, AND NOTHING ELSE — the row is
+          // still created and still keeps its inferred subcategory. Removing it is part 3.
+          countSubcategoryMapOutOfScope++;
+          subcategoryMapBreakdown[`out_of_scope|${hit.prefix}`] =
+            (subcategoryMapBreakdown[`out_of_scope|${hit.prefix}`] || 0) + 1;
+        } else {
+          finalSubcategory = hit.subcategory;
+          countSubcategoryFromMap++;
+          subcategoryMapBreakdown[hit.subcategory] =
+            (subcategoryMapBreakdown[hit.subcategory] || 0) + 1;
+        }
+      }
+    }
+
     countCreateNew++;
     // Brand restriction: if existing_brands_only is on, skip products from
     // brands we don't already track.
@@ -2433,7 +2558,7 @@ serve(async (req) => {
       category: cat.product_type,         // backwards compat (auto-sync trigger reads this)
       product_type: cat.product_type,
       top_category: finalTopCategory,
-      subcategory: cat.subcategory,
+      subcategory: finalSubcategory,
       tags: finalTags,
       canonical_size: canonicalSize,
       shade: shade,
@@ -2667,6 +2792,28 @@ serve(async (req) => {
       v6_excluded: countV6Excluded,
       on_supplements_path: countOnSupplementsPath,
       supplements_path_unreachable: supplementsPathUnreachable,
+      // PART 2, and it passes the test above the same way on_supplements_path does: the
+      // NUMBERS are all zero on an inert run and would also be zero on a broken one, so
+      // the number alone is decoration. `subcategory_map_source` is what carries the
+      // information — it takes four distinguishable values and a reader can tell which:
+      //   null              feature off, nothing configured        (inert, expected today)
+      //   "half-set"        one of the pair set, the other not     (the item 91 no-op)
+      //   "<col>:not-in-feed"  configured column absent from the header row
+      //   "<col>"           resolved and read
+      // Without it, "0 rows mapped" cannot be told apart from "never looked".
+      subcategory_map_source: !subcategorySourceField
+        ? (subcategoryMapHalfSet ? "half-set" : null)
+        : subcategoryMapHalfSet
+          ? "half-set"
+          : subcategorySourceIdx === -1
+            ? `${subcategorySourceField}:not-in-feed`
+            : subcategorySourceField,
+      subcategory_map_entries: subcategoryPrefixMap.length,
+      subcategory_from_map: countSubcategoryFromMap,
+      subcategory_map_out_of_scope: countSubcategoryMapOutOfScope,
+      subcategory_map_unmatched: countSubcategoryMapUnmatched,
+      subcategory_map_source_empty: countSubcategoryMapSourceEmpty,
+      subcategory_map_breakdown: subcategoryMapBreakdown,
       would_update_existing: countUpdate,
       would_link_to_existing_product: countLinkExisting,
       skipped_shade_variant: countSkippedShadeVariant,

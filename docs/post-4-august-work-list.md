@@ -11803,3 +11803,288 @@ Atelier ships **zero** curated redirects, so the four-path gate check could not 
 > silently turns a four-path standard into a three-path one without anyone deciding, and the
 > next reader cannot tell the difference between "not applicable" and "not run".
 
+
+
+---
+
+### 140. The bound was the node, and the node holds 23 per cent
+
+**Raised:** 16 August 2026, enumerating all 88 `product_type` values before building mapping
+part 2 · **WITHDRAWS an argument made in item 128 and repeated in the part 1 column comment.**
+**Robbie's withdrawal, stated here rather than left implied by the code.**
+
+#### THE ARGUMENT BEING WITHDRAWN
+
+Item 128 filed hydration as sports and justified the name rule that does the filing like this:
+
+> *the name rule that files it is **bounded by the taxonomy***
+
+That was the whole safety case for group B. A name rule is a blunt instrument, and the answer
+to "why is a blunt instrument acceptable here" was **"because it only runs inside Active
+Nutrition"** — a node of about 92 rows. A wrong match could only be wrong about a sports
+product.
+
+**Measured against all 88 values, that is false.** Sports-token rows, of **353** total:
+
+| node | sport rows | share |
+|---|---:|---:|
+| `Health & Pharmacy > Medicines & Treatments` *(bare)* | 142 | 40% |
+| `Health & Pharmacy > Lifestyle & Wellbeing` *(bare)* | 98 | 28% |
+| `Health & Pharmacy > Lifestyle & Wellbeing > Active Nutrition` (+2 children) | **80** | **23%** |
+| `Health & Pharmacy > Vitamins & Supplements` tree | 10 | 3% |
+| `Wellness > Sports Nutrition` + `Wellness > Food & Drink` | 6 | 2% |
+| everything else | 17 | 5% |
+
+> **77 PER CENT OF THE SPORTS POPULATION SITS OUTSIDE ACTIVE NUTRITION, AND 68 PER CENT SITS
+> IN THE TWO BARE PARENTS.** The bound is not 92 rows. **The bound is 1,771 rows — the whole
+> leaf.** Group B is a name rule over the entire supplements catalogue, and always was.
+
+#### THE CONSEQUENCE FOR WHAT SHIPS
+
+**Group B does not ship with parts 1 and 2.** Group A comes from the taxonomy and carries the
+taxonomy's risk. Group B comes from a name rule over 1,771 rows and carries a different risk,
+which now has to be argued on its own terms rather than inherited from a node boundary that
+does not exist.
+
+They were going to ship together because they were designed together. **Designed together is
+not the same as bounded together**, and the only thing that made them look alike was that one
+sentence.
+
+#### WHY THE WRONG BOUND SURVIVED
+
+The node is *named for the thing*. `Active Nutrition` is where sports nutrition obviously
+lives, so the question "how much of it is in there" reads as answered by the name. It was
+never asked until the full enumeration made it cheap to ask.
+
+**And the top-30 view actively supported the error.** Active Nutrition is the third-largest
+node; the rows contradicting it are spread across a 58-value tail that a truncated list did
+not show. The evidence for the bound was visible and the evidence against it was below the
+fold.
+
+> **A NODE NAMED FOR A CLASS IS NOT EVIDENCE THAT IT CONTAINS THE CLASS.** It is evidence
+> that the retailer has somewhere to put it, which is a different claim and a much weaker one.
+
+#### THE SHAPE, WHICH IS NOT NEW
+
+This is item 132 from the inside. There, proximity to a constraint conferred the appearance
+of one. Here, **a name confers the appearance of a boundary** — and the name was ours to
+check, in a column we had already downloaded.
+
+---
+
+### 141. Item 79 arrived inside the rule written to apply item 79
+
+**Raised:** 16 August 2026, measuring the group B rule against the corpus before quoting it ·
+**Fourth instance of item 79's class, and the sharpest of the four.**
+
+#### THE INSTANCE
+
+Item 79, defect 1, in its own words:
+
+> **`\bprotein\b` does not match "Myprotein"** — no word boundary inside the brand name
+
+The group B rule drafted this week, to file sports products, used `\yprotein\y` — the Postgres
+spelling of the same expression. Measured on the 1,632-row Boots supplements corpus:
+
+| pattern | matches |
+|---|---:|
+| `\yprotein\y` *(word-boundary, case-insensitive)* | **67** |
+| `protein` *(substring)* | **96** |
+
+**27 "Myprotein" rows missed. The same token. The same brand. The same defect.**
+
+Two more found in the same measurement:
+
+- **13 hydration rows missed** — `\yhydration\y` does not match *"Revival Rapid
+  **Rehydration** – Electrolyte Powder"*. Needs the stem `hydrat`, not the word.
+- **"Vital Proteins" missed** — plural. Needs `proteins?`.
+
+#### WHY THIS IS THE SHARPEST OF THE FOUR
+
+Item 79's third defect was introduced by the fix for its first two — bad enough, and the
+reason the item exists. **This is worse:**
+
+| | instance | what was known at the time |
+|---|---|---|
+| 1 | `\bprotein\b` vs Myprotein | nothing; this is where the class was discovered |
+| 2 | `\btoner\b` vs "Toner250 ml" | nothing; found in the same pass |
+| 3 | `\b(&\|and)\s+cream` | defects 1 and 2, diagnosed an hour earlier, in the fix for them |
+| **4** | **`\yprotein\y` vs Myprotein** | **item 79 itself, written down, open on the desk, naming this exact token as its first example** |
+
+> **THE ITEM DID NOT PREVENT ITS OWN RECURRENCE, AND IT NAMED THE TOKEN.** Not a similar
+> token, not the same class in a new place — *Myprotein*, the literal example in the literal
+> row of the table.
+
+**So the failure is not knowledge.** The knowledge was written, filed, indexed and adjacent.
+The failure is that **a written rule is a thing you consult, and nothing in the act of writing
+a regex prompts you to consult it.** Item 79's remedy — *measure every regex against the
+corpus* — is correct and was not applied, because applying it requires remembering to, and the
+moment a regex looks right is exactly the moment it stops feeling like it needs measuring.
+
+#### WHAT ACTUALLY CAUGHT IT
+
+Not review, not recall. **Robbie asking for the rule to be measured before it was quoted.**
+The instruction that catches this class is procedural, not intellectual: *the rule is not
+quoted until it has been run.*
+
+> **A REGEX IS NOT A CLAIM UNTIL IT HAS BEEN MEASURED; UNTIL THEN IT IS A DRAFT.** Item 79
+> says this already. The fourth instance says that saying it is not enough.
+
+---
+
+### 142. Richer in distinct values, not richer where the mass is
+
+**Raised:** 16 August 2026, mapping part 2 · **Confirms the 57 per cent ceiling from item 125
+by a second, independent route.**
+
+#### THE CEILING SURVIVED THE CHANGE OF COLUMN
+
+Part 1 hit a limit: `merchant_product_category_path` could not resolve a subcategory for 57%
+of Boots' supplements. `product_type` was the answer to that — a second, richer taxonomy the
+importer was not using.
+
+It **is** richer, on the measurement that first suggested it:
+
+| column | distinct values inside the supplements leaf | fill |
+|---|---:|---:|
+| `merchant_category` | **1** (`Health & Beauty`) | 100% |
+| `category_name` | **1** (`Health`) | 100% |
+| `merchant_product_category_path` | several | 100% |
+| **`product_type`** | **88** | **100%** |
+
+And it lands in the same place:
+
+> **1,012 of 1,771 rows — 57.1% — sit on a BARE TWO-SEGMENT PARENT with no child beneath
+> it.** `Health & Pharmacy > Medicines & Treatments` (607) and `Health & Pharmacy > Lifestyle
+> & Wellbeing` (405). Same ceiling, different column, arrived at independently.
+
+**That the two figures coincide is not a coincidence, and it is not a bug either.** Both
+columns are describing the same catalogue, and **the catalogue is what is thin.** Boots has
+not filed the majority of its supplements below two levels in *any* of its four taxonomy
+columns. No amount of picking a better column fixes that, because there is no better column —
+there is a shop that did not file the rows.
+
+> **A SECOND TAXONOMY IS NOT A SECOND OPINION. It is the same shop filing the same rows
+> again**, and where the first one stopped, the second tends to stop too.
+
+#### WHAT THE MAP IS WORTH — AND A CORRECTION MADE BY MEASURING IT
+
+I first wrote, in this item: *"the map buys the other 43%"*. **Then I ran the map against all
+88 values, and 43% is the ceiling, not the delivery:**
+
+| outcome | rows | share |
+|---|---:|---:|
+| a **specific** subcategory | **306** | 17% |
+| `general` — matched, but only to a bare parent | **1,330** | 75% |
+| deliberately out of scope (null entry) | 133 | 8% |
+| **left unmatched on purpose** (`Pregnancy & Maternity`) | 2 | — |
+
+The gap between 43% and 17% is **inheritance working as designed**: longest-prefix means an
+unmapped child falls back to its mapped parent, so `Medicines & Treatments > Footcare` lands
+on `general` along with the 607 bare rows above it. Those children are real values, and they
+are real *medicine* categories with no supplement subcategory to map them to. The taxonomy
+distinguishes them; **the target vocabulary does not**.
+
+> **57% IS A CEILING ON WHAT THE COLUMN CAN DISTINGUISH. IT IS NOT A FORECAST OF WHAT A MAP
+> WILL DELIVER.** The delivery depends on the map, and the map is bounded by the subcategory
+> set on the other side of it.
+
+**This is item 139's shape for the third time today** — there, a departing retailer's
+contribution was reported as the index's loss. Here, a column's discriminating power was
+reported as the map's output. **Both times the smaller number was the answer, and both times
+the larger one was the one that had already been said out loud.**
+
+What is genuinely bought: **306 rows** filed by the retailer instead of by our name inference,
+plus a **clean out-of-scope test for 133 rows** under `Beauty & Skincare`, `Toiletries`,
+`Electrical`, `Gift` and `Sun & Holiday` that no name rule was ever going to find.
+
+**That is worth having and it is not what a taxonomy promised.** The pitch for reading
+`product_type` was "the retailer already filed the row, so stop guessing". True for 17% of
+them. For three rows in four the retailer filed it into a two-word bucket and we are guessing
+exactly as much as before, with a better-looking source.
+
+> **THE TRAP FOR THE NEXT READER IS A ZERO.** `product_type` is 100% filled, so a map over it
+> leaves **no residual and no unclassified count**. It is *residual-free and thin at the same
+> time*. Anyone measuring this by "how many rows failed to map" gets zero and concludes it
+> worked completely. **The measurement that matters is how many landed on a bare parent, and
+> nothing computes it unless asked.**
+
+#### AND THE COLUMN WAS NOT UNREAD — IT WAS SHADOWED
+
+I described `product_type` as "a column the importer never reads". **That is wrong, and the
+truth is worse.** `import-awin-feed/index.ts:1545` parses it:
+
+```
+category_name:     columns.indexOf("category_name"),
+category_name_alt: columns.indexOf("product_type"),
+```
+
+It is wired as the **fallback** for `category_name`, resolved by `coalesceField`, which takes
+the alt only when the primary is empty. On Boots `category_name` is **100% filled** — with the
+single constant `"Health"`.
+
+> **THE FALLBACK IS UNREACHABLE BY CONSTRUCTION.** Not disabled, not forgotten — permanently
+> shadowed by a column that is always present and always says nothing.
+
+And even if it were reached, `categoryName` feeds only `isExcludedCategory()` — a denylist —
+and two diagnostics. **It has never been on the path to a subcategory at all.**
+
+> **`coalesceField` RANKS BY PRESENCE, NOT BY INFORMATION.** Given a constant that is always
+> filled and a taxonomy that is always filled, it picks whichever was named first. **A
+> coalesce is a fallback for missing data; it is not a preference for better data, and it
+> reads exactly like one.**
+
+This is why part 2 resolves `subcategory_source_field` to a **named raw column, directly** —
+never through the coalesce. Going through it would have reproduced the shadowing.
+
+---
+
+### 143. A question reported inapplicable, kept as a prediction
+
+**Raised:** 16 August 2026, mapping part 2 · **Method note plus one decision that is not mine.**
+
+#### THE QUESTION THAT COULD NOT BE ANSWERED
+
+*What do the 51 `product_exclusions` rows do under the map?*
+
+**It cannot be answered today, and the reason is the change itself:** `product_type` is not
+stored anywhere, because the importer does not read it — which is the entire point of part 2.
+There is no column to join the 51 excluded ids to. Reported as **inapplicable, not omitted**,
+per item 139's standard.
+
+**A near-miss worth naming:** the map suppresses exactly **51 rows** under
+`Beauty & Skincare > Makeup` (18), `> Nails` (15), `> Lips` (7) and
+`Toiletries > Bathroom Essentials` (11). `product_exclusions` holds exactly **51 ids**. These
+are **different 51s** — one is a feed-side count of admitted rows, the other a list of primary
+keys — and the coincidence is close enough to have been reported as a match by anyone reading
+one line of output.
+
+#### THE PREDICTION, WRITTEN DOWN BEFORE THE BACKFILL
+
+From the node names, by inference and not by measurement:
+
+> **The map catches a LARGER cosmetics class than the worked list mostly missed, and leaves
+> the medicines and devices the worked list was BUILT for. Both mechanisms are needed;
+> neither makes the other redundant.**
+
+Specifically: about **6** of the 51 exclusions are plausibly inside the suppressed nodes (two
+bronzing-drops rows, a brow tint, a setting powder, two lip products). The other ~45 — nine
+medicines, thirteen devices and test kits, five veterinary, the massage oils — sit under
+`Medicines & Treatments`, `Lifestyle & Wellbeing` and `Lifestyle & Wellbeing > Pet Supplies`,
+**all of which group A keeps**.
+
+**The backfill settles this in one query.** Recording the prediction first, so that the query
+either confirms it or contradicts it, rather than being read in whichever direction the result
+points.
+
+#### ONE NODE GOES TO ROBBIE, NOT TO A RULE
+
+`Baby & Child > Pregnancy & Maternity` — **2 rows.**
+
+**Prenatal vitamins are supplements. Baby kit is not. The node name does not say which**, and
+neither does anything else in the feed. Every other one of the 88 values resolves by prefix;
+this one resolves by looking at two products.
+
+> **Two rows is small enough that a rule costs more than a person, and ambiguous enough that a
+> rule would be a guess wearing a prefix.** It is not blocked on anything and it is not going
+> in the map until it is answered.
