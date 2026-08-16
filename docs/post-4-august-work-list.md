@@ -12755,3 +12755,112 @@ Three instances is enough to name a pattern and not enough to design the check t
 the luck. **Recorded so that the next instance is the fourth and not the first**, which is the
 same reason item 79 exists — and item 141 is today's evidence that recording alone does not
 prevent recurrence.
+
+
+---
+
+### 148. Men's health is 30 because Boots stocks 30, and the asymmetry runs the other way
+
+**Raised:** 16 August 2026, Robbie asking whether `mens-health` at 30 was a fact about the
+catalogue or an artefact of Boots' filing · **Measured two independent ways.**
+
+#### THE ANSWER: IT IS A FACT ABOUT THE CATALOGUE
+
+Two methods that share no inputs — Boots' own taxonomy, and a name rule built from the corpus:
+
+| | men's | women's | ratio |
+|---|---:|---:|---:|
+| in the retailer's own gendered nodes | **32** | **130** | 4.1 : 1 |
+| matching a name rule | **38** | **127** | 3.3 : 1 |
+| in **both** | 24 | 68 | 2.8 : 1 |
+| **union — anything either method calls it** | **46** | **189** | 4.1 : 1 |
+
+> **THE MOST GENEROUS POSSIBLE COUNT IS 46.** Every definition, including the union of two
+> methods that disagree with each other, lands between 32 and 46. **The floor is 100. Men's
+> health would have to more than double to reach it**, so no plausible measurement error
+> changes the decision.
+
+**The floor was not applied to a mismeasured number.** 30 was low by a few and the answer is
+the same at 46.
+
+#### AND THE HYPOTHESIS IS NOT SUPPORTED — THE DISPERSION RUNS THE OTHER WAY
+
+The question was whether Boots files men's products into general nodes while women's get a
+dedicated one. Measured:
+
+| | filed OUTSIDE its own gendered nodes | |
+|---|---:|---:|
+| men's name-shaped rows | 14 of 38 | **37%** |
+| women's name-shaped rows | 59 of 127 | **46%** |
+
+> **WOMEN'S PRODUCTS ARE DISPERSED MORE, NOT LESS.** Both populations are scattered across
+> `Medicines & Treatments` and `Lifestyle & Wellbeing`; women's is scattered slightly harder.
+> **Boots does not under-file men's health. It under-stocks it.**
+
+**A worked example pointing the opposite way to the hypothesis:** *New Leaf Tribulus
+Terrestris 6000mg* — a testosterone booster — is filed by Boots under
+`Health & Pharmacy > Women's Health > Women's Vitamins & Supplements`.
+
+Men's rows Boots files outside its men's nodes include both *Health & Him Andropause*
+products, *Prostaguard*, *For Dad Paternal Support* and *Ova him Sperm Support* — under
+`Medicines & Treatments` — and both *Wellteen Him* products under `Baby & Child Health`, which
+is defensible: they are teenagers' multivitamins.
+
+#### THE FINDING UNDERNEATH: SIZE AGREES, MEMBERSHIP DOES NOT
+
+The two methods agree on **scale** and disagree on **rows**:
+
+| | size | overlap |
+|---|---|---:|
+| women's: taxonomy 130 vs name 127 | **2% apart** | **68 — barely half** |
+| men's: taxonomy 32 vs name 38 | 16% apart | 24 |
+
+> **ITEM 146 AT THE LEVEL OF A CATEGORY RATHER THAN A QUERY.** There, a paginated read
+> returned the right total from the wrong rows. Here, two independent classifications return
+> nearly the same total from substantially different sets. **A number that reproduces under a
+> second method is not thereby confirmed** — it can reproduce because both methods are
+> measuring a real population of that size while disagreeing about who is in it.
+
+The 49 rows in `womens-health` that no name rule would pick are the retailer's *merchandising*
+judgement, not a clinical one: evening primrose oil, Sambucol immune liquid, omega-3, Revive
+Active. **Boots' Women's Health node is a shelf, not a definition.** That is a legitimate thing
+for a retailer to have and it is not the same object our subcategory claims to be — which is
+worth knowing about a page we have just published.
+
+#### ITEM 79, FIFTH INSTANCE, IN THE PARAMETER OF THE MEASUREMENT COMMISSIONED TO AVOID IT
+
+The brief said *measure before quoting, per item 79 — the token list is exactly the kind that
+misses on plurals and compounds.* Four token defects fired during this measurement:
+
+| | defect | direction |
+|---|---|---|
+| 1 | substring `men` matches **supple*men*t**, **wo*men***, **regi*men*** | over-match |
+| 2 | substring `men's` matches **Wo*men's*** | over-match |
+| 3 | `\ymen\y` misses **Well*man***, **Osavi ... *Man***, **Nourkrin *Man*** | under-match |
+| 4 | women's list omitted `female` **while the men's list used `\ymale\y`** | asymmetric |
+| **5** | **`Men's Health` matches `Women's Health`** — **in the node parameter I passed to run this very cross-tab** | over-match |
+
+Defect 5 reported **132 rows in "the taxonomy's men's nodes"**. The true figure is **32.** It
+was caught only because 132 was implausible against a 13-row node.
+
+> **THE MEASUREMENT COMMISSIONED SPECIFICALLY TO AVOID ITEM 79 CONTAINED ITEM 79, IN THE
+> ARGUMENT, ON THE FIRST RUN.** Item 141 recorded the fourth instance as the sharpest because
+> the item was open on the desk. **The fifth is sharper still: the instruction was in the
+> brief, in writing, naming the failure mode, and the defect went into the parameter anyway.**
+>
+> **`Men's Health` matching `Women's Health` is not an exotic case.** It is a substring of a
+> substring, in a two-word phrase, in a domain whose entire subject is the two categories
+> being compared.
+
+**What caught it was not care and not the item.** It was that 132 out of 1,771 was too large
+for a node the enumeration had already measured at 13. **An implausible number, checked against
+a figure that happened to be in front of me.** Item 147's pattern for the fourth time in a day.
+
+#### RECORDED AS A FACT ABOUT WHAT BOOTS STOCKS
+
+`mens-health` folded into `supplements` because it is small, and it is small because **there
+are about 30 men's health supplements in the catalogue.** Not because a taxonomy hid them, not
+because a name rule missed them, and not because a floor was applied to a bad number.
+
+**If a second supplements retailer onboards, this is one of the numbers to re-read** — a
+men's-focused retailer would move it, and nothing else on the current list will.
