@@ -904,3 +904,74 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
     }
   }
 }
+
+// === 9. NAME-COHORT × product_type CROSS-TAB =========================================
+// Takes a name regex and reports where the matching admitted rows sit in the retailer's
+// own taxonomy. Read-only.
+//
+// THE QUESTION IT EXISTS FOR is not "how big is the cohort" -- SQL answers that from the
+// catalogue. It is whether the retailer's taxonomy and a name rule pick out THE SAME ROWS,
+// which neither source can answer alone. Item 146 is the general form: two reads can agree
+// on a TOTAL and disagree on the MEMBERSHIP, and only a row-level comparison shows it.
+//
+// Measured on womens-health 16 Aug: the map produced 117 live rows and a name rule produced
+// 127, a 9% difference in size -- and they overlap on only 68. The sizes nearly agreed while
+// barely half the rows did.
+//
+// COHORT_RX is a JS regex source, case-insensitive. COHORT_EXCLUDE_RX is optional.
+{
+  const rx = process.env.COHORT_RX || "";
+  const exRx = process.env.COHORT_EXCLUDE_RX || "";
+  const label = process.env.COHORT_LABEL || "(unnamed cohort)";
+  const PREFIX = (process.env.ADMIT_PREFIX || "").split("|").map(s => s.trim()).filter(Boolean);
+  if (rx && PREFIX.length) {
+    const pathCol = col("merchant_product_category_path");
+    const ptCol = col("product_type");
+    if (pathCol < 0 || ptCol < 0) {
+      console.log("\n=== 9. NAME-COHORT CROSS-TAB — missing path/product_type column ===");
+    } else {
+      const re = new RegExp(rx, "i");
+      const exRe = exRx ? new RegExp(exRx, "i") : null;
+      const admitted = body.filter(r => { const p = (r[pathCol] ?? "").trim(); return PREFIX.some(x => p.startsWith(x)); });
+      const hits = admitted.filter(r => {
+        const n = get(r, "product_name");
+        return re.test(n) && !(exRe && exRe.test(n));
+      });
+      console.log("\n=== 9. NAME-COHORT × product_type — " + label + " ===");
+      console.log("  admitted rows:", admitted.length, " matching the name rule:", hits.length);
+      const byNode = new Map<string, number>();
+      for (const r of hits) {
+        const v = (r[ptCol] ?? "").trim() || "(blank)";
+        byNode.set(v, (byNode.get(v) ?? 0) + 1);
+      }
+      console.log("\n  WHERE THE COHORT SITS IN THE RETAILER'S TAXONOMY:");
+      for (const [k, n] of [...byNode.entries()].sort((a, b) => b[1] - a[1])) {
+        console.log("    " + String(n).padStart(4) + "  " + k);
+      }
+      // AND THE CONVERSE, which is the half a one-directional check misses: rows the
+      // taxonomy puts in the cohort's nodes that the NAME rule does not pick up.
+      const nodeRx = process.env.COHORT_NODE_RX || "";
+      if (nodeRx) {
+        const nre = new RegExp(nodeRx, "i");
+        const inNodes = admitted.filter(r => nre.test((r[ptCol] ?? "").trim()));
+        const hitSet = new Set(hits);
+        const inNodesOnly = inNodes.filter(r => !hitSet.has(r));
+        const nameOnly = hits.filter(r => !nre.test((r[ptCol] ?? "").trim()));
+        console.log("\n  MEMBERSHIP COMPARISON (not just size):");
+        console.log("    in the taxonomy's nodes      :", inNodes.length);
+        console.log("    matching the name rule       :", hits.length);
+        console.log("    BOTH                         :", inNodes.length - inNodesOnly.length);
+        console.log("    taxonomy only, name misses it:", inNodesOnly.length);
+        console.log("    name only, taxonomy files it elsewhere:", nameOnly.length);
+        console.log("\n    NAME-ONLY rows and where the retailer actually files them:");
+        for (const r of nameOnly.slice(0, 30)) {
+          console.log("      " + get(r, "product_name").slice(0, 58).padEnd(58) + " | " + (r[ptCol] ?? "").trim());
+        }
+        console.log("\n    TAXONOMY-ONLY rows the name rule does not see:");
+        for (const r of inNodesOnly.slice(0, 30)) {
+          console.log("      " + get(r, "product_name").slice(0, 58).padEnd(58) + " | " + (r[ptCol] ?? "").trim());
+        }
+      }
+    }
+  }
+}
