@@ -12150,13 +12150,24 @@ supplements, sports
 verified: `/supplements/supplements` and `/supplements/sports` both return 200,
 `/supplements/general` returns 404 today because no product carries the value.
 
-**And nothing sits between the two.** `active_category_subcategories` is
-`select distinct top_category, subcategory … where subcategory is not null`, and it drives the
-sitemap. There is no allowlist, no threshold, no `generateStaticParams`.
+**Two surfaces sit between the value and the page, and NEITHER of them is a threshold.**
 
-> **ONE PRODUCT CARRYING A NEW SUBCATEGORY VALUE PUBLISHES A URL AND PUTS IT IN THE SITEMAP.
-> WRITING THE VALUE IS PUBLISHING THE PAGE.** There is no step in between at which a thin
-> page could be declined, so the floor has to be enforced by not writing the value.
+`active_category_subcategories` is `select distinct top_category, subcategory … where
+subcategory is not null`, and it drives the sitemap. No allowlist, no threshold.
+
+There IS a render-time gate, and **I said there was not** — `SubcategoryPage` calls
+`getValidSubcategories(category)` and `notFound()`s if the slug is absent, plus a second
+`notFound()` on `stats.total_products === 0`. So a typo'd URL is refused.
+
+> **BUT THE GATE TESTS EXISTENCE, NOT SUFFICIENCY.** `getValidSubcategories` is
+> `select subcategory from products_active where top_category = $1` — every distinct value
+> that any product carries. **One product carrying a value passes the gate**, renders a page
+> and puts it in the sitemap.
+>
+> **A gate that rejects zero and accepts one is not a floor.** It is exactly strict enough to
+> catch the mistake nobody makes and exactly loose enough to miss the one this work would
+> have made. So the floor still has to be enforced by not writing the value — but the reason
+> is that the existing gate asks the wrong question, not that no gate exists.
 
 So the map does not "file 306 rows more precisely". It creates twelve URLs, one of which is
 `/supplements/general` holding **1,330 products — 75% of the category** — behind a page named
@@ -12274,6 +12285,28 @@ join loss reads as complete coverage.
 **Raised:** 16 August 2026 · **Robbie's decisions on item 144, plus the consolidated set they
 ask for.** · **Nothing applied.**
 
+#### THE NUMBER THAT MATTERS MOST HERE IS NOT ABOUT SUBCATEGORIES AT ALL
+
+| | products | with 2+ retailers | |
+|---|---:|---:|---:|
+| `supplements/supplements` | 1,517 | **32** | **2.1%** |
+| `supplements/sports` | 202 | **2** | 1.0% |
+
+**Supplements is 92% one retailer** — Boots 1,632 products, the other seven combined 132.
+
+> **A COMPARISON-DEPTH FLOOR WOULD HAVE REJECTED SUPPLEMENTS WHOLESALE**, not sized its
+> subcategories. At 2.1% even the 1,517-product page has 32 comparable rows. That is a fact
+> about the CATEGORY, not about how it is subdivided, and it was found while looking for
+> something else.
+
+**This is the number to put in front of the second supplements retailer's assessment**, and it
+is the strongest argument for onboarding one. Every other lever — a richer taxonomy, a better
+map, more subcategories — divides 1,764 products that are 98% single-sourced. **A second
+retailer changes what the category IS; nothing else on this list does.**
+
+It also reframes what today's work could ever have achieved. A subcategory page here is a
+browse page, and it was always going to be, because there is nothing to compare.
+
 #### THE DECISIONS
 
 **1. NO `/supplements/general`.** A page named for having nothing to say about 75% of the
@@ -12290,6 +12323,22 @@ where it is currently NULL or `general`, and **never where the existing value is
 than what the map produces.** Item 144's second defect, as a rule.
 
 **3. THE ELEVEN SPECIFIC VALUES ARE TOO THIN FOR ELEVEN URLs** at 306 products between them.
+
+#### THE FLOOR IS OTHERWISE UNENFORCEABLE, WHICH IS WHY DECISION 1 IS THE ONLY LEVER
+
+Recorded here rather than only in item 144, because a floor is worthless without the mechanism
+that makes it the sole point of control:
+
+- **The sitemap has no gate.** `active_category_subcategories` is a bare `DISTINCT` over
+  `products_active`.
+- **The page has a gate, and it tests existence.** `getValidSubcategories` returns every
+  distinct value any product carries; `SubcategoryPage` 404s only on an absent slug or zero
+  products.
+
+> **ONE PRODUCT CARRYING A VALUE PASSES BOTH.** A gate that rejects zero and accepts one is
+> not a floor. **There is no point downstream at which a thin page can be declined**, so the
+> floor exists only at the moment of writing the value — which is what makes decision 1 the
+> whole enforcement, not a preference.
 
 #### WHAT THE FLOOR SHOULD BE: 100 PRODUCTS
 
@@ -12325,19 +12374,8 @@ subcategory in `products_active`:
 **100, just under the smallest deliberate page.** Rounder than 113, and the gap between 100
 and 113 is smaller than the error in any of these counts.
 
-**Why the floor cannot be a comparison-depth floor**, which would otherwise be the better
-test on a comparison site:
-
-| | products | with 2+ retailers | |
-|---|---:|---:|---:|
-| `supplements/supplements` | 1,517 | **32** | 2.1% |
-| `supplements/sports` | 202 | **2** | 1.0% |
-
-**Supplements is 92% one retailer** — Boots 1,632 products, the other seven together 132. At
-2.1% comparability even the 1,517-product page has 32 comparable rows, so no supplements
-subcategory can clear a depth floor and the test would reject the category wholesale rather
-than size it. **A supplements subcategory page is a browse page**, and the floor has to be a
-browse-page floor.
+**And it cannot be a comparison-depth floor**, which would otherwise be the better test on a
+comparison site — see the 2.1% above. The floor has to be a browse-page floor.
 
 #### THE CONSOLIDATED SET
 
@@ -12378,9 +12416,17 @@ Applying a 100-product floor to the 306:
 | `supplements` | ~1,387 | **live.** The 1,330 `general` rows plus the ten sub-floor values |
 | **`womens-health`** | **130** | **new. One new URL, one new CHECK value** |
 
-**So the whole of parts 1 and 2 buys one page.** That is a real and disappointing answer and
-it is the honest one: `product_type` is 100% filled, richer than every sibling column, and it
-still resolves only one shopper-meaningful grouping above a floor the site set itself.
+#### PARTS 1 AND 2 BUY ONE PAGE
+
+Stated plainly, because softening it would be the fourth time today a number got reported as
+larger than it is.
+
+**`product_type` is 100% filled. It is richer than every sibling column — 88 distinct values
+against 1, 1 and a shallow path. It resolves ONE shopper-meaningful grouping above the site's
+own floor.** That is the whole return on parts 1 and 2 as measured in pages.
+
+Not a disappointment to be explained away and not a reason the work was wrong. It is what the
+column contains, and the only way to have known was to read it.
 
 #### WHAT IS STILL WORTH HAVING, GIVEN THAT
 
@@ -12407,3 +12453,47 @@ taxonomy worth reading.
 > **A floor derived from shipped pages stays correct as volumes change; the values that clear
 > it do not.** Re-read this when a second supplements retailer onboards or when Boots' feed
 > shifts, and re-derive the floor only if the site's own smallest deliberate page moves.
+
+#### APPLIED, AND THE GUARD FIRED THREE TIMES IN THE APPROVED BATCH
+
+`products_subcategory_check` gained `womens-health` — one value. Then the backfill:
+
+| stage | rows | lost to |
+|---|---:|---|
+| mapped by `product_type` | **130** | — |
+| joined to a stored product | **128** | 2 feed rows with no catalogue row |
+| passed both guards | **125** | 3 declines, below |
+| **live on the page** | **117** | 8 in `product_exclusions` |
+
+**130 → 117.** Item 144's "a backfill reaches only what the catalogue admitted" is not a
+caveat about some future batch; it cost 13 rows in the first one, through three different
+mechanisms, none of which is a defect.
+
+**The three declines, and none was theoretical:**
+
+| id | product | existing | why declined |
+|---|---|---|---|
+| 148826 | ORS Hydration Blackcurrant Electrolyte Tablets | `sports` | more specific than what the map produced |
+| 149612 | ORS Hydration Lemon Electrolyte Tablets | `sports` | same |
+| 24682 | **Philip Kingsley Density Preserving Scalp Drops** | `hair` / `treatment` | **not a supplement at all** |
+
+> **THE TWO ORS ROWS ARE ITEM 128 ARRIVING AS A COLLISION.** We decided hydration is sports.
+> **Boots files hydration under Women's Health.** The retailer's own taxonomy and our own
+> decision disagree about the same two products, and decision 2 resolves it in favour of the
+> existing more-specific value. Reading `product_type` does not end the argument about where
+> a row belongs; it just gives the argument a second participant.
+
+**And 24682 is a third defect, which decision 2 caught by luck.** Boots files a Philip Kingsley
+scalp treatment under `Health & Pharmacy > Women's Health` — hair loss for women. The product's
+`top_category` is `hair`. Decision 2 declined it only because `treatment` happens to be a
+specific value; **had it been NULL, the batch would have written `womens-health` onto a hair
+product and published `/hair/womens-health`.**
+
+> **DECISION 2 CONSTRAINS THE OLD VALUE AND NEVER LOOKED AT `top_category`.** A supplements
+> map has no business writing to a hair product and nothing in the rule said so. The applied
+> statement carries `AND top_category = 'supplements'` as a second guard, added before running
+> it — **and the rule generalises: a map scoped to one category must assert that scope on the
+> row, not assume it from the feed it was built on.**
+
+The category after: `supplements` 1,517 → **1,400**, `sports` **202 → 202, untouched**,
+`womens-health` **117**.
