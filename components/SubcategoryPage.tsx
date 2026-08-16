@@ -74,6 +74,10 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
   // nothing prevents that -- `supplements` became a subcategory value of `supplements`
   // without anyone deciding it should be. Same family as this morning's ${sub}
   // duplication in the article template. Work-list item 152.
+  // TWO CALL SITES, AND THE FIRST FIX ONLY CAUGHT ONE. The hero sentence was corrected and
+  // deployed while "The most stocked brands in supplements supplements." was still rendering
+  // forty lines below it. Both interpolate the same pair in the same order; only the hero was
+  // reported, so only the hero was looked at. USE scopePhrase FOR ANY NEW ONE. Item 153.
   const scopePhrase =
     subDisplay.toLowerCase() === categoryDisplay.toLowerCase()
       ? categoryDisplay.toLowerCase()
@@ -197,7 +201,7 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
           <p className="text-ink-light mb-8">
             {productType
               ? `The most stocked brands in ${productType.toLowerCase()}.`
-              : `The most stocked brands in ${subDisplay.toLowerCase()} ${categoryDisplay.toLowerCase()}.`}
+              : `The most stocked brands in ${scopePhrase}.`}
           </p>
           <div className="flex flex-wrap gap-2">
             {brands.map(brand => (
