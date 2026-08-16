@@ -12759,10 +12759,34 @@ prevent recurrence.
 
 ---
 
-### 148. Men's health is 30 because Boots stocks 30, and the asymmetry runs the other way
+### 148. Boots does not under-file men's health, it under-stocks it
 
 **Raised:** 16 August 2026, Robbie asking whether `mens-health` at 30 was a fact about the
-catalogue or an artefact of Boots' filing · **Measured two independent ways.**
+catalogue or an artefact of Boots' filing · **Measured two independent ways.** · **Settled: no
+page.**
+
+#### THE HYPOTHESIS WAS THAT BOOTS FILES MEN'S PRODUCTS INTO GENERAL NODES WHILE WOMEN'S GET A DEDICATED ONE. THE DISPERSAL RUNS THE OTHER WAY.
+
+| | filed OUTSIDE its own gendered nodes | |
+|---|---:|---:|
+| men's name-shaped rows | 14 of 38 | **37%** |
+| women's name-shaped rows | 59 of 127 | **46%** |
+
+Both populations scatter across `Medicines & Treatments` and `Lifestyle & Wellbeing`. **Women's
+scatters harder.** There is no hidden men's population sitting in general nodes, because the
+name rule looks in every node and finds 38 in total.
+
+**The counter-example points the opposite way to the hypothesis:** *New Leaf Tribulus
+Terrestris 6000mg* — **a testosterone booster** — is filed by Boots under
+`Health & Pharmacy > Women's Health > Women's Vitamins & Supplements`.
+
+> **BOOTS DOES NOT UNDER-FILE MEN'S HEALTH. IT UNDER-STOCKS IT.** The dedicated node looks
+> small because the shelf is small, and the shelf is small because the range is.
+
+Men's rows Boots files outside its men's nodes are mostly defensible: both *Health & Him
+Andropause* products, *Prostaguard*, *For Dad Paternal Support* and *Ova him Sperm Support*
+sit under `Medicines & Treatments`, and both *Wellteen Him* products under
+`Baby & Child Health` — which is correct, they are teenagers' multivitamins.
 
 #### THE ANSWER: IT IS A FACT ABOUT THE CATALOGUE
 
@@ -12783,30 +12807,7 @@ Two methods that share no inputs — Boots' own taxonomy, and a name rule built 
 **The floor was not applied to a mismeasured number.** 30 was low by a few and the answer is
 the same at 46.
 
-#### AND THE HYPOTHESIS IS NOT SUPPORTED — THE DISPERSION RUNS THE OTHER WAY
-
-The question was whether Boots files men's products into general nodes while women's get a
-dedicated one. Measured:
-
-| | filed OUTSIDE its own gendered nodes | |
-|---|---:|---:|
-| men's name-shaped rows | 14 of 38 | **37%** |
-| women's name-shaped rows | 59 of 127 | **46%** |
-
-> **WOMEN'S PRODUCTS ARE DISPERSED MORE, NOT LESS.** Both populations are scattered across
-> `Medicines & Treatments` and `Lifestyle & Wellbeing`; women's is scattered slightly harder.
-> **Boots does not under-file men's health. It under-stocks it.**
-
-**A worked example pointing the opposite way to the hypothesis:** *New Leaf Tribulus
-Terrestris 6000mg* — a testosterone booster — is filed by Boots under
-`Health & Pharmacy > Women's Health > Women's Vitamins & Supplements`.
-
-Men's rows Boots files outside its men's nodes include both *Health & Him Andropause*
-products, *Prostaguard*, *For Dad Paternal Support* and *Ova him Sperm Support* — under
-`Medicines & Treatments` — and both *Wellteen Him* products under `Baby & Child Health`, which
-is defensible: they are teenagers' multivitamins.
-
-#### THE FINDING UNDERNEATH: SIZE AGREES, MEMBERSHIP DOES NOT
+#### THE FINDING THAT TRANSFERS: SIZE AGREES, MEMBERSHIP DOES NOT
 
 The two methods agree on **scale** and disagree on **rows**:
 
@@ -12815,11 +12816,16 @@ The two methods agree on **scale** and disagree on **rows**:
 | women's: taxonomy 130 vs name 127 | **2% apart** | **68 — barely half** |
 | men's: taxonomy 32 vs name 38 | 16% apart | 24 |
 
-> **ITEM 146 AT THE LEVEL OF A CATEGORY RATHER THAN A QUERY.** There, a paginated read
-> returned the right total from the wrong rows. Here, two independent classifications return
-> nearly the same total from substantially different sets. **A number that reproduces under a
-> second method is not thereby confirmed** — it can reproduce because both methods are
-> measuring a real population of that size while disagreeing about who is in it.
+> **A NUMBER THAT REPRODUCES UNDER A SECOND METHOD IS NOT CONFIRMED BY IT.** 130 against 127
+> is 2% apart and looks like corroboration. **They overlap on 68 of 127.** Both methods are
+> measuring a real population of about that size while disagreeing about half its members.
+>
+> **ITEM 146 AT THE LEVEL OF A CATEGORY RATHER THAN A QUERY.** There, a paginated read returned
+> the right total from the wrong rows, and every aggregate check passed. Here, two independent
+> classifications return nearly the same total from substantially different sets, and
+> agreement-between-methods — normally the strongest check available — passes too.
+>
+> **The check that fails in both cases is the same one: compare the members, not the count.**
 
 The 49 rows in `womens-health` that no name rule would pick are the retailer's *merchandising*
 judgement, not a clinical one: evening primrose oil, Sambucol immune liquid, omega-3, Revive
@@ -12852,9 +12858,20 @@ was caught only because 132 was implausible against a 13-row node.
 > substring, in a two-word phrase, in a domain whose entire subject is the two categories
 > being compared.
 
-**What caught it was not care and not the item.** It was that 132 out of 1,771 was too large
-for a node the enumeration had already measured at 13. **An implausible number, checked against
-a figure that happened to be in front of me.** Item 147's pattern for the fourth time in a day.
+#### AND THE ACCOUNT OF WHAT CAUGHT IT IS THE RECORD
+
+**Not care. Not the item. Not review.**
+
+132 out of 1,771 was too large for a node the enumeration had already measured at **13**. The
+only reason that comparison happened is that the 13 was **in view** — it sat in a table
+produced hours earlier for an unrelated question, and the new number contradicted it loudly
+enough to notice.
+
+> **AN IMPLAUSIBLE NUMBER CHECKED AGAINST A FIGURE THAT HAPPENED TO BE ON THE SCREEN.** Had
+> the enumeration been run last week, or the node been 90 instead of 13, or the contaminated
+> figure been 40 instead of 132, nothing would have fired. **Item 147's pattern for the fourth
+> time in a day, and the thinnest of the four** — the other three at least had a mechanism
+> standing in the way, aimed elsewhere. This one had a coincidence of working memory.
 
 #### RECORDED AS A FACT ABOUT WHAT BOOTS STOCKS
 
@@ -12864,3 +12881,102 @@ because a name rule missed them, and not because a floor was applied to a bad nu
 
 **If a second supplements retailer onboards, this is one of the numbers to re-read** — a
 men's-focused retailer would move it, and nothing else on the current list will.
+
+
+---
+
+### 149. The page clears the floor only because the shelf is wider than its name
+
+**Raised:** 16 August 2026, after item 148 established that Boots' Women's Health node is a
+shelf rather than a definition · **`/supplements/womens-health` is LIVE with 117 products.** ·
+**Decision needed. Not taken here.**
+
+#### WHAT THE PAGE ACTUALLY CONTAINS
+
+All 117 live products, classified by what the name says:
+
+| | bucket | products |
+|---|---|---:|
+| 1 | menopause | 14 |
+| 2 | pregnancy & fertility | 11 |
+| 3 | intimate & urinary | 9 |
+| 4 | cycle & hormonal | 5 |
+| 5 | named for women, otherwise general *(multivitamins "for women")* | 36 |
+| 6 | hair, skin & nails | 5 |
+| 7 | **no gender signal at all** | **37** |
+
+**75 of 117 are women's health on any reading (1–5). 37 are not women's anything (7).**
+
+The 37 are generic supplements: turmeric, glucosamine, quercetin, reishi, shilajit, taurine,
+NAC, omega-3, vitamin C, vitamin D3, elderberry, astaxanthin, magnesium, fibre.
+
+#### AND THE MECHANISM IS BRAND SHELVING, NOT PRODUCT CLASSIFICATION
+
+The 37 are not scattered. **They cluster by brand:**
+
+| brand | in `womens-health` | brand's supplements | |
+|---|---:|---:|---:|
+| **GP Nutrition** | **11** | **11** | **100%** |
+| New Leaf | 12 | 34 | 35% |
+| botanycl | 2 | 2 | 100% |
+| Sambucol | 3 | 6 | 50% |
+| Revive Active | 3 | 7 | 43% |
+
+> **BOOTS FILES GP NUTRITION'S ENTIRE RANGE UNDER WOMEN'S HEALTH** — astaxanthin, fibre,
+> magnesium bisglycinate, omega. All eleven products, no exceptions. That is not a
+> classification decision about products; **it is a decision about where a brand sits in the
+> shop**, and every product inherits it.
+
+**This is the concrete form of "a shelf, not a definition."** New Leaf's testosterone booster
+(item 148) is on the women's shelf for the same reason: not because anyone judged it a women's
+product, but because a chunk of the New Leaf range was placed there.
+
+#### THE PART THAT WAS NOT VISIBLE WHEN THE FLOOR WAS SET
+
+| option | products | clears the 100 floor? |
+|---|---:|:---:|
+| as published today — the retailer's shelf | **117** | **yes** |
+| narrowed to explicitly women's (buckets 1–5) | **75** | **no** |
+| narrowed to the intersection of taxonomy AND name rule | **68** | **no** |
+
+> **EVERY HONEST NARROWING PUTS THE PAGE BELOW THE FLOOR SET THIS AFTERNOON.** Narrowing the
+> page and keeping the page are not compatible options. **The page qualifies as a page only at
+> its widest and least accurate definition.**
+
+**So the floor was applied to a number that is arithmetically right and semantically loose.**
+117 clears 100 — and 32% of the 117 is there because Boots shelves brands, not because the
+products are women's health. Item 148 found the men's number was low by a few and right in its
+conclusion; **this is the reciprocal — the women's number is exact and its meaning is not.**
+
+Nothing about this was visible when the floor was decided. The floor was derived from *page
+sizes*, which is the right method for "is this page big enough", and it has no way to ask
+**"is this page what it says it is"**.
+
+#### THE OPTIONS, WITH WHAT EACH COSTS
+
+**A — leave it as the retailer's shelf, with the name it has.** 117 products, live now, no
+work. The URL and `<h1>` say *Women's Health* and 37 products are elderberry and turmeric. A
+shopper landing on it from search finds a plausible page with a third of it off-topic. **Cheap,
+and the name makes a claim the contents do not support.**
+
+**B — rename it to what it is.** Keeps 117 and the floor. Requires a name that honestly covers
+"supplements Boots merchandises to women", which is what the shelf is. Every candidate is
+either vague or unsearchable, and the value of the page was that *women's health* is a term
+people search for. **Honest, and it discards the reason the page was worth having.**
+
+**C — narrow it and accept it is no longer a page.** Fold back to `supplements`, leaving
+`sports` as the only subcategory. Parts 1 and 2 then buy **zero** pages rather than one.
+**Most accurate, and it costs the whole visible return on the mapping work.**
+
+**D — narrow to 75 and lower the floor.** Not proposed. The floor was derived from eighteen
+shipped pages this afternoon and moving it to fit the first case that fails it would leave it
+meaning nothing.
+
+> **THE DECISION IS NOT WHICH IS TIDIEST. It is whether a category page on this site is
+> allowed to be A SHELF — a useful grouping the retailer already maintains — or must be A
+> DEFINITION.** Every other subcategory on the site inherits its meaning from our own
+> classifier and that question has never been asked, because until today no page took its
+> membership from a retailer.
+
+**Robbie decides. Nothing changed pending that**, and the page stays up as published — option
+A by default, which is worth naming so the default is not mistaken for a decision.
