@@ -12554,25 +12554,17 @@ enough to catch a typo'd URL and exactly loose enough to miss a one-product page
 
 ---
 
-### 146. The right count from the wrong rows, and a fix applied to one caller of two
+### 146. The right count from the wrong rows
 
 **Raised:** 16 August 2026, verifying `/supplements/womens-health` after the backfill ·
-**Found only because the verification was run.**
+**Found only because the verification was run.** · **The reconciliation trap's sharpest
+instance.**
 
-#### THE SYMPTOM: THE SAME URL, 200 AND 404, MINUTES APART
+#### THE MEASUREMENT
 
-The backfill wrote 117 live rows. The page then returned **404 twelve times, 200 once, and 404
-again** — with `x-vercel-cache: MISS` on every request, so each response was a fresh render
-against live data. Not a cache. **The render itself was nondeterministic.**
-
-#### THE CAUSE, REPRODUCED IN SQL
-
-`SubcategoryPage` calls `getValidSubcategories(category)` and `notFound()`s if the slug is
-absent. That function paginated `products_active` with `.range(offset, offset + 999)` **and no
-`.order()`**.
-
-Unordered `LIMIT`/`OFFSET` has no stability guarantee in Postgres. Running the app's exact
-two-page scan:
+`getValidSubcategories` paginated `products_active` with `.range(offset, offset + 999)` **and
+no `.order()`**. Unordered `LIMIT`/`OFFSET` has no stability guarantee in Postgres. Running the
+app's exact two-page scan against the live table:
 
 | | |
 |---|---:|
@@ -12581,14 +12573,26 @@ two-page scan:
 | `womens-health` rows seen | **102** |
 | `womens-health` rows actually present | **117** |
 
-> **THE RIGHT COUNT FROM THE WRONG ROWS.** The scan returned exactly the right number of rows
-> and 15 of them were duplicates of rows it had already seen, while 15 others were never
-> returned at all. **A total that reconciles is not evidence that a paginated read is
-> complete**, and nothing available to the caller could have shown otherwise — only comparing
-> against a SQL `DISTINCT` does.
+**15 rows came back twice. 15 others never came back at all. The totals match exactly.**
 
-A subcategory with few enough rows can miss the sample **entirely**, at which point its page
-404s. `womens-health` at 117 of 1,719 sits right on that edge, which is why it flickered
+> **EVERY AGGREGATE CHECK PASSES.** Row count reconciles. Page-size arithmetic reconciles —
+> 1,000 then 719, and 719 < 1,000 is the loop's own termination condition, so the read
+> *reports itself complete*. Sum, count, "did we get everything" — all green. **Only comparing
+> the ROWS against a SQL `DISTINCT` shows it, and nothing in the caller could have done that.**
+
+**A total that reconciles is not evidence that a paginated read is complete.** It is evidence
+that the read returned the right *number* of rows, which is a different claim and the one that
+is easy to verify — which is exactly why it gets verified instead.
+
+#### THE SYMPTOM IT PRODUCED
+
+The backfill wrote 117 live rows. The page then returned **404 twelve times, 200 once, and 404
+again** — `x-vercel-cache: MISS` on every request, so each response was a fresh render against
+live data. Not a cache. **The render itself was nondeterministic.**
+
+`SubcategoryPage` calls `getValidSubcategories(category)` and `notFound()`s if the slug is
+absent. A subcategory with few enough rows can miss the sample **entirely**, at which point its
+page 404s. `womens-health` at 117 of 1,719 sits right on that edge, which is why it flickered
 instead of failing cleanly.
 
 #### THE PART THAT MAKES IT AN ITEM: THIS BUG WAS ALREADY FOUND AND ALREADY FIXED
@@ -12604,10 +12608,30 @@ instead of failing cleanly.
 **The same query, diagnosed precisely, seven weeks ago. The sitemap was migrated onto the
 view. The page's copy was not.**
 
-> **AND PAGINATING IT DID NOT FIX IT — IT CHANGED THE FAILURE.** Adding `.range()` removed the
-> 1,000-row cap and introduced unordered pagination in its place. The original bug dropped
-> subcategories **deterministically**, which is findable. This one drops them **at random**,
-> which reads as flakiness in the platform rather than a defect in the query.
+**This is item 65's shape: two implementations of one rule, and only one got fixed.** The
+sitemap and the page ask the identical question of the identical table through separate code.
+One was corrected in June. The other kept the bug and then acquired a worse one.
+
+#### PAGINATING IT CHANGED THE FAILURE RATHER THAN FIXING IT
+
+Adding `.range()` removed the 1,000-row cap and introduced unordered pagination in its place.
+
+| | original defect | after "fixing" it |
+|---|---|---|
+| what is dropped | subcategories beyond row 1,000 | any subcategory, depending on the scan |
+| when | **every time** | **at random** |
+| how it presents | a page that is always missing | a page that is sometimes missing |
+| how it reads to a human | a bug | **flakiness in the platform** |
+
+> **A FIX THAT CONVERTS A VISIBLE DEFECT INTO AN INVISIBLE ONE IS WORSE THAN THE DEFECT.** The
+> capped version was wrong on every request, which is the condition under which someone
+> notices and files it. The paginated version is right most of the time, and "it 404'd once
+> and then worked" is not a bug report anybody writes. **Seven weeks is what that difference
+> bought.**
+
+The change also *looked* like a strict improvement — it removed a documented cap, handled more
+rows, and made the function correct for large categories. **Everything about it was better
+except the guarantee nobody knew it depended on.**
 
 #### THE SITEMAP AND THE PAGE DISAGREED, AND THE SITEMAP WAS RIGHT
 
@@ -12619,22 +12643,39 @@ miss — while the page it points at returned 404.
 > invisible for seven weeks because it only shows on a subcategory small enough to fall
 > through the sample. **A category launch is exactly what creates one of those.**
 
-#### WHY IT SURVIVED, AND WHAT ACTUALLY FOUND IT
+#### SEVEN WEEKS OF INVISIBILITY, AND THE CONDITION THAT ENDED IT
 
-Nothing was watching. The page is not in any monitor, an intermittent 404 leaves no error, and
-the categories that existed before today are all large enough that their subcategories always
-land in the sample.
+**It only shows on a subcategory small enough to fall through the sample.** Every subcategory
+that existed before today is large relative to its parent, so its rows land in any scan and the
+defect never fires.
+
+> **AND A CATEGORY LAUNCH IS WHAT CREATES A SMALL SUBCATEGORY.** The defect was dormant from
+> 29 June because nothing had been added that was thin enough to trigger it. Publishing
+> `womens-health` at 117 of 1,719 is what made it observable — **the change did not cause the
+> bug, it satisfied the bug's precondition.**
+
+Two others were already carrying the same exposure and happened to be sitting on cached 200s:
+
+| page | products | parent |
+|---|---:|---:|
+| `bath_body/foot` | **113** | 7,928 |
+| `hair/colour` | **509** | 10,956 |
+
+Nothing was watching either. The page is in no monitor, an intermittent 404 leaves no error
+row, and a 404 that recovers on refresh is indistinguishable from a user's bad connection.
+
+#### WHAT ACTUALLY FOUND IT
 
 **It was found because the verification step was run at all** — and specifically because the
 revalidation-timing trap recorded beside Step E says to *re-check until it settles* rather than
-trust one response. **One check would have reported either "200, done" or "404, cache" and both
-would have been wrong.**
+trust one response.
 
-> **THE TRAP WRITTEN FOR A DIFFERENT PROBLEM CAUGHT THIS ONE.** That is the third time today a
-> mechanism aimed at something else did the catching — the CHECK constraint on the sports
-> overwrite, decision 2 on product 24682, and now a re-check rule on a nondeterministic query.
-> **Three for three.** Good habits are doing the work that checks are supposed to do, and a
-> habit is not a check: it fires when someone remembers to run it.
+> **ONE CHECK WOULD HAVE REPORTED EITHER "200, DONE" OR "404, CACHE", AND BOTH WOULD HAVE BEEN
+> WRONG.** The first is a false pass. The second is a false explanation that also ends the
+> investigation. **A single sample of a nondeterministic system produces a confident answer
+> either way**, and the only defence is the habit of taking more than one.
+
+See item 147: this is the third defect today caught by a mechanism aimed elsewhere.
 
 #### THE FIX
 
@@ -12644,3 +12685,73 @@ already granted to `anon`, already correct. One query, no pagination, DISTINCT i
 **This fixes every category, not just supplements.** Any subcategory small relative to its
 parent had the same exposure; `bath_body/foot` (113 of 7,928) and `hair/colour` (509 of 10,956)
 were latent instances that happened to be sitting on cached 200s.
+
+
+---
+
+### 147. Three defects in one day, each caught by a mechanism aimed at something else
+
+**Raised:** 16 August 2026 · **The pattern, recorded because three instances in one afternoon
+is not a coincidence.** · **Robbie's observation.**
+
+#### THE THREE
+
+| | defect | what caught it | what that mechanism is FOR |
+|---|---|---|---|
+| 1 | backfill would relabel **194 `sports` rows** as `general` | `products_subcategory_check` | policing the **value vocabulary**, not overwrites |
+| 2 | backfill would write `womens-health` onto a **hair product** and publish `/hair/womens-health` | **decision 2**, the overwrite guard | policing **supplements-to-supplements** overwrites, not category scope |
+| 3 | `getValidSubcategories` returns a **nondeterministic** row set | the **re-check-until-it-settles** habit | the ISR **revalidation-timing** trap, a caching problem |
+
+**None of the three was caught by anything designed to catch it.** Each was caught by something
+standing nearby for another reason.
+
+#### WHY THAT IS A WARNING RATHER THAN A RECORD OF A GOOD DAY
+
+Each catch depended on a coincidence that can be named:
+
+1. The CHECK fired because the new vocabulary happened to be unpermitted. **Had the twelve
+   values already been allowed** — which is exactly what the next map's values will be, once
+   the CHECK is widened — the sports overwrite would have applied silently.
+2. Decision 2 fired because product 24682 happened to carry `treatment`. **Had its subcategory
+   been NULL**, as thousands of rows are, the hair page would have been published.
+3. The re-check habit fired because someone ran it. **It is not wired to anything.**
+
+> **THREE FOR THREE ON LUCK IS NOT A HIT RATE, IT IS AN UNMEASURED FAILURE RATE.** Every one
+> of these caught the instance in front of it and none of them would catch the next one. The
+> question a good day like this raises is not "what did we catch" but **"what has the same
+> shape and no bystander next to it".**
+
+#### THE LINE THAT NAMES IT
+
+> **Good habits are doing the work that checks are supposed to do, and a habit only fires when
+> someone remembers to run it.**
+
+**This is item 131's shape at the level of the whole process.** There, a watch was built and
+wired to nothing. Here, the watching is real and lives in a person: it is genuine diligence,
+it produced three real catches in one afternoon, and it has **no trigger, no coverage
+guarantee, and no record of the times it did not run.**
+
+A check that fires automatically and catches one defect a year is worth more than a habit that
+catches three in an afternoon, because the check's silence is evidence and the habit's silence
+is nothing at all.
+
+#### WHAT THE THREE HAVE IN COMMON, WHICH IS THE ACTIONABLE PART
+
+All three are **writes or reads whose blast radius exceeds their stated scope**:
+
+- a backfill scoped to a subcategory, touching a **top_category** it never named;
+- a backfill scoped to "assign a value", **removing** one it never mentioned;
+- a query scoped to "list the values", **sampling** rather than listing.
+
+> **In each case the code did something the sentence describing it did not cover, and the
+> guard that caught it was watching a different sentence.** The generalisation from item 145
+> is the one that transfers: **a thing scoped to X must assert X on the row rather than assume
+> it from the context it was built in.** Applied to reads as well as writes, that covers all
+> three.
+
+#### NOT PROPOSING A MECHANISM HERE
+
+Three instances is enough to name a pattern and not enough to design the check that replaces
+the luck. **Recorded so that the next instance is the fourth and not the first**, which is the
+same reason item 79 exists — and item 141 is today's evidence that recording alone does not
+prevent recurrence.
