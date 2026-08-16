@@ -114,6 +114,46 @@ Deno.serve(async (req: Request) => {
     const nameById = new Map<number, string>();
     for (const r of retailers) nameById.set(r.id, r.name);
 
+    // 1a. ORPHAN GATE PROVENANCE.
+    //
+    // middleware.ts fails CLOSED to a build-time constant when Edge Config cannot be
+    // read, so an outage no longer silently un-410s the catalogue. But the fallback is
+    // invisible from the outside unless something looks: `x-fmb-gate-source` reports
+    // whether the value came from Edge Config or from the constant, and until now it
+    // was a distinguishable state with no consumer -- the same shape as
+    // retailers_delivery_unknown, which sat correct and unread for seven days.
+    //
+    // WHAT THIS ALERTS ON, AND WHAT IT DELIBERATELY DOES NOT.
+    //   ALERT   source starts with `default-`. Edge Config did not answer. That is
+    //           unambiguously wrong whatever the intended gate state is, because the
+    //           switch is not currently switching anything.
+    //   REPORT  everything else, WITHOUT judging it. `inert` versus `gone` depends on
+    //           whether the removal is *meant* to be on, and THIS FUNCTION HAS NO SOURCE
+    //           FOR THAT INTENT. Reading GATE_DEFAULT from Postgres to make the check
+    //           symmetrical would put a second copy of the constant somewhere it can
+    //           drift from the first, which is the duplication class this codebase
+    //           already carries several instances of. A monitor that invents an
+    //           expectation reports on its own copy, not on the system.
+    //
+    // The probe id is a KNOWN-GONE id: the one request whose expected outcome is
+    // unambiguous, which is what makes it probeable at all. If it ever stops being gone
+    // that is reported as its own state rather than treated as a failure.
+    const GATE_PROBE_ID = 650;
+    const GATE_PROBE_URL = `https://www.findmybasket.co.uk/product/${GATE_PROBE_ID}`;
+    let gateOutcome = "(not probed)";
+    let gateSource = "(not probed)";
+    let gateProbeError: string | null = null;
+    try {
+      const gr = await fetch(GATE_PROBE_URL, { method: "HEAD", redirect: "manual" });
+      gateOutcome = gr.headers.get("x-fmb-superdrug-gate") ?? `(header absent, HTTP ${gr.status})`;
+      gateSource = gr.headers.get("x-fmb-gate-source") ?? "(header absent)";
+    } catch (e) {
+      gateProbeError = String(e);
+    }
+    // A failed probe is NOT a gate failure and must not be reported as one -- it is this
+    // check being unable to see, which is a different claim.
+    const gateFellBack = gateSource.startsWith("default-");
+
     // 1b. ACTIVE RETAILERS WITH UNRECORDED DELIVERY TERMS.
     //
     // The view `retailers_delivery_unknown` was created on 3 August 2026
@@ -224,13 +264,16 @@ Deno.serve(async (req: Request) => {
     // retailer with unrecorded terms is invisible to the feed checks above -- its feed
     // can be perfectly healthy -- so leaving it out of this test would reproduce the
     // original defect one layer up: detected, formatted, and never sent.
-    if (failures.length === 0 && stale.length === 0 && deliveryUnknown.length === 0) {
+    if (failures.length === 0 && stale.length === 0 && deliveryUnknown.length === 0 && !gateFellBack) {
       // Everything healthy — no email, just return status
       return new Response(
         JSON.stringify({
           status: "all_healthy",
           checked: statuses.length,
           delivery_unknown: 0,
+          // Asserted, not omitted: absent would mean nobody asked.
+          gate_source: gateSource,
+          gate_outcome: gateOutcome,
           statuses,
         }, null, 2),
         { headers: { "Content-Type": "application/json" } },
@@ -245,6 +288,7 @@ Deno.serve(async (req: Request) => {
     if (deliveryUnknown.length > 0) {
       subjectParts.push(`${deliveryUnknown.length} without delivery terms`);
     }
+    if (gateFellBack) subjectParts.push("orphan gate on fallback");
     const subject = `FindMyBasket: ${subjectParts.join(", ")}`;
 
     const failureRows = failures.map((f) => `
@@ -354,6 +398,25 @@ Never enter a threshold without its cost.
 <tbody>${deliveryRows}</tbody>
 </table>` : "";
 
+    // Rendered whenever an email is going out anyway, so the state is visible even on a
+    // send triggered by something else. Only the `default-` case CAUSES a send.
+    const gateSection = `
+<h1 style="margin: 0 0 8px; font-family: Georgia, serif; font-size: 22px; color: ${gateFellBack ? "#c0392b" : "#4a4845"};">
+Orphan gate${gateFellBack ? ": running on the build-time fallback" : ""}
+</h1>
+<p style="margin: 0 0 12px; font-size: 14px; color: #4a4845;">
+${gateFellBack
+  ? `Edge Config did not answer, so middleware fell back to its build-time constant. The gate is still applying its last deliberate state, which is why nothing broke, but <strong>the switch is not currently switching anything</strong>: an Edge Config change would have no effect until this clears.`
+  : `Probe of <code>/product/${GATE_PROBE_ID}</code>, a known-gone id. State is reported, not judged: whether <em>inert</em> or <em>gone</em> is correct depends on whether the removal is meant to be on, and this monitor has no source for that intent.`}
+</p>
+<table cellspacing="0" cellpadding="0" border="0" width="100%" style="border-top: 1px solid #e5e0d8; margin-bottom: 28px;">
+<tbody>
+<tr><td style="padding: 8px 10px; font-size: 13px; color: #6e6a64;">Outcome (<code>x-fmb-superdrug-gate</code>)</td><td style="padding: 8px 10px; font-size: 13px; text-align: right;"><strong>${escapeHtml(gateOutcome)}</strong></td></tr>
+<tr><td style="padding: 8px 10px; font-size: 13px; color: #6e6a64;">Source (<code>x-fmb-gate-source</code>)</td><td style="padding: 8px 10px; font-size: 13px; text-align: right; color: ${gateFellBack ? "#c0392b" : "#6a7e6f"};"><strong>${escapeHtml(gateSource)}</strong></td></tr>
+${gateProbeError ? `<tr><td style="padding: 8px 10px; font-size: 13px; color: #6e6a64;">Probe error</td><td style="padding: 8px 10px; font-size: 13px; text-align: right; color: #8a8680;">${escapeHtml(gateProbeError)} (this check could not see; NOT a gate failure)</td></tr>` : ""}
+</tbody>
+</table>`;
+
     const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"/></head>
 <body style="margin: 0; padding: 0; background: #faf8f4; font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: #1c1a18;">
@@ -366,6 +429,7 @@ Find<span style="color: #c9a96e;">My</span>Basket — Feed Monitor</div>
 </td></tr>
 <tr><td style="padding: 24px 28px;">
 ${deliverySection}
+${gateSection}
 ${failureSection}
 ${staleSection}
 ${healthyRows ? `
