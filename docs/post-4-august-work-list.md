@@ -11357,3 +11357,81 @@ GSC read before the flip, not after.
 **Recommendation: run Step 6 first.** At 1,821 ids and 36 brand pages this is the biggest
 departure since Superdrug's 24,484, and the one thing that made Superdrug expensive was
 `GONE_IDS` being generated eight days before it was used.
+
+---
+
+### 135. Two traps that outlive the transition that created them
+
+**Raised:** 16 August 2026, completing the orphan-gate key rename ·
+`superdrug_removed` → `orphan_gate_enabled`, phases 1-4 shipped, phase 5 outstanding.
+
+#### THE VERIFICATION STANDARD: THREE PATHS, WHEN ONE WAS UNDER TEST
+
+Phase 3's job was to prove the new key was readable, and the header alone would have said
+so. **All three gate outcomes were checked instead**, because the change touched the code
+path all three share:
+
+| id | result | `x-fmb-superdrug-gate` | `x-fmb-gate-source` |
+|---|---|---|---|
+| 650 | **410** | `gone` | `config` |
+| 3308 | **301** → `/brands/clearasil` | `redirect` | `config` |
+| 81755 | **200** | `on-passthrough` | `config` |
+
+> **The 410 was under test. The 301 and the pass-through were not, and they are the ones
+> that would have failed silently** — a broken redirect is a lost curated 301 nobody would
+> notice for weeks, and a broken pass-through is a 200 that stops being a 200. **Verify the
+> paths the change touches, not the path the change is about.**
+
+It also settled the package question empirically: `@vercel/edge-config@1.4.3` reads an item
+added through the renamed Global Config UI without difficulty, so **no client migration is
+needed** and one was nearly done on the strength of a docs example.
+
+#### TRAP 1: `typeof === 'boolean'` IS LOAD-BEARING, AND IT DOES NOT EXPIRE
+
+```ts
+const primary = await readKey(ORPHAN_GATE_KEY);
+if (typeof primary === 'boolean') { ... }   // NOT `if (primary)`
+```
+
+**A key set to `false` is the deliberate kill switch.** A truthiness test would treat it as
+"no answer" and fall through to `GATE_DEFAULT`, which is `true` — **turning the gate back on
+in the middle of the rollback that set it to false.**
+
+> **This is the same inversion as the `??`-over-`||` decision during phase 1, EXCEPT THAT
+> ONE EXPIRED WITH THE TRANSITION AND THIS ONE DOES NOT.** `||` only mattered while two keys
+> were being read. `if (primary)` matters forever, because a boolean flag with a meaningful
+> `false` will always have this trap somewhere in the line that reads it.
+>
+> **The transition ending removed one guard and left the other. Nothing marks the
+> difference**, which is why the reason is now written next to the surviving one rather
+> than in a commit message about a transition that is over.
+
+#### TRAP 2: THE ORPHANED KEY READS AS BELT AND BRACES AND IS NOTHING OF THE SORT
+
+Phase 4 removed the legacy read. **After that deploy the only fallback is `GATE_DEFAULT`.**
+
+`superdrug_removed` is still in the store. **Nothing reads it.** Left there, it presents as a
+second line of defence — a key with the right name, in the right store, next to the live one
+— and it is inert.
+
+> **THIS IS WHY PHASE 5 IS NOT OPTIONAL AND NOT TIDYING.** A key that looks like a fallback
+> and is not is worse than no key, because the next person weighing whether the gate is
+> risky counts two mechanisms and finds one.
+
+**Third instance today of a label implying a mechanism that does not exist:**
+
+| | label | implied | actual |
+|---|---|---|---|
+| 1 | `about.html`'s *"keep in step with `retailers` where active = true"* | a maintenance rule that keeps the page correct | **produces the error it exists to prevent** — following it adds a closed programme |
+| 2 | *"treat threshold-with-zero-cost as unverified"*, one paragraph from a CHECK | enforced by the constraint beside it | **a reading rule.** The CHECK tests NULL-ness, never meaning |
+| 3 | **`superdrug_removed` left in the store after phase 4** | a fallback | **an orphan.** The only fallback is a build-time constant |
+
+> **All three are correct sentences in the wrong position.** None is wrong on its own terms;
+> each acquires a false meaning from what sits next to it — a table, a constraint, a live
+> key. **Proximity is doing the lying, and proximity is not reviewed.**
+
+#### STATUS
+
+Phases 1-4 shipped and verified. **Phase 5 — delete `superdrug_removed` from the store — is
+outstanding and is the one that stops trap 2 being true.**
+
