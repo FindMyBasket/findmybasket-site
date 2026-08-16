@@ -11001,3 +11001,111 @@ retailer's scope changes, and the same trap applies on the way in."*
 retailer cannot win a basket comparison on delivered cost, and any site copy describing the
 delivery mechanism is false for it until the terms are entered.
 
+
+---
+
+### 131. The watch for this exact state was built on 3 August and wired to nothing
+
+**Raised:** 16 August 2026, answering item 130's question about the two older rows ·
+**Report only.**
+
+Item 130 asked whether Branded Beauty and Skin Cupid at `threshold 30.00 / cost 0.00`
+**predate the constraint or slipped past it**. The answer is **neither**, and the reason
+matters more than either option.
+
+#### THE CHECK DOES NOT REACH THAT SHAPE, AND NEVER DID
+
+```
+CHECK ( (delivery_model = 'tiered'  AND threshold IS NOT NULL AND cost IS NOT NULL)
+     OR (delivery_model = 'flat'    AND threshold IS NULL     AND cost IS NOT NULL)
+     OR (delivery_model = 'unknown' AND threshold IS NULL     AND cost IS NULL) )
+```
+
+**It tests NULL-ness and agreement with `delivery_model`. It does not test meaning.**
+`0.00` is a value, so `tiered / 30.00 / 0.00` satisfies the first branch completely.
+
+> **These rows are not survivors of a constraint added after them. They would be accepted
+> today, on a fresh insert, by the constraint as written.** "Free above £30 and free below
+> £30" is a legal tiered retailer. So is Amazon and eBay's `0.00 / 0.00`, which says free
+> above nothing.
+
+**So the doctrine's instruction — *"treat threshold-with-zero-cost as unverified, never as
+free delivery"* — is a READING RULE for humans, and it was never a constraint.** Recording it
+next to a CHECK constraint in the same section made it look like one. **Neither of the two
+rows is a defect in the CHECK. The gap is that the CHECK was read as covering a class it does
+not mention.**
+
+#### AND THERE IS A COLUMN, A VIEW AND A WATCH I DID NOT KNOW ABOUT
+
+Migration `20260803160000_delivery_model_unknown_is_transitional.sql`, 3 August. It adds
+`delivery_terms_observed_at`, and a view **built for precisely the Niche Beauty case**:
+
+> `retailers_delivery_unknown` — *"Active retailers whose delivery terms are unrecorded, so
+> the optimiser will not rank them on delivered total. **Expected to be EMPTY. A row here is
+> live inventory being quietly excluded from best-value comparison.**"*
+
+Its own migration says: *"Zero rows today by construction, because no active retailer is
+'unknown'. That is expected, and it is why this is a watch rather than an alert with a body."*
+And it names the successor: *"The Fragrance Shop … will pass through exactly this state, and
+that transition is the intended live exercise of the branch."*
+
+**SELECT * FROM retailers_delivery_unknown, today:**
+
+| retailer_id | name | delivery_model | terms_observed_at |
+|---|---|---|---|
+| 32 | **Niche Beauty** | unknown | **NULL** |
+
+> **THE VIEW WORKS. IT HAS BEEN CORRECT SINCE 9 AUGUST. NOTHING READS IT.**
+>
+> `retailers_delivery_unknown` appears **nowhere** in `supabase/functions/`,
+> `.github/workflows/`, `app/` or `lib/`. The migration says *"a view the 09:00 monitor CAN
+> read"* — and that is exactly what shipped: something the monitor **could** read, and does
+> not. **Seven days of a correct answer sitting in a view nobody queries.**
+
+**This revises item 130's framing rather than replacing it.** Item 130 said nothing covered
+what arrived after the 1 August pass. That is true of the *onboarding sequence*. But it is
+not true that nobody thought of it: **somebody thought of it on 3 August, built the detector,
+predicted the exact retailer class that would trip it, and stopped one wire short.**
+
+> **A DETECTOR THAT NOTHING READS IS INDISTINGUISHABLE FROM NO DETECTOR, AND MORE EXPENSIVE
+> THAN ONE — because it also consumes the belief that the case is covered.** The 3 August
+> migration reads, correctly and in good faith, as though this state were now watched.
+
+#### THE 1 AUGUST AUDIT IS RECORDED EXACTLY, AND CORROBORATES THE ACCOUNT
+
+`delivery_terms_observed_at` holds **eleven active retailers, every one dated 2026-08-01** —
+Atelier De Glow, Beauty Bay, Beauty Flash, Boots, Debenhams, Escentual, Gorgeous Shop,
+Perfume Click, Stylevana, The Organic Pharmacy, YesStyle.
+
+**The only two active retailers never observed are Branded Beauty and Niche Beauty**, and
+they are unobserved for opposite reasons: **Branded Beauty was excluded from the 1 August pass
+because it was already retiring** (and still carries the zero-cost shape), and **Niche Beauty
+did not exist yet.**
+
+#### THE GENERAL FORM, FROM TODAY'S DELIVERY COPY FIX
+
+The homepage claimed *"we factor in each retailer's free delivery threshold"*. The obvious fix
+was to soften the claim. **The better fix came from looking at the product first:**
+`RoutineBuilder` already renders *"Delivery not known"* and **refuses to compute a delivered
+total** for a retailer with unknown terms.
+
+> **WHEN COPY AND PRODUCT DISAGREE, ESTABLISH WHICH ONE IS HONEST BEFORE DECIDING WHICH TO
+> CHANGE.**
+>
+> The copy was claiming a mechanism the product **deliberately declines to fake**. So the fix
+> was not to soften a claim — it was to **make the copy describe what the product actually
+> does**, which turned out to be a stronger sentence than the one being replaced, because the
+> product's refusal to guess is a commitment rather than a caveat.
+>
+> Softening would have produced a hedge. Matching produced a promise. **Same disagreement,
+> opposite result, decided entirely by which artefact was checked first.**
+
+#### WHAT THIS LEAVES
+
+- **Wire `retailers_delivery_unknown` into the 09:00 monitor.** The view is built, correct
+  and one query short of doing its job.
+- **Branded Beauty is still `active = true`** on a departure held since 2 August, with an
+  unverified delivery shape and zero in-stock rows. Its own loose end, unrelated to the above.
+- **The zero-cost shape is not CHECK-detectable**, so if it should be forbidden that is a new
+  constraint (`cost > 0 WHEN threshold IS NOT NULL`), not an existing one being enforced.
+
