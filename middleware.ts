@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { get } from '@vercel/edge-config';
 import { createServerClient } from '@supabase/ssr';
-import { GONE_IDS, REDIRECTS, GONE_HTML } from './lib/superdrug-removed';
+import { GONE_IDS, REDIRECTS, GONE_HTML } from './lib/orphan-gate';
 
 // THREE independent jobs share this middleware:
 //   /product/*  — Superdrug-removed gate (below, unchanged)
