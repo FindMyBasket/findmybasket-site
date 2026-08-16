@@ -387,6 +387,92 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
       console.log("\n  sample of the supplements EXCLUDE_PATTERNS would drop:");
       clash.slice(0, 10).forEach(r => console.log("   x " + get(r, "product_name").slice(0, 80)));
     }
+
+    // --- 5b. SIBLING TAXONOMY CROSS-TAB ---------------------------------------------
+    //
+    // WHY THIS EXISTS. Section 5 above groups the admitted rows by the path we FILTER
+    // ON, and for Boots that path is flat: it terminates at "Vitamins & Supplements"
+    // with no fifth segment, so grouping by it tells you nothing about what is inside.
+    // Measured 16 Aug 2026 on fid 115009: 1,771 admitted rows, zero occurrences of
+    // "Vitamins & Supplements >".
+    //
+    // BUT AN ADVERTISER SHIPS MORE THAN ONE TAXONOMY. Boots populates product_type on
+    // 100.0% of 38,077 rows with a DIFFERENT and visibly richer hierarchy --
+    // "Health & Pharmacy > Medicines & Treatments" (1,761 rows), "Health & Pharmacy >
+    // Lifestyle & Wellbeing" (924), "Baby & Child > Feeding" (647). The importer reads
+    // merchant_product_category_path and never product_type, so that hierarchy has
+    // never been looked at.
+    //
+    // THIS IS THE PATH FINDING ON A SECOND FIELD: the retailer's own filing beating our
+    // inference. If one of these columns separates medicines, paediatric and sports
+    // inside the leaf, the subcategory set is DERIVED from it rather than from name
+    // tokens -- and a name-token set leaves a 14% residual that no token list closes,
+    // because the tail is long-tail single actives and opaque brand codes.
+    //
+    // The supplement-shaped count per value is the discriminating measure, not the row
+    // count: a value is USEFUL when it is nearly all supplements or nearly none, and
+    // useless when it splits down the middle.
+    for (const field of ["product_type", "merchant_category", "category_name"]) {
+      const fc = col(field);
+      if (fc < 0) { console.log(`\n  [5b] ${field}: column not requested`); continue; }
+      const filled = admitted.filter(r => (r[fc] ?? "").trim()).length;
+      // Sports name tokens. INDEPENDENT of the shipped path rule, which is the point:
+      // `supp` below cannot disagree with the path, this can.
+      const SPORT_TOK = /\b(whey|casein|creatine|electrolyte|electrolytes|hydration|hydrate|isotonic|pre[\s-]?workout|bcaa|eaa|amino|glutamine|endurance|protein|isolate|gainer|energy gel)\b/i;
+      const tab = new Map<string, { n: number; supp: number; sport: number }>();
+      for (const r of admitted) {
+        const k = ((r[fc] ?? "").trim()) || "(empty)";
+        const e = tab.get(k) ?? { n: 0, supp: 0, sport: 0 };
+        e.n++;
+        const nm = get(r, "product_name");
+        if (isSupp(nm)) e.supp++;
+        if (SPORT_TOK.test(nm)) e.sport++;
+        tab.set(k, e);
+      }
+      console.log(`\n  [5b] ADMITTED ROWS BY ${field}  (filled ${filled}/${admitted.length}` +
+                  `, ${tab.size} distinct value(s))`);
+      if (tab.size === 1) console.log("       -> SINGLE VALUE: this column cannot discriminate inside the leaf.");
+      console.log("       cols: rows | supp = shipped rule (SEE CAUTION) | sport = sports name tokens");
+      for (const [k, e] of [...tab.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 30)) {
+        const pct = (100 * e.supp / Math.max(e.n, 1)).toFixed(0);
+        console.log("   " + String(e.n).padStart(6) + "  supp " + String(e.supp).padStart(5) +
+                    " (" + pct.padStart(3) + "%)  sport " + String(e.sport).padStart(4) +
+                    "  " + k.slice(0, 66));
+      }
+      // CAUTION, printed next to the number it applies to rather than only in the work
+      // list: the `supp` column is the SHIPPED RULE READING ITSELF. On a configured
+      // supplements path a row is a supplement unless visibly topical, so it says
+      // "supplement" for nearly everything here BY CONSTRUCTION, whatever this column
+      // says. It is not a second signal agreeing. The discriminating power is in the
+      // VALUES. `sport` IS independent -- it is name tokens, not the path rule.
+      console.log("       CAUTION: `supp` is the shipped path rule reading itself, not a");
+      console.log("                second signal agreeing. Discrimination is in the VALUES.");
+    }
+
+    // --- 5c. WHAT IS INSIDE A BARE PARENT NODE -------------------------------------
+    //
+    // A hierarchical column is only as useful as it is DEEP. For Boots two parent nodes
+    // carry the majority of the leaf with no child node beneath them, so a mapping built
+    // on this column groups them correctly and says nothing about what is in them. 5c
+    // dumps names from the nodes named in BARE_NODES so that limit is visible in the
+    // report rather than inferred from a count.
+    const BARE = (process.env.BARE_NODES || "").split("|").map(s => s.trim()).filter(Boolean);
+    const ptc = col("product_type");
+    if (BARE.length && ptc >= 0) {
+      const SPORT = /\b(whey|casein|creatine|electrolyte|electrolytes|hydration|hydrate|isotonic|pre[\s-]?workout|bcaa|eaa|amino|glutamine|endurance|protein|isolate|gainer|energy gel)\b/i;
+      for (const node of BARE) {
+        const rows = admitted.filter(r => (r[ptc] ?? "").trim() === node);
+        const sport = rows.filter(r => SPORT.test(get(r, "product_name")));
+        console.log(`\n  [5c] INSIDE "${node}"`);
+        console.log(`       rows ${rows.length}, of which sports name tokens: ${sport.length}` +
+                    ` (${(100 * sport.length / Math.max(rows.length, 1)).toFixed(0)}%)`);
+        console.log("       -- sports-token names (up to 30) --");
+        sport.slice(0, 30).forEach(r => console.log("        S " + get(r, "product_name").slice(0, 88)));
+        console.log("       -- non-sports names (up to 30) --");
+        rows.filter(r => !SPORT.test(get(r, "product_name"))).slice(0, 30)
+            .forEach(r => console.log("        . " + get(r, "product_name").slice(0, 88)));
+      }
+    }
   }
 }
 
