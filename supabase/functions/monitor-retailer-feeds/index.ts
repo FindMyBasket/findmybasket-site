@@ -114,6 +114,26 @@ Deno.serve(async (req: Request) => {
     const nameById = new Map<number, string>();
     for (const r of retailers) nameById.set(r.id, r.name);
 
+    // 1b. ACTIVE RETAILERS WITH UNRECORDED DELIVERY TERMS.
+    //
+    // The view `retailers_delivery_unknown` was created on 3 August 2026
+    // (migration 20260803160000) for exactly this case, and its own comment says a row
+    // in it is "live inventory being quietly excluded from best-value comparison". It
+    // was built to be read by THIS function and was never wired to it. Niche Beauty
+    // went live on 9 August at delivery_model='unknown' and sat in the view, correct
+    // and unread, for seven days.
+    //
+    // A DETECTOR NOTHING READS IS MORE EXPENSIVE THAN NO DETECTOR, because it also
+    // consumes the belief that the case is covered. Work-list item 131.
+    const { data: deliveryUnknownRows, error: duErr } = await supabase
+      .from("retailers_delivery_unknown")
+      .select("retailer_id, name, delivery_model, days_since_terms_observed")
+      .order("retailer_id");
+    // Read failure must not be silent: an empty result and a broken query look identical
+    // downstream, and "no rows" is the healthy state this section reports.
+    if (duErr) console.error("retailers_delivery_unknown read failed:", duErr);
+    const deliveryUnknown = deliveryUnknownRows ?? [];
+
     const now = Date.now();
 
     // 2. Import failures (fast signal). Read the per-retailer import status
@@ -200,12 +220,17 @@ Deno.serve(async (req: Request) => {
       (s) => (s.hours_stale === null || s.hours_stale > STALENESS_HOURS) && !failedIds.has(s.retailer_id),
     );
 
-    if (failures.length === 0 && stale.length === 0) {
+    // deliveryUnknown is part of the send condition, NOT just part of the body. A
+    // retailer with unrecorded terms is invisible to the feed checks above -- its feed
+    // can be perfectly healthy -- so leaving it out of this test would reproduce the
+    // original defect one layer up: detected, formatted, and never sent.
+    if (failures.length === 0 && stale.length === 0 && deliveryUnknown.length === 0) {
       // Everything healthy — no email, just return status
       return new Response(
         JSON.stringify({
           status: "all_healthy",
           checked: statuses.length,
+          delivery_unknown: 0,
           statuses,
         }, null, 2),
         { headers: { "Content-Type": "application/json" } },
@@ -217,6 +242,9 @@ Deno.serve(async (req: Request) => {
     const subjectParts: string[] = [];
     if (failures.length > 0) subjectParts.push(`${failures.length} import failure${failures.length === 1 ? "" : "s"}`);
     if (stale.length > 0) subjectParts.push(`${stale.length} stale`);
+    if (deliveryUnknown.length > 0) {
+      subjectParts.push(`${deliveryUnknown.length} without delivery terms`);
+    }
     const subject = `FindMyBasket: ${subjectParts.join(", ")}`;
 
     const failureRows = failures.map((f) => `
@@ -293,6 +321,39 @@ Check GitHub Actions and Supabase Edge Function logs.
 <tbody>${staleRows}</tbody>
 </table>` : "";
 
+    const deliveryRows = deliveryUnknown.map((d) => `
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e0d8; font-size: 14px;">
+          <strong>${escapeHtml(d.name)}</strong>
+        </td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e0d8; font-size: 13px; color: #8a8680;">
+          ${escapeHtml(d.delivery_model ?? "(null)")}
+        </td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e0d8; font-size: 14px; text-align: right; white-space: nowrap; color: #c0392b;">
+          ${d.days_since_terms_observed === null ? "never observed" : Math.round(d.days_since_terms_observed) + "d ago"}
+        </td>
+      </tr>`).join("");
+
+    const deliverySection = deliveryUnknown.length > 0 ? `
+<h1 style="margin: 0 0 8px; font-family: Georgia, serif; font-size: 22px; color: #c0392b;">
+${deliveryUnknown.length} active retailer${deliveryUnknown.length === 1 ? "" : "s"} without delivery terms
+</h1>
+<p style="margin: 0 0 20px; font-size: 14px; color: #4a4845;">
+These retailers are live and selling, and the optimiser will <strong>not rank them on delivered total</strong>
+because their terms are unrecorded. That is live inventory quietly excluded from best-value comparison.
+This is legitimate only while a newly onboarded retailer has its terms read from source.
+Verify against the retailer's own site, never the feed, then set one of <em>tiered</em> / <em>flat</em> / <em>unknown</em>.
+Never enter a threshold without its cost.
+</p>
+<table cellspacing="0" cellpadding="0" border="0" width="100%" style="border-top: 1px solid #e5e0d8; margin-bottom: 28px;">
+<thead><tr>
+<th style="padding: 10px; text-align: left; font-size: 11px; text-transform: uppercase; color: #8a8680; letter-spacing: 0.1em;">Retailer</th>
+<th style="padding: 10px; text-align: left; font-size: 11px; text-transform: uppercase; color: #8a8680; letter-spacing: 0.1em;">Model</th>
+<th style="padding: 10px; text-align: right; font-size: 11px; text-transform: uppercase; color: #8a8680; letter-spacing: 0.1em;">Terms observed</th>
+</tr></thead>
+<tbody>${deliveryRows}</tbody>
+</table>` : "";
+
     const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"/></head>
 <body style="margin: 0; padding: 0; background: #faf8f4; font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: #1c1a18;">
@@ -304,6 +365,7 @@ Check GitHub Actions and Supabase Edge Function logs.
 Find<span style="color: #c9a96e;">My</span>Basket — Feed Monitor</div>
 </td></tr>
 <tr><td style="padding: 24px 28px;">
+${deliverySection}
 ${failureSection}
 ${staleSection}
 ${healthyRows ? `
