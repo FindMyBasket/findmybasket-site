@@ -4,6 +4,12 @@
 -- subcategory_prefix_map's comment on 16 August from a TOP-30 view of Boots'
 -- product_type values, now that all 88 have been enumerated.
 --
+-- ALSO FIXES A LITERAL '%%' IN THE LIVE COMMENT. Part 1's migration doubled every percent
+-- sign, a habit from format()/printf where '%' is a placeholder. COMMENT ON takes a plain
+-- string literal, so Postgres stored the doubling verbatim and the live comment reads
+-- "100%% filled". Same class as everything else today: a convention applied in a context
+-- where the thing it protects against does not exist.
+--
 -- WHY A MIGRATION FOR A COMMENT: the old comment carries the safety argument for a name
 -- rule, and that argument has been WITHDRAWN (item 140). A withdrawn argument left in a
 -- column comment is item 135 trap 2 -- it presents as reasoning and is nothing of the
@@ -19,19 +25,19 @@ COMMENT ON COLUMN public.retailer_import_config.subcategory_prefix_map IS
   'REPORTS those rows and does nothing else to them -- it does not exclude them. Excluding '
   'is a separate decision (part 3). '
   'READ THE LIMIT BEFORE TRUSTING A ZERO-UNCLASSIFIED RESULT: on Boots this column is '
-  '100%% filled, so a map over it leaves NO residual -- but 1,012 of 1,771 rows (57.1%%) sit '
+  '100% filled, so a map over it leaves NO residual -- but 1,012 of 1,771 rows (57.1%) sit '
   'on two BARE PARENT nodes (Medicines & Treatments 607, Lifestyle & Wellbeing 405) with no '
   'child beneath them. It is RESIDUAL-FREE AND THIN AT THE SAME TIME. A reader seeing zero '
   'unclassified will otherwise assume it did more than it did. '
-  'AND 57%% IS THE CEILING, NOT THE DELIVERY. Measured against all 88 values, the group A '
-  'map files 306 rows (17%%) to a SPECIFIC subcategory, 1,330 (75%%) to `general` because '
-  'unmapped children inherit their bare parent, and 133 (8%%) to a null out-of-scope entry. '
+  'AND 57% IS THE CEILING, NOT THE DELIVERY. Measured against all 88 values, the group A '
+  'map files 306 rows (17%) to a SPECIFIC subcategory, 1,330 (75%) to `general` because '
+  'unmapped children inherit their bare parent, and 133 (8%) to a null out-of-scope entry. '
   'The column''s discriminating power and the map''s output are different numbers -- the '
   'map is bounded by the subcategory vocabulary on the other side of it. Item 142. '
   'WITHDRAWN, AND THE PREVIOUS VERSION OF THIS COMMENT ASSERTED IT: that a sports name rule '
   'is safe because it is bounded by the Active Nutrition node. It is not. Of 353 '
-  'sports-token rows, Active Nutrition and its two children hold 80 (23%%); 142 are under '
-  'Medicines & Treatments and 98 under Lifestyle & Wellbeing, so 68%% sit in the two bare '
+  'sports-token rows, Active Nutrition and its two children hold 80 (23%); 142 are under '
+  'Medicines & Treatments and 98 under Lifestyle & Wellbeing, so 68% sit in the two bare '
   'parents and the bound is the whole 1,771-row leaf. A NODE NAMED FOR A CLASS IS NOT '
   'EVIDENCE THAT IT CONTAINS THE CLASS. Boots files Phizz hydration under Medicines and '
   'Liquid IV hydration under Lifestyle: it is inconsistent about one product class, and '
@@ -46,7 +52,7 @@ COMMENT ON COLUMN public.retailer_import_config.subcategory_source_field IS
   'and says so -- it does not fall back. '
   'RESOLVED BY NAME AGAINST THE HEADER ROW, NEVER THROUGH coalesceField. product_type is '
   'ALREADY parsed by the importer as `category_name_alt`, the fallback for category_name -- '
-  'and on Boots category_name is 100%% filled with the single constant "Health", so that '
+  'and on Boots category_name is 100% filled with the single constant "Health", so that '
   'fallback is UNREACHABLE BY CONSTRUCTION. coalesceField ranks by PRESENCE, not by '
   'INFORMATION. Routing this column through it would reproduce the shadowing and return a '
   'clean zero. Work-list items 126, 142.';
