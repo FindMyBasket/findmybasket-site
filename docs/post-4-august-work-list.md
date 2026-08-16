@@ -10382,3 +10382,112 @@ articles' framing have to name what the category actually is. The set determines
 so the copy fix waits on it, but it must not wait longer than that — the articles are live,
 indexed and were published this morning.
 
+
+---
+
+### 125. The retailer's own filing, on a second field the importer never reads
+
+**Raised:** 16 August 2026 · **Measured, feed-diag run 31949314330 on fid 115009.** Section
+5b added to `scripts/atelier-feed-diag.mts` to produce it.
+
+**This is the path finding again on a different column.** Item 92 established that a
+retailer's own taxonomy beats our name inference. `merchant_product_category_path` then
+turned out to be flat for Boots — it terminates at `Vitamins & Supplements`, **1,771
+admitted rows and zero occurrences of `Vitamins & Supplements >`** — so path-first had
+nothing left to give inside the leaf.
+
+> **BUT AN ADVERTISER SHIPS MORE THAN ONE TAXONOMY, AND WE READ ONE OF THEM.**
+>
+> `product_type` is populated on **100.0% of all 38,077 Boots rows** and carries a
+> different, deeper hierarchy. The importer requests it — it is in the column list — and
+> then never uses it for anything.
+
+#### TWO POPULATIONS, TWO SETS OF NUMBERS, DO NOT CONFLATE THEM
+
+| | Medicines & Treatments | Lifestyle & Wellbeing |
+|---|---:|---:|
+| **whole feed** (38,077 rows) | **1,761** | **924** |
+| **inside the supplements leaf** (1,771 rows) | **607** | **405** |
+
+The feed-wide figures are what section 2 prints and are the ones that first drew attention.
+**The leaf figures are the ones that matter for the subcategory set**, and they are smaller
+because most of Medicines & Treatments sits outside the supplements path entirely.
+
+#### THE COLUMN IS THE SUBCATEGORY SET, WRITTEN BY BOOTS
+
+88 distinct values across the 1,771 rows, 100% filled. The top of the distribution:
+
+| rows | `product_type` |
+|---:|---|
+| 607 | Health & Pharmacy > Medicines & Treatments |
+| 405 | Health & Pharmacy > Lifestyle & Wellbeing |
+| 155 | Health & Pharmacy > Vitamins & Supplements |
+| 86 | … > Lifestyle & Wellbeing > **Active Nutrition** |
+| 61 | Health & Pharmacy > **Women's Health** |
+| 43 | … > Vitamins & Supplements > **Beauty Supplements** |
+| 38 | … > Women's Health > Women's Vitamins & Supplements |
+| 30 | Health & Pharmacy > **Baby & Child Health** |
+| 18 / 15 / 7 | **Beauty & Skincare > Makeup**, > Nails, > Lips |
+| 14 | … > Medicines & Treatments > Heart Health |
+| 13 | … > Vitamins & Supplements > Multivitamins |
+| 13 | Health & Pharmacy > **Men's Health** |
+| 11 | Toiletries > Bathroom Essentials |
+| 10 / 10 | … > **Joint Health Supplements**, > **Immune System Support** |
+| 7 | … > Diet & Weight Management |
+| 6 | … > Active Nutrition > **Protein Powder** |
+| 5 | … > Vitamins For The Brain |
+
+**Boots has already named the subcategories: Beauty Supplements, Active Nutrition, Women's
+Health, Men's Health, Baby & Child Health, Joint Health Supplements, Immune System Support,
+Multivitamins, Diet & Weight Management, Vitamins For The Brain, Heart Health.** That is the
+set, and it was written by the retailer rather than inferred by us.
+
+**The top 30 values cover 1,651 of 1,771 rows (93.2%);** the remaining 58 values hold 120
+rows between them.
+
+#### THE RESIDUAL STOPS BEING THE CONSTRAINT
+
+A name-token set left **248 of 1,764 (14.1%)** in no subcategory, and that residual was
+irreducible in principle: long-tail single actives (D-mannose, lactoferrin, pycnogenol,
+sodium butyrate — hundreds of distinct actives, each its own word) and opaque brand codes
+(Nourished `Bmca Nutrient Stacks`, where the name contains no product information at all).
+
+> **`product_type` is 100% filled, so under a product_type-derived set the residual is ZERO
+> BY CONSTRUCTION.** Every row lands somewhere. The remaining work is rolling 88 values up
+> into a shippable set, which is a MAPPING decision over a finite list — not an inference
+> problem with an open tail.
+
+#### IT ALSO REPRODUCES THE HAND-BUILT EXCLUSION LIST
+
+`Beauty & Skincare > Makeup` (18), `> Nails` (15), `> Lips` (7) and
+`Toiletries > Bathroom Essentials` (11) are, on Boots' own filing, exactly the population
+that took a human pass over 102 rows to identify: the bronzing drops, the brow tint, the
+setting powder, the lip products. **Boots was telling us they were makeup the whole time.**
+
+**This does not retire the list.** `product_exclusions` covers 51 ids that are decided; what
+this offers is a better *detector* for the next import, and item 122's rule still holds —
+a pattern derived from a retailer's column is still a pattern, and it will be wrong on the
+rows the retailer files carelessly.
+
+#### THE CAVEAT ON THE `supp %` COLUMN
+
+Section 5b prints, per value, how many rows the shipped rule calls supplement-shaped. **It
+reads ~100% almost everywhere, and that is not a validation of `product_type`.** It is the
+shipped rule behaving exactly as designed: on a configured supplements path, a row is a
+supplement unless it is visibly topical. The discriminating power is in the `product_type`
+VALUES, not in that percentage, and a reader who takes the 100% as agreement between two
+independent signals would be reading one signal twice.
+
+#### 607 UNDER MEDICINES & TREATMENTS IS TOO BIG TO BE MEDICINES
+
+**Not chased.** 607 of 1,771 rows on a supplements path filed by Boots under Medicines &
+Treatments cannot all be regulated medicines — Boots evidently uses that node broadly. It is
+where this morning's Viagra Connect, Calpol and Calprofen sat, so it is the right place to
+look, but the node is not a medicines allowlist and must not be treated as one.
+
+#### `merchant_category` IS USELESS HERE, AND 5b SAYS SO
+
+**One distinct value across all 1,771 rows.** Section 5b calls this out explicitly rather
+than printing a one-row table and leaving the reader to notice. `category_name` was measured
+in the same run.
+
