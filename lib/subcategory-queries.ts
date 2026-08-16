@@ -22,6 +22,20 @@ export interface ProductTypeChip {
 
 const PAGE_SIZE = 1000;
 
+// EVERY CALLER MUST .order() A UNIQUE COLUMN BEFORE .range().
+//
+// `.range()` without `.order()` is unordered LIMIT/OFFSET, and Postgres gives NO
+// stability guarantee across pages: rows can be missed and others returned twice.
+//
+// MEASURED 16 August on supplements, running a real caller's two-page scan: it returned
+// 1,719 rows against an actual 1,719 -- the RIGHT TOTAL -- while containing only 102 of
+// the 117 rows carrying one subcategory value. 15 rows came back twice and 15 never came
+// back. Row count reconciled, page-size arithmetic reconciled, and `719 < PAGE_SIZE` is
+// this loop's own termination condition, so the read REPORTED ITSELF COMPLETE.
+//
+// A COUNT THAT RECONCILES IS NOT EVIDENCE THAT A PAGINATED READ IS COMPLETE. It is
+// evidence that the right NUMBER of rows came back, which is a different claim and the
+// easy one to check -- which is why it gets checked instead. Work-list items 146, 151.
 async function fetchAllRows<T>(
   build: (offset: number) => PromiseLike<{ data: T[] | null; error: any }>,
 ): Promise<T[]> {
@@ -60,6 +74,7 @@ export async function getSubcategoryStats(
       .eq('subcategory', subcategory)
       .not('normalised_brand', 'is', null)
       .not('tags', 'cs', '{cleanup_remove}')
+      .order('id')
       .range(offset, offset + PAGE_SIZE - 1),
   );
 
@@ -77,6 +92,7 @@ export async function getSubcategoryStats(
       .eq('subcategory', subcategory)
       .is('merged_into', null)
       .is('parent_product_id', null)
+      .order('id')
       .range(offset, offset + PAGE_SIZE - 1),
   );
 
@@ -109,10 +125,27 @@ export async function getProductTypes(
       .eq('subcategory', subcategory)
       .not('product_type', 'is', null)
       .not('tags', 'cs', '{cleanup_remove}')
+      .order('id')
       .range(offset, offset + PAGE_SIZE - 1),
   );
 
-  const JUNK_TYPES = new Set(['Skincare', 'Makeup', 'Hair', 'Fragrance']);
+  // CATEGORY-NAME DEFAULTS: the value the classifier emits when it has no better
+  // answer. They are not product types and must never render as browse chips.
+  //
+  // 'Hair Care' WAS MISSING AND IS THE WHOLE REASON THIS COMMENT EXISTS. It is the hair
+  // classifier's default (_shared/categorisation.ts), it covers 2,753 products -- 100%
+  // of every hair row that reached a default -- and it rendered live on /hair/treatment
+  // as a chip reading "Hair Care 2753" linking to ?type=Hair+Care.
+  //
+  // AND 'Hair' MATCHES ZERO ROWS. The classifier has never emitted it. The list held a
+  // value that never existed IN PLACE OF the one that does, one word short, and three of
+  // the four defaults were caught -- so the list looked complete from every angle except
+  // running it against the column.
+  //
+  // 'Hair' is kept only so a future classifier emitting it is covered; it suppresses
+  // nothing today. Verified 16 Aug: Skincare 16,539 · Hair Care 2,753 · Makeup 682 ·
+  // Fragrance 266 · Hair 0. Work-list item 152.
+  const JUNK_TYPES = new Set(['Skincare', 'Makeup', 'Hair', 'Hair Care', 'Fragrance']);
 
   const counts = new Map<string, number>();
   for (const row of data) {
@@ -145,7 +178,7 @@ export async function getSubcategoryTopBrands(
 
       if (productType) query = query.eq('product_type', productType);
 
-      return query.range(offset, offset + PAGE_SIZE - 1);
+      return query.order('id').range(offset, offset + PAGE_SIZE - 1);
     },
   );
 

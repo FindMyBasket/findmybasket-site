@@ -1226,7 +1226,12 @@ export type ImportTopCategory = TopCategory | ExtendedTopCategory | "supplements
 
 export type ImportCategorisation = {
   top_category: ImportTopCategory | null;
-  product_type: string;
+  // NULLABLE, and only the supplements branch returns null. Every other path still
+  // produces a string. NULL means "this classifier has no opinion worth publishing about
+  // this row's type" -- which is different from "" (the denylist's value) and different
+  // from a catch-all like "Skincare". The browse facet filters nulls out; it renders
+  // empty strings as blank chips, which is why this is null and not "".
+  product_type: string | null;
   subcategory: string;
   tags: string[];
   excluded?: string;
@@ -1365,12 +1370,36 @@ export function inferCategorisationForImport(
   // denylist verdict in `base` is deliberately discarded rather than edited:
   // `excludeChecks["supplement"]` drops 315 of Boots' rows, and this branch
   // stops that without touching a regex every other retailer reads.
-  // `product_type` is kept from `base` because the inference is still useful.
+  //
+  // `product_type` IS NULLED, and used to be `base.product_type`. The comment that
+  // stood here said the beauty inference was "still useful". It was never checked
+  // against its own output, and the output was:
+  //
+  //     Skincare 1,297 · "" 340 · Hair Care 39 · Oil 32 · Moisturiser 8 ·
+  //     Eye Care 2 · Foundation 1
+  //
+  // `base` is inferCategorisation(), the BEAUTY classifier. This branch overrides its
+  // top_category and its subcategory precisely because they are wrong for a supplement
+  // -- and then read a third field off the same verdict. THE 340 EMPTIES ARE THE SHARP
+  // CASE: those rows hit the denylist return above, which is `{top_category: null,
+  // product_type: "", excluded: reason}`. This branch exists to DISCARD that verdict and
+  // was still reading a field out of it. It kept half of a result it had just declared
+  // invalid.
+  //
+  // NULL, NOT REPOPULATED FROM THE RETAILER'S OWN product_type COLUMN. That column is
+  // parsed now (mapping part 2) but it describes BOOTS' SHELF, is 57% bare parents, and
+  // is per-retailer -- so it would give one retailer's rows a facet nobody else's could
+  // fill. An empty facet is honest; a facet built from one merchant's aisle names is not.
+  //
+  // WHAT MADE THIS SURVIVE: the browse facet suppresses a JUNK_TYPES list containing
+  // "Skincare", so the 1,297 never rendered and the ABSURD TAIL did. A supplements page
+  // offering "Foundation 1" is what got noticed; "Skincare 1,297" would have been caught
+  // the same hour. Work-list items 151, 152.
   if (onSupplementsPath && !isSupplementPathTopical(name)) {
     const subcategory = supplementSubcategory(brand);
     return {
       top_category: "supplements",
-      product_type: base.product_type,
+      product_type: null,
       subcategory,
       tags: ["supplements", subcategory],
     };
