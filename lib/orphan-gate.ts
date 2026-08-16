@@ -155,6 +155,29 @@ const REDIRECTS_BRANDED_BEAUTY: Readonly<Record<number, string>> = {
   22393: '/makeup/nails',
 };
 
+// Staged for the Atelier De Glow (r29) departure, NOT YET GENERATED.
+// EXPECTED SIZE: 59 ids (work-list item 139). Small, and that is the trap this departure
+// exists to record -- see REDIRECTS_ATELIER below and the item.
+const GONE_RAW_ATELIER =
+  '1722,3566,3569,3671,3965,3967,4464,4465,4468,4469,4471,4473,5310,5740,5742,6011,18301,18303,20518,48856,51742,53843,80490,91324,91326,124272,126070,127463,127465,127467,127470,127471,127472,127474,127475,127476,127477,127478,127479,127480,127481,127484,127492,127493,127494,127499,127501,127502,127504,127505,127506,127507,127514,127515,127519,135046,135047,135048,135810';
+
+// DELIBERATELY EMPTY, AND THAT IS A DECISION RATHER THAN AN OMISSION.
+//
+// Curated from the same GSC Pages export (Web, last 3 months) that produced Branded
+// Beauty's 22. NONE of Atelier's 59 dropping products appears in it, and only 2 of its
+// 553 products appear at all. Atelier onboarded 16 July with Korean specialist lines
+// that carry little UK search volume, so there is no equity to preserve.
+//
+// COVERAGE IS ESTABLISHED, NOT ASSUMED. GSC sorts by clicks then impressions and the
+// export's last row carries 0 clicks and 63 impressions, so every product page with at
+// least one click in three months is above the cut. "No clicks" is a measurement here,
+// not an absence of data.
+//
+// So the 59 all 410 and none 301s. If this is ever revisited, the question is not "why
+// were no redirects written" but "has Atelier acquired search traffic since 16 August
+// 2026" -- and the answer needs a fresh export, not this comment.
+const REDIRECTS_ATELIER: Readonly<Record<number, string>> = {};
+
 interface Departure {
   /** `retailers.id`, so the regen script and this module cannot disagree about who. */
   retailerId: number;
@@ -172,6 +195,11 @@ export const DEPARTURES: Readonly<Record<string, Departure>> = {
     retailerId: 6,
     goneRaw: GONE_RAW_BRANDED_BEAUTY,
     redirects: REDIRECTS_BRANDED_BEAUTY,
+  },
+  atelier: {
+    retailerId: 29,
+    goneRaw: GONE_RAW_ATELIER,
+    redirects: REDIRECTS_ATELIER,
   },
 };
 
