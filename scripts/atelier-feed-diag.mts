@@ -849,23 +849,58 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
       }
 
       // (d) THE SQL, PRINTED NOT RUN.
+      //
+      // TWO DECISIONS FROM ITEM 145 ARE ENCODED HERE, NOT LEFT TO THE READER OF THE OUTPUT.
+      //
+      // 1. `general` IS NEVER WRITTEN. products.subcategory publishes a URL — one product
+      //    carrying a value puts it in active_category_subcategories and therefore in the
+      //    sitemap, with no threshold anywhere in between. /supplements/general would be a
+      //    page named for having nothing to say about 75% of the category. `general` stays
+      //    the honest INTERNAL answer for a row on a bare parent and stops being written to
+      //    the column that publishes pages.
+      //
+      // 2. NOTHING OVERWRITES A MORE SPECIFIC EXISTING VALUE. Item 144's second defect: the
+      //    first draft of this batch would have relabelled 194 products already filed
+      //    `sports` as `general`, silently, because the UPDATEs were keyed on product id
+      //    alone. "Group B stays out" meant do not ship a new name rule; it did not mean
+      //    un-file what the existing inference already filed.
+      //
+      // THE SPECIFICITY ORDER IS EXPLICIT BECAUSE IT IS NOT OBVIOUS. NULL, `general` and
+      // `supplements` all mean "no subcategory information" and are overwritable; anything
+      // else is a real classification and is not. Writing the guard as "only where NULL"
+      // would have written nothing at all, since every Boots row already carries
+      // `supplements`.
+      const OVERWRITABLE = ["supplements", "general"];
       console.log("\n  --- (d) BACKFILL SQL (printed, NOT executed) ---");
       const byTarget = new Map<string, number[]>();
+      let declinedGeneral = 0;
       for (const [pid, sub] of assign) {
+        if (sub === "general") { declinedGeneral++; continue; }
         const a = byTarget.get(sub) ?? [];
         a.push(pid);
         byTarget.set(sub, a);
       }
+      console.log("    DECLINED, decision 1: " + declinedGeneral + " rows that map to `general` " +
+                  "and would publish /supplements/general. They keep whatever they have.");
+      console.log("    GUARDED, decision 2: every UPDATE writes only where the existing value " +
+                  "is one of " + JSON.stringify(OVERWRITABLE) + " or NULL.");
+      const guard = " AND (subcategory IS NULL OR subcategory IN (" +
+                    OVERWRITABLE.map(v => JSON.stringify(v)).join(",") + "))";
       console.log("BEGIN;");
       for (const [sub, ids] of [...byTarget.entries()].sort()) {
         ids.sort((a, b) => a - b);
-        console.log("-- " + sub + ": " + ids.length + " products");
+        console.log("-- " + sub + ": " + ids.length + " products offered");
         for (let i = 0; i < ids.length; i += 200) {
           console.log("UPDATE public.products SET subcategory = " + JSON.stringify(sub) +
-                      " WHERE id IN (" + ids.slice(i, i + 200).join(",") + ");");
+                      " WHERE id IN (" + ids.slice(i, i + 200).join(",") + ")" + guard + ";");
         }
       }
       console.log("COMMIT;");
+      // A GUARD THAT SILENTLY WRITES FEWER ROWS THAN IT WAS GIVEN IS THE SAME DEFECT ONE
+      // LEVEL UP, so print the count to check the applied result against.
+      console.log("\n-- CHECK AFTER APPLYING: rows offered per value, above. A statement that");
+      console.log("-- updates FEWER rows than offered means the guard declined some, which is");
+      console.log("-- correct behaviour and must still be reported rather than noticed.");
     }
   }
 }

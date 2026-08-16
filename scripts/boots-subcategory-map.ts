@@ -26,6 +26,24 @@
 // node name does not say which. Leaving it out means it surfaces as a standing 2 in the
 // importer's `subcategory_map_unmatched` counter instead of being silently filed. Item 143.
 
+// ITEM 145 DECISIONS, RECORDED HERE BECAUSE THIS FILE IS WHERE THE VALUES ARE CHOSEN:
+//
+//   `general` IS NEVER WRITTEN TO products.subcategory. That column publishes URLs --
+//   active_category_subcategories feeds the sitemap with no threshold in between, so one
+//   product carrying a value publishes a page. /supplements/general would name a page for
+//   having nothing to say about 75% of the category. `general` remains the honest INTERNAL
+//   answer for a row on a bare parent; the backfill declines to write it.
+//
+//   THE FLOOR IS 100 PRODUCTS, derived from the pages that already shipped: every
+//   deliberately-created subcategory on the site holds at least 113 (bath_body/foot), and
+//   the two below it are classification leakage rather than decisions. Of the eleven
+//   specific values below, exactly ONE clears it -- `womens-health` at 130.
+//
+//   THE OTHER TEN ARE KEPT IN THIS MAP AND NOT WRITTEN. They are correct classifications
+//   and they are not pages. Deleting them would lose the reasoning; writing them would
+//   publish ten thin URLs. AWAITING THE CONSOLIDATED SET being confirmed before this file
+//   collapses them -- until then the backfill's decision-1 filter is what holds the line.
+
 export type SubcategoryMapEntry = { prefix: string; subcategory: string | null };
 
 const H = "Health & Pharmacy > ";
