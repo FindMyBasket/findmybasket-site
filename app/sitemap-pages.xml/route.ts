@@ -48,6 +48,13 @@ const STATIC_PAGES: UrlEntry[] = [
   { loc: '/articles/skincare-routine-under-40.html', changefreq: 'monthly', priority: 0.6 },
   { loc: '/articles/skincare-routine-cost-uk.html', changefreq: 'monthly', priority: 0.7 },
   { loc: '/articles/volufiline-pdrn-topical-collagen-explained.html', changefreq: 'monthly', priority: 0.7 },
+  // Supplements cluster, published together 16 Aug 2026. All four cross-link to
+  // each other, so they are a must-publish-together set: removing one leaves dead
+  // internal links in the other three.
+  { loc: '/articles/how-to-read-supplement-label.html', changefreq: 'monthly', priority: 0.7 },
+  { loc: '/articles/supplement-price-per-serving.html', changefreq: 'monthly', priority: 0.7 },
+  { loc: '/articles/supplement-capsules-vs-powder.html', changefreq: 'monthly', priority: 0.7 },
+  { loc: '/articles/supplement-dose-explained.html', changefreq: 'monthly', priority: 0.7 },
 ];
 
 function escapeXml(s: string): string {

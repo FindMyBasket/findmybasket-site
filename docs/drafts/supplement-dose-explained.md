@@ -1,30 +1,12 @@
-> **HELD — NOT FOR PUBLICATION.** Do not copy this into `public/articles/`. That directory
-> is served statically, so putting a file there IS publishing it; there is no draft state
-> in it. This file lives in `docs/drafts/` because it is version-controlled, reviewable and
-> served to nobody.
+> **PUBLISHED 16 August 2026.** Live at `/articles/supplement-dose-explained.html`. This file is the
+> source draft and is kept for provenance; **the published HTML is the live artefact and
+> edits made here do not reach it.** To change the article, edit
+> `public/articles/supplement-dose-explained.html`.
 >
-> **THE GATE IS TOMORROW'S 04:30 READ, NOT TODAY'S FLIP.** Boots' two config values —
-> `category_path_must_contain` and `supplements_path_prefixes` — were written on 15 August
-> with Baseline A captured first. **The catalogue has not moved yet.** The supplements
-> category stands at **93 products, 23 comparable, 19 of those one brand's flavour
-> variants**, and these articles route to `/supplements` promising a comparison "across
-> multiple stockists". That claim is not currently true. It becomes true when the read
-> confirms the move to roughly 1,715, not when the config was written.
->
-> **PUBLISH TOGETHER OR NOT AT ALL.** All four cross-link to each other. A partial publish
-> leaves dead internal links in whichever went first, so the template's five steps apply to
-> all four as a single act.
->
-> **STILL TO DO, AND NONE OF IT IS THE COPY** (`docs/article-template.html`):
-> 1. convert markdown to HTML on the template
-> 2. keep the mandatory `.disclosure` paragraph — this is the affiliate disclosure, compliance rather than styling
-> 3. delete the `<meta name="robots" content="noindex">` line
-> 4. make the slug match in `<title>`, `canonical`, `og:url` and the JSON-LD `url`
-> 5. add a card to `public/savings-hub.html` and a line to `app/sitemap-pages.xml/route.ts`
->
-> Copy conventions already satisfied: no em dashes, no "cheaper"/"cheapest", links use
-> `/articles/{slug}.html` and `/app`. See work-list item 115.
-
+> Released as one act with the other three in the cluster, against the 04:30 read on
+> 16 August: supplements 93 -> 1,770 (Boots 1,683), `on_supplements_path` 1,696,
+> `supplements_path_unreachable` `[]`. The gate condition in the previous version of this
+> note was met. All five template steps applied to all four; see work-list item 115.
 ---
 
 # What the Dose on the Front of the Pack Means
