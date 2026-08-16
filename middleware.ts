@@ -97,19 +97,21 @@ const HDR = 'x-fmb-superdrug-gate';
 // cannot express because HDR reports the OUTCOME.
 const HDR_SRC = 'x-fmb-gate-source';
 
-// KEY RENAME, PHASE 1 OF 5 (expand/contract). `superdrug_removed` gates more than
-// Superdrug now, so the name reads as more than it is. Both keys are read during the
-// transition because EITHER HALF ALONE OPENS THE GATE: renaming in Edge Config first
-// leaves this code reading a key that no longer exists, and deploying a new-key-only
-// read first leaves it reading a key that does not exist yet. Both resolve to
-// undefined, and undefined used to mean inert.
-//   1. THIS DEPLOY: read NEW, fall back to LEGACY.        gate stays on
-//   2. Edge Config: add ORPHAN_GATE_KEY = true.           gate stays on
-//   3. Verify via HDR_SRC on a known orphan id.
-//   4. Deploy: drop the LEGACY read.
-//   5. Edge Config: delete the legacy key.
+// KEY RENAME, PHASE 4 OF 5 (expand/contract) -- COMPLETE ON THIS SIDE.
+// `superdrug_removed` gated more than Superdrug, so the name read as more than it was.
+// The transition read BOTH keys because EITHER HALF ALONE OPENS THE GATE: renaming in
+// Edge Config first leaves the code reading a key that no longer exists, and deploying
+// a new-key-only read first leaves it reading one that does not exist yet.
+//   1. DONE  deploy: read NEW, fall back to LEGACY.       gate stayed on
+//   2. DONE  Edge Config: added orphan_gate_enabled=true. gate stayed on
+//   3. DONE  verified on 16 Aug 2026 via HDR_SRC=config, and all three outcomes with it:
+//            /product/650 -> 410 gone, /product/3308 -> 301 /brands/clearasil,
+//            /product/81755 -> 200 on-passthrough.
+//   4. THIS DEPLOY: legacy read dropped.
+//   5. REMAINING, ROBBIE: delete `superdrug_removed` from the store. Safe once this is
+//      live -- nothing reads it. Until then it is a harmless orphan, NOT a fallback:
+//      after this deploy the only fallback is GATE_DEFAULT below.
 const ORPHAN_GATE_KEY = 'orphan_gate_enabled';
-const LEGACY_GATE_KEY = 'superdrug_removed';
 
 // THE BUILD-TIME RECORD OF WHAT THE SWITCH IS EXPECTED TO SAY, and the fallback when
 // Edge Config cannot be read.
@@ -140,7 +142,7 @@ const LEGACY_GATE_KEY = 'superdrug_removed';
 const GATE_DEFAULT = true;
 
 type FlagState = 'on' | 'off';
-type GateSource = 'config' | 'legacy' | 'default-absent' | 'default-unreadable';
+type GateSource = 'config' | 'default-absent' | 'default-unreadable';
 
 // Per-key try/catch, NOT one around both: a throw on the new key must still reach the
 // legacy fallback. A single catch spanning both would skip it and land on the default,
@@ -154,22 +156,19 @@ async function readKey(key: string): Promise<boolean | undefined | 'error'> {
 }
 
 async function readGate(): Promise<{ state: FlagState; source: GateSource }> {
-  // `??` semantics, deliberately, NOT `||`. A key set to FALSE is a DELIBERATE KILL and
-  // must win: `false` is a real answer and stops here. `||` would treat it as absent and
-  // fall through to the legacy key, silently ignoring a rollback performed during the
-  // transition window -- inverting the switch's entire purpose.
+  // A BOOLEAN IS A REAL ANSWER AND STOPS HERE, INCLUDING `false`. That is the deliberate
+  // kill switch, and it must never be mistaken for "no answer" and overridden by the
+  // build-time default below. This is why the check is `typeof === 'boolean'` and not a
+  // truthiness test: `if (primary)` would send a deliberate `false` to the fallback and
+  // turn the gate back on, which is the exact inversion the transition guarded against.
   const primary = await readKey(ORPHAN_GATE_KEY);
   if (typeof primary === 'boolean') {
     return { state: primary ? 'on' : 'off', source: 'config' };
   }
-  const legacy = await readKey(LEGACY_GATE_KEY);
-  if (typeof legacy === 'boolean') {
-    return { state: legacy ? 'on' : 'off', source: 'legacy' };
-  }
-  // Neither key answered. Fail closed to the last deliberate state.
+  // No answer. Fail closed to the last deliberate state rather than going inert.
   return {
     state: GATE_DEFAULT ? 'on' : 'off',
-    source: primary === 'error' || legacy === 'error' ? 'default-unreadable' : 'default-absent',
+    source: primary === 'error' ? 'default-unreadable' : 'default-absent',
   };
 }
 
