@@ -7569,6 +7569,22 @@ feed, same prefix, the shipped classifier:
 | topical rows arriving alongside | **28** |
 | of the supplements, `EXCLUDE_PATTERNS.supplements` would drop | 312 (18.2%) |
 
+> **CONFIRMED ON THE FIRST SCHEDULED IMPORT, AND IT IS THE CLEANEST RESULT IN THE WHOLE
+> READ.** Boots run 302, 16 August 04:30: `excluded_path_not_in_scope` fell **14,010 →
+> 12,296**, a drop of **exactly 1,714** against the 1,715 measured here. **One row.**
+>
+> This is what a measurement taken on the *shipped* rule buys. The superseded ~900 came
+> from a reimplementation; this figure came from importing `isSupplementPathTopical` and
+> running it over the real feed, and it predicted production to within 0.06%. **Cite this
+> when the method is questioned, not the headline count** — the count is what the rule
+> admits, and item 122 is about how little that guarantees.
+
+> **AND THE SENTENCE ABOVE ABOUT THE SUBTREE IS ALSO TRUE OF THIS LEAF.** *"Feed it a
+> subtree that is not a supplements path and it will faithfully call a wheelchair a
+> supplement"* was used to reject the wide path and never turned back on the narrow one.
+> Boots files Viagra Connect, Regaine and thrush pessaries under this leaf. **The medicines
+> were inside the 1,715**, not among the 28. See item 122.
+
 **~900 → ~1,715.** The old figure came from a v1.0 copy with no sports tokens — sports moved
 into scope two days *before* that measurement — and a topical veto containing `oil`, `gel`,
 `butter`, `wash`, which are application words on a beauty path and **dosage forms on a health
@@ -8355,6 +8371,11 @@ reseller-style codes rather than manufacturer EANs:**
 | Boots | 21,851 | 327 | 553 |
 | **YesStyle** | 13,812 | **5** | 7,893 |
 | **Atelier De Glow** | 547 | **0** | 544 (99.5%) |
+
+> **TWO CELLS IN THIS TABLE DO NOT REPRODUCE ON 15 AUGUST — see item 121.** Stylevana's
+> 967 measures 2,559, and 967 is exactly the Escentual figure in that re-measurement.
+> Atelier's 0 measures 1. **The argument below is unaffected** and no one has chased it;
+> cite the table for its point, not for these numbers.
 
 > **THIS IS NOT "TWO BARCODES MEANS TWO PRODUCTS". IT IS ONE MANUFACTURER CODE AND ONE
 > RESELLER CODE SITTING IN THE SAME FIELD.**
@@ -9849,4 +9870,363 @@ are built. It is a table and a loop.
 > **A marker is a question someone already identified and nobody has asked.** Three of
 > these took one dispatch each. That is the going rate, and it is why the remaining ones
 > should be read as a work queue rather than as caveats.
+
+
+---
+
+### 121. A count-scoped sweep passes a page whose count is right and whose claim is false
+
+**Raised:** 15 August 2026, running the departure sweep for Atelier De Glow (r29) ·
+**Recorded here rather than in `docs/superdrug-removal-plan.md` deliberately. Neither
+finding is caused by a departure, neither is fixed by completing one, and filing them
+inside the r29 retirement would date them to an event they have nothing to do with.**
+
+Two live, indexed, hand-written claims. One is wrong in a way no sweep this project has
+ever run could detect. The other is a figure that was identified as unverifiable, removed
+from the page it was found on, documented in that page's own comment, and left standing on
+a page nobody looked at.
+
+#### FINDING 1 — `about.html` SAYS 11, LISTS 11, AND NAMES THE WRONG ELEVEN
+
+`public/about.html:281` — *"Currently live across 11 UK retailers"* — over a `<ul>` of
+exactly eleven names. **The count matches the list. The list is internally consistent. The
+page is false.**
+
+| | |
+|---|---|
+| Names listed | 11 |
+| Of those, live partners | 10 — **Atelier De Glow is listed and is departing** |
+| Live partners **omitted** | 1 — **Niche Beauty, live since 9 August 2026, 8,838 in-stock rows** |
+
+**The two errors cancel in the count and only in the count.** Remove Atelier and the
+sentence still reads 11, because Niche Beauty was never added. So the r29 departure sweep
+needs **both edits, not one** — and a sweep that checks the number would report this page
+as clean while it names a retailer we do not sell and omits one we do.
+
+> **THIS IS THE FOURTH INSTANCE OF THE SWEEP-SCOPE CLASS, AND IT IS NOT THE SAME AS THE
+> FIRST THREE.**
+>
+> | # | Instance | Why the sweep missed it |
+> |---|---|---|
+> | 1 | **Item 66**, 12 Aug — bath & body absent from five surfaces | *"absence has no keyword to grep for"* |
+> | 2 | **3 Aug copy sweep** (`superdrug-removal-plan.md`) — three false claims on the swept page | searched for a retailer name; the claims name nobody |
+> | 3 | **Item 110**, 14 Aug — `/app` outside the eleven-places supplements sweep | the count described the sweep's reach, not the surface area |
+> | 4 | **this one** | **nothing was missed. The sweep looked, checked the count, and the count was correct.** |
+>
+> **The first three are under-reach: the sweep did not look there.** This one looked, ran
+> its check, and passed — because **the token it can verify is true and the assertion it
+> stands for is false.** A count is a summary of a list; verifying the summary says
+> nothing about the membership, and membership is the whole claim the page is making.
+>
+> **The rule that follows: verify the list, never the count.** A retailer roster claim is
+> checked by diffing the `<li>` set against `retailers`, not by comparing a number against
+> `count(*)`. The number agreeing is not weak evidence that the list is right — **it is no
+> evidence at all**, and it is worse than no check because it produces a pass.
+
+**Two further things in that block are stale, both of which would mislead the next
+sweeper**, and both sitting inside the comment that exists to prevent exactly this:
+
+- The maintenance comment (lines 265–279) states the table has **12** rows with
+  `active = true` and that the twelfth is Branded Beauty. **It has 13.** Niche Beauty
+  landed after the comment was written and nothing updated it.
+- The comment instructs the reader to keep the list *"in step with `retailers` where
+  active = true"*. **Following that instruction literally adds Branded Beauty**, whose
+  programme closed on 30 July and whose `active` flip is still held. `active` alone has
+  never been the liveness test — see the two-flag rule in `superdrug-removal-plan.md`
+  Step 0.
+
+#### FINDING 2 — THE 25% FIGURE SURVIVED ON THE PAGE NOBODY SWEPT
+
+`public/work-with-us.html`, the stat grid at lines 264–280. Four hand-written numbers,
+none generated, none refreshed by anything:
+
+| Claim | Measured, 15 August 2026 |
+|---|---|
+| **`~25%` average saving on a typical routine** | **The exact figure removed from the homepage on 3 August as unverifiable.** |
+| `10` UK retailers currently live | **11** partner-live (13 rows `active = true`, less Branded Beauty and, imminently, Atelier) |
+| `80k+` products tracked in real time | 98,404 in `products_active` — conservative, and stale in the other direction |
+| `5k+` multi-retailer price comparisons | **14,056** products with ≥2 live retailers |
+
+> **THIS IS ITEM 66'S SHAPE ON A LIVE MARKETING SURFACE, AND THE HOMEPAGE FIX IS WHAT
+> MAKES IT WORSE RATHER THAN BETTER.**
+>
+> The savings claim was found on `public/index.html` on 3 August, judged unverifiable,
+> removed, and **the reasoning was written into that file as a standing comment** —
+> *"a hand-written percentage above the fold would contradict them… If a savings figure is
+> ever wanted here it must be GENERATED"*. That comment is still there and still correct.
+>
+> **It protects one file.** The same claim, the same number, was sitting on
+> `work-with-us.html` the whole time. The fix was scoped to where the problem was found,
+> the note documenting the fix was scoped to the same file, and **a comment in
+> `index.html` cannot be read by anyone editing a different page.**
+
+**It is reachable from the sitemap.** `/partners.html` is in `STATIC_PAGES`
+(`app/sitemap-pages.xml/route.ts:31`) and 301s to `/work-with-us` (`vercel.json:14`),
+which serves this file. So it is a submitted, indexable URL — **and the page's audience is
+prospective retail partners**, which makes a wrong live-retailer count and an unverifiable
+savings claim the two worst possible figures to be wrong on.
+
+**`work-with-us.html` is not in the Step 5 sweep table.** That table lists the homepage
+strip, the demo basket, `about.html`, article price tables, meta descriptions and logo
+assets. **Six surfaces, and the partnerships page is not one of them** — item 110's
+finding restated: the sweep table is a floor, and it has now been short twice.
+
+#### WHAT TO DO, AND WHAT NOT TO INFER
+
+- **Fix both pages.** Neither edit is blocked on the r29 flip and neither should wait for
+  it — `work-with-us.html` in particular is wrong today, independent of any departure.
+- **Add `public/work-with-us.html` to the Step 5 sweep table**, with its stat grid called
+  out by line the way the demo basket is.
+- **Do not read this as an argument that the 3 August fix was inadequate.** It was correct
+  and it was documented. **The gap is that a per-file comment is a per-file mechanism**,
+  and there is still nothing that compares any hand-written claim against the database —
+  the same absence Step 5 has recorded since 1 August. **This is a third instance of that
+  absence, not a new one.**
+
+#### AN UNCHASED DISCREPANCY IN ITEM 104's TABLE
+
+Flagged here because re-measuring the fleet's barcode shapes for the r29 departure ran
+across it. **Not investigated — deliberately, it is outside that brief.**
+
+| retailer | item 104 recorded (14 Aug) | measured 15 Aug |
+|---|---:|---:|
+| **Stylevana**, 12-digit reseller | **967** | **2,559** |
+| Atelier De Glow, 12-digit reseller | 0 | **1** |
+| Atelier De Glow, barcodes / Korean 880 | 547 / 544 | 547 / 544 — **unchanged** |
+
+**967 is exactly the Escentual figure in the 15 August measurement**, and Escentual is not
+in item 104's table. That coincidence is the reason to look, and it is also the reason not
+to assume: it could be a column transcribed from the wrong row, or two different
+definitions of "reseller-style", or a real one-day feed change. **Item 104's argument does
+not depend on which** — Stylevana supplies reseller codes at either 967 or 2,559, and the
+merge it justified stands. Resolve it if the table is ever cited for a number rather than
+for its point.
+
+
+---
+
+### 122. The 18 measured the regex, not the problem, and path-first relocated the sildenafil case
+
+**Raised:** 16 August 2026, from the Boots supplements 04:30 read · **Applied in part:** six
+medicines excluded, migration `20260816090000`. The rest is a human pass, unfinished.
+
+#### THE COUNT I REPORTED WAS WRONG IN BOTH DIRECTIONS, AND THAT LEADS THIS ITEM
+
+The read said **18 bad rows in the 1,683**. That figure came from a regex over product names
+and it should not be carried anywhere.
+
+| | |
+|---|---|
+| **Two of the 18 were false positives** | `Jude Collagen & Creatine Pelvic Floor Supplements Sachets 14S` (149983) and `... X30 Servings, 255g` (149898) are ingestible supplements. They matched on `pelvic floor`, **a token they share with the Soma Flex devices** they were sitting next to. |
+| **Five more were missed entirely** | an insect repellent pump spray (148989), a collagen neck patch (150442), a razor and shave gel bundle (150449), a sleep kit (149127), a topical arnica ritual (150216). Found only by widening the net. |
+| **A structural pass then found more still** | makeup and skincare under `top_category = 'supplements'`: bronzing drops, highlighting drops, a brow tint, loose setting powder, jelly eye patches, a lip balm bundle, Tiger Balm, a kids' hair oil, Vicks Vapopads. |
+
+> **THE 18 WAS A MEASURE OF THE REGEX. It is the same defect as the 1,715 below, one level
+> down, and it was committed in the act of writing up the 1,715.** Item 110's rule again:
+> the number describes the sweep's reach, not the surface area.
+
+**The other half of the finding is that the right move was to stop.** The obvious next step
+was a better pattern. **A better pattern produces another sample-fitted number**, and that is
+precisely what the name-based supplement rule already demonstrated: `oil`, `gel`, `butter`
+and `wash` were reasonable tokens chosen from real examples, and they are application words
+in beauty and dosage forms in health. **A third pattern fitted to a third sample is not a
+third attempt at the same problem; it is the problem.** So the population goes to a human
+pass and the mechanism takes ids, not patterns.
+
+#### THE DESIGN DID NOT FAIL. IT MOVED THE FAILURE
+
+Three Viagra Connect listings went live with prices this morning, alongside a hayfever
+antihistamine, thrush pessaries and Regaine 5%. All created by `scrape_log` run 302 between
+04:30:56 and 04:31:17, so they arrived on the supplements path rather than drifting in.
+
+The founding case for path-first was `Viagra Connect Sildenafil Film-Coated Tablets` being
+classified as **skincare** by a name rule (`scripts/categorisation-harness.mts`, argued in
+item 92). The path-first branch takes the category from the path the retailer filed the row
+under.
+
+> **It worked exactly as designed and produced the same product in a different wrong place.
+> Viagra Connect is no longer skincare. It is a supplement.**
+
+The name rule failed on tokens; the path rule fails on a path that contains medicines.
+**Neither is a tuning error and neither is fixed by adjusting the other.** The second is
+worse in one respect: a misfiled skincare product is a bad category, whereas a P-medicine
+carrying a price on a beauty comparison site is a compliance question.
+
+#### ITEM 92 PREDICTED THIS IN ITS OWN SENTENCE
+
+Item 92, arguing against the wide `Health Care` subtree, wrote:
+
+> *"The shipped path-first rule has NO NAME-BASED SUPPLEMENT TEST AT ALL. It trusts the
+> path. ... Feed it a subtree that is not a supplements path and it will faithfully call a
+> wheelchair a supplement."*
+
+**That sentence is true of the leaf as well, and item 92 applied it only to the subtree.**
+The argument was used to reject the wide path and never turned back on the narrow one. The
+question item 92 posed — *is this a path where "on it" means "ingested"?* — was answered
+"yes, for the leaf" without checking. **The answer is no.**
+
+#### THE MEDICINES SAT INSIDE THE 1,715 WHILE THE 28 WERE READ AS THE CONTAMINATION
+
+| Boots leaf, item 92 | rows |
+|---|---:|
+| admitted by the prefix | 1,743 |
+| **supplements per the shipped rule** | **1,715** |
+| topical rows arriving alongside | 28 |
+
+**The 28 were read as the contamination and the 1,715 as the clean population.** Medicines
+are not topical, so `SUPP_TOPICAL_FORM` could not see them, nothing counted them, and they
+sat inside the 1,715 as supplements. **The number quoted as the size of the win was also the
+number carrying the defect.**
+
+> **A count of what a rule admits is not a measure of what it got right.** The 28 measured
+> one veto firing. It was read as though it measured correctness. Only looking at the
+> admitted rows separates the two, and a confident admitted-count is exactly what makes that
+> step feel unnecessary.
+
+#### THE PROPERTY THE FIX RESTS ON, MEASURED RATHER THAN ASSUMED
+
+The design needed one thing to be true: **that a row-level edit survives the next import.**
+It does, and it was checked in the importer rather than assumed:
+
+| line | action | fields written |
+|---|---|---|
+| `index.ts:2429` | `createActions.push` | **`tags`, `top_category`, `subcategory`**, plus price/url/stock/identifiers |
+| `index.ts:2197` | `updateActions.push` | `rp_id, product_id, price, url, in_stock, ean, mpn, image_url` |
+| `index.ts:2315` | `linkActions.push` | `product_id, ext_id, price, url, in_stock, ean, mpn, image_url` |
+
+> **`tags`, `top_category` and `subcategory` are written at CREATE ONLY. The update and link
+> paths carry no categorisation fields at all.** So an edit to an existing product row is
+> stable across imports, and **only deletion is reversed** — the feed still carries the row,
+> the next import finds no match, and it is recreated under a **new id**.
+
+That asymmetry is the whole design. It is why this is a table of ids rather than a delete,
+and why `in_stock = false` would not have worked either: it is rewritten at 04:30 **and**
+`products_active` ignores `in_stock` entirely, so the page would survive with nothing
+buyable on it.
+
+**The existing `cleanup_remove` tag was checked and rejected on the same basis.** It is
+filtered in ~20 query-layer call sites but **not in `products_active`**, and both
+`lib/sitemap.ts` and `getProductById` read `products_active` with no tag filter. A
+`cleanup_remove` product loses its listings and **keeps its live, indexed `/product/{id}`
+page with the price on it** — the exact surface that made this urgent.
+
+#### APPLIED: `product_exclusions`, AND THE CLAUSE GOES ON THE VIEW
+
+Migration `20260816090000`. A table with `product_id` primary key, a constrained `reason`, a
+required `note` saying why THIS id, `added_at` and `added_by`. One clause on
+`products_active`:
+
+```sql
+AND NOT EXISTS (SELECT 1 FROM product_exclusions x WHERE x.product_id = p.id)
+```
+
+**The view and not the call sites, because Step C of the Superdrug removal had to patch
+EIGHT separate query sites for want of a chokepoint.** One clause here is honoured by the
+product page, the sitemap, the listings, the brand pages and search, without eight edits and
+without a ninth being missed later.
+
+**The view was patched from its own live definition** — `pg_get_viewdef` read, clause
+inserted at a guarded anchor, result re-applied — so the 22-column SELECT list is carried
+verbatim. The guard refuses to patch if the predicate is not the exact expected shape,
+because the insert prepends to a flat top-level `AND` chain and an `OR` appearing there would
+silently change the meaning.
+
+**Verified on applying:** `products_active` 100,207 → **100,201**, exactly −6; column list
+identical; 0 of the six visible; `products` and `retailer_prices` rows **intact**, so prices
+keep updating and reversal is one `DELETE` from a table of ids. Supplements 1,770 → 1,764.
+
+The six medicines went first because **none of them needs judgement**: 149604 / 149605 /
+149607 Viagra Connect, 149409 Pirilieve Hayfever Relief, 149880 Regaine 5%, 150432 Balance
+Activ thrush pessaries.
+
+#### IT DOES NOT STOP TOMORROW'S MEDICINE
+
+**This stays in the record as the honest cost of a list, and it must not be papered over
+with a rule.**
+
+A new P-medicine arriving on the same path tomorrow gets a **new product id**, is not on the
+list, and goes live. The list covers exactly what is on it and nothing else, **by design**.
+The answer is to re-run the detection query after an import and curate what it surfaces —
+never to promote the list into a pattern, because a pattern is fitted to the rows that
+produced it and the two failures above are both instances of that.
+
+The table comment says so, so that a future reader meeting the table cannot mistake it for a
+rule that fell short.
+
+#### THE HUMAN PASS: `boots-supplements-working-list-2026-08-16.csv`
+
+**102 candidates, sorted so the unambiguous ones come first.** One row per candidate with
+`brand`, `name`, `price`, `live_retailers`, a `proposed_verdict`, and blank `done`, `verdict`
+and `note` columns to work in — the shape of the ASIN working list (item 105).
+
+| bucket | rows | proposed |
+|---|---:|---|
+| `A_medicine` | 1 | `medicine` — Boots Repel DEET pump spray |
+| `B_device` | 11 | `device` — blood test kits, Soma Flex trainers, Vicks Vapopads, a vet syringe |
+| `C_veterinary` | 4 | `veterinary` |
+| `D_topical_or_cosmetic` | 18 | `not_a_supplement` — bronzing drops, brow tint, setting powder, massage oils, Tiger Balm, a razor bundle |
+| `E_token_clash_probably_keep` | 6 | **`KEEP`** — hair/skin/nail tablets and gummies caught by the `nail` token. **Listed precisely because the proposal is to keep them.** |
+| `F_bundle_review` | 62 | *(blank)* — multi-item bundles, genuinely undecided |
+
+**Built from several independent signals rather than one pattern**, and each row carries the
+bucket that caught it, so a wrong proposal is visible as a wrong bucket rather than hidden in
+a verdict. **Bucket E exists to make the regex's own errors reviewable**: those six are the
+class that produced the two false positives above.
+
+> **THE FROZEN-SNAPSHOT PROPERTY APPLIES TO THIS FILE, per item 105.** The ASIN list had one
+> stale id of 44 within four hours because a merge moved a product underneath it. **Re-check
+> every id against `products.merged_into` and against `product_exclusions` before applying
+> anything from this file.** The catalogue moves; a CSV does not.
+
+**Still open, and bigger than a suppression list:** whether the Boots leaf is the right path
+at all, now that it is known to contain medicines, devices, veterinary products, makeup and
+topicals. That is item 92's question asked properly.
+
+---
+
+### 123. A weekly upsert cannot record a mid-week change
+
+**Raised:** 16 August 2026, caught before running rather than after · **A property of
+`fmb_quality_snapshot_write`, not an incident.**
+
+`fmb_quality_snapshot_write(p_week_start date DEFAULT (date_trunc('week', now()))::date)`
+upserts on `week_start`. On 16 August `date_trunc('week', now())` is **2026-08-10** — the
+week_start of the single existing row, which is the **pre-change baseline** for the Boots
+supplements activation.
+
+> **Calling the writer with its own default, on any day that is not the first of a week,
+> overwrites that week's row with values measured later in the same week. For a change that
+> lands mid-week, that destroys the only "before" the series has.**
+
+Nothing about this is specific to Boots. It is structural:
+
+| | |
+|---|---|
+| The series' resolution | one row per week |
+| A change's resolution | an instant |
+| What the boundary table exists to explain | a step between two rows |
+| **What the before must be** | **measured before the change, in the week the change lands** |
+
+**So the two collide by construction.** A change that lands mid-week needs a before-reading
+inside a week whose row the writer will happily overwrite, and the writer's default argument
+is precisely the value that does it. **A re-run is not idempotent across a change boundary**,
+even though an upsert reads as though re-running is free.
+
+**Rules that follow:**
+
+- **Do not run the writer between a change landing and the following Monday.** For the Boots
+  activation the first legitimate post-change row is `week_start = 2026-08-17`.
+- **A deliberate re-run inside a week must pass an explicit `p_week_start`**, never the
+  default, and never the current week's value if a change has landed inside it.
+- **The baseline for a mid-week change belongs in a side table**, which is what
+  `fmb_boots_supplements_baseline_20260815` is and why it was right to take it. See the
+  correction to boundary row id 36 for what happens when a side-table figure is then
+  mistaken for a series member.
+
+**This was caught by reading the default before calling the function**, not by a guard.
+There is no guard: the function will overwrite a pre-change row without complaint, and the
+overwritten values are unrecoverable. **If a guard is ever wanted**, the cheapest is to
+refuse the write when `p_week_start` matches a week that a `platform_changes` row falls
+inside and the existing row predates that change — but that is a real build, and the rule
+above costs nothing.
 
