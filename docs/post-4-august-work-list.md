@@ -10695,3 +10695,309 @@ the mapped nodes — safe, because the population is bounded — or a decision f
 where hydration sits. **Do not adopt half a map and describe it as derived from the
 retailer's taxonomy.**
 
+---
+
+### 128. Hydration is sports, and the name rule that files it is bounded by the taxonomy
+
+**Decided by Robbie, 16 August 2026.** Resolves the open question in item 126.
+
+**Whey, creatine and electrolytes are one shopper and one purchase pattern.** The four
+articles published this morning name hydration alongside protein and creatine as sports
+nutrition, so **splitting it would make copy wrong that was corrected the same day** — the
+anchors were fixed at 13:5x and a split would have re-broken the bodies.
+
+Boots cannot answer this: it files Phizz hydration under Medicines & Treatments and Liquid IV
+hydration under Lifestyle & Wellbeing. **A retailer inconsistent about one product class
+cannot arbitrate that class**, so this was always a decision rather than a lookup.
+
+#### THE RISK PROFILE OF A NAME RULE CHANGES WITH ITS INPUT SET
+
+Group B is therefore a **name rule scoped INSIDE the mapped `product_type` nodes**, and that
+scoping is the whole of the argument for it:
+
+| | name rule over the CORPUS | name rule over a TAXONOMY-BOUNDED set |
+|---|---|---|
+| input | anything in the feed | rows Boots already filed as health/wellbeing/nutrition |
+| worst failure | **sildenafil filed as a supplement**, live with a price | **a whey protein filed as general health** |
+| who notices | nobody, until someone looks | a shopper browsing the wrong subcategory |
+| cost | compliance | a filing error |
+
+> **A name rule operating on a taxonomy-bounded set is a different risk from one operating on
+> the corpus, and the difference is not degree.** The bound removes the failure mode that
+> made name rules unacceptable in the first place. What remains is mis-filing, which is
+> visible, reversible and does not put a P-medicine on a beauty site.
+
+**This is not a licence to reintroduce name rules generally.** It is specifically that
+`isSupplementPathTopical`-style inference is acceptable *downstream of* a retailer's own
+filing and unacceptable *instead of* it. Record the bound with the rule whenever one is
+written, because a rule copied out of its bound is a rule without the property that made it
+safe — item 92's `oil`/`gel` veto was exactly that.
+
+**Order from here:** part 2 (importer reads the field), backfill, read one cycle, then decide
+part 3 deliberately. **Nothing resumes until the claim sweep in item 129 has a decision.**
+
+---
+
+### 129. The claim sweep the doctrine asked for on a calendar, run for the first time
+
+**Raised:** 16 August 2026 · **REPORT ONLY, nothing changed.** The doctrine's Step 5 records
+a second half that is *not* departure-driven — *"grep for the SHAPES rather than the names: a
+percentage next to the word save, a currency figure in hand-written markup, a month name, and
+any sentence asserting what the optimiser accounts for. Run it on a calendar, not on a
+departure."* **It had never been run.** Shapes 5 and 6 are added from `docs/strategy.md`'s
+positioning register.
+
+**Findings are ranked by brand consequence, not by count.** The full list is below; these are
+the ones that are wrong rather than merely dated.
+
+#### 1. "FIND THE BEST DEAL" IS GENERATED ONTO EVERY SUBCATEGORY PAGE
+
+`app/edit/[slug]`, `app/fragrance/[subcategory]`, `app/hair/[subcategory]`,
+`app/makeup/[subcategory]`, `app/skincare/[subcategory]` — five route files, each writing
+`Find the best deal` into a `<meta name="description">` **generated across every
+subcategory**, so this is on hundreds of indexed pages.
+
+> `docs/strategy.md`: *"FindMyBasket is **not a discount destination and should never be
+> framed as one**."*
+>
+> **This is the largest register violation on the site by surface area, and it is the
+> cheapest to fix, because it is generated.** Five strings correct every page at once. Every
+> other item in this sweep is hand-written and has to be fixed one at a time.
+
+#### 2. THE DELIVERY-THRESHOLD MECHANISM CLAIM IS FALSE FOR TWO LIVE RETAILERS
+
+`public/index.html:588` — *"We factor in each retailer's free delivery threshold, so you
+always see the true total cost."*
+
+| retailer | threshold | cost | |
+|---|---|---|---|
+| **Debenhams** | **NULL** | £3.99 | flat rate. **There is no free-delivery threshold to factor in.** |
+| **Niche Beauty** | **NULL** | **NULL** | `unknown`. Live since 9 August with 8,838 in-stock rows and **we do not know its delivery terms at all.** |
+
+The 3 August note flagged this claim as *"a mechanism claim, wrong for one retailer"*. **It is
+now wrong for two, and the second is worse**: `unknown` is a state the
+`retailers_delivery_shape` CHECK deliberately makes someone *choose*, and it was chosen by
+default when Niche Beauty was onboarded.
+
+**The invented-figures bug is NOT back.** `RoutineBuilder.tsx:495-499` carries terms verbatim
+with the `?? '25'` / `?? '3.95'` coercion removed, so nulls stay null. **The claim is wrong;
+the arithmetic is not.**
+
+#### 3. EIGHT ARTICLES CLAIM "UPDATED APRIL 2026" AND WERE NOT
+
+`cerave`, `clarins`, `cosrx`, `elemis`, `k-beauty`, `lookfantastic-vs-boots`,
+`overpaying-for-skincare`, `skincare-routine-under-40`, `the-ordinary` all carry
+**`Updated April 2026`** in the byline. Four of them were materially edited on 1 August to add
+supersession notices, and **the byline still says April**. A freshness claim that the edit
+itself falsified.
+
+`public/terms.html:96` — **`Last updated: April 2025`**, sixteen months old.
+
+#### 4. TWO COUNTS THAT UNDERSTATE, AND ONE THAT IS STILL WRONG
+
+| claim | where | actual |
+|---|---|---|
+| `80,000+` products tracked | `public/index.html:387` | **100,214** |
+| `80,000+` product catalogue | `public/work-with-us.html:297` | **100,214** |
+| `Currently live across 11 UK retailers` | `public/about.html:281` | **still unfixed from item 121** — count right, list wrong |
+
+#### 5. ONE POINT-IN-TIME PRICE PAIR OUTSIDE AN ARTICLE
+
+`public/savings-hub.html:285` — *"A 5-product CosRx routine costs £114 at one UK retailer and
+£74 at another"* — in a hub card excerpt. **The article it links to carries a supersession
+notice; the card does not.**
+
+#### WHAT THE SWEEP CLEARED
+
+Recorded because a sweep that only lists problems reads as though everything else was checked
+and failed:
+
+- **All four articles with hand-written `<td>£` price tables** (clarins 5, cosrx 15, elemis
+  12, k-beauty 5) **carry supersession notices.** No unnotified price table exists.
+- **The `?? '25'` / `?? '3.95'` delivery fallback is gone**, as recorded on 1 August.
+- **Savings percentages are range-based**, per the register: *"can save another 10-30%"*,
+  *"even a 10% variation"*. No point-in-time savings claim survives on any page.
+- **The supplements anchors** were corrected earlier today and are clean.
+
+#### THE LIST IS LONGER THAN THE SHAPES PREDICTED, AND THAT IS THE FINDING
+
+The doctrine named four shapes. **Two of the five findings above came from the two shapes
+added from `strategy.md` rather than from the doctrine's four** — the register violation
+(#1), which is the biggest, and the stale-count pair (#4).
+
+> **A sweep specification is itself a sweep scope, and item 110's rule applies to it: the
+> shapes describe the reach of whoever wrote them.** The doctrine's four shapes were derived
+> from one page on one day in August. They do not reach a `<meta>` description written by a
+> `.tsx` template, because the person writing them was looking at hand-written HTML.
+
+
+#### FINDING 1 FIXED SAME DAY; AND ONE THING THE FIX EXPOSED
+
+Seven strings, `best deal` → `best value`, merged and live. **The replacement was not
+invented**: `app/bath-and-body/[subcategory]` already shipped the identical sentence with the
+compliant word, so the newer route files were right and the older five had simply never been
+swept.
+
+**Exposed by the fix, not fixed by it:** the same templates interpolate `${sub}` twice, and
+the second one is wrong. Live right now:
+
+| page | rendered `<meta name="description">` |
+|---|---|
+| `/makeup/lips` | *"Find the best value on **lips foundation**, lipstick, mascara"* |
+| `/hair/cleanse` | *"Find the best value on **cleanse shampoo**, conditioner"* |
+| `/skincare/face` | *"face cleansers, serums, moisturisers"* — reads correctly by luck |
+
+**A subcategory name is not an adjective for the product nouns that follow it.** Dropping the
+second `${sub}` fixes every one, and `bath-and-body` — the file that was already right on the
+register — is also the one that does not duplicate. **The same file was right twice.**
+Queued, not fixed.
+
+#### NICHE BEAUTY'S TERMS ARE HALF-KNOWABLE, MEASURED FROM THEIR SITE
+
+Finding 2 asked whether fixing the data beats softening the claim. **Partly.**
+
+| | |
+|---|---|
+| free-delivery threshold | **£75.00**, stated plainly and confirmed on two separate pages of `niche-beauty.com/en-gb` |
+| standard UK delivery cost below it | **NOT PUBLISHED ANYWHERE** — reachable only by building a basket and going to checkout |
+
+**£75 would be the highest threshold in the fleet by half** — the next highest are Perfume
+Click and YesStyle at £50, and the median is £30. That is materially different for basket
+optimisation, so leaving it `unknown` is not a neutral placeholder.
+
+> **But the shape CHECK will not accept a threshold without a cost**, and it is right not to.
+> `tiered` requires both. **Writing £75 with a NULL cost recreates the exact shape the
+> 1 August work called self-contradictory** — free above a threshold and free below it, which
+> no retailer means.
+
+**So the options are: run a checkout to obtain the cost, or leave it `unknown` and stop
+claiming the mechanism.** What must not happen is a threshold entered without its cost,
+because that is the 1 August defect with a fresher date on it.
+
+#### `about.html` IS NOW TWICE-FLAGGED AND STILL WRONG
+
+**Item 121 recorded it on 16 August. This sweep found it again the same day.** The page still
+reads *"Currently live across 11 UK retailers"* over a list that names Atelier De Glow, which
+is departing, and omits Niche Beauty, which has been live since 9 August.
+
+> **Item 121 is open while the page makes a false claim, and the claim is now in the record
+> twice.** Being recorded is not being fixed, and a second sighting of the same defect is
+> evidence about the queue rather than about the page.
+
+#### THE SWEEP SPECIFICATION IS ITSELF A SWEEP SCOPE
+
+**This is the finding that outlives the list.**
+
+**Two of the five findings came from the two shapes added from `strategy.md`, not from the
+doctrine's four** — the register violation, which was the largest by surface, and the stale
+counts. The doctrine's four shapes are: a percentage next to *save*, a currency figure in
+hand-written markup, a month name, and a sentence asserting what the optimiser accounts for.
+
+**They were derived on 3 August from ONE PAGE — `public/index.html` — on ONE DAY.** Every one
+of them describes something that page happened to contain. **None of them can reach a
+`<meta>` description written by a `.tsx` template**, because the person deriving them was
+reading hand-written HTML and the failure they were cataloguing was hand-written HTML.
+
+> **Item 110's rule applies to sweep specifications, not just to sweeps: the shapes describe
+> the reach of whoever wrote them.** A shape list is a floor. The doctrine presents its four
+> as though they were the categories of stale claim, and they are the categories of stale
+> claim *on one page*.
+
+**And the second half, which is worse:**
+
+> **A SWEEP THAT HAS NEVER RUN HAS NEVER BEEN TESTED.** The doctrine has carried these four
+> shapes since 3 August as a standing instruction, and today was the first time anything ran
+> against them. **Thirteen days of a specification nobody had exercised**, presented in the
+> runbook with the same confidence as the steps that had been executed repeatedly. Its two
+> gaps were not discoverable by reading it — they were discoverable only by running it and
+> noticing that the interesting results came from elsewhere.
+
+**Consequence for Step 5:** the shape list must be **re-derived from the current surface
+area, not reused**. Specifically it needs shapes for generated copy (`<meta>` in `.tsx`
+templates, JSON-LD, `generateMetadata`) which did not exist in the form it does now when the
+list was written. **Re-derive on each run and record what the run added**, because the
+addition is the measurement of how stale the list had become.
+
+---
+
+### 130. A thorough pass with nothing behind it, and the retailer who arrived eight days later
+
+**Raised:** 16 August 2026, from the delivery claim in item 129 · **The 1 August audit was
+not skipped. It was complete, and then it stopped being true.**
+
+**Robbie verified eleven retailers' delivery terms against their own sites on 1 August**, and
+the record confirms it: five were missing, one wrong, one out by ten pence, and the
+`retailers_delivery_shape` CHECK was added the same day to stop a sixth. **That work was
+correct when it ran.**
+
+**Niche Beauty went live on 9 August, eight days later, and was never in it.**
+
+> **THE DEFECT IS NOT A SKIPPED CHECK. IT IS THAT THE CHECK WAS AN EVENT.** A one-off pass
+> over the retailers that existed on the day, with **nothing in the onboarding sequence
+> requiring delivery terms before a retailer goes live.** The pass could not have covered
+> Niche Beauty, and nothing else was ever going to.
+
+#### THIS IS THE AFTERNOON'S OTHER FINDING, ON A DIFFERENT SUBJECT
+
+**Same shape as the sweep specification, hours apart.**
+
+| | the sweep spec (item 129) | the delivery audit (here) |
+|---|---|---|
+| the work | four shapes derived 3 Aug | eleven retailers verified 1 Aug |
+| quality when done | correct for that page | correct for those retailers |
+| what it was read as | the categories of stale claim | the delivery terms are checked |
+| what it actually was | **the categories on one page** | **the terms of the retailers that existed** |
+| what covers arrivals after | nothing | nothing |
+
+> **A thorough pass and a mechanism are not the same thing, and the more thorough the pass,
+> the more it reads like one.** Both of today's instances were good work. Neither left
+> anything behind that could see what arrived next. **The CHECK constraint is the only part
+> of the 1 August work that was a mechanism, and it constrains the SHAPE of a value rather
+> than requiring one to exist.**
+
+**It recurs with The Fragrance Shop** — pending in `docs/partnership-tracker.md` at the £40
+price point — **and with every retailer after it.**
+
+#### MEASURED: NICHE BEAUTY IS THE ONLY ONE
+
+Asked whether it is alone. It is, among live retailers:
+
+| retailer | shape | |
+|---|---|---|
+| 11 active retailers | `tiered` | both values present |
+| **Debenhams** | **`flat`** | £3.99, no threshold. **Legitimate**, not a gap. |
+| **Niche Beauty** | **`UNKNOWN`** | both NULL. The only one. |
+
+**Method note, because the obvious query is wrong:** `min(retailer_prices.last_updated)` is
+NOT a go-live proxy — it moves on every re-import, and it reports The Organic Pharmacy as
+15 August when the 1 August audit already covered it. Go-live has to come from
+`platform_changes` and the partnership tracker, not from the price rows.
+
+**Two inactive retailers carry the shape the 1 August work called self-contradictory** —
+Branded Beauty (6) and Skin Cupid (7), both `threshold 30.00 / cost 0.00`, free above a
+threshold and free below it. Already recorded on 1 August as unverified rather than free.
+**Branded Beauty is still `active = true`**, so it is inside `products_active`'s retailer
+test; it has zero in-stock rows so no basket can reach it, but the flag and the shape are
+both still wrong and it is a departure that has been held since 2 August.
+
+#### THE FIX IS A REQUIRED STEP, NOT ANOTHER AUDIT
+
+Added to the "Before onboarding" section of `docs/superdrug-removal-plan.md`, which already
+exists on the stated reasoning that *"the departure runbook is what gets read when a
+retailer's scope changes, and the same trap applies on the way in."*
+
+**Delivery terms are required before go-live, and `unknown` must be CHOSEN:**
+
+1. Verify against the retailer's own site, not the feed. Terms are not in AWIN.
+2. Record one of the CHECK's three shapes: **`tiered`** (threshold and cost), **`flat`**
+   (cost, no threshold), **`unknown`** (neither).
+3. **`unknown` is a deliberate choice with a reason, never a default.** It is what the column
+   pair looks like when nobody decided, which is exactly how Niche Beauty acquired it.
+4. **Never enter half a shape.** A threshold with no cost is the self-contradictory shape;
+   the CHECK refuses it, and the refusal is the constraint working.
+
+**What `unknown` costs, so choosing it is informed:** the product is honest about it —
+`RoutineBuilder` renders *"Delivery not known"* and refuses a delivered total — but that
+retailer cannot win a basket comparison on delivered cost, and any site copy describing the
+delivery mechanism is false for it until the terms are entered.
+
