@@ -11582,3 +11582,107 @@ collects a loss already taken*. The search equity went the same way and for the 
 > held fifteen days and kept 22. **The hold is the cost, and it is measurable in both
 > catalogue and search terms.**
 
+
+---
+
+### 138. A check whose truth is contingent on a state the change will alter is not a check on that change
+
+**Raised:** 16 August 2026 · **The pattern, recorded instead of the instances**, because the
+instances are already in items 129, 131, 134 and 137 and the pattern is what transfers.
+
+#### THE FOUR, AS EVIDENCE RATHER THAN AS THE FINDING
+
+| # | the check | why it passed | when its reason expires |
+|---|---|---|---|
+| 1 | `about.html`'s count matched its own list | 11 names, 11 in the sentence — internally consistent | it never had one. The claim was membership; the check tested arithmetic |
+| 2 | feed-diag's `supp %` read ~100% | the shipped rule calls a row on a supplements path a supplement **by construction** | never. It cannot vary, so it was never evidence |
+| 3 | *"an unreadable flag can never accidentally 410 the catalogue"* | true, while the gate was **off** | **at the flip** |
+| 4 | `/brands/betrue` returns **200** | the brand has products **today** | **at the flip** |
+
+> **NONE IS CATCHABLE BY RUNNING IT MORE CAREFULLY, BECAUSE THEY ALL PASS CORRECTLY.** There
+> is no flaky result and no missed edge case to tighten. Each answers its own question
+> accurately, and the answer is irrelevant to the decision it is being used for.
+
+#### THE PATTERN
+
+> **A CHECK WHOSE TRUTH IS CONTINGENT ON A STATE THE CHANGE IS ABOUT TO ALTER IS NOT A CHECK
+> ON THAT CHANGE. It is a measurement of the world the change is leaving.**
+
+The diagnostic question is not *"did the check pass?"* but **"what is this check's truth
+resting on, and does the change touch it?"** Both halves matter: a check resting on something
+untouched is fine, and the same check becomes worthless the moment the change reaches
+underneath it — which is what happened to the fail-safe direction, correct for eleven days
+and wrong from the flip onward.
+
+**Two of the four expire at the same moment, and that is not coincidence.** A flip is a single
+instant at which several states change together, so every check standing on any of them
+invalidates simultaneously. **The flip is where they cluster because the flip is what they
+have in common** — so the audit worth doing is not per-check but per-change: list what the
+change alters, then ask which checks stand on it.
+
+#### ENTRY 4 IS NO LONGER A NEAR-MISS. IT WAS OBSERVED.
+
+The Branded Beauty flip went through at 18:0x on 16 August. Immediately afterwards,
+**`/brands/miss-sporty` returned HTTP 200 and rendered 39 product cards, every one marked
+"Out of stock", every one linking to a `/product/{id}` that had just started serving 410.**
+
+> **THAT IS PRECISELY WHAT A 301 TO THAT PAGE WOULD HAVE DELIVERED SOMEONE.** A visitor
+> following a search result would have been redirected off a 410 onto a page of 39 dead
+> links, each one another 410. Not a soft-404 — a fully-rendered catalogue page whose entire
+> contents were gone.
+>
+> **The false green was right to distrust, and there is now a live instance of what it would
+> have cost.** The two products whose brands zeroed were routed to `/makeup/nails` and
+> `/makeup/eyes` instead, and both resolve to real listings.
+
+**The page was not a bug.** `x-vercel-cache: MISS`, `age: 0` — a fresh render of stale ISR
+data, self-correcting within the hour, which is exactly the window Step E exists to close.
+**It was correct behaviour producing live harm**, and it is the sharpest available argument
+for Step E not being optional: an hour of self-correction is a floor, not a fix.
+
+#### AND WHY THE WEAK HALF IS THE ONE THAT GETS RUN
+
+Superdrug's redirect method had two conditions — *200 today* **and** *>=1 product post-flip*.
+Both shipped. Only the first was run.
+
+> **The reassuring half is the one a person reaches for, because it is the one visible in a
+> browser.** `curl` returns 200 in a second and it feels like evidence. The post-flip brand
+> count requires constructing a state that does not exist yet: slower, abstract, and it
+> produces a number rather than a green tick.
+>
+> **The check that can be performed is not the check that decides.** Where a method has a
+> visible half and a hypothetical half, expect the visible one to be mistaken for the method.
+
+**Practical consequence:** when a test has two conditions and one requires imagining the
+post-change world, write the imagined one FIRST and mark the observable one as corroboration.
+Superdrug's method had the order right and the emphasis wrong, which is why running half of
+it looked complete.
+
+#### A SMALLER ONE FROM THE SAME SWEEP: ABSENCE IS ITS OWN CLAIM
+
+Four articles carried `datePublished` in their JSON-LD **and no `dateModified` at all**,
+having been materially modified on 1 August. **Structured data asserting a publication date
+and silent on modification, for articles that had been modified.**
+
+Not wrong, which is why it survived — an absent field is not a false field. But it is the
+asserted-zero distinction again: **absent means nobody said, and for an article carrying a
+correction notice that is a worse answer than a date.** Now populated for the four that
+changed and still absent for the five that genuinely have not, which is right in both
+directions.
+
+#### STEP E, AND ONE THING IT DEMONSTRATED
+
+Three calls, fired separately so a surprise would be attributable. All returned 200 / `ok`:
+
+| call | function | paths |
+|---|---|---:|
+| 1 | `fmb_revalidate_brand_slugs` — the 14 zeroed brands | **14** |
+| 2 | `fmb_revalidate_paths` — the 315 survivors | **315** |
+| 3 | `fmb_revalidate_paths` — 5 categories + 15 subcategories | **20** |
+
+**13 of the 14 brand pages now 404. `/brands/ponds` correctly still returns 200** — and that
+is Step 8's normalisation-split caveat firing live, in the benign direction: `ponds` and
+`pond's` collide on one slug, the apostrophe variant still has a product, so the URL survives
+because a differently-normalised sibling holds it up. **The caveat was written from `tia'm`
+and `cleardea`; this is the first time it has been observed on a real departure.**
+
