@@ -22,7 +22,7 @@ export async function generateMetadata({
   }
   return {
     title: `${display} hair care best prices | FindMyBasket`,
-    description: `Compare ${sub} hair care prices across UK retailers. Find the best value on ${sub} shampoo, conditioner, treatments and styling products.`,
+    description: `Compare ${sub} hair care prices across UK retailers. Find the best value on shampoo, conditioner, treatments and styling products.`,
     alternates: { canonical },
   };
 }

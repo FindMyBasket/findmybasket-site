@@ -22,7 +22,7 @@ export async function generateMetadata({
   }
   return {
     title: `${display} makeup best prices | FindMyBasket`,
-    description: `Compare ${sub} makeup prices across UK retailers. Find the best value on ${sub} foundation, lipstick, mascara and more.`,
+    description: `Compare ${sub} makeup prices across UK retailers. Find the best value on foundation, lipstick, mascara and more.`,
     alternates: { canonical },
   };
 }

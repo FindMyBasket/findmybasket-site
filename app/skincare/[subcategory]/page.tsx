@@ -22,7 +22,7 @@ export async function generateMetadata({
   }
   return {
     title: `${display} skincare best prices | FindMyBasket`,
-    description: `Compare ${sub} skincare prices across UK retailers. Find the best value on ${sub} cleansers, serums, moisturisers and more.`,
+    description: `Compare ${sub} skincare prices across UK retailers. Find the best value on cleansers, serums, moisturisers and more.`,
     alternates: { canonical },
   };
 }
