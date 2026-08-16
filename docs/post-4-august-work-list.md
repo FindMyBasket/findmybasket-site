@@ -11435,3 +11435,73 @@ second line of defence — a key with the right name, in the right store, next t
 Phases 1-4 shipped and verified. **Phase 5 — delete `superdrug_removed` from the store — is
 outstanding and is the one that stops trap 2 being true.**
 
+
+---
+
+### 136. The doctrine's query was correct and unused
+
+**Raised:** 16 August 2026, correcting item 134 · **The correction is mine, and the failure
+is not the one it looks like.**
+
+#### THE CORRECTION
+
+Item 134 reported **36 brand pages going to zero** on the Branded Beauty flip, *"including
+MAC Cosmetics, Elemis, Burberry, Olay"*. **It is 14, and none of those names is among them.**
+
+| brand | now | after flip |
+|---|---:|---:|
+| MAC Cosmetics | 1,239 | **1,237** — loses two products |
+| Elemis | 152 | **150** — loses two |
+| Olay | 144 | **142** — loses two |
+| Essie | 393 | **214** |
+| Sally Hansen | 238 | **175** |
+| Burberry | 152 | **131** |
+| Bourjois | 125 | **6** |
+| **Miss Sporty** | 39 | **0** |
+
+The real list is **Miss Sporty 39**, Branded Beauty own-label 10, BeTrue 4, Johnson's 3,
+Bubble T 3, OGX 2, and eight singletons. **The departure is materially smaller than
+reported.**
+
+#### THIRD INSTANCE TODAY OF MEASURING THE JOINED POPULATION
+
+| # | what was joined | what was asked | result |
+|---|---|---|---|
+| 1 | a regex's matches over 1,683 rows | *"which rows are not supplements?"* | **the 18** — two false positives, five missed, more found structurally |
+| 2 | `${sub}` interpolated where the enumeration already stood | *"what does this page describe?"* | *"lips foundation, lipstick, mascara"* on every generated page |
+| 3 | `products_active JOIN branded_beauty_products` | *"which BRANDS go to zero?"* | **36 instead of 14** |
+
+> **The join narrows the population before the question is asked, and the answer is then
+> true of the narrowed set and false of the real one.** Every brand whose
+> Branded-Beauty-touched slice zeroed appeared in the count, however large the rest of the
+> brand was. MAC has 1,239 products and two of them are Branded Beauty's; the join saw the
+> two, found both zeroing, and reported the brand.
+
+#### AND THE PART THAT IS NOT A MEASUREMENT ERROR
+
+**The doctrine already contained the correct query.** Step 8 of
+`docs/superdrug-removal-plan.md` selects `FROM products_active p WHERE p.normalised_brand IN
+(brands the departing retailer touches)` — every product of those brands, not the departing
+retailer's slice. **Run verbatim against retailer 6 it returns 14.**
+
+I did not run it. I wrote a new one.
+
+> **THE REMEDY FOR A WRONG QUERY IS TO FIX IT. THE REMEDY FOR A CORRECT ONE THAT WENT
+> UNUSED IS DIFFERENT AND HARDER: CHECK WHETHER THE QUESTION HAS ALREADY BEEN ANSWERED
+> BEFORE WRITING SQL.**
+>
+> These are not the same failure and they do not have the same fix. A wrong query is a bug
+> in an artefact and fixing the artefact fixes it for everyone. **An unused correct query is
+> a bug in a habit**, and the artefact is already right, so nothing about it will improve.
+> The doctrine gained nothing from this: it was correct before and it is correct now.
+
+**This also explains why the error survived review.** The number was plausible, the query was
+readable, and the doctrine it contradicted was two thousand lines away in a file I had edited
+the same afternoon. **Nothing flags a query for being novel**, and novelty is exactly the
+property that should have.
+
+**The practical rule, and it is cheap:** before writing SQL for a departure step, open the
+step. Steps 7 and 8 both ship parameterised queries. Step 8's exists precisely because the
+brand-page question has a known trap — and I fell into a *different* trap in a query written
+to avoid the documented one.
+
