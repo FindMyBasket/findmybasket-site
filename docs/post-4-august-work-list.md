@@ -11686,3 +11686,120 @@ is Step 8's normalisation-split caveat firing live, in the benign direction: `po
 because a differently-normalised sibling holds it up. **The caveat was written from `tia'm`
 and `cleardea`; this is the first time it has been observed on a real departure.**
 
+
+---
+
+### 139. A departing retailer's contribution and the index's loss are different numbers
+
+**Raised:** 16 August 2026, verifying the Atelier De Glow flip · **Corrects a framing used
+in item 125, item 134 and the pre-flip brief.**
+
+#### THE CORRECTION, AND IT WAS REPEATED THREE TIMES BEFORE IT WAS MEASURED
+
+Every Step 7 report today said some version of **"547 codes leave `ean_product_index`"**.
+Measured at the flip:
+
+| | |
+|---|---:|
+| codes Atelier supplied to the index | **547** |
+| **still in the index, supplied by other retailers** | **480** |
+| **gone from the index entirely** | **67** |
+| index pairs lost | **72** |
+
+**547 was Atelier's CONTRIBUTION. The index lost 72 pairs. 67 codes disappeared.** The other
+480 are corroborated elsewhere and never went anywhere.
+
+> **A DEPARTING RETAILER'S CONTRIBUTION AND THE INDEX'S LOSS ARE DIFFERENT NUMBERS, AND THE
+> DIFFERENCE IS THE CORROBORATION.** They coincide only for a retailer whose every barcode is
+> sole-supplied, which is a retailer nobody overlaps — not a real one.
+
+**The query was right and the prose was wrong.** Step 7's parameterised query computes
+`sole_supplier` as a separate figure precisely because it is the one that leaves; the
+sentence around it then reported the contribution as though it were the loss. **The
+correction is to the sentence, not the SQL** — which makes it item 136's shape from the other
+side: there, a correct query went unused; here, a correct query was used and then described
+wrongly.
+
+**Why it survived three repetitions:** 547 is the bigger, more alarming number, it appears
+first in the query output, and 67 reads as a subset rather than as the answer. Nothing about
+the pair announces which one is load-bearing.
+
+**Step 7's wording in the doctrine is amended accordingly.**
+
+#### THE INVERSION: SIZE AND COST ARE DIFFERENT MEASUREMENTS
+
+Two departures, hours apart, and they rank opposite ways depending on what is counted:
+
+| | Branded Beauty (r6) | Atelier De Glow (r29) |
+|---|---:|---:|
+| catalogue loss | **1,821** | **59** |
+| barcodes gone from the index | **0** | **67** |
+| products losing a live offer | **0** | **520** |
+| brand pages really lost | 13 | 2 |
+| curated redirects needed | 22 | **0** |
+
+> **THE SMALLER DEPARTURE BY ROWS IS THE LARGER BY CONSEQUENCE, BY A FACTOR OF THIRTY IN
+> ROWS AND INFINITELY THE OTHER WAY ON BOTH BARCODES AND COMPARATORS.**
+
+The reason is in the flags, not the size. **Branded Beauty's zeroes are losses already
+taken**: `enabled = false` on 12 August removed its barcodes from the index, and offers
+withdrawn on 1 August removed its comparators. **Atelier was still `enabled` and still
+selling, so both land at the flip.**
+
+**The doctrine ranks departures by rows** — Step 1 is catalogue loss and it is the first
+number anyone quotes. That ordering would have called Atelier the trivial one.
+
+#### A PREDICTION THAT DID NOT FIRE
+
+I expected the Branded Beauty flip to **increase** Atelier's catalogue loss: a product on
+Atelier + Branded Beauty was a survivor while r6 was active and would drop once it was not.
+
+**It did not. 59 before, 59 after.** Only **4** products carry both retailers, and all four
+have a third active retailer.
+
+> Weaker evidence than a prediction that fires, and recorded anyway **so the worry is not
+> re-derived from first principles at the next overlapping departure.** The question "does
+> retiring A change B's drop set?" now has a measured answer for one case: only if the
+> overlap products have no third retailer, and here none did.
+
+#### 469 VERSUS 520: SAME POPULATION, DIFFERENT QUESTION
+
+The morning brief quoted **469** as the comparison-depth loss. The flip measured **520**.
+Both are correct and neither is the other's correction:
+
+- **520** products lose a live offer at the flip.
+- Of those, **51** lose their only one — the sole-offer set, which becomes catalogue loss.
+- The remaining **469** keep at least one comparator and lose depth.
+
+**520 answers "how many products are affected"; 469 answers "how many survive with less".**
+The brief quoted the narrower figure as the total. **State which question a number answers
+when two slices of one population differ by a set with its own name.**
+
+#### THE SLUG CAVEAT IS OBSERVED, NOT PREDICTED — AND IN BOTH DIRECTIONS
+
+Written this morning from `tia'm`/`tiam` and `clear dea`/`cleardea` as a hypothesis about
+what *would* happen. Both fired, on two separate departures, hours apart:
+
+| | | |
+|---|---|---|
+| `/brands/ponds` | **200** | `ponds` zeroed; `pond's` holds the slug and keeps a product |
+| `/brands/tiam` | **200** | `tia'm` zeroed; `tiam` holds the slug and keeps a product |
+| `/brands/clear-dea` | **404** | zeroed, and **nothing shares its slug** |
+| `/brands/cleardea` | **200** | a *different* slug entirely, unaffected |
+
+> **The last two are the same mechanism seen from the other side.** `clear dea` and
+> `cleardea` were the pair the caveat was written from, and they demonstrate that
+> normalisation splitting a brand does NOT always save the URL: it saves it only when the
+> variants collide on one slug. Here they do not, so one 404s and one lives. **Whether the
+> variants collide is the whole question, and it is invisible in the brand list.**
+
+#### AND A VERIFICATION STANDARD: INAPPLICABLE IS NOT OMITTED
+
+Atelier ships **zero** curated redirects, so the four-path gate check could not exercise the
+301 path for this departure. The 301 was verified — using Branded Beauty's `/product/21380`
+— which proves the path still works and proves **nothing about Atelier**.
+
+> **A verification that cannot apply is reported as inapplicable, not omitted.** Dropping it
+> silently turns a four-path standard into a three-path one without anyone deciding, and the
+> next reader cannot tell the difference between "not applicable" and "not run".
+
