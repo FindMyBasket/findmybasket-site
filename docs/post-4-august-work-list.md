@@ -12550,3 +12550,97 @@ enough to catch a typo'd URL and exactly loose enough to miss a one-product page
 > finding, it is a coincidence that has not been tested.** Had the gate happened to test a
 > count, the whole floor argument would have been unnecessary and I would not have known —
 > I checked the gate only because the page 404'd for an unrelated reason.
+
+
+---
+
+### 146. The right count from the wrong rows, and a fix applied to one caller of two
+
+**Raised:** 16 August 2026, verifying `/supplements/womens-health` after the backfill ·
+**Found only because the verification was run.**
+
+#### THE SYMPTOM: THE SAME URL, 200 AND 404, MINUTES APART
+
+The backfill wrote 117 live rows. The page then returned **404 twelve times, 200 once, and 404
+again** — with `x-vercel-cache: MISS` on every request, so each response was a fresh render
+against live data. Not a cache. **The render itself was nondeterministic.**
+
+#### THE CAUSE, REPRODUCED IN SQL
+
+`SubcategoryPage` calls `getValidSubcategories(category)` and `notFound()`s if the slug is
+absent. That function paginated `products_active` with `.range(offset, offset + 999)` **and no
+`.order()`**.
+
+Unordered `LIMIT`/`OFFSET` has no stability guarantee in Postgres. Running the app's exact
+two-page scan:
+
+| | |
+|---|---:|
+| rows returned across both pages | **1,719** |
+| rows actually in the category | **1,719** |
+| `womens-health` rows seen | **102** |
+| `womens-health` rows actually present | **117** |
+
+> **THE RIGHT COUNT FROM THE WRONG ROWS.** The scan returned exactly the right number of rows
+> and 15 of them were duplicates of rows it had already seen, while 15 others were never
+> returned at all. **A total that reconciles is not evidence that a paginated read is
+> complete**, and nothing available to the caller could have shown otherwise — only comparing
+> against a SQL `DISTINCT` does.
+
+A subcategory with few enough rows can miss the sample **entirely**, at which point its page
+404s. `womens-health` at 117 of 1,719 sits right on that edge, which is why it flickered
+instead of failing cleanly.
+
+#### THE PART THAT MAKES IT AN ITEM: THIS BUG WAS ALREADY FOUND AND ALREADY FIXED
+
+`active_category_subcategories` was created on **29 June** and its migration comment reads:
+
+> *"The sitemap previously enumerated subcategories with an un-paginated
+> `select subcategory from products_active where top_category = $1`, which hits PostgREST's
+> default 1,000-row cap. When a category's first 1,000 rows all share one subcategory, the
+> others are silently dropped… This view collapses to the handful of distinct pairs so the
+> sitemap reads tens of rows, not tens of thousands, and can never miss a subcategory."*
+
+**The same query, diagnosed precisely, seven weeks ago. The sitemap was migrated onto the
+view. The page's copy was not.**
+
+> **AND PAGINATING IT DID NOT FIX IT — IT CHANGED THE FAILURE.** Adding `.range()` removed the
+> 1,000-row cap and introduced unordered pagination in its place. The original bug dropped
+> subcategories **deterministically**, which is findable. This one drops them **at random**,
+> which reads as flakiness in the platform rather than a defect in the query.
+
+#### THE SITEMAP AND THE PAGE DISAGREED, AND THE SITEMAP WAS RIGHT
+
+`/supplements/womens-health` was **in the sitemap** — the view is a SQL `DISTINCT` and cannot
+miss — while the page it points at returned 404.
+
+> **We were advertising a URL for crawling and serving 404 at it.** The two surfaces read the
+> same fact from the same table through different code, one fixed and one not, and the gap was
+> invisible for seven weeks because it only shows on a subcategory small enough to fall
+> through the sample. **A category launch is exactly what creates one of those.**
+
+#### WHY IT SURVIVED, AND WHAT ACTUALLY FOUND IT
+
+Nothing was watching. The page is not in any monitor, an intermittent 404 leaves no error, and
+the categories that existed before today are all large enough that their subcategories always
+land in the sample.
+
+**It was found because the verification step was run at all** — and specifically because the
+revalidation-timing trap recorded beside Step E says to *re-check until it settles* rather than
+trust one response. **One check would have reported either "200, done" or "404, cache" and both
+would have been wrong.**
+
+> **THE TRAP WRITTEN FOR A DIFFERENT PROBLEM CAUGHT THIS ONE.** That is the third time today a
+> mechanism aimed at something else did the catching — the CHECK constraint on the sports
+> overwrite, decision 2 on product 24682, and now a re-check rule on a nondeterministic query.
+> **Three for three.** Good habits are doing the work that checks are supposed to do, and a
+> habit is not a check: it fires when someone remembers to run it.
+
+#### THE FIX
+
+`getValidSubcategories` now reads `active_category_subcategories` — the view built for this,
+already granted to `anon`, already correct. One query, no pagination, DISTINCT in SQL.
+
+**This fixes every category, not just supplements.** Any subcategory small relative to its
+parent had the same exposure; `bath_body/foot` (113 of 7,928) and `hair/colour` (509 of 10,956)
+were latent instances that happened to be sitting on cached 200s.
