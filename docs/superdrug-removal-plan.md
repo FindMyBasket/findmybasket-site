@@ -52,6 +52,53 @@ Two measured reasons it cannot be shortcut:
 allowlist excludes, what a proposed change would admit, and how a classification rule
 behaves on that retailer's raw rows.
 
+## Before onboarding: delivery terms are a REQUIRED step, not a later audit
+
+**Added 16 August 2026. Work-list item 130.** Same placement and same reason as the section
+above: this runbook is what gets read when a retailer's scope changes.
+
+**Eleven retailers' delivery terms were verified against their own sites on 1 August 2026 —
+thorough, correct, and an EVENT.** Niche Beauty went live on 9 August and was never in it,
+because it did not exist yet. **Nothing in the onboarding sequence required delivery terms
+before go-live**, so it went live with both columns NULL and the homepage went on claiming
+*"we factor in each retailer's free delivery threshold"* for a retailer whose terms nobody
+knew.
+
+> **A THOROUGH PASS IS NOT A MECHANISM, AND THE MORE THOROUGH IT IS THE MORE IT READS LIKE
+> ONE.** The `retailers_delivery_shape` CHECK was the only durable part of the 1 August work,
+> and it constrains the SHAPE of a value rather than requiring one to exist. **A retailer can
+> still go live knowing nothing, because `unknown` is a legal shape.**
+
+**Required before `active = true`:**
+
+1. **Verify against the retailer's own site, not the feed.** Delivery terms are not in AWIN
+   and never have been.
+2. **Record one of the CHECK's three shapes:**
+
+   | shape | columns | means |
+   |---|---|---|
+   | **`tiered`** | threshold AND cost | free above the threshold, cost below it |
+   | **`flat`** | cost, NO threshold | one charge regardless of basket size (Debenhams) |
+   | **`unknown`** | neither | **we looked and could not establish them** |
+
+3. **`unknown` IS A DELIBERATE CHOICE WITH A REASON, NEVER A DEFAULT.** It is also exactly
+   what the pair looks like when nobody decided, and those two states are indistinguishable
+   in the database. **Write the reason down at go-live or the distinction is lost.**
+4. **Never enter half a shape.** A threshold with no cost is self-contradictory — free above
+   a threshold and free below it, which no retailer means. The CHECK refuses it; that refusal
+   is the constraint working, not an obstacle to route around.
+
+**What `unknown` costs, so the choice is informed.** The product is honest about it:
+`RoutineBuilder` renders *"Delivery not known"* and refuses to compute a delivered total.
+But **that retailer cannot win a basket comparison on delivered cost**, and every site claim
+describing the delivery mechanism is false for it until the terms are entered. Niche Beauty
+has carried that since 9 August.
+
+**Live instance:** Niche Beauty (32) is the only active retailer at `unknown`. Its threshold
+is published — **£75, confirmed on two pages of niche-beauty.com/en-gb**, which would be the
+highest in the fleet by half — and the cost below it is published nowhere, reachable only
+through checkout. **Do not enter the threshold alone.**
+
 ## Reusable pattern for the NEXT retailer departure
 
 Step A permanently changed `products_active` to require an offer from an ACTIVE retailer,
