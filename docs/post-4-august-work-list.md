@@ -12980,3 +12980,87 @@ meaning nothing.
 
 **Robbie decides. Nothing changed pending that**, and the page stays up as published — option
 A by default, which is worth naming so the default is not mistaken for a decision.
+
+
+---
+
+### 150. Parts 1 and 2 bought zero pages
+
+**Raised:** 16 August 2026 · **Robbie's decision on item 149, option C.** · **Applied: the
+value is removed, the 125 rows are back, sports untouched.**
+
+#### THE RESULT, PLAINLY
+
+**Two parts of taxonomy work — a config pair, an importer change, an 88-value enumeration, a
+prefix map, a backfill and a CHECK migration — produced ZERO subcategory pages.**
+
+`womens-health` was published at 117 live products and withdrawn the same day.
+`supplements` 1,517 and `sports` 202 are exactly what they were this morning.
+
+#### WHY THE FRAMING QUESTION ANSWERED ITSELF
+
+Item 149 asked whether a category page here may be **a shelf** — a grouping the retailer
+already maintains — or must be **a definition**.
+
+> **A CATEGORY PAGE ON THIS SITE IS A CLAIM ABOUT WHAT PRODUCTS ARE, NOT ABOUT WHERE ONE
+> RETAILER SHELVES THEM.** Every other subcategory inherits its meaning from our own
+> classifier. This would have been the exception that established shelves are acceptable —
+> **on the day the shelf included a testosterone booster.**
+
+The other three options fail on their own terms and are recorded because the reasoning is the
+durable part:
+
+- **B, rename it.** The page was worth having *because* "women's health" is searched. Every
+  honest rename makes it unsearchable, **which removes the reason it cleared the bar in the
+  first place.** An option that destroys its own justification is not an option.
+- **A, leave it.** Being wrong on purpose — published the same day as four articles promising
+  honest comparison.
+- **D, lower the floor.** Correctly not proposed. **Moving a floor derived this afternoon to
+  fit the first case that fails it leaves it meaning nothing.**
+
+#### WHAT PARTS 1 AND 2 DID BUY, WHICH IS REAL
+
+- **133 out-of-scope rows identified by the retailer's own filing** — makeup, toiletries,
+  homeware, a Bluetooth speaker — that no name rule was going to find.
+- **An auditable reason per filing.** Where a row sits is now traceable to a named node
+  instead of to an inference nobody can inspect.
+- **The three nodes the worked list found** (item 144) that a root-segment method is blind to.
+- **Item 148's measurement**: men's health is 30 because Boots stocks 30.
+
+> **NONE OF THOSE NEEDS A URL, AND THAT IS THE WHOLE DISTINCTION THIS WORK PRODUCED.**
+> Classification and publication were the same act until today because `products.subcategory`
+> does both jobs, and the day they had to come apart is the day the column's second job became
+> visible.
+
+#### THE RECIPROCAL, WHICH IS THE REASON
+
+| | number | conclusion |
+|---|---|---|
+| **men's health** (item 148) | **low by a few** — 30 measured, 32–46 across methods | **right** — no page, at any count |
+| **women's health** (item 149) | **exact** — 117, reproducible, verified live | **wrong** — 37 of it is not women's anything |
+
+> **THE FLOOR WAS DERIVED FROM PAGE SIZES. It answers "IS THIS PAGE BIG ENOUGH" and it cannot
+> ask "IS THIS PAGE WHAT IT SAYS IT IS".**
+
+Both questions had to be asked and only one of them had a mechanism. Men's failed the size
+test, so the second question never arose. **Women's passed the size test, and passing is what
+stopped anyone asking the other one** — the page was live for roughly three hours before its
+contents were examined, because clearing a floor reads as clearance.
+
+**This is item 146's shape a third time and the most expensive instance.** There, a total
+reconciled while the rows were wrong. In item 148, two methods agreed on a total while
+disagreeing on half the members. Here, **a page passed the only test that existed while
+failing a test nobody had written.**
+
+> **A NUMBER CAN BE EXACT, REPRODUCIBLE, VERIFIED IN PRODUCTION, AND MEASURING THE WRONG
+> THING.** Precision is not a defence against measuring the wrong thing; it is what makes
+> measuring the wrong thing persuasive.
+
+#### THE TEST THAT DID NOT EXIST, NAMED BUT NOT BUILT
+
+Before publishing a subcategory: **sample its members and check they are what the name claims**
+— not how many there are. Twenty rows read by a person would have caught this in minutes; the
+37 are not subtle, they are elderberry and turmeric.
+
+**Not built here.** One instance is not enough to design a check, and item 147's warning
+applies to this item too: naming a gap is not closing it.
