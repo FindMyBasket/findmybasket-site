@@ -118,6 +118,21 @@ So the next departure is far simpler:
    See below. **First measured on Atelier De Glow (r29), 15 August 2026.**
 8. **Check for brand pages going to zero live products**, and separate the real losses
    from normalisation splits before touching anything. See below.
+
+> **A DEPARTURE'S SIZE AND ITS COST ARE DIFFERENT MEASUREMENTS, AND THIS LIST RANKS BY SIZE.**
+> Added 16 August 2026, from two departures hours apart. Step 1 is catalogue loss and it is
+> the first number anyone quotes, which makes the big-row departure look like the serious one.
+>
+> | | Branded Beauty | Atelier De Glow |
+> |---|---:|---:|
+> | catalogue loss | **1,821** | **59** |
+> | barcodes gone from the index | 0 | **67** |
+> | products losing a live offer | 0 | **520** |
+>
+> **Thirty times smaller by rows and unboundedly larger on both the other measures.** The
+> reason is the flags, not the size: Branded Beauty was `enabled = false` from 12 August and
+> out of stock from 1 August, so its barcode and comparator losses were already taken before
+> anyone flipped anything. **Read steps 7 and 8 before deciding a departure is small.**
 No view change, no query-filtering work, no new infra needed — those were one-time and
 are now permanent. The listing-query active filtering (Step C) also already covers every
 future inactive retailer.
@@ -444,8 +459,22 @@ than the truth.
 | **of those, sole-supplier — no other active+enabled retailer provides them** | **67** |
 | the same measured in-stock-only (**also the wrong number**) | 61 |
 
-**Use 547 and 67.** The index does not know about stock, so 61 understates by exactly the
-31 out-of-stock barcoded rows that were never counted.
+**Use 67 AS THE LOSS.** The in-stock-only figure of 61 understates by exactly the 31
+out-of-stock barcoded rows that were never counted, so 67 is the right sole-supplier number.
+
+> **CORRECTED 16 AUGUST 2026 AT THE ATELIER FLIP, AFTER THE WRONG SENTENCE WAS USED THREE
+> TIMES.** "547 codes leave `ean_product_index`" is FALSE. 547 is the departing retailer's
+> CONTRIBUTION. Measured at the flip: **480 of them stayed**, supplied by other retailers,
+> **67 disappeared**, and the index shrank by **72 pairs**.
+>
+> **A DEPARTING RETAILER'S CONTRIBUTION AND THE INDEX'S LOSS ARE DIFFERENT NUMBERS, AND THE
+> DIFFERENCE IS THE CORROBORATION.** They coincide only for a retailer whose every barcode
+> is sole-supplied, which is not a real retailer.
+>
+> The query below already computes the right figure — `sole_supplier` is a separate count for
+> exactly this reason. **It was the prose around it that was wrong.** Report the
+> sole-supplier number as the loss and the contribution as context, never the other way
+> round.
 
 #### THE 67 SPLIT INTO TWO POPULATIONS AND ONLY ONE OF THEM MATTERS
 
@@ -888,6 +917,20 @@ Bad/never-existed ids are untouched → keep their normal 404. Curated 301 targe
 must be pages that survive the removal (verify brand still has live inventory).
 
 ## Step E — Revalidation
+
+> **VERIFYING IMMEDIATELY AFTER REVALIDATING MEASURES THE REQUEST THAT DOES THE WORK, NOT THE
+> RESULT.** Added 16 August 2026, after it produced a false pass twice in one evening.
+>
+> `/api/revalidate` invalidates; it does not regenerate. **The next request regenerates, and
+> is typically served the stale render while doing so.** So the check anyone following this
+> runbook performs — hit the page right after firing the call — is the one request guaranteed
+> to show the old page. `/brands/arocell` reported 200 twice that way and settled to 404 on
+> the third.
+>
+> **RE-CHECK UNTIL IT SETTLES; DO NOT WAIT A FIXED TIME.** Five consecutive GETs returning
+> the same status is what established it, and a fixed pause is guesswork either too short or
+> needlessly long. **`x-vercel-cache: MISS` with `age: 0` does NOT mean fresh data** — it
+> means the CDN did not serve it, which is true of the regenerating request too.
 
 Orphans are handled by middleware (410), so they don't need revalidation. Revalidate
 the pages whose CONTENT changes:
