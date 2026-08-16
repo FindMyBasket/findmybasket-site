@@ -21,7 +21,7 @@ export async function generateMetadata({
   }
   return {
     title: `${display} fragrance best prices | FindMyBasket`,
-    description: `Compare ${sub} fragrance prices across UK retailers. Find the best deal on eau de parfum, eau de toilette, cologne and more.`,
+    description: `Compare ${sub} fragrance prices across UK retailers. Find the best value on eau de parfum, eau de toilette, cologne and more.`,
     alternates: { canonical },
   };
 }
