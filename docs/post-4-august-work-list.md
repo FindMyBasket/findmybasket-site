@@ -10230,3 +10230,155 @@ refuse the write when `p_week_start` matches a week that a `platform_changes` ro
 inside and the existing row predates that change — but that is a real build, and the rule
 above costs nothing.
 
+
+---
+
+### 124. The copy assumes the narrow scope, the category carries the wide one
+
+**Raised:** 16 August 2026, by Robbie · **BLOCKING the exclusion batch.** 45 curated
+exclusions are held pending this, deliberately.
+
+**The intended supplements category is TWO groups:** sports nutrition (whey, creatine,
+hydration) and beauty-adjacent (collagen, hair-skin-nails, biotin). **Jude bladder health is
+neither, and neither is most of what arrived on 16 August.**
+
+#### THE COPY ALREADY SHIPPED THE NARROW READING
+
+Four articles published this morning are the site's only prose about supplements. **Every
+one of them assumes beauty-adjacent**, and the anchor text is the clearest statement of
+scope anywhere on the site:
+
+| anchor on `/supplements` | count |
+|---|---:|
+| *"browse **beauty supplements** across UK retailers"* | 3 |
+| *"browse **beauty supplements**"* | 1 |
+| *"supplements category page"* | 1 |
+
+Vocabulary across all four: **collagen ×9, biotin ×3, hair-skin-and-nails ×1, "beauty
+supplements" ×4. Whey, creatine, protein, electrolyte and sports appear ZERO times**, and so
+does every general-health term.
+
+> **So the published copy is narrower than even the two intended groups. It promises beauty
+> supplements and links to a page serving 1,764 products, 275 of which are beauty-adjacent.**
+> A reader arriving from *"browse beauty supplements"* lands on Osavi chromium, SlimFast
+> shakes, MyHealthChecked blood tests and Jude bladder capsules.
+
+**This is the reason to settle scope now rather than let it accumulate.** The copy is not a
+description of the category; it is a *commitment about* the category, and it was made in
+public this morning. Every row excluded one at a time moves the category toward that
+commitment without anyone deciding to, which is how a scope gets decided by accident.
+
+#### WHY THE 45 ARE HELD
+
+**Several of the 45 are correct under the wide reading and wrong under the narrow one, and
+the reverse.** They were curated against "is this a supplement", not against "is this in
+scope". Two examples that flip:
+
+- **Jude bladder health** — a genuine ingestible supplement, so it survives the wide
+  reading; neither sports nor beauty, so it fails the narrow one. Three Jude bundles are in
+  the batch and six other Jude products are not, which is only incoherent under the wide
+  reading.
+- **Calpol, Calprofen, York Test, MyHealthChecked** — out under BOTH readings, and they are
+  the only part of the batch that is unambiguous either way.
+
+**Applying the batch first would answer the scope question with 45 individual judgements
+instead of one decision.**
+
+#### THE MEASURED SPLIT, 1,764 PRODUCTS
+
+Name-token classification, precedence `none-of-these > paediatric > sports > beauty >
+residual`:
+
+| group | products | share |
+|---|---:|---:|
+| **sports nutrition** | **302** | 17.1% |
+| *(sports AND beauty tokens both)* | *24* | *1.4%* |
+| **beauty-adjacent** | **275** | 15.6% |
+| general health (residual) | **1,038** | **58.8%** |
+| paediatric | 73 | 4.1% |
+| none-of-these | 52 | 2.9% |
+
+> **IN SCOPE UNDER THE NARROW READING: 601 of 1,764, or 34%. TWO-THIRDS OF THE CATEGORY IS
+> OUTSIDE THE INTENDED DEFINITION.** This is not a tidy-up. It is most of the category.
+
+#### NO SIGNAL SEPARATES THEM RELIABLY, AND THE PATH CANNOT BE READ
+
+| signal | reliability, measured on this corpus |
+|---|---|
+| **name** | **60.1% unambiguous.** 1,060 of 1,764 match exactly one group; **551 (31%) match NO group vocabulary at all** and 153 match two or more. The residual is not a gap in the token list, it is the shape of the problem: general health is open-ended (Osavi chromium, lion's mane, MSM, shilajit, sea moss, CBD, saw palmetto), whereas sports and beauty have closed, recognisable vocabularies. |
+| **brand** | **weak. Only 44.9% of the corpus sits in a brand that is wholly in or wholly out.** 972 products sit in 67 mixed brands, 32 of which carry 10+ products. **Boots itself is 19 in-scope of 133.** Osavi 21/85, Solgar 8/30, and even Myprotein is 25/35 because it also sells Myvitamins. |
+| **existing `subcategory`** | **poor agreement.** 202 products carry `subcategory = 'sports'`; name-classification puts 302 in sports and the two sets overlap on only **163**. Both are name-derived, so this is one name rule disagreeing with another. |
+| **Boots sub-path** | **UNKNOWN, AND UNKNOWABLE FROM STORED DATA — see below.** |
+
+#### THE PREFIX MATCHER IS WHY THE SUB-TAXONOMY IS INVISIBLE
+
+`merchant_product_category_path` is **read at import time and never persisted** — not on
+`retailer_prices`, not on `products`, and `scrape_log` run 302 carries no raw-path samples
+(`sample_raw_category_data` is returned in the HTTP response, not written to the log).
+
+**And the matcher would hide any deeper level even if one exists:**
+
+```ts
+function isOnSupplementsPath(categoryPath: string, prefixes: string[]): boolean {
+  return prefixes.some((p) => haystack.startsWith(p.toLowerCase()));
+}
+```
+
+> **`startsWith`, not equality.** A row filed at
+> `… > Vitamins & Supplements > Sports Nutrition` matches the configured prefix exactly as
+> well as one filed at the bare leaf, is admitted identically, and the extra level is
+> discarded unread. **The design decision that made path-first work is the same one that
+> makes Boots' sub-taxonomy unobservable from here.**
+
+**This is the question worth answering before choosing a signal**, because path-first beat
+name-based everywhere else and a sub-path would beat both of the weak signals above. It
+takes one read-only dispatch:
+
+```
+gh workflow run feed-diag.yml -f classify_paths='Health & Beauty > Health Care > Fitness & Nutrition > Vitamins & Supplements' -f sample_rows=200
+```
+
+`.github/workflows/feed-diag.yml` writes nothing — downloads the feed to the runner, reads,
+prints. **Not run here: the brief was to report, and dispatching CI is an action.**
+
+#### WHAT A DECISION NEEDS TO COVER
+
+1. **Narrow or wide.** If narrow, ~1,163 products leave, which is a catalogue change of a
+   different order from a suppression list and needs the departure doctrine's treatment
+   (sitemap, 410s, brand pages going to zero), not `product_exclusions`.
+2. **If narrow, what carries it** — a second `category_path_must_contain` entry scoped to a
+   sub-path, if one exists; otherwise a curated brand allowlist, since name is 60% reliable
+   and brand is 45%.
+3. **Paediatric** (73) — out under both readings as stated, but worth naming explicitly
+   rather than letting it fall out of a token list.
+4. **The articles.** If the answer is wide, the four articles' *"browse beauty supplements"*
+   anchors are wrong and need rewording. **The copy and the category have to agree, and
+   right now the copy is the only one of the two that has committed.**
+
+
+#### REVISED SHAPE, 16 AUGUST: TWO TOP-LEVEL GROUPS, AND THE COPY GETS MORE WRONG NOT LESS
+
+**Robbie's revised shape supersedes the narrow-scope question above.** Two top-level groups,
+each with subcategories: **health and beauty supplements**, and **sports**. Jude bladder
+health is IN SCOPE under women's health rather than excluded.
+
+**Almost nothing leaves. No departure event, no 410s, no brand pages to zero.** The 1,163
+out-of-scope figure above is superseded and must not be carried forward — it was measured
+against a two-group reading in which general health was out, and general health is now in.
+
+> **THE COPY PROBLEM GETS WORSE UNDER THIS READING, WHICH IS THE OPPOSITE OF WHAT A WIDER
+> SCOPE USUALLY DOES.**
+>
+> A wider category normally makes narrow copy merely incomplete. Here it makes it wrong,
+> because the copy does not describe a subset — it names the category. The four articles
+> say *"beauty supplements"* five times, collagen ×9, biotin ×3, and **zero** sports terms,
+> and they link to a page that will now carry chromium, colostrum, saw palmetto and bladder
+> health under a taxonomy whose own top level is *health and beauty supplements + sports*.
+>
+> **Under the narrow reading the copy was premature. Under this one it is inaccurate.**
+
+**DECISION NEEDED AFTER THE SUBCATEGORY SET LANDS, not before:** the anchor text and the
+articles' framing have to name what the category actually is. The set determines the words,
+so the copy fix waits on it, but it must not wait longer than that — the articles are live,
+indexed and were published this morning.
+
