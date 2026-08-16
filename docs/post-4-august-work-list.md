@@ -21386,3 +21386,116 @@ which **must** stay or historical attribution breaks, and which renders nothing.
 
 **And a stale comment was corrected rather than deleted**, describing links that no longer exist:
 a reader meeting an absence has nothing to stop them re-adding it as an improvement.
+
+---
+
+### 246. Rakuten parked, and the argument that carried AWIN does not carry it
+
+> **RENUMBERED FROM 121 ON MERGE, 23 August 2026.** This was written on 16 August when 121 was
+> the next free number, and sat open while 122 further items landed. Item 121 is now different
+> work entirely — *"A count-scoped sweep passes a page whose count is right and whose claim is
+> false"* — so merging as authored would have created a duplicate.
+>
+> **IT WAS STALE IN ITS NUMBER AND NOT IN ITS CONTENT, AND THAT DISTINCTION IS WHY IT WAS
+> RENUMBERED RATHER THAN CLOSED.** Rakuten is still producing nothing — `metrics_rakuten_weekly`
+> is empty and `outbound_clicks_rakuten` is zero for every GA4 week measured — so the position
+> below still holds. And the expensive half is the research, not the decision: the three token
+> families, the deprecated-as-a-scheme-but-mandatory-as-a-parameter trap, and the portal
+> instructions in `docs/rakuten-reporting-probe-brief.md` would otherwise be re-derived from
+> scratch by whoever next opens the question.
+>
+> **A stale number is a merge problem. Stale content is a reason to close. Only one of those was
+> true here.**
+
+**Raised and decided:** 15 August 2026 · **PARKED until The Fragrance Shop onboards.
+Research kept: `docs/rakuten-reporting-probe-brief.md`.**
+
+#### THE DECISION, AND WHY IT IS NOT THE SAME DECISION AS AWIN'S
+
+The argument for building the AWIN puller before there was much to report was
+**instrument before volume**, and it was right. **It was right for a specific reason that
+does not carry over.**
+
+> **AWIN had twelve weeks of history sitting unread.** The puller did not create the data;
+> it went and got data that already existed and that nobody had ever looked at. First run:
+> 993 clicks, 16 sales, £527.72, and the first commission rate this project has measured
+> rather than carried.
+
+**Rakuten has no history to go and get.**
+
+- **Superdrug retired** — `active=false`, 29,547 rows, all out of stock since 19 July. It
+  was the only Rakuten retailer we ever had.
+- **Its tracking was deliberately removed before that**, at Rakuten's own request:
+  `lib/analytics.ts` strips `click.linksynergy.com` wrappers and sends the visitor to the
+  decoded `murl`. So even while Superdrug was live, Rakuten saw nothing.
+- **Stylevana is AWIN**, despite the old Rakuten datafeed filenames.
+- **The Fragrance Shop was approved 3 August and is not onboarded**, queued behind Niche
+  Beauty, itself queued behind the AWIN coalesce fix.
+- GA4 corroborates: `outbound_clicks_rakuten = 0` in every week it has.
+
+> **A Rakuten puller built today would return zeros until The Fragrance Shop lands, and
+> those zeros would be correct.** Instrument before volume is an argument for reading
+> history that exists. It is not an argument for building a meter with nothing on the
+> other side of it.
+
+**This is a decision, not an omission**, and it is recorded here so it reads as one.
+
+#### AND AN EMPTY RESULT WOULD PROVE NOTHING, WHICH IS THE SHARPER REASON
+
+With AWIN, an empty response meant a token problem — the probe **retried once** before
+concluding anything, precisely because empty was suspicious. Here it inverts:
+
+> **An empty Rakuten response is the expected and correct result. So it cannot distinguish
+> working credentials from silently wrong ones**, and a green probe would prove nothing
+> about the only thing it exists to prove.
+
+A probe run now would need a call returning non-empty with zero transactions — an account
+or advertiser listing — exactly as the AWIN probe called `/programmes` first to establish
+the token worked before asking anything about performance. **Building that today buys a
+credential check and nothing else, and the credentials are not confirmed to exist.**
+
+#### THE STRUCTURAL FINDING SURVIVES THE PARKING
+
+**AWIN's table works because ONE endpoint returned the whole grain** — `(week, advertiser,
+region)` with clicks and all four statuses as columns of one record.
+
+> **Rakuten appears to have no single equivalent. Transactions are per-transaction and
+> carry no click count**, exactly as AWIN's transactions endpoint did; clicks would have to
+> come from a separate report. That is **two endpoints composed, which is a structural
+> difference rather than a mapping one.**
+
+So `metrics_rakuten_weekly` is worse-founded than a column count suggests: no comments at
+all, **a text advertiser name in the primary key** that a rename would fork the series on —
+not hypothetical, AWIN's "Branded Beauty" became "Branded Beauty- CLOSED 30/7/2026"
+mid-series this quarter — no `sale_value` so no realised rate, no pending/confirmed split,
+and now **a grain that may correspond to no endpoint at all.**
+
+**Same conclusion as AWIN, held more strongly: probe first, design after.** Do not extend
+this table. Drop and recreate it against the observed shape.
+
+#### THE RESEARCH IS KEPT BECAUSE IT IS THE EXPENSIVE PART
+
+`docs/rakuten-reporting-probe-brief.md` holds it: **three token families rather than one
+scheme**, the **deprecated-as-scheme but mandatory-as-parameter** trap on the Security
+token, the **contradicted token lifetime** (4 hours vs 60 minutes vs "short-lived"), the
+endpoint list, and the portal instructions.
+
+> **The reading was the expensive part; the probe is the cheap part.** Parking the build
+> while discarding the research would mean paying for the reading twice.
+
+**Two open questions carried forward, so this resumes rather than restarts:**
+
+1. **Are "Web Services token" and "Security token" one credential or two?** Rakuten's help
+   article is titled as though they are two; Adverity finds the Security Token *on* the Web
+   Services page. **Only the portal settles it** — count the token fields on that page.
+2. **Does the portal's Scope ID match SID `4684964`?** That SID appears in old Stylevana
+   feed filenames (`53421_4684964_1_cmp_xml.gz`), so it **may be datafeed-scoped rather
+   than reporting-scoped.** A mismatch is a finding before a line is written.
+
+#### THE DEPENDENCY IS ATTACHED WHERE IT WILL BE FOUND
+
+Added to The Fragrance Shop's entry in `docs/partnership-tracker.md`, not left here.
+
+> **A dependency recorded only on the blocked side is discovered after the fact.** Whoever
+> picks up that onboarding needs to find the Rakuten reporting work attached to it, rather
+> than going live and then asking why nothing measures it.

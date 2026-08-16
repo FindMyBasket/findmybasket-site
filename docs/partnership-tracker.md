@@ -49,6 +49,25 @@ Boots step-down decision because it sits on the import path).
 So the chain is: **AWIN coalesce fix → Niche Beauty go-live → The Fragrance Shop
 go-live.** Nothing here starts until the first link clears.
 
+### Reporting dependency — attached here deliberately
+
+**Going live on Rakuten means going live with nothing measuring it.** There is no Rakuten
+puller and `metrics_rakuten_weekly` has never held a row, so on the day this retailer
+onboards its clicks, sales and commission are invisible to every dashboard the project has.
+
+**That work is PARKED, not forgotten** — work-list item 121, with the research kept in
+**`docs/rakuten-reporting-probe-brief.md`**. It was parked *because* of this dependency:
+Rakuten has no live programme, so a puller built earlier would return correct zeros until
+this onboarding lands.
+
+> **This onboarding is the trigger. Read the probe brief before writing any Rakuten code**,
+> and expect the probe to change the table — Rakuten's grain probably does not match
+> `metrics_rakuten_weekly`'s existing shape, and the reasons are recorded there.
+
+**Two things to check in the Rakuten portal while onboarding, both one glance each:**
+whether the Web Services page shows **one token field or two**, and whether the portal's
+**Scope ID matches SID `4684964`**.
+
 ### Delivery terms — recorded now, applied later
 
 **These values do NOT go into `retailers` until the retailer row is created.** They are
@@ -90,12 +109,21 @@ to compare against, and 86.2% of buyable products carry exactly one live offer
 adds a second offer where there was one is doing the thing the site exists to do,
 whatever it pays.
 
-> **Caveat on the comparison itself.** Commission rates are **not in the database** —
-> `retailers` has no rate column and `metrics_awin_weekly` is empty. "Boots sits at the
-> bottom of the commission range" is carried as stated and **not confirmed by
-> measurement** (`docs/commercial-finding-catalogue-depth.md`, "Not verified here").
-> The Fragrance Shop's 2% is a documented Rakuten term; the *ranking against Boots* is
-> not. Do not build a comparison table of rates until they are recorded somewhere real.
+> **[Resolved 15 August 2026.] "Boots sits at the bottom of the commission range" is
+> CONFIRMED, and it was understated.** Boots's standard commission groups top out at
+> **2.00%** — the lowest ceiling of all sixteen joined AWIN advertisers, against 3.00% for
+> the next lowest and 15% at the top — and it carries **26 groups paying zero**, including
+> named exclusions for Chanel, Dior, Dyson and Jo Malone that no other advertiser has. Read
+> from `api.awin.com/publishers/{id}/commissiongroups`; see work-list items 118 and 120.
+>
+> **Which changes what The Fragrance Shop's 2% means. It does not beat Boots; it MATCHES
+> Boots**, at the bottom of the range. The ranking that was carried as unverified turns out
+> to have been carried in the wrong direction.
+>
+> **Still true: commission rates are not in the database.** `retailers` has no rate column
+> and the AWIN card was printed to an Actions log rather than stored, so a rate comparison
+> table still has nothing real to read from. **Rakuten's rates have never been read at all**
+> — see the reporting dependency above.
 
 ---
 
