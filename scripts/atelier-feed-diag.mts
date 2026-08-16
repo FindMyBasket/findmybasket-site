@@ -433,7 +433,11 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
                   `, ${tab.size} distinct value(s))`);
       if (tab.size === 1) console.log("       -> SINGLE VALUE: this column cannot discriminate inside the leaf.");
       console.log("       cols: rows | supp = shipped rule (SEE CAUTION) | sport = sports name tokens");
-      for (const [k, e] of [...tab.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 30)) {
+      // FULL ENUMERATION, not a top-N. A prefix map inherits the tail from its parents,
+      // so the question that decides the map is not "what are the big values" but
+      // "does every value descend from a mapped parent". A truncated list cannot answer it.
+      const SHOW = Number(process.env.TAXONOMY_ROWS || "30");
+      for (const [k, e] of [...tab.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, SHOW)) {
         const pct = (100 * e.supp / Math.max(e.n, 1)).toFixed(0);
         console.log("   " + String(e.n).padStart(6) + "  supp " + String(e.supp).padStart(5) +
                     " (" + pct.padStart(3) + "%)  sport " + String(e.sport).padStart(4) +
