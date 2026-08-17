@@ -14230,3 +14230,112 @@ the ones anybody has actually looked at.
 > DIFFERENT CONSEQUENCES.** Item 131's rule was that a detector nothing reads is worse than
 > none. **This is the next rule along: a detector everything reads and nothing acts on is not
 > much better**, and what moved this one was a task that could not proceed.
+
+
+---
+
+### 170. Item 96 is smaller than it was sized, and 214 parents are the blocker
+
+**Raised:** 17 August 2026, scoping the shade-variant collision before item 96 can be scoped ·
+**Corrects two figures I reported one message earlier.** · **No option chosen.**
+
+#### FIRST CORRECTION: 2,855 IS NOT WHAT I SAID IT WAS
+
+I reported *"2,855 of the 16,079 in-scope products are the parent of at least one shade variant
+— 18%."*
+
+**Wrong.** The query counted **child rows**, not parent products:
+
+```sql
+SELECT count(*) FROM ids JOIN products p2 ON p2.parent_product_id = ids.id
+```
+
+That returns one row per child. The truth:
+
+| | |
+|---|---:|
+| in-scope products that are **parents** | **214** — 1.3%, not 18% |
+| **their children** | 2,855 |
+| in-scope products that are themselves **children** | **2,201** |
+
+> **THE JOIN COUNTED THE OTHER SIDE OF ITSELF AND I READ THE TOTAL AS THOUGH IT WERE THE
+> DRIVING SIDE.** Same class as the day's other four: a number that is correct about something
+> and was reported as being about something else. **Fifth instance, and this one had a `count(*)`
+> over a join in plain sight.**
+
+#### SECOND CORRECTION, AND IT SHRINKS ITEM 96
+
+Scope was built from `retailer_prices_live JOIN products … merged_into IS NULL`, which **does
+not exclude shade-variant children** — and children are invisible to `products_active` by
+design. So the population I sized includes rows the site never shows.
+
+| | groups | surplus rows |
+|---|---:|---:|
+| **as I reported it** | 7,709 | **8,423** |
+| **counting only site-visible products** | **6,048** | **6,660** |
+| groups that are *purely* shade structure | **1,661** | — |
+
+> **1,661 OF THE 7,709 SAME-BRAND GROUPS ARE NOT DUPLICATES AT ALL. They are one visible
+> product and its shade variants, correctly modelled**, sharing a barcode because a shade
+> variant legitimately does.
+
+**The merge target is 6,048 groups and 6,660 surplus rows — about 6.6% of the active catalogue,
+not 8%.** Item 96 is real and it is **21% smaller** than the sizing I gave, and the difference
+is a modelling feature being counted as a defect.
+
+**The sizing correction is worth more than the sizing.** A merge pass aimed at 7,709 groups
+would have walked into 1,661 groups where the right answer is *do nothing*, and "do nothing" is
+the hardest outcome to get right in a batch that exists to change things.
+
+#### THE DESIGN QUESTION: WHAT HAPPENS TO SHADE CHILDREN WHEN A PARENT MERGES
+
+**214 parents, 2,855 children.** `fmb_soft_merge_group` never touches `parent_product_id`, and
+its orphan check reads `retailer_prices` only — so **children are invisible to it in both
+directions**: it will not move them and it will not complain about them.
+
+**Three options, none chosen.**
+
+**A — REPOINT: `UPDATE products SET parent_product_id = keeper WHERE parent_product_id = ANY(removed)`.**
+*Cost:* assumes the keeper is a valid parent for the removed parent's children — i.e. that the
+two parents really are the same product, which is the premise of the merge but is decided per
+group by whoever picks the keeper. **A wrong keeper choice silently re-parents up to 2,855
+shade variants**, and shade children are invisible in `products_active`, so nothing on the site
+would look different afterwards. **The cheapest to implement and the hardest to notice when
+wrong.**
+
+**B — BLOCK: refuse the merge if either side has children.**
+*Cost:* removes 214 parents from the pass, and with them any group they appear in. **Safe, and
+it defers the hardest 214 indefinitely** — they are parents precisely because they are
+well-populated products, so they are likely to be the ones worth merging. Also needs a decision
+about the *rest* of a group when one member is blocked: merge the others, or skip the group?
+
+**C — PROMOTE THEN MERGE: detach children to standalone products first, merge the parents, then
+re-parent.**
+*Cost:* three steps where one failed leaves the catalogue in a state no view models, and 2,855
+products briefly visible in `products_active` that were deliberately hidden. **Highest blast
+radius, and the only one that does not assume the two parents are equivalent.**
+
+**A fourth possibility, not a full option:** treat parents as keepers by rule rather than by
+choice — if exactly one member of a group has children, it keeps. That does not answer what
+happens when **two** members have children, and it is not known how often that occurs.
+
+> **EVERYTHING ELSE ABOUT A 7,709-GROUP PASS — BATCHING, KEEPER RULES, REVERSAL — IS DOWNSTREAM
+> OF THIS.** All three options are implementable; none is derivable from the data, because the
+> question is what a shade variant *means* when its parent turns out to be a duplicate.
+
+#### AND THE 53 THAT SPAN GROUPS
+
+16,132 was the sum over groups; **16,079 is the distinct product count.** The 53 difference is
+products appearing in more than one barcode group — **the ones where a keeper choice in one
+group constrains another**, and the only ones where batch order changes the outcome. **Found
+before a batch rather than during it**, which is the point of counting distinctly.
+
+#### ITEM 104'S HARDCODED ZERO IS CURRENTLY TRUE
+
+`fmb_soft_merge_group` writes a literal `0` into `product_merge_log.saved_routines_updated`.
+Measured: **8 active saved routines, 27 product references, 0 of them inside the merge scope.**
+
+> **THE LOG WOULD HAVE SAID 0 EITHER WAY.** The check does not exist and today it would have
+> agreed with reality. **That is item 104 exactly** — a hardcoded value that reads as a
+> measurement — and the fact that it is currently correct is the reason it has survived, not a
+> reason to keep it.
