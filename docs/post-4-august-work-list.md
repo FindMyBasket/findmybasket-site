@@ -13262,3 +13262,180 @@ load-bearing**, which is item 135's trap 2.
 
 The counts are written into the comment so the next reader can see what it was verified
 against, and re-derive it rather than trusting it.
+
+
+---
+
+### 153. Two deploy targets, and the classifier is only ever reached by the second
+
+**Raised:** 17 August 2026, Monday morning, finding the browse facet back on
+`/supplements/supplements` · **A fix merged and deployed on Sunday was silently reverted by a
+cron on Monday.**
+
+#### WHAT HAPPENED
+
+| | |
+|---|---|
+| Sun ~21:00 | `product_type` nulled on the supplements branch of `_shared/categorisation.ts`. Merged. |
+| Sun ~21:10 | Vercel deploys. `/supplements/supplements` verified clean — no facet. |
+| Mon **04:31** | `refresh-boots` runs. **The edge function is still running Sunday-morning code.** |
+| Mon 07:30 | Facet back. 18 new products carrying `Skincare` ×16, `Moisturiser` ×1, `""` ×1. |
+
+> **THE FIX WAS MERGED, DEPLOYED, AND VERIFIED — AND IT WAS NOT RUNNING WHERE IT MATTERED.**
+> `supabase/functions/**` does not deploy with the app. Vercel builds the Next.js site;
+> Supabase edge functions need `supabase functions deploy`, a separate command nobody had
+> named as part of this change.
+
+#### THE SHARP PART IS THE SYMPTOM
+
+**A cron eight hours later reintroduced the defect, and the symptom was
+indistinguishable from the original.** A browse chip reading *Moisturiser* on a supplements
+page — the same words, the same place, the same wrongness.
+
+> **A SILENT PARTIAL REVERT PRESENTS AS "THE FIX DID NOT WORK".** Which is the one conclusion
+> that leads away from the cause: it sends the next person back into the code that is already
+> correct. The only thing distinguishing the two states is the row count — 1,770 rows on
+> Sunday, 18 on Monday — and nothing surfaces that.
+
+**And it is self-repeating.** Every daily import re-creates it. Had this not been read on
+Monday morning, `refresh-boots` would have added a further ~18 rows every day, with the page
+looking exactly as broken as before the fix.
+
+#### THE DEPLOY SET, RECORDED SO THE NEXT PERSON DOES NOT DISCOVER IT
+
+**`supabase/functions/_shared/categorisation.ts` is imported by four functions.** Changing it
+and deploying none of them changes nothing; deploying some of them changes some retailers:
+
+| function | what it classifies |
+|---|---|
+| `import-awin-feed` | 13 of 15 retailers, including Boots |
+| `import-rakuten-feed` | Rakuten-sourced retailers |
+| `import-shopify-feed` | Skin Cupid |
+| `recategorise-products` | the backfill/repair path |
+
+```
+supabase functions deploy import-awin-feed import-rakuten-feed \
+  import-shopify-feed recategorise-products --project-ref crtrjoescntlcjiwdtrt
+```
+
+> **A SHARED MODULE'S BLAST RADIUS IS ITS IMPORTERS, AND ITS DEPLOY SET IS THE SAME LIST.**
+> Nothing in the repo states it, `grep -rl _shared/categorisation supabase/functions/` derives
+> it in one second, and neither of those facts helps someone who does not know there is a
+> second deploy target at all.
+
+#### RESOLVED
+
+All four deployed. The 18 rows re-nulled. Supplements: 1,737 live, **0 with `product_type`**.
+
+**This is yesterday's "merged is not deployed" with a second target added** — and the new part
+is that the two targets have different deploy triggers, so one of them is automatic and
+invisible and the other is a command someone has to remember.
+
+---
+
+### 154. `x-vercel-cache` reports one of two caches, and I used it as the freshness signal all day
+
+**Raised:** 17 August 2026 · **Corrects the verification method used for every page check on
+16 and 17 August.** · **Robbie's correction.**
+
+#### THE TWO CACHES
+
+| | what it caches | visible in headers |
+|---|---|---|
+| **Full Route Cache** | the rendered HTML | **yes** — `x-vercel-cache: HIT/MISS/STALE` |
+| **Data Cache** | each `fetch()` result, keyed by URL | **NO** |
+
+`export const revalidate = 3600` sets **both**. `supabase-js` issues ordinary `fetch` calls
+with no `cache:` or `next:` override, so **every Supabase query on these routes is cached for
+up to an hour and nothing in the response says so.**
+
+> **`x-vercel-cache: MISS`, `age: 0`, `no-store` MEANS THE HTML WAS RE-RENDERED. IT SAYS
+> NOTHING ABOUT THE DATA THAT WENT INTO IT.** A freshly rendered page can be built entirely
+> from hour-old query results.
+
+#### THE PROOF, ON ONE PAGE IN ONE REQUEST
+
+`/supplements/supplements`, `x-vercel-cache: MISS`, `age: 0`, measured against the database at
+the same moment:
+
+| claim | rendered | database | |
+|---|---:|---:|---|
+| products | 1,532 | 1,532 | **fresh** |
+| brands | 297 | 297 | **fresh** |
+| **facet chips** | **Moisturiser** | **(none)** | **STALE** |
+
+> **THE DATA CACHE IS KEYED PER FETCH URL, SO A SINGLE PAGE IS FRESH AND STALE AT THE SAME
+> TIME.** The count query and the facet query are different URLs with independent TTLs. **No
+> number on a page can act as a freshness token for the page**, because the number you check
+> and the claim you care about are cached separately.
+
+#### WHAT A CORRECT FRESHNESS CHECK LOOKS LIKE
+
+> **VERIFY THE SPECIFIC CLAIM YOU ARE MAKING, AGAINST THE DATABASE, AT THE SAME MOMENT.**
+
+Not a header. Not a proxy. Not a different number on the same page.
+
+1. State the claim as a query — *"the facet should show these chips"* becomes the exact
+   `SELECT` the page runs, junk filter and all.
+2. Fetch the page and extract the rendered claim.
+3. Compare them. **A mismatch means stale, whatever any header says.**
+4. Repeat until stable, for the reason already recorded beside Step E.
+
+**Cheap enough to be routine**: the re-verification of three pages and nine claims took one SQL
+query and one script.
+
+#### WHAT WAS RE-VERIFIED, AND WHAT IT CHANGED
+
+Every data-driven conclusion from 16–17 August, re-run against the database:
+
+| page | products | brands | facet |
+|---|---|---|---|
+| `/supplements/supplements` | match | match | **stale — Data Cache, clearing** |
+| `/supplements/sports` | match | match | match |
+| `/hair/treatment` | match | match | match — `Hair Treatment` only, **no `Hair Care`** |
+
+**One conclusion was affected and it was the one being re-checked.** The rest hold:
+
+- **Item 146's diagnosis is unaffected.** The nondeterministic `getValidSubcategories` was
+  proved by **reproducing the unordered scan in SQL** — 102 of 117 rows — not by reading a
+  header. The header was used to rule cache OUT, and the SQL is what ruled pagination IN.
+- **The heading fixes are unaffected.** They are code, not data: a re-rendered route is
+  running current code by definition.
+- **The `Hair Care` removal is confirmed by data**, not just by the deploy.
+
+#### AND IT DOES NOT CLEAR LIKE A SWITCH — IT CONVERGES
+
+Watching the stale facet clear after the database was corrected:
+
+| observation | result |
+|---|---|
+| single check at ~6 min | **absent** — "it cleared" |
+| single check moments later | **present** — it had not |
+| 20 samples | present **1**, absent 19 |
+| 25 samples, minutes later | present **2**, absent 23 |
+
+`x-vercel-id` differs on every request within one region: **requests land on different instances,
+each holding its own view of the Data Cache**, and those instances are created and recycled at
+different times.
+
+> **A STALE DATA CACHE DRAINS PROBABILISTICALLY, NOT ATOMICALLY.** There is no moment at which
+> it is "cleared". There is a falling proportion of requests still served from it, with a long
+> tail — and **any single check samples that distribution rather than measuring it.**
+>
+> **"Re-check until it settles" is necessary and not sufficient.** Two consecutive agreeing
+> checks would have declared this clear at 6 minutes, twice, wrongly. **Count the samples and
+> report the proportion**, because the honest answer at that moment was "19 of 20", not "yes".
+
+This is why the watcher's "FACET GONE after ~6m" was wrong and the count that followed was
+right. **The watcher asked a yes/no question of a system that only has a distribution.**
+
+#### THE HABIT THIS REPLACES
+
+I checked `x-vercel-cache` on essentially every verification in two days. **It is the header
+that looks like it answers the question**, it is right about the thing it reports, and it has
+been silently answering a narrower question than the one being asked.
+
+> **A SIGNAL THAT IS CORRECT ABOUT A SMALLER SCOPE THAN YOU THINK IS WORSE THAN NO SIGNAL**,
+> because it produces confident verification rather than an obvious gap. This is item 132's
+> shape — proximity conferring the appearance of a constraint — applied to a response header:
+> it sits next to the freshness question and is not an answer to it.
