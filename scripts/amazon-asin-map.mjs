@@ -39,6 +39,14 @@
  *   backed off on failure, and it cannot be validated against anything the API says.
  *
  * Usage:  node scripts/amazon-asin-map.mjs [--out FILE] [--brands "A,B"] [--pages N]
+ *                                          [--index SearchIndex] [--seeds ""]
+ *
+ *   --index  Amazon search index. 'Beauty' (default, tranche 1 K-beauty) or
+ *            'HealthPersonalCare' (supplements). A BRAND SEARCH IN THE WRONG INDEX
+ *            RETURNS A FEW ITEMS RATHER THAN AN ERROR, so an unset index reads as a
+ *            brand with no products. Always state it.
+ *   --seeds  Pass "" to disable. The default seeds are K-BEAUTY ASINs and will
+ *            contaminate any other tranche's counts if left in place.
  */
 import { createRequire } from 'node:module';
 import { writeFileSync } from 'node:fs';
@@ -62,7 +70,18 @@ const arg = (k, d) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] :
 const OUT = arg('--out', '/tmp/amazon-asin-harvest.json');
 const MAX_PAGES = Number(arg('--pages', '10'));
 const BRANDS = arg('--brands', 'COSRX,medicube,Beauty of Joseon,Dr.Melaxin').split(',');
-const SEEDS = (arg('--seeds', 'B00PBX3L7K,B01LEJ5MSK,B0DM1VTB62,B0D1G7XF9X,B0FKTKF8RB,B0DNMCJMBB,B09JVNZVH3,B0CNCL35CH,B0CYS776TR')).split(',');
+const SEEDS = (arg('--seeds', 'B00PBX3L7K,B01LEJ5MSK,B0DM1VTB62,B0D1G7XF9X,B0FKTKF8RB,B0DNMCJMBB,B09JVNZVH3,B0CNCL35CH,B0CYS776TR')).split(',').filter(Boolean);
+
+// THE SEARCH INDEX IS NOT A DETAIL AND WAS NOT A PARAMETER. It was hardcoded to 'Beauty'
+// for tranche 1, which is correct for K-beauty and WRONG FOR EVERY SUPPLEMENT. Amazon UK
+// files MyProtein and Solgar under HealthPersonalCare, and a brand search in the wrong
+// index does not error -- it returns a handful of cross-listed items and looks like a brand
+// with almost no products. Measured 17 August: MyProtein returned 2 ASINs on 'Beauty'.
+//
+// THAT IS THE SAME FAILURE MODE THE COMMENT ON THE CALLING CONVENTION ABOVE DESCRIBES,
+// arriving by a second route: a request that is malformed for the question returns a small
+// number rather than an error, and a small number is indistinguishable from a small brand.
+const SEARCH_INDEX = arg('--index', 'Beauty');
 
 const api = (() => {
   const c = new ApiClient();
@@ -118,7 +137,7 @@ async function enumerateBrand(brand) {
     const req = new SearchItemsRequestContent();
     req.partnerTag = process.env.CREATORS_PARTNER_TAG;
     req.brand = brand;
-    req.searchIndex = 'Beauty';
+    req.searchIndex = SEARCH_INDEX;
     req.itemCount = 10;
     req.itemPage = page;
     req.resources = ['itemInfo.title', 'itemInfo.byLineInfo'];

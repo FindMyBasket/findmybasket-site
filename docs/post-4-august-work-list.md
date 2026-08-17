@@ -13536,10 +13536,6 @@ is the departures, and they are the change the table does not know about.**
 
 Written now, with `metrics_affected` naming what moved — see the boundary row added under this
 item. **The step is visible today; the annotation has to exist before anyone reads the chart.**
-
-
----
-
 ### 156. The delivery argument was right about the problem and wrong about the reason
 
 **AMENDED 17 August 2026, same day, after taking the measurement.** The version below argued
@@ -13760,3 +13756,851 @@ departures.**
 
 **What did find something was a check nobody had specified**: comparing candidates against
 values already present, and grouping the candidates by product. Neither was in item 105.
+
+### 158. Not unranked — ranked on a goods-only total against delivered ones
+
+**Raised:** 17 August 2026, setting Niche Beauty's delivery terms · **Applied.** · **Inverts the
+framing the task was written under, including mine.**
+
+#### THE FRAMING THAT WAS WRONG
+
+The task read: *8,838 in-stock rows enter delivered-total ranking for the first time.* It was
+written as an admission — a retailer that could not be ranked, now able to be.
+
+**Niche Beauty was already being ranked.** `lib/delivery.ts` returns `{known: false}` for
+`delivery_model = 'unknown'`, and **both callers then keep the goods total**:
+
+| caller | what it does with an unknown leg |
+|---|---|
+| `lib/product-queries.ts:183` | `effective_price = numericPrice` — no delivery added |
+| `app/app/RoutineBuilder.tsx:535` | pushes the option with `total = goods`, then **line 669 sorts every option by `a.total - b.total`** |
+
+> **A GOODS-ONLY TOTAL WAS SORTED AGAINST NINE RIVALS' DELIVERED TOTALS, AND WON ON THE
+> DIFFERENCE.** Setting the terms does not grant entry to the ranking. **It removes an
+> advantage.**
+
+#### THE MEASUREMENT
+
+1,451 contested products — those where a rival also has the item in stock. The other 7,316 of
+Niche Beauty's 8,767 in-stock rows are sole-supplied and no ranking exists to change.
+
+| | |
+|---|---:|
+| NB wins **today**, goods-only against delivered | **202** |
+| NB wins **after pricing** | **32** |
+| **loses** | **170** |
+| **newly wins** | **0** |
+
+> **84% OF ITS CURRENT WINS EXIST ONLY BECAUSE DELIVERY WAS IMPUTED AS FREE.**
+
+**And the zero is structural, not a quirk of this retailer's numbers.** An unknown leg is
+scored with £0 delivery. Pricing it can only ever add cost, never remove it, so **the flip is
+one-directional by construction**: an unknown-delivery retailer can only lose rankings when its
+terms are recorded, never gain them. That holds for every future retailer arriving unknown.
+
+#### THE COST IS WHAT BITES, NOT THE THRESHOLD
+
+| | Niche Beauty | fleet |
+|---|---:|---|
+| threshold | **£75.00** | next-highest £50 · median £30 · **1.5×** |
+| **cost** | **£9.95** | **maximum £3.99** · **2.5×** |
+
+The threshold attracted attention because it is the highest by half. **The cost is the term
+that moved the 170**: they average **£23.92** of goods, nowhere near £75, so they pay the full
+£9.95 — more than twice what any rival charges, against a rival that is often over its own
+threshold and paying nothing.
+
+#### AND THE COLUMN THAT WAS MISSING
+
+`delivery_terms_observed_at` recorded **when** somebody looked and could not record **what they
+looked at**. `delivery_terms_source` added.
+
+> **A FEED-DERIVED TERM AND A CHECKOUT-OBSERVED TERM HAVE DIFFERENT DECAY RATES.** A feed value
+> re-arrives on every import and is wrong only if the advertiser changed it. A checkout
+> observation is a photograph: correct on the day, silently stale afterwards, and nothing
+> re-reads it. **An old date alone cannot distinguish "old and stable" from "old and
+> unverified"**, and the next person re-observing needs to know which they are replacing.
+
+One of eleven active retailers now carries a source. The other ten are NULL, which the column
+comment states means **provenance was lost, not absent** — they were set on 1 August from an
+unrecorded route.
+
+---
+
+### 159. A flag set once, read nowhere, in the code that ranks money
+
+**Raised:** 17 August 2026, tracing what `delivery_model = 'unknown'` actually does ·
+**Outlives today's fix.** · **Reported, not built — the remedy is a product decision.**
+
+#### THE FLAG
+
+`app/app/RoutineBuilder.tsx` contains exactly **two** occurrences of `deliveryUnknown`:
+
+| line | |
+|---|---|
+| 124 | the field declaration on the option type |
+| 537 | `deliveryCost: null, deliveryUnknown: true` |
+
+**Nothing reads it** — not the sort, not the analytics, and **not the label that appears to be
+its consequence.**
+
+`RoutineBuilder:1413` does render *"Delivery not known"* in the option's delivery row. **It is
+keyed off `deliveryCost === null`, not off `deliveryUnknown`.** The user-visible honesty exists
+and arrives by a different field entirely.
+
+> **A DUPLICATED INTENT WITH ONE WORKING COPY AND ONE INERT ONE IS MORE DURABLE THAN A MISSING
+> LABEL.** A missing label is found the moment anyone looks at the page. This survives looking:
+> **an audit of "do we mark unknown delivery?" finds two yeses** — the rendered string and the
+> flag being set — **they agree, and neither reveals which one produced the string.**
+>
+> The flag survived review because it looked consequential **and because the behaviour it names
+> was in fact happening.** Both halves of the check pass. The thing that is false is the
+> relationship between them, and nothing tests a relationship.
+
+**And the consequence, stated plainly: the option wins the comparison and then tells you it does
+not know what delivery costs.** The label describes the input. Nothing says the RANKING used a
+number the same row has just admitted is unknown.
+
+And the comment directly above line 537 reads:
+
+> *"Unknown terms: keep the goods visible, refuse to claim a delivered total. Never defaulted to
+> a number, which is what produced the original defect."*
+
+**The option is then pushed into the same array as every priced option and sorted by `total` at
+line 669 — where its `total` is the goods figure.**
+
+> **THE CODE REFUSES TO CLAIM A DELIVERED TOTAL AND THEN RANKS THE GOODS TOTAL AS IF IT WERE
+> ONE.** Both halves are true statements about the same variable. The refusal is real and it is
+> undone four lines later by a sort that does not know the difference.
+
+**This is item 135's trap 2 inside the optimiser** — a mechanism that presents as a guard and is
+inert. Worse than the earlier instances, because those were labels in prose and this one is a
+field on a type: it survives review precisely because a reader sees the flag being set and
+assumes the setting has a consequence.
+
+#### WHY IT OUTLIVES THE FIX
+
+Niche Beauty was the only active retailer at `unknown`, and the view is now empty. **The flag is
+unreached today and the defect is not fixed** — it is dormant, waiting for the next retailer to
+arrive without terms.
+
+The departure doctrine now requires delivery terms **before** go-live, so the next one is **less
+likely, not impossible**: a retailer can change its terms mid-life, a migration can widen
+`delivery_model`, and `deliveryFor` returns `{known:false}` for *any* unrecognised value —
+including one a future migration adds that this code predates, which its own comment says out
+loud.
+
+#### WHAT IT WOULD TAKE, AND WHY THIS IS NOT A BUG FIX
+
+**The question is what the optimiser should do with an option it cannot price.** That is a
+product decision, so three options are stated and none is built:
+
+**A — exclude unknown-delivery options from ranking.** Truthful: an option whose total is
+unknowable is not comparable. **Cost:** a retailer with real stock vanishes from the basket
+entirely, and the shopper is never told it exists. On Niche Beauty that would have hidden 8,767
+in-stock rows, 7,316 of which are the *only* source for their product.
+
+**B — rank them last, priced at worst case.** Keeps them visible and never flatters them.
+**Cost:** invents a number. Worst case means "assume the full delivery charge", which requires a
+charge we do not have — the whole premise is that the terms are unknown. Using a fleet maximum
+is a default, and defaults are the class this module was written to remove.
+
+**C — rank them where they fall, and mark them.** Cheapest to build, and the flag already
+exists. **Cost:** it keeps a goods-only total in a delivered-total ranking and asks the interface
+to explain the discrepancy — which is the current behaviour plus honesty, not a fix.
+
+> **THERE IS NO OPTION THAT IS BOTH COMPLETE AND HONEST**, which is why this is a decision and
+> not a defect to be quietly closed. **A does not lie and hides real stock. B and C keep the
+> stock and each concede something.**
+
+The measurement that would inform it: how often an unknown option currently wins. **Today the
+answer is zero, because there are none.** It was 202 yesterday.
+
+#### THE LOOP CLOSED, AND IT IS THE FIRST TIME
+
+`retailers_delivery_unknown` was created **3 August**, sat correct and unread for seven days
+while Niche Beauty went live inside it, was wired into `monitor-retailer-feeds` on **Sunday 16
+August**, fired at **09:00 Monday**, and was resolved the same morning by reading the retailer's
+own checkout.
+
+> **FIRST TIME ON THIS LIST A MONITOR HAS PRODUCED AN ACTION RATHER THAN A FINDING.** Every
+> prior detector on this list produced something to write down. This one produced a value in a
+> column, a ranking correction on 170 products, and an empty view.
+
+**The detector's own history is the argument for wiring it.** It was right for seven days and
+worth nothing, because item 131's rule holds: a detector nothing reads is more expensive than no
+detector, since it also consumes the belief that the case is covered.
+### 160. Ten of eleven retailers have unverifiable delivery provenance
+
+**Raised:** 17 August 2026, immediately after `delivery_terms_source` landed · **A standing gap,
+not an action.** · **Nothing to do today; worth knowing before somebody re-observes one.**
+
+#### THE STATE
+
+| | active retailers | source recorded |
+|---|---:|---|
+| Niche Beauty (32) | 1 | **`checkout`**, observed today |
+| everyone else | **10** | **NULL — provenance lost** |
+
+**All ten share one `delivery_terms_observed_at`: 2026-08-01.** Sixteen days ago, in a single
+sitting, by one route that nobody wrote down. Escentual, Stylevana, Boots, The Organic Pharmacy,
+YesStyle, Beauty Bay, Beauty Flash, Debenhams, Gorgeous Shop, Perfume Click.
+
+> **EVERY DELIVERED TOTAL ON THE SITE IS COMPUTED FROM TEN NUMBERS WHOSE ORIGIN NOBODY
+> RECORDED.** The basket optimiser's entire output — the claim the product is built on — rests
+> on them. They are almost certainly right; that is not the same as being checkable.
+
+#### WHY THIS IS A GAP AND NOT A TASK
+
+**Nothing is known to be wrong.** The terms were set deliberately, on one day, by someone who
+had just done the work of finding them. The odds that any individual value is incorrect are low.
+
+**What is missing is the ability to tell.** A source of `checkout` decays: it is a photograph,
+correct on the day and silently stale afterwards. A source of `feed` does not decay the same
+way — it re-arrives on every import. **With the source unrecorded, sixteen days means nothing:**
+
+| if the source was | 16 days later |
+|---|---|
+| `feed` | fine — it has re-arrived fifteen times since |
+| `checkout` | unverified for sixteen days, and nothing re-reads it |
+| `site` | probably fine, help pages change rarely |
+
+> **`delivery_terms_observed_at` ALONE CANNOT DISTINGUISH "OLD AND STABLE" FROM "OLD AND
+> UNVERIFIED".** That was true before today and invisible. **The column did not create the gap;
+> it made an assumption into a measurement.**
+
+#### WHAT IT COSTS, CONCRETELY
+
+The next person re-observing a retailer's terms — because they changed, because a monitor fired,
+because the fleet is being audited — **cannot tell what they are replacing.** They will find a
+value, a date, and no answer to "was this read off a checkout or copied from a feed?", which is
+the question that decides whether their new observation is a correction or a duplicate.
+
+**And it is self-resolving at exactly the wrong rate.** Every future observation records a
+source, so the gap shrinks one retailer at a time — but only when something forces an
+observation. **A retailer whose terms never change is never re-observed and never gains a
+provenance**, so the ten will not drain on their own.
+
+#### THE ASYMMETRY WORTH NOTICING
+
+**The only value whose origin is known is the newest one.** The oldest ten are the ones a reader
+would most want to check, and they are exactly the ones that cannot be checked.
+
+> **A PROVENANCE COLUMN ADDED AFTER THE FACT DOCUMENTS THE FUTURE AND NOT THE PAST**, and the
+> past is where the doubt is. That is not an argument against adding it late — it is the reason
+> to record what it cannot cover, in the same breath as adding it.
+
+**Backfilling is not available**, and saying so is the point: nobody remembers which of ten
+retailers' terms came from a checkout and which from a delivery page, sixteen days on. Writing a
+plausible source would be worse than NULL — it would look like a record.
+
+#### STATUS
+
+**Not urgent. Not scheduled. Recorded so it is a known gap rather than an assumed absence**, and
+so the first person to re-observe any of the ten knows to write `delivery_terms_source` while
+they are there.
+
+
+---
+
+### 161. A doctrine paragraph that was wrong in the direction that made the risk look safe
+
+**Raised:** 17 August 2026 · **A′ and B built.** · **Item 159 is NOT closed by either.**
+
+#### THE FALSE PARAGRAPH
+
+`docs/superdrug-removal-plan.md`, under *"Before onboarding: delivery terms are a REQUIRED
+step"*, explaining what `unknown` costs so the choice is informed:
+
+> *"that retailer **cannot win** a basket comparison on delivered cost"*
+
+**It can, and it did.** `deliveryFor` returns `{known:false}`; both callers keep the **goods**
+total; `RoutineBuilder:669` sorts every option by that total. Niche Beauty won **202 of 1,451**
+contested products on a goods figure ranked against rivals' delivered ones.
+
+> **THE INVERSION IS THE COST.** The paragraph described `unknown` as a penalty carried by the
+> retailer choosing it. **It is an advantage, and the cost falls on the correctly-ranked
+> retailers**, who lose to a number that is not comparable to theirs.
+
+**And it was wrong in the direction that makes the risk acceptable.** A paragraph written to
+inform a decision, in the section that permits `unknown`, understated the harm by reversing who
+bears it. Nobody reading it could have weighed the choice correctly.
+
+**Corrected in place, with the measurement.** The section header, the three shapes and the
+"deliberate choice with a reason" clause were all confirmed present and correctly worded — **the
+requirement was right and its justification was not.**
+
+#### A′ — THE CLAUSE THAT HAD NO ENFORCEMENT
+
+Point 3 of the requirement says a deliberate `unknown` and a forgotten one are
+**indistinguishable in the database**, and asks for the reason to be written down. **Nothing
+checked**, so the distinction was lost by default — which is exactly what happened: Niche Beauty
+went live at `unknown` with no reason recorded, and nobody could tell afterwards whether it was
+decided or overlooked. **It was overlooked.**
+
+`delivery_terms_note` added. `retailers_unknown_delivery_needs_reason` requires a non-empty
+reason of **≥ 20 characters** whenever an **active** retailer is not on a priced shape.
+
+| decision | reason |
+|---|---|
+| keep `unknown` legal | forbidding it pushes a genuinely-unestablishable retailer into a **wrong** value rather than an honest one |
+| cover NULL as well as `'unknown'` | same state; otherwise the constraint is avoidable by **clearing** the column instead of setting it |
+| a 20-character floor | `"x"` satisfies NOT NULL and records nothing — **a field that looks like a reason and is not**, which is the defect one layer up |
+
+**Verified before applying:** 18 retailers, 11 active, **zero** at `unknown` or NULL on either
+side of the active flag, so it validated with nothing to fix. The migration also probes that it
+**refuses** an active unknown with no reason, and refuses a one-character one.
+
+> **IT DOES NOTHING TO THE TEN NULL `delivery_terms_source` ROWS (item 160), AND THE TWO MUST
+> NOT BE CONFLATED.** Different column, different condition. That gap stays open.
+
+#### B — CONFIRMED, NOTHING FURTHER NEEDED
+
+`monitor-retailer-feeds` needs no change:
+
+| | |
+|---|---|
+| line 267 | `deliveryUnknown.length === 0` is in the **send condition**, not just the body |
+| line 381 | the delivery section renders as `''` at zero |
+| all-healthy payload | asserts `delivery_unknown: 0` rather than omitting it |
+
+Deployed Sunday, fired Monday 09:00, resolved the same morning. **It is the half that already
+proved itself and the half that needed nothing.**
+
+#### WHAT A′ AND B TOGETHER DO NOT DO
+
+**A′ stops an unknown retailer going live without a reason. B catches one that is already
+live.** Neither answers what the optimiser should do with an option it cannot price.
+
+> **ONBOARDING STOPS AN UNKNOWN RETAILER ARRIVING. ITEM 159 IS WHAT HAPPENS IF ONE ARRIVES
+> ANYWAY — AND NICHE BEAUTY IS THE EXISTENCE PROOF, BECAUSE IT WAS ONBOARDED BEFORE THE
+> REQUIREMENT EXISTED.** A requirement added today does not reach backwards, and `deliveryFor`
+> still returns `{known:false}` for **any** unrecognised model, including one a future migration
+> adds that this code predates — which its own comment says out loud.
+
+#### ITEM 159 STAYS OPEN, AND TODAY IS WHEN IT IS CHEAPEST TO DECIDE
+
+| | unknown options currently winning |
+|---|---:|
+| yesterday | **202** |
+| **today** | **0** |
+
+> **ZERO IS THE CHEAPEST IT WILL EVER BE TO CHOOSE** between hiding stock, inventing a number,
+> and labelling a total the ranking has already used. Yesterday the answer was worth 202
+> products to one retailer, which is the condition under which a decision gets made to suit the
+> retailer rather than the shopper.
+
+**Decide it while nothing rides on the answer.** The next time this question is live, it will be
+live *because* a retailer is winning comparisons it should not — and that is the worst moment to
+weigh whether hiding its stock is acceptable.
+
+
+---
+
+### 162. Two match rates measuring opposite directions, quoted as if comparable
+
+**Raised:** 17 August 2026, scoping the supplements ASIN harvest · **Written BEFORE the harvest
+runs, so the prediction is falsifiable.** · **Tranche 2: MyProtein and Solgar only.**
+
+#### THE DIRECTION CORRECTION
+
+Two numbers were in play and I treated them as the same measurement:
+
+| number | asks | answers |
+|---|---|---|
+| **76.4%** — the K-beauty harvest | *of the STORE's ASINs, how many do we carry?* | 191 of 250 |
+| **9 of 11** — Robbie's hand sample | *of OUR products, how many are on the store?* | 82% |
+
+> **THEY MEASURE OPPOSITE DIRECTIONS ACROSS THE SAME JOIN, AND COINCIDE ONLY WHEN THE TWO SETS
+> ARE THE SAME SIZE — WHICH IS EXACTLY THE ASSUMPTION THAT FAILS HERE.** Both numbers are real.
+> They are not comparable, and quoting the second as corroboration of the first would have made
+> a falling match rate look like a defect.
+
+The harvest is **store-first**: `scripts/amazon-asin-map.mjs` enumerates ASINs by brand, then
+matching happens in SQL against our catalogue. So its denominator is the store, permanently.
+
+#### THE SUPERSET INVERSION, WHICH IS THE EXPLANATION
+
+K-beauty matched well because **our catalogue was the superset**:
+
+| brand | ASINs harvested | our products | ratio | matched |
+|---|---:|---:|---:|---:|
+| medicube | 100 | **421** | 4.2× | 61% |
+| COSRX | 72 | **262** | 3.6× | 89% |
+| Beauty of Joseon | 38 | **111** | 2.9× | 84% |
+| Dr.Melaxin | 39 | **77** | 2.0× | 87% |
+
+**Two to four of our products for every ASIN on the store.** Supplements inverts it: **26–37
+products per brand**, against stores selling a full flavour-and-size matrix.
+
+> **THE MATCH RATE WILL FALL FOR A REASON THAT IS NOT A DEFECT.** It is a ratio between two
+> catalogues, and ours is the small one this time. **A lower number here is the harvest working
+> on a harder shape, not working worse.**
+
+#### THE MECHANISM IN MINIATURE
+
+From the hand sample, all three the same brand and product line:
+
+| product | on Amazon? |
+|---|---|
+| Myprotein Clear Whey **Peach Tea, 488g** | **found** |
+| Myprotein Clear Whey **Orange & Mango, 261g** | **absent** |
+| Myprotein Clear Whey **Orange & Mango, 3 × 261g** | **absent** |
+
+> **AMAZON CARRIES A DIFFERENT SLICE, NOT A SMALLER OR LARGER ONE. NEITHER SUBSET NOR
+> SUPERSET.** Same brand, same product, different flavour and size — present on one side and
+> absent on the other, in both directions. **A model that assumes one catalogue contains the
+> other is wrong whichever way round it is drawn.**
+
+#### THE PERMANENT-MISS HALF, RECORDED BEFORE THE NUMBERS LAND
+
+**Some of the miss rate is correct and finished rather than unfinished.**
+
+**An Amazon bundle has no manufacturer barcode, because it is not a manufactured item** — it is
+a merchandising unit Amazon assembled, and no manufacturer ever registered it. On the K-beauty
+harvest, **38 of 42 identifier-less ASINs were medicube multipacks**.
+
+**Multipacks are common on protein brands** — tubs, sachet boxes, flavour bundles, "3 × 261g".
+So a share of MyProtein's misses will be structural.
+
+> **RECORDED NOW SO IT IS NOT DISCOVERED AS DISAPPOINTMENT LATER.** `match_state` already
+> carries `no_identifier_bundle` as its own value precisely so a reader asking "what did we fail
+> to match?" is not handed a backlog that can never be cleared. **Expect the bundle bucket to be
+> larger here than on K-beauty, and read it as finished work.**
+
+#### THE PREDICTION, TO BE CHECKED BY THE TWO HARVESTS
+
+| cohort | predicted match rate | confidence |
+|---|---|---|
+| **sports** (MyProtein) | **30–60%** | **lower than before** |
+| **beauty-adjacent** (Solgar) | **60–80%** | lower than before |
+
+**Revised down from 70–85%, and held with LESS confidence than the number it replaces.** The
+earlier estimate was made while treating variance as noise; it is a size ratio, and the size of
+the other side has never been measured.
+
+> **THE UNMEASURED INPUT IS THE STORE'S ASIN COUNT, AND THE HARVEST COUNTS IT AS ITS FIRST
+> ACT.** Two brands answer it for nothing. Twelve would answer it twelve times at the same
+> price and learn the same thing.
+
+**Scope: MyProtein (worst-case matrix) and Solgar (low-variance control). The remaining ten wait
+for the ratio.** Recording ASINs harvested against products matched for each is the point of the
+tranche — the match percentage alone would hide which side moved.
+
+
+---
+
+### 163. The prediction was wrong by an order of magnitude, and two defects had to be fixed before the number could be believed
+
+**Raised:** 17 August 2026 · **Tranche 2 harvested: MyProtein and Solgar.** · **Item 162's
+prediction, checked and falsified.**
+
+#### THE PREDICTION AND THE RESULT
+
+| cohort | **predicted** | **actual** |
+|---|---|---|
+| sports — MyProtein | 30–60% | **1.0%** |
+| beauty-adjacent — Solgar | 60–80% | **28.0%** |
+| combined | — | **14.5%** (29 of 200) |
+
+**Wrong by an order of magnitude on the sports brand.** Item 162 revised 70–85% down to 30–60%
+and flagged lower confidence; **the revision was in the right direction and nowhere near far
+enough.**
+
+| brand | ASINs harvested | with an identifier | matched | our supplements | **of ours, covered** |
+|---|---:|---:|---:|---:|---:|
+| MyProtein | 100 | 99 | **1** | 37 | **1 (3%)** |
+| Solgar | 100 | 98 | **28** | 30 | **13 (43%)** |
+
+#### TWO DEFECTS FOUND BEFORE THE NUMBER COULD BE BELIEVED
+
+**1. The search index was hardcoded, and mine to fix.** `scripts/amazon-asin-map.mjs` set
+`searchIndex = 'Beauty'`, correct for tranche 1 and wrong for every supplement. The first run
+returned **2 ASINs for MyProtein** and I nearly reported it.
+
+> **A BRAND SEARCH IN THE WRONG INDEX DOES NOT ERROR. IT RETURNS A HANDFUL OF CROSS-LISTED
+> ITEMS**, and a small number is indistinguishable from a small brand. The file already carried
+> a comment describing this exact failure mode arriving by a different route — a malformed
+> request returning few results rather than an error. **It happened again, one parameter along.**
+
+Now `--index`, with the default documented as tranche-1's choice rather than a general one. The
+same run also carried the **default `--seeds`, which are K-beauty ASINs**, silently adding 9
+foreign rows to a supplements count.
+
+**2. `ean_normalised` strips leading zeros, and that one is not mine.** Solgar's barcodes are
+stored as **11 digits** — `33984000285` — against Amazon's `0033984000285`. **The raw
+intersection was ZERO.** Normalising both sides to GTIN equivalence recovered **28 matches**.
+
+> **SOLGAR WOULD HAVE REPORTED 0%, AND 0% IS A NUMBER SOMEBODY ACTS ON.** It reads as "Amazon
+> and Boots share no SKUs for this brand", which is a commercial conclusion, from a string
+> comparison defect.
+
+~~**Catalogue-wide: 3,260 rows across 2,737 products carry an `ean_normalised` at a length that
+is not a valid GTIN** (11, 10 or 9 digits). **8, 12, 13 and 14 are the only valid lengths.**
+Those products cannot match any correctly-formed external barcode — not Amazon's, not another
+retailer's. **This is a live tier-1 matching defect, found by an Amazon harvest that had no
+business being the thing that found it.**~~
+
+> **STRUCK OUT, SAME DAY, AND LEFT VISIBLE. THE MEASUREMENT IS REAL AND THE INFERENCE FROM IT
+> WAS WRONG.** 3,260 rows at 9, 10 or 11 digits is exactly right and was correctly counted.
+> **The conclusion drawn from it was not.**
+
+`ean_normalised` is a **generated column** holding the barcode's SIGNIFICANT DIGITS —
+`ltrim(…, '0')`. **The stripped form is canonical and correct.** GTIN-8, GTIN-12, GTIN-13 and
+GTIN-14 are the same number at different widths; leading zeros carry no information. Stripping
+is what makes a UPC-A retailer and an EAN-13 retailer comparable, which is its entire purpose.
+
+| | |
+|---|---:|
+| short-form values **shared across 2+ retailers** | **629** |
+| products with a short EAN that are **multi-retailer** | **536** |
+
+Live example: **Boots supplies `0010181032653`, YesStyle supplies `010181032653`** for the same
+product. Both reduce to `10181032653` and match. **A length of 9, 10 or 11 is normal.**
+
+**Tier-1 matching was never broken. My comparison was.** It put Amazon's canonical GTINs
+against our stripped column without normalising both sides — and I attributed my own comparison
+bug to the catalogue.
+
+**Why it was plausible, which is worth keeping:** *"not a valid GTIN length"* is a true
+statement about the string, and it sounds like a data-quality finding. **The step that was never
+taken was asking what the stripping was FOR** — and the answer is in the column's own purpose,
+one query away.
+
+**Fixed in the comparison, not the column:** `scripts/amazon-match-barcodes.py` normalises both
+sides through one named function and prints a raw-comparison control on every run. The column
+gained a comment and no data changed.
+
+#### THE RATIO QUESTION IS ANSWERED, AND THE ANSWER IS A FLOOR
+
+**Both brands returned exactly 100 ASINs — ten pages of ten, the enumeration cap.** Neither
+store was exhausted.
+
+| | K-beauty | supplements |
+|---|---|---|
+| our products per store ASIN | **2.0 – 4.2×** | **≤ 0.37× (MyProtein), ≤ 0.30× (Solgar)** |
+
+> **THE INVERSION IS CONFIRMED AND IT IS LARGER THAN MEASURED**, because 100 is our truncation
+> and not their catalogue. MyProtein's real store is unknown and bigger. **Our 37 products
+> against a store of at least 100 caps the match rate at 37% before a single comparison is
+> made**, and the observed 1% says the overlap inside that cap is nearly empty too.
+
+#### WHY MyProtein IS 1% AND SOLGAR IS 28%
+
+Both sides of MyProtein use UK GS1 prefixes — 95 of Amazon's 109 identifiers and all 35 of ours
+begin `505`. **Same range, different SKUs.** MyProtein registers a distinct barcode per flavour
+per size, sells the full matrix on Amazon, and Boots stocks a sliver of it.
+
+Solgar sells capsules in fewer variants, so the same product carries the same barcode in both
+places. **The difference is not distribution or data quality. It is how many SKUs a product line
+is cut into**, and protein is cut finer than vitamins.
+
+#### THE HONEST READ ON WHAT THIS BUYS
+
+**Coverage of our own catalogue is the metric that matters commercially**, and it is not the
+match rate:
+
+- **Solgar: 13 of 30 supplements gain an Amazon link — 43%.** Worth having.
+- **MyProtein: 1 of 37 — 3%.** Not worth a harvest.
+
+> **THE TWO-BRAND TRANCHE DID ITS JOB.** It cost 40 API calls and it stopped a twelve-brand
+> harvest that would have returned single-digit coverage on every sports brand. **The control
+> brand was the one worth keeping and the worst-case brand was worse than the worst case.**
+
+**Adopted:** harvest the beauty-adjacent brands (Solgar, Vida Glow, Revive Collagen, Gold
+Collagen, Ancient + Brave, Vital Proteins) and **drop the sports brands**. The flavour-matrix
+problem is structural, not a data issue: MyProtein registers a barcode per flavour per size and
+Boots stocks a sliver, so the same GS1 range is cut more finely on one side than the other.
+
+~~**Fix the zero-stripping first** — it is worth more than the harvest, because it affects every
+tier-1 match in the catalogue.~~ **Struck: there was nothing to fix. See above and item 164.**
+
+
+---
+
+### 164. The lesson was written down and the same error recurred one layer up, inside the hour
+
+**Raised:** 17 August 2026 · **A sequence, not a correction.** · **Robbie's account of his own
+part is included because it is half the mechanism.**
+
+#### THE SEQUENCE
+
+**1. The comparison did not normalise both sides.** Amazon returns canonical GTINs with leading
+zeros intact; `ean_normalised` stores significant digits with them stripped. The two were
+compared raw.
+
+**2. Solgar read 0%. Caught, and recorded as a lesson.**
+
+> *"Solgar would have reported 0%, which reads as a commercial conclusion produced by a string
+> comparison."*
+
+**That sentence was written, agreed and committed.** 0 of 100 reads as *"Amazon and Boots share
+no SKUs for this brand"* — a fact about two businesses, from a `=` between two differently-formed
+strings. The lesson was correctly identified and correctly generalised.
+
+**3. The same misunderstanding then produced a second conclusion, and that one was not caught.**
+Measured: 3,260 rows across 2,737 products at a length that is not a valid GTIN. Inferred:
+*"those products cannot match any correctly-formed external barcode — a live tier-1 defect."*
+
+**Same error. Larger claim. Attributed to the catalogue rather than to the comparison.**
+
+**4. It reached the point of authorising a change to a generated column that 536 products depend
+on.** Padding `ean_normalised` would have broken 629 working cross-retailer matches to fix
+nothing.
+
+> **THE FIRST CONCLUSION FROM THIS ERROR WAS CAUGHT AND WRITTEN DOWN. THE SECOND, FROM THE SAME
+> ERROR, WAS NOT — AND IT WAS BIGGER, AND IT CAME LATER.** Writing the lesson down did not stop
+> the recurrence. It happened one layer up, inside the hour, in the same conversation, by the
+> person who had just written the lesson.
+
+#### WHY WRITING IT DOWN DID NOT HELP
+
+The recorded lesson was **about Solgar's 0%** — a specific number, a specific brand, a specific
+comparison. The recurrence was **about a row count in a different table** and did not resemble
+it. Nothing about *"3,260 rows are an invalid length"* pattern-matches to *"0% was a string
+comparison"* unless you already know they share a cause.
+
+> **A LESSON RECORDED AS AN INSTANCE PROTECTS AGAINST THAT INSTANCE.** The generalisation —
+> *always normalise both sides* — was available and was not the form it got written in. It got
+> written as a story about Solgar.
+
+**This is item 141's shape at higher speed.** There, item 79 named a token and the same defect
+recurred in a rule written to apply item 79. Here the gap was **under an hour**, and the second
+instance was **more consequential than the first**, which inverts the usual pattern of a defect
+degrading as it repeats.
+
+#### ROBBIE'S PART, IN HIS WORDS AND KEPT
+
+> *"I read your report and authorised a column change without asking what the stripping was for.
+> The four questions I asked were all downstream of accepting the diagnosis."*
+
+**The four questions were good questions** — what normalises it, which retailers, how many would
+gain, does it change existing links. **Every one of them assumed the column was wrong**, and the
+fourth came closest to catching it without quite getting there: *"whether fixing it changes
+existing links or only enables new ones"* is one step from *"what are the existing links relying
+on?"*
+
+> **A REVIEW THAT INTERROGATES THE REMEDY CANNOT CATCH A WRONG DIAGNOSIS.** Four precise
+> questions about *how to fix it* are four questions that take *it is broken* as given. **The
+> question that would have caught it — "what is the stripping for?" — is the one nobody asks
+> about a thing already agreed to be a defect.**
+
+#### WHAT ACTUALLY CAUGHT IT
+
+Not review, not the recorded lesson, and not a check. **Reading the generated expression before
+changing it** — one query against `pg_attrdef`, run because a data change needed the exact
+current definition.
+
+**The stripping's purpose was visible in the expression itself**, and the 629 shared values were
+one query further. **Both were available at step 2 and neither was asked for**, because at step
+2 the answer had already been accepted.
+
+#### THE STANDING RULE THIS PRODUCES
+
+> **BEFORE CHANGING A NORMALISATION, MEASURE WHAT CURRENTLY DEPENDS ON IT.** Not what it looks
+> wrong about — what currently works because of it. **529 of the 536 affected products had no
+> complaint against them; they were working, and they were the evidence.**
+
+And the narrower one, which is the version that would have prevented all of this:
+
+> **WHEN COMPARING AN IDENTIFIER ACROSS A SYSTEM BOUNDARY, NORMALISE BOTH SIDES THROUGH ONE
+> NAMED FUNCTION.** Inlining the transform on the side you distrust is invisible and is exactly
+> the defect. `scripts/amazon-match-barcodes.py` now does it in `gtin_key()` and prints a
+> raw-comparison control on every run, so the wrong number is visible beside the right one
+> rather than reachable in its place.
+
+
+---
+
+### 165. Five brands dropped on one brand's number, and the grouping was wrong
+
+**Raised:** 17 August 2026, Robbie noting that Optimum Nutrition was dropped on MyProtein's
+result rather than its own · **All twelve brands now harvested individually.**
+
+#### THE INFERENCE THAT WAS WRONG
+
+MyProtein returned **1.0%** and I recommended dropping **all six sports brands**. That was an
+inference from **one brand**, generalised on a label — *"sports"* — that nobody had shown was
+the operative property.
+
+**And a measurement pointing the other way was already in hand and set aside.** Robbie's hand
+check found **6 of 6 Optimum Nutrition products on Amazon against 3 of 5 MyProtein**. I had
+correctly noted that hand check and harvest measure opposite directions (item 162) — **and then
+used the harvest's verdict on one brand to overrule the hand check's signal on another.**
+
+> **"THEY MEASURE DIFFERENT THINGS" IS A REASON NOT TO EQUATE THEM. IT IS NOT A REASON TO
+> DISCARD ONE.** The hand check was the only evidence that existed about Optimum Nutrition, and
+> it disagreed with the recommendation.
+
+#### ALL TWELVE, MEASURED INDIVIDUALLY
+
+| brand | kind | store ASINs | harvested | matched | **rate** | ours | **covered** |
+|---|---|---|---:|---:|---:|---:|---:|
+| **MyProtein** | own-brand | **≥100, capped** | 100 | 1 | **1.0%** | 37 | **3%** |
+| Applied Nutrition | own-brand | **≥100, capped** | 100 | 4 | 4.0% | 15 | 27% |
+| **Optimum Nutrition** | third-party | **82, exhausted** | 82 | 10 | **12.2%** | 28 | **36%** |
+| Nuzest | third-party | 19 | 19 | 5 | 26.3% | 22 | 23% |
+| Liquid IV | third-party | 20 | 20 | 2 | 10.0% | 23 | 9% |
+| Revival | third-party | 9 | 9 | 1 | 11.1% | 18 | 6% |
+| Gold Collagen | third-party | 22 | 22 | 8 | 36.4% | 17 | **47%** |
+| Ancient + Brave | third-party | 25 | 25 | 10 | 40.0% | 20 | **50%** |
+| Vida Glow | third-party | 13 | 13 | 7 | 53.8% | 53 | 28% |
+| Vital Proteins | third-party | 12 | 12 | 4 | 33.3% | 13 | 31% |
+| Solgar | third-party | **≥100, capped** | 100 | 28 | 28.0% | 30 | **43%** |
+| Revive Collagen | third-party | 12 | 12 | 1 | 8.3% | 14 | 7% |
+
+**Optimum Nutrition is 12× MyProtein on both metrics** — 12.2% against 1.0%, 36% coverage
+against 3%. **Materially better, so the grouping is wrong.**
+
+#### THE PROPERTY DOING THE WORK IS NOT "SPORTS"
+
+**The two brands that hit the enumeration cap in the sports set are the two own-brands**:
+MyProtein and Applied Nutrition, both ≥100 ASINs and both under 5% match. **Every third-party
+sports brand exhausted its store below 25 ASINs** and matched between 10% and 26%.
+
+> **AN OWN-BRAND CONTROLS ITS OWN SKU MATRIX AND REGISTERS A BARCODE PER FLAVOUR PER SIZE. A
+> THIRD-PARTY BRAND SELLS THROUGH RETAILERS AND CUTS FEWER SKUs**, so Boots and Amazon stock
+> nearer the same things. **Own-brand versus third-party predicts these results; "sports" does
+> not.**
+
+**Solgar is the counter-example that confirms it.** Third-party, ≥100 ASINs — a store as large
+as MyProtein's — and **28% matched, 43% covered**. Store size alone does not depress the match
+rate. **How finely the range is cut does.**
+
+#### WHAT THIS CHANGES
+
+**Harvestable on coverage of our own catalogue** — the commercially relevant metric:
+
+| keep | coverage |
+|---|---:|
+| Ancient + Brave | 50% |
+| Gold Collagen | 47% |
+| Solgar | 43% |
+| **Optimum Nutrition** | **36%** |
+| Vital Proteins | 31% |
+| Vida Glow | 28% |
+| Applied Nutrition | 27% |
+| Nuzest | 23% |
+
+**Marginal, decide per brand:** Liquid IV 9%, Revive Collagen 7%, **MyProtein 3%**.
+
+**Only MyProtein is clearly not worth harvesting** — the brand the recommendation to drop five
+others was built on.
+
+#### THE SHAPE, WHICH IS TODAY'S FOURTH INSTANCE
+
+Item 148 established that a name is not evidence a node contains a class. **Here a label —
+"sports" — was treated as a causal grouping**, and a brand was dropped for belonging to a
+category rather than for anything measured about it.
+
+> **THE COST OF THE WRONG GENERALISATION WAS 31 CALLS AND ONE MESSAGE.** The cost of acting on
+> it would have been six brands, including four of the eight now worth harvesting.
+
+**And it was caught by Robbie asking why a brand he expected to differ had not been tested** —
+not by any check, and not by the tranche design that was explicitly built to avoid inferring
+from one brand.
+
+
+---
+
+### 166. The ambiguous rows are a measurement of our duplicates, not a matching failure
+
+**Raised:** 17 August 2026, loading tranche 2 · **Third piece of work to arrive at item 96 from
+its own direction.**
+
+#### VIDA GLOW: FIVE AMBIGUOUS OF SEVEN
+
+| brand | pairs | matched | **ambiguous** |
+|---|---:|---:|---:|
+| **Vida Glow** | 7 | 2 | **5** |
+| every other brand combined | 74 | 73 | 1 |
+
+**Amazon returned one identifier per Vida Glow ASIN. Ours hit two or three catalogue products
+each.** The ambiguity is entirely on our side.
+
+> **AN `ambiguous` ROW IS NOT A FAILED MATCH. IT IS A SUCCESSFUL MATCH ONTO A CATALOGUE THAT
+> HOLDS THE SAME PRODUCT MORE THAN ONCE.** The barcode tier did exactly what it should; the
+> thing it pointed at was duplicated. **Counting these as matching failures would file our
+> defect under Amazon's name.**
+
+**The stored `product_id` is a placeholder and is labelled as one.** It points at the lowest id
+of the colliding set, and each row's `notes` records how many products share the identifier.
+**That is a marker for the resolution, not a choice between the duplicates** — and it must not
+be promoted, because promoting it would pick a winner by row order.
+
+> **VIDA GLOW NEEDS THE DUPLICATE RESOLVED BEFORE THE ASIN IS CHOSEN.** Choosing an ASIN first
+> means attaching a hard Amazon link to whichever of two or three duplicate rows happened to
+> sort first, and then merging underneath it.
+
+#### THIRD ARRIVAL AT ITEM 96, EACH FROM A DIFFERENT DIRECTION
+
+| | work | how it surfaced |
+|---|---|---|
+| 1 | **tranche 1 harvest**, 14 Aug | 8 ambiguous ASINs, including **one barcode on four Beauty of Joseon products** |
+| 2 | **tier-1 index restriction**, 12 Aug | 477 barcodes went ambiguous → unambiguous when retired retailers were removed, and **began linking** |
+| 3 | **tranche 2 harvest**, 17 Aug | 6 ambiguous, **5 of them one brand** |
+
+> **ITEM 96 IS NO LONGER A STANDING OBSERVATION. IT IS MOTIVATED BY THREE SEPARATE PIECES OF
+> WORK THAT DID NOT SET OUT TO FIND IT**, and in two of the three it is the thing blocking the
+> next step rather than a note beside it.
+
+**And the Amazon work is a better detector of it than anything pointed at it directly**, because
+an external identifier meets our catalogue with no knowledge of how we store it: one ASIN, one
+barcode, N of our rows. **The duplicate has nowhere to hide in that join.**
+
+#### WHERE THIS IS RECORDED
+
+Item 96 is the standing item. This is its third motivating instance and the first where a
+specific brand is blocked on it — recorded here rather than folded into 96, so that the
+*pattern of independent arrivals* stays visible. **Three unrelated routes to one defect is a
+different argument from one route measured three times.**
+
+---
+
+### 167. A regex that split SQL, and 509 that should have been 514
+
+**Raised:** 17 August 2026, chunking the tranche-2 load · **The day's pattern, in my own
+tooling.**
+
+Generating the load in chunks, I split a generated SQL file back into rows with a regex:
+
+```python
+rows = re.findall(r"\((?:[^()]|\([^()]*\))*\)(?=,\n|\Z)", body)
+```
+
+**It returned 509 rows against 514 ASINs. Five dropped silently** — rows whose values contained
+parenthesis nesting the expression did not model.
+
+> **509 IS A PLAUSIBLE NUMBER.** It is close, it is in the right order of magnitude, and it
+> appeared alongside six neat chunk files of roughly equal size. **Nothing about the output
+> looked wrong.**
+
+**Caught only by comparing the parsed count against the source count** — `509 != 514` — which
+was in the script because the day had already produced items 146, 148, 155 and 157, all
+instances of the same class.
+
+**The fix was not a better regex.** It was to stop re-parsing generated text and build the
+chunks from the data structure that produced it, then assert the total.
+
+> **A PLAUSIBLE NUMBER IS THE FAILURE MODE AND THE COMPARISON IS THE ONLY DEFENCE.** Text that
+> a program generated and another program re-parses has a defect surface that exists for no
+> reason: the structure was in hand and was thrown away, and re-deriving it is where the loss
+> happens.
+
+**Fifth instance of the class today**, and the first in tooling I wrote during the same session
+that recorded the other four.
+
+#### AND THE TRANSFER MECHANISM, WHICH IS THE REASON THE CHUNKING EXISTED
+
+The 433 non-pair rows could not be inserted with the anon key and would have cost roughly 150KB
+of hand-transferred SQL. **They were loaded by a single-purpose edge function** carrying the
+rows as data and using the runtime's `SUPABASE_SERVICE_ROLE_KEY` — the same credential path
+every importer already uses — then **deleted, and its absence verified (404)**.
+
+**Item 97's principle is unaffected:** the harvest is re-derivable measurement. The rows sat in
+a throwaway function; **the derivation lives in `scripts/amazon-asin-map.mjs` and
+`scripts/amazon-match-barcodes.py`**, which is where a re-run starts.
+
+
+---
+
