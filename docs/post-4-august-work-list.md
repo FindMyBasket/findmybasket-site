@@ -14963,29 +14963,34 @@ not.
 **That is the sentence to read first if this is ever picked up.** The size is recoverable from a
 query; the trap is not.
 
-#### THE SECOND SHAPE, ADDED 17 AUGUST: ONE ROW HOLDING TWO PRODUCTS
+#### WITHDRAWN 17 AUGUST: THE "SECOND SHAPE" WAS A TRUNCATION ARTEFACT
 
-The groups above are **several rows that should be one**. Product **82517** is the inverse —
-**one row that should be two** — and it surfaced from the ASIN work rather than from a duplicate
-sweep:
+**This section previously recorded product 82517 as one catalogue row holding two different
+products, and said item 96 would need a split direction. That was wrong and is withdrawn.**
 
-| 82517 | matched EAN |
-|---|---|
-| Beauty of Joseon **Green Plum Refreshing** Toner, 5.27 fl oz | `8809473195655` |
-| Beauty of Joseon **Green Plum AHA BHA** Toner, 149.94 ml | `8809968130123` |
+I read a 44-character title extract:
 
-**Two different products, two different manufacturer identifiers, one catalogue row.** 583 and
-596 are the same shape.
+```
+Beauty of Joseon Green Plum Refreshing Toner      ← cut here
+Beauty of Joseon Green Plum Refreshing Toner : AHA + BHA [Renewed] 150ml 5.27 fl.oz
+```
 
-> **THE DEFECT IS UPSTREAM OF THE IDENTIFIER AND NO ASIN CHOICE RESOLVES IT.** Whichever ASIN is
-> picked, the row is wrong for the other product — and a shopper reaching it has been shown a
-> price for something they did not search for. **It cannot be fixed in the tier that chooses
-> between ASINs, because both candidates are correct about a product; the row is wrong about
-> which product it is.**
+**The cut fell immediately before `: AHA + BHA`**, which is the exact text that made the two
+listings look like different products. They are one product: same size (5.27 fl oz = 155ml
+against 149.94ml), and the first listing carries **both** barcodes. 583 and 596 are the same
+story — one product, two EANs, two Amazon listings.
 
-**A merge-only pass cannot see this class at all.** It scans for rows sharing an identifier;
-this is one row holding two. **If item 96 is revived, the pass needs a split direction or it
-will report a clean catalogue over the top of these.**
+> **ITEM 96 DOES NOT NEED A SPLIT DIRECTION. Nothing about this class was real.** The finding
+> was manufactured by reading a truncated field as a complete one, and it survived long enough
+> to be written into two items and a merged PR.
+
+**Seventh instance of the same class** — a value correct about one thing, read as being about
+another. Items 146, 148, 155, 157, 167 and the 2,855 below are the others. **The new variant is
+that the corruption was in the DISPLAY rather than the query:** the SQL was right, `left(name,44)`
+was mine, and no count disagreed with any other count because there was nothing to cross-check
+against. **The defence that catches the others — check one side of the join against the other —
+does not catch this one.** The defence that does is: never conclude a difference from a
+truncated field.
 
 #### AND THE CORRECTION THAT PRODUCED IT
 
@@ -15672,21 +15677,19 @@ the opposite direction and very nearly applied without being seen.
 Genuinely the same product; resolvable on live offer or buy-box, but *that rule does not exist
 yet* and inventing it inside an apply step is how it would never get reviewed.
 
-**B — different EANs on one catalogue row** (583, 596, 82517). **These are not duplicates, and
-they are not ASIN work at all.**
+**B — different EANs on one catalogue row** (583, 596, 82517).
 
-**Recorded against item 96, in item 172.** Two different products are conflated into one
-catalogue row, so the defect is **upstream of the identifier and no ASIN choice resolves it** —
-whichever is picked, the row is wrong for the other product. It cannot be answered in the tier
-that chooses between ASINs.
+> **CLASS B WAS WITHDRAWN ON 17 AUGUST AND COLLAPSES INTO CLASS A.** It was recorded here as two
+> different products conflated into one catalogue row. **It was a truncation artefact** — the
+> 44-character title extract cut `Green Plum Refreshing Toner` immediately before `: AHA + BHA`.
+> All three are one product with two EANs and two Amazon listings. See item 172.
 
-> **Class B is the inverse of the Vida Glow question.** Vida Glow is one identifier claimed by
-> several catalogue products; this is several identifiers claimed by one. **Both are the
-> catalogue disagreeing with itself about what a product is, and neither is an Amazon problem.**
+**So all seven are the same problem, and it is not an identity problem:** both candidates are the
+right product, and the question is which *listing* is better. Item 186 is the rule.
 
-**What this leaves for the ASIN work: class A only** — four products where one identifier has
-two Amazon listings. That needs a stated rule (live offer, or buy-box) and it does not exist
-yet. Class B leaves with item 96 and does not come back.
+**What this leaves for the ASIN work: all seven**, plus item 184's five conflicts. Twelve
+instances of one question — which candidate ASIN represents this product — answered in item 186
+and measured against all twelve before being quoted.
 
 ---
 
@@ -15871,3 +15874,190 @@ harvest of this size is not one sitting.
 
 > **BOTH ARE CHOOSING-BETWEEN-CANDIDATES PROBLEMS AND THEY ARE THE SAME PROBLEM.** Answering it
 > once before the harvest is cheaper than adjudicating 330 instances after it.
+
+---
+
+### 186. The candidate-selection rule, measured on twelve instances before being quoted
+
+**Raised:** 17 August 2026 · **Robbie's decisions: adopt the secondary path with logging; drop
+S5; the rule is re-run rather than run once (item 187); approved otherwise.** · **Not built.
+Blocks item 185.**
+
+#### THE PROBLEM, AND IT IS ONE PROBLEM
+
+**Twelve measured instances of "which candidate ASIN represents this product":** item 183's
+seven (two Amazon listings, both matching on barcode) and item 184's five conflicts (Amazon's
+barcode differs in the last digits — `…517533` against `…517557`).
+
+**Neither obvious remedy works, and that shapes the rule:**
+
+- **A human pass fails.** On 1028 Isntree the title, brand, image and size all agree. There is
+  nothing for a reviewer to see. *This is the case named in item 184 and it is why item 181's
+  no-human-pass decision is not the answer here.*
+- **A closest-barcode rule fails worse.** It does not merely miss near-misses, it **actively
+  selects for them** — `…517557` is the closest barcode to `…517533` in the entire catalogue.
+
+#### TWO SIGNALS DIED ON MEASUREMENT, WHICH IS WHY THIS WAS MEASURED FIRST
+
+> **`isBuyBoxWinner` IS `true` ON 19 OF 19 LISTINGS**, including ones returning no offer at all.
+> **Zero discriminating power.** It was a plausible candidate signal and it is worth nothing.
+
+**Size confirmed item 60 empirically rather than by argument:** 82251's size field reads `"1"`
+and 596's reads `"0"`. **The field cannot gate anything**, which item 60 asserted and this
+measured.
+
+#### THE REFRAME THAT FOLLOWED THE CLASS B WITHDRAWAL
+
+With item 183's class B withdrawn (item 172), **the seven multi-candidate cases are not identity
+questions at all.** Both candidates are the right product. The question is which *listing* is
+better. **The five conflicts are the only real identity questions.** Same shape, different
+problems, and the rule treats them differently.
+
+#### THE RULE
+
+**ELIGIBILITY — identity. Stable signals only.**
+
+| | |
+|---|---|
+| **E1** | shares a barcode with ours · *the five conflicts fail here* |
+| **E2** | brand agrees |
+| **E3** | no disagreeing **generation token** among candidates (`4.0` against unversioned) → hold all |
+
+**SELECTION — offer quality, among eligible, in order.**
+
+| | |
+|---|---|
+| **S1** | has a live offer |
+| **S2** | in stock |
+| **S3** | not condition-tagged (`[Renewed]`) |
+| **S4** | sold by the brand's own store |
+| ~~S5~~ | ~~lower price~~ — **dropped, see below** |
+
+**SECONDARY CONFIRM — the only path past a failed E1.** All three required:
+
+> **brand's own store** AND **exact title match** AND **size agreement**
+
+**HOLD** when nothing is eligible, when E3 fires, or when eligible candidates tie through S4.
+
+> **HOLDING IS A FIRST-CLASS VERDICT, NOT A FALLTHROUGH.** An unresolved candidate pair is a
+> product with no ASIN — **which is the current state, and is not a failure.**
+
+#### DECISION: THE BRAND-STORE CONDITION IS LOAD-BEARING, NOT ONE SIGNAL OF THREE
+
+794 and 1028 both have a near-miss barcode, and they deserve different answers:
+
+| 794 Anua Heartleaf Cleansing Oil | 1028 Isntree Hyaluronic Acid Toner |
+|---|---|
+| sold by **Anua** — the brand's own store | sold by **Medpak EU** — a third party |
+| `8809640736254` against our `…732829` | `8809540517557` against our `…517533` |
+| **a brand selling its own product under a newer SKU** | **a third party making a variant claim** |
+| **ordinary** | **unverified** |
+
+> **THE SELLER IS WHAT SEPARATES THEM.** A brand cannot easily be wrong about which SKU its own
+> product is; a reseller's near-miss barcode is a claim about a variant that nothing corroborates.
+> **Title and size agreement are corroborating conditions. The brand-store condition is the
+> reason the path exists**, and without it the other two would confirm 1028 as readily as 794.
+
+**Deciding this on n=1 either way was the wrong shape.** Every use of the secondary path logs its
+three inputs, so that by the time item 185's harvest produces more instances **it is a measured
+rate rather than a standing argument.**
+
+#### DECISION: S5 (LOWER PRICE) IS DROPPED
+
+**Price alone, on identical listings from the same seller, is not a reason to prefer one** — and
+it is the most volatile signal in the set.
+
+**Measured cost: one of seven.** 583 (CosRx Retinol, both listings COSRX Inc., both in stock,
+£19.58 against £14.88) moves from *pick* to *hold*.
+
+#### BEHAVIOUR ON ALL TWELVE, AS DECIDED
+
+| | product | verdict | picked | on |
+|---|---|---|---|---|
+| 1787 | BoJ Ginseng Cleansing Oil | **pick** | B0D1Q43KQZ £8.22 | S2 |
+| 6601 | BoJ Apricot Peeling Gel | **pick** | B09KH1NN7B £11.00 | S1 |
+| 82251 | medicube Triple Collagen | **hold** | — | E3 `4.0` |
+| 87918 | Solgar CoQ-10 200mg | **pick** | B00S9XYW40 £31.93 | S2 |
+| 583 | CosRx Retinol 0.1 | **hold** | — | **S5 dropped** |
+| 596 | CosRx Niacinamide 15 | **pick** | B0BFWPQRM7 £14.50 | S4 |
+| 82517 | BoJ Green Plum Toner | **pick** | B0DJDC71XL £12.89 | S2, S3 |
+| 794 | Anua Cleansing Oil | **confirm** | B0DL8Y8N4G £14.40 | **secondary path** |
+| 3077 | BoJ Glow Deep Serum | hold | — | E1 |
+| 3995 | Haruharu Eye Cream | hold | — | E1 |
+| 1028 | Isntree HA Toner | hold | — | E1, seller fails secondary |
+| 971 | Skin1004 Water-Fit | hold | — | E1 |
+
+**Six resolved, six held.** S1 and S2 do most of the work; S4 decides one; the secondary path
+decides one.
+
+#### WHERE THE RULE IS STILL WEAK, RECORDED RATHER THAN SMOOTHED
+
+**1028 gets the right answer for the wrong reason.** It holds on E1, not on any reasoning about
+variants. The rule cannot distinguish "different SKU of the same product" from "different
+product" — **it only knows the barcode differs.** The secondary path's seller condition is what
+rescues this in practice, and that is a narrower defence than it looks.
+
+**The hold branch is driven almost entirely by E1.** E3 fired once in twelve. **On item 185's
+330 instances the conflict population is the one that grows**, which is exactly where the rule
+is thinnest.
+
+---
+
+### 187. The rule optimises a snapshot while its output is stored
+
+**Raised:** 17 August 2026, out of item 186 · **Robbie's decision: the rule is re-runnable and
+periodically re-run.** · **Scoped, not built.**
+
+#### THE FINDING IS NOT ABOUT 87918
+
+87918 picks the in-stock listing at £31.93 over an out-of-stock one at £25.50 — a 25% penalty
+that **reverses the moment the cheaper listing restocks.**
+
+> **THREE OF THE RULE'S FOUR SELECTION SIGNALS ARE VOLATILE — live offer, stock, seller — WHILE
+> ITS OUTPUT IS A STORED COLUMN.** The rule is correct at the instant it runs and decays from
+> then on, and **nothing surfaces the decay.**
+
+**This is the frozen-state problem this list already carries several instances of**, and it is
+the same shape named in `lib/amazon-live.ts`: *a cached price served through an outage is a
+stored price whose refresh path no longer exists.* Here it is **a stored ASIN chosen on live
+signals whose refresh path was never built.**
+
+**The 24-hour rule does not bite** — no price is stored, only a choice made using one. **That is
+why it is invisible:** the compliance boundary that would have caught a stored price does not
+notice a stored decision.
+
+#### THE TWO SHAPES, AND THE SECOND IS BETTER
+
+**(a) A scheduled re-evaluation of held ASINs.** A job re-runs the rule over held candidate sets;
+a hold resolves when signals change.
+
+- **Cheap and additive.** Nothing already published moves.
+- **Only fixes half of it.** 87918 is not held — it is *published and wrong*. A job that only
+  revisits holds never revisits it.
+
+**(b) Re-run on the map, not on products.** `products.amazon_asin` becomes a **derived
+projection** of `amazon_asin_map` plus the rule, rather than a value written once.
+
+- **Re-runnable by construction**, and holds and publishes are revisited by the same pass.
+- **The guard disappears** — item 179's inversion cannot recur, because there is no
+  write-if-absent left to invert. *The tier ladder becomes part of the derivation instead of a
+  property of arrival order.*
+- **Cost is small:** ~280 ASINs today, ~600 after item 185, at ten per call — **28 and 60 calls.**
+- **Churn is acceptable and mostly desirable.** A product's Amazon link changing to the in-stock
+  listing of the same product is an improvement, not instability.
+
+> **(b) IS THE RIGHT SHAPE AND IT HAS ONE PREREQUISITE THAT MUST NOT BE MISSED.**
+>
+> **The 25 pre-existing ASINs are not in the map** (item 184). A projection derived from the map
+> would **erase all 25.** Item 184's 16 CONFIRMED rows must be written into the map *first*, and
+> the remaining 9 need an explicit carve-out or an equivalent decision.
+>
+> **Deriving a column from a table that does not contain everything the column holds is a
+> silent-deletion bug**, and it would present as the Amazon row quietly disappearing from 25
+> product pages.
+
+#### WHAT IS NOT DECIDED
+
+**Cadence.** Weekly is the obvious guess and it is a guess. **The live price fetch cannot serve
+as the trigger** — it reads only the *published* ASIN, never the alternatives, so it can never
+see that a held candidate has become the better one.
