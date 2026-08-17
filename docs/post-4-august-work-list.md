@@ -13748,11 +13748,41 @@ intersection was ZERO.** Normalising both sides to GTIN equivalence recovered **
 > and Boots share no SKUs for this brand", which is a commercial conclusion, from a string
 > comparison defect.
 
-**Catalogue-wide: 3,260 rows across 2,737 products carry an `ean_normalised` at a length that is
-not a valid GTIN** (11, 10 or 9 digits). **8, 12, 13 and 14 are the only valid lengths.** Those
-products cannot match any correctly-formed external barcode — not Amazon's, not another
+~~**Catalogue-wide: 3,260 rows across 2,737 products carry an `ean_normalised` at a length that
+is not a valid GTIN** (11, 10 or 9 digits). **8, 12, 13 and 14 are the only valid lengths.**
+Those products cannot match any correctly-formed external barcode — not Amazon's, not another
 retailer's. **This is a live tier-1 matching defect, found by an Amazon harvest that had no
-business being the thing that found it.**
+business being the thing that found it.**~~
+
+> **STRUCK OUT, SAME DAY, AND LEFT VISIBLE. THE MEASUREMENT IS REAL AND THE INFERENCE FROM IT
+> WAS WRONG.** 3,260 rows at 9, 10 or 11 digits is exactly right and was correctly counted.
+> **The conclusion drawn from it was not.**
+
+`ean_normalised` is a **generated column** holding the barcode's SIGNIFICANT DIGITS —
+`ltrim(…, '0')`. **The stripped form is canonical and correct.** GTIN-8, GTIN-12, GTIN-13 and
+GTIN-14 are the same number at different widths; leading zeros carry no information. Stripping
+is what makes a UPC-A retailer and an EAN-13 retailer comparable, which is its entire purpose.
+
+| | |
+|---|---:|
+| short-form values **shared across 2+ retailers** | **629** |
+| products with a short EAN that are **multi-retailer** | **536** |
+
+Live example: **Boots supplies `0010181032653`, YesStyle supplies `010181032653`** for the same
+product. Both reduce to `10181032653` and match. **A length of 9, 10 or 11 is normal.**
+
+**Tier-1 matching was never broken. My comparison was.** It put Amazon's canonical GTINs
+against our stripped column without normalising both sides — and I attributed my own comparison
+bug to the catalogue.
+
+**Why it was plausible, which is worth keeping:** *"not a valid GTIN length"* is a true
+statement about the string, and it sounds like a data-quality finding. **The step that was never
+taken was asking what the stripping was FOR** — and the answer is in the column's own purpose,
+one query away.
+
+**Fixed in the comparison, not the column:** `scripts/amazon-match-barcodes.py` normalises both
+sides through one named function and prints a raw-comparison control on every run. The column
+gained a comment and no data changed.
 
 #### THE RATIO QUESTION IS ANSWERED, AND THE ANSWER IS A FLOOR
 
@@ -13790,7 +13820,104 @@ match rate:
 > harvest that would have returned single-digit coverage on every sports brand. **The control
 > brand was the one worth keeping and the worst-case brand was worse than the worst case.**
 
-**Recommendation, not applied:** harvest the beauty-adjacent brands (Solgar, Vida Glow, Revive
-Collagen, Gold Collagen, Ancient + Brave, Vital Proteins) and **drop the sports brands** unless
-the flavour-matrix problem is solved some other way. **Fix the zero-stripping first** — it is
-worth more than the harvest, because it affects every tier-1 match in the catalogue.
+**Adopted:** harvest the beauty-adjacent brands (Solgar, Vida Glow, Revive Collagen, Gold
+Collagen, Ancient + Brave, Vital Proteins) and **drop the sports brands**. The flavour-matrix
+problem is structural, not a data issue: MyProtein registers a barcode per flavour per size and
+Boots stocks a sliver, so the same GS1 range is cut more finely on one side than the other.
+
+~~**Fix the zero-stripping first** — it is worth more than the harvest, because it affects every
+tier-1 match in the catalogue.~~ **Struck: there was nothing to fix. See above and item 164.**
+
+
+---
+
+### 164. The lesson was written down and the same error recurred one layer up, inside the hour
+
+**Raised:** 17 August 2026 · **A sequence, not a correction.** · **Robbie's account of his own
+part is included because it is half the mechanism.**
+
+#### THE SEQUENCE
+
+**1. The comparison did not normalise both sides.** Amazon returns canonical GTINs with leading
+zeros intact; `ean_normalised` stores significant digits with them stripped. The two were
+compared raw.
+
+**2. Solgar read 0%. Caught, and recorded as a lesson.**
+
+> *"Solgar would have reported 0%, which reads as a commercial conclusion produced by a string
+> comparison."*
+
+**That sentence was written, agreed and committed.** 0 of 100 reads as *"Amazon and Boots share
+no SKUs for this brand"* — a fact about two businesses, from a `=` between two differently-formed
+strings. The lesson was correctly identified and correctly generalised.
+
+**3. The same misunderstanding then produced a second conclusion, and that one was not caught.**
+Measured: 3,260 rows across 2,737 products at a length that is not a valid GTIN. Inferred:
+*"those products cannot match any correctly-formed external barcode — a live tier-1 defect."*
+
+**Same error. Larger claim. Attributed to the catalogue rather than to the comparison.**
+
+**4. It reached the point of authorising a change to a generated column that 536 products depend
+on.** Padding `ean_normalised` would have broken 629 working cross-retailer matches to fix
+nothing.
+
+> **THE FIRST CONCLUSION FROM THIS ERROR WAS CAUGHT AND WRITTEN DOWN. THE SECOND, FROM THE SAME
+> ERROR, WAS NOT — AND IT WAS BIGGER, AND IT CAME LATER.** Writing the lesson down did not stop
+> the recurrence. It happened one layer up, inside the hour, in the same conversation, by the
+> person who had just written the lesson.
+
+#### WHY WRITING IT DOWN DID NOT HELP
+
+The recorded lesson was **about Solgar's 0%** — a specific number, a specific brand, a specific
+comparison. The recurrence was **about a row count in a different table** and did not resemble
+it. Nothing about *"3,260 rows are an invalid length"* pattern-matches to *"0% was a string
+comparison"* unless you already know they share a cause.
+
+> **A LESSON RECORDED AS AN INSTANCE PROTECTS AGAINST THAT INSTANCE.** The generalisation —
+> *always normalise both sides* — was available and was not the form it got written in. It got
+> written as a story about Solgar.
+
+**This is item 141's shape at higher speed.** There, item 79 named a token and the same defect
+recurred in a rule written to apply item 79. Here the gap was **under an hour**, and the second
+instance was **more consequential than the first**, which inverts the usual pattern of a defect
+degrading as it repeats.
+
+#### ROBBIE'S PART, IN HIS WORDS AND KEPT
+
+> *"I read your report and authorised a column change without asking what the stripping was for.
+> The four questions I asked were all downstream of accepting the diagnosis."*
+
+**The four questions were good questions** — what normalises it, which retailers, how many would
+gain, does it change existing links. **Every one of them assumed the column was wrong**, and the
+fourth came closest to catching it without quite getting there: *"whether fixing it changes
+existing links or only enables new ones"* is one step from *"what are the existing links relying
+on?"*
+
+> **A REVIEW THAT INTERROGATES THE REMEDY CANNOT CATCH A WRONG DIAGNOSIS.** Four precise
+> questions about *how to fix it* are four questions that take *it is broken* as given. **The
+> question that would have caught it — "what is the stripping for?" — is the one nobody asks
+> about a thing already agreed to be a defect.**
+
+#### WHAT ACTUALLY CAUGHT IT
+
+Not review, not the recorded lesson, and not a check. **Reading the generated expression before
+changing it** — one query against `pg_attrdef`, run because a data change needed the exact
+current definition.
+
+**The stripping's purpose was visible in the expression itself**, and the 629 shared values were
+one query further. **Both were available at step 2 and neither was asked for**, because at step
+2 the answer had already been accepted.
+
+#### THE STANDING RULE THIS PRODUCES
+
+> **BEFORE CHANGING A NORMALISATION, MEASURE WHAT CURRENTLY DEPENDS ON IT.** Not what it looks
+> wrong about — what currently works because of it. **529 of the 536 affected products had no
+> complaint against them; they were working, and they were the evidence.**
+
+And the narrower one, which is the version that would have prevented all of this:
+
+> **WHEN COMPARING AN IDENTIFIER ACROSS A SYSTEM BOUNDARY, NORMALISE BOTH SIDES THROUGH ONE
+> NAMED FUNCTION.** Inlining the transform on the side you distrust is invisible and is exactly
+> the defect. `scripts/amazon-match-barcodes.py` now does it in `gtin_key()` and prints a
+> raw-comparison control on every run, so the wrong number is visible beside the right one
+> rather than reachable in its place.
