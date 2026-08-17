@@ -13421,3 +13421,76 @@ own checkout.
 **The detector's own history is the argument for wiring it.** It was right for seven days and
 worth nothing, because item 131's rule holds: a detector nothing reads is more expensive than no
 detector, since it also consumes the belief that the case is covered.
+
+
+---
+
+### 160. Ten of eleven retailers have unverifiable delivery provenance
+
+**Raised:** 17 August 2026, immediately after `delivery_terms_source` landed · **A standing gap,
+not an action.** · **Nothing to do today; worth knowing before somebody re-observes one.**
+
+#### THE STATE
+
+| | active retailers | source recorded |
+|---|---:|---|
+| Niche Beauty (32) | 1 | **`checkout`**, observed today |
+| everyone else | **10** | **NULL — provenance lost** |
+
+**All ten share one `delivery_terms_observed_at`: 2026-08-01.** Sixteen days ago, in a single
+sitting, by one route that nobody wrote down. Escentual, Stylevana, Boots, The Organic Pharmacy,
+YesStyle, Beauty Bay, Beauty Flash, Debenhams, Gorgeous Shop, Perfume Click.
+
+> **EVERY DELIVERED TOTAL ON THE SITE IS COMPUTED FROM TEN NUMBERS WHOSE ORIGIN NOBODY
+> RECORDED.** The basket optimiser's entire output — the claim the product is built on — rests
+> on them. They are almost certainly right; that is not the same as being checkable.
+
+#### WHY THIS IS A GAP AND NOT A TASK
+
+**Nothing is known to be wrong.** The terms were set deliberately, on one day, by someone who
+had just done the work of finding them. The odds that any individual value is incorrect are low.
+
+**What is missing is the ability to tell.** A source of `checkout` decays: it is a photograph,
+correct on the day and silently stale afterwards. A source of `feed` does not decay the same
+way — it re-arrives on every import. **With the source unrecorded, sixteen days means nothing:**
+
+| if the source was | 16 days later |
+|---|---|
+| `feed` | fine — it has re-arrived fifteen times since |
+| `checkout` | unverified for sixteen days, and nothing re-reads it |
+| `site` | probably fine, help pages change rarely |
+
+> **`delivery_terms_observed_at` ALONE CANNOT DISTINGUISH "OLD AND STABLE" FROM "OLD AND
+> UNVERIFIED".** That was true before today and invisible. **The column did not create the gap;
+> it made an assumption into a measurement.**
+
+#### WHAT IT COSTS, CONCRETELY
+
+The next person re-observing a retailer's terms — because they changed, because a monitor fired,
+because the fleet is being audited — **cannot tell what they are replacing.** They will find a
+value, a date, and no answer to "was this read off a checkout or copied from a feed?", which is
+the question that decides whether their new observation is a correction or a duplicate.
+
+**And it is self-resolving at exactly the wrong rate.** Every future observation records a
+source, so the gap shrinks one retailer at a time — but only when something forces an
+observation. **A retailer whose terms never change is never re-observed and never gains a
+provenance**, so the ten will not drain on their own.
+
+#### THE ASYMMETRY WORTH NOTICING
+
+**The only value whose origin is known is the newest one.** The oldest ten are the ones a reader
+would most want to check, and they are exactly the ones that cannot be checked.
+
+> **A PROVENANCE COLUMN ADDED AFTER THE FACT DOCUMENTS THE FUTURE AND NOT THE PAST**, and the
+> past is where the doubt is. That is not an argument against adding it late — it is the reason
+> to record what it cannot cover, in the same breath as adding it.
+
+**Backfilling is not available**, and saying so is the point: nobody remembers which of ten
+retailers' terms came from a checkout and which from a delivery page, sixteen days on. Writing a
+plausible source would be worse than NULL — it would look like a record.
+
+#### STATUS
+
+**Not urgent. Not scheduled. Recorded so it is a known gap rather than an assumed absence**, and
+so the first person to re-observe any of the ten knows to write `delivery_terms_source` while
+they are there.
