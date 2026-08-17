@@ -13262,3 +13262,162 @@ load-bearing**, which is item 135's trap 2.
 
 The counts are written into the comment so the next reader can see what it was verified
 against, and re-derive it rather than trusting it.
+
+
+---
+
+### 158. Not unranked — ranked on a goods-only total against delivered ones
+
+**Raised:** 17 August 2026, setting Niche Beauty's delivery terms · **Applied.** · **Inverts the
+framing the task was written under, including mine.**
+
+#### THE FRAMING THAT WAS WRONG
+
+The task read: *8,838 in-stock rows enter delivered-total ranking for the first time.* It was
+written as an admission — a retailer that could not be ranked, now able to be.
+
+**Niche Beauty was already being ranked.** `lib/delivery.ts` returns `{known: false}` for
+`delivery_model = 'unknown'`, and **both callers then keep the goods total**:
+
+| caller | what it does with an unknown leg |
+|---|---|
+| `lib/product-queries.ts:183` | `effective_price = numericPrice` — no delivery added |
+| `app/app/RoutineBuilder.tsx:535` | pushes the option with `total = goods`, then **line 669 sorts every option by `a.total - b.total`** |
+
+> **A GOODS-ONLY TOTAL WAS SORTED AGAINST NINE RIVALS' DELIVERED TOTALS, AND WON ON THE
+> DIFFERENCE.** Setting the terms does not grant entry to the ranking. **It removes an
+> advantage.**
+
+#### THE MEASUREMENT
+
+1,451 contested products — those where a rival also has the item in stock. The other 7,316 of
+Niche Beauty's 8,767 in-stock rows are sole-supplied and no ranking exists to change.
+
+| | |
+|---|---:|
+| NB wins **today**, goods-only against delivered | **202** |
+| NB wins **after pricing** | **32** |
+| **loses** | **170** |
+| **newly wins** | **0** |
+
+> **84% OF ITS CURRENT WINS EXIST ONLY BECAUSE DELIVERY WAS IMPUTED AS FREE.**
+
+**And the zero is structural, not a quirk of this retailer's numbers.** An unknown leg is
+scored with £0 delivery. Pricing it can only ever add cost, never remove it, so **the flip is
+one-directional by construction**: an unknown-delivery retailer can only lose rankings when its
+terms are recorded, never gain them. That holds for every future retailer arriving unknown.
+
+#### THE COST IS WHAT BITES, NOT THE THRESHOLD
+
+| | Niche Beauty | fleet |
+|---|---:|---|
+| threshold | **£75.00** | next-highest £50 · median £30 · **1.5×** |
+| **cost** | **£9.95** | **maximum £3.99** · **2.5×** |
+
+The threshold attracted attention because it is the highest by half. **The cost is the term
+that moved the 170**: they average **£23.92** of goods, nowhere near £75, so they pay the full
+£9.95 — more than twice what any rival charges, against a rival that is often over its own
+threshold and paying nothing.
+
+#### AND THE COLUMN THAT WAS MISSING
+
+`delivery_terms_observed_at` recorded **when** somebody looked and could not record **what they
+looked at**. `delivery_terms_source` added.
+
+> **A FEED-DERIVED TERM AND A CHECKOUT-OBSERVED TERM HAVE DIFFERENT DECAY RATES.** A feed value
+> re-arrives on every import and is wrong only if the advertiser changed it. A checkout
+> observation is a photograph: correct on the day, silently stale afterwards, and nothing
+> re-reads it. **An old date alone cannot distinguish "old and stable" from "old and
+> unverified"**, and the next person re-observing needs to know which they are replacing.
+
+One of eleven active retailers now carries a source. The other ten are NULL, which the column
+comment states means **provenance was lost, not absent** — they were set on 1 August from an
+unrecorded route.
+
+---
+
+### 159. A flag set once, read nowhere, in the code that ranks money
+
+**Raised:** 17 August 2026, tracing what `delivery_model = 'unknown'` actually does ·
+**Outlives today's fix.** · **Reported, not built — the remedy is a product decision.**
+
+#### THE FLAG
+
+`app/app/RoutineBuilder.tsx` contains exactly **two** occurrences of `deliveryUnknown`:
+
+| line | |
+|---|---|
+| 124 | the field declaration on the option type |
+| 537 | `deliveryCost: null, deliveryUnknown: true` |
+
+**Nothing reads it.** Not the sort, not the UI, not the analytics.
+
+And the comment directly above line 537 reads:
+
+> *"Unknown terms: keep the goods visible, refuse to claim a delivered total. Never defaulted to
+> a number, which is what produced the original defect."*
+
+**The option is then pushed into the same array as every priced option and sorted by `total` at
+line 669 — where its `total` is the goods figure.**
+
+> **THE CODE REFUSES TO CLAIM A DELIVERED TOTAL AND THEN RANKS THE GOODS TOTAL AS IF IT WERE
+> ONE.** Both halves are true statements about the same variable. The refusal is real and it is
+> undone four lines later by a sort that does not know the difference.
+
+**This is item 135's trap 2 inside the optimiser** — a mechanism that presents as a guard and is
+inert. Worse than the earlier instances, because those were labels in prose and this one is a
+field on a type: it survives review precisely because a reader sees the flag being set and
+assumes the setting has a consequence.
+
+#### WHY IT OUTLIVES THE FIX
+
+Niche Beauty was the only active retailer at `unknown`, and the view is now empty. **The flag is
+unreached today and the defect is not fixed** — it is dormant, waiting for the next retailer to
+arrive without terms.
+
+The departure doctrine now requires delivery terms **before** go-live, so the next one is **less
+likely, not impossible**: a retailer can change its terms mid-life, a migration can widen
+`delivery_model`, and `deliveryFor` returns `{known:false}` for *any* unrecognised value —
+including one a future migration adds that this code predates, which its own comment says out
+loud.
+
+#### WHAT IT WOULD TAKE, AND WHY THIS IS NOT A BUG FIX
+
+**The question is what the optimiser should do with an option it cannot price.** That is a
+product decision, so three options are stated and none is built:
+
+**A — exclude unknown-delivery options from ranking.** Truthful: an option whose total is
+unknowable is not comparable. **Cost:** a retailer with real stock vanishes from the basket
+entirely, and the shopper is never told it exists. On Niche Beauty that would have hidden 8,767
+in-stock rows, 7,316 of which are the *only* source for their product.
+
+**B — rank them last, priced at worst case.** Keeps them visible and never flatters them.
+**Cost:** invents a number. Worst case means "assume the full delivery charge", which requires a
+charge we do not have — the whole premise is that the terms are unknown. Using a fleet maximum
+is a default, and defaults are the class this module was written to remove.
+
+**C — rank them where they fall, and mark them.** Cheapest to build, and the flag already
+exists. **Cost:** it keeps a goods-only total in a delivered-total ranking and asks the interface
+to explain the discrepancy — which is the current behaviour plus honesty, not a fix.
+
+> **THERE IS NO OPTION THAT IS BOTH COMPLETE AND HONEST**, which is why this is a decision and
+> not a defect to be quietly closed. **A does not lie and hides real stock. B and C keep the
+> stock and each concede something.**
+
+The measurement that would inform it: how often an unknown option currently wins. **Today the
+answer is zero, because there are none.** It was 202 yesterday.
+
+#### THE LOOP CLOSED, AND IT IS THE FIRST TIME
+
+`retailers_delivery_unknown` was created **3 August**, sat correct and unread for seven days
+while Niche Beauty went live inside it, was wired into `monitor-retailer-feeds` on **Sunday 16
+August**, fired at **09:00 Monday**, and was resolved the same morning by reading the retailer's
+own checkout.
+
+> **FIRST TIME ON THIS LIST A MONITOR HAS PRODUCED AN ACTION RATHER THAN A FINDING.** Every
+> prior detector on this list produced something to write down. This one produced a value in a
+> column, a ranking correction on 170 products, and an empty view.
+
+**The detector's own history is the argument for wiring it.** It was right for seven days and
+worth nothing, because item 131's rule holds: a detector nothing reads is more expensive than no
+detector, since it also consumes the belief that the case is covered.
