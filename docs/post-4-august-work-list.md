@@ -13350,7 +13350,21 @@ unrecorded route.
 | 124 | the field declaration on the option type |
 | 537 | `deliveryCost: null, deliveryUnknown: true` |
 
-**Nothing reads it.** Not the sort, not the UI, not the analytics.
+**Nothing reads it.** Not the sort, not the analytics.
+
+**CORRECTION, 17 August, same day: "not the UI" was wrong.** `RoutineBuilder:1413` renders
+*"Delivery not known"* in the option's delivery row — keyed off **`deliveryCost === null`**, not
+off `deliveryUnknown`. The user-visible honesty exists; it arrives by a different field.
+
+> **THAT MAKES THIS A DUPLICATED INTENT WITH ONE WORKING COPY AND ONE INERT ONE**, which is a
+> different and more durable trap than a missing label. The flag survived review because it
+> looked consequential **and because the behaviour it names was in fact happening** — by another
+> route. Anyone checking "do we mark unknown delivery?" finds the string, sees the flag, and
+> both answers agree. **Neither check reveals that the flag is not what produced the string.**
+
+The consequence stands unchanged: the option **wins the comparison and then tells you it does
+not know what delivery costs.** The label describes the input. Nothing says the RANKING used a
+number the same row has just admitted is unknown.
 
 And the comment directly above line 537 reads:
 
