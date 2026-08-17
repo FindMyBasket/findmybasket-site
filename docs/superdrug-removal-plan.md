@@ -88,16 +88,43 @@ knew.
    a threshold and free below it, which no retailer means. The CHECK refuses it; that refusal
    is the constraint working, not an obstacle to route around.
 
-**What `unknown` costs, so the choice is informed.** The product is honest about it:
-`RoutineBuilder` renders *"Delivery not known"* and refuses to compute a delivered total.
-But **that retailer cannot win a basket comparison on delivered cost**, and every site claim
-describing the delivery mechanism is false for it until the terms are entered. Niche Beauty
-has carried that since 9 August.
+**What `unknown` costs, so the choice is informed. CORRECTED 17 AUGUST — THE ORIGINAL VERSION
+OF THIS PARAGRAPH WAS WRONG IN THE DIRECTION THAT MADE `unknown` LOOK SAFE.**
 
-**Live instance:** Niche Beauty (32) is the only active retailer at `unknown`. Its threshold
-is published — **£75, confirmed on two pages of niche-beauty.com/en-gb**, which would be the
-highest in the fleet by half — and the cost below it is published nowhere, reachable only
-through checkout. **Do not enter the threshold alone.**
+It said: *"that retailer cannot win a basket comparison on delivered cost"*. **It can, and it
+did.** `deliveryFor` returns `{known:false}`, and both callers then keep the GOODS total —
+which `RoutineBuilder.tsx:669` sorts against every rival's DELIVERED total. Measured on Niche
+Beauty across 1,451 contested products: **it won 202 and wins 32 once priced. 84% of its wins
+existed only because delivery was imputed as free.** Work-list item 158.
+
+**The honest label is real and it is not a guard.** `RoutineBuilder:1413` renders *"Delivery
+not known"* in the option's delivery row, keyed off `deliveryCost === null`. So the option
+**wins the comparison and then tells you it does not know what delivery costs.** The label
+describes the input; nothing tells the reader the RANKING used a number the same row has just
+admitted is unknown.
+
+> **`unknown` DOES NOT WITHHOLD A RETAILER FROM RANKING. IT RANKS IT ON GOODS ALONE AGAINST
+> RIVALS CARRYING DELIVERY, AND THAT IS AN ADVANTAGE, NOT A PENALTY.** Every site claim
+> describing the delivery mechanism is also false for it until the terms are entered. Niche
+> Beauty carried both from 9 to 17 August.
+
+**So the cost of `unknown` is borne by the OTHER retailers**, who are ranked correctly and lose
+to a number that is not comparable. That is the opposite of the risk this paragraph originally
+described, and it is why the requirement above is a requirement.
+
+**Live instance — RESOLVED 17 August 2026.** Niche Beauty (32) was the only active retailer at
+`unknown`. Terms confirmed from its own checkout: **£9.95 Premium Standard, DHL and FedEx, free
+above the published £75 threshold.** Set 17 August with `delivery_terms_source = 'checkout'`.
+`retailers_delivery_unknown` now returns zero rows.
+
+**The warning that stood here — "do not enter the threshold alone" — was the right one.** The
+threshold was published on two pages; the cost below it was published nowhere and was reachable
+only through checkout. **A tiered retailer with a threshold and no cost is refused by the CHECK**,
+which is that constraint doing its job rather than obstructing.
+
+**And note what the terms turned out to be:** £75 is the highest threshold in the fleet by half,
+but **£9.95 is 2.5× the fleet's highest cost of £3.99**, and the cost is the term that moved the
+170 products. **The published half was the reassuring half.**
 
 ## Reusable pattern for the NEXT retailer departure
 

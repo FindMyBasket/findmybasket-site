@@ -13350,7 +13350,25 @@ unrecorded route.
 | 124 | the field declaration on the option type |
 | 537 | `deliveryCost: null, deliveryUnknown: true` |
 
-**Nothing reads it.** Not the sort, not the UI, not the analytics.
+**Nothing reads it** — not the sort, not the analytics, and **not the label that appears to be
+its consequence.**
+
+`RoutineBuilder:1413` does render *"Delivery not known"* in the option's delivery row. **It is
+keyed off `deliveryCost === null`, not off `deliveryUnknown`.** The user-visible honesty exists
+and arrives by a different field entirely.
+
+> **A DUPLICATED INTENT WITH ONE WORKING COPY AND ONE INERT ONE IS MORE DURABLE THAN A MISSING
+> LABEL.** A missing label is found the moment anyone looks at the page. This survives looking:
+> **an audit of "do we mark unknown delivery?" finds two yeses** — the rendered string and the
+> flag being set — **they agree, and neither reveals which one produced the string.**
+>
+> The flag survived review because it looked consequential **and because the behaviour it names
+> was in fact happening.** Both halves of the check pass. The thing that is false is the
+> relationship between them, and nothing tests a relationship.
+
+**And the consequence, stated plainly: the option wins the comparison and then tells you it does
+not know what delivery costs.** The label describes the input. Nothing says the RANKING used a
+number the same row has just admitted is unknown.
 
 And the comment directly above line 537 reads:
 
@@ -13494,3 +13512,97 @@ plausible source would be worse than NULL — it would look like a record.
 **Not urgent. Not scheduled. Recorded so it is a known gap rather than an assumed absence**, and
 so the first person to re-observe any of the ten knows to write `delivery_terms_source` while
 they are there.
+
+
+---
+
+### 161. A doctrine paragraph that was wrong in the direction that made the risk look safe
+
+**Raised:** 17 August 2026 · **A′ and B built.** · **Item 159 is NOT closed by either.**
+
+#### THE FALSE PARAGRAPH
+
+`docs/superdrug-removal-plan.md`, under *"Before onboarding: delivery terms are a REQUIRED
+step"*, explaining what `unknown` costs so the choice is informed:
+
+> *"that retailer **cannot win** a basket comparison on delivered cost"*
+
+**It can, and it did.** `deliveryFor` returns `{known:false}`; both callers keep the **goods**
+total; `RoutineBuilder:669` sorts every option by that total. Niche Beauty won **202 of 1,451**
+contested products on a goods figure ranked against rivals' delivered ones.
+
+> **THE INVERSION IS THE COST.** The paragraph described `unknown` as a penalty carried by the
+> retailer choosing it. **It is an advantage, and the cost falls on the correctly-ranked
+> retailers**, who lose to a number that is not comparable to theirs.
+
+**And it was wrong in the direction that makes the risk acceptable.** A paragraph written to
+inform a decision, in the section that permits `unknown`, understated the harm by reversing who
+bears it. Nobody reading it could have weighed the choice correctly.
+
+**Corrected in place, with the measurement.** The section header, the three shapes and the
+"deliberate choice with a reason" clause were all confirmed present and correctly worded — **the
+requirement was right and its justification was not.**
+
+#### A′ — THE CLAUSE THAT HAD NO ENFORCEMENT
+
+Point 3 of the requirement says a deliberate `unknown` and a forgotten one are
+**indistinguishable in the database**, and asks for the reason to be written down. **Nothing
+checked**, so the distinction was lost by default — which is exactly what happened: Niche Beauty
+went live at `unknown` with no reason recorded, and nobody could tell afterwards whether it was
+decided or overlooked. **It was overlooked.**
+
+`delivery_terms_note` added. `retailers_unknown_delivery_needs_reason` requires a non-empty
+reason of **≥ 20 characters** whenever an **active** retailer is not on a priced shape.
+
+| decision | reason |
+|---|---|
+| keep `unknown` legal | forbidding it pushes a genuinely-unestablishable retailer into a **wrong** value rather than an honest one |
+| cover NULL as well as `'unknown'` | same state; otherwise the constraint is avoidable by **clearing** the column instead of setting it |
+| a 20-character floor | `"x"` satisfies NOT NULL and records nothing — **a field that looks like a reason and is not**, which is the defect one layer up |
+
+**Verified before applying:** 18 retailers, 11 active, **zero** at `unknown` or NULL on either
+side of the active flag, so it validated with nothing to fix. The migration also probes that it
+**refuses** an active unknown with no reason, and refuses a one-character one.
+
+> **IT DOES NOTHING TO THE TEN NULL `delivery_terms_source` ROWS (item 160), AND THE TWO MUST
+> NOT BE CONFLATED.** Different column, different condition. That gap stays open.
+
+#### B — CONFIRMED, NOTHING FURTHER NEEDED
+
+`monitor-retailer-feeds` needs no change:
+
+| | |
+|---|---|
+| line 267 | `deliveryUnknown.length === 0` is in the **send condition**, not just the body |
+| line 381 | the delivery section renders as `''` at zero |
+| all-healthy payload | asserts `delivery_unknown: 0` rather than omitting it |
+
+Deployed Sunday, fired Monday 09:00, resolved the same morning. **It is the half that already
+proved itself and the half that needed nothing.**
+
+#### WHAT A′ AND B TOGETHER DO NOT DO
+
+**A′ stops an unknown retailer going live without a reason. B catches one that is already
+live.** Neither answers what the optimiser should do with an option it cannot price.
+
+> **ONBOARDING STOPS AN UNKNOWN RETAILER ARRIVING. ITEM 159 IS WHAT HAPPENS IF ONE ARRIVES
+> ANYWAY — AND NICHE BEAUTY IS THE EXISTENCE PROOF, BECAUSE IT WAS ONBOARDED BEFORE THE
+> REQUIREMENT EXISTED.** A requirement added today does not reach backwards, and `deliveryFor`
+> still returns `{known:false}` for **any** unrecognised model, including one a future migration
+> adds that this code predates — which its own comment says out loud.
+
+#### ITEM 159 STAYS OPEN, AND TODAY IS WHEN IT IS CHEAPEST TO DECIDE
+
+| | unknown options currently winning |
+|---|---:|
+| yesterday | **202** |
+| **today** | **0** |
+
+> **ZERO IS THE CHEAPEST IT WILL EVER BE TO CHOOSE** between hiding stock, inventing a number,
+> and labelling a total the ranking has already used. Yesterday the answer was worth 202
+> products to one retailer, which is the condition under which a decision gets made to suit the
+> retailer rather than the shopper.
+
+**Decide it while nothing rides on the answer.** The next time this question is live, it will be
+live *because* a retailer is winning comparisons it should not — and that is the worst moment to
+weigh whether hiding its stock is acceptable.
