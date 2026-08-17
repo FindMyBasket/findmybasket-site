@@ -15239,3 +15239,161 @@ morning. **Report again in a week.**
 
 **The `no_offers` count.** Seven today, stable across two reads, and readable for the first
 time. Worth a second reading once real traffic rather than a probe is generating the rows.
+
+
+---
+
+### 177. Free above zero, on four retailers, permitted by a CHECK that tests NULL-ness
+
+**Raised:** 17 August 2026, scoping the Prime toggle · **Applied to retailers 9 and 10.** ·
+**Found by asking what Amazon's delivery terms already were.**
+
+#### THE ROW
+
+| id | retailer | held | means |
+|---:|---|---|---|
+| **9** | **Amazon** | `tiered / 0.00 / 0.00` | **free above £0 — free always** |
+| **10** | **eBay** | `tiered / 0.00 / 0.00` | free always |
+| 6 | Branded Beauty | `tiered / 0.00 / 30.00` | free above £30 **and** free below it |
+| 7 | Skin Cupid | `tiered / 0.00 / 30.00` | same |
+
+**Four instances, not the three expected.** All four are inactive; all four are one
+`active = true` away from being ranked as free delivery at every basket size.
+
+> **INACTIVE IS NOT A DEFENCE, AND NOBODY CHOSE ANY OF THESE.** `tiered / 0 / 0` is not a
+> delivery policy. **It is the shape a row takes when someone fills a NOT NULL column to get
+> past a constraint** — and it then reads, forever, as a deliberate statement that delivery
+> is free.
+
+#### THE CHECK PERMITS IT, AND THAT IS THE FINDING
+
+`retailers_delivery_shape` asks whether a tiered retailer **has** a cost and a threshold. It
+never asks whether the pair **says** anything.
+
+> **A CONSTRAINT THAT TESTS NULL-NESS RATHER THAN MEANING ACCEPTS EVERY SELF-CONTRADICTORY
+> VALUE THAT IS NON-NULL.** `cost 0` with `threshold 30` says free above thirty and free
+> below it. `cost 0` with `threshold 0` says free above nothing. Both satisfy "not null" and
+> neither is a policy any retailer operates.
+>
+> This is the same shape as the doctrine's own note about the delivery CHECK being *"a
+> reading rule, not enforced by the constraint beside it"* — **except that here the
+> constraint exists and is doing less than its name suggests.**
+
+**A `cost > 0 OR threshold IS NULL` predicate would catch all four.** Deliberately not added
+here: two of the four are fixable by observation and two are not, and a constraint added while
+half the population violates it forces the rewrite it should be preventing. **Named as the fix
+and left for a decision.**
+
+#### WHY AMAZON IS `unknown` AND NOT A CORRECTED NUMBER
+
+**Amazon's non-Prime UK delivery is not a retailer-level term at all:** free over a threshold
+on **eligible items only**, otherwise a charge that varies **by seller**, with third-party
+sellers setting their own.
+
+**Our own live data shows it on a single page.** The seller marker shipped this afternoon
+returns `COSRX Inc.` on one product and `Medpak EU` on another — different sellers, different
+terms, same "retailer".
+
+> **THAT IS ITEM 61'S FINDING RESTATED FROM THE DATA SIDE: delivery here is a property of the
+> SHOPPER AND THE SELLER, not of the retailer.** A tiered pair would be a defensible-looking
+> number that is wrong per listing, and a wrong number that looks considered is worse than an
+> honest `unknown`.
+
+Both rows now carry a written reason. eBay's is stronger still — delivery is set **per
+listing** by the individual seller, so it has no retailer-level value even in principle.
+
+#### AND THE CONSTRAINT I WROTE THIS AFTERNOON WOULD NOT HAVE CAUGHT THIS
+
+`retailers_unknown_delivery_needs_reason` fires only when a retailer is **active**. Retailer 9
+is inactive, so it was outside the check — **and inactive-and-wrong is exactly the state that
+becomes active-and-wrong without anyone re-reading the row.**
+
+`retailers_delivery_unknown` has the same scope, for the same reason, and never reported 9 or
+10 either.
+
+> **A GUARD SCOPED TO THE LIVE FLEET CANNOT SEE THE ROW THAT IS ABOUT TO JOIN IT.** That
+> scoping is correct for a monitor — nobody wants an alert about a dormant retailer — and it
+> is wrong for a constraint, which exists precisely to stop a bad value being *written*.
+
+---
+
+### 178. The blocker I expected does not exist: no basket total is ever stored
+
+**Raised:** 17 August 2026, scoping the Prime toggle · **Reported, not built. The default is a
+product decision.**
+
+#### THE SURPRISE, AND IT LEADS
+
+I expected the 24-hour price-storage rule to block Amazon entering the optimiser, on the
+grounds that a saved routine is priced at a moment. **It does not, because a saved routine is
+not priced at all:**
+
+```
+saved_routines.routine  →  [6168, 7744, 83944]
+```
+
+**A bare array of product ids.** No prices, no totals, no retailers. `send-routine-email`
+recomputes everything from live prices at send time, including delivery, through the shared
+`deliveryFor`.
+
+> **NO BASKET TOTAL IS EVER PERSISTED, SO SAVING A ROUTINE STORES NO PRICE.** The 24-hour rule
+> bites in exactly one place — `routine_alerts`, which holds `baseline_price` and
+> `alerted_price` — and that is the case item 61 already recorded as open.
+>
+> **Alerts are separable from ranking.** Amazon can join basket optimisation without joining
+> alerts, and the boundary already exists in the schema rather than needing to be invented.
+
+#### THE MINIMUM VERSION IS SMALLER THAN PHASE 2 WAS SCOPED AS
+
+**No fourth `delivery_model` value and no second Amazon row.** `deliveryFor` takes a terms
+object as an argument, so the caller hands it non-Prime terms or `{model:'flat', cost:0}` for
+Prime. **A branch, not a schema change.**
+
+Two rows would be worse: `retailer_prices` is keyed per product per retailer and Amazon's
+price is never stored, so there is no row to duplicate — a second row means a second
+`retailers` entry, forking Amazon through the log, the click tracking, the email and the
+seller marker.
+
+**What reads delivery, measured:**
+
+| | needs |
+|---|---|
+| `RoutineBuilder.tsx` | the toggle |
+| `send-routine-email` | the toggle, **stored** — a cron has no user to ask |
+| `product-queries.ts` | nothing — single item, no basket |
+| `generate-homepage-demo.mjs` | a stated assumption |
+| `monitor-retailer-feeds` | nothing |
+| **`category_savings` / the savings figure** | **nothing** — precomputed weekly over catalogue retailers, and Amazon is not one |
+
+**So: one boolean on `saved_routines`, one branch, one email read, one demo assumption.**
+
+#### WHY IT IS HELD, AND IT IS NOT SIZE
+
+**The open question is the default, and that is a product decision.**
+
+A shopper who never answers is ranked **non-Prime forever**. Item 61 already records the
+shape: *for a shopper, unanswered is a permanent, legitimate state* — most people will never
+answer, and the toggle does not change that.
+
+**The options, and what each costs:**
+
+**A — default non-Prime.** Under-claims. Amazon loses baskets it would win for a member, and
+the site shows a higher Amazon total than a Prime member will pay. **Wrong for a large
+minority, in the direction that never overstates a saving.**
+
+**B — default Prime.** Amazon wins baskets a non-member should not be shown, at a total they
+cannot achieve. **Wrong in the direction that overstates a saving on our own affiliate link**,
+which is the direction the site's positioning cannot afford.
+
+**C — no default: exclude Amazon from ranking until answered.** Honest and self-defeating —
+the feature does nothing for the majority who never answer, which is the same outcome as not
+building it, reached more expensively.
+
+**D — ask at the point it matters**, once, when a basket first contains an Amazon leg. Highest
+chance of a real answer and the only option where the question has visible consequences at the
+moment it is asked. **Costs an interruption in the one flow that is currently frictionless.**
+
+> **A AND B ARE THE SAME DECISION SEEN FROM TWO SIDES, AND THEY ARE NOT SYMMETRIC.** Both are
+> wrong for some shoppers. **Only B is wrong in the direction that flatters us.**
+
+**Not built. Robbie decides the default.**
