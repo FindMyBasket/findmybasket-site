@@ -13648,67 +13648,101 @@ between the three options above.
 
 
 ---
+### 157. Thirty-six rows were thirty-four products, and the write is what said so
 
-### 157. A rule from two rows, and a check that earned nothing
+**Raised:** 17 August 2026, promoting the verified Amazon ASIN rows · **Applied: 28 promoted,
+4 held.**
 
-**Raised:** 17 August 2026, promoting 36 verified Amazon ASIN rows · **Applied: 27 promoted, 5
-held.**
+#### THE COUNT
 
-#### THE RULE, WHICH IS NOT A DECISION ABOUT TWO ROWS
+The promotion was scoped, reported and approved as **36 rows**. The map holds 36 rows against
+**34 distinct products**: products **7744** and **14906** each carry **two** `matched_by_name`
++ `human_verified` rows with **different ASINs**.
+
+| | |
+|---|---:|
+| rows in the map, `matched_by_name` + verified | **36** |
+| distinct products | **34** |
+| products with two verified candidates | **2** |
+
+> **A ROW COUNT WAS READ AS AN ENTITY COUNT.** Every figure in the report — 36 candidates, 36
+> distinct ASINs, 33 to promote — was arithmetically correct and counted the wrong thing.
+> **36 and 34 both look like "the verified ones"**, and nothing in the query that produced 36
+> would have shown the difference.
+
+**It was invisible until the write.** `UPDATE … FROM` with two matching source rows picks one
+**non-deterministically**, so both products briefly received an arbitrary choice between two
+human-verified candidates. Reverted to NULL and held.
+
+> **THE WRITE IS WHAT SAID SO, WHICH IS THE LATEST POSSIBLE MOMENT TO FIND IT.** A `count(*)`
+> and a `count(DISTINCT product_id)` differ by two characters and by the entire finding. I ran
+> the first, four times, in four different framings, and never the second.
+
+**Same shape as everything else this week** — item 146's paginated read returned the right
+total from the wrong rows; item 148's two methods agreed on a total and disagreed on the
+members; item 155's week-over-week delta reported the difference of two movements it hid.
+**Four instances, one class: a number that reconciles against the wrong denominator.**
+
+#### AND `human_verified` WAS TREATED AS TERMINAL
+
+Two rows for one product, both `human_verified = true`, both plausible on their titles, pointing
+at different ASINs.
+
+> **TWO HUMAN VERIFICATIONS DISAGREEING IS NOT A DEFECT IN THE DATA.** It is two people, or one
+> person twice, judging a title on different days — which is what a verification queue produces
+> and what it is *for*. **The defect is in the schema and the reader treating the flag as a
+> terminal state**, when it records only that somebody looked.
+
+Nothing in the table can hold "these two disagree". A `human_verified` boolean per row cannot
+express a per-product conflict, so the conflict is only visible to a query that groups.
+
+#### THE RULE THIS PRODUCED
 
 > **A BARCODE MATCH IS NEVER OVERWRITTEN BY A NAME MATCH.**
 
-This is the tier ladder the importer already uses everywhere else — EAN, then MPN, then exact
-name, then stripped name — applied to the Amazon map, where it had not been stated because the
-map had never been promoted over an existing value before.
+The tier ladder the importer already uses — EAN, MPN, exact name, stripped name — applied to
+the Amazon map, where it had never been stated because the map had never been promoted over an
+existing value.
 
-**Why it is worth a rule rather than a judgement call.** The two conflicts (products 6180 and
-7092) each had a `matched` row carrying a `matched_ean` and a `matched_by_name` row without
-one. Both were plausible on their titles; **one of them was checked against a barcode and the
-other against a human's reading of a title.** Nothing in the map's shape makes the first
-obviously stronger at the moment someone is looking at two rows that both say "verified".
+**Written as the guard rather than an exclusion list** — `only where NULL or already equal` —
+so the next promotion inherits it without anyone remembering the rows it came from.
 
-#### AND WHY A WRONG ASIN IS WORSE THAN NO ASIN
-
-`app/product/[id]/page.tsx:273` — with an ASIN the page emits a **direct hard link**
-(`amazon.co.uk/dp/{ASIN}/?tag=…`); without one, a **tagged search**.
+**And why a wrong ASIN is worse than none.** `app/product/[id]/page.tsx:273`: with an ASIN the
+page emits a **direct hard link** (`amazon.co.uk/dp/{ASIN}/?tag=…`); without one, a **tagged
+search**.
 
 > **THE FALLBACK DEGRADES GRACEFULLY AND THE FAILURE DOES NOT.** A search shows candidates and
-> the shopper resolves it in a second. A wrong hard-link lands confidently on the wrong
-> product, under our affiliate tag, from a page whose whole claim is accuracy. **The absence
-> of a value is a worse-looking outcome and a better one.**
+> the shopper resolves it in a second. A wrong hard-link lands confidently on the wrong product,
+> under our affiliate tag, from a page whose whole claim is accuracy. **The absence of a value
+> is a worse-looking outcome and a better one.**
 
-So the guard is written as *"only where NULL or already equal"* rather than as an exclusion
-list: **it encodes the rule, so the next promotion inherits it without anyone remembering the
-two rows it came from.**
+#### THE EXCEPTION, AND WHY IT IS NOT A BREACH OF THE RULE
 
-#### "36 ROWS" WAS 34 PRODUCTS, AND THE FIRST WRITE PROVED IT
+**Product 609 — Beauty of Joseon Dynasty Cream (50ml) — promoted to the map candidate
+`B01M4GQO8W`, over the incumbent `B08WJQ3XJD`.**
 
-The promotion was reported as 36 candidates. **The map holds 36 rows against 34 distinct
-products**: 7744 and 14906 each carry **two** `matched_by_name` + `human_verified` rows with
-different ASINs.
+| | ASIN | evidence |
+|---|---|---|
+| incumbent | `B08WJQ3XJD` | **none.** Not in the map. No title, no match state, no provenance |
+| promoted | `B01M4GQO8W` | recorded title *"…Dynasty Cream…1.7 fl oz"*, size agrees (1.7 fl oz = 50ml), human-verified 14 Aug |
 
-`UPDATE … FROM` with two matching source rows picks one **non-deterministically**, so both
-products briefly received an arbitrary choice between two human-verified candidates. Reverted
-to NULL and held.
+> **THE RULE PROTECTS A BARCODE MATCH FROM A NAME MATCH. THIS IS A NAME MATCH AGAINST AN
+> UNKNOWN, WHICH IS A DIFFERENT COMPARISON.** Applying the rule here would have preserved the
+> incumbent for no reason beyond incumbency, **and incumbency is not evidence.**
 
-> **A ROW COUNT WAS READ AS AN ENTITY COUNT**, which is the same shape as every other
-> reconciliation failure recorded this week — and it was invisible until the write, because
-> 36 and 34 both look like "the verified ones".
+Recorded as an exception so that the next reader meeting the rule does not conclude it was
+broken. **A rule stated without its boundary gets applied where it does not belong**, which is
+the failure mode of every rule on this list.
 
-**Two human verifications disagreeing is not a defect in the data**; it is two people, or one
-person twice, judging a title on different days. **It is a defect in treating `human_verified`
-as terminal**, which the promotion did.
-
-#### PRODUCT 609 NEEDS A PERSON, AND SO DO FOUR OTHERS
-
-Five held, three reasons:
+#### THE FOUR HELD
 
 | product | held because |
 |---|---|
-| 6180, 7092 | map's name match conflicts with an existing **barcode** match — rule applies, barcode wins |
-| **609** | existing ASIN is **not in the map at all**; provenance unknown, nothing to compare on |
-| 7744, 14906 | **two verified name matches each**, and no basis in the data to choose |
+| 6180, 7092 | name match conflicts with an existing **barcode** match — the rule, applied |
+| 7744, 14906 | **two verified name matches each**, no basis in the data to choose |
+
+**7744 and 14906 wait for a person, and that is the correct outcome rather than a gap.** Two
+verified candidates with no discriminator is exactly the case a rule should decline.
 
 #### THE ITEM 105 RE-CHECK EARNED NOTHING THIS TIME
 
@@ -13716,14 +13750,13 @@ All 36 re-checked against `merged_into`, `product_exclusions` and `products_acti
 merged, zero excluded, zero fallen out of the view, zero affected by Saturday's two
 departures.**
 
-> **A CHECK THAT FINDS NOTHING IS NOT A CHECK THAT WAS UNNECESSARY.** Item 105 exists because
-> a previous list went stale on 1 of 44 within four hours; this one had been sitting since
-> Friday and across two retailer departures, which is a longer and riskier gap, and it came
-> back clean.
+> **A CHECK THAT FINDS NOTHING IS NOT A CHECK THAT WAS UNNECESSARY.** Item 105 exists because a
+> previous list went stale on 1 of 44 within four hours; this one had been sitting since Friday
+> and across two retailer departures, a longer and riskier gap, and it came back clean.
 >
 > **Recorded in those words because the alternative is silence, and silence about a check that
 > paid nothing is how a check stops being run.** The next person needs to know it was run and
 > found nothing — not to infer from an absence of findings that it was skipped.
 
-**What did find something was a check nobody had specified**: comparing candidate ASINs against
-values already present. That was not in item 105 and is now in the rule above.
+**What did find something was a check nobody had specified**: comparing candidates against
+values already present, and grouping the candidates by product. Neither was in item 105.
