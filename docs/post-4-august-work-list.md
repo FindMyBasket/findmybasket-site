@@ -2589,6 +2589,21 @@ run are indistinguishable after the fact, because both end with an empty table a
 
 ---
 
+### 42. ALLOCATED AND NEVER WRITTEN
+
+**Stub added 17 August 2026.** This number was allocated and abandoned. **It has never existed
+in git history on any branch** — verified with `git log -S "### 42."` over the full history and
+against every remote branch. Items 41 and 43 are present and unrelated, so nothing was
+renumbered around it.
+
+**Kept as a stub rather than closed by renumbering**, because this list is cited by number in
+migrations, commit messages, code comments and other items. **Renumbering to remove a gap would
+invalidate every citation above it, to close a hole that costs nothing.**
+
+Detected by `scripts/check-worklist-contiguity.sh` on its first run. See item 171.
+
+---
+
 ### 43. We emit GA4 parameters nothing checks are registered — three found in two days
 
 **Raised:** 6 August 2026 · **REPORT ONLY**, and the report is below. **A class, not three
@@ -10697,6 +10712,21 @@ retailer's taxonomy.**
 
 ---
 
+### 127. ALLOCATED AND NEVER WRITTEN
+
+**Stub added 17 August 2026.** Reserved on 16 August for Robbie's own item while it was in
+progress; items 128 and 129 were renumbered around it to avoid a collision. **The item was never
+written and the number has never existed in git history on any branch.**
+
+**The reservation worked and the follow-through did not** — the ordinary way a number goes
+missing. It is held deliberately, the reason expires, and nothing records that the hold was
+released.
+
+Kept as a stub rather than closed by renumbering, for the reason in item 42. Detected by
+`scripts/check-worklist-contiguity.sh`. See item 171.
+
+---
+
 ### 128. Hydration is sports, and the name rule that files it is bounded by the taxonomy
 
 **Decided by Robbie, 16 August 2026.** Resolves the open question in item 126.
@@ -14894,3 +14924,60 @@ It asserts **numbering**, not content. A hollow item with a real heading passes.
 Friday failure and it needs a different check — **non-empty body under each heading** — which
 is equally cheap and not written here, because one check that half-covers two failures is worse
 than one that fully covers one.
+
+
+---
+
+### 172. Item 96 parked, and the finding to carry if it is revived
+
+**Raised:** 17 August 2026 · **Robbie's decision: parked.** · **An unscoped project, not a
+task.**
+
+#### PARKED, AND WHY
+
+Item 96 has a size, three motivating instances and three costed design options. **It does not
+have a decision on what a shade child means when its parent turns out to be a duplicate**, and
+everything else about a 6,048-group pass is downstream of that.
+
+> **IT IS AN UNSCOPED PROJECT RATHER THAN A TASK**, and the last several turns ran on questions
+> the work raised rather than on priority. **Recording the options is enough.**
+
+#### THE FINDING TO CARRY IF IT IS REVIVED
+
+| | groups | |
+|---|---:|---|
+| same-brand ambiguous groups | 7,709 | |
+| **shade structure, not duplicates** | **1,661** | **21.5%** |
+| genuine merge candidates | 6,048 | |
+
+**1,661 groups are one visible product and its shade variants**, sharing a barcode because a
+shade variant legitimately does. `products_active` hides the children; the barcode grouping does
+not.
+
+> **IN 21% OF THE POPULATION THE RIGHT ANSWER IS DO NOTHING, AND THAT IS THE HARDEST OUTCOME TO
+> GET RIGHT IN A BATCH THAT EXISTS TO CHANGE THINGS.** A pass built to merge, run over a set
+> where a fifth of the cases must be left alone, is one predicate away from destroying correct
+> modelling — and the destruction is invisible, because merged shade children were already
+> hidden from every view.
+
+**That is the sentence to read first if this is ever picked up.** The size is recoverable from a
+query; the trap is not.
+
+#### AND THE CORRECTION THAT PRODUCED IT
+
+The 1,661 was only visible after a counting error was fixed. I reported **"2,855 of 16,079
+in-scope products are parents — 18%"**. The query was:
+
+```sql
+SELECT count(*) FROM ids JOIN products p2 ON p2.parent_product_id = ids.id
+```
+
+**That counts children.** 214 in-scope products are parents; 2,855 are their children.
+
+> **A JOIN COUNTED THE OTHER SIDE OF ITSELF AND THE TOTAL WAS READ AS THE DRIVING SIDE.** Sixth
+> instance today of the same class — a number correct about one thing, reported as being about
+> another. Items 146, 148, 155, 157 and 167 are the others.
+>
+> **The defence is the same every time and it is not care:** state which side of the join the
+> count is over, and check it against a count of the other side. `count(DISTINCT ids.id)` and
+> `count(*)` differ by 2,641 here, and either alone looks like an answer.
