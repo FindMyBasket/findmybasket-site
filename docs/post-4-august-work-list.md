@@ -15687,3 +15687,187 @@ that chooses between ASINs.
 **What this leaves for the ASIN work: class A only** — four products where one identifier has
 two Amazon listings. That needs a stated rule (live offer, or buy-box) and it does not exist
 yet. Class B leaves with item 96 and does not come back.
+
+---
+
+### 184. The matcher has never seen them, and a known ASIN does not need a harvest
+
+**Raised:** 17 August 2026, scoping item 180's open finding · **Reported, nothing applied.
+Nothing retired.**
+
+#### THE REFRAMING LEADS
+
+25 products carry an ASIN that **predates `amazon_asin_map` entirely** — hand-assembled before a
+method existed, untouched by everything built since, and reported in item 180 as the site's
+worst cohort at 16.0% no offer.
+
+> **THE MATCHER HAS NOT FAILED ON THEM. IT HAS NEVER SEEN THEM.** None of the 25 appears in the
+> map in any state — not `unmatched`, not `confirmed_absent`, not `no_identifier`. **Their rate
+> is not evidence about the matcher, because they were never in the process that produced the
+> other 244.**
+
+**So they are a marker, not a cleanup task.** The 25 span **12 brands, 11 of them never
+harvested**, holding **1,887 active products with no ASIN** between them:
+
+| measured yield of an already-harvested brand | brands | active products | carry an ASIN | yield |
+|---|---:|---:|---:|---:|
+| K-beauty | 5 | 794 | 138 | **17.4%** |
+| supplements | 12 | 353 | 73 | 20.7% |
+
+> **AT THE MEASURED YIELD THE ELEVEN BRANDS ARE WORTH ROUGHLY 330 NEW ASINs**, with the 25
+> answered as a by-product. **That is an opportunity, not a repair** — scoped separately as
+> item 185.
+
+*0 of 25 carry a product-level EAN. 24 have a barcode via `retailer_prices_live`; Torriden
+93648 has none anywhere.*
+
+#### THE CHEAP ROUTE, AND IT GENERALISES
+
+The harvest runs **brand → store page → ASINs → identifiers → our barcodes.** That shape exists
+because the harvest starts without knowing which ASINs exist.
+
+> **FOR A KNOWN ASIN THE FIRST THREE STEPS ARE UNNECESSARY. `getItems` WITH
+> `itemInfo.externalIds` RETURNS THE LISTING'S OWN IDENTIFIERS DIRECTLY.**
+>
+> **Three API calls against an eleven-brand harvest.** The match runs backwards, and the answer
+> is the same answer.
+
+**Where this applies beyond here:** any question of the form *"is this ASIN the right one?"* —
+audits, spot-checks, conflict adjudication, and item 183's class A. **The harvest is for
+discovery; it is not the tool for verification, and it was about to be used as one.**
+
+#### THE NEAR-MISS THAT NEARLY COST AN ELEVEN-BRAND HARVEST
+
+The first probe requested `itemInfo.externalIds` and came back **200 with no `externalIds`
+field**, while `itemInfo.title` and `itemInfo.productInfo` on the same call returned data.
+
+**I read that as the resource being silently unsupported** — a reasonable reading, because
+`merchantInfo` had failed in exactly that way the day before and is recorded in
+`lib/amazon-creators.ts` as doing so. **The conclusion was that no reverse lookup existed and
+the only route was to harvest eleven brands.**
+
+> **IT MEANT THE LISTING PUBLISHES NO BARCODE.** `scripts/amazon-asin-map.mjs` requests that
+> exact resource and 764 harvested records carry `eans` and `upcs` from it. **The working code
+> settled it; the probe could not.**
+
+**A single negative probe cannot distinguish "the API does not support this" from "this item has
+no such value."** The one-ASIN test had no control. **Checking whether existing code already
+depends on the thing is faster than designing a better probe, and it is the check that was
+nearly skipped** — the prior was strong, recent, written down, and wrong here.
+
+#### THE DECOMPOSITION IS THE RESULT
+
+| verdict | n | what it means |
+|---|---:|---|
+| **CONFIRMED** — Amazon's barcode matches ours | **16** | **stops being hand-assembled** |
+| CONFLICT — Amazon's barcode is a different item | 5 | the ASIN or the row is wrong |
+| ABSENT — the ASIN does not resolve at Amazon | 2 | evidence about the **ASIN** |
+| no barcode published on the listing | 1 | unconfirmable from Amazon's side |
+| no barcode on **our** side | 1 | unconfirmable from ours |
+
+**16 of 25 survive and acquire a provenance.** They can be written into `amazon_asin_map` as
+`matched` with the confirming EAN, at which point the cohort stops existing as a category.
+
+**And the four no-offer ASINs in the cohort are not one fact:**
+
+| | |
+|---|---|
+| 1276 Biodance, 6965 LANEIGE | **ABSENT** — the ASIN does not resolve. *Ours.* |
+| 3077 Beauty of Joseon | **CONFLICT** — points at a different item. *Ours.* |
+| 7197 LANEIGE | CONFIRMED — right product, genuinely no offer today. **Amazon's.** |
+
+> **TWO MOVES IN ONE DAY, BOTH AWAY FROM AMAZON AND TOWARD US.** Item 180 moved the 16% from
+> "a property of Amazon" to "a property of these 25". This moves three of the remaining four
+> from Amazon to us.
+>
+> **THE HONEST STATEMENT IS THAT MOST OF THE ORIGINAL 16% WAS NEVER AMAZON'S.** It was dead and
+> wrong ASINs, which no live-price feature can fix — the request never reaches a real listing,
+> so there is nothing for a breaker, a retry or a cache to improve.
+
+#### THE FIVE CONFLICTS, AND ONE OF THEM IS A HARDER CASE
+
+They need item 183 class A's answer — a stated rule for choosing between candidate ASINs — and
+**that answer does not exist.**
+
+**One is not a plain mismatch and deserves naming:**
+
+| 1028 Isntree Hyaluronic Acid Toner | |
+|---|---|
+| ours | `8809540517533` |
+| Amazon's, on the held ASIN | `88095405175`**`57`** |
+
+**Two digits apart, same manufacturer prefix, same product family.** This is a **size or variant
+difference, not a wrong product** — and it is harder than a plain mismatch in both directions:
+it will not look wrong to a reviewer, and a rule that picks "the closest barcode" would pick it
+deliberately.
+
+> **A WRONG-PRODUCT MATCH IS CAUGHT BY LOOKING. A WRONG-VARIANT MATCH IS NOT** — the title, the
+> brand and the image all agree, and only the size disagrees. **It is the case a human pass is
+> worst at**, which is worth holding beside item 181's decision that barcode matches do not
+> need one.
+
+#### NOT RETIRED, AND THAT IS DELIBERATE
+
+**An ASIN that returns no offer is still a link to the right product page, and the fallback is a
+search.** Removing it trades a working link for a worse one. **This holds even for the two
+ABSENT rows** — the product page may return, and nothing is gained by clearing the column ahead
+of a decision about what replaces it.
+
+---
+
+### 185. Eleven unharvested brands, ~1,887 products — an opportunity, not a cleanup
+
+**Raised:** 17 August 2026, out of item 184 · **Scoped, not scheduled. Pick up with the next
+Amazon work.**
+
+Item 184 found the 25 pre-existing ASINs to be a marker pointing at **eleven brands the harvest
+has never run against.**
+
+| brand | catalogue products with no ASIN |
+|---|---:|
+| LANEIGE | 336 |
+| Skin1004 | 240 |
+| numbuzin | 230 |
+| Round Lab | 175 |
+| Abib | 171 |
+| Some By Mi | 167 |
+| Isntree | 116 |
+| Anua | 112 |
+| Haruharu Wonder | 105 |
+| Biodance | 78 |
+| Torriden | 70 |
+| **total** | **1,800** |
+
+*(1,887 including Beauty of Joseon's 87, which is already harvested and would be a re-run.)*
+
+> **AT THE MEASURED 17.4% K-BEAUTY YIELD THIS IS ROUGHLY 330 NEW ASINs** — larger than the 269
+> the site carries today, from brands already in the catalogue.
+
+#### WHY IT IS AN OPPORTUNITY AND NOT A REPAIR
+
+**Nothing here is broken.** These brands were never harvested, so there is no defect to fix and
+no regression to chase. The work is additive, the method is proven on 17 brands, and the
+matcher, the promotion guard and the tier rule are all now settled.
+
+#### WHAT IT WOULD COST, HONESTLY
+
+**The API gate is the constraint, not the code.** The rolling window governs throughput, and a
+harvest of this size is not one sitting.
+
+**Three things are known and reduce the cost:**
+
+1. **The matcher is settled** — zero-stripping audited, raw-comparison control on every run.
+2. **The promotion path is settled** — item 179's tier extension, item 181's no-human-pass
+   decision, and a guard that has now been run over 204 rows.
+3. **The verification path is cheap** — item 184's reverse lookup checks a result in three calls
+   rather than a re-harvest.
+
+**Two things are not, and both are known unknowns rather than surprises:**
+
+- **Item 183 class A** — one identifier, several Amazon listings. Unanswered, and a harvest this
+  size will produce more of them.
+- **Item 184's variant conflicts** — `…517557` against `…517533`. Unanswered, invisible to a
+  reviewer, and the class a "closest barcode" rule would actively select for.
+
+> **BOTH ARE CHOOSING-BETWEEN-CANDIDATES PROBLEMS AND THEY ARE THE SAME PROBLEM.** Answering it
+> once before the harvest is cheaper than adjudicating 330 instances after it.
