@@ -13699,3 +13699,98 @@ the other side has never been measured.
 **Scope: MyProtein (worst-case matrix) and Solgar (low-variance control). The remaining ten wait
 for the ratio.** Recording ASINs harvested against products matched for each is the point of the
 tranche — the match percentage alone would hide which side moved.
+
+
+---
+
+### 163. The prediction was wrong by an order of magnitude, and two defects had to be fixed before the number could be believed
+
+**Raised:** 17 August 2026 · **Tranche 2 harvested: MyProtein and Solgar.** · **Item 162's
+prediction, checked and falsified.**
+
+#### THE PREDICTION AND THE RESULT
+
+| cohort | **predicted** | **actual** |
+|---|---|---|
+| sports — MyProtein | 30–60% | **1.0%** |
+| beauty-adjacent — Solgar | 60–80% | **28.0%** |
+| combined | — | **14.5%** (29 of 200) |
+
+**Wrong by an order of magnitude on the sports brand.** Item 162 revised 70–85% down to 30–60%
+and flagged lower confidence; **the revision was in the right direction and nowhere near far
+enough.**
+
+| brand | ASINs harvested | with an identifier | matched | our supplements | **of ours, covered** |
+|---|---:|---:|---:|---:|---:|
+| MyProtein | 100 | 99 | **1** | 37 | **1 (3%)** |
+| Solgar | 100 | 98 | **28** | 30 | **13 (43%)** |
+
+#### TWO DEFECTS FOUND BEFORE THE NUMBER COULD BE BELIEVED
+
+**1. The search index was hardcoded, and mine to fix.** `scripts/amazon-asin-map.mjs` set
+`searchIndex = 'Beauty'`, correct for tranche 1 and wrong for every supplement. The first run
+returned **2 ASINs for MyProtein** and I nearly reported it.
+
+> **A BRAND SEARCH IN THE WRONG INDEX DOES NOT ERROR. IT RETURNS A HANDFUL OF CROSS-LISTED
+> ITEMS**, and a small number is indistinguishable from a small brand. The file already carried
+> a comment describing this exact failure mode arriving by a different route — a malformed
+> request returning few results rather than an error. **It happened again, one parameter along.**
+
+Now `--index`, with the default documented as tranche-1's choice rather than a general one. The
+same run also carried the **default `--seeds`, which are K-beauty ASINs**, silently adding 9
+foreign rows to a supplements count.
+
+**2. `ean_normalised` strips leading zeros, and that one is not mine.** Solgar's barcodes are
+stored as **11 digits** — `33984000285` — against Amazon's `0033984000285`. **The raw
+intersection was ZERO.** Normalising both sides to GTIN equivalence recovered **28 matches**.
+
+> **SOLGAR WOULD HAVE REPORTED 0%, AND 0% IS A NUMBER SOMEBODY ACTS ON.** It reads as "Amazon
+> and Boots share no SKUs for this brand", which is a commercial conclusion, from a string
+> comparison defect.
+
+**Catalogue-wide: 3,260 rows across 2,737 products carry an `ean_normalised` at a length that is
+not a valid GTIN** (11, 10 or 9 digits). **8, 12, 13 and 14 are the only valid lengths.** Those
+products cannot match any correctly-formed external barcode — not Amazon's, not another
+retailer's. **This is a live tier-1 matching defect, found by an Amazon harvest that had no
+business being the thing that found it.**
+
+#### THE RATIO QUESTION IS ANSWERED, AND THE ANSWER IS A FLOOR
+
+**Both brands returned exactly 100 ASINs — ten pages of ten, the enumeration cap.** Neither
+store was exhausted.
+
+| | K-beauty | supplements |
+|---|---|---|
+| our products per store ASIN | **2.0 – 4.2×** | **≤ 0.37× (MyProtein), ≤ 0.30× (Solgar)** |
+
+> **THE INVERSION IS CONFIRMED AND IT IS LARGER THAN MEASURED**, because 100 is our truncation
+> and not their catalogue. MyProtein's real store is unknown and bigger. **Our 37 products
+> against a store of at least 100 caps the match rate at 37% before a single comparison is
+> made**, and the observed 1% says the overlap inside that cap is nearly empty too.
+
+#### WHY MyProtein IS 1% AND SOLGAR IS 28%
+
+Both sides of MyProtein use UK GS1 prefixes — 95 of Amazon's 109 identifiers and all 35 of ours
+begin `505`. **Same range, different SKUs.** MyProtein registers a distinct barcode per flavour
+per size, sells the full matrix on Amazon, and Boots stocks a sliver of it.
+
+Solgar sells capsules in fewer variants, so the same product carries the same barcode in both
+places. **The difference is not distribution or data quality. It is how many SKUs a product line
+is cut into**, and protein is cut finer than vitamins.
+
+#### THE HONEST READ ON WHAT THIS BUYS
+
+**Coverage of our own catalogue is the metric that matters commercially**, and it is not the
+match rate:
+
+- **Solgar: 13 of 30 supplements gain an Amazon link — 43%.** Worth having.
+- **MyProtein: 1 of 37 — 3%.** Not worth a harvest.
+
+> **THE TWO-BRAND TRANCHE DID ITS JOB.** It cost 40 API calls and it stopped a twelve-brand
+> harvest that would have returned single-digit coverage on every sports brand. **The control
+> brand was the one worth keeping and the worst-case brand was worse than the worst case.**
+
+**Recommendation, not applied:** harvest the beauty-adjacent brands (Solgar, Vida Glow, Revive
+Collagen, Gold Collagen, Ancient + Brave, Vital Proteins) and **drop the sports brands** unless
+the flavour-matrix problem is solved some other way. **Fix the zero-stripping first** — it is
+worth more than the harvest, because it affects every tier-1 match in the catalogue.
