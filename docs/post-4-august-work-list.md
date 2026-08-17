@@ -15279,10 +15279,17 @@ never asks whether the pair **says** anything.
 > reading rule, not enforced by the constraint beside it"* — **except that here the
 > constraint exists and is doing less than its name suggests.**
 
-**A `cost > 0 OR threshold IS NULL` predicate would catch all four.** Deliberately not added
-here: two of the four are fixable by observation and two are not, and a constraint added while
-half the population violates it forces the rewrite it should be preventing. **Named as the fix
-and left for a decision.**
+**A `cost > 0 OR threshold IS NULL` predicate would catch all four.** Deliberately not added.
+
+> **A CONSTRAINT ADDED OVER A VIOLATING POPULATION FORCES THE REWRITE IT EXISTS TO PREVENT.**
+> Two of the four are fixable by observation and two are not, so adding the predicate today
+> would demand that Branded Beauty and Skin Cupid be given numbers *in order to satisfy a
+> check* — which is precisely how `tiered / 0 / 0` came to exist in the first place.
+>
+> **The order is: establish the terms, then constrain.** Reversed, the constraint manufactures
+> the values it was written to catch.
+
+**Named as the fix and left until the population is clean.**
 
 #### WHY AMAZON IS `unknown` AND NOT A CORRECTED NUMBER
 
@@ -15311,9 +15318,17 @@ becomes active-and-wrong without anyone re-reading the row.**
 `retailers_delivery_unknown` has the same scope, for the same reason, and never reported 9 or
 10 either.
 
-> **A GUARD SCOPED TO THE LIVE FLEET CANNOT SEE THE ROW THAT IS ABOUT TO JOIN IT.** That
-> scoping is correct for a monitor — nobody wants an alert about a dormant retailer — and it
-> is wrong for a constraint, which exists precisely to stop a bad value being *written*.
+> **A CONSTRAINT SCOPED TO ACTIVE RETAILERS CANNOT SEE THE ROW THAT IS ABOUT TO BECOME ONE.
+> INACTIVE-AND-WRONG IS EXACTLY HOW ACTIVE-AND-WRONG ARRIVES** — a retailer does not acquire
+> bad terms at the moment it goes live; it carries them in.
+>
+> **That scoping is correct for a MONITOR and wrong for a CONSTRAINT.** Nobody wants an alert
+> about a dormant retailer. But a constraint exists to stop a bad value being *written*, and
+> the write that matters happened long before the flag flipped.
+>
+> **The guard-scoping point is sharper than the instance it was found by.** Every check in
+> this codebase scoped to `active` has the same blind spot, and the blind spot is the
+> staging area for everything that later goes live.
 
 ---
 
@@ -15396,4 +15411,41 @@ moment it is asked. **Costs an interruption in the one flow that is currently fr
 > **A AND B ARE THE SAME DECISION SEEN FROM TWO SIDES, AND THEY ARE NOT SYMMETRIC.** Both are
 > wrong for some shoppers. **Only B is wrong in the direction that flatters us.**
 
-**Not built. Robbie decides the default.**
+#### THE DECISION: D. ASK ONCE, WHEN A BASKET FIRST CONTAINS AN AMAZON LEG.
+
+**Robbie's decision, 17 August 2026. The asymmetry decides it.**
+
+> **ON A COMPARISON SITE, "WRONG IN THE DIRECTION THAT FLATTERS US" IS NOT A CLOSE CALL.**
+> B overstates a saving on our own affiliate link. That is the one error the site's
+> positioning cannot absorb, and it disqualifies B whatever its accuracy for the majority.
+
+**A is rejected for the mirror reason, and the reasoning matters because A looks safe.** Never
+overstating a saving is the right instinct — and applied as a default it makes Amazon lose
+baskets it genuinely wins for a large minority. **That is the site's own error pointed
+inward**: a comparison that is wrong about which retailer is cheapest, in favour of the ones
+we already list.
+
+**C reaches the outcome of not building it, more expensively.**
+
+**D is the only option that produces a true answer rather than a defensible assumption** — and
+the interruption lands on the shopper most likely to answer it, one who has just added an
+Amazon product and has a visible reason to care.
+
+#### AND D IS NOT A COMPLETE ANSWER, WHICH IS THE PART TO CARRY
+
+**Whatever D does on DECLINE is the real default, not the stated one.**
+
+Item 61 records that for a shopper, unanswered is a **permanent, legitimate state** rather
+than a transitional one — the property that does not transfer from the retailer case, where
+`unknown` is transitional and `retailers_delivery_unknown` exists to catch anything that
+stays there.
+
+> **A SHOPPER WHO DECLINES IS NOT A SHOPPER WHO HAS NOT YET DECIDED.** Treating a decline as
+> "ask again later" reproduces the interruption D was designed to spend once. Treating it as
+> non-Prime is option A wearing a prompt. Treating it as Prime is option B wearing a prompt.
+>
+> **So the decline branch re-poses the same asymmetry the decision just settled**, and it has
+> to be answered on its own terms rather than inherited from D.
+
+**That is the open question when this is built. It is not open now, because the work is not
+scheduled.**
