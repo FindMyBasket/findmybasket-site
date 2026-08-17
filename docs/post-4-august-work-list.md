@@ -16022,9 +16022,19 @@ the same shape named in `lib/amazon-live.ts`: *a cached price served through an 
 stored price whose refresh path no longer exists.* Here it is **a stored ASIN chosen on live
 signals whose refresh path was never built.**
 
-**The 24-hour rule does not bite** — no price is stored, only a choice made using one. **That is
-why it is invisible:** the compliance boundary that would have caught a stored price does not
-notice a stored decision.
+#### WHY IT STAYED INVISIBLE, WHICH IS THE SHARPEST FORM OF IT
+
+> **NO PRICE IS STORED — ONLY A DECISION MADE USING ONE. So the 24-hour boundary that would
+> catch a stored price does not notice a stored choice.**
+
+Every guard built for this feature watches the price: the 30-second TTL is coalescing rather
+than storage, `amazon_live_fetch_log` asserts at migration time that no column could hold a
+price, and the whole four-state design exists so a stale number is never shown as a live one.
+
+**All of it watches the value. None of it watches the choice.** `products.amazon_asin` is a
+column nobody thinks of as price-derived, because it holds an identifier — and an identifier
+looks permanent. **It was selected on stock, seller and offer availability, and it decays
+exactly like a price would, with none of the machinery that was built to notice.**
 
 #### THE TWO SHAPES, AND THE SECOND IS BETTER
 
@@ -16046,15 +16056,55 @@ projection** of `amazon_asin_map` plus the rule, rather than a value written onc
 - **Churn is acceptable and mostly desirable.** A product's Amazon link changing to the in-stock
   listing of the same product is an improvement, not instability.
 
-> **(b) IS THE RIGHT SHAPE AND IT HAS ONE PREREQUISITE THAT MUST NOT BE MISSED.**
+> **(b) IS THE RIGHT SHAPE AND ITS PREREQUISITE IS NOW CLOSED (17 August).**
 >
-> **The 25 pre-existing ASINs are not in the map** (item 184). A projection derived from the map
-> would **erase all 25.** Item 184's 16 CONFIRMED rows must be written into the map *first*, and
-> the remaining 9 need an explicit carve-out or an equivalent decision.
->
-> **Deriving a column from a table that does not contain everything the column holds is a
-> silent-deletion bug**, and it would present as the Amazon row quietly disappearing from 25
-> product pages.
+> **The 25 pre-existing ASINs were not in the map** (item 184). A projection derived from the map
+> would have **erased all 25** — and *deriving a column from a table that does not contain
+> everything the column holds is a silent-deletion bug*, which would have presented as the Amazon
+> row quietly disappearing from 25 product pages rather than as an error.
+
+#### THE PREREQUISITE, CLOSED
+
+**All 25 are now map rows with a recorded verdict.** The measured assertion, which is the one
+(b) depends on:
+
+```
+published ASINs with no map row  →  0
+projection dry run, would-be-erased  →  0
+```
+
+> **THE CARVE-OUT IS NOW A PROPERTY OF THE DATA RATHER THAN A BRANCH IN CODE.** The map is
+> complete, so **"an ASIN with no map row" is an error condition, not a deletion instruction.**
+> There is no special case for (b) to remember, and nothing for a later refactor to drop.
+
+**Two new `match_state` values, because none of the seven fitted.** Every existing non-matched
+state carries `product_id IS NULL` — the map is ASIN-centric, and `confirmed_absent` means *"this
+Amazon ASIN is not a product FindMyBasket carries"*. The nine rows are the opposite shape: linked
+to a live product, published on the site, checked against Amazon, not confirmed.
+
+| state | n | meaning |
+|---|---:|---|
+| `identifier_conflict` | 5 | **checked, and the identifiers disagree** — evidence against |
+| `legacy_unconfirmed` | 4 | **checked, and could not be told either way** — no evidence |
+
+**The distinction is load-bearing:** a conflict is a candidate for item 186's secondary path; an
+unconfirmable row is a candidate for nothing. **Filing all nine as `unmatched` would have been a
+value correct about one thing stored as another** — the class this list has now recorded seven
+instances of, and the one it keeps recording.
+
+*`matched_ean` stays NULL on the five conflicts. Putting Amazon's barcode in a column named
+`matched_ean` would be that same misfiling, one column further in.*
+
+*`via_brand` stays NULL on all 25 and the column now carries a comment saying why:* **item 185
+counts unharvested brands off `via_brand`, so populating it for a non-harvest row would make
+eleven brands read as already harvested.**
+
+#### AND IT FINISHES THE 25
+
+**They stop being hand-assembled and become map rows with provenance**, which was item 184's
+original point. 16 carry a confirming EAN; 9 carry a recorded reason they do not. **The cohort
+that item 180 identified as the site's worst no longer exists as a category** — not because it
+was repaired, but because it is now described.
 
 #### WHAT IS NOT DECIDED
 
