@@ -14981,3 +14981,100 @@ SELECT count(*) FROM ids JOIN products p2 ON p2.parent_product_id = ids.id
 > **The defence is the same every time and it is not care:** state which side of the join the
 > count is over, and check it against a count of the other side. `count(DISTINCT ids.id)` and
 > `count(*)` differ by 2,641 here, and either alone looks like an answer.
+
+
+---
+
+### 173. A fail-safe direction is a property of the harm, not of the mechanism
+
+**Raised:** 17 August 2026, adding a second Edge Config flag beside the orphan gate ·
+**The general form of a decision that could have been a copy.**
+
+#### THE TWO FLAGS
+
+| | `orphan_gate_enabled` | `amazon_live_enabled` |
+|---|---|---|
+| store | Edge Config | Edge Config |
+| read | per request | per request |
+| test | `typeof === 'boolean'` | `typeof === 'boolean'` |
+| **unreadable config** | **fails CLOSED — gate stays on** | **fails OFF — feature stays off** |
+
+**Same store, same mechanism, same boolean test, opposite default.**
+
+#### WHY THEY DIFFER, WHICH IS THE WHOLE POINT
+
+The orphan gate fails **closed** because **the harm is 20,849 dead URLs going live**. An
+unreadable config must not be able to un-410 a catalogue.
+
+The Amazon flag fails **off** because **the harm is a feature nobody enabled starting itself**.
+An unreadable config must not be able to begin calling a rate-limited third party and
+rendering prices on pages.
+
+> **THE MECHANISM IS IDENTICAL AND THE CORRECT DEFAULT IS OPPOSITE, BECAUSE THE HARM IS
+> OPPOSITE.** "Fail safe" names a direction, and the direction is not a property of the flag,
+> the store, or the pattern. **It is a property of what goes wrong when nobody is watching.**
+
+#### THE FAILURE MODE THIS PREVENTS
+
+**Copying a flag pattern without re-deciding the direction is how a safe default becomes a
+wrong one.** The copy is the natural move: the orphan gate's `readGate()` is proven, carefully
+reasoned, and carries a comment explaining why `typeof === 'boolean'` beats truthiness. **All
+of that reasoning transfers. The default does not, and nothing in the code says which parts
+travel.**
+
+A `GATE_DEFAULT = true` lifted into the new file would have been defensible line by line and
+wrong as a whole — a feature that turns itself on during a config outage, on the argument that
+the other flag does.
+
+> **THE PART OF A PATTERN THAT DOES NOT TRANSFER IS THE PART THAT WAS DECIDED RATHER THAN
+> DERIVED.** `typeof === 'boolean'` is derived from how JavaScript treats `false` and is true
+> everywhere. The default is a judgement about a specific harm and is true nowhere else.
+
+**Both flags now state their direction and their reason in a comment beside the constant**, so
+the next copy has to read a sentence that says "because dead URLs are the harm" and notice that
+its own harm is different.
+
+---
+
+### 174. The design was portable and the fetch was not
+
+**Raised:** 17 August 2026, after building the live price feature · **A design question found
+during a build.**
+
+#### WHAT HAPPENED
+
+The route handler, breaker, four states, logging and kill switch were all built and
+type-checked. **Then: the Amazon client read the SDK from
+`~/amazon-api-watch/sdk` via `createRequire`.**
+
+That path exists on the laptop where the harvests run. **It does not exist on Vercel.** The
+feature could not have worked in production and every local check passed.
+
+> **EVERY LOCAL TEST PASSED BECAUSE THE PATH EXISTS LOCALLY.** `tsc` was clean — a runtime
+> `require` of an absolute path is not a type error. There is no lint rule for "this directory
+> is outside the repository". **Nothing short of a deploy would have shown it.**
+
+#### THE DISTINCTION THAT MATTERS
+
+**The design was portable and the fetch was not.** Everything reasoned about — where the fetch
+happens, what renders in flight, how the breaker behaves, what gets logged — was independent
+of how the HTTP call was made, and all of it survived the rework unchanged.
+
+> **"DOES THIS RUN WHERE IT SHIPS" IS A DESIGN QUESTION AND WAS TREATED AS A BUILD DETAIL.**
+> It belongs beside "where does the fetch happen" and "what renders on failure", because it
+> constrains the answer as hard as either — and it is cheap to ask and expensive to discover.
+
+**The tell was available and unread.** The design report named the SDK path in the sentence
+*"the route reads the SDK from `~/amazon-api-watch/sdk` via `createRequire`"* — written as
+description, not as a question. **A home-directory path in a server component is a deployment
+fact stated as an implementation fact.**
+
+#### WHAT IT COST AND WHAT IT DID NOT
+
+The rework was one module — `lib/amazon-creators.ts` — and it turned out **better than the
+SDK route**: no vendoring, four resources instead of a generated surface, and the auth
+transcribed from the SDK's own outbound HTTP rather than from documentation.
+
+**And it surfaced two things the SDK path would have hidden:** that the API is OAuth2 rather
+than SigV4, and that `merchantInfo` is silently absent unless its resource string is requested.
+**The second would have shipped as a defect.**

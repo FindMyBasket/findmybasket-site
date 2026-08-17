@@ -35,9 +35,7 @@
  * Recorded here rather than in the work list deliberately: the next person to hit it will
  * be reading this file, not searching a 14,000-line document.
  */
-import path from 'node:path';
-import os from 'node:os';
-import { createRequire } from 'node:module';
+import { getItems, CreatorsError, type CreatorsItem } from './amazon-creators';
 
 export type LiveOffer = {
   asin: string;
@@ -88,24 +86,11 @@ let breakerOpenUntil = 0;
 const cache = new Map<string, { at: number; offer: LiveOffer | null }>();
 const inFlight = new Map<string, Promise<Map<string, LiveOffer | null>>>();
 
-function api() {
-  const SDK_DIR = path.join(os.homedir(), 'amazon-api-watch', 'sdk');
-  const require = createRequire(path.join(SDK_DIR, 'examples', 'x.js'));
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sdk: any = require(path.join(SDK_DIR, 'dist', 'index'));
-  const c = new sdk.ApiClient();
-  c.credentialId = process.env.CREATORS_CREDENTIAL_ID;
-  c.credentialSecret = process.env.CREATORS_CREDENTIAL_SECRET;
-  c.version = '3.2';
-  return { api: new sdk.DefaultApi(c), GetItems: sdk.GetItemsRequestContent };
-}
-
 /** Pick the listing a shopper would actually be offered. Buy-box winner, else the first. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function pickListing(item: any): LiveOffer | null {
+function pickListing(item: CreatorsItem): LiveOffer | null {
   const listings = item?.offersV2?.listings ?? [];
   if (!listings.length) return null;
-  const l = listings.find((x: unknown) => (x as { isBuyBoxWinner?: boolean })?.isBuyBoxWinner) ?? listings[0];
+  const l = listings.find((x) => x?.isBuyBoxWinner) ?? listings[0];
   const money = l?.price?.money;
   if (!money || typeof money.amount !== 'number') return null;
   return {
@@ -122,25 +107,15 @@ function pickListing(item: any): LiveOffer | null {
 }
 
 async function callAmazon(asins: string[]): Promise<Map<string, LiveOffer | null>> {
-  const { api: client, GetItems } = api();
   const out = new Map<string, LiveOffer | null>();
   for (let i = 0; i < asins.length; i += BATCH) {
     const chunk = asins.slice(i, i + BATCH);
-    const req = new GetItems();
-    req.partnerTag = process.env.CREATORS_PARTNER_TAG;
-    req.itemIds = chunk;
-    req.resources = [
-      'offersV2.listings.price',
-      'offersV2.listings.availability',
-      'offersV2.listings.merchantInfo',
-      'offersV2.listings.isBuyBoxWinner',
-    ];
-    const res = await client.getItems(MARKETPLACE, req);
     // EVERY REQUESTED ASIN GETS AN ENTRY, including the ones Amazon did not return. A
     // partial return is silent and normal (item 60) and an absent ASIN is `no_offers`,
     // never a failure — those are different facts and the caller must be able to tell.
     for (const a of chunk) out.set(a, null);
-    for (const item of res?.itemsResult?.items ?? []) out.set(item.asin, pickListing(item));
+    const items = await getItems(chunk);
+    for (const item of items) out.set(item.asin, pickListing(item));
   }
   return out;
 }
@@ -201,6 +176,10 @@ export async function fetchLiveOffers(asinsIn: string[]): Promise<FetchResult> {
     };
   } catch (e) {
     const err = e as { status?: number; fmbTimeout?: boolean };
+    if (e instanceof CreatorsError && e.status === 429) {
+      breakerOpenUntil = Date.now() + BREAKER_COOLDOWN_MS;
+      return { outcome: 'rate_limited', offers, durationMs: Date.now() - started, coalesced, cached: false };
+    }
     if (err?.fmbTimeout) {
       return { outcome: 'timeout', offers, durationMs: Date.now() - started, coalesced, cached: false };
     }
