@@ -15146,3 +15146,96 @@ fail-off rule.**
 **Recorded in `app/api/amazon/price/route.ts` beside the switch, not only here**, because the
 person who meets it will be staring at a preview URL wondering why nothing renders — and they
 will be reading that file, not searching this one.
+
+
+---
+
+### 176. The grey-market question answered by what the harvest produced
+
+**Raised:** 17 August 2026, first live read of the Amazon price fetch across all 69 products
+carrying an ASIN · **Live, flag on, measured.**
+
+#### THE READ
+
+| | |
+|---|---:|
+| ASINs probed | **69** |
+| returned an offer | **62 — 90%** |
+| no offer | 7 |
+| in stock | 52 |
+| **out of stock** | **10** |
+| seller name present | **62/62** |
+| buy-box winner | 62/62 |
+| errors of any kind | **0** |
+
+Seven batches, all `ok`, **530ms average server-side.** The log agrees exactly: 7 calls, 69
+ASINs, 62 offers, no `rate_limited`, no `timeout`, no `upstream_error`, no `misconfigured`.
+Prices **£3.29–£33.99**, median **£13.95**.
+
+#### THE SELLER DISTRIBUTION IS THE GREY-MARKET ANSWER
+
+| | seller |
+|---:|---|
+| 11 | **Medicube Official** |
+| 8 | **COSRX Inc.** |
+| 6 | **BEAUTY OF JOSEON Official** |
+| 4 | Amazon |
+| 3 | Anua |
+| **3** | **Medpak EU** |
+
+> **THE BRAND-STORE CRITERION IS VALIDATED BY WHAT IT PRODUCED RATHER THAN BY ITS PREMISE.**
+> Harvesting only from official stores was adopted on the argument that first-party
+> distribution removes the grey-market objection to linking. **That was reasoning. This is the
+> output**, and it is first-party almost throughout.
+
+**Medpak EU at 3 is the exception, and it is exactly what the seller name exists to surface.**
+A generic third-party caveat would have applied identically to Medpak EU and to COSRX Inc.,
+which is to say it would have said nothing about either. **Naming the seller makes the three
+visible and the fifty-nine reassuring, from the same sentence.**
+
+**`sellerName` present on 62 of 62** — the `REQUIRED_RESOURCES` assertion holding in
+production, so the marker never degrades to the bare caveat it replaced.
+
+#### PROVEN ON A PAGE, NOT ONLY IN A LOG
+
+The log had only ever recorded `ok`. Two product pages loaded in a browser:
+
+| | renders |
+|---|---|
+| `/product/123` — COSRX Snail Mucin | *"Also check on Amazon"* · **"£13.00 · Sold by COSRX Inc. · delivery not included"** |
+| `/product/172` — COSRX AHA 7 | *"Also check on Amazon"* · **"Amazon doesn't stock this"** |
+
+**Two of the four states confirmed on a real page.** The 123 page also shows the row in
+context: nine UK retailers ranked by delivered total, then the Amazon row **outside the
+ranking** — which is the honest placement, since its price is the one without delivery in it.
+
+**`Couldn't reach Amazon` and `Checking Amazon…` remain unproven in production.** Nothing has
+failed yet, and the in-flight state is too brief to catch by hand.
+
+#### THE SEVEN ARE STABLE, NOT TRANSIENT
+
+A second full read returned **the same 62 and the same 7**. So `no_offers` here is a property
+of those ASINs rather than a flake — Amazon holds the ASIN and has no current offer against it.
+
+> **AND THAT COUNT IS TRUSTWORTHY FOR THE FIRST TIME BECAUSE OF THIS MORNING'S
+> `nothing_requested` FIX.** Before it, every malformed or empty request landed in the same
+> bucket, indistinguishably. **The number that measures how often Amazon genuinely lacks a
+> product we carry could not have been read until the bucket stopped collecting our own
+> mistakes.**
+
+#### CAVEATS ON THE MEASUREMENT, STATED
+
+**One sequential probe exercises no concurrency.** The breaker, the single-flight coalescing
+and the TTL are all untested — a run of distinct ASIN sets touches none of them.
+**`cached: false` on every batch** confirms the TTL never fired.
+
+**The first real test is visitors, not probes.**
+
+#### TWO THINGS TO WATCH, NOT ACT ON
+
+**10 of 62 are out of stock — 16%.** An Amazon row that is usually out of stock is worth less
+than 90% suggests. **It is now measurable rather than inferable**, which it was not this
+morning. **Report again in a week.**
+
+**The `no_offers` count.** Seven today, stable across two reads, and readable for the first
+time. Worth a second reading once real traffic rather than a probe is generating the rows.
