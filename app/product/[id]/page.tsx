@@ -16,6 +16,7 @@ import { displayProductTitle } from '../../../lib/format/product-name';
 import { ProductDescription } from '../../../components/ProductDescription';
 import { ClickOutLink } from '../../../components/ClickOutLink';
 import { AmazonLink } from '../../../components/AmazonLink';
+import { AmazonLiveRow } from '../../../components/AmazonLiveRow';
 import { ProductViewTracker } from '../../../components/ProductViewTracker';
 import { EBAY_RETAILER_ID } from '../../../lib/analytics';
 
@@ -451,20 +452,32 @@ export default async function ProductPage({ params }: { params: { id: string } }
                   )}
                 </>
               )}
-              {/* Amazon is an honest cross-check, not a compared price. */}
-              <div className="flex items-center justify-between px-6 py-5 border-t border-border bg-cream/60">
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-ink-light italic mb-1">Also check on Amazon</p>
-                  <p className="text-xs text-ink-light">Live price varies, not compared</p>
-                </div>
-                <AmazonLink
-                  href={amazonUrl}
+              {/* Amazon is an honest cross-check, not a compared price.
+                  WITH A VERIFIED ASIN the row fetches a live price after hydration and
+                  names the seller. WITHOUT ONE it stays a tagged search link and keeps the
+                  old caveat, which is accurate for a link and stops being accurate the
+                  moment a number is rendered — hence the two branches rather than one. */}
+              {product.amazon_asin ? (
+                <AmazonLiveRow
+                  asin={product.amazon_asin}
                   productId={product.id}
-                  source="amazon_crosscheck"
-                  clickSource="product_page"
-                  className="border border-border text-ink-light px-5 py-2.5 rounded-full text-sm font-medium hover:border-gold hover:text-ink transition-colors whitespace-nowrap"
+                  fallbackHref={amazonUrl}
                 />
-              </div>
+              ) : (
+                <div className="flex items-center justify-between px-6 py-5 border-t border-border bg-cream/60">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-ink-light italic mb-1">Also check on Amazon</p>
+                    <p className="text-xs text-ink-light">Live price varies, not compared</p>
+                  </div>
+                  <AmazonLink
+                    href={amazonUrl}
+                    productId={product.id}
+                    source="amazon_crosscheck"
+                    clickSource="product_page"
+                    className="border border-border text-ink-light px-5 py-2.5 rounded-full text-sm font-medium hover:border-gold hover:text-ink transition-colors whitespace-nowrap"
+                  />
+                </div>
+              )}
             </div>
 
             {product.description && <ProductDescription description={product.description} />}
