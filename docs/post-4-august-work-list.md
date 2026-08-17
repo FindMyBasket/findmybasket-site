@@ -13606,3 +13606,96 @@ live.** Neither answers what the optimiser should do with an option it cannot pr
 **Decide it while nothing rides on the answer.** The next time this question is live, it will be
 live *because* a retailer is winning comparisons it should not — and that is the worst moment to
 weigh whether hiding its stock is acceptable.
+
+
+---
+
+### 162. Two match rates measuring opposite directions, quoted as if comparable
+
+**Raised:** 17 August 2026, scoping the supplements ASIN harvest · **Written BEFORE the harvest
+runs, so the prediction is falsifiable.** · **Tranche 2: MyProtein and Solgar only.**
+
+#### THE DIRECTION CORRECTION
+
+Two numbers were in play and I treated them as the same measurement:
+
+| number | asks | answers |
+|---|---|---|
+| **76.4%** — the K-beauty harvest | *of the STORE's ASINs, how many do we carry?* | 191 of 250 |
+| **9 of 11** — Robbie's hand sample | *of OUR products, how many are on the store?* | 82% |
+
+> **THEY MEASURE OPPOSITE DIRECTIONS ACROSS THE SAME JOIN, AND COINCIDE ONLY WHEN THE TWO SETS
+> ARE THE SAME SIZE — WHICH IS EXACTLY THE ASSUMPTION THAT FAILS HERE.** Both numbers are real.
+> They are not comparable, and quoting the second as corroboration of the first would have made
+> a falling match rate look like a defect.
+
+The harvest is **store-first**: `scripts/amazon-asin-map.mjs` enumerates ASINs by brand, then
+matching happens in SQL against our catalogue. So its denominator is the store, permanently.
+
+#### THE SUPERSET INVERSION, WHICH IS THE EXPLANATION
+
+K-beauty matched well because **our catalogue was the superset**:
+
+| brand | ASINs harvested | our products | ratio | matched |
+|---|---:|---:|---:|---:|
+| medicube | 100 | **421** | 4.2× | 61% |
+| COSRX | 72 | **262** | 3.6× | 89% |
+| Beauty of Joseon | 38 | **111** | 2.9× | 84% |
+| Dr.Melaxin | 39 | **77** | 2.0× | 87% |
+
+**Two to four of our products for every ASIN on the store.** Supplements inverts it: **26–37
+products per brand**, against stores selling a full flavour-and-size matrix.
+
+> **THE MATCH RATE WILL FALL FOR A REASON THAT IS NOT A DEFECT.** It is a ratio between two
+> catalogues, and ours is the small one this time. **A lower number here is the harvest working
+> on a harder shape, not working worse.**
+
+#### THE MECHANISM IN MINIATURE
+
+From the hand sample, all three the same brand and product line:
+
+| product | on Amazon? |
+|---|---|
+| Myprotein Clear Whey **Peach Tea, 488g** | **found** |
+| Myprotein Clear Whey **Orange & Mango, 261g** | **absent** |
+| Myprotein Clear Whey **Orange & Mango, 3 × 261g** | **absent** |
+
+> **AMAZON CARRIES A DIFFERENT SLICE, NOT A SMALLER OR LARGER ONE. NEITHER SUBSET NOR
+> SUPERSET.** Same brand, same product, different flavour and size — present on one side and
+> absent on the other, in both directions. **A model that assumes one catalogue contains the
+> other is wrong whichever way round it is drawn.**
+
+#### THE PERMANENT-MISS HALF, RECORDED BEFORE THE NUMBERS LAND
+
+**Some of the miss rate is correct and finished rather than unfinished.**
+
+**An Amazon bundle has no manufacturer barcode, because it is not a manufactured item** — it is
+a merchandising unit Amazon assembled, and no manufacturer ever registered it. On the K-beauty
+harvest, **38 of 42 identifier-less ASINs were medicube multipacks**.
+
+**Multipacks are common on protein brands** — tubs, sachet boxes, flavour bundles, "3 × 261g".
+So a share of MyProtein's misses will be structural.
+
+> **RECORDED NOW SO IT IS NOT DISCOVERED AS DISAPPOINTMENT LATER.** `match_state` already
+> carries `no_identifier_bundle` as its own value precisely so a reader asking "what did we fail
+> to match?" is not handed a backlog that can never be cleared. **Expect the bundle bucket to be
+> larger here than on K-beauty, and read it as finished work.**
+
+#### THE PREDICTION, TO BE CHECKED BY THE TWO HARVESTS
+
+| cohort | predicted match rate | confidence |
+|---|---|---|
+| **sports** (MyProtein) | **30–60%** | **lower than before** |
+| **beauty-adjacent** (Solgar) | **60–80%** | lower than before |
+
+**Revised down from 70–85%, and held with LESS confidence than the number it replaces.** The
+earlier estimate was made while treating variance as noise; it is a size ratio, and the size of
+the other side has never been measured.
+
+> **THE UNMEASURED INPUT IS THE STORE'S ASIN COUNT, AND THE HARVEST COUNTS IT AS ITS FIRST
+> ACT.** Two brands answer it for nothing. Twelve would answer it twelve times at the same
+> price and learn the same thing.
+
+**Scope: MyProtein (worst-case matrix) and Solgar (low-variance control). The remaining ten wait
+for the ratio.** Recording ASINs harvested against products matched for each is the point of the
+tranche — the match percentage alone would hide which side moved.
