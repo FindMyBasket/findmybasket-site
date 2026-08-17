@@ -13536,3 +13536,69 @@ is the departures, and they are the change the table does not know about.**
 
 Written now, with `metrics_affected` naming what moved — see the boundary row added under this
 item. **The step is visible today; the annotation has to exist before anyone reads the chart.**
+
+
+---
+
+### 156. Supplements is where the Amazon delivery problem stops being theoretical
+
+**Raised:** 17 August 2026, scoping a supplements ASIN harvest · **Robbie's constraint, recorded
+before the harvest rather than after.** · **Item 61's phase-2 question, arriving where it costs
+most.**
+
+#### THE CONSTRAINT
+
+Amazon cannot join the basket optimiser (item 61), so an Amazon price renders **beside** the UK
+offers rather than inside the comparison. That was tolerable for K-beauty. **It is not the same
+problem for supplements.**
+
+| | K-beauty | supplements |
+|---|---|---|
+| typical unit | 50ml cream, ~50g | **protein tub, 1–2.5kg** |
+| delivery as a share of cost | small | **large** |
+| our prices | delivery included | delivery included |
+| the Amazon price beside them | **delivery excluded** | **delivery excluded** |
+
+> **A HEAVY CATEGORY IS WHERE A DELIVERY-EXCLUDED PRICE LOOKS BEST AND IS LEAST TRUE.** The
+> Amazon number sits next to UK prices that already carry delivery, on exactly the products
+> where delivery is the biggest single component after the goods. **The comparison is wrong in
+> the direction that flatters the link we earn on.**
+
+#### WHY IT IS WORSE THAN A LIKE-FOR-LIKE ERROR
+
+**The error scales with the weight of the product**, so it is largest precisely where a shopper
+is most likely to be price-sensitive — a 2.5kg protein tub is a considered purchase, and the
+delivery on it is not a rounding error.
+
+And **the direction is consistent**: Amazon always looks cheaper than it is, never dearer.
+A random error would average out across a category page. **A systematic one compounds into the
+category's headline claim.**
+
+> **THIS IS ITEM 61'S PRIME TOGGLE QUESTION ARRIVING WHERE IT MATTERS MOST.** Item 61 records
+> that Amazon delivery is a property of the SHOPPER, not the retailer — Prime members pay
+> nothing, non-members pay unless they clear a threshold, and the buy-box seller can change
+> both. On a 50ml serum that ambiguity is worth a pound or two. **On a 2.5kg tub it can invert
+> the ranking**, and the site's own positioning is that it counts delivery when others do not.
+
+#### WHAT THIS DOES NOT SAY
+
+**It does not say do not harvest.** The ASINs are worth having: a direct product link beats a
+search link (see below), and the harvest is cheap once the brand stores are known.
+
+**It says the display decision is a prerequisite, not a follow-up.** Publishing an Amazon price
+beside delivery-inclusive UK prices in the heaviest category on the site, without stating the
+basis, is the copy claim the four supplement articles published on Sunday are least able to
+survive — they promise honest comparison, and this is the case where "honest" requires a
+sentence the page does not currently have.
+
+**Three options, none chosen here:** show the Amazon price with an explicit *"delivery not
+included"* marker; suppress the Amazon price on supplements and keep only the link; or resolve
+item 61's phase 2 and let Amazon into the optimiser with a Prime assumption the shopper sets.
+
+#### AND A MEASUREMENT THAT MAKES THE CASE CONCRETE
+
+Not taken yet. **Before the display decision, measure what delivery is worth on the heaviest
+supplements** — the sports tubs are the population, and the figure needed is delivery as a
+share of effective price for the products the harvest would actually cover. **A one-query
+answer that turns a design argument into a number**, and it should exist before anyone chooses
+between the three options above.
