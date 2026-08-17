@@ -15687,3 +15687,79 @@ that chooses between ASINs.
 **What this leaves for the ASIN work: class A only** — four products where one identifier has
 two Amazon listings. That needs a stated rule (live offer, or buy-box) and it does not exist
 yet. Class B leaves with item 96 and does not come back.
+
+---
+
+### 184. The 25 pre-existing ASINs, scoped — and the reverse lookup that made it cheap
+
+**Raised:** 17 August 2026, scoping item 180's open finding · **Reported, nothing applied.
+Nothing retired.**
+
+#### WHAT THEY ARE
+
+25 products carrying an ASIN that **predates `amazon_asin_map` entirely**. Hand-assembled before
+a method existed, and untouched by everything built since.
+
+> **NONE OF THE 25 APPEARS IN THE MAP AT ALL.** The matcher has not failed on them — **it has
+> never seen them.** Item 180 read their 16.0% no-offer rate as a property of the cohort; the
+> cause is that they were never in the process that produced the other 244.
+
+**0 of 25 carry a product-level EAN.** 24 have a barcode via `retailer_prices_live`; one
+(Torriden 93648) has none anywhere.
+
+#### THE EXPENSIVE ROUTE, WHICH IS NOT THE RIGHT ONE
+
+The 25 span **12 brands, 11 of them never harvested**, holding **1,887 active products with no
+ASIN** between them.
+
+| measured yield of a harvested brand | brands | active products | now carry an ASIN | yield |
+|---|---:|---:|---:|---:|
+| K-beauty | 5 | 794 | 138 | **17.4%** |
+| supplements | 12 | 353 | 73 | 20.7% |
+
+**Harvesting the 11 would return roughly 330 new ASINs** at ~17.4% — and would answer the 25 as
+a by-product. **That is a real opportunity and it is not this item.** Sizing it here so it is
+not mistaken for a 25-row cleanup: *the 25 are a marker pointing at 11 unharvested brands, not a
+task in themselves.*
+
+#### THE CHEAP ROUTE, WHICH IS WHAT WAS DONE: RUN THE MATCH BACKWARDS
+
+The harvest goes brand → ASINs → identifiers → our barcodes. **For a known ASIN the first two
+steps are unnecessary.** `getItems` with `itemInfo.externalIds` returns the ASIN's own barcodes
+directly, so the 25 were resolved in **three API calls and no harvest.**
+
+| verdict | n | what it means |
+|---|---:|---|
+| **CONFIRMED** — Amazon's barcode matches ours | **16** | **stops being hand-assembled** |
+| CONFLICT — Amazon's barcode is a different item | 5 | the ASIN or the row is wrong |
+| ABSENT — ASIN does not resolve at Amazon | 2 | evidence about the **ASIN** |
+| no barcode published on the listing | 1 | unconfirmable from Amazon's side |
+| no barcode on **our** side | 1 | unconfirmable from ours (Torriden 93648) |
+
+> **16 of 25 SURVIVE AND ACQUIRE A PROVENANCE.** They can be written into `amazon_asin_map` as
+> `matched` with the confirming EAN, at which point the cohort stops existing as a category.
+
+#### AND IT DECOMPOSES THE 16%
+
+The four no-offer ASINs among the 25 are not one fact:
+
+| | |
+|---|---|
+| 1276 Biodance, 6965 LANEIGE | **ABSENT** — the ASIN does not resolve. *Ours.* |
+| 3077 Beauty of Joseon | CONFLICT — points at a different item. *Ours.* |
+| 7197 LANEIGE | CONFIRMED — right product, genuinely no offer today. **Amazon's.** |
+
+> **THREE OF THE FOUR ARE OURS AND ONE IS AMAZON'S.** Item 180 corrected the 16% from "a
+> property of Amazon" to "a property of these 25". This goes one further: **within the 25, most
+> of it is still not Amazon** — it is dead and wrong ASINs that no live-price feature can fix,
+> because the request never reaches a real listing.
+
+#### NOT RETIRED, AND THAT IS DELIBERATE
+
+**Robbie's instruction, and the reason holds independently:** an ASIN that returns no offer is
+still a link to the right product page, and the fallback is a search. **Removing it trades a
+working link for a worse one.**
+
+The five CONFLICT rows are the ones with a real defect — 1028 Isntree differs from ours in the
+last two digits (`…517557` against `…517533`), which is a size or variant, not a wrong product.
+**That class needs the same answer as item 183's class A and does not have one yet.**
