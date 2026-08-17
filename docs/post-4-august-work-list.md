@@ -14963,6 +14963,30 @@ not.
 **That is the sentence to read first if this is ever picked up.** The size is recoverable from a
 query; the trap is not.
 
+#### THE SECOND SHAPE, ADDED 17 AUGUST: ONE ROW HOLDING TWO PRODUCTS
+
+The groups above are **several rows that should be one**. Product **82517** is the inverse —
+**one row that should be two** — and it surfaced from the ASIN work rather than from a duplicate
+sweep:
+
+| 82517 | matched EAN |
+|---|---|
+| Beauty of Joseon **Green Plum Refreshing** Toner, 5.27 fl oz | `8809473195655` |
+| Beauty of Joseon **Green Plum AHA BHA** Toner, 149.94 ml | `8809968130123` |
+
+**Two different products, two different manufacturer identifiers, one catalogue row.** 583 and
+596 are the same shape.
+
+> **THE DEFECT IS UPSTREAM OF THE IDENTIFIER AND NO ASIN CHOICE RESOLVES IT.** Whichever ASIN is
+> picked, the row is wrong for the other product — and a shopper reaching it has been shown a
+> price for something they did not search for. **It cannot be fixed in the tier that chooses
+> between ASINs, because both candidates are correct about a product; the row is wrong about
+> which product it is.**
+
+**A merge-only pass cannot see this class at all.** It scans for rows sharing an identifier;
+this is one row holding two. **If item 96 is revived, the pass needs a split direction or it
+will report a clean catalogue over the top of these.**
+
 #### AND THE CORRECTION THAT PRODUCED IT
 
 The 1,661 was only visible after a counting error was fixed. I reported **"2,855 of 16,079
@@ -15449,3 +15473,217 @@ stays there.
 
 **That is the open question when this is built. It is not open now, because the work is not
 scheduled.**
+
+---
+
+### 179. A rule stated in one direction, implemented as a symmetric guard, silently reverses
+
+**Raised:** 17 August 2026, applying the ASIN promotion · **Found before applying, fixed in the
+same change. 4 products corrected.**
+
+#### THE INVERSION LEADS
+
+The rule agreed that morning was **"a barcode match is never overwritten by a name match."** It
+was written to protect the stronger identifier from the weaker one, and it says *nothing about
+the reverse.*
+
+It was implemented as the guard **`only where NULL or already equal`** — which is symmetric.
+
+> **APPLIED MECHANICALLY, A SYMMETRIC GUARD PROTECTS WHATEVER ARRIVED FIRST.** For four
+> products the name match arrived first, earlier that same morning. So the guard had silently
+> acquired the opposite meaning: it was protecting the **name** match **from** the barcode
+> match — the exact inversion of the rule it was written to implement.
+
+#### 81755 IS THE PROOF
+
+| product | barcode ASIN | name ASIN (held) |
+|---|---|---|
+| **81755 COSRX Full Fit Propolis Light Ampoule** | **£16.00** — COSRX Inc. | **£33.99** — Amazon |
+
+**A 2.1× overstatement, live on a comparison site, produced by a guard doing exactly what it
+was written to do.** Nothing malfunctioned. The rule was correct, the implementation was a
+faithful reading of it, and the result was still wrong.
+
+All four corrected to the barcode ASIN: 590, 1776, 7082, 81755.
+
+#### THE GENERAL FORM, WHICH IS THE REASON THIS IS AN ITEM
+
+> **A rule stated in one direction, implemented as a symmetric guard, silently acquires the
+> opposite meaning wherever the order of arrival differs from the order the rule assumed.**
+
+The rule encodes a *ranking*; the guard encodes *precedence by arrival*. They agree only while
+the stronger thing happens to land first. Nothing in the code marks the point where they
+diverge, and no error is raised when they do — the guard reports success either way.
+
+**Where to look for this shape:** any tiered-source rule implemented as a write-if-absent. The
+tier is a property of the *data*; write-if-absent is a property of the *schedule*.
+
+#### THE HUMAN-VERSUS-MACHINE OBJECTION, AND WHY IT RESOLVES
+
+The barcode rows carry `human_verified = false`; the name rows carry `true`. On its face the
+correction overrides a person with a machine.
+
+> **It does not, because a barcode is an identifier and a name match is a judgement. This is
+> evidence overriding an inference, not a machine overriding a person.**
+>
+> **The verifier confirmed that a name looked right. They were never shown a barcode and never
+> asserted that one was wrong.** There is no human finding here to override — the two signals
+> were never put in front of the same person.
+
+---
+
+### 180. The 16% no-offer rate was reported as a property of Amazon and is not
+
+**Raised:** 17 August 2026, re-measuring after the promotion · **Corrects the figure recorded
+that morning.**
+
+#### THE CORRECTION LEADS
+
+The morning read reported **16% of Amazon rows returning no offer**, and it was stated as a
+property of Amazon's catalogue. Item 179 produced one counter-example — 1776's held ASIN was
+one of the no-offer results, and the barcode ASIN for the same product returned £11.89 — which
+suggested the rate was partly **us holding the wrong ASIN**.
+
+**Re-measured across all 269 live ASINs after the promotion, that hypothesis is not supported,
+and the real answer is a different one.**
+
+| cohort | live | no offer | rate |
+|---|---|---|---|
+| **pre-existing, not from the map** | 25 | 4 | **16.0%** |
+| barcode tier (promoted from the map) | 216 | 17 | 7.9% |
+| name tier (promoted from the map) | 28 | 2 | 7.1% |
+
+Overall: **16% → 8.6%.**
+
+#### MY TIER HYPOTHESIS DIED HERE, AND THAT IS PART OF THE ITEM
+
+I predicted that name-tier ASINs would carry the higher no-offer rate — that the 16% was partly
+**us holding the weaker match**. It was a plausible hypothesis and it had a real instance behind
+it: 1776's held name-match ASIN returned no offer while the barcode ASIN for the same product
+returned £11.89.
+
+**It is wrong. Name tier 7.1% against barcode tier 7.9% is no difference at these counts.**
+
+> **ONE CONFIRMING INSTANCE IS NOT A RATE.** 1776 was real, the correction to it was right, and
+> it generalised to nothing. The instance was found while looking for it, in a set of six
+> hand-examined conflicts — which is the population most likely to contain one and least able
+> to measure how common it is.
+
+**The measurement that killed it is the same one that was run to confirm it.** That is the only
+reason the hypothesis did not survive into the record as a finding.
+
+#### AND THE 8.6% MUST NOT BE QUOTED AS AN IMPROVEMENT
+
+> **THE HEADLINE DROP IS DENOMINATOR, NOT REPAIR.** The overall rate halved because the
+> population quadrupled with a healthier tranche, **not** because anything was fixed. The
+> pre-existing cohort still reads 16.0% — unchanged, because nothing in this change touched it.
+
+**No row got better.** 204 rows were added that were already healthier than the 25, and the
+average moved. Quoting "16% → 8.6%" as progress would credit this change with a repair it did
+not perform, and would hide the cohort that still needs one.
+
+**So the 16% was never a property of Amazon. It is a property of those 25 rows** — the original
+hand-assembled ASINs that predate `amazon_asin_map` and have no match state, no barcode and no
+provenance. They are the worst-performing cohort on the site by a factor of two, and they are
+the only cohort this promotion could not improve.
+
+**Open:** re-derive those 25 through the matcher, or retire them. Not scheduled.
+
+---
+
+### 181. No human pass on the supplements barcodes — a decision, not an inheritance
+
+**Raised:** 17 August 2026 · **Decided and applied. 74 products.**
+
+The K-beauty barcode matches went live without a human pass, so precedent existed in both
+directions. **Recorded as a decision with reasoning attached, because inheriting it silently
+would make the next tranche harder to argue about, not easier.**
+
+> **A BARCODE MATCH IS SUFFICIENT ON ITS OWN. A NAME MATCH IS NOT.**
+>
+> The human pass on the name tranche existed because a name match is a *guess* and nothing
+> else could adjudicate it. **There is no equivalent question for a match on a manufacturer
+> identifier** — the human would be asked to confirm that two identical numbers are identical.
+
+**The class a human would genuinely catch is already caught mechanically.** One identifier
+mapping to several catalogue products is split into `ambiguous` (14 rows) and excluded by
+construction. That is the real failure mode, and it is routed away from the promotion rather
+than left for a reviewer to notice.
+
+**Supporting, not load-bearing:** all 75 rows came through the matcher whose zero-stripping was
+itself audited and corrected, which prints a raw-comparison control every run; and the conflict
+check found **zero** conflicts across all 75.
+
+#### THE COUNTER, STATED HONESTLY
+
+A retailer can file a wrong EAN, and correct matching on wrong input is still wrong.
+
+**That risk is real and a human pass does not address it.** The reviewer would be checking the
+*match*, not the *identifier* — they would confirm that our EAN equals Amazon's EAN, which is
+true, and learn nothing about whether the EAN describes the product. **The check that would
+catch it is a different check, and it is not this one.**
+
+---
+
+### 182. 22 supplement-brand products are filed under /skincare/face
+
+**Raised:** 17 August 2026, during the ASIN promotion · **Recorded, deliberately not fixed in
+that change.**
+
+`Solgar CoQ-10 (Coenzyme Q-10) 200 mg Vegetable Capsules` is live on **`/skincare/face`**.
+
+| brand | on skincare/face | correctly on supplements |
+|---|---|---|
+| Solgar | **14** | 12 |
+| Ancient + Brave | 4 | 6 |
+| Vida Glow | 2 | 0 |
+| Vital Proteins | 2 | 2 |
+| **total** | **22** | 52 |
+
+**30% of the supplements tranche is filed as skincare.**
+
+#### TWO SEPARATE HARMS AND THEY POINT OPPOSITE WAYS
+
+1. **A capsule appears on a face-care page** — wrong for the shopper reading that page.
+2. **The supplements pages under-represent their own catalogue** — the category looks thinner
+   than it is, which is the harm that compounds, because it silently shrinks the surface the
+   subcategory work was sizing against.
+
+> **This does not block an ASIN and did not delay one. An ASIN is correct regardless of which
+> page the product sits on** — the two facts are independent, and folding a categorisation fix
+> into a promotion would have put an unreviewed 22-row rewrite inside a reviewed 204-row one.
+
+**Note the overlap with item 170's sizing:** any count of the supplements catalogue taken from
+`top_category` is short by at least these 22.
+
+---
+
+### 183. Seven products carry two barcode matches, and the arbitrary pick is not a choice
+
+**Raised:** 17 August 2026, immediately before applying · **Held. Excluded from the promotion.**
+
+`DISTINCT ON (product_id)` would have picked one of two barcode-matched ASINs **arbitrarily**
+for seven products — the same failure the Vida Glow hold was placed to prevent, arriving from
+the opposite direction and very nearly applied without being seen.
+
+**Two classes, and they need different answers:**
+
+**A — same EAN, two Amazon listings** (1787, 6601, 82251, 87918). One identifier, two listings.
+Genuinely the same product; resolvable on live offer or buy-box, but *that rule does not exist
+yet* and inventing it inside an apply step is how it would never get reviewed.
+
+**B — different EANs on one catalogue row** (583, 596, 82517). **These are not duplicates, and
+they are not ASIN work at all.**
+
+**Recorded against item 96, in item 172.** Two different products are conflated into one
+catalogue row, so the defect is **upstream of the identifier and no ASIN choice resolves it** —
+whichever is picked, the row is wrong for the other product. It cannot be answered in the tier
+that chooses between ASINs.
+
+> **Class B is the inverse of the Vida Glow question.** Vida Glow is one identifier claimed by
+> several catalogue products; this is several identifiers claimed by one. **Both are the
+> catalogue disagreeing with itself about what a product is, and neither is an Amazon problem.**
+
+**What this leaves for the ASIN work: class A only** — four products where one identifier has
+two Amazon listings. That needs a stated rule (live offer, or buy-box) and it does not exist
+yet. Class B leaves with item 96 and does not come back.
