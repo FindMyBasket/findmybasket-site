@@ -13364,10 +13364,21 @@ the same moment:
 | brands | 297 | 297 | **fresh** |
 | **facet chips** | **Moisturiser** | **(none)** | **STALE** |
 
-> **THE DATA CACHE IS KEYED PER FETCH URL, SO A SINGLE PAGE IS FRESH AND STALE AT THE SAME
-> TIME.** The count query and the facet query are different URLs with independent TTLs. **No
-> number on a page can act as a freshness token for the page**, because the number you check
-> and the claim you care about are cached separately.
+> **NO NUMBER ON A PAGE CAN BE A FRESHNESS TOKEN FOR THE PAGE.**
+>
+> The Data Cache is keyed **per fetch URL**, so a single page is fresh and stale at the same
+> time. The count query and the facet query are different URLs with independent TTLs — and the
+> number you check to establish freshness is cached separately from the claim you care about.
+>
+> **This kills the obvious workaround.** Having learned the header is unreliable, the natural
+> next move is to find something on the page that must be current — a product count, a
+> timestamp, a row you just changed — and treat it as proof the render is fresh. **It proves
+> only that one fetch is fresh.** Here the count was right to the row while the facet beside
+> it was an hour stale.
+
+**The general form: a partially-cached render has no page-level freshness state to read.**
+Freshness is a property of each query, not of the page, and nothing in the response exposes
+it per query.
 
 #### WHAT A CORRECT FRESHNESS CHECK LOOKS LIKE
 
@@ -13439,3 +13450,89 @@ been silently answering a narrower question than the one being asked.
 > because it produces confident verification rather than an obvious gap. This is item 132's
 > shape — proximity conferring the appearance of a constraint — applied to a response header:
 > it sits next to the freshness question and is not an answer to it.
+
+
+---
+
+### 155. A quality metric improved because the bad population was deleted
+
+**Raised:** 17 August 2026, Robbie asking what moved `no_in_stock_offer_count` 13,498 → 11,755
+before it became a figure someone reasons from · **Answered and quantified.** · **It is not an
+improvement.**
+
+#### THE MOVEMENT IS NOT WHERE THE TWO POINTS PUT IT
+
+The series has two rows a week apart. **Three catalogue events sit between them**, and the
+week-over-week delta merges all three:
+
+| when | event | `products_active` | `no_in_stock_offer` |
+|---|---|---:|---:|
+| 10 Aug *(series row)* | — | 98,404 | 13,498 |
+| 15 Aug | Boots supplements activated | ↑ | |
+| 16 Aug *(read, boundary row 36)* | — | **100,207** | **13,481** |
+| 16 Aug | **Branded Beauty + Atelier departures** | ↓ | |
+| 17 Aug *(series row)* | — | 98,380 | **11,755** |
+
+> **THE 13% DROP HAPPENED IN ONE DAY, NOT OVER A WEEK.** Read as a single movement, 10 → 17
+> shows a −24 denominator and a −1,743 numerator, which looks like 1,743 products gaining
+> offers against a flat catalogue. **Nothing of the sort happened.** The catalogue rose 1,803
+> and then fell 1,827, and the two nearly cancel.
+
+**This is item 123 arriving in the data**: a weekly upsert cannot record a mid-week change, so
+a week containing a rise and a fall reports their difference and hides both.
+
+#### WHAT ACTUALLY MOVED IT, MEASURED
+
+| | |
+|---|---:|
+| products **sole-supplied** by retailers 6 and 29 | **1,747** |
+| of those, with **every** row out of stock | **1,720** |
+| observed fall in `no_in_stock_offer_count` (16 → 17 Aug) | **1,726** |
+
+**1,720 against 1,726.** The mechanism is exact to within six rows.
+
+**How it works.** Branded Beauty's feed froze on 31 July; absence handling marked its rows out
+of stock. Those products kept a price row at an **active** retailer, so they stayed in
+`products_active` — which requires an active retailer and **ignores `in_stock` entirely** —
+and they counted in `no_in_stock_offer_count`. Flipping `active = false` removed them from
+`products_active` altogether, so they left **the numerator and the denominator together**.
+
+#### THE READING, AND IT IS THE OPPOSITE OF WHAT THE NUMBER SUGGESTS
+
+> **NOTHING WAS RESTOCKED. THE WORST-PERFORMING 1,720 PRODUCTS WERE DELETED FROM THE
+> MEASUREMENT.** The rate fell 13.72% → 11.95% because a population that was 100% failing left
+> the denominator. **The catalogue did not get better; the part of it that was bad stopped
+> being counted.**
+
+This is the shape boundary row 33 already named for `sole_supplier_share_pct` — *"arithmetic
+(corroboration is removed along with the claims) and NOT a regression"* — running in the
+flattering direction. **A metric that moves the good way when a retailer leaves deserves the
+same scepticism as one that moves the bad way**, and gets less, because nobody investigates
+good news.
+
+> **A RATE CANNOT DISTINGUISH "THE PROBLEM WAS FIXED" FROM "THE PROBLEM WAS REMOVED FROM THE
+> DENOMINATOR".** Only the paired counts can, which is why every ratio in this table stores
+> its own denominator — and here the denominator moved by −24 net while concealing ±1,800 in
+> both directions.
+
+#### AND THE PREDICTION THAT WAS ALREADY WRONG ONCE
+
+Boundary row 36 predicted `no_in_stock_offer_count` would **rise** with a larger catalogue,
+recorded the miss honestly when it fell by 17, and explained it — *"Boots supplements arrived
+overwhelmingly in stock."*
+
+**That explanation was right and it is not this week's cause.** The 17 and the 1,726 are
+different events with different mechanisms, one week apart, in the same column. **Carrying the
+first explanation forward to the second movement would have been reasonable and wrong** — and
+it is what a reader arriving at the two-point series would do, because row 36 is the only
+annotation in view.
+
+#### WHAT THIS MAKES NECESSARY
+
+**The departures have no boundary row.** Row 36 warned about exactly this on 15 August: *"the
+first step this series ever shows would be caused by a change the boundary table does not know
+about."* That was written about Boots supplements. **The step the series actually shows first
+is the departures, and they are the change the table does not know about.**
+
+Written now, with `metrics_affected` naming what moved — see the boundary row added under this
+item. **The step is visible today; the annotation has to exist before anyone reads the chart.**
