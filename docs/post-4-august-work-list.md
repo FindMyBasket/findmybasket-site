@@ -13350,19 +13350,23 @@ unrecorded route.
 | 124 | the field declaration on the option type |
 | 537 | `deliveryCost: null, deliveryUnknown: true` |
 
-**Nothing reads it.** Not the sort, not the analytics.
+**Nothing reads it** — not the sort, not the analytics, and **not the label that appears to be
+its consequence.**
 
-**CORRECTION, 17 August, same day: "not the UI" was wrong.** `RoutineBuilder:1413` renders
-*"Delivery not known"* in the option's delivery row — keyed off **`deliveryCost === null`**, not
-off `deliveryUnknown`. The user-visible honesty exists; it arrives by a different field.
+`RoutineBuilder:1413` does render *"Delivery not known"* in the option's delivery row. **It is
+keyed off `deliveryCost === null`, not off `deliveryUnknown`.** The user-visible honesty exists
+and arrives by a different field entirely.
 
-> **THAT MAKES THIS A DUPLICATED INTENT WITH ONE WORKING COPY AND ONE INERT ONE**, which is a
-> different and more durable trap than a missing label. The flag survived review because it
-> looked consequential **and because the behaviour it names was in fact happening** — by another
-> route. Anyone checking "do we mark unknown delivery?" finds the string, sees the flag, and
-> both answers agree. **Neither check reveals that the flag is not what produced the string.**
+> **A DUPLICATED INTENT WITH ONE WORKING COPY AND ONE INERT ONE IS MORE DURABLE THAN A MISSING
+> LABEL.** A missing label is found the moment anyone looks at the page. This survives looking:
+> **an audit of "do we mark unknown delivery?" finds two yeses** — the rendered string and the
+> flag being set — **they agree, and neither reveals which one produced the string.**
+>
+> The flag survived review because it looked consequential **and because the behaviour it names
+> was in fact happening.** Both halves of the check pass. The thing that is false is the
+> relationship between them, and nothing tests a relationship.
 
-The consequence stands unchanged: the option **wins the comparison and then tells you it does
+**And the consequence, stated plainly: the option wins the comparison and then tells you it does
 not know what delivery costs.** The label describes the input. Nothing says the RANKING used a
 number the same row has just admitted is unknown.
 
