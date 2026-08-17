@@ -14012,3 +14012,104 @@ category rather than for anything measured about it.
 **And it was caught by Robbie asking why a brand he expected to differ had not been tested** —
 not by any check, and not by the tranche design that was explicitly built to avoid inferring
 from one brand.
+
+
+---
+
+### 166. The ambiguous rows are a measurement of our duplicates, not a matching failure
+
+**Raised:** 17 August 2026, loading tranche 2 · **Third piece of work to arrive at item 96 from
+its own direction.**
+
+#### VIDA GLOW: FIVE AMBIGUOUS OF SEVEN
+
+| brand | pairs | matched | **ambiguous** |
+|---|---:|---:|---:|
+| **Vida Glow** | 7 | 2 | **5** |
+| every other brand combined | 74 | 73 | 1 |
+
+**Amazon returned one identifier per Vida Glow ASIN. Ours hit two or three catalogue products
+each.** The ambiguity is entirely on our side.
+
+> **AN `ambiguous` ROW IS NOT A FAILED MATCH. IT IS A SUCCESSFUL MATCH ONTO A CATALOGUE THAT
+> HOLDS THE SAME PRODUCT MORE THAN ONCE.** The barcode tier did exactly what it should; the
+> thing it pointed at was duplicated. **Counting these as matching failures would file our
+> defect under Amazon's name.**
+
+**The stored `product_id` is a placeholder and is labelled as one.** It points at the lowest id
+of the colliding set, and each row's `notes` records how many products share the identifier.
+**That is a marker for the resolution, not a choice between the duplicates** — and it must not
+be promoted, because promoting it would pick a winner by row order.
+
+> **VIDA GLOW NEEDS THE DUPLICATE RESOLVED BEFORE THE ASIN IS CHOSEN.** Choosing an ASIN first
+> means attaching a hard Amazon link to whichever of two or three duplicate rows happened to
+> sort first, and then merging underneath it.
+
+#### THIRD ARRIVAL AT ITEM 96, EACH FROM A DIFFERENT DIRECTION
+
+| | work | how it surfaced |
+|---|---|---|
+| 1 | **tranche 1 harvest**, 14 Aug | 8 ambiguous ASINs, including **one barcode on four Beauty of Joseon products** |
+| 2 | **tier-1 index restriction**, 12 Aug | 477 barcodes went ambiguous → unambiguous when retired retailers were removed, and **began linking** |
+| 3 | **tranche 2 harvest**, 17 Aug | 6 ambiguous, **5 of them one brand** |
+
+> **ITEM 96 IS NO LONGER A STANDING OBSERVATION. IT IS MOTIVATED BY THREE SEPARATE PIECES OF
+> WORK THAT DID NOT SET OUT TO FIND IT**, and in two of the three it is the thing blocking the
+> next step rather than a note beside it.
+
+**And the Amazon work is a better detector of it than anything pointed at it directly**, because
+an external identifier meets our catalogue with no knowledge of how we store it: one ASIN, one
+barcode, N of our rows. **The duplicate has nowhere to hide in that join.**
+
+#### WHERE THIS IS RECORDED
+
+Item 96 is the standing item. This is its third motivating instance and the first where a
+specific brand is blocked on it — recorded here rather than folded into 96, so that the
+*pattern of independent arrivals* stays visible. **Three unrelated routes to one defect is a
+different argument from one route measured three times.**
+
+---
+
+### 167. A regex that split SQL, and 509 that should have been 514
+
+**Raised:** 17 August 2026, chunking the tranche-2 load · **The day's pattern, in my own
+tooling.**
+
+Generating the load in chunks, I split a generated SQL file back into rows with a regex:
+
+```python
+rows = re.findall(r"\((?:[^()]|\([^()]*\))*\)(?=,\n|\Z)", body)
+```
+
+**It returned 509 rows against 514 ASINs. Five dropped silently** — rows whose values contained
+parenthesis nesting the expression did not model.
+
+> **509 IS A PLAUSIBLE NUMBER.** It is close, it is in the right order of magnitude, and it
+> appeared alongside six neat chunk files of roughly equal size. **Nothing about the output
+> looked wrong.**
+
+**Caught only by comparing the parsed count against the source count** — `509 != 514` — which
+was in the script because the day had already produced items 146, 148, 155 and 157, all
+instances of the same class.
+
+**The fix was not a better regex.** It was to stop re-parsing generated text and build the
+chunks from the data structure that produced it, then assert the total.
+
+> **A PLAUSIBLE NUMBER IS THE FAILURE MODE AND THE COMPARISON IS THE ONLY DEFENCE.** Text that
+> a program generated and another program re-parses has a defect surface that exists for no
+> reason: the structure was in hand and was thrown away, and re-deriving it is where the loss
+> happens.
+
+**Fifth instance of the class today**, and the first in tooling I wrote during the same session
+that recorded the other four.
+
+#### AND THE TRANSFER MECHANISM, WHICH IS THE REASON THE CHUNKING EXISTED
+
+The 433 non-pair rows could not be inserted with the anon key and would have cost roughly 150KB
+of hand-transferred SQL. **They were loaded by a single-purpose edge function** carrying the
+rows as data and using the runtime's `SUPABASE_SERVICE_ROLE_KEY` — the same credential path
+every importer already uses — then **deleted, and its absence verified (404)**.
+
+**Item 97's principle is unaffected:** the harvest is re-derivable measurement. The rows sat in
+a throwaway function; **the derivation lives in `scripts/amazon-asin-map.mjs` and
+`scripts/amazon-match-barcodes.py`**, which is where a re-run starts.
