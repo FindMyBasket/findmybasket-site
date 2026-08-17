@@ -13921,3 +13921,94 @@ And the narrower one, which is the version that would have prevented all of this
 > the defect. `scripts/amazon-match-barcodes.py` now does it in `gtin_key()` and prints a
 > raw-comparison control on every run, so the wrong number is visible beside the right one
 > rather than reachable in its place.
+
+
+---
+
+### 165. Five brands dropped on one brand's number, and the grouping was wrong
+
+**Raised:** 17 August 2026, Robbie noting that Optimum Nutrition was dropped on MyProtein's
+result rather than its own · **All twelve brands now harvested individually.**
+
+#### THE INFERENCE THAT WAS WRONG
+
+MyProtein returned **1.0%** and I recommended dropping **all six sports brands**. That was an
+inference from **one brand**, generalised on a label — *"sports"* — that nobody had shown was
+the operative property.
+
+**And a measurement pointing the other way was already in hand and set aside.** Robbie's hand
+check found **6 of 6 Optimum Nutrition products on Amazon against 3 of 5 MyProtein**. I had
+correctly noted that hand check and harvest measure opposite directions (item 162) — **and then
+used the harvest's verdict on one brand to overrule the hand check's signal on another.**
+
+> **"THEY MEASURE DIFFERENT THINGS" IS A REASON NOT TO EQUATE THEM. IT IS NOT A REASON TO
+> DISCARD ONE.** The hand check was the only evidence that existed about Optimum Nutrition, and
+> it disagreed with the recommendation.
+
+#### ALL TWELVE, MEASURED INDIVIDUALLY
+
+| brand | kind | store ASINs | harvested | matched | **rate** | ours | **covered** |
+|---|---|---|---:|---:|---:|---:|---:|
+| **MyProtein** | own-brand | **≥100, capped** | 100 | 1 | **1.0%** | 37 | **3%** |
+| Applied Nutrition | own-brand | **≥100, capped** | 100 | 4 | 4.0% | 15 | 27% |
+| **Optimum Nutrition** | third-party | **82, exhausted** | 82 | 10 | **12.2%** | 28 | **36%** |
+| Nuzest | third-party | 19 | 19 | 5 | 26.3% | 22 | 23% |
+| Liquid IV | third-party | 20 | 20 | 2 | 10.0% | 23 | 9% |
+| Revival | third-party | 9 | 9 | 1 | 11.1% | 18 | 6% |
+| Gold Collagen | third-party | 22 | 22 | 8 | 36.4% | 17 | **47%** |
+| Ancient + Brave | third-party | 25 | 25 | 10 | 40.0% | 20 | **50%** |
+| Vida Glow | third-party | 13 | 13 | 7 | 53.8% | 53 | 28% |
+| Vital Proteins | third-party | 12 | 12 | 4 | 33.3% | 13 | 31% |
+| Solgar | third-party | **≥100, capped** | 100 | 28 | 28.0% | 30 | **43%** |
+| Revive Collagen | third-party | 12 | 12 | 1 | 8.3% | 14 | 7% |
+
+**Optimum Nutrition is 12× MyProtein on both metrics** — 12.2% against 1.0%, 36% coverage
+against 3%. **Materially better, so the grouping is wrong.**
+
+#### THE PROPERTY DOING THE WORK IS NOT "SPORTS"
+
+**The two brands that hit the enumeration cap in the sports set are the two own-brands**:
+MyProtein and Applied Nutrition, both ≥100 ASINs and both under 5% match. **Every third-party
+sports brand exhausted its store below 25 ASINs** and matched between 10% and 26%.
+
+> **AN OWN-BRAND CONTROLS ITS OWN SKU MATRIX AND REGISTERS A BARCODE PER FLAVOUR PER SIZE. A
+> THIRD-PARTY BRAND SELLS THROUGH RETAILERS AND CUTS FEWER SKUs**, so Boots and Amazon stock
+> nearer the same things. **Own-brand versus third-party predicts these results; "sports" does
+> not.**
+
+**Solgar is the counter-example that confirms it.** Third-party, ≥100 ASINs — a store as large
+as MyProtein's — and **28% matched, 43% covered**. Store size alone does not depress the match
+rate. **How finely the range is cut does.**
+
+#### WHAT THIS CHANGES
+
+**Harvestable on coverage of our own catalogue** — the commercially relevant metric:
+
+| keep | coverage |
+|---|---:|
+| Ancient + Brave | 50% |
+| Gold Collagen | 47% |
+| Solgar | 43% |
+| **Optimum Nutrition** | **36%** |
+| Vital Proteins | 31% |
+| Vida Glow | 28% |
+| Applied Nutrition | 27% |
+| Nuzest | 23% |
+
+**Marginal, decide per brand:** Liquid IV 9%, Revive Collagen 7%, **MyProtein 3%**.
+
+**Only MyProtein is clearly not worth harvesting** — the brand the recommendation to drop five
+others was built on.
+
+#### THE SHAPE, WHICH IS TODAY'S FOURTH INSTANCE
+
+Item 148 established that a name is not evidence a node contains a class. **Here a label —
+"sports" — was treated as a causal grouping**, and a brand was dropped for belonging to a
+category rather than for anything measured about it.
+
+> **THE COST OF THE WRONG GENERALISATION WAS 31 CALLS AND ONE MESSAGE.** The cost of acting on
+> it would have been six brands, including four of the eight now worth harvesting.
+
+**And it was caught by Robbie asking why a brand he expected to differ had not been tested** —
+not by any check, and not by the tranche design that was explicitly built to avoid inferring
+from one brand.
