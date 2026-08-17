@@ -2589,6 +2589,21 @@ run are indistinguishable after the fact, because both end with an empty table a
 
 ---
 
+### 42. ALLOCATED AND NEVER WRITTEN
+
+**Stub added 17 August 2026.** This number was allocated and abandoned. **It has never existed
+in git history on any branch** — verified with `git log -S "### 42."` over the full history and
+against every remote branch. Items 41 and 43 are present and unrelated, so nothing was
+renumbered around it.
+
+**Kept as a stub rather than closed by renumbering**, because this list is cited by number in
+migrations, commit messages, code comments and other items. **Renumbering to remove a gap would
+invalidate every citation above it, to close a hole that costs nothing.**
+
+Detected by `scripts/check-worklist-contiguity.sh` on its first run. See item 171.
+
+---
+
 ### 43. We emit GA4 parameters nothing checks are registered — three found in two days
 
 **Raised:** 6 August 2026 · **REPORT ONLY**, and the report is below. **A class, not three
@@ -10697,6 +10712,21 @@ retailer's taxonomy.**
 
 ---
 
+### 127. ALLOCATED AND NEVER WRITTEN
+
+**Stub added 17 August 2026.** Reserved on 16 August for Robbie's own item while it was in
+progress; items 128 and 129 were renumbered around it to avoid a collision. **The item was never
+written and the number has never existed in git history on any branch.**
+
+**The reservation worked and the follow-through did not** — the ordinary way a number goes
+missing. It is held deliberately, the reason expires, and nothing records that the hold was
+released.
+
+Kept as a stub rather than closed by renumbering, for the reason in item 42. Detected by
+`scripts/check-worklist-contiguity.sh`. See item 171.
+
+---
+
 ### 128. Hydration is sports, and the name rule that files it is bounded by the taxonomy
 
 **Decided by Robbie, 16 August 2026.** Resolves the open question in item 126.
@@ -14604,3 +14634,515 @@ a throwaway function; **the derivation lives in `scripts/amazon-asin-map.mjs` an
 
 ---
 
+### 168. Deploy, invoke, delete, verify 404 — the shape for a bulk load the anon key cannot do
+
+**Raised:** 17 August 2026, loading 433 rows into `amazon_asin_map` · **A pattern, recorded
+because it will recur.**
+
+#### THE PROBLEM IT SOLVES
+
+`amazon_asin_map` refuses INSERT to the anon key, and the only credentialled paths are the MCP
+SQL tool — which meant hand-transferring roughly **150KB of literal SQL** — or a GitHub Actions
+runner, whose feed workflow is deliberately read-only and should not be repurposed.
+
+**Edge functions receive `SUPABASE_SERVICE_ROLE_KEY` from the runtime.** That is the same
+credential path every importer already uses, so no new secret is created, copied or stored.
+
+#### THE SHAPE
+
+| step | |
+|---|---|
+| 1 | **generate** the function with the rows baked in as data, by script — never read by hand |
+| 2 | **deploy** it under a clearly temporary name |
+| 3 | **invoke** once, and read the returned counts (`offered`, `attempted`, `errors`) |
+| 4 | **delete** it |
+| 5 | **verify the deletion**, by invoking again and asserting **404** |
+
+**Step 5 is not ceremony.** A deleted function and a function you believe you deleted are
+indistinguishable without it, and this one holds a service-role client and a bulk INSERT. **The
+404 is the evidence.**
+
+#### WHY CARRYING DATA IN IT IS LEGITIMATE
+
+> **THE FUNCTION WAS DISPOSABLE BECAUSE THE DERIVATION WAS NOT IN IT.** The rows are output.
+> `scripts/amazon-asin-map.mjs` produces the harvest and `scripts/amazon-match-barcodes.py`
+> assigns the match states — **both committed, both re-runnable** — so deleting the function
+> destroys nothing that cannot be regenerated.
+
+This is item 97's rule from the other side. It says harvest output is **re-derivable
+measurement** and must not be shipped as DDL, because that freezes a dated snapshot in the
+schema. **A throwaway function is the opposite of freezing it**: the data exists for one
+invocation and the derivation stays where it belongs.
+
+**The test for whether this pattern is being abused:** if the function contains any *logic* that
+is not also in a committed script, deleting it destroys work and it should never have been
+temporary.
+
+---
+
+### 169. The join generalises, and it was already generalised on the day it was found
+
+**Raised:** 17 August 2026, Robbie asking whether the Amazon join shape could be run against the
+catalogue without Amazon · **It can. It already is. Weekly.** · **Corrects a claim I made one
+message earlier.**
+
+#### THE CLAIM I MADE, AND WHY IT WAS WRONG
+
+I wrote that *"the Amazon work is a better detector of our duplicates than anything aimed at it
+directly"*, and reasoned that an external identifier meets our catalogue with no knowledge of
+how we store it — one ASIN, one barcode, N of our rows.
+
+**The reasoning is sound and the conclusion is out of date.** The join needs no external
+identifier at all:
+
+```sql
+SELECT rp.ean_normalised AS code, count(DISTINCT rp.product_id) AS n_prod
+  FROM retailer_prices_live rp
+  JOIN products p ON p.id = rp.product_id AND p.merged_into IS NULL
+ WHERE rp.ean_normalised IS NOT NULL
+ GROUP BY rp.ean_normalised
+```
+
+**That is `ambiguous_ean_groups` in `fmb_quality_snapshot_write`, written on 14 August, in the
+weekly series since `week_start` 2026-08-10.** One barcode, N products, grouped — Amazon's role
+was only ever to be the thing that made someone group by barcode.
+
+> **THE AMAZON WORK FOUND THE DEFECT AND THE METHOD ON THE SAME DAY, AND THE METHOD WAS MADE
+> RETAILER-INDEPENDENT IMMEDIATELY.** What it has done since is not detect anything new. It has
+> made the defect **block a named task for a named brand**, which is a different and more
+> useful thing than measuring it again.
+
+**A metric nobody is stuck behind gets read. A defect blocking Vida Glow gets fixed.**
+
+#### AND THE SIZING ITEM 96 DID NOT HAVE
+
+Item 96 counted **barcodes**. Run today, counting **products**:
+
+| | 14 Aug (item 96) | **17 Aug** |
+|---|---:|---:|
+| ambiguous barcode groups | 8,606 | **8,623** |
+| same-brand — merge candidates | 7,907 | **7,709** |
+| cross-brand — normalisation artefacts | 699 | **914** |
+| **products inside same-brand groups** | *not measured* | **16,132** |
+| **surplus rows if each collapsed to one** | *not measured* | **8,423** |
+| same-brand AND same-category | *not measured* | 7,032 of 7,709 |
+| largest single group | *not measured* | **6 products** |
+
+> **8,423 SURPLUS PRODUCT ROWS — ABOUT 8% OF THE ACTIVE CATALOGUE.** Item 96 said "8,606
+> barcodes", which sounds like a barcode problem. **It is 16,132 product rows that should be
+> 7,709**, and that is a catalogue-size statement rather than an identifier one.
+
+**The split is stable across three days** — 91.9% same-brand then, 89.4% now — so the population
+is real rather than an artefact of one day's data. The 198-group fall in same-brand against a
+215-group rise in cross-brand is worth a look and is **not** explained here; the two departures
+removed 1,880 products in that window and could move either.
+
+#### WHAT THIS CHANGES ABOUT THE METHOD CLAIM
+
+**The method is reusable and is already reused.** What does not generalise is the *pressure*:
+the Amazon join produced six ambiguous rows against a weekly metric of 8,623, and the six are
+the ones anybody has actually looked at.
+
+> **A DETECTOR THAT MEASURES 8,623 AND A DETECTOR THAT BLOCKS ONE BRAND ARE THE SAME QUERY WITH
+> DIFFERENT CONSEQUENCES.** Item 131's rule was that a detector nothing reads is worse than
+> none. **This is the next rule along: a detector everything reads and nothing acts on is not
+> much better**, and what moved this one was a task that could not proceed.
+
+
+---
+
+### 170. Item 96 is smaller than it was sized, and 214 parents are the blocker
+
+**Raised:** 17 August 2026, scoping the shade-variant collision before item 96 can be scoped ·
+**Corrects two figures I reported one message earlier.** · **No option chosen.**
+
+#### FIRST CORRECTION: 2,855 IS NOT WHAT I SAID IT WAS
+
+I reported *"2,855 of the 16,079 in-scope products are the parent of at least one shade variant
+— 18%."*
+
+**Wrong.** The query counted **child rows**, not parent products:
+
+```sql
+SELECT count(*) FROM ids JOIN products p2 ON p2.parent_product_id = ids.id
+```
+
+That returns one row per child. The truth:
+
+| | |
+|---|---:|
+| in-scope products that are **parents** | **214** — 1.3%, not 18% |
+| **their children** | 2,855 |
+| in-scope products that are themselves **children** | **2,201** |
+
+> **THE JOIN COUNTED THE OTHER SIDE OF ITSELF AND I READ THE TOTAL AS THOUGH IT WERE THE
+> DRIVING SIDE.** Same class as the day's other four: a number that is correct about something
+> and was reported as being about something else. **Fifth instance, and this one had a `count(*)`
+> over a join in plain sight.**
+
+#### SECOND CORRECTION, AND IT SHRINKS ITEM 96
+
+Scope was built from `retailer_prices_live JOIN products … merged_into IS NULL`, which **does
+not exclude shade-variant children** — and children are invisible to `products_active` by
+design. So the population I sized includes rows the site never shows.
+
+| | groups | surplus rows |
+|---|---:|---:|
+| **as I reported it** | 7,709 | **8,423** |
+| **counting only site-visible products** | **6,048** | **6,660** |
+| groups that are *purely* shade structure | **1,661** | — |
+
+> **1,661 OF THE 7,709 SAME-BRAND GROUPS ARE NOT DUPLICATES AT ALL. They are one visible
+> product and its shade variants, correctly modelled**, sharing a barcode because a shade
+> variant legitimately does.
+
+**The merge target is 6,048 groups and 6,660 surplus rows — about 6.6% of the active catalogue,
+not 8%.** Item 96 is real and it is **21% smaller** than the sizing I gave, and the difference
+is a modelling feature being counted as a defect.
+
+**The sizing correction is worth more than the sizing.** A merge pass aimed at 7,709 groups
+would have walked into 1,661 groups where the right answer is *do nothing*, and "do nothing" is
+the hardest outcome to get right in a batch that exists to change things.
+
+#### THE DESIGN QUESTION: WHAT HAPPENS TO SHADE CHILDREN WHEN A PARENT MERGES
+
+**214 parents, 2,855 children.** `fmb_soft_merge_group` never touches `parent_product_id`, and
+its orphan check reads `retailer_prices` only — so **children are invisible to it in both
+directions**: it will not move them and it will not complain about them.
+
+**Three options, none chosen.**
+
+**A — REPOINT: `UPDATE products SET parent_product_id = keeper WHERE parent_product_id = ANY(removed)`.**
+*Cost:* assumes the keeper is a valid parent for the removed parent's children — i.e. that the
+two parents really are the same product, which is the premise of the merge but is decided per
+group by whoever picks the keeper. **A wrong keeper choice silently re-parents up to 2,855
+shade variants**, and shade children are invisible in `products_active`, so nothing on the site
+would look different afterwards. **The cheapest to implement and the hardest to notice when
+wrong.**
+
+**B — BLOCK: refuse the merge if either side has children.**
+*Cost:* removes 214 parents from the pass, and with them any group they appear in. **Safe, and
+it defers the hardest 214 indefinitely** — they are parents precisely because they are
+well-populated products, so they are likely to be the ones worth merging. Also needs a decision
+about the *rest* of a group when one member is blocked: merge the others, or skip the group?
+
+**C — PROMOTE THEN MERGE: detach children to standalone products first, merge the parents, then
+re-parent.**
+*Cost:* three steps where one failed leaves the catalogue in a state no view models, and 2,855
+products briefly visible in `products_active` that were deliberately hidden. **Highest blast
+radius, and the only one that does not assume the two parents are equivalent.**
+
+**A fourth possibility, not a full option:** treat parents as keepers by rule rather than by
+choice — if exactly one member of a group has children, it keeps. That does not answer what
+happens when **two** members have children, and it is not known how often that occurs.
+
+> **EVERYTHING ELSE ABOUT A 7,709-GROUP PASS — BATCHING, KEEPER RULES, REVERSAL — IS DOWNSTREAM
+> OF THIS.** All three options are implementable; none is derivable from the data, because the
+> question is what a shade variant *means* when its parent turns out to be a duplicate.
+
+#### AND THE 53 THAT SPAN GROUPS
+
+16,132 was the sum over groups; **16,079 is the distinct product count.** The 53 difference is
+products appearing in more than one barcode group — **the ones where a keeper choice in one
+group constrains another**, and the only ones where batch order changes the outcome. **Found
+before a batch rather than during it**, which is the point of counting distinctly.
+
+#### ITEM 104'S HARDCODED ZERO IS CURRENTLY TRUE
+
+`fmb_soft_merge_group` writes a literal `0` into `product_merge_log.saved_routines_updated`.
+Measured: **8 active saved routines, 27 product references, 0 of them inside the merge scope.**
+
+> **THE LOG WOULD HAVE SAID 0 EITHER WAY.** The check does not exist and today it would have
+> agreed with reality. **That is item 104 exactly** — a hardcoded value that reads as a
+> measurement — and the fact that it is currently correct is the reason it has survived, not a
+> reason to keep it.
+
+
+---
+
+### 171. A gap in a numbered list is invisible unless someone lists the headings
+
+**Raised:** 17 August 2026, resolving a day-old merge conflict · **A check was cheap and it
+found two gaps nobody knew about.**
+
+#### THE INSTANCE
+
+Items **153 to 157 were out of `main` for a full day.** They were written on a branch whose PR
+sat open while four later PRs were cut from a `main` that never received them.
+
+**The sequence on `main` read 152, 158.** Nothing collided, because later items were allocated
+from a working copy that had them. Nothing looked wrong, because **a diff shows what changed
+rather than what is absent** — every commit in between was correct and complete on its own
+terms.
+
+> **A GAP IN A NUMBERED LIST HAS NO LINE TO FIND.** Reviewing the diff of any one PR, or the
+> file, or the tail of it, shows nothing. **The only view that reveals it is the whole sequence
+> of headings, which nobody looks at because the file is 14,000 lines long.**
+
+#### SAME SHAPE AS FRIDAY'S HOLLOW NUMBER, AND HARDER
+
+Friday's instance was a number **claimed and empty**. This one is a number **simply not there**.
+
+| | hollow number | missing number |
+|---|---|---|
+| what exists | a heading with nothing under it | **nothing** |
+| greppable | **yes** | **no** |
+| found by | reading the item | **only by listing all headings** |
+
+**A duplicate or hollow item is at least present.** An absence has no artefact, which is why it
+survived a day of continuous work on the same file.
+
+#### THE CHECK IS CHEAP AND CATCHES BOTH
+
+`scripts/check-worklist-contiguity.sh` — twenty lines. It extracts `^### N.`, asserts
+uniqueness and contiguity, and reports duplicates and missing numbers separately because they
+have different causes: **a duplicate means two branches allocated in parallel, a gap means a
+branch never landed.**
+
+#### IT FOUND TWO MORE ON ITS FIRST RUN
+
+| | |
+|---|---|
+| **42** | never written |
+| **127** | never written |
+
+**Neither appears anywhere in git history, on any branch** — checked with `git log -S` and
+against every remote branch. They were **allocated and abandoned**, not lost: 41 and 43 exist,
+125, 126 and 128 exist.
+
+> **TWO NUMBERS HAVE BEEN MISSING FOR AN UNKNOWN LENGTH OF TIME AND NOBODY NOTICED**, in a list
+> that is read constantly and cited by number. **That is the argument for the check** — not the
+> day-long gap it was written for, which was going to be found by the merge anyway.
+
+**127 is Robbie's**, held back while his own item was in progress and the number reserved
+around it; 128 and 129 were renumbered to avoid it. **Whether it should be filled or the gap
+closed is his call**, and the check will keep reporting both until one or the other happens.
+
+#### WHAT THIS DOES NOT DO
+
+It asserts **numbering**, not content. A hollow item with a real heading passes. That is the
+Friday failure and it needs a different check — **non-empty body under each heading** — which
+is equally cheap and not written here, because one check that half-covers two failures is worse
+than one that fully covers one.
+
+
+---
+
+### 172. Item 96 parked, and the finding to carry if it is revived
+
+**Raised:** 17 August 2026 · **Robbie's decision: parked.** · **An unscoped project, not a
+task.**
+
+#### PARKED, AND WHY
+
+Item 96 has a size, three motivating instances and three costed design options. **It does not
+have a decision on what a shade child means when its parent turns out to be a duplicate**, and
+everything else about a 6,048-group pass is downstream of that.
+
+> **IT IS AN UNSCOPED PROJECT RATHER THAN A TASK**, and the last several turns ran on questions
+> the work raised rather than on priority. **Recording the options is enough.**
+
+#### THE FINDING TO CARRY IF IT IS REVIVED
+
+| | groups | |
+|---|---:|---|
+| same-brand ambiguous groups | 7,709 | |
+| **shade structure, not duplicates** | **1,661** | **21.5%** |
+| genuine merge candidates | 6,048 | |
+
+**1,661 groups are one visible product and its shade variants**, sharing a barcode because a
+shade variant legitimately does. `products_active` hides the children; the barcode grouping does
+not.
+
+> **IN 21% OF THE POPULATION THE RIGHT ANSWER IS DO NOTHING, AND THAT IS THE HARDEST OUTCOME TO
+> GET RIGHT IN A BATCH THAT EXISTS TO CHANGE THINGS.** A pass built to merge, run over a set
+> where a fifth of the cases must be left alone, is one predicate away from destroying correct
+> modelling — and the destruction is invisible, because merged shade children were already
+> hidden from every view.
+
+**That is the sentence to read first if this is ever picked up.** The size is recoverable from a
+query; the trap is not.
+
+#### AND THE CORRECTION THAT PRODUCED IT
+
+The 1,661 was only visible after a counting error was fixed. I reported **"2,855 of 16,079
+in-scope products are parents — 18%"**. The query was:
+
+```sql
+SELECT count(*) FROM ids JOIN products p2 ON p2.parent_product_id = ids.id
+```
+
+**That counts children.** 214 in-scope products are parents; 2,855 are their children.
+
+> **A JOIN COUNTED THE OTHER SIDE OF ITSELF AND THE TOTAL WAS READ AS THE DRIVING SIDE.** Sixth
+> instance today of the same class — a number correct about one thing, reported as being about
+> another. Items 146, 148, 155, 157 and 167 are the others.
+>
+> **The defence is the same every time and it is not care:** state which side of the join the
+> count is over, and check it against a count of the other side. `count(DISTINCT ids.id)` and
+> `count(*)` differ by 2,641 here, and either alone looks like an answer.
+
+
+---
+
+### 173. A fail-safe direction is a property of the harm, not of the mechanism
+
+**Raised:** 17 August 2026, adding a second Edge Config flag beside the orphan gate ·
+**The general form of a decision that could have been a copy.**
+
+#### THE TWO FLAGS
+
+| | `orphan_gate_enabled` | `amazon_live_enabled` |
+|---|---|---|
+| store | Edge Config | Edge Config |
+| read | per request | per request |
+| test | `typeof === 'boolean'` | `typeof === 'boolean'` |
+| **unreadable config** | **fails CLOSED — gate stays on** | **fails OFF — feature stays off** |
+
+**Same store, same mechanism, same boolean test, opposite default.**
+
+#### WHY THEY DIFFER, WHICH IS THE WHOLE POINT
+
+The orphan gate fails **closed** because **the harm is 20,849 dead URLs going live**. An
+unreadable config must not be able to un-410 a catalogue.
+
+The Amazon flag fails **off** because **the harm is a feature nobody enabled starting itself**.
+An unreadable config must not be able to begin calling a rate-limited third party and
+rendering prices on pages.
+
+> **THE MECHANISM IS IDENTICAL AND THE CORRECT DEFAULT IS OPPOSITE, BECAUSE THE HARM IS
+> OPPOSITE.** "Fail safe" names a direction, and the direction is not a property of the flag,
+> the store, or the pattern. **It is a property of what goes wrong when nobody is watching.**
+
+#### THE FAILURE MODE THIS PREVENTS
+
+**Copying a flag pattern without re-deciding the direction is how a safe default becomes a
+wrong one.** The copy is the natural move: the orphan gate's `readGate()` is proven, carefully
+reasoned, and carries a comment explaining why `typeof === 'boolean'` beats truthiness. **All
+of that reasoning transfers. The default does not, and nothing in the code says which parts
+travel.**
+
+A `GATE_DEFAULT = true` lifted into the new file would have been defensible line by line and
+wrong as a whole — a feature that turns itself on during a config outage, on the argument that
+the other flag does.
+
+> **THE PART OF A PATTERN THAT DOES NOT TRANSFER IS THE PART THAT WAS DECIDED RATHER THAN
+> DERIVED.** `typeof === 'boolean'` is derived from how JavaScript treats `false` and is true
+> everywhere. The default is a judgement about a specific harm and is true nowhere else.
+
+**Both flags now state their direction and their reason in a comment beside the constant**, so
+the next copy has to read a sentence that says "because dead URLs are the harm" and notice that
+its own harm is different.
+
+---
+
+### 174. The design was portable and the fetch was not
+
+**Raised:** 17 August 2026, after building the live price feature · **A design question found
+during a build.**
+
+#### WHAT HAPPENED
+
+The route handler, breaker, four states, logging and kill switch were all built and
+type-checked. **Then: the Amazon client read the SDK from
+`~/amazon-api-watch/sdk` via `createRequire`.**
+
+That path exists on the laptop where the harvests run. **It does not exist on Vercel.** The
+feature could not have worked in production and every local check passed.
+
+> **EVERY LOCAL TEST PASSED BECAUSE THE PATH EXISTS LOCALLY.** `tsc` was clean — a runtime
+> `require` of an absolute path is not a type error. There is no lint rule for "this directory
+> is outside the repository". **Nothing short of a deploy would have shown it.**
+
+#### THE DISTINCTION THAT MATTERS
+
+**The design was portable and the fetch was not.** Everything reasoned about — where the fetch
+happens, what renders in flight, how the breaker behaves, what gets logged — was independent
+of how the HTTP call was made, and all of it survived the rework unchanged.
+
+> **"DOES THIS RUN WHERE IT SHIPS" IS A DESIGN QUESTION AND WAS TREATED AS A BUILD DETAIL.**
+> It belongs beside "where does the fetch happen" and "what renders on failure", because it
+> constrains the answer as hard as either — and it is cheap to ask and expensive to discover.
+
+**The tell was available and unread.** The design report named the SDK path in the sentence
+*"the route reads the SDK from `~/amazon-api-watch/sdk` via `createRequire`"* — written as
+description, not as a question. **A home-directory path in a server component is a deployment
+fact stated as an implementation fact.**
+
+#### WHAT IT COST AND WHAT IT DID NOT
+
+The rework was one module — `lib/amazon-creators.ts` — and it turned out **better than the
+SDK route**: no vendoring, four resources instead of a generated surface, and the auth
+transcribed from the SDK's own outbound HTTP rather than from documentation.
+
+**And it surfaced two things the SDK path would have hidden:** that the API is OAuth2 rather
+than SigV4, and that `merchantInfo` is silently absent unless its resource string is requested.
+**The second would have shipped as a defect.**
+
+
+---
+
+### 175. The category item 22 never named is "we never asked"
+
+**Raised:** 17 August 2026, before deploying the live price fetch · **The enumeration grew
+twice and both new members landed in the same group.**
+
+#### THE ENUMERATION NOW
+
+| category | outcomes |
+|---|---|
+| **ours, nothing attempted** | `disabled` · **`misconfigured`** · **`nothing_requested`** |
+| Amazon's, attempted and refused | `rate_limited` · `breaker_open` · `upstream_error` · `timeout` |
+| Amazon's, attempted and answered | `ok` · `no_offers` |
+
+**Item 22 named one distinction: `no_offers` versus `upstream_error`** — "Amazon does not
+stock this" against "we could not reach Amazon". That split sits entirely *inside* the second
+and third rows.
+
+> **THE FIRST ROW DID NOT EXIST WHEN THE DISTINCTION WAS DRAWN**, and every growth since has
+> been a new member of it. `disabled` was added during the build. `misconfigured` and
+> `nothing_requested` were added before the deploy. **Three for three.**
+>
+> **That is predictive, not just descriptive: the fifth case will be in the same group.**
+> Anything where the fetch does not happen for a reason of ours — a request rejected before
+> it is made, a guard that returns early, a precondition that fails — is a candidate, and
+> the place to look.
+
+**`breaker_open` stays in the second group deliberately.** We are refusing to call, but only
+because Amazon refused first, so *"couldn't reach Amazon"* is true.
+
+#### THE FOURTH CASE IS THE BETTER FIND, AND THE REASON IS THE METRIC
+
+`misconfigured` is the more obvious defect: absent credentials fell through to
+`upstream_error`, so a missing env var rendered as an Amazon outage. **Wrong, visible, and
+about one page at a time.**
+
+`nothing_requested` is worse. An empty or all-invalid ASIN request returned **`no_offers`** —
+a claim that Amazon does not stock a product, made when we asked about nothing.
+
+> **A WRONG OUTCOME CORRUPTING THE NUMBER THAT DECIDES WHETHER THE FEATURE IS WORTH HAVING.**
+> `no_offers` is the measurement of how often Amazon genuinely lacks a product we carry —
+> which is the coverage question the whole ASIN map exists to answer. **Every malformed
+> request would have inflated it**, and the inflation is indistinguishable from a real result.
+>
+> The render is one row on one page. **The metric is the argument for the map.**
+
+#### AND WHY THIS IS CODE RATHER THAN DEPLOY ORDER
+
+Setting the env vars before deploying would have protected the first deploy and nothing after
+it. **A credential can be rotated, expire, or be dropped from one environment later**, and
+every one of those would have reported an Amazon outage. Ordering protects once; the branch
+protects always.
+
+#### A DEPLOYMENT FACT RECORDED WHERE SOMEONE WILL MEET IT
+
+`EDGE_CONFIG` is scoped **Production only**. On a preview deployment the connection string is
+absent, `get()` throws, the catch fires, and the feature stays off — **correctly, by the
+fail-off rule.**
+
+> **A PREVIEW THEREFORE LOOKS EXACTLY LIKE A BROKEN FEATURE:** no row, no error, nothing in
+> the console. It is the default working.
+
+**Recorded in `app/api/amazon/price/route.ts` beside the switch, not only here**, because the
+person who meets it will be staring at a preview URL wondering why nothing renders — and they
+will be reading that file, not searching this one.
