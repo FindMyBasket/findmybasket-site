@@ -13266,6 +13266,497 @@ against, and re-derive it rather than trusting it.
 
 ---
 
+### 153. Two deploy targets, and the classifier is only ever reached by the second
+
+**Raised:** 17 August 2026, Monday morning, finding the browse facet back on
+`/supplements/supplements` · **A fix merged and deployed on Sunday was silently reverted by a
+cron on Monday.**
+
+#### WHAT HAPPENED
+
+| | |
+|---|---|
+| Sun ~21:00 | `product_type` nulled on the supplements branch of `_shared/categorisation.ts`. Merged. |
+| Sun ~21:10 | Vercel deploys. `/supplements/supplements` verified clean — no facet. |
+| Mon **04:31** | `refresh-boots` runs. **The edge function is still running Sunday-morning code.** |
+| Mon 07:30 | Facet back. 18 new products carrying `Skincare` ×16, `Moisturiser` ×1, `""` ×1. |
+
+> **THE FIX WAS MERGED, DEPLOYED, AND VERIFIED — AND IT WAS NOT RUNNING WHERE IT MATTERED.**
+> `supabase/functions/**` does not deploy with the app. Vercel builds the Next.js site;
+> Supabase edge functions need `supabase functions deploy`, a separate command nobody had
+> named as part of this change.
+
+#### THE SHARP PART IS THE SYMPTOM
+
+**A cron eight hours later reintroduced the defect, and the symptom was
+indistinguishable from the original.** A browse chip reading *Moisturiser* on a supplements
+page — the same words, the same place, the same wrongness.
+
+> **A SILENT PARTIAL REVERT PRESENTS AS "THE FIX DID NOT WORK".** Which is the one conclusion
+> that leads away from the cause: it sends the next person back into the code that is already
+> correct. The only thing distinguishing the two states is the row count — 1,770 rows on
+> Sunday, 18 on Monday — and nothing surfaces that.
+
+**And it is self-repeating.** Every daily import re-creates it. Had this not been read on
+Monday morning, `refresh-boots` would have added a further ~18 rows every day, with the page
+looking exactly as broken as before the fix.
+
+#### THE DEPLOY SET, RECORDED SO THE NEXT PERSON DOES NOT DISCOVER IT
+
+**`supabase/functions/_shared/categorisation.ts` is imported by four functions.** Changing it
+and deploying none of them changes nothing; deploying some of them changes some retailers:
+
+| function | what it classifies |
+|---|---|
+| `import-awin-feed` | 13 of 15 retailers, including Boots |
+| `import-rakuten-feed` | Rakuten-sourced retailers |
+| `import-shopify-feed` | Skin Cupid |
+| `recategorise-products` | the backfill/repair path |
+
+```
+supabase functions deploy import-awin-feed import-rakuten-feed \
+  import-shopify-feed recategorise-products --project-ref crtrjoescntlcjiwdtrt
+```
+
+> **A SHARED MODULE'S BLAST RADIUS IS ITS IMPORTERS, AND ITS DEPLOY SET IS THE SAME LIST.**
+> Nothing in the repo states it, `grep -rl _shared/categorisation supabase/functions/` derives
+> it in one second, and neither of those facts helps someone who does not know there is a
+> second deploy target at all.
+
+#### RESOLVED
+
+All four deployed. The 18 rows re-nulled. Supplements: 1,737 live, **0 with `product_type`**.
+
+**This is yesterday's "merged is not deployed" with a second target added** — and the new part
+is that the two targets have different deploy triggers, so one of them is automatic and
+invisible and the other is a command someone has to remember.
+
+---
+
+### 154. `x-vercel-cache` reports one of two caches, and I used it as the freshness signal all day
+
+**Raised:** 17 August 2026 · **Corrects the verification method used for every page check on
+16 and 17 August.** · **Robbie's correction.**
+
+#### THE TWO CACHES
+
+| | what it caches | visible in headers |
+|---|---|---|
+| **Full Route Cache** | the rendered HTML | **yes** — `x-vercel-cache: HIT/MISS/STALE` |
+| **Data Cache** | each `fetch()` result, keyed by URL | **NO** |
+
+`export const revalidate = 3600` sets **both**. `supabase-js` issues ordinary `fetch` calls
+with no `cache:` or `next:` override, so **every Supabase query on these routes is cached for
+up to an hour and nothing in the response says so.**
+
+> **`x-vercel-cache: MISS`, `age: 0`, `no-store` MEANS THE HTML WAS RE-RENDERED. IT SAYS
+> NOTHING ABOUT THE DATA THAT WENT INTO IT.** A freshly rendered page can be built entirely
+> from hour-old query results.
+
+#### THE PROOF, ON ONE PAGE IN ONE REQUEST
+
+`/supplements/supplements`, `x-vercel-cache: MISS`, `age: 0`, measured against the database at
+the same moment:
+
+| claim | rendered | database | |
+|---|---:|---:|---|
+| products | 1,532 | 1,532 | **fresh** |
+| brands | 297 | 297 | **fresh** |
+| **facet chips** | **Moisturiser** | **(none)** | **STALE** |
+
+> **NO NUMBER ON A PAGE CAN BE A FRESHNESS TOKEN FOR THE PAGE.**
+>
+> The Data Cache is keyed **per fetch URL**, so a single page is fresh and stale at the same
+> time. The count query and the facet query are different URLs with independent TTLs — and the
+> number you check to establish freshness is cached separately from the claim you care about.
+>
+> **This kills the obvious workaround.** Having learned the header is unreliable, the natural
+> next move is to find something on the page that must be current — a product count, a
+> timestamp, a row you just changed — and treat it as proof the render is fresh. **It proves
+> only that one fetch is fresh.** Here the count was right to the row while the facet beside
+> it was an hour stale.
+
+**The general form: a partially-cached render has no page-level freshness state to read.**
+Freshness is a property of each query, not of the page, and nothing in the response exposes
+it per query.
+
+#### WHAT A CORRECT FRESHNESS CHECK LOOKS LIKE
+
+> **VERIFY THE SPECIFIC CLAIM YOU ARE MAKING, AGAINST THE DATABASE, AT THE SAME MOMENT.**
+
+Not a header. Not a proxy. Not a different number on the same page.
+
+1. State the claim as a query — *"the facet should show these chips"* becomes the exact
+   `SELECT` the page runs, junk filter and all.
+2. Fetch the page and extract the rendered claim.
+3. Compare them. **A mismatch means stale, whatever any header says.**
+4. Repeat until stable, for the reason already recorded beside Step E.
+
+**Cheap enough to be routine**: the re-verification of three pages and nine claims took one SQL
+query and one script.
+
+#### WHAT WAS RE-VERIFIED, AND WHAT IT CHANGED
+
+Every data-driven conclusion from 16–17 August, re-run against the database:
+
+| page | products | brands | facet |
+|---|---|---|---|
+| `/supplements/supplements` | match | match | **stale — Data Cache, clearing** |
+| `/supplements/sports` | match | match | match |
+| `/hair/treatment` | match | match | match — `Hair Treatment` only, **no `Hair Care`** |
+
+**One conclusion was affected and it was the one being re-checked.** The rest hold:
+
+- **Item 146's diagnosis is unaffected.** The nondeterministic `getValidSubcategories` was
+  proved by **reproducing the unordered scan in SQL** — 102 of 117 rows — not by reading a
+  header. The header was used to rule cache OUT, and the SQL is what ruled pagination IN.
+- **The heading fixes are unaffected.** They are code, not data: a re-rendered route is
+  running current code by definition.
+- **The `Hair Care` removal is confirmed by data**, not just by the deploy.
+
+#### AND IT DOES NOT CLEAR LIKE A SWITCH — IT CONVERGES
+
+Watching the stale facet clear after the database was corrected:
+
+| observation | result |
+|---|---|
+| single check at ~6 min | **absent** — "it cleared" |
+| single check moments later | **present** — it had not |
+| 20 samples | present **1**, absent 19 |
+| 25 samples, minutes later | present **2**, absent 23 |
+
+`x-vercel-id` differs on every request within one region: **requests land on different instances,
+each holding its own view of the Data Cache**, and those instances are created and recycled at
+different times.
+
+> **A STALE DATA CACHE DRAINS PROBABILISTICALLY, NOT ATOMICALLY.** There is no moment at which
+> it is "cleared". There is a falling proportion of requests still served from it, with a long
+> tail — and **any single check samples that distribution rather than measuring it.**
+>
+> **"Re-check until it settles" is necessary and not sufficient.** Two consecutive agreeing
+> checks would have declared this clear at 6 minutes, twice, wrongly. **Count the samples and
+> report the proportion**, because the honest answer at that moment was "19 of 20", not "yes".
+
+This is why the watcher's "FACET GONE after ~6m" was wrong and the count that followed was
+right. **The watcher asked a yes/no question of a system that only has a distribution.**
+
+#### THE HABIT THIS REPLACES
+
+I checked `x-vercel-cache` on essentially every verification in two days. **It is the header
+that looks like it answers the question**, it is right about the thing it reports, and it has
+been silently answering a narrower question than the one being asked.
+
+> **A SIGNAL THAT IS CORRECT ABOUT A SMALLER SCOPE THAN YOU THINK IS WORSE THAN NO SIGNAL**,
+> because it produces confident verification rather than an obvious gap. This is item 132's
+> shape — proximity conferring the appearance of a constraint — applied to a response header:
+> it sits next to the freshness question and is not an answer to it.
+
+
+---
+
+### 155. A quality metric improved because the bad population was deleted
+
+**Raised:** 17 August 2026, Robbie asking what moved `no_in_stock_offer_count` 13,498 → 11,755
+before it became a figure someone reasons from · **Answered and quantified.** · **It is not an
+improvement.**
+
+#### THE MOVEMENT IS NOT WHERE THE TWO POINTS PUT IT
+
+The series has two rows a week apart. **Three catalogue events sit between them**, and the
+week-over-week delta merges all three:
+
+| when | event | `products_active` | `no_in_stock_offer` |
+|---|---|---:|---:|
+| 10 Aug *(series row)* | — | 98,404 | 13,498 |
+| 15 Aug | Boots supplements activated | ↑ | |
+| 16 Aug *(read, boundary row 36)* | — | **100,207** | **13,481** |
+| 16 Aug | **Branded Beauty + Atelier departures** | ↓ | |
+| 17 Aug *(series row)* | — | 98,380 | **11,755** |
+
+> **THE 13% DROP HAPPENED IN ONE DAY, NOT OVER A WEEK.** Read as a single movement, 10 → 17
+> shows a −24 denominator and a −1,743 numerator, which looks like 1,743 products gaining
+> offers against a flat catalogue. **Nothing of the sort happened.** The catalogue rose 1,803
+> and then fell 1,827, and the two nearly cancel.
+
+**This is item 123 arriving in the data**: a weekly upsert cannot record a mid-week change, so
+a week containing a rise and a fall reports their difference and hides both.
+
+#### WHAT ACTUALLY MOVED IT, MEASURED
+
+| | |
+|---|---:|
+| products **sole-supplied** by retailers 6 and 29 | **1,747** |
+| of those, with **every** row out of stock | **1,720** |
+| observed fall in `no_in_stock_offer_count` (16 → 17 Aug) | **1,726** |
+
+**1,720 against 1,726.** The mechanism is exact to within six rows.
+
+**How it works.** Branded Beauty's feed froze on 31 July; absence handling marked its rows out
+of stock. Those products kept a price row at an **active** retailer, so they stayed in
+`products_active` — which requires an active retailer and **ignores `in_stock` entirely** —
+and they counted in `no_in_stock_offer_count`. Flipping `active = false` removed them from
+`products_active` altogether, so they left **the numerator and the denominator together**.
+
+#### THE READING, AND IT IS THE OPPOSITE OF WHAT THE NUMBER SUGGESTS
+
+> **NOTHING WAS RESTOCKED. THE WORST-PERFORMING 1,720 PRODUCTS WERE DELETED FROM THE
+> MEASUREMENT.** The rate fell 13.72% → 11.95% because a population that was 100% failing left
+> the denominator. **The catalogue did not get better; the part of it that was bad stopped
+> being counted.**
+
+This is the shape boundary row 33 already named for `sole_supplier_share_pct` — *"arithmetic
+(corroboration is removed along with the claims) and NOT a regression"* — running in the
+flattering direction. **A metric that moves the good way when a retailer leaves deserves the
+same scepticism as one that moves the bad way**, and gets less, because nobody investigates
+good news.
+
+> **A RATE CANNOT DISTINGUISH "THE PROBLEM WAS FIXED" FROM "THE PROBLEM WAS REMOVED FROM THE
+> DENOMINATOR".** Only the paired counts can, which is why every ratio in this table stores
+> its own denominator — and here the denominator moved by −24 net while concealing ±1,800 in
+> both directions.
+
+#### AND THE PREDICTION THAT WAS ALREADY WRONG ONCE
+
+Boundary row 36 predicted `no_in_stock_offer_count` would **rise** with a larger catalogue,
+recorded the miss honestly when it fell by 17, and explained it — *"Boots supplements arrived
+overwhelmingly in stock."*
+
+**That explanation was right and it is not this week's cause.** The 17 and the 1,726 are
+different events with different mechanisms, one week apart, in the same column. **Carrying the
+first explanation forward to the second movement would have been reasonable and wrong** — and
+it is what a reader arriving at the two-point series would do, because row 36 is the only
+annotation in view.
+
+#### WHAT THIS MAKES NECESSARY
+
+**The departures have no boundary row.** Row 36 warned about exactly this on 15 August: *"the
+first step this series ever shows would be caused by a change the boundary table does not know
+about."* That was written about Boots supplements. **The step the series actually shows first
+is the departures, and they are the change the table does not know about.**
+
+Written now, with `metrics_affected` naming what moved — see the boundary row added under this
+item. **The step is visible today; the annotation has to exist before anyone reads the chart.**
+### 156. The delivery argument was right about the problem and wrong about the reason
+
+**AMENDED 17 August 2026, same day, after taking the measurement.** The version below argued
+that supplements are exposed because **protein is heavy and delivery is a large share of the
+cost**. Measured, that is false:
+
+| cohort | products | avg goods | **delivery as % of effective price** |
+|---|---:|---:|---:|
+| sports: **other** (electrolytes, sachets, bars) | 108 | £16.46 | **22.2%** |
+| all beauty categories | 77,422 | £28.21 | 18.4% |
+| supplements: general | 1,491 | £23.57 | 17.8% |
+| **sports: protein / creatine / kg** | **91** | £23.05 | **15.5%** |
+
+> **THE HEAVY COHORT HAS THE LOWEST DELIVERY SHARE OF THE FOUR, AND IT IS BELOW BEAUTY'S.**
+> The weight premise does not survive contact with the data.
+
+**Because none of our retailers charges by weight.** Delivery here is flat or tiered **on
+basket value**, so a heavy product costs no more to ship than a light one — and a *dearer*
+product clears a free-delivery threshold more often. **The share is driven by price, not mass**,
+which is why the cheapest sports products carry the highest exposure and the tubs the lowest.
+
+**WHAT SURVIVES, AND IT IS THE PART THAT MATTERS.** The comparison defect is untouched: our
+prices include delivery, the Amazon price beside them does not, and the direction is always
+flattering to Amazon. **That was never a claim about weight.** What changes is where the harm
+concentrates:
+
+> **THE EXPOSURE IS WORST ON CHEAP SUPPLEMENTS, NOT ON TUBS.** At £16.46 average goods and
+> 22.2% delivery, an electrolyte sachet pack is where a delivery-excluded Amazon price distorts
+> the ranking most — and it is the cohort nobody would have prioritised from the weight
+> argument.
+
+**And the weight intuition may still be right about AMAZON's side.** Amazon's own delivery for
+a non-Prime shopper can be weight-influenced in a way our retailers' is not. **We have no data
+on that**, and it is not assumed here — it is the second measurement, and it needs the harvest
+to exist first.
+
+> **THE MEASUREMENT WAS ASKED FOR TO TURN AN ARGUMENT INTO A NUMBER. IT DID, AND THE NUMBER
+> CONTRADICTED THE ARGUMENT.** Recorded rather than quietly restated, because the original
+> reasoning was plausible, was written down confidently, and would have sent the display work
+> at the wrong cohort.
+
+The original item follows, unedited apart from this heading.
+
+#### THE ORIGINAL ARGUMENT, AS WRITTEN BEFORE THE MEASUREMENT
+
+**Raised:** 17 August 2026, scoping a supplements ASIN harvest · **Robbie's constraint, recorded
+before the harvest rather than after.** · **Item 61's phase-2 question, arriving where it costs
+most.**
+
+#### THE CONSTRAINT
+
+Amazon cannot join the basket optimiser (item 61), so an Amazon price renders **beside** the UK
+offers rather than inside the comparison. That was tolerable for K-beauty. **It is not the same
+problem for supplements.**
+
+| | K-beauty | supplements |
+|---|---|---|
+| typical unit | 50ml cream, ~50g | **protein tub, 1–2.5kg** |
+| delivery as a share of cost | small | **large** |
+| our prices | delivery included | delivery included |
+| the Amazon price beside them | **delivery excluded** | **delivery excluded** |
+
+> **A HEAVY CATEGORY IS WHERE A DELIVERY-EXCLUDED PRICE LOOKS BEST AND IS LEAST TRUE.** The
+> Amazon number sits next to UK prices that already carry delivery, on exactly the products
+> where delivery is the biggest single component after the goods. **The comparison is wrong in
+> the direction that flatters the link we earn on.**
+
+#### WHY IT IS WORSE THAN A LIKE-FOR-LIKE ERROR
+
+**The error scales with the weight of the product**, so it is largest precisely where a shopper
+is most likely to be price-sensitive — a 2.5kg protein tub is a considered purchase, and the
+delivery on it is not a rounding error.
+
+And **the direction is consistent**: Amazon always looks cheaper than it is, never dearer.
+A random error would average out across a category page. **A systematic one compounds into the
+category's headline claim.**
+
+> **THIS IS ITEM 61'S PRIME TOGGLE QUESTION ARRIVING WHERE IT MATTERS MOST.** Item 61 records
+> that Amazon delivery is a property of the SHOPPER, not the retailer — Prime members pay
+> nothing, non-members pay unless they clear a threshold, and the buy-box seller can change
+> both. On a 50ml serum that ambiguity is worth a pound or two. **On a 2.5kg tub it can invert
+> the ranking**, and the site's own positioning is that it counts delivery when others do not.
+
+#### WHAT THIS DOES NOT SAY
+
+**It does not say do not harvest.** The ASINs are worth having: a direct product link beats a
+search link (see below), and the harvest is cheap once the brand stores are known.
+
+**It says the display decision is a prerequisite, not a follow-up.** Publishing an Amazon price
+beside delivery-inclusive UK prices in the heaviest category on the site, without stating the
+basis, is the copy claim the four supplement articles published on Sunday are least able to
+survive — they promise honest comparison, and this is the case where "honest" requires a
+sentence the page does not currently have.
+
+**Three options, none chosen here:** show the Amazon price with an explicit *"delivery not
+included"* marker; suppress the Amazon price on supplements and keep only the link; or resolve
+item 61's phase 2 and let Amazon into the optimiser with a Prime assumption the shopper sets.
+
+#### AND A MEASUREMENT THAT MAKES THE CASE CONCRETE
+
+Not taken yet. **Before the display decision, measure what delivery is worth on the heaviest
+supplements** — the sports tubs are the population, and the figure needed is delivery as a
+share of effective price for the products the harvest would actually cover. **A one-query
+answer that turns a design argument into a number**, and it should exist before anyone chooses
+between the three options above.
+
+
+---
+### 157. Thirty-six rows were thirty-four products, and the write is what said so
+
+**Raised:** 17 August 2026, promoting the verified Amazon ASIN rows · **Applied: 28 promoted,
+4 held.**
+
+#### THE COUNT
+
+The promotion was scoped, reported and approved as **36 rows**. The map holds 36 rows against
+**34 distinct products**: products **7744** and **14906** each carry **two** `matched_by_name`
++ `human_verified` rows with **different ASINs**.
+
+| | |
+|---|---:|
+| rows in the map, `matched_by_name` + verified | **36** |
+| distinct products | **34** |
+| products with two verified candidates | **2** |
+
+> **A ROW COUNT WAS READ AS AN ENTITY COUNT.** Every figure in the report — 36 candidates, 36
+> distinct ASINs, 33 to promote — was arithmetically correct and counted the wrong thing.
+> **36 and 34 both look like "the verified ones"**, and nothing in the query that produced 36
+> would have shown the difference.
+
+**It was invisible until the write.** `UPDATE … FROM` with two matching source rows picks one
+**non-deterministically**, so both products briefly received an arbitrary choice between two
+human-verified candidates. Reverted to NULL and held.
+
+> **THE WRITE IS WHAT SAID SO, WHICH IS THE LATEST POSSIBLE MOMENT TO FIND IT.** A `count(*)`
+> and a `count(DISTINCT product_id)` differ by two characters and by the entire finding. I ran
+> the first, four times, in four different framings, and never the second.
+
+**Same shape as everything else this week** — item 146's paginated read returned the right
+total from the wrong rows; item 148's two methods agreed on a total and disagreed on the
+members; item 155's week-over-week delta reported the difference of two movements it hid.
+**Four instances, one class: a number that reconciles against the wrong denominator.**
+
+#### AND `human_verified` WAS TREATED AS TERMINAL
+
+Two rows for one product, both `human_verified = true`, both plausible on their titles, pointing
+at different ASINs.
+
+> **TWO HUMAN VERIFICATIONS DISAGREEING IS NOT A DEFECT IN THE DATA.** It is two people, or one
+> person twice, judging a title on different days — which is what a verification queue produces
+> and what it is *for*. **The defect is in the schema and the reader treating the flag as a
+> terminal state**, when it records only that somebody looked.
+
+Nothing in the table can hold "these two disagree". A `human_verified` boolean per row cannot
+express a per-product conflict, so the conflict is only visible to a query that groups.
+
+#### THE RULE THIS PRODUCED
+
+> **A BARCODE MATCH IS NEVER OVERWRITTEN BY A NAME MATCH.**
+
+The tier ladder the importer already uses — EAN, MPN, exact name, stripped name — applied to
+the Amazon map, where it had never been stated because the map had never been promoted over an
+existing value.
+
+**Written as the guard rather than an exclusion list** — `only where NULL or already equal` —
+so the next promotion inherits it without anyone remembering the rows it came from.
+
+**And why a wrong ASIN is worse than none.** `app/product/[id]/page.tsx:273`: with an ASIN the
+page emits a **direct hard link** (`amazon.co.uk/dp/{ASIN}/?tag=…`); without one, a **tagged
+search**.
+
+> **THE FALLBACK DEGRADES GRACEFULLY AND THE FAILURE DOES NOT.** A search shows candidates and
+> the shopper resolves it in a second. A wrong hard-link lands confidently on the wrong product,
+> under our affiliate tag, from a page whose whole claim is accuracy. **The absence of a value
+> is a worse-looking outcome and a better one.**
+
+#### THE EXCEPTION, AND WHY IT IS NOT A BREACH OF THE RULE
+
+**Product 609 — Beauty of Joseon Dynasty Cream (50ml) — promoted to the map candidate
+`B01M4GQO8W`, over the incumbent `B08WJQ3XJD`.**
+
+| | ASIN | evidence |
+|---|---|---|
+| incumbent | `B08WJQ3XJD` | **none.** Not in the map. No title, no match state, no provenance |
+| promoted | `B01M4GQO8W` | recorded title *"…Dynasty Cream…1.7 fl oz"*, size agrees (1.7 fl oz = 50ml), human-verified 14 Aug |
+
+> **THE RULE PROTECTS A BARCODE MATCH FROM A NAME MATCH. THIS IS A NAME MATCH AGAINST AN
+> UNKNOWN, WHICH IS A DIFFERENT COMPARISON.** Applying the rule here would have preserved the
+> incumbent for no reason beyond incumbency, **and incumbency is not evidence.**
+
+Recorded as an exception so that the next reader meeting the rule does not conclude it was
+broken. **A rule stated without its boundary gets applied where it does not belong**, which is
+the failure mode of every rule on this list.
+
+#### THE FOUR HELD
+
+| product | held because |
+|---|---|
+| 6180, 7092 | name match conflicts with an existing **barcode** match — the rule, applied |
+| 7744, 14906 | **two verified name matches each**, no basis in the data to choose |
+
+**7744 and 14906 wait for a person, and that is the correct outcome rather than a gap.** Two
+verified candidates with no discriminator is exactly the case a rule should decline.
+
+#### THE ITEM 105 RE-CHECK EARNED NOTHING THIS TIME
+
+All 36 re-checked against `merged_into`, `product_exclusions` and `products_active`. **Zero
+merged, zero excluded, zero fallen out of the view, zero affected by Saturday's two
+departures.**
+
+> **A CHECK THAT FINDS NOTHING IS NOT A CHECK THAT WAS UNNECESSARY.** Item 105 exists because a
+> previous list went stale on 1 of 44 within four hours; this one had been sitting since Friday
+> and across two retailer departures, a longer and riskier gap, and it came back clean.
+>
+> **Recorded in those words because the alternative is silence, and silence about a check that
+> paid nothing is how a check stops being run.** The next person needs to know it was run and
+> found nothing — not to infer from an absence of findings that it was skipped.
+
+**What did find something was a check nobody had specified**: comparing candidates against
+values already present, and grouping the candidates by product. Neither was in item 105.
+
 ### 158. Not unranked — ranked on a goods-only total against delivered ones
 
 **Raised:** 17 August 2026, setting Niche Beauty's delivery terms · **Applied.** · **Inverts the
@@ -13439,10 +13930,6 @@ own checkout.
 **The detector's own history is the argument for wiring it.** It was right for seven days and
 worth nothing, because item 131's rule holds: a detector nothing reads is more expensive than no
 detector, since it also consumes the belief that the case is covered.
-
-
----
-
 ### 160. Ten of eleven retailers have unverifiable delivery provenance
 
 **Raised:** 17 August 2026, immediately after `delivery_terms_source` landed · **A standing gap,
@@ -14113,3 +14600,7 @@ every importer already uses — then **deleted, and its absence verified (404)**
 **Item 97's principle is unaffected:** the harvest is re-derivable measurement. The rows sat in
 a throwaway function; **the derivation lives in `scripts/amazon-asin-map.mjs` and
 `scripts/amazon-match-barcodes.py`**, which is where a re-run starts.
+
+
+---
+

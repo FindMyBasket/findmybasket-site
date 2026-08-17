@@ -958,6 +958,31 @@ must be pages that survive the removal (verify brand still has live inventory).
 > the same status is what established it, and a fixed pause is guesswork either too short or
 > needlessly long. **`x-vercel-cache: MISS` with `age: 0` does NOT mean fresh data** — it
 > means the CDN did not serve it, which is true of the regenerating request too.
+>
+> **AMENDED 17 AUGUST — "UNTIL IT SETTLES" HAS A KNOWN FAILURE MODE, AND IT FIRED THE DAY
+> AFTER THIS WAS WRITTEN.** A stale browse facet was declared clear at six minutes on two
+> consecutive agreeing checks. It was not. Sampled properly it was **1 of 20**, then **2 of
+> 25** several minutes later.
+>
+> **THERE IS NO MOMENT AT WHICH A STALE CACHE CLEARS.** `x-vercel-id` differs on every
+> request inside one region: each instance holds its own view of Next's **Data Cache**, and
+> instances are created and recycled at different times. **A stale cache drains
+> probabilistically, with a long tail** — a falling PROPORTION of requests, never a switch.
+>
+> **SO: SAMPLE, AND REPORT A PROPORTION. DO NOT TREAT CONSECUTIVE AGREEMENT AS CLEARANCE.**
+> Two agreeing checks are two draws from a distribution, and at 1-in-20 they agree by chance
+> most of the time. **"23 of 25 clean and falling" is the honest statement; "gone" is not.**
+> Twenty samples is enough to see a 5% residual; two is enough to see nothing.
+>
+> **AND THE HEADER IS NARROWER THAN IT LOOKS.** `x-vercel-cache` reports the Full Route Cache
+> ONLY. The **Data Cache** — every `fetch()` result, keyed per URL, set by the same
+> `revalidate` — is invisible in response headers. Because it is keyed PER FETCH URL, **one
+> page is fresh and stale at once**: measured on `/supplements/supplements` at `MISS`/`age: 0`,
+> the product count and brand count matched the database while the facet did not.
+>
+> **NO NUMBER ON A PAGE CAN BE A FRESHNESS TOKEN FOR THE PAGE.** Verify THE SPECIFIC CLAIM
+> you are making, against the database, at the same moment — not a header, not a proxy, not a
+> different number on the same page. Work-list item 154.
 
 Orphans are handled by middleware (410), so they don't need revalidation. Revalidate
 the pages whose CONTENT changes:
