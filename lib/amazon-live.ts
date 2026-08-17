@@ -47,10 +47,35 @@ export type LiveOffer = {
   inStock: boolean;
 };
 
-/** Four outcomes, and `no_offers` is deliberately not a failure. See below. */
+/**
+ * ── THE ENUMERATION, AND IT HAS NOW GROWN TWICE ──────────────────────────────────────
+ *
+ * Item 22 named ONE distinction: `no_offers` versus `upstream_error`. "Amazon does not
+ * stock this" and "we could not reach Amazon" are different facts, and collapsing them is
+ * how a failed fetch on a solo-retailer product silently reads as a product Amazon does not
+ * carry.
+ *
+ * That enumeration was incomplete, and the missing cases share a shape:
+ *
+ *   OURS, NOTHING ATTEMPTED          `disabled`          the kill switch is off
+ *                                    `misconfigured`     credentials absent
+ *                                    `nothing_requested` no valid ASIN was asked about
+ *   AMAZON'S, ATTEMPTED AND REFUSED  `rate_limited` `upstream_error` `timeout` `breaker_open`
+ *   AMAZON'S, ATTEMPTED AND ANSWERED `ok` `no_offers`
+ *
+ * THE FIRST GROUP MUST NEVER RENDER AS THE SECOND. Reporting our own absence as a third
+ * party's outage is a lie about who failed, and it is the same misattribution item 22
+ * names — one layer further out. Every member of the first group renders NOTHING, because
+ * nothing was attempted and there is no honest sentence to show.
+ *
+ * `breaker_open` sits in the SECOND group deliberately: we are refusing to call, but only
+ * because Amazon refused first, so "couldn't reach Amazon" is true.
+ */
 export type FetchOutcome =
   | 'ok'
   | 'no_offers'
+  | 'nothing_requested'
+  | 'misconfigured'
   | 'rate_limited'
   | 'breaker_open'
   | 'upstream_error'
@@ -130,7 +155,10 @@ export async function fetchLiveOffers(asinsIn: string[]): Promise<FetchResult> {
   const started = Date.now();
   const asins = [...new Set(asinsIn.filter((a) => /^[A-Z0-9]{10}$/.test(a)))].sort();
   const empty = { offers: {}, durationMs: 0, coalesced: false, cached: false };
-  if (!asins.length) return { outcome: 'no_offers', ...empty };
+  // NOT `no_offers`. An empty or all-invalid request means WE asked about nothing, which
+  // is not the same as Amazon holding nothing — and mislabelling it would also pollute the
+  // metric that measures how often Amazon does not stock a product we carry.
+  if (!asins.length) return { outcome: 'nothing_requested', ...empty };
 
   if (Date.now() < breakerOpenUntil) {
     return { outcome: 'breaker_open', ...empty, durationMs: Date.now() - started };
@@ -176,6 +204,18 @@ export async function fetchLiveOffers(asinsIn: string[]): Promise<FetchResult> {
     };
   } catch (e) {
     const err = e as { status?: number; fmbTimeout?: boolean };
+    // MISSING CREDENTIALS ARE OUR STATE, NOT AMAZON'S. CreatorsError uses status 0 for
+    // "we never made a request", and without this branch it falls through to
+    // `upstream_error` and the row renders "couldn't reach Amazon" — an outage we invented
+    // to describe our own absent configuration.
+    //
+    // THE HOLE OUTLIVES THE FIRST DEPLOY, which is why this is code and not deploy order:
+    // a credential set today can be rotated, expire, or be dropped from one environment
+    // later, and every one of those would report an Amazon outage. Ordering protects the
+    // first deploy; this protects every subsequent one.
+    if (e instanceof CreatorsError && e.status === 0) {
+      return { outcome: 'misconfigured', offers, durationMs: Date.now() - started, coalesced, cached: false };
+    }
     if (e instanceof CreatorsError && e.status === 429) {
       breakerOpenUntil = Date.now() + BREAKER_COOLDOWN_MS;
       return { outcome: 'rate_limited', offers, durationMs: Date.now() - started, coalesced, cached: false };

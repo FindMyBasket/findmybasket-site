@@ -15078,3 +15078,71 @@ transcribed from the SDK's own outbound HTTP rather than from documentation.
 **And it surfaced two things the SDK path would have hidden:** that the API is OAuth2 rather
 than SigV4, and that `merchantInfo` is silently absent unless its resource string is requested.
 **The second would have shipped as a defect.**
+
+
+---
+
+### 175. The category item 22 never named is "we never asked"
+
+**Raised:** 17 August 2026, before deploying the live price fetch · **The enumeration grew
+twice and both new members landed in the same group.**
+
+#### THE ENUMERATION NOW
+
+| category | outcomes |
+|---|---|
+| **ours, nothing attempted** | `disabled` · **`misconfigured`** · **`nothing_requested`** |
+| Amazon's, attempted and refused | `rate_limited` · `breaker_open` · `upstream_error` · `timeout` |
+| Amazon's, attempted and answered | `ok` · `no_offers` |
+
+**Item 22 named one distinction: `no_offers` versus `upstream_error`** — "Amazon does not
+stock this" against "we could not reach Amazon". That split sits entirely *inside* the second
+and third rows.
+
+> **THE FIRST ROW DID NOT EXIST WHEN THE DISTINCTION WAS DRAWN**, and every growth since has
+> been a new member of it. `disabled` was added during the build. `misconfigured` and
+> `nothing_requested` were added before the deploy. **Three for three.**
+>
+> **That is predictive, not just descriptive: the fifth case will be in the same group.**
+> Anything where the fetch does not happen for a reason of ours — a request rejected before
+> it is made, a guard that returns early, a precondition that fails — is a candidate, and
+> the place to look.
+
+**`breaker_open` stays in the second group deliberately.** We are refusing to call, but only
+because Amazon refused first, so *"couldn't reach Amazon"* is true.
+
+#### THE FOURTH CASE IS THE BETTER FIND, AND THE REASON IS THE METRIC
+
+`misconfigured` is the more obvious defect: absent credentials fell through to
+`upstream_error`, so a missing env var rendered as an Amazon outage. **Wrong, visible, and
+about one page at a time.**
+
+`nothing_requested` is worse. An empty or all-invalid ASIN request returned **`no_offers`** —
+a claim that Amazon does not stock a product, made when we asked about nothing.
+
+> **A WRONG OUTCOME CORRUPTING THE NUMBER THAT DECIDES WHETHER THE FEATURE IS WORTH HAVING.**
+> `no_offers` is the measurement of how often Amazon genuinely lacks a product we carry —
+> which is the coverage question the whole ASIN map exists to answer. **Every malformed
+> request would have inflated it**, and the inflation is indistinguishable from a real result.
+>
+> The render is one row on one page. **The metric is the argument for the map.**
+
+#### AND WHY THIS IS CODE RATHER THAN DEPLOY ORDER
+
+Setting the env vars before deploying would have protected the first deploy and nothing after
+it. **A credential can be rotated, expire, or be dropped from one environment later**, and
+every one of those would have reported an Amazon outage. Ordering protects once; the branch
+protects always.
+
+#### A DEPLOYMENT FACT RECORDED WHERE SOMEONE WILL MEET IT
+
+`EDGE_CONFIG` is scoped **Production only**. On a preview deployment the connection string is
+absent, `get()` throws, the catch fires, and the feature stays off — **correctly, by the
+fail-off rule.**
+
+> **A PREVIEW THEREFORE LOOKS EXACTLY LIKE A BROKEN FEATURE:** no row, no error, nothing in
+> the console. It is the default working.
+
+**Recorded in `app/api/amazon/price/route.ts` beside the switch, not only here**, because the
+person who meets it will be staring at a preview URL wondering why nothing renders — and they
+will be reading that file, not searching this one.

@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { AmazonLink } from './AmazonLink';
 
 /**
- * The Amazon row on a product page. Fetches after hydration, renders FOUR STATES and never
- * nothing.
+ * The Amazon row on a product page. Fetches after hydration and, once it has started,
+ * always renders one of four visible states — never nothing.
  *
  * ── THE VISIBLE-FAILURE CONSTRAINT IS THE DESIGN, NOT A NICETY ───────────────────────
  *
@@ -25,8 +25,11 @@ import { AmazonLink } from './AmazonLink';
  * indistinguishable from a product Amazon does not carry, and those are different facts.
  * The log keeps them apart for the same reason.
  *
- * The one state that renders nothing is `disabled`, and that is correct: the kill switch is
- * off, nothing was attempted, and claiming an outage would be untrue.
+ * THE STATES THAT RENDER NOTHING ARE THE ONES WHERE WE NEVER ASKED: `disabled` (kill switch
+ * off), `misconfigured` (credentials absent) and `nothing_requested` (no valid ASIN). None
+ * of the three is an Amazon outage and none has an honest sentence to show, so the row does
+ * not appear at all. Rendering "couldn't reach Amazon" for any of them would be inventing an
+ * outage to describe our own absence — the same misattribution item 22 names, one layer out.
  *
  * NO RETRY. The client asks once. Retry logic on the client is a rate-limit amplifier with
  * a user watching it, and the server-side breaker exists precisely so that a refusal is
@@ -45,7 +48,7 @@ type State =
   | { kind: 'ok'; offer: Offer }
   | { kind: 'no_offers' }
   | { kind: 'failed' }
-  | { kind: 'disabled' };
+  | { kind: 'silent' };   // ours, nothing attempted — see below
 
 export function AmazonLiveRow({
   asin,
@@ -70,7 +73,11 @@ export function AmazonLiveRow({
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((data: { outcome: string; offers: Record<string, Offer> }) => {
         if (!live) return;
-        if (data.outcome === 'disabled') return setState({ kind: 'disabled' });
+        // OUR STATE, NOTHING ATTEMPTED — renders nothing. The kill switch is off, the
+        // credentials are absent, or we asked about no ASIN. None of those is an Amazon
+        // outage and none has an honest sentence to show, so the row does not appear.
+        if (data.outcome === 'disabled' || data.outcome === 'misconfigured'
+            || data.outcome === 'nothing_requested') return setState({ kind: 'silent' });
         const offer = data.offers?.[asin];
         if (offer) return setState({ kind: 'ok', offer });
         if (data.outcome === 'no_offers') return setState({ kind: 'no_offers' });
@@ -84,7 +91,7 @@ export function AmazonLiveRow({
     // changes, so a re-render cannot become a second call.
   }, [asin, surface]);
 
-  if (state.kind === 'disabled') return null;
+  if (state.kind === 'silent') return null;
 
   return (
     <div className="flex items-center justify-between px-6 py-5 border-t border-border bg-cream/60">

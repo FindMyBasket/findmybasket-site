@@ -37,6 +37,17 @@ const KILL_SWITCH_KEY = 'amazon_live_enabled';
  *
  * `typeof === 'boolean'` and not truthiness, for the reason recorded in middleware.ts: a
  * deliberate `false` must win over the default rather than being treated as "no answer".
+ *
+ * ── IF YOU ARE TESTING ON A PREVIEW URL AND THE ROW NEVER APPEARS, READ THIS ──────────
+ *
+ * `EDGE_CONFIG` is scoped to PRODUCTION ONLY. On a preview deployment the connection string
+ * is absent, `get()` throws, this catch fires, and the feature stays OFF — correctly, by the
+ * fail-off rule below.
+ *
+ * SO A PREVIEW LOOKS EXACTLY LIKE A BROKEN FEATURE: no row, no error, nothing in the
+ * console. It is the default working, not a bug, and it will cost an hour to whoever meets
+ * it first without this paragraph. Verify on production, or scope `EDGE_CONFIG` to Preview
+ * as well and accept that previews then read the live flag.
  */
 async function liveEnabled(): Promise<boolean> {
   try {
@@ -55,7 +66,7 @@ async function liveEnabled(): Promise<boolean> {
  * migration-time assertion that no column could hold a price, a seller or an ASIN.
  */
 async function logFetch(row: {
-  outcome: FetchOutcome | 'disabled';
+  outcome: FetchOutcome | 'disabled';   // 'disabled' is the route's own, not the fetcher's
   asin_count: number;
   offers_found: number;
   duration_ms: number;
@@ -86,7 +97,8 @@ export async function POST(request: Request) {
     });
     // `disabled` is reported to the client as its own state, not as a failure: the row
     // should render nothing at all rather than "couldn't reach Amazon", because nothing
-    // was attempted and claiming an outage would be untrue.
+    // was attempted and claiming an outage would be untrue. `misconfigured` and
+    // `nothing_requested` are the same category — see the enumeration in lib/amazon-live.ts.
     return NextResponse.json({ outcome: 'disabled', offers: {} });
   }
 
@@ -102,8 +114,9 @@ export async function POST(request: Request) {
     surface,
   });
 
-  // FOUR STATES REACH THE CLIENT AND `no_offers` IS NOT A FAILURE. A disappearing row is
-  // indistinguishable from a product Amazon does not carry, and those are different facts.
+  // THE OUTCOME REACHES THE CLIENT VERBATIM and `no_offers` is not a failure. A disappearing
+  // row is indistinguishable from a product Amazon does not carry, and those are different
+  // facts — as are "we never asked" and "we asked and could not reach them".
   return NextResponse.json({
     outcome: result.outcome,
     offers: result.offers,
