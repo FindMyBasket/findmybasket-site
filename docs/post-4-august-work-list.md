@@ -14113,3 +14113,120 @@ every importer already uses — then **deleted, and its absence verified (404)**
 **Item 97's principle is unaffected:** the harvest is re-derivable measurement. The rows sat in
 a throwaway function; **the derivation lives in `scripts/amazon-asin-map.mjs` and
 `scripts/amazon-match-barcodes.py`**, which is where a re-run starts.
+
+
+---
+
+### 168. Deploy, invoke, delete, verify 404 — the shape for a bulk load the anon key cannot do
+
+**Raised:** 17 August 2026, loading 433 rows into `amazon_asin_map` · **A pattern, recorded
+because it will recur.**
+
+#### THE PROBLEM IT SOLVES
+
+`amazon_asin_map` refuses INSERT to the anon key, and the only credentialled paths are the MCP
+SQL tool — which meant hand-transferring roughly **150KB of literal SQL** — or a GitHub Actions
+runner, whose feed workflow is deliberately read-only and should not be repurposed.
+
+**Edge functions receive `SUPABASE_SERVICE_ROLE_KEY` from the runtime.** That is the same
+credential path every importer already uses, so no new secret is created, copied or stored.
+
+#### THE SHAPE
+
+| step | |
+|---|---|
+| 1 | **generate** the function with the rows baked in as data, by script — never read by hand |
+| 2 | **deploy** it under a clearly temporary name |
+| 3 | **invoke** once, and read the returned counts (`offered`, `attempted`, `errors`) |
+| 4 | **delete** it |
+| 5 | **verify the deletion**, by invoking again and asserting **404** |
+
+**Step 5 is not ceremony.** A deleted function and a function you believe you deleted are
+indistinguishable without it, and this one holds a service-role client and a bulk INSERT. **The
+404 is the evidence.**
+
+#### WHY CARRYING DATA IN IT IS LEGITIMATE
+
+> **THE FUNCTION WAS DISPOSABLE BECAUSE THE DERIVATION WAS NOT IN IT.** The rows are output.
+> `scripts/amazon-asin-map.mjs` produces the harvest and `scripts/amazon-match-barcodes.py`
+> assigns the match states — **both committed, both re-runnable** — so deleting the function
+> destroys nothing that cannot be regenerated.
+
+This is item 97's rule from the other side. It says harvest output is **re-derivable
+measurement** and must not be shipped as DDL, because that freezes a dated snapshot in the
+schema. **A throwaway function is the opposite of freezing it**: the data exists for one
+invocation and the derivation stays where it belongs.
+
+**The test for whether this pattern is being abused:** if the function contains any *logic* that
+is not also in a committed script, deleting it destroys work and it should never have been
+temporary.
+
+---
+
+### 169. The join generalises, and it was already generalised on the day it was found
+
+**Raised:** 17 August 2026, Robbie asking whether the Amazon join shape could be run against the
+catalogue without Amazon · **It can. It already is. Weekly.** · **Corrects a claim I made one
+message earlier.**
+
+#### THE CLAIM I MADE, AND WHY IT WAS WRONG
+
+I wrote that *"the Amazon work is a better detector of our duplicates than anything aimed at it
+directly"*, and reasoned that an external identifier meets our catalogue with no knowledge of
+how we store it — one ASIN, one barcode, N of our rows.
+
+**The reasoning is sound and the conclusion is out of date.** The join needs no external
+identifier at all:
+
+```sql
+SELECT rp.ean_normalised AS code, count(DISTINCT rp.product_id) AS n_prod
+  FROM retailer_prices_live rp
+  JOIN products p ON p.id = rp.product_id AND p.merged_into IS NULL
+ WHERE rp.ean_normalised IS NOT NULL
+ GROUP BY rp.ean_normalised
+```
+
+**That is `ambiguous_ean_groups` in `fmb_quality_snapshot_write`, written on 14 August, in the
+weekly series since `week_start` 2026-08-10.** One barcode, N products, grouped — Amazon's role
+was only ever to be the thing that made someone group by barcode.
+
+> **THE AMAZON WORK FOUND THE DEFECT AND THE METHOD ON THE SAME DAY, AND THE METHOD WAS MADE
+> RETAILER-INDEPENDENT IMMEDIATELY.** What it has done since is not detect anything new. It has
+> made the defect **block a named task for a named brand**, which is a different and more
+> useful thing than measuring it again.
+
+**A metric nobody is stuck behind gets read. A defect blocking Vida Glow gets fixed.**
+
+#### AND THE SIZING ITEM 96 DID NOT HAVE
+
+Item 96 counted **barcodes**. Run today, counting **products**:
+
+| | 14 Aug (item 96) | **17 Aug** |
+|---|---:|---:|
+| ambiguous barcode groups | 8,606 | **8,623** |
+| same-brand — merge candidates | 7,907 | **7,709** |
+| cross-brand — normalisation artefacts | 699 | **914** |
+| **products inside same-brand groups** | *not measured* | **16,132** |
+| **surplus rows if each collapsed to one** | *not measured* | **8,423** |
+| same-brand AND same-category | *not measured* | 7,032 of 7,709 |
+| largest single group | *not measured* | **6 products** |
+
+> **8,423 SURPLUS PRODUCT ROWS — ABOUT 8% OF THE ACTIVE CATALOGUE.** Item 96 said "8,606
+> barcodes", which sounds like a barcode problem. **It is 16,132 product rows that should be
+> 7,709**, and that is a catalogue-size statement rather than an identifier one.
+
+**The split is stable across three days** — 91.9% same-brand then, 89.4% now — so the population
+is real rather than an artefact of one day's data. The 198-group fall in same-brand against a
+215-group rise in cross-brand is worth a look and is **not** explained here; the two departures
+removed 1,880 products in that window and could move either.
+
+#### WHAT THIS CHANGES ABOUT THE METHOD CLAIM
+
+**The method is reusable and is already reused.** What does not generalise is the *pressure*:
+the Amazon join produced six ambiguous rows against a weekly metric of 8,623, and the six are
+the ones anybody has actually looked at.
+
+> **A DETECTOR THAT MEASURES 8,623 AND A DETECTOR THAT BLOCKS ONE BRAND ARE THE SAME QUERY WITH
+> DIFFERENT CONSEQUENCES.** Item 131's rule was that a detector nothing reads is worse than
+> none. **This is the next rule along: a detector everything reads and nothing acts on is not
+> much better**, and what moved this one was a task that could not proceed.
