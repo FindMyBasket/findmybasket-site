@@ -14963,6 +14963,10 @@ not.
 **That is the sentence to read first if this is ever picked up.** The size is recoverable from a
 query; the trap is not.
 
+> **AND SINCE 18 AUGUST THERE IS EVIDENCE FROM OUTSIDE THE CATALOGUE — SEE ITEM 212.** Three
+> independent routes in one day, including a duplicate pair (93648/3448) that **no internal
+> barcode-keyed check could ever have found**, because one side carries no barcode at all.
+
 #### WITHDRAWN 17 AUGUST: THE "SECOND SHAPE" WAS A TRUNCATION ARTEFACT
 
 **This section previously recorded product 82517 as one catalogue row holding two different
@@ -17662,3 +17666,116 @@ products publishing their barcode winner — items 179's four tier upgrades plus
 
 **971 and 6965 stay held.** Both are contested destinations, and reassigning to a contested
 destination is the coin flip items 186 and 202 exist to refuse.
+
+---
+
+### 210. The sharpest correction of the day: it was never a near-miss
+
+**Raised:** 18 August 2026 · **Resolved and applied (item 209). Reframes a class.**
+
+> **`…517557` WAS NEVER A NEAR-MISS.** Product **6750 is the *Plus* variant** and it carries that
+> barcode. **Product 1028 was publishing an Amazon listing for a different product than the one
+> on its page.**
+>
+> **Amazon was right and our attachment was wrong.**
+
+Item 184 recorded this as *"two digits apart, same prefix, same family — a size or variant, not a
+wrong product"*, and named it the case a human pass is worst at because title, brand, image and
+size all agree. **All of that was true and the conclusion was still wrong**, because it was drawn
+about the wrong pair.
+
+#### IT CLOSES `identifier_conflict` DIFFERENTLY THAN THE CLASS WAS NAMED FOR
+
+The state was created on 17 August meaning **"we checked and the identifiers DISAGREE — evidence
+against"**.
+
+> **AT LEAST ONE MEMBER WAS A BARCODE THAT AGREED PERFECTLY — WITH A DIFFERENT PRODUCT.** There
+> was no disagreement anywhere in it. The class had silently assumed **the catalogue row is the
+> fixed point and the ASIN is the suspect**, so "conflict" could only ever be read as a fact
+> about the ASIN.
+
+**The honest reading of the state is narrower than its name:** *this ASIN's identifiers do not
+match THIS product's.* That is a fact about a **pairing**, and a pairing has two sides.
+
+#### WHAT THAT DOES TO THE FOUR WITH NO NEW EVIDENCE
+
+3077 (Beauty of Joseon), 3995 (Haruharu Wonder), 1276 (Biodance), 1499 (Skin1004) gained nothing
+from the tranche-3 harvest. **The reframe changes the question to ask about them.**
+
+| was asked | should be asked |
+|---|---|
+| *does this ASIN match this product?* — pairwise, answered, negative | **which catalogue product does this ASIN's barcode match?** — catalogue-wide, never asked |
+
+**The second question has a cheap answer and it has not been run:** look up each unconfirmed
+ASIN's Amazon-side identifiers against every product's barcodes, not just the one it is attached
+to. For 1028 that lookup would have returned 6750 immediately, months of ambiguity ago.
+
+> **3077 IS THE ONE MOST LIKELY TO MOVE.** Its Amazon identifiers are US UPC prefixes
+> (`691266…`) against our Korean EANs, and **Beauty of Joseon was a tranche-1 brand and was not
+> in this harvest at all** — so the catalogue-wide question has genuinely never been put for it.
+
+**Not run. Recorded as the next cheap step**, and it is a query rather than a harvest.
+
+---
+
+### 211. Third instance today of a guard's wording drifting from its purpose
+
+**Raised:** 18 August 2026 · **A pattern within one day.**
+
+| | the guard's purpose | what its wording actually said |
+|---|---|---|
+| **E3** (item 201) | hold when candidates disagree on generation | `filter(Boolean)` — *hold when two candidates carry different explicit tokens*, so absence was not a value |
+| **cross-product** (item 204) | hold an ASIN claimed by more than one product | *claimed by more than one product **in this batch*** |
+| **the invariant check** (item 209) | *every published ASIN has a map row* | *no map row points at a product publishing something else* — a different sentence entirely |
+
+**All three ran clean. All three passed their tests.** The third produced a count of 8 that I
+briefly read as a violation, when **a losing candidate's map row is the record that it lost.**
+
+> **THE FAILURE IS NOT IN THE LOGIC BUT IN THE TRANSLATION.** Each guard is a correct
+> implementation of a sentence that is *nearly* the intended one, and the gap between the two
+> sentences is invisible from inside the code — because the code is faithful to what was written,
+> and what was written is the thing that drifted.
+
+**Related but distinct from item 196**, where an assertion was correct and the *world* moved.
+Here the world stood still and **the sentence was never quite the one meant.** Item 196's defect
+had no wrong line anywhere; these have a wrong line that reads as right.
+
+**The practical defence is the same as item 207's:** state the invariant in words first, then
+check that the query is that sentence and not a neighbour of it. *Two of the three were caught by
+running the thing against reality; the third was caught by being surprised at a number.*
+
+---
+
+### 212. Item 96 has evidence from outside the catalogue for the first time
+
+**Raised:** 18 August 2026 · **Three independent routes in one day. Recorded for item 96, which is
+parked.**
+
+Every duplicate signal item 96 has ever had was **internal** — the catalogue compared against
+itself, by barcode grouping. **On 18 August, Amazon supplied three separate routes from outside.**
+
+| route | what it found | where it is |
+|---|---|---|
+| **cross-product conflicts** | **22 ASINs claimed by 46 catalogue rows** | `docs/amazon-harvests/tranche-3-conflicts.json` |
+| **reassignment** | **93648 / 3448** — the same Torriden product in two rows | item 209 |
+| **the identifier reframe** | 1028 / 6750 were *not* duplicates — a variant pair the catalogue had right and the ASIN wrong | item 210 |
+
+> **AN EXTERNAL IDENTIFIER ARBITRATES BETWEEN TWO CATALOGUE ROWS IN A WAY THE CATALOGUE CANNOT DO
+> FOR ITSELF.** When one Amazon ASIN's barcode matches two of our products, Amazon is asserting
+> they are one product. That assertion is independent of every heuristic item 96 was scoped
+> around.
+
+#### AND 93648 IS THE DETAIL THAT MAKES THE ROUTE VALUABLE
+
+**93648 carries no barcode anywhere in `retailer_prices_live`** — item 184 recorded it as the only
+one of the twenty-five with none from either side.
+
+> **AN INTERNAL DUPLICATE CHECK KEYED ON BARCODES CANNOT SEE A PAIR WHERE ONE SIDE HAS NO
+> BARCODE.** 93648/3448 was invisible to every method item 96 was built around, by construction,
+> and it was found because an ASIN attached to the barcode-less row turned out to match the other
+> one.
+
+**That is the class the external route reaches and the internal one cannot**, and it is a
+reason to prefer this evidence rather than merely to accept it.
+
+*Item 96 remains parked (item 172). This adds evidence, not a decision.*
