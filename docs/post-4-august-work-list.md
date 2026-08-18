@@ -16687,9 +16687,63 @@ anywhere** — *that is a stable secret, and the rule reports it as skew.*
 | skew | the **warning** | a relative measure presented as absolute |
 
 > **NEITHER IS A BUG. BOTH ARE CORRECT IMPLEMENTATIONS OF ASSERTIONS THAT STOPPED BEING TRUE.**
-> The code does what it says; what it says stopped describing the world.
+> **Nothing in the repository changed. Supabase shipped a key format and the invariant silently
+> went false. No commit, no diff, no test.**
+
+#### THIS IS A CATEGORY THIS LIST DOES NOT OTHERWISE CARRY
+
+**Every other instance recorded here has a wrong line somewhere.** A guard drawn around the wrong
+noun (187), a column filled with a correct value that broke an aggregate (188), a symmetric guard
+implementing a one-directional rule (179), a truncation read as a difference (172), a join counted
+from the wrong side (170). **In every case there is a line to point at, and a diff that would have
+shown it to a reviewer.**
+
+**Here there is nothing to point at.** The script was right. It stayed right. **The world moved and
+took the assertion's truth with it**, and no review of the repository at any point between 24 July
+and 18 August would have found anything wrong — because nothing in the repository was.
+
+> **AN ASSERTION ABOUT A PLATFORM IS DATED BY THE PLATFORM, NOT BY THE CODE.** Its correctness has
+> an expiry that is not visible in the file, not recorded in git, and not testable from inside the
+> repository. **The only signal is the check going red — which is precisely the signal item 191
+> shows we stop reading.**
+
+**That is the compounding failure**: the one class of defect with no reviewable artefact is
+detectable only through the one channel that decays into background.
 
 **This is item 191's argument with its own evidence.** The script warned itself — *"otherwise the
 standing check goes permanently red and stops being read"* — and then produced two false
 positives that did precisely that. **The warning was in the file the whole time, and the author
 six weeks later is not that reader.**
+
+
+#### APPLIED AND VERIFIED, 18 AUGUST
+
+`COPIES` replaces `PAIRS`; the age rule measures against `now()`; `STALE_DAYS` is 180 as an
+**explicit placeholder policy that still needs a decision** — it was 45 when the measure was
+relative, and 45 days of absolute age would flag nearly everything and rebuild the noise this
+removed.
+
+**Both directions were tested, because a check that cannot fail is not a check:**
+
+```
+green   OK vault:service_role_key           aee0e4653b97…  service_role / legacy_jwt
+        OK edge:SUPABASE_SERVICE_ROLE_KEY   77a2bb9723c4…  service_role / secret_key
+        RESULT: no divergence detected.                      ← first green since 24 July
+
+red     ✗  edge:SUPABASE_SERVICE_ROLE_KEY   PIN MISMATCH     ← deliberately corrupted pin
+              expected  deadbeef0000…
+              found     77a2bb9723c4…
+              → the value changed, or it was rotated without updating the pin here.
+```
+
+**The age section printed nothing** — `REVALIDATE_SECRET`, which had been reported "60d behind
+newest" while entirely unchanged, no longer appears.
+
+**Role coverage is now stated rather than implied:** `service_role → vault(legacy_jwt)
+edge(secret_key)`. The old form carried that fact as a side effect of asserting equality, so
+replacing the assertion would have silently dropped it.
+
+> **AND THE SCRIPT'S OWN WARNING NOW SITS BESIDE WHAT IT FAILED TO PREVENT.** The `SKEW_IGNORE`
+> comment predicting that a permanently-red check stops being read is annotated in place with the
+> fact that it went permanently red anyway — **through the rule the comment does not cover.** The
+> mechanism was predicted correctly and the guard was built one rule too narrow.
