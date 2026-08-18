@@ -62,6 +62,7 @@ const { ApiClient, DefaultApi, GetItemsRequestContent, SearchItemsRequestContent
 
 const MARKETPLACE = 'www.amazon.co.uk';
 const BATCH = 10;                 // server ceiling, item 60 §2
+let rateLimited = 0;              // 429s seen, reported at the end — item 185
 const THROTTLE_MS = 1500;         // chosen, not read from anything
 const MAX_RETRIES = 4;
 
@@ -121,6 +122,11 @@ async function call(fn, label) {
           JSON.stringify(body)?.slice(0, 200));
         return null;
       }
+      // COUNT 429s SEPARATELY. On 18 August a sequential read of 269 ASINs hit five of them
+      // and ~50 ASINs came back unread; counted as absent they produced a 26.4% figure against
+      // a true 8.9%. A rate limit that disappears into a retry loop is a silent sampling bias,
+      // so it is tallied and reported at the end whether or not the retry succeeded.
+      if (status === 429) rateLimited++;
       const wait = THROTTLE_MS * Math.pow(2, attempt + 1);
       console.error(`  [${label}] ${status ?? e?.message} — backing off ${wait}ms`);
       await sleep(wait);
@@ -177,6 +183,18 @@ async function getItemsBatch(asins) {
     'itemInfo.title',
     'itemInfo.byLineInfo',
     'itemInfo.productInfo',
+    // SELLER IDENTITY, CAPTURED AT HARVEST TIME. Added 18 August — work-list item 185.
+    // Measured that day: 53.5% of live buy boxes are the brand's own store, 14.1% Amazon,
+    // 23.4% a third party across 46 distinct sellers. That measurement needed a second full
+    // read of 269 ASINs because the first harvest did not record it, AND THAT RE-READ IS
+    // WHAT HIT THE FIRST RATE LIMIT THIS PROJECT HAS SEEN. Recording it as it arrives costs
+    // nothing here and removes the need to ask again.
+    //
+    // THE SELLER NAME IS A STRING, NOT AN ATTESTATION (item 200). It is captured as evidence
+    // for a human policy decision, never as proof of provenance.
+    'offersV2.listings.merchantInfo',
+    'offersV2.listings.price',
+    'offersV2.listings.isBuyBoxWinner',
   ];
   const res = await call(() => api.getItems(MARKETPLACE, req), `getItems x${asins.length}`);
   const items = res?.itemsResult?.items ?? [];
@@ -217,8 +235,12 @@ for (let i = 0; i < allAsins.length; i += BATCH) {
     const ext = it?.itemInfo?.externalIds ?? {};
     const eans = ext?.eans?.displayValues ?? [];
     const upcs = ext?.upcs?.displayValues ?? [];
+    const listings = it?.offersV2?.listings ?? [];
+    const buyBox = listings.find((l) => l?.isBuyBoxWinner) ?? listings[0] ?? null;
     records.push({
       asin: it.asin,
+      seller: buyBox?.merchantInfo?.name ?? null,
+      sellerPrice: buyBox?.price?.money?.displayAmount ?? null,
       title: it?.itemInfo?.title?.displayValue ?? null,
       brand: it?.itemInfo?.byLineInfo?.brand?.displayValue ?? null,
       manufacturer: it?.itemInfo?.byLineInfo?.manufacturer?.displayValue ?? null,
@@ -236,6 +258,7 @@ const out = {
   marketplace: MARKETPLACE,
   brands_queried: BRANDS,
   api_calls: callCount,
+  rate_limited_calls: rateLimited,
   enumerated: allAsins.length,
   returned: records.length,
   never_returned: neverReturned,
@@ -246,3 +269,14 @@ writeFileSync(OUT, JSON.stringify(out, null, 2));
 console.error(`\nWrote ${OUT}`);
 console.error(`  enumerated ${out.enumerated} | returned ${out.returned} | ` +
   `absent ${neverReturned.length} | no identifier ${out.no_identifier.length} | calls ${callCount}`);
+// AN ABSENT ASIN AFTER A 429 IS NOT AN ABSENT ASIN. Reported loudly rather than folded into
+// the absent count, because that conflation is exactly what produced a 26.4% figure against a
+// true 8.9% on 18 August. Item 185, item 200.
+if (rateLimited) {
+  console.error(`\n  *** ${rateLimited} call(s) were RATE LIMITED (429) and retried.`);
+  console.error(`  *** If any ASIN is listed absent, re-read it before treating absence as a fact.`);
+} else {
+  console.error(`  no rate limiting observed`);
+}
+const withSeller = records.filter((r) => r.seller).length;
+console.error(`  seller captured for ${withSeller}/${records.length} records`);
