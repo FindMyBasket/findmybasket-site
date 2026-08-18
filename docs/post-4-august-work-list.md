@@ -16177,3 +16177,256 @@ brands read as already harvested.
 *not harvested*; a `NULL` that carries a fact is a column where filling a blank is an assertion,
 not a tidy-up. **The instinct to complete a record is the hazard**, and it is a good instinct
 everywhere else.
+
+---
+
+### 189. Secret divergence: two credential generations, not one drifting credential
+
+**Raised:** 18 August 2026 · **Reported, NOT applied. A secret change touches every consumer and
+needs its own sequence.** · **Do before any Creators rotation.**
+
+`secret-divergence-check` has failed **every run since 24 July** — five consecutive weeks.
+
+> **THE JOB IS NOT BROKEN. IT IS WORKING, AND REPORTING SOMETHING NOBODY HAS ACTIONED.** See
+> item 191 for why that was indistinguishable from the other red workflow.
+
+#### WHAT ACTUALLY DIVERGES
+
+```
+✗  service-role key
+     vault:service_role_key           aee0e4653b97…   updated 2026-04-26
+     edge:SUPABASE_SERVICE_ROLE_KEY   77a2bb9723c4…   updated 2026-08-17
+```
+
+**The leading explanation is NOT that one copy is stale.** Measured:
+
+| | |
+|---|---|
+| Vault copy | **legacy JWT**, `eyJ…`, 219 chars, April |
+| This project's API keys | **both generations live** — legacy `anon` JWT *and* `sb_publishable_…`, neither disabled |
+| Who reads the Vault copy | **every active pg_cron job** — ~20 of them, building the `Authorization` header for `net.http_post` to edge functions |
+| Do they work | **yes, all succeeding** — so the April key is valid, not revoked |
+| Do edge functions work | **yes** — imports write, so the edge copy is valid too |
+
+> **BOTH CREDENTIALS WORK. That is the finding.** This is almost certainly a legacy
+> `service_role` JWT beside a new `sb_secret_…` key — two generations, each valid, each used by
+> a different consumer. **The check's `PAIRS` registry asserts they must be identical, and that
+> invariant quietly stopped being true when Supabase shipped the new key format.**
+
+**Not proven:** the edge value's format, because edge secrets return only a digest and reading
+one needs a management token this session did not have. **That is the first step below, and the
+proposal branches on it.**
+
+#### AND `REVALIDATE_SECRET` IS NOT DIVERGENT AT ALL
+
+Three consumers, and **all three date from 17 June**: `app/api/revalidate/route.ts` (Vercel env),
+vault `revalidate_secret` (read by `fmb_revalidate_brand_slugs` and `fmb_revalidate_paths`), and
+`import-awin-feed`'s `Deno.env`.
+
+> **NOTHING IS USING AN OLDER VALUE, BECAUSE THERE IS NO NEWER VALUE.**
+>
+> **The skew check measures each secret against the NEWEST secret in the store.** Updating the
+> service-role edge secret on 17 August is what pushed `REVALIDATE_SECRET` past the 45-day line.
+> **It is a relative measure presented as an absolute one** — rotate any one secret and every
+> other secret becomes "stale" on the same day.
+
+**Unverified and deliberately so:** whether Vercel's copy still matches. Proving it means
+exercising `/api/revalidate`, which has a side effect, so it belongs in the sequence rather than
+in a report.
+
+#### THE PROPOSED RECONCILIATION — NOT APPLIED
+
+**Step 1 — establish which is which.** Run `scripts/secret-divergence-check.sh` locally with
+`SUPABASE_ACCESS_TOKEN`, or read the edge secret's format in the dashboard. **Everything below
+branches on the answer and none of it should start before it.**
+
+**Step 2a — if the edge copy is `sb_secret_…` (expected).** **The credentials are correct and the
+check is wrong.** Fix the check, not the secrets:
+
+- Change `PAIRS` so it no longer asserts equality across generations, and **record in the
+  registry why they differ** — the registry is the only place that knowledge would live.
+- *Optionally* migrate the Vault copy to the new key so there is one credential again. **This is
+  the expensive branch:** ~20 cron jobs read that one row, so a wrong value stops every
+  scheduled import at once.
+
+**Step 2b — if both are legacy JWTs.** Then it is real drift and one is a superseded key that
+still works. Rotate deliberately, and only then.
+
+**Step 3 — the skew check.** Measure age against an absolute policy age or the secret's own
+rotation history, **not against the newest sibling.** As written it manufactures a warning every
+time anything is rotated, which is how a standing check earns being ignored.
+
+#### SEQUENCING, WHICH IS THE PART THAT MATTERS
+
+> **CHANGE THE VAULT COPY LAST.** It is a single row read by every scheduled job on the project.
+> Verify against one job before the others, and keep the previous value recoverable until a full
+> daily cycle has passed.
+
+**And do this before rotating the Creators secret.** That rotation will write a new value in one
+store; if the invariant here is still unresolved, its result will be indistinguishable from this.
+
+---
+
+### 190. The homepage demo trigger, and a correction to how bad it was
+
+**Raised:** 18 August 2026 · **Robbie's to fix — it needs two dashboard logins.**
+
+`Refresh homepage demo` has failed **every run since 4 August — fourteen days**, on:
+
+```
+Vercel API responded HTTP 403
+  forbidden — Not authorized: Trying to access resource under scope
+  "hello-1150s-projects". You must re-authenticate to this scope.
+```
+
+#### THE CORRECTION LEADS: IT WAS NOT FOURTEEN DAYS STALE. IT WAS NEVER MORE THAN TWO.
+
+**I reported this as "eight days frozen" and both numbers were wrong.** The workflow has been
+failing for fourteen days, not eight — I read eight runs and reported the window I had looked at
+rather than the window that existed.
+
+**And the demo was never frozen.** `scripts/generate-homepage-demo.mjs` runs at **build time**,
+and every merge to `main` triggers a production build. Measured:
+
+| deploys to `main` since 4 Aug | **156** |
+|---|---|
+| longest gap between them | **46.4 hours** |
+
+> **THE WORKFLOW IS A GUARANTEE, NOT THE MECHANISM THAT DOES THE WORK.** Its failing does not
+> cause staleness — it removes the floor under freshness. **The floor was never tested, because
+> the fortnight was busy.**
+
+**The workflow's own comment said this before it happened:** *"builds have been near-daily this
+fortnight, but that is a fact about recent activity rather than a guarantee."* **The guarantee
+has been absent for fourteen days and the property held anyway, by luck.**
+
+#### WHY IT NEVER ESCALATED, AND THE ERROR MESSAGE WAS RIGHT
+
+> *"The site continues to serve the last good build, so this is stale rather than wrong."*
+
+**That is true, and it is why nothing escalated.** A wrong price escalates; a slightly old
+correct one does not. **The message was accurate and its accuracy is what bought fourteen days
+of silence** — it told the reader not to worry, and there was no reader.
+
+#### WHAT THE TOKEN IS FOR
+
+`VERCEL_TOKEN` triggers a **production deploy via the Vercel API**, so the homepage demo is
+re-solved against the day's prices. A Deploy Hook was rejected on 3 August: hooks are not
+available on this project, and a hook URL is an unauthenticated trigger with no identity that
+cannot be scoped or attributably rotated.
+
+#### WHAT RE-AUTHENTICATING REQUIRES FROM ROBBIE
+
+**Two dashboard logins, which is why it is his and not mine:**
+
+1. **Vercel → Settings → Tokens → Create Token.** Scope it to team `hello-1150s-projects`
+   (`team_yVgBqs8yKGekZePH0nYXhqrg`).
+2. **Choose an expiry deliberately.** A token that expires will do this again on a date nobody
+   has written down; one that does not is a standing deploy credential. **The 403 says
+   "re-authenticate to this scope", which reads like expiry** — so this has likely already
+   happened once.
+3. **GitHub → repo Settings → Secrets and variables → Actions → `VERCEL_TOKEN`.**
+4. **Re-run the workflow** to confirm, rather than waiting for 05:30 UTC.
+
+---
+
+### 191. Two failures indistinguishable from each other — a new shape
+
+**Raised:** 18 August 2026 · **The pairing is the finding.**
+
+Two workflows are red in the Actions UI:
+
+| | | |
+|---|---|---|
+| `Refresh homepage demo` | **broken** — expired token, cannot do its job | ignored 14 days |
+| `secret-divergence-check` | **working** — found real divergence and failed as designed | ignored 25 days |
+
+> **THE STATUS COLOUR CANNOT DISTINGUISH A JOB THAT BROKE FROM A JOB THAT FOUND SOMETHING.**
+> Both are a red ✗. One means *this check is dead*; the other means *this check is alive and has
+> news*. **They demand opposite responses and present identically.**
+
+#### WHY THIS IS A NEW SHAPE ON THIS LIST
+
+**Every other instance recorded here is a signal indistinguishable from SUCCESS** — a silent
+kill running 26 hours, a frozen feed serving retained rows, a categorisation defect on a page
+that renders correctly, a stored ASIN decaying with nothing to surface it. The failure mode is
+always *nothing looks wrong.*
+
+**This is the opposite and it is worse in one specific way:** both look wrong, so neither is
+missed for lack of a signal. **They were both ignored because the signal is uninformative.** A
+red that might mean "broken" or might mean "found something" is a red that teaches the reader
+that red means nothing.
+
+#### AND IT EXPLAINS THE DURATIONS
+
+**The one that was working got ignored longer** — 25 days against 14. That is the wrong way
+round for effort but the right way round for the mechanism: a *broken* job's red is at least
+stable and eventually looks like a task, whereas a *detector* firing every week reads as
+background. **A standing check that goes permanently red stops being read**, which is exactly
+what `secret-divergence-check.sh` warns about in its own `SKEW_IGNORE` comment — and then it
+did it to itself, via the skew rule described in item 189.
+
+#### THE REMEDY IS EXIT CODES, NOT DASHBOARDS
+
+**A detector needs a third state**: pass, *found something*, and *cannot run*. CI gives two.
+Where a third is not available, the split has to be **two workflows** — a detector that fails
+only when it cannot run, and a reporter that never fails and writes its findings somewhere read
+on purpose. **Anything that routes both through one red tick reproduces this.**
+
+---
+
+### 192. The Amazon log's limit is designed, not missing
+
+**Raised:** 18 August 2026, reading the first real traffic · **A limit rather than a gap.**
+
+> **IT WAS BUILT TO ANSWER HOW OFTEN THE FETCH FAILS, AND IT DOES THAT. IT STRUCTURALLY CANNOT
+> SAY WHICH PRODUCTS AMAZON DOES NOT STOCK, BECAUSE THE COLUMN THAT WOULD ATTRIBUTE IT IS THE
+> ONE THE 24-HOUR RULE FORBIDS.**
+
+`amazon_live_fetch_log` holds outcomes, counts and durations. The migration asserts that no
+column could hold a price, a seller **or an ASIN**. So `no_offers` is countable and never
+attributable: the log can say it happened twice, and can never say to what.
+
+**This is not an oversight to be fixed later.** Adding the ASIN would make the row a record of
+which product Amazon had no offer for at a moment — which is the storage the rule exists to
+prevent, one step removed.
+
+#### THE CONSEQUENCE FOR THE 16% AND 8.6% FIGURES
+
+**Every meaningful no-offer rate on this project has come from a sweep, not from the log**, and
+that is now a permanent property rather than an artefact of low traffic. Items 180 and 184 both
+measured by asking about all 269 ASINs directly. **The log will never corroborate them**, and a
+future reader finding the log unable to reproduce a quoted rate should stop here rather than
+suspect the rate.
+
+**What the log is genuinely for:** breaker openings, rate limiting, timeout frequency, duration
+distribution, and the ratio of `ok` to everything else. **All of those are properties of the
+fetch, which is what it was scoped to.**
+
+---
+
+### 193. The latency in the route handler comment is warm-path and real traffic is not
+
+**Raised:** 18 August 2026 · **Correction to a measured figure, recorded not fixed.**
+
+`app/api/amazon/price/route.ts` justifies batching with a measured figure:
+
+> *"Measured 17 Aug: ten ASINs cost the same as one (197-439ms either way)"*
+
+**First real page loads: 213, 255, 635, 633, 579 ms.**
+
+> **THE 197–439ms WAS WARM SEQUENTIAL PROBING** — twenty-three batches fired back to back
+> against an instance that stayed hot. **Real traffic was five requests across eleven hours, so
+> essentially every one is a cold start.** ~600ms is the honest figure.
+
+**The comment's conclusion still holds and its number does not.** Ten ASINs really do cost the
+same as one, so batching is still right — that comparison was between two things measured the
+same way, and the bias applies equally to both. **It is the absolute number that does not
+transfer.**
+
+**Headroom against `TIMEOUT_MS = 4000` is ample either way** — 600ms is 15% of the budget. But
+the figure a later reader would reach for when tuning that timeout is the wrong one by roughly
+2.5x, and it is quoted with a date and a measurement, which is exactly what makes it credible.
+
+> **A NUMBER MEASURED UNDER PROBE CONDITIONS AND QUOTED WITHOUT THEM READS AS A PROPERTY OF THE
+> SYSTEM.** The probe was not wrong; the omission is that it never said it was a probe.
