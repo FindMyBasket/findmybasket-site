@@ -16003,12 +16003,36 @@ is thinnest.
 
 ---
 
-### 187. The rule optimises a snapshot while its output is stored
+### 187. Every guard watches the value; none watches the choice
 
 **Raised:** 17 August 2026, out of item 186 · **Robbie's decision: the rule is re-runnable and
 periodically re-run.** · **Scoped, not built.**
 
-#### THE FINDING IS NOT ABOUT 87918
+#### THE IMPLICATION LEADS
+
+> **EVERY GUARD BUILT FOR THIS FEATURE WATCHES THE VALUE. NONE WATCHES THE CHOICE.**
+
+The 30-second TTL is coalescing rather than storage. `amazon_live_fetch_log` asserts at
+migration time that no column could hold a price, a seller or an ASIN. The four visible states
+exist so a stale number is never shown as a live one. **All of it guards the price**, and it was
+built deliberately, item by item.
+
+**`products.amazon_asin` is a column nobody thinks of as price-derived, because it holds an
+identifier — and an identifier looks permanent.** It was selected on stock, seller and offer
+availability. **It decays exactly like a price would, with none of the machinery that was built
+to notice.**
+
+#### AND THAT IS WHY IT STAYED INVISIBLE
+
+> **NO PRICE IS STORED — ONLY A DECISION MADE USING ONE. So the 24-hour boundary that would
+> catch a stored price does not notice a stored choice.**
+
+**The guard was drawn around the wrong noun.** Everything that touches a price is watched;
+nothing that is *derived from* a price is, because the derivation produces something that does
+not look like a price. **Any rule that selects on live signals and stores its answer has this
+shape**, and the storage rule will not find it.
+
+#### THE INSTANCE, WHICH IS NOT THE FINDING
 
 87918 picks the in-stock listing at £31.93 over an out-of-stock one at £25.50 — a 25% penalty
 that **reverses the moment the cheaper listing restocks.**
@@ -16021,20 +16045,6 @@ that **reverses the moment the cheaper listing restocks.**
 the same shape named in `lib/amazon-live.ts`: *a cached price served through an outage is a
 stored price whose refresh path no longer exists.* Here it is **a stored ASIN chosen on live
 signals whose refresh path was never built.**
-
-#### WHY IT STAYED INVISIBLE, WHICH IS THE SHARPEST FORM OF IT
-
-> **NO PRICE IS STORED — ONLY A DECISION MADE USING ONE. So the 24-hour boundary that would
-> catch a stored price does not notice a stored choice.**
-
-Every guard built for this feature watches the price: the 30-second TTL is coalescing rather
-than storage, `amazon_live_fetch_log` asserts at migration time that no column could hold a
-price, and the whole four-state design exists so a stale number is never shown as a live one.
-
-**All of it watches the value. None of it watches the choice.** `products.amazon_asin` is a
-column nobody thinks of as price-derived, because it holds an identifier — and an identifier
-looks permanent. **It was selected on stock, seller and offer availability, and it decays
-exactly like a price would, with none of the machinery that was built to notice.**
 
 #### THE TWO SHAPES, AND THE SECOND IS BETTER
 
@@ -16111,3 +16121,59 @@ was repaired, but because it is now described.
 **Cadence.** Weekly is the obvious guess and it is a guess. **The live price fetch cannot serve
 as the trigger** — it reads only the *published* ASIN, never the alternatives, so it can never
 see that a held candidate has become the better one.
+
+
+---
+
+### 188. A field whose meaning is defined by what reads it, not by what it describes
+
+**Raised:** 17 August 2026, writing the 25 into `amazon_asin_map` · **Caught before applying.
+The remedy is a column comment.**
+
+#### THE NEAR-MISS
+
+Writing 25 pre-existing ASINs into the map, setting `via_brand` to each product's brand looked
+like **free traceability**. The column is called *via brand*; the products have brands; nothing
+would have been untrue.
+
+> **IT WOULD HAVE MADE ELEVEN BRANDS READ AS ALREADY HARVESTED** — Skin1004, LANEIGE, numbuzin,
+> Round Lab, Abib, Some By Mi, Isntree, Anua, Haruharu Wonder, Biodance, Torriden.
+>
+> **Item 185 counts unharvested brands off `via_brand`.** Populating it would have silently
+> deleted the 1,800-product opportunity scoped an hour earlier, in the same session that scoped
+> it — and left no error behind, because every individual value would have been correct.
+
+#### THE GENERAL FORM
+
+> **A COLUMN'S MEANING CAN BE DEFINED BY WHAT READS IT RATHER THAN BY WHAT IT DESCRIBES.**
+
+`via_brand` looks like a description of the row: *which brand is this ASIN associated with.*
+**It is not.** It is a record of **provenance** — which harvest produced this row — and that
+meaning exists nowhere in the column name, the type, or any constraint. **It exists only in the
+queries that read it**, and those queries are in a document and a session, not in the schema.
+
+**The name is the trap.** A column called `harvest_batch` could not have been filled in this way.
+`via_brand` reads as an attribute, so filling it reads as completing the record rather than as
+asserting something.
+
+#### WHY THE REMEDY IS A COMMENT AND NOT A CONSTRAINT
+
+**No constraint can express this.** There is no invalid value — every brand name is a legitimate
+`via_brand`. The error is not in the value but in the *act of writing one*, for a row whose
+provenance is not a harvest. A `CHECK` cannot see intent.
+
+**So the remedy is the one thing that reaches the next person to hold this question:** the column
+now says what it is for, and what breaks if it is filled in casually.
+
+```
+NULL means the row did not come from a harvest ... item 185 counts unharvested
+brands off this column, so populating it for a non-harvest row would make eleven
+brands read as already harvested.
+```
+
+#### WHERE ELSE TO LOOK
+
+**Any column read by an aggregate that treats absence as meaningful.** `via_brand` NULL means
+*not harvested*; a `NULL` that carries a fact is a column where filling a blank is an assertion,
+not a tidy-up. **The instinct to complete a record is the hazard**, and it is a good instinct
+everywhere else.
