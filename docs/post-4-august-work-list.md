@@ -17303,13 +17303,33 @@ unverifiable from a name.
 
 **Raised:** 18 August 2026 · **BUILT and applied. 215 products promoted, 269 → 484.**
 
-`resolveAcrossProducts` implements item 202: an ASIN selected for more than one product is
-**held for all of them**, and the conflicts are **emitted as a list** rather than suppressed.
+#### THE FINDING LEADS: I DREW THE SET TOO SMALL, INSIDE THE FIX FOR DRAWING IT TOO SMALL
+
+Item 202's finding was **"ambiguity is a property of the set"** — the per-product rule cannot see
+a conflict because it only ever holds one product.
+
+The fix compared **verdicts against verdicts**. It ran clean, all tests passed, and the SQL it
+generated was about to write `B07Y32L357` to product 6750 — **while product 1028 already
+published it.**
+
+> **THE SET IS NOT THE BATCH. THE SET IS THE CATALOGUE.**
+
+Two collisions in 217 rows, and **neither product's verdict was individually wrong** — the exact
+shape of the defect being fixed, reproduced inside the fix. **Caught by reading the generated SQL
+before running it, not by any check**, and every test I had written passed against the flaw.
+
+`resolveAcrossProducts` now takes the published ASINs as a second argument. A product
+re-selecting the ASIN it already holds is correctly not a conflict.
+
+#### WHAT IT DOES
+
+It implements item 202: an ASIN selected for more than one product is **held for all of them**,
+and the conflicts are **emitted as a list** rather than suppressed.
 
 **Applied to the tranche-3 harvest: 22 ASINs contested by 46 products, all held**, and the
 conflict list is versioned at `docs/amazon-harvests/tranche-3-conflicts.json`.
 
-#### AND THEN THE SAME MISTAKE, ONE LEVEL OUT
+#### THE ORIGINAL WRITE-UP OF THE SLIP, KEPT
 
 The first implementation compared **verdicts against verdicts**. It ran clean. The SQL it
 generated was about to write `B07Y32L357` to product 6750 — **while product 1028 already
@@ -17417,3 +17437,141 @@ applies equally to the brand's own store and to a reseller.
 > harm when the action is qualifying a price than when it is hiding a product.
 
 **Robbie chooses. Nothing built.**
+
+---
+
+### 206. Option A: the seller name is the disclosure — a decision, not a status quo
+
+**Raised:** 18 August 2026 · **Robbie's decision. Recorded as a position because "do nothing" and
+"decided to do nothing" read identically later and only one of them is an argument.**
+
+The seller rule runs at **display time** (item 205), and the chosen option is **A: show the price
+with the seller named**, exactly as the row does today.
+
+> **THE SELLER NAME IS THE DISCLOSURE, AND IT DOES MORE WORK THAN THE ALTERNATIVES.**
+
+#### WHY NOT B (SHOW THE ROW, SUPPRESS THE PRICE)
+
+**B withholds a true and useful fact to protect a shopper who does not know that the seller name
+matters.** But the price is real, and **someone weighing it against our retailers is doing the
+thing the site exists for.** Suppressing it removes the comparison in order to warn about the
+comparison.
+
+#### WHY NOT C (HIDE THE ROW)
+
+**Disqualified by the argument that produced it.** A product Amazon carries, at a price we chose
+not to show, becomes **indistinguishable from a product Amazon does not carry** — item 22's
+confusion, reintroduced deliberately one layer up. Item 22 built four visible states precisely so
+that "we found nothing" and "we are not showing you what we found" could never look the same.
+
+#### AND THE UNVERIFIABLE-STRING BOUND POINTS THE SAME WAY
+
+A seller name is a string, not an attestation (item 200), so **every option acts on a signal that
+cannot verify the property the policy turns on.**
+
+> **ACTING ON AN UNVERIFIABLE SIGNAL IS A SMALLER HARM WHEN QUALIFYING THAN WHEN HIDING.** A
+> names the seller and lets the shopper weigh it; B and C convert an unverified classification
+> into a suppression. **The weaker the signal, the more the response should be disclosure rather
+> than action.**
+
+#### WHAT THIS COMMITS TO
+
+**36.8% of Amazon rows are third-party and will be shown as such, named.** That is the accepted
+cost and it is the honest one: the alternative is not a cleaner catalogue, it is a quieter one.
+
+**And it stays revisitable.** A display-time rule can be changed on any subset at any moment with
+no data change — which is the property that made moving it off promotion-time worth doing, and it
+means this decision costs nothing to reverse if the seller mix worsens.
+
+---
+
+### 207. Two lessons failed their author in one day
+
+**Raised:** 18 August 2026 · **A pattern, recorded jointly because they happened hours apart.**
+
+| | the lesson, already recorded | how it failed its author |
+|---|---|---|
+| **E3** (item 201) | *absence is a value* — `Number(null)` is 0, item 197, recorded that morning | `.filter(Boolean)` dropped untokened candidates, so a version guard stopped firing when one side had no version |
+| **cross-product** (item 204) | *ambiguity is a property of the set* — item 202, written hours earlier | the set was drawn as **the batch**, not the catalogue, inside the fix for that finding |
+
+**Item 191 already records the sharpest earlier instance:** `secret-divergence-check.sh` warning
+in its own comment that a permanently-red check stops being read, and then going permanently red.
+**That was a lesson failing an author six weeks later. These two failed within hours.**
+
+> **RECORDING A LESSON DOES NOT INSTALL IT.** The interval between writing the finding and
+> violating it was, in one case, a single working day — and in the other, the same session.
+
+#### WHAT ACTUALLY CAUGHT THEM, WHICH IS THE USEFUL PART
+
+**Neither was caught by review, and both were caught by re-running something against reality:**
+
+- E3 by **re-measuring the built rule against the same twelve the design was measured on**
+- the set by **reading the generated SQL before executing it**
+
+**All tests passed in both cases**, because the tests were written by the same person holding the
+same too-small model. *A test encodes the author's understanding, so it cannot catch a
+misunderstanding — only a slip.*
+
+> **THE DEFENCE IS NOT MORE CARE AND NOT MORE TESTS. IT IS A SECOND CONFRONTATION WITH THE
+> WORLD** — the same input measured twice, or the artefact inspected before it is applied. Both
+> defects survived everything internal to the change and died on contact with something external
+> to it.
+
+---
+
+### 208. Reassignment, and what the harvest resolved of item 184's nine
+
+**Raised:** 18 August 2026 · **Reported. NOTHING REASSIGNED.**
+
+Item 184 left nine pre-existing ASINs unconfirmed — five `identifier_conflict`, four
+`legacy_unconfirmed`. The tranche-3 harvest independently touched seven of them.
+
+| product | published ASIN | what the harvest says |
+|---|---|---|
+| **1028** Isntree | `B07Y32L357` | **matches product 6750, single claimant** |
+| **93648** Torriden | `B07WZ2YTDP` | **matches product 3448, single claimant** |
+| **971** Skin1004 | `B0B881GN1P` | matches **81987 AND 99360** — contested three ways |
+| **6965** LANEIGE | `B0DRZ8GBDM` | a candidate exists but is contested by 99400 and 102542 |
+| **794** Anua | `B0DL8Y8N4G` | harvested, **matched no catalogue product at all** |
+| **1499** Skin1004 | `B09JB71319` | harvested, publishes no barcode — unchanged |
+| 3077, 3995, 1276 | — | no candidate in this harvest |
+
+#### TWO ARE RESOLVED, AND ONE OF THE OTHERS IS QUIETLY STRENGTHENED
+
+> **1028 AND 93648 HAVE A CLEAN ANSWER: the ASIN was right about a product and attached to the
+> wrong catalogue row.** Isntree's `…517557` was never a variant claim — it is product 6750's
+> barcode.
+
+**794 gains corroboration nobody was looking for.** Its ASIN was harvested and **matched no
+catalogue product**, so no other row claims it. Item 186's secondary path confirmed it on brand
+store + exact title + size; **the harvest independently shows there is no competing claimant**,
+which is the check the secondary path itself cannot perform.
+
+**971 gets worse, not better.** Its published ASIN is claimed by two other products, so it is the
+1028 shape *without* a clean destination.
+
+#### WHAT REASSIGNMENT WOULD INVOLVE
+
+**It is not an UPDATE.** Moving a published ASIN from one catalogue row to another is four
+changes, and the order matters:
+
+1. **Clear** `products.amazon_asin` on the losing row — which removes a live Amazon row from a
+   page that has one today.
+2. **Repoint** the `amazon_asin_map` row's `product_id`, since `asin` is the primary key and the
+   row already exists. *Not an insert; the existing provenance must move with it.*
+3. **Re-state the match**: `identifier_conflict` becomes `matched` with the confirming EAN, and
+   the note must record that it was reassigned rather than newly matched.
+4. **Re-run the cross-product pass**, because the destination product may itself have a verdict.
+
+> **STEP 1 IS THE ONE THAT NEEDS DELIBERATION.** It is the first time this project would REMOVE a
+> live Amazon row. Everything so far has added or held — item 184 explicitly declined to retire
+> ASINs on the grounds that a dead one still links to a product page. **Reassignment is the first
+> case where the losing row genuinely should lose it**, and that is a different act from
+> retirement even though the shopper sees the same thing.
+
+**And it should be one change for both, not a general mechanism.** Two products with clean
+single-claimant evidence is not a migration; building a reassignment pipeline for n=2 would be
+inventing a tool for a case that has occurred twice.
+
+**Not applied. 971 and 6965 stay held — contested, and reassigning to a contested destination is
+the coin flip both item 186 and item 202 exist to refuse.**
