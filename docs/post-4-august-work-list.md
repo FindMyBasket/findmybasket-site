@@ -16788,3 +16788,177 @@ replacing the assertion would have silently dropped it.
 > comment predicting that a permanently-red check stops being read is annotated in place with the
 > fact that it went permanently red anyway — **through the rule the comment does not cover.** The
 > mechanism was predicted correctly and the guard was built one rule too narrow.
+---
+
+### 197. A local copy of the delivery rule that priced unknown as free — third instance
+
+**Raised:** 18 August 2026, scoping the Prime toggle · **FIXED and tested. Independent of the
+toggle, and done first.**
+
+`scripts/generate-homepage-demo.mjs` carried its own `deliveryFor`:
+
+```js
+if (r.delivery_model === 'flat') return Number(r.delivery_cost)
+return goods >= Number(r.delivery_threshold) ? 0 : Number(r.delivery_cost)
+```
+
+> **NO UNKNOWN BRANCH.** `Number(null)` is `0`, `goods >= 0` is true, **so it returned FREE
+> DELIVERY** for a retailer whose terms are unknown. Measured: `unknown retailer, £40 leg -> 0`.
+
+**That is exactly the defaulting `lib/delivery.ts` exists to forbid**, reintroduced in a copy
+written before the unknown contract existed.
+
+#### THE PROTECTION WAS COINCIDENCE, NOT DESIGN
+
+It was unreachable only because `loadData()` filters `.eq('active', true)` and the two unknown
+retailers — Amazon (9) and eBay (10) — are inactive.
+
+> **AN UNRELATED FILTER WAS THE ONLY THING STANDING BETWEEN THIS AND A WRONG NUMBER ON THE
+> MOST-VISITED PAGE** — and **activating Amazon is precisely what the Prime toggle required.**
+> The toggle's first step would have silently turned this on.
+
+**What it would have produced:** free Amazon delivery in the homepage demo. **Option B, chosen by
+nobody, on the page most people see, through a code path nobody would have looked at.**
+
+#### THIRD INSTANCE OF A LOCAL COPY DIVERGING FROM THE SHARED RULE
+
+After `feed-diag` and the eight unordered paginated reads. **The pattern is now established
+enough to state as a rule rather than a coincidence:**
+
+> **A COPY DOES NOT DRIFT WHEN IT IS WRITTEN. IT DRIFTS WHEN THE SHARED RULE GAINS A CASE THE
+> COPY NEVER HAD.** All three copies were correct on the day they were made. `lib/delivery.ts`
+> later grew the `unknown` contract; the copies did not, and nothing connects them.
+
+**So the hazard is not duplication itself — it is duplication plus a rule that is still learning.**
+`lib/delivery.ts` has changed three times since August; that is what makes copies of it dangerous.
+
+#### IT CAN IMPORT THE SHARED MODULE. THE BOUNDARY DOES NOT FORCE A COPY.
+
+**Measured, not assumed:** Node strips TypeScript types on import from 22.18, and **this
+repository already depends on it** — `npm test` runs `node --test "lib/**/*.test.ts"`.
+
+```
+import { deliveryFor } from '../lib/delivery.ts'     → works, verified
+```
+
+**The Deno/Node boundary that justifies `supabase/functions/_shared/delivery.ts` existing
+separately does not apply here.** That copy is genuinely forced: Deno cannot import from `lib/`.
+This script is plain Node — the same runtime as the tests — and its copy was never forced by
+anything. **Two copies looked like a policy; one of them was just habit.**
+
+`package.json` now declares `engines: { node: ">=22.18" }`, so the requirement is stated rather
+than assumed. **If a build ever runs on an older Node the import fails and the build breaks
+loudly** — strictly better than the silent £0 it replaces.
+
+#### AND THE TEST THAT KEEPS IT HONEST
+
+`main()` used to run on bare import, so `solve` could not be exercised without credentials and a
+network. **That is why this went unnoticed: nothing could reach it.** A main guard now makes it
+importable, and `scripts/generate-homepage-demo.test.mjs` asserts the behaviour:
+
+- an unknown-terms retailer never appears in a solved basket, **however cheap its goods**
+- it is never priced at zero delivery
+- all-unknown yields `null`, which triggers the fallback copy rather than a free basket
+- **a fully known pair still solves** — the control, so the guard cannot pass by disabling it
+
+> **THE TEST WAS PROVEN TO DISCRIMINATE.** Re-run against the old always-known behaviour: **3 of
+> 4 fail**, and the control passes both ways. *A test that passes against the code it was written
+> to reject is not a test*, and that had to be demonstrated rather than assumed.
+
+152 tests pass.
+
+---
+
+### 198. The Prime toggle: the decision is implementable and the toggle is not
+
+**Raised:** 18 August 2026 · **Robbie's decision on the decline branch recorded. TOGGLE NOT
+BUILT, and the reason is a hard blocker rather than a priority call.**
+
+#### THE DECISION
+
+**A decline is treated as unanswered, and Amazon is excluded from basket ranking.** The row stays
+visible with its price and its note, outside the total — **exactly what the product page does
+today. Nothing claimed, nothing hidden.**
+
+**The reasoning:** it is the only branch that **makes no claim on the shopper's behalf.** As
+non-Prime it would be option A wearing a prompt; as Prime it would be option B wearing a prompt;
+both were rejected on the asymmetry argument. **A shopper who declines gets today's behaviour
+rather than a guess.**
+
+**The accepted cost, stated rather than buried:**
+
+> **MOST SHOPPERS WILL NEVER ANSWER, SO AMAZON STAYS OUT OF MOST BASKET TOTALS.** That is the
+> honest version of *"we do not know"*, and **it must not be quietly optimised away later by
+> changing the default.** Any future change that improves Amazon's inclusion rate by assuming an
+> answer is reversing this decision, whatever it is called.
+
+#### AND THE TOGGLE CANNOT BE BUILT, FOR A REASON THAT IS NOT PRIORITY
+
+> **A TOGGLE THAT SELECTS BETWEEN TWO TERMS OBJECTS NEEDS BOTH TO EXIST. NEITHER DOES.**
+>
+> **A prompt whose "yes" cannot be honoured is worse than no prompt.** It spends the interruption
+> the design existed to spend once, and returns nothing for it.
+
+**The decline branch needs no terms object at all** — excluding Amazon from ranking requires no
+cost. **The accept branch has no source that could give it one.**
+
+#### THE CORRECTION: THE PRIME BRANCH IS NOT THE EASY HALF
+
+**I previously scoped Prime as `{model:'flat', cost:0}` — "a branch, not a schema change".** That
+was wrong, and it was wrong in the direction that made the work look small.
+
+**"Free" is true only for PRIME-ELIGIBLE listings**, and eligibility is **not determinable from
+any resource this API offers**. Meanwhile the sellers on our own promoted ASINs include Medpak
+EU, One Sedona, Kweb LTD, TRADEZ GLOBAL, London Beauty Group, HealthandWholesale, Maison Elyra,
+Propel by GRG and VENTURA VISTA.
+
+> **`cost: 0` ON THOSE IS OPTION B WEARING A TOGGLE.** The asymmetry argument rejected assuming
+> Prime for everyone; doing it behind a prompt does not make it an answer.
+
+**Non-Prime is no better and was already recorded as such** on the retailer row itself: *"free
+over a threshold on eligible items only, otherwise a charge that varies BY SELLER… Any tiered pair
+would be wrong per listing."*
+
+#### WHAT WOULD UNBLOCK IT
+
+**A per-listing delivery cost, which needs a source that does not currently exist.** Not a
+decision, not a default — a source. **Until then the toggle is not small work being deferred; it
+is work with a missing input.**
+
+---
+
+### 199. The Creators API forecloses the per-listing delivery route, and the control proves it
+
+**Raised:** 18 August 2026 · **Recorded so it is not re-derived.**
+
+**The complete `offersV2.listings.*` surface**, returned by the API's own validation error:
+
+```
+availability · condition · dealDetails · isBuyBoxWinner
+loyaltyPoints · merchantInfo · price · type
+```
+
+**There is no delivery resource, no shipping cost, and no Prime-eligibility flag.** `deliveryInfo`,
+`isPrimeEligible` and `programEligibility` all return **400**.
+
+#### THE CONTROL IS THE POINT, AND IT IS ITEM 184'S LESSON APPLIED TO ITS OWN QUESTION
+
+Item 184 records reading an **empty** `itemInfo.externalIds` as an unsupported resource when it
+meant *that listing publishes no barcode* — and nearly spending an eleven-brand harvest on the
+mistake.
+
+**So this time the probe carried a control:** a deliberately bogus resource, `offersV2.listings.thisIsNotAResource`.
+
+| | |
+|---|---|
+| bogus resource | **400** — so the API **validates** resource names |
+| `deliveryInfo`, `isPrimeEligible`, `programEligibility` | **400** — genuinely unsupported |
+| `loyaltyPoints` | **200** — supported, and revealed two undocumented keys (`violatesMAP`, `type`) |
+
+> **"UNSUPPORTED" IS PROVEN HERE, NOT INFERRED.** A 400 against a validated namespace is
+> evidence; an empty field never was. **The same probe shape that misled item 184 is decisive
+> once it has a control**, and the control cost one extra API call.
+
+**Practical consequence:** the per-listing route to a delivery cost is closed at the API, not
+merely undone. **Nobody should re-derive this**, and item 198's blocker cannot be lifted by
+requesting more resources.
