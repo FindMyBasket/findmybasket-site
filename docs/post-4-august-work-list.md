@@ -16236,9 +16236,31 @@ in a report.
 
 #### THE PROPOSED RECONCILIATION — NOT APPLIED
 
-**Step 1 — establish which is which.** Run `scripts/secret-divergence-check.sh` locally with
-`SUPABASE_ACCESS_TOKEN`, or read the edge secret's format in the dashboard. **Everything below
-branches on the answer and none of it should start before it.**
+**Step 1 — establish which is which. AND THE FIRST VERSION OF THIS STEP WAS WRONG.**
+
+I wrote *"run the script locally with `SUPABASE_ACCESS_TOKEN`"*. **That would return the digest
+again and answer nothing.** The script's own header says why: *the edge-secrets API returns the
+SHA-256 of each secret's value* — **never the value.** No level of access reveals the format,
+because the endpoint does not carry it.
+
+> **THE MISSING THING IS NOT A TOKEN. IT IS A CANDIDATE VALUE TO HASH.** The only way to
+> identify a digest is to compare it against something hashed the same way — which is the
+> technique the script already documents for `RESEND_API_KEY` and which I failed to apply to the
+> question I was actually asking.
+
+**The decisive test, and it needs no secret to change hands.** From the Supabase dashboard,
+Project Settings → API Keys, take the current `sb_secret_…` key and run:
+
+```
+printf '%s' '<sb_secret_...>' | shasum -a 256 | cut -c1-12
+```
+
+| result | meaning |
+|---|---|
+| **`77a2bb9723c4`** | **two generations, as expected.** The credentials are right and the *check* is wrong |
+| anything else | the edge copy is some third value — treat as real drift, step 2b |
+
+**Only twelve hex characters need to be reported back.** The key never leaves that terminal.
 
 **Step 2a — if the edge copy is `sb_secret_…` (expected).** **The credentials are correct and the
 check is wrong.** Fix the check, not the secrets:
@@ -16359,12 +16381,35 @@ that red means nothing.
 
 #### AND IT EXPLAINS THE DURATIONS
 
-**The one that was working got ignored longer** — 25 days against 14. That is the wrong way
-round for effort but the right way round for the mechanism: a *broken* job's red is at least
-stable and eventually looks like a task, whereas a *detector* firing every week reads as
-background. **A standing check that goes permanently red stops being read**, which is exactly
-what `secret-divergence-check.sh` warns about in its own `SKEW_IGNORE` comment — and then it
-did it to itself, via the skew rule described in item 189.
+**The one that was working got ignored longer** — **25 days against 14**, and that is the
+evidence rather than the irony.
+
+> **A BROKEN JOB'S RED IS STABLE AND EVENTUALLY LOOKS LIKE A TASK. A DETECTOR FIRING EVERY WEEK
+> READS AS BACKGROUND.**
+
+Wrong way round for effort, right way round for the mechanism — and the durations are the proof,
+because the job that needed *less* work to resolve is the one that waited nearly twice as long.
+
+#### THE SHARPEST INSTANCE YET OF A RECORDED LESSON FAILING TO PROTECT ITS OWN AUTHOR
+
+`secret-divergence-check.sh` contains this, written deliberately, about its own skew rule:
+
+> *"Secrets that are legitimately static … Timestamp skew on these is expected and must NOT flag
+> — **otherwise the standing check goes permanently red and stops being read.**"*
+
+**It then went permanently red and stopped being read**, through the very rule that comment
+guards — the skew measure that compares each secret against the newest sibling (item 189), so
+one rotation on 17 August made an unchanged secret look 60 days stale.
+
+> **THE LESSON WAS WRITTEN DOWN, IN THE RIGHT FILE, BY THE PERSON WHO NEEDED IT, AND IT STILL
+> DID NOT FIRE.** `SKEW_IGNORE` was built as the defence and it only covers a hand-maintained
+> list of names. **The author anticipated the failure mode, built a partial guard, and was then
+> caught by the part the guard did not cover.**
+
+**This is the argument against believing that recording a finding is the same as preventing it.**
+Every item on this list is subject to it. A comment protects the reader who is looking at that
+file for another reason; it does nothing for the person who never opens it — and the author six
+weeks later is that person.
 
 #### THE REMEDY IS EXIT CODES, NOT DASHBOARDS
 
@@ -16430,3 +16475,103 @@ the figure a later reader would reach for when tuning that timeout is the wrong 
 
 > **A NUMBER MEASURED UNDER PROBE CONDITIONS AND QUOTED WITHOUT THEM READS AS A PROPERTY OF THE
 > SYSTEM.** The probe was not wrong; the omission is that it never said it was a probe.
+
+---
+
+### 194. A detector needs three states and CI gives two — scoped as work
+
+**Raised:** 18 August 2026, out of item 191 · **Scoped, not built.** · **Small. Do it with the
+item 189 reconciliation, since that touches the same workflow.**
+
+Item 191's remedy, written as work rather than left as an observation.
+
+> **PASS · FOUND-SOMETHING · CANNOT-RUN. A dashboard expresses two.**
+
+A red tick answers *did this job exit non-zero*, and three states do not fit in that. **The split
+has to be structural, because the display cannot be extended.**
+
+#### THE SHAPE
+
+**Two workflows out of the one that exists now:**
+
+| | fails when | red means |
+|---|---|---|
+| **`secret-divergence-check`** (detector) | it **cannot run** — no token, API unreachable, digest missing on one side | **the check is dead.** Act on the check |
+| **`secret-divergence-report`** (reporter) | never | — |
+
+**The reporter's findings go somewhere read on purpose.** The daily feed monitor email already
+exists, is already read, and already carries sections that appear only when there is something
+to say — which is the property needed here, and it is the same property that makes the delivery
+section's absence meaningful.
+
+> **A DETECTOR THAT FAILS WHEN IT FINDS SOMETHING CANNOT ALSO SIGNAL THAT IT IS BROKEN.** The one
+> state it has left is spent. That is the whole defect, and no amount of message-writing fixes
+> it — item 190's error message was *well written and accurate* and bought fourteen days of
+> silence anyway.
+
+#### WHAT NOT TO DO
+
+**Do not make it exit 0 on divergence.** That converts a detector nobody reads into a detector
+nobody *can* read, and it is the tempting fix precisely because it turns the tab green.
+
+**Do not add a third exit code and a dashboard rule.** GitHub renders non-zero as one colour;
+encoding meaning in `exit 2` puts the interpretation in a place no reader sees.
+
+#### AND THE SAME SPLIT APPLIES TO ITEM 187(b)
+
+The re-derivation job will have the identical shape: *ran and changed nothing*, *ran and moved an
+ASIN*, *could not run*. **Deciding it once here means not deciding it again there.**
+
+---
+
+### 195. A guarantee failing removes a floor rather than causing the harm
+
+**Raised:** 18 August 2026, correcting item 190 · **The general form, and the reason nothing
+looked wrong.**
+
+Item 190 recorded the homepage demo trigger failing for fourteen days with **no staleness
+whatsoever** — 156 deploys to `main`, longest gap 46 hours, because the generator runs at build
+time and every merge rebuilds.
+
+> **THE WORKFLOW GUARANTEES A FLOOR. IT IS NOT THE MECHANISM THAT DOES THE WORK.** Its failing
+> did not make the demo stale; it removed the *worst case* on how stale the demo could get.
+
+#### WHY THIS IS THE REASON NOTHING LOOKED WRONG
+
+**A broken mechanism produces a visible symptom. A broken guarantee produces none**, because the
+guaranteed property is being delivered by something else — until the day it is not.
+
+**Nothing was wrong for fourteen days and nothing would have been wrong for fourteen more**, on a
+busy fortnight. The failure only becomes visible on a quiet week, which is **exactly the week
+nobody is looking**, and exactly the week the guarantee was written for.
+
+> **THE HARM IS PERFECTLY ANTI-CORRELATED WITH THE ATTENTION AVAILABLE TO CATCH IT.**
+
+#### THE DIAGNOSTIC QUESTION
+
+**For anything that fails without a symptom, ask: is this doing the work, or guaranteeing a floor
+under work something else usually does?**
+
+| doing the work | guaranteeing a floor |
+|---|---|
+| a retailer import — stops, prices freeze, visible | the demo trigger — builds happen anyway |
+| the live price fetch — fails, the row says so | `detect-frozen-feeds` — feeds are usually fine |
+| | `secret-divergence-check` — secrets are usually in sync |
+
+**For the second column, "is it failing?" cannot be answered by looking at the output**, because
+the output is correct. It can only be answered by looking at the guarantee itself — which means
+these are precisely the checks that need item 194's cannot-run state, and precisely the ones
+where a red tick is least informative.
+
+#### AND BOTH OF YESTERDAY'S CORRECTIONS WERE ONE SHAPE
+
+**"Eight days" for a fourteen-day failure, and "two products" for one truncated title** — both
+were **the edge of the sample read as the edge of the data.** I looked at eight runs and reported
+eight days; I read 44 characters of a title and reported two products.
+
+> **NEITHER WAS A REASONING ERROR. BOTH WERE A LOOKING ERROR** — the sample was bounded by a
+> default I chose and then forgot I had chosen. `--limit 8` and `left(name,44)` are the same
+> mistake in different syntax.
+
+**The defence is not care.** It is: **state the bound with the finding.** "Failing for at least
+the last 8 runs" is true and unfalsifiable; "failing for eight days" is neither.
