@@ -17575,3 +17575,90 @@ inventing a tool for a case that has occurred twice.
 
 **Not applied. 971 and 6965 stay held — contested, and reassigning to a contested destination is
 the coin flip both item 186 and item 202 exist to refuse.**
+
+---
+
+### 209. Two ASINs reassigned, and an n=1 argument grew a second leg by accident
+
+**Raised:** 18 August 2026 · **APPLIED, by hand, for two rows. Nothing else reassigned.**
+
+#### 794's INDEPENDENT CORROBORATION LEADS
+
+Item 186's secondary path confirmed product 794's ASIN on three conditions — **brand's own store,
+exact title, size agreement** — and that path was adopted on a single instance, with logging,
+precisely because deciding it on n=1 either way was the wrong shape.
+
+**The tranche-3 harvest then read `B0DL8Y8N4G` independently and matched it to no catalogue
+product at all.**
+
+> **NOTHING COMPETES WITH THE CONFIRMATION, AND THAT IS THE CHECK THE SECONDARY PATH CANNOT
+> PERFORM ON ITSELF.** The path reasons about ONE product and ONE listing; "is anybody else's
+> barcode claiming this ASIN?" is a question about the catalogue, and only a harvest can answer
+> it.
+>
+> **An n=1 argument now has a second leg from an unrelated direction — and it arrived by
+> accident**, out of a harvest run for a different purpose entirely.
+
+**That is worth more than a second instance of the same kind would have been.** Two brand-store
+confirmations would have been the same evidence twice; this is a different evidence type reaching
+the same conclusion.
+
+#### WHAT WAS REASSIGNED
+
+| ASIN | from | to |
+|---|---|---|
+| `B07Y32L357` | 1028 *Isntree Hyaluronic Acid Toner (200ml)* | **6750 *Isntree Hyaluronic Acid Toner **PLUS** — 200ml*** |
+| `B07WZ2YTDP` | 93648 *Torriden — DIVE-IN Low Molecular Hyaluronic* | **3448 *Dive-In Low Molecular Hyaluronic Acid Serum*** |
+
+> **ITEM 184's NEAR-MISS IS FULLY RESOLVED AND IT WAS NOT A NEAR-MISS.** `…517557` against
+> `…517533` read as a size-or-variant claim with two digits between them. **6750 IS the "Plus"
+> variant and carries that barcode.** Product 1028 was publishing an Amazon listing for a
+> different product than the one on its page — Amazon was right and our attachment was wrong.
+
+**And the Torriden pair surfaced a probable duplicate:** 93648 and 3448 read as the same product,
+and 93648 carries no barcode anywhere. **That pair belongs to item 96**, and it arrived the same
+way the 22 conflicts did — from outside.
+
+#### WHY REMOVING A LIVE ROW WAS ALLOWED HERE, WHEN ITEM 184 FORBADE IT
+
+**Item 184's rule is intact and this is not an exception to it.** That rule declined to retire
+dead ASINs because *an ASIN returning no offer is still a link to the right product page*.
+
+> **THE DISTINCTION IS WHERE THE LINK GOES.** Item 184's dead ASINs point at the correct product,
+> so removing one removes a working fallback. **These two pointed at a page that is not their
+> product, so removing them corrects an error rather than removing a fallback.**
+>
+> **The test is not "does the ASIN resolve" but "does it resolve to THIS product".** A reader
+> meeting item 184's rule first will reach for it here, and it does not apply.
+
+This is recorded in the migration comment as well as here, because that is where the next person
+changing this will be looking.
+
+#### VERIFIED AFTER
+
+```
+products carrying an ASIN                        484
+an ASIN on 2+ products                             0
+published with no map row                          0
+cross-product pass re-run, live state:  22 conflicts, all still held
+  product 6750 -> select B07Y32L357   (sole eligible candidate)
+  product 3448 -> select B07WZ2YTDP   (sole eligible candidate)
+```
+
+**Both reassigned products now select exactly what they publish**, and neither appears as a
+conflict — a product re-selecting the ASIN it already holds is correctly not one.
+
+#### A CHECK I MIS-STATED, CORRECTED RATHER THAN REPORTED
+
+I also counted *"map rows pointing at a product that publishes something else"* and got **8**,
+and briefly read it as a violation. **It is not.** All eight are `matched_by_name` runners-up on
+products publishing their barcode winner — items 179's four tier upgrades plus 6180, 7092, 7744,
+14906 — and in every case the published ASIN has its own map row.
+
+> **A LOSING CANDIDATE'S MAP ROW IS THE RECORD THAT IT LOST, NOT A CONTRADICTION.** The invariant
+> is *every published ASIN has a map row*, which holds at 0 violations. **The check I wrote was a
+> different sentence from the invariant I meant**, which is the same family as item 201 — a
+> guard whose wording quietly drifted from its purpose.
+
+**971 and 6965 stay held.** Both are contested destinations, and reassigning to a contested
+destination is the coin flip items 186 and 202 exist to refuse.
