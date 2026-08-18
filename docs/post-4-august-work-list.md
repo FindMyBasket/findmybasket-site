@@ -16041,6 +16041,28 @@ that **reverses the moment the cheaper listing restocks.**
 > ITS OUTPUT IS A STORED COLUMN.** The rule is correct at the instant it runs and decays from
 > then on, and **nothing surfaces the decay.**
 
+**MEASURED 18 AUGUST, AND SELLER IDENTITY IS THE ONE THAT MATTERS MOST.** Re-running item 186's
+rule against the same twelve products one day later:
+
+| ASIN | 17 August | 18 August |
+|---|---|---|
+| B0B45M89LX | £13.60, **out of stock** | £16.99, **in stock**, BEAUTY OF JOSEON Official |
+| B0D1Q43KQZ | £8.22, **in stock**, Amazon | £8.40, **out of stock** |
+| B00S9XYW40 | £31.93, in stock, **Kweb LTD** | £31.26, out of stock, **Sorted Wholesale** |
+
+1787's two listings **swapped stock states in opposite directions in 24 hours** and the verdict
+flipped with them. 87918 lost its discriminator and a pick became a tie, therefore a hold.
+
+> **AND 87918's BUY-BOX SELLER CHANGED IDENTITY ENTIRELY.** Not its price, not its stock — **who
+> is selling the product.** The buy box is a rotating award, so a stored ASIN goes stale on
+> WHO IS BEHIND IT, not merely on what it costs.
+>
+> **THAT IS THE PROPERTY ITEM 200's COUNTERFEIT POLICY DEPENDS ON.** Any restriction of the form
+> "only brand-store or Amazon listings" is evaluated at one instant and stored, and the listing
+> it approved can be a different seller's the next day. **A seller-based policy over a stored
+> ASIN is a snapshot policy**, and the re-derivation in (b) below is what makes it anything
+> else.
+
 **This is the frozen-state problem this list already carries several instances of**, and it is
 the same shape named in `lib/amazon-live.ts`: *a cached price served through an outage is a
 stored price whose refresh path no longer exists.* Here it is **a stored ASIN chosen on live
@@ -17014,6 +17036,21 @@ Products were classified by **normalised name-matching** between the catalogue b
 >
 > **So `brand's own store` is an upper bound on genuineness, and the restriction it would justify
 > is weaker than its own numbers make it look.**
+
+#### AND A SECOND BOUND: SELLER IDENTITY IS VOLATILE, NOT JUST PRICE
+
+**Measured 18 August (item 187):** ASIN B00S9XYW40's buy-box seller changed from **Kweb LTD** to
+**Sorted Wholesale** between two reads a day apart. Not the price, not the stock — **who is
+selling it.**
+
+> **THE BUY BOX IS A ROTATING AWARD, SO EVERY FIGURE IN THE TABLE BELOW IS A SNAPSHOT OF WHO
+> HAPPENED TO HOLD IT AT READ TIME.** A product classified `brand's own store` today can be a
+> third party's tomorrow with nothing changing on our side.
+>
+> **A POLICY THAT APPROVES AN ASIN ON ITS SELLER AND THEN STORES THE ASIN IS APPROVING A
+> SNAPSHOT.** Enforcing it needs the re-derivation of item 187(b), or a check at render time —
+> and the live fetch already returns `merchantInfo.name` on every request, so **the honest
+> version of a seller policy is a DISPLAY-TIME rule, not a promotion-time one.**
 
 #### SELLER DISTRIBUTION — ALL 269, LIVE
 
