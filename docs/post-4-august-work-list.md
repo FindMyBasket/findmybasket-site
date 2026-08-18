@@ -17081,3 +17081,181 @@ Amazon leaves **144 of the surviving 182 — 79% — with unknown Prime eligibil
   it scores.
 
 **Robbie decides. Nothing restricted.**
+
+---
+
+### 201. Absence is a value, and this is the third instance in one feature
+
+**Raised:** 18 August 2026, re-measuring item 186 before shipping · **Caught by the
+re-measurement, not by review. Fixed and tested.**
+
+E3 holds a candidate set when its members disagree on an explicit generation token. It was
+written as:
+
+```js
+const gens = new Set(eligible.map(c => generationToken(c.amazonTitle)).filter(Boolean));
+if (gens.size > 1) hold
+```
+
+> **`.filter(Boolean)` DROPPED THE UNTOKENED CANDIDATES BEFORE COMPARING.** So `"4.0"` beside a
+> listing making no version claim collapsed to a set of ONE, and **a guard written to hold on
+> version disagreement stopped firing exactly when one side had no version.**
+
+Product 82251 — measured as a hold on 17 August — silently became a pick.
+
+#### THE FAMILY, AND THIS FEATURE HAS NOW PRODUCED THREE
+
+| | the value that vanished | what it became |
+|---|---|---|
+| demo generator (item 197) | `delivery_threshold` NULL | `Number(null)` → `0` → **free delivery** |
+| size matching | `\bcapsule\b` against `"Capsules"` | no match → **size unknown** |
+| **E3 (this)** | **no generation token** | **filtered out → no disagreement** |
+
+> **THE SHAPE: A MISSING VALUE IS SILENTLY RECAST AS AN INNOCUOUS ONE**, and the recast always
+> runs in the permissive direction — free rather than unknown, agreement rather than
+> disagreement, match rather than mismatch. **Nothing errors, because nothing is wrong with the
+> code; the absent case was simply never a case.**
+
+**Why it is the permissive direction every time is not luck.** The idioms that discard absence —
+`filter(Boolean)`, `Number(null)`, a regex that does not match — all return the *empty* or
+*zero* answer, and in a guard the empty answer means "nothing to object to". **A guard built out
+of these idioms fails open by construction.**
+
+#### AND IT WAS CAUGHT BY RE-MEASURING, NOT BY READING
+
+The design was measured on twelve instances on 17 August and the implementation was measured
+against the same twelve on 18 August. **The disagreement between the two is what surfaced it** —
+82251 was a hold in the design and a pick in the build.
+
+> **A SPECIFICATION MEASURED ONCE AND AN IMPLEMENTATION MEASURED NEVER IS A SPECIFICATION.**
+> Re-running the same twelve against the built rule cost one command and found a defect that
+> reading the code had not.
+
+---
+
+### 202. The cross-product pass: 186 cannot see ambiguity by construction
+
+**Raised:** 18 August 2026, applying item 186 to the tranche-3 harvest · **PROPOSED, NOT BUILT.
+Blocks promotion of 46 products.**
+
+Applying the rule to 280 matched products resolved 276 — and **22 of those ASINs were each
+claimed by two or more different catalogue products**, affecting **46 products**.
+
+> **THIS IS A GAP IN THE RULE, NOT AN EDGE CASE.** `selectCandidate` takes ONE product and ITS
+> candidates. **Ambiguity is a property of the SET**, so the rule cannot see it however carefully
+> it is written — each of the 46 verdicts is individually correct and jointly wrong.
+
+**It is the Vida Glow shape from a new direction.** Vida Glow was found because the *matcher*
+flagged one identifier claimed by several products and split it into `ambiguous`. Here the same
+condition arises **after** selection, between products the matcher never compared, because each
+product's barcode set matched the same ASIN independently.
+
+**And it will recur on every harvest**, which is why it belongs in the rule rather than beside it
+as a pre-promotion query somebody has to remember.
+
+#### THE PROPOSED SHAPE
+
+**A second phase over the verdicts, not a change to the per-product rule.**
+
+```
+selectCandidate(product, candidates)      →  per-product verdict     (unchanged)
+resolveAcrossProducts(verdicts)           →  verdicts with conflicts held
+```
+
+**The rule for the second phase, and it should be the conservative one:**
+
+> **AN ASIN SELECTED FOR MORE THAN ONE PRODUCT IS HELD FOR ALL OF THEM.**
+
+**Not "give it to the best match".** Deciding which product owns a contested ASIN needs a
+similarity judgement between two catalogue rows, which is the class item 186 exists to refuse —
+and `matched_by_name`'s history is the argument against inventing one here.
+
+**Not "give it to the lowest id".** *The lowest-id placeholder is not a choice*, recorded on the
+Vida Glow hold and true in this direction too.
+
+#### WHAT THE CONFLICT USUALLY MEANS, WHICH IS WHY HOLDING IS RIGHT
+
+A single ASIN matching several catalogue products almost always means **the catalogue has several
+rows for one product** — the item 96 duplicate question — **or one row is wrong about its
+barcode.** Both are catalogue defects, and *neither is fixed by choosing an ASIN.*
+
+> **THE CONFLICT IS A SIGNAL ABOUT OUR CATALOGUE THAT ARRIVED THROUGH AMAZON.** Holding preserves
+> it; picking a winner destroys it, because the losing rows stop looking wrong.
+
+**So the second phase should also emit the conflicts as a list**, not merely suppress them —
+22 ASINs pointing at 46 catalogue rows is a duplicate-detection input item 96 could use.
+
+#### MEASURED COST OF HOLDING THEM
+
+**46 of 276 resolved products, 17%.** One is product 6965, which currently publishes
+`B0DRZ8GBDM` — an ASIN item 184 recorded as **absent from Amazon**. The rule proposes a
+replacement, that replacement is contested, so the product **keeps a dead ASIN**.
+
+> **THAT IS A COST OF HOLDING, NOT A DEFECT.** The alternative is resolving a contested identity
+> on no evidence, and a dead ASIN still links to a product page with search as the fallback —
+> which is exactly the reasoning that kept the 25 pre-existing ASINs alive in item 184.
+
+---
+
+### 203. The seller split is per-brand, and the same five brands replicate
+
+**Raised:** 18 August 2026 · **MEASUREMENT for the policy decision held open at item 200.
+Nothing restricted, nothing promoted.**
+
+Item 200 measured the existing 269 at **23.4% third-party**. The tranche-3 harvest's 217
+promotable products are **53.5% third-party**, which would take the site to **36.8%**.
+
+**That number should not be read site-wide, because it is not distributed site-wide.**
+
+| brand | n | brand store | Amazon | third party | 3rd-party |
+|---|---:|---:|---:|---:|---:|
+| **Skin1004** | 19 | 0 | 0 | 19 | **100%** |
+| **Torriden** | 8 | 0 | 0 | 8 | **100%** |
+| **Round Lab** | 26 | 0 | 1 | 25 | **96%** |
+| **Haruharu Wonder** | 4 | 0 | 0 | 3 | **75%** |
+| **Abib** | 7 | 1 | 0 | 5 | **71%** |
+| Some By Mi | 58 | 23 | 0 | 31 | 53% |
+| numbuzin | 30 | 13 | 1 | 14 | 47% |
+| Isntree | 13 | 8 | 0 | 3 | 23% |
+| LANEIGE | 31 | 0 | **21** | 7 | 23% |
+| Biodance | 9 | 7 | 0 | 1 | 11% |
+| **Anua** | 12 | 12 | 0 | 0 | **0%** |
+
+#### THE FIVE BRANDS ARE THE SAME FIVE
+
+Item 200 found five brands with **100% third-party** exposure in the existing population:
+**Skin1004, Abib, Round Lab, Haruharu Wonder, Torriden** — twelve products.
+
+**They are the top five here, in a sample twenty times larger and gathered independently.**
+
+> **A REPLICATED RESULT ACROSS TWO SAMPLES IS A BRAND-LEVEL FACT, NOT A SAMPLING ARTEFACT.**
+> These brands do not operate a UK Amazon store. Everything sold under their name on Amazon.co.uk
+> is sold by somebody else, and that is a property of the brand's distribution rather than of our
+> catalogue or our matcher.
+
+**Combined across both tranches those five brands are 72 of 76 products third-party — 95%.**
+
+#### SO THE DECISION IS PER-BRAND, NOT SITE-WIDE
+
+**A site-wide restriction is the wrong instrument** because the population is bimodal: Anua 0%,
+Biodance 11%, and LANEIGE 23% *whose exposure is almost entirely Amazon-sold* (21 of 31), against
+five brands at 71–100%.
+
+**What each brand keeps under "brand store or Amazon only":**
+
+```
+Anua 100%   Biodance 78%   LANEIGE 68%   Isntree 62%   numbuzin 47%   Some By Mi 40%
+Abib 14%    Round Lab 4%   Skin1004 0%   Torriden 0%   Haruharu Wonder 0%
+```
+
+> **THREE BRANDS WOULD LOSE EVERY AMAZON ROW THEY HAVE**, and they would lose it not because
+> their listings are suspect but because **the brand has no Amazon presence for a restriction to
+> fall back on.**
+
+**The counterfeit concern and the restriction's cost are concentrated in the same five brands,
+which is the condition under which a per-brand rule is strictly better than a site-wide one.**
+It also means the question can be asked brand by brand — *does this brand sell on Amazon UK at
+all?* — which is checkable, rather than *is this seller genuine?*, which item 200 records as
+unverifiable from a name.
+
+**Robbie re-decides with this in front of him. Nothing restricted.**
