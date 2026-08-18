@@ -41,10 +41,24 @@
 set -euo pipefail
 
 REF="${SUPABASE_PROJECT_REF:-crtrjoescntlcjiwdtrt}"
-# 180 IS A PLACEHOLDER POLICY, NOT A MEASUREMENT, AND IT NEEDS A DECISION. It was 45 when
-# the rule measured distance from the newest sibling; as an absolute age 45 days would flag
-# almost everything and rebuild the noise item 196 removed. Nothing here can derive the
-# right number — it is a statement about how often these credentials ought to be rotated.
+# 180 IS A PLACEHOLDER AWAITING A DECISION, NOT A DERIVED THRESHOLD.
+#
+# THE HONEST POSITION: there is no rotation policy for these credentials, so any number here
+# is arbitrary until there is one. Nothing in this script — or in the repository — can derive
+# it, because it is not a fact about the system. It is a statement about how often these
+# credentials OUGHT to be rotated, and nobody has made that statement.
+#
+# WHY 180 SPECIFICALLY: it does not fire today. That is the entire justification, and it is a
+# deliberate one — the section is advisory, and an advisory section that shouts on every run
+# is how this script's other rule turned a working detector into background (item 196). 180
+# keeps the output readable while the question stays open.
+#
+# IT WILL NEED RE-DECIDING RATHER THAN TUNING. If it starts firing, the answer is not to raise
+# it until it stops; that is how a threshold becomes a number chosen to produce silence. The
+# answer is to decide the rotation policy it is standing in for.
+#
+# It was 45 when the rule measured distance from the newest sibling. As an ABSOLUTE age, 45
+# days would flag nearly everything and rebuild the noise item 196 removed.
 STALE_DAYS="${STALE_DAYS:-180}"
 TOKEN="${SUPABASE_ACCESS_TOKEN:-$(cat "${HOME}/.supabase/access-token" 2>/dev/null || true)}"
 

@@ -16517,6 +16517,25 @@ nobody *can* read, and it is the tempting fix precisely because it turns the tab
 **Do not add a third exit code and a dashboard rule.** GitHub renders non-zero as one colour;
 encoding meaning in `exit 2` puts the interpretation in a place no reader sees.
 
+#### WHY THIS IS A DEADLINE AND NOT A SLOT
+
+**Added 18 August, from item 196.** The argument for doing this is not tidiness.
+
+> **THE ONE CLASS OF DEFECT WITH NO REVIEWABLE ARTEFACT IS DETECTABLE ONLY THROUGH THE CHANNEL WE
+> STOP READING.**
+
+Item 196 records a defect with **no wrong line anywhere** — an assertion about a platform, correct
+when written, expired by an event outside the repository. **No diff, no commit, no local test
+could have found it.** Every other instance on this list has a line to point at; this one does not.
+
+**Its only detection channel was the red tick.** And item 191 is the evidence that a red tick
+carrying both "broken" and "found something" decays into background — measured at 25 days for the
+one that was working.
+
+**So the two findings interlock:** the defects that most need a standing check are exactly the
+ones with nothing else to catch them, and the standing check is the thing being eroded. **Every
+week item 194 is not done, that channel is still the only one, and still unreliable.**
+
 #### AND THE SAME SPLIT APPLIES TO ITEM 187(b)
 
 The re-derivation job will have the identical shape: *ran and changed nothing*, *ran and moved an
@@ -16702,10 +16721,17 @@ shown it to a reviewer.**
 took the assertion's truth with it**, and no review of the repository at any point between 24 July
 and 18 August would have found anything wrong — because nothing in the repository was.
 
-> **AN ASSERTION ABOUT A PLATFORM IS DATED BY THE PLATFORM, NOT BY THE CODE.** Its correctness has
-> an expiry that is not visible in the file, not recorded in git, and not testable from inside the
-> repository. **The only signal is the check going red — which is precisely the signal item 191
-> shows we stop reading.**
+> **AN ASSERTION ABOUT A PLATFORM IS DATED BY THE PLATFORM, NOT BY THE CODE.**
+>
+> Its correctness has an expiry with three properties, and they compound:
+>
+> 1. **not visible in the file** — the assertion reads as true, because it was
+> 2. **not recorded in git** — no commit expires it; the expiring event happens elsewhere
+> 3. **not testable from inside the repository** — nothing local can distinguish "still true"
+>    from "was true"
+>
+> **The only signal is the check going red — which is precisely the signal item 191 shows we
+> stop reading.**
 
 **That is the compounding failure**: the one class of defect with no reviewable artefact is
 detectable only through the one channel that decays into background.
@@ -16718,10 +16744,25 @@ six weeks later is not that reader.**
 
 #### APPLIED AND VERIFIED, 18 AUGUST
 
-`COPIES` replaces `PAIRS`; the age rule measures against `now()`; `STALE_DAYS` is 180 as an
-**explicit placeholder policy that still needs a decision** — it was 45 when the measure was
-relative, and 45 days of absolute age would flag nearly everything and rebuild the noise this
-removed.
+`COPIES` replaces `PAIRS`; the age rule measures against `now()`.
+
+**`STALE_DAYS` is 180, and the honest position is recorded in the file rather than implied by
+the number:**
+
+> **THERE IS NO ROTATION POLICY FOR THESE CREDENTIALS, SO ANY NUMBER HERE IS ARBITRARY UNTIL
+> THERE IS ONE.** It is not a fact about the system and nothing in the repository can derive it —
+> it is a statement about how often these credentials *ought* to be rotated, and nobody has made
+> that statement.
+
+**Why 180 specifically: it does not fire today.** That is the whole justification and it is a
+deliberate one — the section is advisory, and an advisory section that shouts on every run is how
+this script's other rule turned a working detector into background.
+
+> **IT WILL NEED RE-DECIDING RATHER THAN TUNING.** If it starts firing, the answer is not to raise
+> it until it stops — **that is how a threshold becomes a number chosen to produce silence.** The
+> answer is to decide the policy it is standing in for.
+
+*(It was 45 when the measure was relative; 45 days of absolute age would flag nearly everything.)*
 
 **Both directions were tested, because a check that cannot fail is not a check:**
 
