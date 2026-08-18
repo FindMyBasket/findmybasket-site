@@ -155,3 +155,83 @@ test('isBrandStore is a name match and nothing stronger', () => {
   // themselves after the brand passes. Work-list item 200.
   assert.equal(isBrandStore('COSRX Official Store', 'COSRX'), true);
 });
+
+// ── the cross-product pass ───────────────────────────────────────────────────────────
+
+import { resolveAcrossProducts } from '../asin-selection.ts';
+
+const sel = (productId: number, asin: string) => ({
+  productId, verdict: { action: 'select' as const, asin, on: 'test', eligible: [asin] },
+});
+
+test('an ASIN selected for two products is held for BOTH, not awarded to one', () => {
+  const { resolved, conflicts } = resolveAcrossProducts([sel(1, 'B0A'), sel(2, 'B0A')]);
+  assert.equal(resolved.filter((r) => r.verdict.action === 'hold').length, 2);
+  assert.equal(conflicts.length, 1);
+  assert.deepEqual(conflicts[0].productIds, [1, 2]);
+});
+
+test('the conflict is EMITTED, not merely suppressed — it is a catalogue signal', () => {
+  const { conflicts } = resolveAcrossProducts([sel(9, 'B0A'), sel(3, 'B0A'), sel(7, 'B0B')]);
+  assert.equal(conflicts.length, 1);
+  assert.equal(conflicts[0].asin, 'B0A');
+  assert.deepEqual(conflicts[0].productIds, [3, 9], 'product ids are sorted for a stable report');
+});
+
+test('uncontested selections are untouched', () => {
+  const { resolved, conflicts } = resolveAcrossProducts([sel(1, 'B0A'), sel(2, 'B0B')]);
+  assert.equal(conflicts.length, 0);
+  assert.equal(resolved.every((r) => r.verdict.action === 'select'), true);
+});
+
+test('a hold never creates a conflict, so held ASINs do not block other products', () => {
+  const { conflicts } = resolveAcrossProducts([
+    sel(1, 'B0A'),
+    { productId: 2, verdict: { action: 'hold', on: 'E1', eligible: ['B0A'] } },
+  ]);
+  assert.equal(conflicts.length, 0);
+});
+
+test('a confirm from the secondary path is contestable like any other selection', () => {
+  const secondary = {
+    productId: 5,
+    verdict: { action: 'confirm' as const, asin: 'B0A', on: 'secondary_path' as const,
+      secondary: {} as never },
+  };
+  const { resolved, conflicts } = resolveAcrossProducts([secondary, sel(6, 'B0A')]);
+  assert.equal(conflicts.length, 1);
+  assert.equal(resolved.every((r) => r.verdict.action === 'hold'), true);
+});
+
+test('the hold reason names the other claimants, so the conflict is readable in place', () => {
+  const { resolved } = resolveAcrossProducts([sel(1, 'B0A'), sel(2, 'B0A')]);
+  const first = resolved.find((r) => r.productId === 1)!;
+  assert.match(first.verdict.on, /cross-product/);
+  assert.match(first.verdict.on, /\b2\b/);
+});
+
+/**
+ * THE SECOND GAP, CAUGHT ON THE TRANCHE-3 PROMOTION. The first cross-product pass compared
+ * verdicts against verdicts, so an ASIN a DIFFERENT product already published was invisible.
+ * "Ambiguity is a property of the set" — and the set is the catalogue, not the batch.
+ */
+test('an ASIN already published on another product is a conflict', () => {
+  const published = new Map([['B0A', 99]]);
+  const { resolved, conflicts } = resolveAcrossProducts([sel(1, 'B0A')], published);
+  assert.equal(conflicts.length, 1);
+  assert.deepEqual(conflicts[0].productIds, [1, 99]);
+  assert.equal(resolved[0].verdict.action, 'hold');
+});
+
+test('a product re-selecting the ASIN it already publishes is NOT a conflict', () => {
+  const published = new Map([['B0A', 1]]);
+  const { resolved, conflicts } = resolveAcrossProducts([sel(1, 'B0A')], published);
+  assert.equal(conflicts.length, 0);
+  assert.equal(resolved[0].verdict.action, 'select');
+});
+
+test('a published ASIN nobody selected does not manufacture a conflict', () => {
+  const published = new Map([['B0Z', 42]]);
+  const { conflicts } = resolveAcrossProducts([sel(1, 'B0A')], published);
+  assert.equal(conflicts.length, 0);
+});

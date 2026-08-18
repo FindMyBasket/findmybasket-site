@@ -143,6 +143,96 @@ export function sizeToken(text: string | null): string | null {
 
 // ── the rule ─────────────────────────────────────────────────────────────────────────
 
+/**
+ * ── THE CROSS-PRODUCT PASS ───────────────────────────────────────────────────────────
+ *
+ * `selectCandidate` takes ONE product and ITS candidates, so it cannot see that the ASIN it
+ * chose was also chosen for a different product. AMBIGUITY IS A PROPERTY OF THE SET, and no
+ * amount of care inside the per-product rule can reach it: each verdict is individually
+ * correct and jointly wrong.
+ *
+ * Measured on the tranche-3 harvest: 22 ASINs claimed by 46 different catalogue products.
+ *
+ * ── HELD FOR ALL OF THEM, NOT AWARDED TO ONE ─────────────────────────────────────────
+ *
+ * NOT "give it to the best match" — deciding which product owns a contested ASIN needs a
+ * similarity judgement between two catalogue rows, which is the class item 186 exists to
+ * refuse. NOT "give it to the lowest id" — the lowest-id placeholder is not a choice.
+ *
+ * ── AND THE CONFLICTS ARE EMITTED, NOT MERELY SUPPRESSED ─────────────────────────────
+ *
+ * A single ASIN matching several catalogue rows almost always means OUR CATALOGUE HAS
+ * SEVERAL ROWS FOR ONE PRODUCT, or one row is wrong about its barcode. Both are catalogue
+ * defects and neither is fixed by choosing an ASIN.
+ *
+ * SO THE CONFLICT IS A SIGNAL ABOUT OUR CATALOGUE THAT ARRIVED THROUGH AMAZON. Holding
+ * preserves it; picking a winner destroys it, because the losing rows stop looking wrong.
+ * Item 96 has never had a duplicate-detection input that arrived from outside the catalogue,
+ * and this is one.
+ */
+export type ProductVerdict = { productId: number; verdict: Verdict };
+export type Conflict = { asin: string; productIds: number[] };
+
+export function resolveAcrossProducts(
+  input: ProductVerdict[],
+  /**
+   * ASINs ALREADY PUBLISHED, as asin -> productId. REQUIRED IN PRACTICE, OPTIONAL ONLY SO
+   * THE PURE CASE STAYS TESTABLE.
+   *
+   * THE FIRST VERSION OF THIS FUNCTION OMITTED THIS AND WAS WRONG IN THE SAME WAY THE
+   * PER-PRODUCT RULE WAS. It compared verdicts against verdicts, so an ASIN a *different*
+   * product already publishes was invisible — the set it reasoned over was the batch, not
+   * the catalogue.
+   *
+   * Caught on the tranche-3 promotion by reading the generated SQL: B07Y32L357 was about to
+   * be written to product 6750 while product 1028 already published it. Two collisions in
+   * 217 rows, and neither product's verdict was individually wrong.
+   *
+   * "Ambiguity is a property of the set" was the finding, AND I THEN DREW THE SET TOO SMALL.
+   */
+  published?: Map<string, number>,
+): { resolved: ProductVerdict[]; conflicts: Conflict[] } {
+  const claims = new Map<string, number[]>();
+  for (const { productId, verdict } of input) {
+    if (verdict.action === 'hold') continue;
+    const list = claims.get(verdict.asin) ?? [];
+    // A product appearing twice in the input is the caller's bug, not a conflict.
+    if (!list.includes(productId)) list.push(productId);
+    claims.set(verdict.asin, list);
+  }
+
+  // Fold in the incumbents. A product re-selecting the ASIN it already has is NOT a conflict.
+  if (published) {
+    for (const [asin, holderId] of published) {
+      const list = claims.get(asin);
+      if (list && !list.includes(holderId)) list.push(holderId);
+    }
+  }
+
+  const conflicts: Conflict[] = [...claims.entries()]
+    .filter(([, ids]) => ids.length > 1)
+    .map(([asin, productIds]) => ({ asin, productIds: [...productIds].sort((a, b) => a - b) }))
+    .sort((a, b) => b.productIds.length - a.productIds.length || a.asin.localeCompare(b.asin));
+
+  const contested = new Set(conflicts.map((c) => c.asin));
+  const resolved = input.map(({ productId, verdict }) =>
+    verdict.action !== 'hold' && contested.has(verdict.asin)
+      ? {
+          productId,
+          verdict: {
+            action: 'hold' as const,
+            on: `cross-product: ${verdict.asin} is also selected for ${
+              (claims.get(verdict.asin) ?? []).filter((id) => id !== productId).join(', ')
+            }`,
+            eligible: verdict.action === 'select' ? verdict.eligible : [verdict.asin],
+          },
+        }
+      : { productId, verdict },
+  );
+
+  return { resolved, conflicts };
+}
+
 export function selectCandidate(
   product: CatalogueProduct,
   candidates: Candidate[],

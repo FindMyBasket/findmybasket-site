@@ -17296,3 +17296,124 @@ all?* — which is checkable, rather than *is this seller genuine?*, which item 
 unverifiable from a name.
 
 **Robbie re-decides with this in front of him. Nothing restricted.**
+
+---
+
+### 204. The cross-product pass, built — and I drew the set too small the first time
+
+**Raised:** 18 August 2026 · **BUILT and applied. 215 products promoted, 269 → 484.**
+
+`resolveAcrossProducts` implements item 202: an ASIN selected for more than one product is
+**held for all of them**, and the conflicts are **emitted as a list** rather than suppressed.
+
+**Applied to the tranche-3 harvest: 22 ASINs contested by 46 products, all held**, and the
+conflict list is versioned at `docs/amazon-harvests/tranche-3-conflicts.json`.
+
+#### AND THEN THE SAME MISTAKE, ONE LEVEL OUT
+
+The first implementation compared **verdicts against verdicts**. It ran clean. The SQL it
+generated was about to write `B07Y32L357` to product 6750 — **while product 1028 already
+published it.**
+
+> **"AMBIGUITY IS A PROPERTY OF THE SET" WAS THE FINDING, AND I THEN DREW THE SET TOO SMALL.**
+> The set is not the batch. **The set is the catalogue.**
+
+Two collisions in 217 rows, and **neither product's verdict was individually wrong** — which is
+the identical shape as the per-product rule's blindness, reproduced inside the fix for it.
+
+**Caught by reading the generated SQL before running it**, not by any check. The pass now takes
+the published ASINs as a second argument, and a product re-selecting the ASIN it already holds is
+correctly not a conflict.
+
+#### THE TWO COLLISIONS ARE THEMSELVES A FINDING
+
+| ASIN | published on | matched by barcode to |
+|---|---|---|
+| `B07Y32L357` | 1028 *(item 184: `identifier_conflict`)* | **6750** |
+| `B07WZ2YTDP` | 93648 *(item 184: `legacy_unconfirmed`, no barcode our side)* | **3448** |
+
+> **THIS RESOLVES THE ISNTREE NEAR-MISS FROM ITEM 184.** `…517557` was never a variant claim
+> about product 1028 — **it is the correct barcode for product 6750**, a different catalogue row.
+> The ASIN was right about a product; it was attached to the wrong one.
+
+**Both are pre-existing hand-assembled ASINs, and in both cases a barcode-matched candidate for a
+DIFFERENT product has now appeared.** That is the emit-not-suppress design paying for itself on
+its first run: had the pass silently dropped the collisions, the strongest available evidence
+about two of item 184's nine unconfirmed rows would have been discarded.
+
+**Not applied to 1028 or 93648.** Reassigning a published ASIN between catalogue rows is a
+separate act from promoting a new one, and it needs the same deliberateness.
+
+#### WHAT WAS APPLIED
+
+| | |
+|---|---|
+| harvested | 383 ASINs, 11 brands, **no rate limiting** |
+| products with a candidate | 280 |
+| resolved by the per-product rule | 276 |
+| held by the cross-product pass | 46 across 22 ASINs |
+| held on collision with a published ASIN | 2 |
+| **promoted** | **215** |
+| products carrying an ASIN | **269 → 484** |
+
+**Map rows were written in the same statement as the promotion**, so item 187(b)'s completeness
+invariant never went stale — `published ASINs with no map row` is still **0**, and no ASIN is on
+two products.
+
+---
+
+### 205. The seller rule moves to display time, which dissolves the per-brand decision
+
+**Raised:** 18 August 2026 · **Robbie's decision: display-time. OPTIONS REPORTED, NOT CHOSEN.**
+
+Approving an ASIN on its seller and then storing the ASIN **approves a snapshot** (items 187,
+200). The live fetch already returns `merchantInfo.name` on every request, so the rule can run on
+current data at no extra cost.
+
+> **THIS DISSOLVES THE PER-BRAND DECISION RATHER THAN SETTLING IT.** A promotion-time restriction
+> had to be decided per brand because it was irreversible without re-promoting. **A display-time
+> rule is revisitable at any moment, on any subset, with no data change at all** — which is a
+> property the promotion-time version could never have.
+
+**And it needs neither item 187(b) nor the harvest's `seller_at_harvest` column**, which remains
+a snapshot for analysis only.
+
+#### THE THREE OPTIONS, WITH WHAT EACH DOES
+
+Measured against the current 484-product population *(existing 269 at 23.4% third-party; the 215
+promoted at 53.5%)*.
+
+| | what the shopper sees | effect on the third-party figure |
+|---|---|---|
+| **A — as now** | price + *"Sold by X · delivery not included"* | **36.8% unchanged.** The seller is named and the shopper decides |
+| **B — suppress the price** | the row, the seller name, and no price: *"Sold by X"* with a link | **0% of displayed prices** are third-party. ~179 rows lose their number but keep their link |
+| **C — hide the row** | nothing. The product page shows no Amazon row | **0%**, and ~179 products silently lose Amazon entirely |
+
+#### WHAT SEPARATES THEM, WHICH IS NOT THE PERCENTAGE
+
+**A and B both keep the shopper informed. C does not.**
+
+> **C IS THE ONLY OPTION THAT HIDES A FACT RATHER THAN QUALIFYING IT.** A product Amazon carries
+> at a price we chose not to show becomes indistinguishable from a product Amazon does not carry
+> — **which is exactly the confusion item 22 built four visible states to prevent.** It would
+> reintroduce that confusion deliberately, one layer up.
+
+**B is the interesting one and it is not obviously worse than A.** It says *we found this on
+Amazon, here is who is selling it, and we are not putting our name to the price.* That is an
+honest position and it is more informative than A for a shopper who does not know that "Sold by
+Medpak EU" matters.
+
+**A's defence is that the seller name is already the disclosure.** Item 176 recorded that naming
+the seller is more useful and more honest than a generic caveat, because a blanket warning
+applies equally to the brand's own store and to a reseller.
+
+#### THE BOUND THAT APPLIES TO ALL THREE
+
+> **A seller name is a string, not an attestation** (item 200), so every option enforces
+> `brand-store-or-Amazon` on a classifier that **cannot verify the property the policy turns
+> on.** B and C act on it; A merely reports it.
+>
+> **That argues mildly for A or B over C**, since acting on an unverifiable signal is a smaller
+> harm when the action is qualifying a price than when it is hiding a product.
+
+**Robbie chooses. Nothing built.**
