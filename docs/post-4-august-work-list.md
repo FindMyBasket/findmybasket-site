@@ -16962,3 +16962,122 @@ mistake.
 **Practical consequence:** the per-listing route to a delivery cost is closed at the API, not
 merely undone. **Nobody should re-derive this**, and item 198's blocker cannot be lifted by
 requesting more resources.
+
+---
+
+### 200. The rate limit is real, and it nearly produced a wrong policy number
+
+**Raised:** 18 August 2026, measuring seller distribution for a counterfeit-policy decision ·
+**MEASUREMENT ONLY. Nothing restricted. Robbie decides.**
+
+#### THE 429s LEAD, BECAUSE THEY OUTRANK THE MEASUREMENT
+
+A full live read of all 269 ASINs returned **five HTTP 429s** — **the first rate limit this
+project has ever observed.**
+
+> **~50 ASINs CAME BACK UNREAD AND WERE COUNTED AS `no_offer`.** The naive result was **26.4%
+> no offer**. Re-reading only the gaps with backoff recovered **47 of 71**. The corrected figure
+> is **8.9%**, which corroborates the 8.6% measured the day before.
+
+**A failed read and an absent offer are the same shape to a caller that does not distinguish
+them** — which is item 22's finding arriving from a new direction. Item 22 protected the
+*shopper* from that confusion in the UI. **Nothing protected the analyst**, and the number was
+headed for a policy decision about which sellers to allow.
+
+**26.4% against 8.9% is a factor of three**, and it would have made third-party exposure look
+smaller as a share of live offers than it is.
+
+#### TWO THINGS THIS SETTLES ABOUT THE BREAKER
+
+**1. It now has a real event behind it rather than a theoretical one.** `lib/amazon-live.ts`
+records that the rate limit is *not discoverable* — ten response headers, none naming a quota,
+a remaining count, a reset or a TPS — so every backoff number in it is a choice validated
+against nothing. **It is still a choice, but the thing it defends against has now been seen.**
+
+**2. THIS READ WAS SEQUENTIAL.** Ten ASINs per call, one call at a time, a short pause between.
+**Under concurrency the same limit arrives sooner** — and the production path is concurrent by
+construction, because it is one call per page view. The breaker's per-instance limitation
+(recorded in `lib/amazon-live.ts`) means N instances each learn this separately.
+
+> **The observed ceiling is an upper bound on what the live path can sustain, not an estimate of
+> it.**
+
+#### THE CLASSIFIER'S BOUND, WHICH BELONGS ABOVE THE TABLE AND NOT BENEATH IT
+
+Products were classified by **normalised name-matching** between the catalogue brand and
+`merchantInfo.name`.
+
+> **THE CLASSIFIER CANNOT VERIFY THE PROPERTY THE POLICY TURNS ON.** A seller name is **a string,
+> not an attestation**, and *naming yourself after the brand is the counterfeiter's move.*
+> "Sold by COSRX Inc." is evidence of a name, and a policy about counterfeits needs evidence of
+> an identity.
+>
+> **So `brand's own store` is an upper bound on genuineness, and the restriction it would justify
+> is weaker than its own numbers make it look.**
+
+#### SELLER DISTRIBUTION — ALL 269, LIVE
+
+| | n | share |
+|---|---:|---:|
+| brand's own store *(by name; see the bound above)* | **144** | **53.5%** |
+| sold by Amazon | 38 | 14.1% |
+| third party | **63** | **23.4%** |
+| no current offer | 24 | 8.9% |
+
+The third-party tail is **46 distinct sellers across 63 listings** — Glass Glow K-Beauty (4),
+Medpak EU (4), The Tyndale Group (4), BEDAST (3), then a long tail of ones and twos.
+
+#### WHAT A RESTRICTION WOULD COST
+
+| | |
+|---|---|
+| showing an Amazon price now | **245** — 91.1% |
+| under "brand store or Amazon only" | **182** — 67.7% |
+| **lose the row entirely** | **63** — 23.4% of all, **25.7% of those that currently show a price** |
+
+**It concentrates two different ways, and the second is the one that matters.**
+
+**Most of the loss sits in three brands that survive it** — COSRX 17, medicube 14, Beauty of
+Joseon 6, thirty-seven of sixty-three — because each also has brand-store listings.
+
+> **FIVE BRANDS DISAPPEAR FROM AMAZON ENTIRELY, BEING 100% THIRD-PARTY:** **Skin1004 (5/5),
+> Abib (2/2), Round Lab (2/2), Haruharu Wonder (2/2), Torriden (1/1)** — twelve products, no
+> Amazon row at all.
+
+**Twelve brands cost nothing**, having no third-party exposure: Ancient + Brave, Anua, Biodance,
+Isntree, LANEIGE, Liquid IV, MyProtein, Nuzest, Revival, Revive Collagen, Vida Glow, numbuzin.
+
+#### THE DELIVERY INTERACTION IS SETTLED, AND A RESTRICTION DOES NOT HELP IT
+
+**A brand store is a third-party seller in Amazon's sense**, so restricting to brand-store plus
+Amazon leaves **144 of the surviving 182 — 79% — with unknown Prime eligibility.**
+
+**Can eligibility be inferred from seller identity?** One class only:
+
+| | |
+|---|---|
+| `merchantInfo.name = "Amazon"` | reliably Prime-eligible — **38 products, 14.1%** |
+| everything else | depends on **fulfilment** (FBA / Seller-Fulfilled Prime / self-shipped), which is a property of the **listing**, not the seller |
+
+**Checked directly rather than assumed:** `type` returns nothing, `condition` is only
+`New`/`Unknown`, `violatesMAP` is unrelated. Item 199 already proved `deliveryInfo`,
+`isPrimeEligible` and `programEligibility` return 400.
+
+> **IT IS THE SAME UNAVAILABLE FACT WEARING A DIFFERENT QUESTION.** And the one exception yields
+> no cost either way: **"Prime-eligible" only becomes free if the shopper HAS Prime** — the exact
+> fact item 198's toggle cannot obtain — and for a non-Prime shopper an Amazon-sold listing still
+> falls under the eligible-items threshold recorded as unknowable on retailer 9.
+
+#### THE SHAPE OF THE DECISION, AS MEASURED
+
+**Not a recommendation. The numbers, arranged so the trade is visible:**
+
+- **67.7% is already brand-store or Amazon**, so the concern is largely addressed by what the buy
+  box surfaces without any policy at all.
+- **The restriction buys the remaining quarter** — 63 products, 25.7% of those with a price.
+- **The price is five brands leaving entirely**, and they leave because they are 100%
+  third-party, not because they are marginal.
+- **It does nothing for delivery**, and the classifier that scores it cannot verify the property
+  it scores.
+
+**Robbie decides. Nothing restricted.**
