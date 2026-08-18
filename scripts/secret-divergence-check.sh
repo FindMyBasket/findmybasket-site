@@ -16,11 +16,14 @@
 # proves the values are identical; a mismatch proves drift. No plaintext leaves
 # the database.
 #
-# What it checks:
-#   1. CROSS-STORE PAIRS — secrets that exist in >1 store and MUST be identical
-#      (currently: Vault.service_role_key == edge.SUPABASE_SERVICE_ROLE_KEY).
-#   2. TIMESTAMP SKEW — any edge secret whose updated_at lags the newest by more
-#      than STALE_DAYS, i.e. it likely missed a rotation the others got.
+# What it checks (CHANGED 2026-08-18 — work-list item 196):
+#   1. REGISTERED COPIES — each copy in COPIES must still hash to its declared pin.
+#      This replaced a cross-store equality assertion that went false when Supabase
+#      shipped a second key format. See the long note above COPIES for why equality
+#      cannot be repaired and had to be replaced by a different relation.
+#   2. AGE — any edge secret not rotated in STALE_DAYS. ADVISORY, never fails CI.
+#      Measured against NOW, not against the newest sibling: the old form made every
+#      other secret look stale the day any one was rotated.
 #
 # Stores it CANNOT digest-compare (reported here for a human/manual check):
 #   - Auth SMTP smtp_pass: masked by a different endpoint, hashing unverified, so
@@ -33,12 +36,30 @@
 # Requires: bash, curl, jq. Env:
 #   SUPABASE_ACCESS_TOKEN  (or ~/.supabase/access-token)
 #   SUPABASE_PROJECT_REF   (default: crtrjoescntlcjiwdtrt)
-#   STALE_DAYS             (default: 45)
+#   STALE_DAYS             (default: 180 — see note below; this is a POLICY number)
 
 set -euo pipefail
 
 REF="${SUPABASE_PROJECT_REF:-crtrjoescntlcjiwdtrt}"
-STALE_DAYS="${STALE_DAYS:-45}"
+# 180 IS A PLACEHOLDER AWAITING A DECISION, NOT A DERIVED THRESHOLD.
+#
+# THE HONEST POSITION: there is no rotation policy for these credentials, so any number here
+# is arbitrary until there is one. Nothing in this script — or in the repository — can derive
+# it, because it is not a fact about the system. It is a statement about how often these
+# credentials OUGHT to be rotated, and nobody has made that statement.
+#
+# WHY 180 SPECIFICALLY: it does not fire today. That is the entire justification, and it is a
+# deliberate one — the section is advisory, and an advisory section that shouts on every run
+# is how this script's other rule turned a working detector into background (item 196). 180
+# keeps the output readable while the question stays open.
+#
+# IT WILL NEED RE-DECIDING RATHER THAN TUNING. If it starts firing, the answer is not to raise
+# it until it stops; that is how a threshold becomes a number chosen to produce silence. The
+# answer is to decide the rotation policy it is standing in for.
+#
+# It was 45 when the rule measured distance from the newest sibling. As an ABSOLUTE age, 45
+# days would flag nearly everything and rebuild the noise item 196 removed.
+STALE_DAYS="${STALE_DAYS:-180}"
 TOKEN="${SUPABASE_ACCESS_TOKEN:-$(cat "${HOME}/.supabase/access-token" 2>/dev/null || true)}"
 
 if [[ -z "${TOKEN}" ]]; then
@@ -51,17 +72,64 @@ run_sql() { curl -sS -X POST "https://api.supabase.com/v1/projects/${REF}/databa
               -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" \
               -d "$(jq -Rn --arg q "$1" '{query:$q}')"; }
 
-# ── Pairs that MUST match. Format: "label|store_a:name_a|store_b:name_b"
-#    stores: edge (edge-function secrets) | vault (Vault). Extend as new shared
-#    secrets appear. Keep this list as the registry of "which secret lives where".
-#    A mismatch here is a HARD failure (exit 1) — these are the real detector.
-PAIRS=(
-  "service-role key|vault:service_role_key|edge:SUPABASE_SERVICE_ROLE_KEY"
+# ── THE REGISTRY. Changed 2026-08-18 from pairs to copies — see work-list item 196.
+#
+# WHAT WAS HERE BEFORE, AND WHY IT WAS REPLACED RATHER THAN EXTENDED.
+#
+#   PAIRS=( "service-role key|vault:service_role_key|edge:SUPABASE_SERVICE_ROLE_KEY" )
+#
+# That asserted digest(vault.x) == digest(edge.y): the two copies must be byte-identical.
+# It was CORRECT WHEN WRITTEN and went false on 2026-08-17 without a line of this
+# repository changing — Supabase shipped a second key format, the edge copy became the
+# new sb_secret_… key, the Vault copy stayed the legacy service_role JWT, and BOTH ARE
+# VALID. ~20 pg_cron jobs authenticate with the Vault copy; edge functions use theirs.
+#
+# So the check went red for five weeks on a project with nothing wrong with it.
+#
+# WHY "SAME CREDENTIAL, DIFFERENT FORMATS" CANNOT BE EXPRESSED HERE, EVER.
+#
+# Two formats of one authority produce UNRELATED digests, and no function of two digests
+# can establish that they correspond. Digest equality proves byte-identity and nothing
+# else. This is a property of hashing, not a limitation to engineer around — it forecloses
+# the obvious next attempt, which is to make the pair cleverer.
+#
+# THE RELATION CHANGES INSTEAD:
+#   was:  equal(a, b)             symmetric, between two copies, needs nothing external
+#   now:  conforms(copy, pinned)  asymmetric, one copy against a declared fingerprint
+#
+# Pairwise equality was never the property of interest anyway. The question is "has a copy
+# changed without the change being intended?", and equality was a proxy that only worked
+# while both stores held one credential in one format.
+#
+# WHY A PIN AND NOT THE MANAGEMENT API'S ?reveal=true.
+#
+# Comparing each copy against the authoritative value would be stronger — it would catch a
+# stale pin too. It also pulls PLAINTEXT INTO THIS RUNNER, destroying the property this
+# whole script is built around: no plaintext leaves Postgres or reaches CI. Rejected.
+#
+# The pin's failure mode is "someone rotated something without recording it here", which is
+# a TRUE red — and producing true reds is exactly what the old assertion stopped doing.
+#
+# ROTATING A CREDENTIAL IS THEREFORE A TWO-PART CHANGE: rotate it, and update its pin in
+# the same commit. That is a feature. The registry is the only place that records which
+# generation each store is expected to hold, and it had to be rediscovered by hashing a key
+# by hand on 18 August because nothing wrote it down.
+#
+# Format: "store:name|role|generation|expected_sha256_prefix"   (prefix: >=12 hex chars)
+COPIES=(
+  "vault:service_role_key|service_role|legacy_jwt|aee0e4653b97"
+  "edge:SUPABASE_SERVICE_ROLE_KEY|service_role|secret_key|77a2bb9723c4"
 )
 
 # ── Secrets that are legitimately static (config/URLs, provider keys that rarely
 #    rotate). Timestamp skew on these is expected and must NOT flag — otherwise
 #    the standing check goes permanently red and stops being read. Space list.
+#
+#    2026-08-18: THAT SENTENCE WAS RIGHT AND DID NOT SAVE THIS SCRIPT. It went
+#    permanently red for five weeks and stopped being read — not through this rule,
+#    which is advisory and never failed CI, but through the equality assertion above.
+#    The mechanism was correctly predicted and the guard was built one rule too narrow.
+#    Work-list items 191 and 196.
 SKEW_IGNORE="${SKEW_IGNORE:-APP_BASE_URL AWIN_API_KEY AWIN_PUBLISHER_ID SUPABASE_DB_URL}"
 
 # ── Pull both stores as name<TAB>digest<TAB>updated_at ───────────────────────
@@ -86,29 +154,52 @@ echo "=================================================================="
 echo " Secret divergence check — project ${REF}"
 echo "=================================================================="
 echo
-echo "── Cross-store pairs (digest must match) ─────────────────────────"
-for row in "${PAIRS[@]}"; do
-  IFS='|' read -r label a b <<<"$row"
-  IFS=':' read -r sa na <<<"$a"; IFS=':' read -r sb nb <<<"$b"
-  da="$(digest_of "$sa" "$na")"; db="$(digest_of "$sb" "$nb")"
-  if [[ -z "$da" || -z "$db" ]]; then
-    printf "  ?  %-22s MISSING in one store (%s:%s=%s, %s:%s=%s)\n" \
-      "$label" "$sa" "$na" "${da:0:8}" "$sb" "$nb" "${db:0:8}"
+echo "── Registered copies (digest must match its pin) ─────────────────"
+for row in "${COPIES[@]}"; do
+  IFS='|' read -r ref role generation pin <<<"$row"
+  IFS=':' read -r store name <<<"$ref"
+  got="$(digest_of "$store" "$name")"
+  n="${#pin}"
+  if [[ -z "$got" ]]; then
+    # ABSENT IS NOT "UNCHANGED". A registered copy that has vanished from its store is a
+    # finding, and the old code could only see this as one half of a pair.
+    printf "  ?  %-34s MISSING from store  (role %s, expected %s…)\n" "$ref" "$role" "$pin"
     DIVERGENCE=1
-  elif [[ "$da" == "$db" ]]; then
-    printf "  OK %-22s match (%s…)\n" "$label" "${da:0:8}"
+  elif [[ "${got:0:$n}" == "$pin" ]]; then
+    printf "  OK %-34s %s…  %s / %s\n" "$ref" "$pin" "$role" "$generation"
   else
-    printf "  ✗  %-22s DIVERGENT\n" "$label"
-    printf "        %s:%-28s %s  (updated %s)\n" "$sa" "$na" "${da:0:12}" "$(updated_of "$sa" "$na")"
-    printf "        %s:%-28s %s  (updated %s)\n" "$sb" "$nb" "${db:0:12}" "$(updated_of "$sb" "$nb")"
+    printf "  ✗  %-34s PIN MISMATCH\n" "$ref"
+    printf "        expected  %s…  (%s / %s)\n" "$pin" "$role" "$generation"
+    printf "        found     %s…  (updated %s)\n" "${got:0:$n}" "$(updated_of "$store" "$name")"
+    printf "        → the value changed, or it was rotated without updating the pin here.\n"
     DIVERGENCE=1
   fi
 done
 
+# ── ROLE COVERAGE. The old pair form implied "these two serve the same role" as a side
+#    effect of asserting equality. Losing that would lose real information, so it is now
+#    stated explicitly instead of inferred from a comparison that no longer holds.
 echo
-echo "── Timestamp skew in edge secrets (> ${STALE_DAYS}d behind newest) ─"
-echo "   (warning only — does not fail CI; investigate against known rotations)"
-NEWEST_EPOCH="$(awk -F'\t' '$3!=""{print $3}' <<<"$EDGE" | while read -r d; do date -d "$d" +%s 2>/dev/null || true; done | sort -nr | head -1)"
+echo "── Roles and the generations registered for them ─────────────────"
+printf '%s\n' "${COPIES[@]}" | awk -F'|' '{split($1,r,":"); print $2"\t"$3"\t"r[1]}' \
+  | sort | awk -F'\t' '{a[$1]=a[$1]"  "$3"("$2")"} END{for(k in a) printf "  %-14s%s\n", k, a[k]}'
+
+echo
+echo "── Age of edge secrets (> ${STALE_DAYS}d since last rotation) ─────"
+echo "   (advisory only — never fails CI. Belongs in the reporter, work-list item 194.)"
+#
+# MEASURED AGAINST NOW, NOT AGAINST THE NEWEST SIBLING. Changed 2026-08-18, item 196.
+#
+# It used to compute (newest_edge_secret_updated_at − this_secret_updated_at), which makes
+# EVERY OTHER SECRET LOOK STALE THE DAY ANY ONE IS ROTATED. On 17 August the service-role
+# edge secret was updated and REVALIDATE_SECRET — unchanged, with all three of its copies
+# dated 17 June and no newer value anywhere — was reported as "60d behind newest".
+#
+# That is a stable secret, not skew. A relative measure was being presented as an absolute
+# one, and it was the second false positive this script produced in one investigation.
+# Absolute age says "not rotated in N days", which is true, and is either actionable or
+# ignorable on policy rather than on mood.
+NEWEST_EPOCH="$(date -u +%s)"
 if [[ -n "${NEWEST_EPOCH:-}" ]]; then
   while IFS=$'\t' read -r name _digest updated; do
     [[ -z "$updated" ]] && continue
@@ -116,7 +207,7 @@ if [[ -n "${NEWEST_EPOCH:-}" ]]; then
     e="$(date -d "$updated" +%s 2>/dev/null || echo 0)"
     age_days=$(( (NEWEST_EPOCH - e) / 86400 ))
     if (( age_days > STALE_DAYS )); then
-      printf "  ⚠  %-30s %sd behind newest (updated %s)\n" "$name" "$age_days" "${updated%%.*}"
+      printf "  ⚠  %-30s not rotated in %sd (last %s)\n" "$name" "$age_days" "${updated%%.*}"
     fi
   done <<<"$EDGE"
 fi
