@@ -16575,3 +16575,121 @@ eight days; I read 44 characters of a title and reported two products.
 
 **The defence is not care.** It is: **state the bound with the finding.** "Failing for at least
 the last 8 runs" is true and unfalsifiable; "failing for eight days" is neither.
+
+---
+
+### 196. Fix the check, not the secrets: an invariant dated by the platform
+
+**Raised:** 18 August 2026 · **Confirmed by hash: `77a2bb9723c4` matches the edge copy.** ·
+**Proposed, NOT applied. Nothing rotated.**
+
+**Settled.** `edge:SUPABASE_SERVICE_ROLE_KEY` **is** the project's current `sb_secret_…` key.
+`vault:service_role_key` is the legacy `service_role` JWT. **Two generations, both valid, each
+read by different consumers. No drift. No rotation needed.**
+
+> **THE ASSERTION WAS CORRECT WHEN IT WAS WRITTEN AND IS NOT NOW, AND NOTHING IN THIS REPOSITORY
+> CHANGED.** Supabase shipped a second key format and the invariant silently became false.
+>
+> **An assertion about a platform is dated by the platform, not by the code.** There is no commit
+> to blame, no diff to review and no test that would have caught it — the check kept doing
+> exactly what it was written to do, against a world that had moved.
+
+#### 1. WHAT THE INVARIANT SHOULD ASSERT INSTEAD
+
+**Current:** `digest(vault.x) == digest(edge.y)` — pairwise equality between two copies.
+
+**Pairwise equality was never the property of interest.** The property is *"has a copy changed
+without the change being intended?"* Equality was a **proxy** that held only while both stores
+carried one credential in one format. **It has no notion of a source of truth**, so once two
+generations exist there is nothing for it to be right about.
+
+**Proposed:** `digest(copy) == pinned_expected_digest(copy)` — **per-copy conformance to a
+declared value.**
+
+| | keeps no-plaintext | detects unplanned change | cost |
+|---|---|---|---|
+| **pinned digests** ✅ recommended | **yes** | yes, in either store | one deliberate registry edit per rotation |
+| compare each to the authority (`/v1/projects/…/api-keys?reveal=true`) | **no** — pulls plaintext into the runner | yes, and catches a stale pin too | destroys the script's central property |
+
+> **PINNING CONVERTS AN INFERRED INVARIANT INTO A DECLARED ONE.** The failure mode it creates —
+> *"someone rotated something without recording it"* — is a **true and useful red**, which is
+> exactly what the old assertion stopped being.
+
+#### 2. CAN THE REGISTRY EXPRESS "THE SAME CREDENTIAL IN DIFFERENT FORMATS"?
+
+> **NO, AND IT CANNOT BE MADE TO. THAT IS A PROPERTY OF HASHING, NOT A LIMITATION OF THE
+> REGISTRY.** Two formats of the same underlying authority produce unrelated digests, and **no
+> function of two digests can establish that they correspond.** Digest equality can only ever
+> prove byte-identity.
+
+**So it needs a different relation, not a richer pair:**
+
+| | relation | shape | needs |
+|---|---|---|---|
+| now | `equal(a, b)` | **symmetric**, between copies | nothing external |
+| needed | `conforms(copy, expected)` | **asymmetric**, copy against declaration | a declaration |
+
+**The registry stops being a list of pairs and becomes a list of copies:**
+
+```
+# store:name                    | role         | generation  | expected sha256 prefix
+vault:service_role_key          | service_role | legacy_jwt  | aee0e4653b97
+edge:SUPABASE_SERVICE_ROLE_KEY  | service_role | secret_key  | 77a2bb9723c4
+```
+
+**Two entries where there was one pair.** The `role` column preserves the original intent — *ask
+which copies serve `service_role` and you still get both* — and **the `generation` column records
+why they differ, which is the knowledge that currently has nowhere to live and had to be
+rediscovered by hashing a key by hand.**
+
+#### 3. DOES ANY OTHER PAIR HAVE THE SAME PROBLEM?
+
+**No, because there is only one pair.** `PAIRS` has a single entry. But the hazard is loaded:
+
+- **Both anon generations are live too** — legacy `anon` JWT (**not disabled**) beside
+  `sb_publishable_…`.
+- **From the repository, the anon key appears in one store only** (`NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+  Vercel, five call sites), so no pair exists and nothing fires today.
+
+> **BOUND ON THAT CLAIM, PER ITEM 195:** this is what a repository grep shows. **I could not
+> enumerate the edge-secret store**, which needs a management token this session did not have.
+> If an anon copy lives there, the pair exists and I did not see it.
+
+**The important part: the hazard is not per-pair, it is in the relation.** Fixing the relation
+removes it for every future entry. **Adding an anon exception would fix one instance and leave
+the mechanism wrong** — and the next person extending the registry, as its comment invites, would
+walk into it.
+
+#### 4. AND THE SKEW RULE GOES WITH IT
+
+```
+age_days = (newest_edge_secret_updated_at − this_secret_updated_at) / 86400
+```
+
+**Measured against the newest sibling.** Rotating anything makes everything else N days "behind"
+that same day. `REVALIDATE_SECRET`'s three copies all date from 17 June with **no newer value
+anywhere** — *that is a stable secret, and the rule reports it as skew.*
+
+**Two changes:**
+
+1. **Measure absolute age** — `now() − updated_at` against a stated rotation policy. Then the
+   output is *"not rotated in 62 days"*, which is true, and either actionable or ignorable on
+   policy rather than on mood.
+2. **Move it to the reporter (item 194).** It is advisory by the script's own admission and does
+   not fail CI, so **it has no business in the detector's output, where it dilutes the one signal
+   that does mean something.**
+
+#### 5. TWO FALSE POSITIVES FROM ONE SCRIPT IN ONE INVESTIGATION
+
+| | what fired | why it was wrong |
+|---|---|---|
+| `PAIRS` | the **red** | an invariant that outlived its truth |
+| skew | the **warning** | a relative measure presented as absolute |
+
+> **NEITHER IS A BUG. BOTH ARE CORRECT IMPLEMENTATIONS OF ASSERTIONS THAT STOPPED BEING TRUE.**
+> The code does what it says; what it says stopped describing the world.
+
+**This is item 191's argument with its own evidence.** The script warned itself — *"otherwise the
+standing check goes permanently red and stops being read"* — and then produced two false
+positives that did precisely that. **The warning was in the file the whole time, and the author
+six weeks later is not that reader.**
