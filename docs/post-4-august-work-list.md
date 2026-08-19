@@ -18631,3 +18631,108 @@ they are not in AWIN and never have been.
 > BE SKIPPED** — and the reason it is recorded here rather than left unsaid is that a reversed
 > decision inherits the probe's findings and could easily inherit the impression that onboarding
 > was already assessed end to end. It was not.
+
+---
+
+### 224. The Abib spotlight after its programme closed — reported, not decided
+
+**Raised:** 19 August 2026 · **REPORT ONLY. Nothing changed, nothing taken down.** · **A brand
+relationship, so the departure doctrine does not apply and nothing leaves the catalogue.**
+
+#### THE LINKS ARE DEAD AND THEY DO NOT FAIL — THEY LAND SOMEWHERE ELSE
+
+**Five affiliate links** on the page, all to AWIN merchant **122652**. Every one now resolves to:
+
+```
+https://awin1.com/closedMerchant.html?mid=122652&aid=2841268     HTTP 200
+```
+
+> **THE VISITOR NEVER REACHES abib.global.** They land on an AWIN interstitial announcing that
+> the programme is closed — **a 200, not an error**, so nothing anywhere would ever flag it.
+
+**Controlled, because a dead link is a claim I should not make on one observation.** The
+iLĀPOTHECARY link (merchant 125272) resolves normally to `ilapothecary.com` with its tracking
+parameter, so the mechanism works and **Abib's result is the closed programme rather than a
+malformed URL.**
+
+#### WHAT THE PAGE CLAIMS, AND WHICH CLAIMS ARE NOW FALSE
+
+| claim | where | status |
+|---|---|---|
+| *"Abib is a brand partner. This spotlight is presented with the brand…"* | page disclosure | **FALSE — present tense, relationship ended** |
+| *"Brand Spotlight"*, eyebrow and framing | page furniture | **the framing IS the claim**, not only the sentence |
+| *"Brand creative · supplied by Abib"* | image credit | **true** — it was supplied, and remains a fact about provenance |
+| *"FindMyBasket may earn a small affiliate commission…"* | site-wide footer | true site-wide, **false for these five links** — no commission is earnable on a closed programme |
+| *"View all 147 Abib products"* | CTA | **stale: 173 live today** |
+
+#### WHAT A VISITOR GETS TODAY
+
+**The page is live and it is an orphan.** Measured: `/` 0 mentions, `/savings-hub.html` 0,
+`/about.html` 0, `/articles/` 0 — and **`/brands/abib` does not link to it either.** It is
+reachable only by direct URL or an external inbound link.
+
+**Everything except the outbound links still works.** All **8 internal product links** return
+200, the editorial body (6,364 characters) reads fine, and the comparison links do what they
+say.
+
+> **SO THE PAGE IS NOT BROKEN — IT IS DISHONEST IN ONE DIRECTION AND USEFUL IN ANOTHER.** Its
+> editorial and its comparison links serve a reader; its partnership framing and its five
+> outbound links no longer describe anything real.
+
+#### THE AMAZON SIDE IS UNAFFECTED — CONFIRMED, AND THE FIGURE HAS MOVED
+
+**Abib carries 9 ASINs, not 2.** The brief said two; **yesterday's tranche-3 harvest added
+seven** (item 219's promotion). Nothing about the AWIN closure touches them — Amazon is a
+separate relationship with its own credential and its own map row.
+
+**And Abib remains comparable:** 173 live products across **2 retailers**, so the price
+comparison the page links into is real. *`brand_hubs.show_comparison` is nevertheless `false`
+for this hub* — a divergence that predates the closure and is not caused by it.
+
+#### THE TWO OPTIONS, WITH WHAT EACH COSTS
+
+**Not a recommendation.**
+
+| | keep and correct | take down |
+|---|---|---|
+| editorial (6,364 chars) | kept | lost |
+| 8 internal comparison links | kept | lost |
+| the five dead links | must be repointed or removed | gone with the page |
+| the partnership framing | **still there** — past tense fixes the sentence, not the premise | gone |
+| external inbound links | keep working | 404 unless redirected to `/brands/abib` |
+| internal traffic | **none either way — the page is an orphan** | none |
+
+> **THE HONEST DIFFICULTY WITH "KEEP AND CORRECT" IS THAT THE PAGE'S PREMISE IS THE
+> PARTNERSHIP.** It is titled a Brand Spotlight, presented *with* the brand, and built on
+> supplied creative. Rewriting the disclosure to the past tense makes every sentence true while
+> leaving a page whose whole shape asserts a relationship that has ended.
+
+**The missing input is traffic.** The page is an orphan internally, so its entire value is
+external and search — **and that number is in GA4, which this report has no reading of.** A
+decision to remove editorial that nobody visits is very different from one that removes a page
+with standing search traffic, and *nothing measured here distinguishes them.*
+
+#### AND iLĀPOTHECARY IS NOT THE SAME SHAPE
+
+| | Abib | iLĀPOTHECARY |
+|---|---|---|
+| `body_html` | 6,364 chars of editorial | **0 — empty** |
+| `offer` | none | **code FMB15 + affiliate CTA** |
+| disclosure | "brand partner", **no commission claim** | explicit: *"We may earn affiliate commission"* |
+| live catalogue products | **173, across 2 retailers** | **0** |
+| affiliate link today | **closed merchant** | **resolves normally** |
+
+**They share a table and diverge in almost every field that matters.** A "template that outlives
+one relationship" does not quite exist here — what exists is a *table* used two different ways.
+
+> **BUT THE SHARED RISK IS EXACT: BOTH HUBS HARDCODE A DISCLOSURE ASSERTING A LIVE RELATIONSHIP,
+> AND BOTH DEPEND ON A PROGRAMME STAYING OPEN. NOTHING WATCHES EITHER.**
+>
+> iLĀPOTHECARY's link works **today**. If its programme closes, the page will keep saying *"we
+> may earn affiliate commission"* over a link to a closed-merchant page, and **the failure will
+> again be an HTTP 200.**
+
+**The departure doctrine does not cover this**, correctly — no retailer leaves, no catalogue
+changes, no `active` flip. **That is exactly why nothing detected it**: brand relationships end
+with no database event at all, and the only observable is an outbound link quietly changing
+where it lands.
