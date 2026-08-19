@@ -1,0 +1,33 @@
+name: Brand-hub programme check
+
+# Detects a brand relationship ending. A brand departure has NO DATABASE EVENT -- no retailer
+# leaves, no active flip, no catalogue change -- so the only observable is an outbound affiliate
+# link quietly changing where it lands, and it lands on an HTTP 200. Item 224.
+#
+# IT DOES NOT FOLLOW THE LINKS. Resolving an affiliate link registers a CLICK, and a weekly probe
+# over every hub would manufacture clicks that can never convert in the same account whose figures
+# feed metrics_awin_weekly. It asks the AWIN API whether the programme is still joined instead.
+# Item 226.
+#
+# Item 194's exit contract: 0 for ok or findings, 1 only for cannot_run.
+
+"on":
+  schedule:
+    - cron: '0 8 * * 1'   # Monday 08:00 UTC, beside the other weekly standing checks
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check brand-hub programmes
+        env:
+          AWIN_OAUTH_TOKEN: ${{ secrets.AWIN_OAUTH_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/brand-hub-programme-check.mjs --write-findings
