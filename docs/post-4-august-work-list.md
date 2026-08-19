@@ -18534,3 +18534,100 @@ change about another. It was two reviewed changes rather than a day's accumulate
 cost was low; **the point is that the rule was known and I did it anyway**, which is item 207's
 family again and the reason the PR title had to be amended rather than left describing half its
 contents.
+
+---
+
+### 223. Cohorted: a decision not to onboard, and the reason is the business model
+
+**Raised:** 19 August 2026 · **DECISION: do not onboard.** · **Probed read-only; nothing
+imported, nothing configured, nothing set active.**
+
+#### THE NAMES LEAD, BECAUSE THE NUMBER UNDER-DESCRIBES THE ANSWER
+
+```
+Cohorted Mystery Beauty Box - First Edition
+Cohorted Subscription Beauty Box
+Easter Edit Limited Edition Beauty Box (Worth £110+)
+Letterbox Gifts - It's Your Birthday (Worth £40+)
+Cohorted - Gift Card
+```
+
+> **0% OVERLAP SAYS "PRODUCTS WE CANNOT COMPARE TODAY". THE NAMES SAY "PRODUCTS THAT CANNOT BE
+> COMPARED IN PRINCIPLE".**
+>
+> **A mystery box's contents are unknown BY DESIGN, and a gift card has no comparable price.**
+> There is no identity to match on because the product *is* the surprise. **No future harvest
+> changes it.**
+
+**Cohorted is a beauty-box subscription business with an own-brand catalogue** — two brands, both
+theirs — not a stockist. It has no competitor to be compared against on this site and never will.
+
+#### WHY THAT DISTINCTION IS THE POINT AND NOT A FLOURISH
+
+> **A MEASUREMENT MIGHT MOVE NEXT QUARTER. A FACT ABOUT THE BUSINESS MODEL DOES NOT.**
+
+Recorded as a **decision with a reason** rather than a rejection on a threshold, because the two
+age differently. *"0% overlap"* invites the same probe again in three months and a different
+answer. *"They sell mystery boxes"* does not.
+
+**Twenty product names cost one extra line of probe output and turned one into the other.**
+
+#### A CORRECTION TO THE BRIEF, AND IT IS THE USEFUL PART
+
+The brief asked for **barcode overlap**, on the standing reasoning that the catalogue is 86%
+single-stockist and supplements 92%, so a retailer's value is what it can be compared against
+rather than what it adds.
+
+> **THE OVERLAP QUESTION WAS RIGHT AND INSUFFICIENT.** It would have rejected this retailer **on
+> the number alone, without ever explaining why** — a correct verdict with no reason attached,
+> and therefore one that has to be re-derived every time it is questioned.
+
+**The fix: read the names as well as counting the matches, on every future onboarding probe.**
+Now added to the doctrine's before-onboarding section as its own step, because it is the cheapest
+thing in the sequence and the only one that produces a *reason* rather than a *verdict*.
+
+#### THE SECOND REASON, WHICH WOULD BLOCK IT INDEPENDENTLY
+
+| column | populated |
+|---|---|
+| `brand_name` | 100% |
+| `ean` / `mpn` | 55% |
+| `merchant_category` | **0.0%** |
+| `merchant_product_category_path` | **0.0%** |
+
+> **BOTH CATEGORY COLUMNS ARE EMPTY, SO THE ALLOWLIST STEP CANNOT RUN AT ALL.**
+
+**Worse than the Debenhams case that produced that rule.** Debenhams populates
+`merchant_product_category_path` on 0.0% of rows and carries its taxonomy in `merchant_category`
+instead — a wrong-column problem with a right answer available. **Cohorted has neither column,
+so there is nothing to audit and nothing to write an allowlist against.**
+
+#### WHAT WAS PROBED
+
+| | |
+|---|---|
+| programme | **Cohorted Beauty**, advertiser **69170**, GBP / GB, joined |
+| feed | **90440**, *"Awin - Default Store Feed"* |
+| rows | **20**, last imported 2026-08-19 03:03 — current, not stale |
+| distinct barcodes in feed | 10 |
+| **barcode overlap** | **0 — 0.0%** |
+| **brand overlap** | **0 of 2** |
+
+#### THE CONTROL ON THE ZERO
+
+**A zero from a comparison I wrote is what item 184 says not to trust** — it cannot distinguish
+*new to us* from *broken join*.
+
+> **THE SAME LOOKUP FOUND 5 OF 5 KNOWN CATALOGUE BARCODES**, and the brand check returned zero of
+> two. **Zero barcode overlap AND zero brand overlap is consistent**, which is what makes
+> *disjoint catalogue* the reading rather than a failing comparison.
+
+#### DELIVERY TERMS WERE DELIBERATELY NOT SOUGHT
+
+The doctrine requires terms read from the retailer's **own site** before `active = true`, because
+they are not in AWIN and never have been.
+
+> **THAT STEP IS MOOT ONLY WHILE THIS RECOMMENDATION STANDS. IF THE DECISION REVERSES IT MUST NOT
+> BE SKIPPED** — and the reason it is recorded here rather than left unsaid is that a reversed
+> decision inherits the probe's findings and could easily inherit the impression that onboarding
+> was already assessed end to end. It was not.

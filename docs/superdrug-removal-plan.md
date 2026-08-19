@@ -52,6 +52,43 @@ Two measured reasons it cannot be shortcut:
 allowlist excludes, what a proposed change would admit, and how a classification rule
 behaves on that retailer's raw rows.
 
+## Before onboarding: read the product names, do not only count the matches
+
+**Added 19 August 2026, from the Cohorted probe — work-list item 223.**
+
+**The overlap test is right and it is not sufficient on its own.** The catalogue is 86%
+single-stockist and supplements 92%, so a retailer's value is what it can be COMPARED AGAINST
+rather than what it adds, and barcode overlap measures exactly that.
+
+> **BUT AN OVERLAP FIGURE PRODUCES A VERDICT WITHOUT A REASON**, and a verdict without a reason
+> has to be re-derived every time somebody questions it.
+
+**Cohorted returned 0% overlap.** That number alone would have rejected the retailer correctly
+and explained nothing. **Twenty product names explained it:**
+
+```
+Cohorted Mystery Beauty Box · Subscription Beauty Box
+Easter Edit Limited Edition Beauty Box · Letterbox Gifts · Gift Card
+```
+
+> **0% SAYS "PRODUCTS WE CANNOT COMPARE TODAY". THE NAMES SAY "PRODUCTS THAT CANNOT BE COMPARED
+> IN PRINCIPLE"** — a mystery box's contents are unknown by design and a gift card has no
+> comparable price.
+>
+> **A MEASUREMENT MIGHT MOVE NEXT QUARTER. A FACT ABOUT THE BUSINESS MODEL DOES NOT.**
+
+**The step:** print a sample of product names from every onboarding probe and read them.
+
+**It is the cheapest thing in this sequence** — one line of output — **and the only step that
+produces a reason rather than a verdict.** A low overlap invites the same probe again in three
+months; "they sell mystery boxes" closes the question permanently.
+
+**And control a zero before believing it.** A zero overlap cannot distinguish *new to us* from
+*a broken comparison*. Check that the same lookup finds barcodes known to be in the catalogue,
+and check brand overlap alongside barcode overlap: **zero barcodes on brands we already carry is
+suspicious; zero on brands we do not is what a genuinely disjoint catalogue looks like.**
+
+---
 ## Before onboarding: delivery terms are a REQUIRED step, not a later audit
 
 **Added 16 August 2026. Work-list item 130.** Same placement and same reason as the section
