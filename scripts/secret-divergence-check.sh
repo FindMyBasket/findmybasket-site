@@ -158,8 +158,14 @@ COPIES=(
 # divergence hard to reason about -- and the reason item 196 had to hash a key by hand to work
 # out which generation lived where. Recorded here as a known, uncomparable copy, exactly as the
 # Auth SMTP smtp_pass pair already is.
+#
+# HOW MANY OF THESE EXIST: at least three, and the category already had a member before this
+# list did. A registry with ONE ACKNOWLEDGED GAP is a different thing from one with several
+# UNACKNOWLEDGED, and this file was the latter -- the Auth SMTP pair below proved the category
+# existed while two other copies went unwritten. Item 222.
 UNCOMPARABLE=(
   "gh-actions:SUPABASE_SERVICE_KEY|service_role|unknown generation — Actions secrets are write-only"
+  "gh-actions:AWIN_API_KEY|awin|also an edge secret; Actions secrets are write-only"
 )
 
 # ── Secrets that are legitimately static (config/URLs, provider keys that rarely
