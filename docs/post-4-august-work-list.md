@@ -18537,55 +18537,12 @@ contents.
 
 ---
 
-### 223. Cohorted: the overlap question was right and it under-describes the answer
+### 223. Cohorted: a decision not to onboard, and the reason is the business model
 
-**Raised:** 19 August 2026 · **PROBED, READ-ONLY. Nothing imported, nothing configured, nothing
-set active.** · **Recommendation: do not onboard.**
+**Raised:** 19 August 2026 · **DECISION: do not onboard.** · **Probed read-only; nothing
+imported, nothing configured, nothing set active.**
 
-#### THE PROGRAMME AND FEED EXIST AND ARE HEALTHY
-
-| | |
-|---|---|
-| programme | **Cohorted Beauty**, advertiser **69170**, GBP / GB, joined |
-| feed | **90440**, *"Awin - Default Store Feed"* |
-| rows | **20** |
-| last imported | 2026-08-19 03:03 — **current, not stale** |
-
-#### THE FEED CANNOT SUPPORT THE DOCTRINE'S FIRST PRE-ONBOARDING STEP
-
-| column | populated |
-|---|---|
-| `brand_name` | 100% |
-| `ean` | **55%** |
-| `mpn` | 55% |
-| `merchant_category` | **0.0%** |
-| `merchant_product_category_path` | **0.0%** |
-
-> **BOTH CATEGORY COLUMNS ARE EMPTY, SO A CATEGORY ALLOWLIST CANNOT BE WRITTEN AT ALL.** The
-> doctrine's rule is *"never copy a path allowlist between retailers — audit each feed before
-> writing one"*. The audit's answer here is that **there is nothing to write one against.**
-
-**Worse than the Debenhams case that produced that rule.** Debenhams populates
-`merchant_product_category_path` on 0.0% of rows but carries its taxonomy in
-`merchant_category` instead — a wrong-column problem with a right answer available. **Cohorted
-has neither.**
-
-#### THE OVERLAP FIGURE, AND ITS CONTROLS
-
-| | |
-|---|---|
-| distinct barcodes in feed | **10** |
-| distinct barcodes in catalogue | 80,163 |
-| **overlap** | **0 — 0.0%** |
-| feed brands | **2**: *Cohorted Beauty*, *Cohorted - Be You Be Beautiful* |
-| **brands we already carry** | **0 of 2** |
-
-**A zero from a comparison I wrote is what item 184 says not to trust**, so it carries two
-controls: the same lookup found **5 of 5** known catalogue barcodes, and the brand check
-distinguishes *new to us* from *broken comparison*. **Zero barcode overlap AND zero brand
-overlap is consistent** — a genuinely disjoint catalogue rather than a failing join.
-
-#### AND THE PRODUCT NAMES SAY SOMETHING STRONGER THAN 0%
+#### THE NAMES LEAD, BECAUSE THE NUMBER UNDER-DESCRIBES THE ANSWER
 
 ```
 Cohorted Mystery Beauty Box - First Edition
@@ -18595,25 +18552,82 @@ Letterbox Gifts - It's Your Birthday (Worth £40+)
 Cohorted - Gift Card
 ```
 
-> **THE OVERLAP QUESTION WAS THE RIGHT ONE AND ITS ANSWER UNDER-DESCRIBES THE PROBLEM.** 0%
-> overlap says *products we cannot compare today*. The names say **products that cannot be
-> compared in principle**: a mystery box's contents are unknown BY DESIGN, and a gift card has no
-> comparable price. **A future harvest cannot fix this, because there is no identity to match on
-> — the product is the surprise.**
+> **0% OVERLAP SAYS "PRODUCTS WE CANNOT COMPARE TODAY". THE NAMES SAY "PRODUCTS THAT CANNOT BE
+> COMPARED IN PRINCIPLE".**
+>
+> **A mystery box's contents are unknown BY DESIGN, and a gift card has no comparable price.**
+> There is no identity to match on because the product *is* the surprise. **No future harvest
+> changes it.**
 
-**Cohorted is a beauty-box subscription business with an own-brand catalogue**, not a stockist.
-It has no competitor to be compared against on this site, and never will.
+**Cohorted is a beauty-box subscription business with an own-brand catalogue** — two brands, both
+theirs — not a stockist. It has no competitor to be compared against on this site and never will.
 
-#### WHAT THIS SAYS ABOUT THE OVERLAP TEST ITSELF
+#### WHY THAT DISTINCTION IS THE POINT AND NOT A FLOURISH
 
-The catalogue is **86% single-stockist** and supplements **92%**, so the standing rule is that a
-retailer's value is what it can be compared against rather than what it adds.
+> **A MEASUREMENT MIGHT MOVE NEXT QUARTER. A FACT ABOUT THE BUSINESS MODEL DOES NOT.**
 
-> **THAT TEST CORRECTLY REJECTS THIS RETAILER, AND IT WOULD HAVE REJECTED IT ON THE NUMBER ALONE
-> WITHOUT EVER EXPLAINING WHY.** Reading the twenty product names cost one extra line of probe
-> output and turned *"0% overlap, low value"* into *"a category of product this site cannot
-> compare"* — which is a durable reason rather than a measurement that might change next quarter.
+Recorded as a **decision with a reason** rather than a rejection on a threshold, because the two
+age differently. *"0% overlap"* invites the same probe again in three months and a different
+answer. *"They sell mystery boxes"* does not.
 
-**Nothing was imported and no delivery terms were sought.** The doctrine requires terms read from
-the retailer's own site before `active = true`; that step is moot while the recommendation is not
-to onboard, and it must not be skipped if that changes.
+**Twenty product names cost one extra line of probe output and turned one into the other.**
+
+#### A CORRECTION TO THE BRIEF, AND IT IS THE USEFUL PART
+
+The brief asked for **barcode overlap**, on the standing reasoning that the catalogue is 86%
+single-stockist and supplements 92%, so a retailer's value is what it can be compared against
+rather than what it adds.
+
+> **THE OVERLAP QUESTION WAS RIGHT AND INSUFFICIENT.** It would have rejected this retailer **on
+> the number alone, without ever explaining why** — a correct verdict with no reason attached,
+> and therefore one that has to be re-derived every time it is questioned.
+
+**The fix: read the names as well as counting the matches, on every future onboarding probe.**
+Now added to the doctrine's before-onboarding section as its own step, because it is the cheapest
+thing in the sequence and the only one that produces a *reason* rather than a *verdict*.
+
+#### THE SECOND REASON, WHICH WOULD BLOCK IT INDEPENDENTLY
+
+| column | populated |
+|---|---|
+| `brand_name` | 100% |
+| `ean` / `mpn` | 55% |
+| `merchant_category` | **0.0%** |
+| `merchant_product_category_path` | **0.0%** |
+
+> **BOTH CATEGORY COLUMNS ARE EMPTY, SO THE ALLOWLIST STEP CANNOT RUN AT ALL.**
+
+**Worse than the Debenhams case that produced that rule.** Debenhams populates
+`merchant_product_category_path` on 0.0% of rows and carries its taxonomy in `merchant_category`
+instead — a wrong-column problem with a right answer available. **Cohorted has neither column,
+so there is nothing to audit and nothing to write an allowlist against.**
+
+#### WHAT WAS PROBED
+
+| | |
+|---|---|
+| programme | **Cohorted Beauty**, advertiser **69170**, GBP / GB, joined |
+| feed | **90440**, *"Awin - Default Store Feed"* |
+| rows | **20**, last imported 2026-08-19 03:03 — current, not stale |
+| distinct barcodes in feed | 10 |
+| **barcode overlap** | **0 — 0.0%** |
+| **brand overlap** | **0 of 2** |
+
+#### THE CONTROL ON THE ZERO
+
+**A zero from a comparison I wrote is what item 184 says not to trust** — it cannot distinguish
+*new to us* from *broken join*.
+
+> **THE SAME LOOKUP FOUND 5 OF 5 KNOWN CATALOGUE BARCODES**, and the brand check returned zero of
+> two. **Zero barcode overlap AND zero brand overlap is consistent**, which is what makes
+> *disjoint catalogue* the reading rather than a failing comparison.
+
+#### DELIVERY TERMS WERE DELIBERATELY NOT SOUGHT
+
+The doctrine requires terms read from the retailer's **own site** before `active = true`, because
+they are not in AWIN and never have been.
+
+> **THAT STEP IS MOOT ONLY WHILE THIS RECOMMENDATION STANDS. IF THE DECISION REVERSES IT MUST NOT
+> BE SKIPPED** — and the reason it is recorded here rather than left unsaid is that a reversed
+> decision inherits the probe's findings and could easily inherit the impression that onboarding
+> was already assessed end to end. It was not.
