@@ -14963,6 +14963,10 @@ not.
 **That is the sentence to read first if this is ever picked up.** The size is recoverable from a
 query; the trap is not.
 
+> **AND SINCE 18 AUGUST THERE IS EVIDENCE FROM OUTSIDE THE CATALOGUE — SEE ITEM 212.** Three
+> independent routes in one day, including a duplicate pair (93648/3448) that **no internal
+> barcode-keyed check could ever have found**, because one side carries no barcode at all.
+
 #### WITHDRAWN 17 AUGUST: THE "SECOND SHAPE" WAS A TRUNCATION ARTEFACT
 
 **This section previously recorded product 82517 as one catalogue row holding two different
@@ -16041,6 +16045,28 @@ that **reverses the moment the cheaper listing restocks.**
 > ITS OUTPUT IS A STORED COLUMN.** The rule is correct at the instant it runs and decays from
 > then on, and **nothing surfaces the decay.**
 
+**MEASURED 18 AUGUST, AND SELLER IDENTITY IS THE ONE THAT MATTERS MOST.** Re-running item 186's
+rule against the same twelve products one day later:
+
+| ASIN | 17 August | 18 August |
+|---|---|---|
+| B0B45M89LX | £13.60, **out of stock** | £16.99, **in stock**, BEAUTY OF JOSEON Official |
+| B0D1Q43KQZ | £8.22, **in stock**, Amazon | £8.40, **out of stock** |
+| B00S9XYW40 | £31.93, in stock, **Kweb LTD** | £31.26, out of stock, **Sorted Wholesale** |
+
+1787's two listings **swapped stock states in opposite directions in 24 hours** and the verdict
+flipped with them. 87918 lost its discriminator and a pick became a tie, therefore a hold.
+
+> **AND 87918's BUY-BOX SELLER CHANGED IDENTITY ENTIRELY.** Not its price, not its stock — **who
+> is selling the product.** The buy box is a rotating award, so a stored ASIN goes stale on
+> WHO IS BEHIND IT, not merely on what it costs.
+>
+> **THAT IS THE PROPERTY ITEM 200's COUNTERFEIT POLICY DEPENDS ON.** Any restriction of the form
+> "only brand-store or Amazon listings" is evaluated at one instant and stored, and the listing
+> it approved can be a different seller's the next day. **A seller-based policy over a stored
+> ASIN is a snapshot policy**, and the re-derivation in (b) below is what makes it anything
+> else.
+
 **This is the frozen-state problem this list already carries several instances of**, and it is
 the same shape named in `lib/amazon-live.ts`: *a cached price served through an outage is a
 stored price whose refresh path no longer exists.* Here it is **a stored ASIN chosen on live
@@ -16788,3 +16814,1167 @@ replacing the assertion would have silently dropped it.
 > comment predicting that a permanently-red check stops being read is annotated in place with the
 > fact that it went permanently red anyway — **through the rule the comment does not cover.** The
 > mechanism was predicted correctly and the guard was built one rule too narrow.
+---
+
+### 197. A local copy of the delivery rule that priced unknown as free — third instance
+
+**Raised:** 18 August 2026, scoping the Prime toggle · **FIXED and tested. Independent of the
+toggle, and done first.**
+
+`scripts/generate-homepage-demo.mjs` carried its own `deliveryFor`:
+
+```js
+if (r.delivery_model === 'flat') return Number(r.delivery_cost)
+return goods >= Number(r.delivery_threshold) ? 0 : Number(r.delivery_cost)
+```
+
+> **NO UNKNOWN BRANCH.** `Number(null)` is `0`, `goods >= 0` is true, **so it returned FREE
+> DELIVERY** for a retailer whose terms are unknown. Measured: `unknown retailer, £40 leg -> 0`.
+
+**That is exactly the defaulting `lib/delivery.ts` exists to forbid**, reintroduced in a copy
+written before the unknown contract existed.
+
+#### THE PROTECTION WAS COINCIDENCE, NOT DESIGN
+
+It was unreachable only because `loadData()` filters `.eq('active', true)` and the two unknown
+retailers — Amazon (9) and eBay (10) — are inactive.
+
+> **AN UNRELATED FILTER WAS THE ONLY THING STANDING BETWEEN THIS AND A WRONG NUMBER ON THE
+> MOST-VISITED PAGE** — and **activating Amazon is precisely what the Prime toggle required.**
+> The toggle's first step would have silently turned this on.
+
+**What it would have produced:** free Amazon delivery in the homepage demo. **Option B, chosen by
+nobody, on the page most people see, through a code path nobody would have looked at.**
+
+#### THIRD INSTANCE OF A LOCAL COPY DIVERGING FROM THE SHARED RULE
+
+After `feed-diag` and the eight unordered paginated reads. **The pattern is now established
+enough to state as a rule rather than a coincidence:**
+
+> **A COPY DOES NOT DRIFT WHEN IT IS WRITTEN. IT DRIFTS WHEN THE SHARED RULE GAINS A CASE THE
+> COPY NEVER HAD.** All three copies were correct on the day they were made. `lib/delivery.ts`
+> later grew the `unknown` contract; the copies did not, and nothing connects them.
+
+**So the hazard is not duplication itself — it is duplication plus a rule that is still learning.**
+`lib/delivery.ts` has changed three times since August; that is what makes copies of it dangerous.
+
+#### IT CAN IMPORT THE SHARED MODULE. THE BOUNDARY DOES NOT FORCE A COPY.
+
+**Measured, not assumed:** Node strips TypeScript types on import from 22.18, and **this
+repository already depends on it** — `npm test` runs `node --test "lib/**/*.test.ts"`.
+
+```
+import { deliveryFor } from '../lib/delivery.ts'     → works, verified
+```
+
+**The Deno/Node boundary that justifies `supabase/functions/_shared/delivery.ts` existing
+separately does not apply here.** That copy is genuinely forced: Deno cannot import from `lib/`.
+This script is plain Node — the same runtime as the tests — and its copy was never forced by
+anything. **Two copies looked like a policy; one of them was just habit.**
+
+`package.json` now declares `engines: { node: ">=22.18" }`, so the requirement is stated rather
+than assumed. **If a build ever runs on an older Node the import fails and the build breaks
+loudly** — strictly better than the silent £0 it replaces.
+
+#### AND THE TEST THAT KEEPS IT HONEST
+
+`main()` used to run on bare import, so `solve` could not be exercised without credentials and a
+network. **That is why this went unnoticed: nothing could reach it.** A main guard now makes it
+importable, and `scripts/generate-homepage-demo.test.mjs` asserts the behaviour:
+
+- an unknown-terms retailer never appears in a solved basket, **however cheap its goods**
+- it is never priced at zero delivery
+- all-unknown yields `null`, which triggers the fallback copy rather than a free basket
+- **a fully known pair still solves** — the control, so the guard cannot pass by disabling it
+
+> **THE TEST WAS PROVEN TO DISCRIMINATE.** Re-run against the old always-known behaviour: **3 of
+> 4 fail**, and the control passes both ways. *A test that passes against the code it was written
+> to reject is not a test*, and that had to be demonstrated rather than assumed.
+
+152 tests pass.
+
+---
+
+### 198. The Prime toggle: the decision is implementable and the toggle is not
+
+**Raised:** 18 August 2026 · **Robbie's decision on the decline branch recorded. TOGGLE NOT
+BUILT, and the reason is a hard blocker rather than a priority call.**
+
+#### THE DECISION
+
+**A decline is treated as unanswered, and Amazon is excluded from basket ranking.** The row stays
+visible with its price and its note, outside the total — **exactly what the product page does
+today. Nothing claimed, nothing hidden.**
+
+**The reasoning:** it is the only branch that **makes no claim on the shopper's behalf.** As
+non-Prime it would be option A wearing a prompt; as Prime it would be option B wearing a prompt;
+both were rejected on the asymmetry argument. **A shopper who declines gets today's behaviour
+rather than a guess.**
+
+**The accepted cost, stated rather than buried:**
+
+> **MOST SHOPPERS WILL NEVER ANSWER, SO AMAZON STAYS OUT OF MOST BASKET TOTALS.** That is the
+> honest version of *"we do not know"*, and **it must not be quietly optimised away later by
+> changing the default.** Any future change that improves Amazon's inclusion rate by assuming an
+> answer is reversing this decision, whatever it is called.
+
+#### AND THE TOGGLE CANNOT BE BUILT, FOR A REASON THAT IS NOT PRIORITY
+
+> **A TOGGLE THAT SELECTS BETWEEN TWO TERMS OBJECTS NEEDS BOTH TO EXIST. NEITHER DOES.**
+>
+> **A prompt whose "yes" cannot be honoured is worse than no prompt.** It spends the interruption
+> the design existed to spend once, and returns nothing for it.
+
+**The decline branch needs no terms object at all** — excluding Amazon from ranking requires no
+cost. **The accept branch has no source that could give it one.**
+
+#### THE CORRECTION: THE PRIME BRANCH IS NOT THE EASY HALF
+
+**I previously scoped Prime as `{model:'flat', cost:0}` — "a branch, not a schema change".** That
+was wrong, and it was wrong in the direction that made the work look small.
+
+**"Free" is true only for PRIME-ELIGIBLE listings**, and eligibility is **not determinable from
+any resource this API offers**. Meanwhile the sellers on our own promoted ASINs include Medpak
+EU, One Sedona, Kweb LTD, TRADEZ GLOBAL, London Beauty Group, HealthandWholesale, Maison Elyra,
+Propel by GRG and VENTURA VISTA.
+
+> **`cost: 0` ON THOSE IS OPTION B WEARING A TOGGLE.** The asymmetry argument rejected assuming
+> Prime for everyone; doing it behind a prompt does not make it an answer.
+
+**Non-Prime is no better and was already recorded as such** on the retailer row itself: *"free
+over a threshold on eligible items only, otherwise a charge that varies BY SELLER… Any tiered pair
+would be wrong per listing."*
+
+#### WHAT WOULD UNBLOCK IT
+
+**A per-listing delivery cost, which needs a source that does not currently exist.** Not a
+decision, not a default — a source. **Until then the toggle is not small work being deferred; it
+is work with a missing input.**
+
+---
+
+### 199. The Creators API forecloses the per-listing delivery route, and the control proves it
+
+**Raised:** 18 August 2026 · **Recorded so it is not re-derived.**
+
+**The complete `offersV2.listings.*` surface**, returned by the API's own validation error:
+
+```
+availability · condition · dealDetails · isBuyBoxWinner
+loyaltyPoints · merchantInfo · price · type
+```
+
+**There is no delivery resource, no shipping cost, and no Prime-eligibility flag.** `deliveryInfo`,
+`isPrimeEligible` and `programEligibility` all return **400**.
+
+#### THE CONTROL IS THE POINT, AND IT IS ITEM 184'S LESSON APPLIED TO ITS OWN QUESTION
+
+Item 184 records reading an **empty** `itemInfo.externalIds` as an unsupported resource when it
+meant *that listing publishes no barcode* — and nearly spending an eleven-brand harvest on the
+mistake.
+
+**So this time the probe carried a control:** a deliberately bogus resource, `offersV2.listings.thisIsNotAResource`.
+
+| | |
+|---|---|
+| bogus resource | **400** — so the API **validates** resource names |
+| `deliveryInfo`, `isPrimeEligible`, `programEligibility` | **400** — genuinely unsupported |
+| `loyaltyPoints` | **200** — supported, and revealed two undocumented keys (`violatesMAP`, `type`) |
+
+> **"UNSUPPORTED" IS PROVEN HERE, NOT INFERRED.** A 400 against a validated namespace is
+> evidence; an empty field never was. **The same probe shape that misled item 184 is decisive
+> once it has a control**, and the control cost one extra API call.
+
+**Practical consequence:** the per-listing route to a delivery cost is closed at the API, not
+merely undone. **Nobody should re-derive this**, and item 198's blocker cannot be lifted by
+requesting more resources.
+
+---
+
+### 200. The rate limit is real, and it nearly produced a wrong policy number
+
+**Raised:** 18 August 2026, measuring seller distribution for a counterfeit-policy decision ·
+**MEASUREMENT ONLY. Nothing restricted. Robbie decides.**
+
+#### THE 429s LEAD, BECAUSE THEY OUTRANK THE MEASUREMENT
+
+A full live read of all 269 ASINs returned **five HTTP 429s** — **the first rate limit this
+project has ever observed.**
+
+> **~50 ASINs CAME BACK UNREAD AND WERE COUNTED AS `no_offer`.** The naive result was **26.4%
+> no offer**. Re-reading only the gaps with backoff recovered **47 of 71**. The corrected figure
+> is **8.9%**, which corroborates the 8.6% measured the day before.
+
+**A failed read and an absent offer are the same shape to a caller that does not distinguish
+them** — which is item 22's finding arriving from a new direction. Item 22 protected the
+*shopper* from that confusion in the UI. **Nothing protected the analyst**, and the number was
+headed for a policy decision about which sellers to allow.
+
+**26.4% against 8.9% is a factor of three**, and it would have made third-party exposure look
+smaller as a share of live offers than it is.
+
+#### TWO THINGS THIS SETTLES ABOUT THE BREAKER
+
+**1. It now has a real event behind it rather than a theoretical one.** `lib/amazon-live.ts`
+records that the rate limit is *not discoverable* — ten response headers, none naming a quota,
+a remaining count, a reset or a TPS — so every backoff number in it is a choice validated
+against nothing. **It is still a choice, but the thing it defends against has now been seen.**
+
+**2. THIS READ WAS SEQUENTIAL.** Ten ASINs per call, one call at a time, a short pause between.
+**Under concurrency the same limit arrives sooner** — and the production path is concurrent by
+construction, because it is one call per page view. The breaker's per-instance limitation
+(recorded in `lib/amazon-live.ts`) means N instances each learn this separately.
+
+> **The observed ceiling is an upper bound on what the live path can sustain, not an estimate of
+> it.**
+
+#### THE CLASSIFIER'S BOUND, WHICH BELONGS ABOVE THE TABLE AND NOT BENEATH IT
+
+Products were classified by **normalised name-matching** between the catalogue brand and
+`merchantInfo.name`.
+
+> **THE CLASSIFIER CANNOT VERIFY THE PROPERTY THE POLICY TURNS ON.** A seller name is **a string,
+> not an attestation**, and *naming yourself after the brand is the counterfeiter's move.*
+> "Sold by COSRX Inc." is evidence of a name, and a policy about counterfeits needs evidence of
+> an identity.
+>
+> **So `brand's own store` is an upper bound on genuineness, and the restriction it would justify
+> is weaker than its own numbers make it look.**
+
+#### AND A SECOND BOUND: SELLER IDENTITY IS VOLATILE, NOT JUST PRICE
+
+**Measured 18 August (item 187):** ASIN B00S9XYW40's buy-box seller changed from **Kweb LTD** to
+**Sorted Wholesale** between two reads a day apart. Not the price, not the stock — **who is
+selling it.**
+
+> **THE BUY BOX IS A ROTATING AWARD, SO EVERY FIGURE IN THE TABLE BELOW IS A SNAPSHOT OF WHO
+> HAPPENED TO HOLD IT AT READ TIME.** A product classified `brand's own store` today can be a
+> third party's tomorrow with nothing changing on our side.
+>
+> **A POLICY THAT APPROVES AN ASIN ON ITS SELLER AND THEN STORES THE ASIN IS APPROVING A
+> SNAPSHOT.** Enforcing it needs the re-derivation of item 187(b), or a check at render time —
+> and the live fetch already returns `merchantInfo.name` on every request, so **the honest
+> version of a seller policy is a DISPLAY-TIME rule, not a promotion-time one.**
+
+#### SELLER DISTRIBUTION — ALL 269, LIVE
+
+| | n | share |
+|---|---:|---:|
+| brand's own store *(by name; see the bound above)* | **144** | **53.5%** |
+| sold by Amazon | 38 | 14.1% |
+| third party | **63** | **23.4%** |
+| no current offer | 24 | 8.9% |
+
+The third-party tail is **46 distinct sellers across 63 listings** — Glass Glow K-Beauty (4),
+Medpak EU (4), The Tyndale Group (4), BEDAST (3), then a long tail of ones and twos.
+
+#### WHAT A RESTRICTION WOULD COST
+
+| | |
+|---|---|
+| showing an Amazon price now | **245** — 91.1% |
+| under "brand store or Amazon only" | **182** — 67.7% |
+| **lose the row entirely** | **63** — 23.4% of all, **25.7% of those that currently show a price** |
+
+**It concentrates two different ways, and the second is the one that matters.**
+
+**Most of the loss sits in three brands that survive it** — COSRX 17, medicube 14, Beauty of
+Joseon 6, thirty-seven of sixty-three — because each also has brand-store listings.
+
+> **FIVE BRANDS DISAPPEAR FROM AMAZON ENTIRELY, BEING 100% THIRD-PARTY:** **Skin1004 (5/5),
+> Abib (2/2), Round Lab (2/2), Haruharu Wonder (2/2), Torriden (1/1)** — twelve products, no
+> Amazon row at all.
+
+**Twelve brands cost nothing**, having no third-party exposure: Ancient + Brave, Anua, Biodance,
+Isntree, LANEIGE, Liquid IV, MyProtein, Nuzest, Revival, Revive Collagen, Vida Glow, numbuzin.
+
+#### THE DELIVERY INTERACTION IS SETTLED, AND A RESTRICTION DOES NOT HELP IT
+
+**A brand store is a third-party seller in Amazon's sense**, so restricting to brand-store plus
+Amazon leaves **144 of the surviving 182 — 79% — with unknown Prime eligibility.**
+
+**Can eligibility be inferred from seller identity?** One class only:
+
+| | |
+|---|---|
+| `merchantInfo.name = "Amazon"` | reliably Prime-eligible — **38 products, 14.1%** |
+| everything else | depends on **fulfilment** (FBA / Seller-Fulfilled Prime / self-shipped), which is a property of the **listing**, not the seller |
+
+**Checked directly rather than assumed:** `type` returns nothing, `condition` is only
+`New`/`Unknown`, `violatesMAP` is unrelated. Item 199 already proved `deliveryInfo`,
+`isPrimeEligible` and `programEligibility` return 400.
+
+> **IT IS THE SAME UNAVAILABLE FACT WEARING A DIFFERENT QUESTION.** And the one exception yields
+> no cost either way: **"Prime-eligible" only becomes free if the shopper HAS Prime** — the exact
+> fact item 198's toggle cannot obtain — and for a non-Prime shopper an Amazon-sold listing still
+> falls under the eligible-items threshold recorded as unknowable on retailer 9.
+
+#### THE SHAPE OF THE DECISION, AS MEASURED
+
+**Not a recommendation. The numbers, arranged so the trade is visible:**
+
+- **67.7% is already brand-store or Amazon**, so the concern is largely addressed by what the buy
+  box surfaces without any policy at all.
+- **The restriction buys the remaining quarter** — 63 products, 25.7% of those with a price.
+- **The price is five brands leaving entirely**, and they leave because they are 100%
+  third-party, not because they are marginal.
+- **It does nothing for delivery**, and the classifier that scores it cannot verify the property
+  it scores.
+
+**Robbie decides. Nothing restricted.**
+
+---
+
+### 201. Absence is a value, and this is the third instance in one feature
+
+**Raised:** 18 August 2026, re-measuring item 186 before shipping · **Caught by the
+re-measurement, not by review. Fixed and tested.**
+
+E3 holds a candidate set when its members disagree on an explicit generation token. It was
+written as:
+
+```js
+const gens = new Set(eligible.map(c => generationToken(c.amazonTitle)).filter(Boolean));
+if (gens.size > 1) hold
+```
+
+> **`.filter(Boolean)` DROPPED THE UNTOKENED CANDIDATES BEFORE COMPARING.** So `"4.0"` beside a
+> listing making no version claim collapsed to a set of ONE, and **a guard written to hold on
+> version disagreement stopped firing exactly when one side had no version.**
+
+Product 82251 — measured as a hold on 17 August — silently became a pick.
+
+#### THE FAMILY, AND THIS FEATURE HAS NOW PRODUCED THREE
+
+| | the value that vanished | what it became |
+|---|---|---|
+| demo generator (item 197) | `delivery_threshold` NULL | `Number(null)` → `0` → **free delivery** |
+| size matching | `\bcapsule\b` against `"Capsules"` | no match → **size unknown** |
+| **E3 (this)** | **no generation token** | **filtered out → no disagreement** |
+
+> **THE SHAPE: A MISSING VALUE IS SILENTLY RECAST AS AN INNOCUOUS ONE**, and the recast always
+> runs in the permissive direction — free rather than unknown, agreement rather than
+> disagreement, match rather than mismatch. **Nothing errors, because nothing is wrong with the
+> code; the absent case was simply never a case.**
+
+**Why it is the permissive direction every time is not luck.** The idioms that discard absence —
+`filter(Boolean)`, `Number(null)`, a regex that does not match — all return the *empty* or
+*zero* answer, and in a guard the empty answer means "nothing to object to". **A guard built out
+of these idioms fails open by construction.**
+
+#### AND IT WAS CAUGHT BY RE-MEASURING, NOT BY READING
+
+The design was measured on twelve instances on 17 August and the implementation was measured
+against the same twelve on 18 August. **The disagreement between the two is what surfaced it** —
+82251 was a hold in the design and a pick in the build.
+
+> **A SPECIFICATION MEASURED ONCE AND AN IMPLEMENTATION MEASURED NEVER IS A SPECIFICATION.**
+> Re-running the same twelve against the built rule cost one command and found a defect that
+> reading the code had not.
+
+---
+
+### 202. The cross-product pass: 186 cannot see ambiguity by construction
+
+**Raised:** 18 August 2026, applying item 186 to the tranche-3 harvest · **PROPOSED, NOT BUILT.
+Blocks promotion of 46 products.**
+
+Applying the rule to 280 matched products resolved 276 — and **22 of those ASINs were each
+claimed by two or more different catalogue products**, affecting **46 products**.
+
+> **THIS IS A GAP IN THE RULE, NOT AN EDGE CASE.** `selectCandidate` takes ONE product and ITS
+> candidates. **Ambiguity is a property of the SET**, so the rule cannot see it however carefully
+> it is written — each of the 46 verdicts is individually correct and jointly wrong.
+
+**It is the Vida Glow shape from a new direction.** Vida Glow was found because the *matcher*
+flagged one identifier claimed by several products and split it into `ambiguous`. Here the same
+condition arises **after** selection, between products the matcher never compared, because each
+product's barcode set matched the same ASIN independently.
+
+**And it will recur on every harvest**, which is why it belongs in the rule rather than beside it
+as a pre-promotion query somebody has to remember.
+
+#### THE PROPOSED SHAPE
+
+**A second phase over the verdicts, not a change to the per-product rule.**
+
+```
+selectCandidate(product, candidates)      →  per-product verdict     (unchanged)
+resolveAcrossProducts(verdicts)           →  verdicts with conflicts held
+```
+
+**The rule for the second phase, and it should be the conservative one:**
+
+> **AN ASIN SELECTED FOR MORE THAN ONE PRODUCT IS HELD FOR ALL OF THEM.**
+
+**Not "give it to the best match".** Deciding which product owns a contested ASIN needs a
+similarity judgement between two catalogue rows, which is the class item 186 exists to refuse —
+and `matched_by_name`'s history is the argument against inventing one here.
+
+**Not "give it to the lowest id".** *The lowest-id placeholder is not a choice*, recorded on the
+Vida Glow hold and true in this direction too.
+
+#### WHAT THE CONFLICT USUALLY MEANS, WHICH IS WHY HOLDING IS RIGHT
+
+A single ASIN matching several catalogue products almost always means **the catalogue has several
+rows for one product** — the item 96 duplicate question — **or one row is wrong about its
+barcode.** Both are catalogue defects, and *neither is fixed by choosing an ASIN.*
+
+> **THE CONFLICT IS A SIGNAL ABOUT OUR CATALOGUE THAT ARRIVED THROUGH AMAZON.** Holding preserves
+> it; picking a winner destroys it, because the losing rows stop looking wrong.
+
+**So the second phase should also emit the conflicts as a list**, not merely suppress them —
+22 ASINs pointing at 46 catalogue rows is a duplicate-detection input item 96 could use.
+
+#### MEASURED COST OF HOLDING THEM
+
+**46 of 276 resolved products, 17%.** One is product 6965, which currently publishes
+`B0DRZ8GBDM` — an ASIN item 184 recorded as **absent from Amazon**. The rule proposes a
+replacement, that replacement is contested, so the product **keeps a dead ASIN**.
+
+> **THAT IS A COST OF HOLDING, NOT A DEFECT.** The alternative is resolving a contested identity
+> on no evidence, and a dead ASIN still links to a product page with search as the fallback —
+> which is exactly the reasoning that kept the 25 pre-existing ASINs alive in item 184.
+
+---
+
+### 203. The seller split is per-brand, and the same five brands replicate
+
+**Raised:** 18 August 2026 · **MEASUREMENT for the policy decision held open at item 200.
+Nothing restricted, nothing promoted.**
+
+Item 200 measured the existing 269 at **23.4% third-party**. The tranche-3 harvest's 217
+promotable products are **53.5% third-party**, which would take the site to **36.8%**.
+
+**That number should not be read site-wide, because it is not distributed site-wide.**
+
+| brand | n | brand store | Amazon | third party | 3rd-party |
+|---|---:|---:|---:|---:|---:|
+| **Skin1004** | 19 | 0 | 0 | 19 | **100%** |
+| **Torriden** | 8 | 0 | 0 | 8 | **100%** |
+| **Round Lab** | 26 | 0 | 1 | 25 | **96%** |
+| **Haruharu Wonder** | 4 | 0 | 0 | 3 | **75%** |
+| **Abib** | 7 | 1 | 0 | 5 | **71%** |
+| Some By Mi | 58 | 23 | 0 | 31 | 53% |
+| numbuzin | 30 | 13 | 1 | 14 | 47% |
+| Isntree | 13 | 8 | 0 | 3 | 23% |
+| LANEIGE | 31 | 0 | **21** | 7 | 23% |
+| Biodance | 9 | 7 | 0 | 1 | 11% |
+| **Anua** | 12 | 12 | 0 | 0 | **0%** |
+
+#### THE FIVE BRANDS ARE THE SAME FIVE
+
+Item 200 found five brands with **100% third-party** exposure in the existing population:
+**Skin1004, Abib, Round Lab, Haruharu Wonder, Torriden** — twelve products.
+
+**They are the top five here, in a sample twenty times larger and gathered independently.**
+
+> **A REPLICATED RESULT ACROSS TWO SAMPLES IS A BRAND-LEVEL FACT, NOT A SAMPLING ARTEFACT.**
+> These brands do not operate a UK Amazon store. Everything sold under their name on Amazon.co.uk
+> is sold by somebody else, and that is a property of the brand's distribution rather than of our
+> catalogue or our matcher.
+
+**Combined across both tranches those five brands are 72 of 76 products third-party — 95%.**
+
+#### SO THE DECISION IS PER-BRAND, NOT SITE-WIDE
+
+**A site-wide restriction is the wrong instrument** because the population is bimodal: Anua 0%,
+Biodance 11%, and LANEIGE 23% *whose exposure is almost entirely Amazon-sold* (21 of 31), against
+five brands at 71–100%.
+
+**What each brand keeps under "brand store or Amazon only":**
+
+```
+Anua 100%   Biodance 78%   LANEIGE 68%   Isntree 62%   numbuzin 47%   Some By Mi 40%
+Abib 14%    Round Lab 4%   Skin1004 0%   Torriden 0%   Haruharu Wonder 0%
+```
+
+> **THREE BRANDS WOULD LOSE EVERY AMAZON ROW THEY HAVE**, and they would lose it not because
+> their listings are suspect but because **the brand has no Amazon presence for a restriction to
+> fall back on.**
+
+**The counterfeit concern and the restriction's cost are concentrated in the same five brands,
+which is the condition under which a per-brand rule is strictly better than a site-wide one.**
+It also means the question can be asked brand by brand — *does this brand sell on Amazon UK at
+all?* — which is checkable, rather than *is this seller genuine?*, which item 200 records as
+unverifiable from a name.
+
+**Robbie re-decides with this in front of him. Nothing restricted.**
+
+---
+
+### 204. The cross-product pass, built — and I drew the set too small the first time
+
+**Raised:** 18 August 2026 · **BUILT and applied. 215 products promoted, 269 → 484.**
+
+#### THE FINDING LEADS: I DREW THE SET TOO SMALL, INSIDE THE FIX FOR DRAWING IT TOO SMALL
+
+Item 202's finding was **"ambiguity is a property of the set"** — the per-product rule cannot see
+a conflict because it only ever holds one product.
+
+The fix compared **verdicts against verdicts**. It ran clean, all tests passed, and the SQL it
+generated was about to write `B07Y32L357` to product 6750 — **while product 1028 already
+published it.**
+
+> **THE SET IS NOT THE BATCH. THE SET IS THE CATALOGUE.**
+
+Two collisions in 217 rows, and **neither product's verdict was individually wrong** — the exact
+shape of the defect being fixed, reproduced inside the fix. **Caught by reading the generated SQL
+before running it, not by any check**, and every test I had written passed against the flaw.
+
+`resolveAcrossProducts` now takes the published ASINs as a second argument. A product
+re-selecting the ASIN it already holds is correctly not a conflict.
+
+#### WHAT IT DOES
+
+It implements item 202: an ASIN selected for more than one product is **held for all of them**,
+and the conflicts are **emitted as a list** rather than suppressed.
+
+**Applied to the tranche-3 harvest: 22 ASINs contested by 46 products, all held**, and the
+conflict list is versioned at `docs/amazon-harvests/tranche-3-conflicts.json`.
+
+#### THE ORIGINAL WRITE-UP OF THE SLIP, KEPT
+
+The first implementation compared **verdicts against verdicts**. It ran clean. The SQL it
+generated was about to write `B07Y32L357` to product 6750 — **while product 1028 already
+published it.**
+
+> **"AMBIGUITY IS A PROPERTY OF THE SET" WAS THE FINDING, AND I THEN DREW THE SET TOO SMALL.**
+> The set is not the batch. **The set is the catalogue.**
+
+Two collisions in 217 rows, and **neither product's verdict was individually wrong** — which is
+the identical shape as the per-product rule's blindness, reproduced inside the fix for it.
+
+**Caught by reading the generated SQL before running it**, not by any check. The pass now takes
+the published ASINs as a second argument, and a product re-selecting the ASIN it already holds is
+correctly not a conflict.
+
+#### THE TWO COLLISIONS ARE THEMSELVES A FINDING
+
+| ASIN | published on | matched by barcode to |
+|---|---|---|
+| `B07Y32L357` | 1028 *(item 184: `identifier_conflict`)* | **6750** |
+| `B07WZ2YTDP` | 93648 *(item 184: `legacy_unconfirmed`, no barcode our side)* | **3448** |
+
+> **THIS RESOLVES THE ISNTREE NEAR-MISS FROM ITEM 184.** `…517557` was never a variant claim
+> about product 1028 — **it is the correct barcode for product 6750**, a different catalogue row.
+> The ASIN was right about a product; it was attached to the wrong one.
+
+**Both are pre-existing hand-assembled ASINs, and in both cases a barcode-matched candidate for a
+DIFFERENT product has now appeared.** That is the emit-not-suppress design paying for itself on
+its first run: had the pass silently dropped the collisions, the strongest available evidence
+about two of item 184's nine unconfirmed rows would have been discarded.
+
+**Not applied to 1028 or 93648.** Reassigning a published ASIN between catalogue rows is a
+separate act from promoting a new one, and it needs the same deliberateness.
+
+#### WHAT WAS APPLIED
+
+| | |
+|---|---|
+| harvested | 383 ASINs, 11 brands, **no rate limiting** |
+| products with a candidate | 280 |
+| resolved by the per-product rule | 276 |
+| held by the cross-product pass | 46 across 22 ASINs |
+| held on collision with a published ASIN | 2 |
+| **promoted** | **215** |
+| products carrying an ASIN | **269 → 484** |
+
+**Map rows were written in the same statement as the promotion**, so item 187(b)'s completeness
+invariant never went stale — `published ASINs with no map row` is still **0**, and no ASIN is on
+two products.
+
+---
+
+### 205. The seller rule moves to display time, which dissolves the per-brand decision
+
+**Raised:** 18 August 2026 · **Robbie's decision: display-time. OPTIONS REPORTED, NOT CHOSEN.**
+
+Approving an ASIN on its seller and then storing the ASIN **approves a snapshot** (items 187,
+200). The live fetch already returns `merchantInfo.name` on every request, so the rule can run on
+current data at no extra cost.
+
+> **THIS DISSOLVES THE PER-BRAND DECISION RATHER THAN SETTLING IT.** A promotion-time restriction
+> had to be decided per brand because it was irreversible without re-promoting. **A display-time
+> rule is revisitable at any moment, on any subset, with no data change at all** — which is a
+> property the promotion-time version could never have.
+
+**And it needs neither item 187(b) nor the harvest's `seller_at_harvest` column**, which remains
+a snapshot for analysis only.
+
+#### THE THREE OPTIONS, WITH WHAT EACH DOES
+
+Measured against the current 484-product population *(existing 269 at 23.4% third-party; the 215
+promoted at 53.5%)*.
+
+| | what the shopper sees | effect on the third-party figure |
+|---|---|---|
+| **A — as now** | price + *"Sold by X · delivery not included"* | **36.8% unchanged.** The seller is named and the shopper decides |
+| **B — suppress the price** | the row, the seller name, and no price: *"Sold by X"* with a link | **0% of displayed prices** are third-party. ~179 rows lose their number but keep their link |
+| **C — hide the row** | nothing. The product page shows no Amazon row | **0%**, and ~179 products silently lose Amazon entirely |
+
+#### WHAT SEPARATES THEM, WHICH IS NOT THE PERCENTAGE
+
+**A and B both keep the shopper informed. C does not.**
+
+> **C IS THE ONLY OPTION THAT HIDES A FACT RATHER THAN QUALIFYING IT.** A product Amazon carries
+> at a price we chose not to show becomes indistinguishable from a product Amazon does not carry
+> — **which is exactly the confusion item 22 built four visible states to prevent.** It would
+> reintroduce that confusion deliberately, one layer up.
+
+**B is the interesting one and it is not obviously worse than A.** It says *we found this on
+Amazon, here is who is selling it, and we are not putting our name to the price.* That is an
+honest position and it is more informative than A for a shopper who does not know that "Sold by
+Medpak EU" matters.
+
+**A's defence is that the seller name is already the disclosure.** Item 176 recorded that naming
+the seller is more useful and more honest than a generic caveat, because a blanket warning
+applies equally to the brand's own store and to a reseller.
+
+#### THE BOUND THAT APPLIES TO ALL THREE
+
+> **A seller name is a string, not an attestation** (item 200), so every option enforces
+> `brand-store-or-Amazon` on a classifier that **cannot verify the property the policy turns
+> on.** B and C act on it; A merely reports it.
+>
+> **That argues mildly for A or B over C**, since acting on an unverifiable signal is a smaller
+> harm when the action is qualifying a price than when it is hiding a product.
+
+**Robbie chooses. Nothing built.**
+
+---
+
+### 206. Option A: the seller name is the disclosure — a decision, not a status quo
+
+**Raised:** 18 August 2026 · **Robbie's decision. Recorded as a position because "do nothing" and
+"decided to do nothing" read identically later and only one of them is an argument.**
+
+The seller rule runs at **display time** (item 205), and the chosen option is **A: show the price
+with the seller named**, exactly as the row does today.
+
+> **THE SELLER NAME IS THE DISCLOSURE, AND IT DOES MORE WORK THAN THE ALTERNATIVES.**
+
+#### WHY NOT B (SHOW THE ROW, SUPPRESS THE PRICE)
+
+**B withholds a true and useful fact to protect a shopper who does not know that the seller name
+matters.** But the price is real, and **someone weighing it against our retailers is doing the
+thing the site exists for.** Suppressing it removes the comparison in order to warn about the
+comparison.
+
+#### WHY NOT C (HIDE THE ROW)
+
+**Disqualified by the argument that produced it.** A product Amazon carries, at a price we chose
+not to show, becomes **indistinguishable from a product Amazon does not carry** — item 22's
+confusion, reintroduced deliberately one layer up. Item 22 built four visible states precisely so
+that "we found nothing" and "we are not showing you what we found" could never look the same.
+
+#### AND THE UNVERIFIABLE-STRING BOUND POINTS THE SAME WAY
+
+A seller name is a string, not an attestation (item 200), so **every option acts on a signal that
+cannot verify the property the policy turns on.**
+
+> **ACTING ON AN UNVERIFIABLE SIGNAL IS A SMALLER HARM WHEN QUALIFYING THAN WHEN HIDING.** A
+> names the seller and lets the shopper weigh it; B and C convert an unverified classification
+> into a suppression. **The weaker the signal, the more the response should be disclosure rather
+> than action.**
+
+#### WHAT THIS COMMITS TO
+
+**36.8% of Amazon rows are third-party and will be shown as such, named.** That is the accepted
+cost and it is the honest one: the alternative is not a cleaner catalogue, it is a quieter one.
+
+**And it stays revisitable.** A display-time rule can be changed on any subset at any moment with
+no data change — which is the property that made moving it off promotion-time worth doing, and it
+means this decision costs nothing to reverse if the seller mix worsens.
+
+---
+
+### 207. Two lessons failed their author in one day
+
+**Raised:** 18 August 2026 · **A pattern, recorded jointly because they happened hours apart.**
+
+| | the lesson, already recorded | how it failed its author |
+|---|---|---|
+| **E3** (item 201) | *absence is a value* — `Number(null)` is 0, item 197, recorded that morning | `.filter(Boolean)` dropped untokened candidates, so a version guard stopped firing when one side had no version |
+| **cross-product** (item 204) | *ambiguity is a property of the set* — item 202, written hours earlier | the set was drawn as **the batch**, not the catalogue, inside the fix for that finding |
+
+**Item 191 already records the sharpest earlier instance:** `secret-divergence-check.sh` warning
+in its own comment that a permanently-red check stops being read, and then going permanently red.
+**That was a lesson failing an author six weeks later. These two failed within hours.**
+
+> **RECORDING A LESSON DOES NOT INSTALL IT.** The interval between writing the finding and
+> violating it was, in one case, a single working day — and in the other, the same session.
+
+#### WHAT ACTUALLY CAUGHT THEM, WHICH IS THE USEFUL PART
+
+**Neither was caught by review, and both were caught by re-running something against reality:**
+
+- E3 by **re-measuring the built rule against the same twelve the design was measured on**
+- the set by **reading the generated SQL before executing it**
+
+**All tests passed in both cases**, because the tests were written by the same person holding the
+same too-small model. *A test encodes the author's understanding, so it cannot catch a
+misunderstanding — only a slip.*
+
+> **THE DEFENCE IS NOT MORE CARE AND NOT MORE TESTS. IT IS A SECOND CONFRONTATION WITH THE
+> WORLD** — the same input measured twice, or the artefact inspected before it is applied. Both
+> defects survived everything internal to the change and died on contact with something external
+> to it.
+
+---
+
+### 208. Reassignment, and what the harvest resolved of item 184's nine
+
+**Raised:** 18 August 2026 · **Reported. NOTHING REASSIGNED.**
+
+Item 184 left nine pre-existing ASINs unconfirmed — five `identifier_conflict`, four
+`legacy_unconfirmed`. The tranche-3 harvest independently touched seven of them.
+
+| product | published ASIN | what the harvest says |
+|---|---|---|
+| **1028** Isntree | `B07Y32L357` | **matches product 6750, single claimant** |
+| **93648** Torriden | `B07WZ2YTDP` | **matches product 3448, single claimant** |
+| **971** Skin1004 | `B0B881GN1P` | matches **81987 AND 99360** — contested three ways |
+| **6965** LANEIGE | `B0DRZ8GBDM` | a candidate exists but is contested by 99400 and 102542 |
+| **794** Anua | `B0DL8Y8N4G` | harvested, **matched no catalogue product at all** |
+| **1499** Skin1004 | `B09JB71319` | harvested, publishes no barcode — unchanged |
+| 3077, 3995, 1276 | — | no candidate in this harvest |
+
+#### TWO ARE RESOLVED, AND ONE OF THE OTHERS IS QUIETLY STRENGTHENED
+
+> **1028 AND 93648 HAVE A CLEAN ANSWER: the ASIN was right about a product and attached to the
+> wrong catalogue row.** Isntree's `…517557` was never a variant claim — it is product 6750's
+> barcode.
+
+**794 gains corroboration nobody was looking for.** Its ASIN was harvested and **matched no
+catalogue product**, so no other row claims it. Item 186's secondary path confirmed it on brand
+store + exact title + size; **the harvest independently shows there is no competing claimant**,
+which is the check the secondary path itself cannot perform.
+
+**971 gets worse, not better.** Its published ASIN is claimed by two other products, so it is the
+1028 shape *without* a clean destination.
+
+#### WHAT REASSIGNMENT WOULD INVOLVE
+
+**It is not an UPDATE.** Moving a published ASIN from one catalogue row to another is four
+changes, and the order matters:
+
+1. **Clear** `products.amazon_asin` on the losing row — which removes a live Amazon row from a
+   page that has one today.
+2. **Repoint** the `amazon_asin_map` row's `product_id`, since `asin` is the primary key and the
+   row already exists. *Not an insert; the existing provenance must move with it.*
+3. **Re-state the match**: `identifier_conflict` becomes `matched` with the confirming EAN, and
+   the note must record that it was reassigned rather than newly matched.
+4. **Re-run the cross-product pass**, because the destination product may itself have a verdict.
+
+> **STEP 1 IS THE ONE THAT NEEDS DELIBERATION.** It is the first time this project would REMOVE a
+> live Amazon row. Everything so far has added or held — item 184 explicitly declined to retire
+> ASINs on the grounds that a dead one still links to a product page. **Reassignment is the first
+> case where the losing row genuinely should lose it**, and that is a different act from
+> retirement even though the shopper sees the same thing.
+
+**And it should be one change for both, not a general mechanism.** Two products with clean
+single-claimant evidence is not a migration; building a reassignment pipeline for n=2 would be
+inventing a tool for a case that has occurred twice.
+
+**Not applied. 971 and 6965 stay held — contested, and reassigning to a contested destination is
+the coin flip both item 186 and item 202 exist to refuse.**
+
+---
+
+### 209. Two ASINs reassigned, and an n=1 argument grew a second leg by accident
+
+**Raised:** 18 August 2026 · **APPLIED, by hand, for two rows. Nothing else reassigned.**
+
+#### 794's INDEPENDENT CORROBORATION LEADS
+
+Item 186's secondary path confirmed product 794's ASIN on three conditions — **brand's own store,
+exact title, size agreement** — and that path was adopted on a single instance, with logging,
+precisely because deciding it on n=1 either way was the wrong shape.
+
+**The tranche-3 harvest then read `B0DL8Y8N4G` independently and matched it to no catalogue
+product at all.**
+
+> **NOTHING COMPETES WITH THE CONFIRMATION, AND THAT IS THE CHECK THE SECONDARY PATH CANNOT
+> PERFORM ON ITSELF.** The path reasons about ONE product and ONE listing; "is anybody else's
+> barcode claiming this ASIN?" is a question about the catalogue, and only a harvest can answer
+> it.
+>
+> **An n=1 argument now has a second leg from an unrelated direction — and it arrived by
+> accident**, out of a harvest run for a different purpose entirely.
+
+**That is worth more than a second instance of the same kind would have been.** Two brand-store
+confirmations would have been the same evidence twice; this is a different evidence type reaching
+the same conclusion.
+
+#### WHAT WAS REASSIGNED
+
+| ASIN | from | to |
+|---|---|---|
+| `B07Y32L357` | 1028 *Isntree Hyaluronic Acid Toner (200ml)* | **6750 *Isntree Hyaluronic Acid Toner **PLUS** — 200ml*** |
+| `B07WZ2YTDP` | 93648 *Torriden — DIVE-IN Low Molecular Hyaluronic* | **3448 *Dive-In Low Molecular Hyaluronic Acid Serum*** |
+
+> **ITEM 184's NEAR-MISS IS FULLY RESOLVED AND IT WAS NOT A NEAR-MISS.** `…517557` against
+> `…517533` read as a size-or-variant claim with two digits between them. **6750 IS the "Plus"
+> variant and carries that barcode.** Product 1028 was publishing an Amazon listing for a
+> different product than the one on its page — Amazon was right and our attachment was wrong.
+
+**And the Torriden pair surfaced a probable duplicate:** 93648 and 3448 read as the same product,
+and 93648 carries no barcode anywhere. **That pair belongs to item 96**, and it arrived the same
+way the 22 conflicts did — from outside.
+
+#### WHY REMOVING A LIVE ROW WAS ALLOWED HERE, WHEN ITEM 184 FORBADE IT
+
+**Item 184's rule is intact and this is not an exception to it.** That rule declined to retire
+dead ASINs because *an ASIN returning no offer is still a link to the right product page*.
+
+> **THE DISTINCTION IS WHERE THE LINK GOES.** Item 184's dead ASINs point at the correct product,
+> so removing one removes a working fallback. **These two pointed at a page that is not their
+> product, so removing them corrects an error rather than removing a fallback.**
+>
+> **The test is not "does the ASIN resolve" but "does it resolve to THIS product".** A reader
+> meeting item 184's rule first will reach for it here, and it does not apply.
+
+This is recorded in the migration comment as well as here, because that is where the next person
+changing this will be looking.
+
+#### VERIFIED AFTER
+
+```
+products carrying an ASIN                        484
+an ASIN on 2+ products                             0
+published with no map row                          0
+cross-product pass re-run, live state:  22 conflicts, all still held
+  product 6750 -> select B07Y32L357   (sole eligible candidate)
+  product 3448 -> select B07WZ2YTDP   (sole eligible candidate)
+```
+
+**Both reassigned products now select exactly what they publish**, and neither appears as a
+conflict — a product re-selecting the ASIN it already holds is correctly not one.
+
+#### A CHECK I MIS-STATED, CORRECTED RATHER THAN REPORTED
+
+I also counted *"map rows pointing at a product that publishes something else"* and got **8**,
+and briefly read it as a violation. **It is not.** All eight are `matched_by_name` runners-up on
+products publishing their barcode winner — items 179's four tier upgrades plus 6180, 7092, 7744,
+14906 — and in every case the published ASIN has its own map row.
+
+> **A LOSING CANDIDATE'S MAP ROW IS THE RECORD THAT IT LOST, NOT A CONTRADICTION.** The invariant
+> is *every published ASIN has a map row*, which holds at 0 violations. **The check I wrote was a
+> different sentence from the invariant I meant**, which is the same family as item 201 — a
+> guard whose wording quietly drifted from its purpose.
+
+**971 and 6965 stay held.** Both are contested destinations, and reassigning to a contested
+destination is the coin flip items 186 and 202 exist to refuse.
+
+---
+
+### 210. The sharpest correction of the day: it was never a near-miss
+
+**Raised:** 18 August 2026 · **Resolved and applied (item 209). Reframes a class.**
+
+> **`…517557` WAS NEVER A NEAR-MISS.** Product **6750 is the *Plus* variant** and it carries that
+> barcode. **Product 1028 was publishing an Amazon listing for a different product than the one
+> on its page.**
+>
+> **Amazon was right and our attachment was wrong.**
+
+Item 184 recorded this as *"two digits apart, same prefix, same family — a size or variant, not a
+wrong product"*, and named it the case a human pass is worst at because title, brand, image and
+size all agree. **All of that was true and the conclusion was still wrong**, because it was drawn
+about the wrong pair.
+
+#### IT CLOSES `identifier_conflict` DIFFERENTLY THAN THE CLASS WAS NAMED FOR
+
+The state was created on 17 August meaning **"we checked and the identifiers DISAGREE — evidence
+against"**.
+
+> **AT LEAST ONE MEMBER WAS A BARCODE THAT AGREED PERFECTLY — WITH A DIFFERENT PRODUCT.** There
+> was no disagreement anywhere in it. The class had silently assumed **the catalogue row is the
+> fixed point and the ASIN is the suspect**, so "conflict" could only ever be read as a fact
+> about the ASIN.
+
+**The honest reading of the state is narrower than its name:** *this ASIN's identifiers do not
+match THIS product's.* That is a fact about a **pairing**, and a pairing has two sides.
+
+#### WHAT THAT DOES TO THE FOUR WITH NO NEW EVIDENCE
+
+3077 (Beauty of Joseon), 3995 (Haruharu Wonder), 1276 (Biodance), 1499 (Skin1004) gained nothing
+from the tranche-3 harvest. **The reframe changes the question to ask about them.**
+
+| was asked | should be asked |
+|---|---|
+| *does this ASIN match this product?* — pairwise, answered, negative | **which catalogue product does this ASIN's barcode match?** — catalogue-wide, never asked |
+
+**The second question has a cheap answer and it has not been run:** look up each unconfirmed
+ASIN's Amazon-side identifiers against every product's barcodes, not just the one it is attached
+to. For 1028 that lookup would have returned 6750 immediately, months of ambiguity ago.
+
+> **3077 IS THE ONE MOST LIKELY TO MOVE.** Its Amazon identifiers are US UPC prefixes
+> (`691266…`) against our Korean EANs, and **Beauty of Joseon was a tranche-1 brand and was not
+> in this harvest at all** — so the catalogue-wide question has genuinely never been put for it.
+
+**Not run. Recorded as the next cheap step**, and it is a query rather than a harvest.
+
+---
+
+### 211. Third instance today of a guard's wording drifting from its purpose
+
+**Raised:** 18 August 2026 · **A pattern within one day.**
+
+| | the guard's purpose | what its wording actually said |
+|---|---|---|
+| **E3** (item 201) | hold when candidates disagree on generation | `filter(Boolean)` — *hold when two candidates carry different explicit tokens*, so absence was not a value |
+| **cross-product** (item 204) | hold an ASIN claimed by more than one product | *claimed by more than one product **in this batch*** |
+| **the invariant check** (item 209) | *every published ASIN has a map row* | *no map row points at a product publishing something else* — a different sentence entirely |
+
+**All three ran clean. All three passed their tests.** The third produced a count of 8 that I
+briefly read as a violation, when **a losing candidate's map row is the record that it lost.**
+
+> **THE FAILURE IS NOT IN THE LOGIC BUT IN THE TRANSLATION.** Each guard is a correct
+> implementation of a sentence that is *nearly* the intended one, and the gap between the two
+> sentences is invisible from inside the code — because the code is faithful to what was written,
+> and what was written is the thing that drifted.
+
+**Related but distinct from item 196**, where an assertion was correct and the *world* moved.
+Here the world stood still and **the sentence was never quite the one meant.** Item 196's defect
+had no wrong line anywhere; these have a wrong line that reads as right.
+
+**The practical defence is the same as item 207's:** state the invariant in words first, then
+check that the query is that sentence and not a neighbour of it. *Two of the three were caught by
+running the thing against reality; the third was caught by being surprised at a number.*
+
+---
+
+### 212. Item 96 has evidence from outside the catalogue for the first time
+
+**Raised:** 18 August 2026 · **Three independent routes in one day. Recorded for item 96, which is
+parked.**
+
+Every duplicate signal item 96 has ever had was **internal** — the catalogue compared against
+itself, by barcode grouping. **On 18 August, Amazon supplied three separate routes from outside.**
+
+| route | what it found | where it is |
+|---|---|---|
+| **cross-product conflicts** | **22 ASINs claimed by 46 catalogue rows** | `docs/amazon-harvests/tranche-3-conflicts.json` |
+| **reassignment** | **93648 / 3448** — the same Torriden product in two rows | item 209 |
+| **the identifier reframe** | 1028 / 6750 were *not* duplicates — a variant pair the catalogue had right and the ASIN wrong | item 210 |
+
+> **AN EXTERNAL IDENTIFIER ARBITRATES BETWEEN TWO CATALOGUE ROWS IN A WAY THE CATALOGUE CANNOT DO
+> FOR ITSELF.** When one Amazon ASIN's barcode matches two of our products, Amazon is asserting
+> they are one product. That assertion is independent of every heuristic item 96 was scoped
+> around.
+
+#### AND 93648 IS THE DETAIL THAT MAKES THE ROUTE VALUABLE
+
+**93648 carries no barcode anywhere in `retailer_prices_live`** — item 184 recorded it as the only
+one of the twenty-five with none from either side.
+
+> **AN INTERNAL DUPLICATE CHECK KEYED ON BARCODES CANNOT SEE A PAIR WHERE ONE SIDE HAS NO
+> BARCODE.** 93648/3448 was invisible to every method item 96 was built around, by construction,
+> and it was found because an ASIN attached to the barcode-less row turned out to match the other
+> one.
+
+**That is the class the external route reaches and the internal one cannot**, and it is a
+reason to prefer this evidence rather than merely to accept it.
+
+*Item 96 remains parked (item 172). This adds evidence, not a decision.*
+
+---
+
+### 213. The catalogue-wide lookup: two answered, two unanswerable, one structural finding
+
+**Raised:** 19 August 2026, running item 210's cheap step · **Query, not a harvest. Nothing
+changed.**
+
+The reframed question — *which catalogue product does this ASIN's barcode match?* — put to the
+four remaining unconfirmed rows.
+
+| product | ASIN | Amazon identifiers | catalogue match |
+|---|---|---|---|
+| **3077** BoJ Glow Deep | `B09XQBCSD8` | `691266699628` | **none** |
+| **3995** Haruharu Eye Cream | `B09ZB7GDJL` | `691266741204`, `691266703813` | **none** |
+| **1276** Biodance | `B0D8B9MKMV` | — **ASIN absent from Amazon** | *unanswerable* |
+| **1499** Skin1004 Toning Toner | `B09JB71319` | — **publishes no barcode** | *unanswerable* |
+
+> **"MATCHES NOTHING WE CARRY" IS A DIFFERENT AND USEFUL ANSWER**, and it is not the same as "we
+> could not tell". Two of the four now have a fact; the other two are unanswerable **for reasons
+> that are themselves recorded facts**, and no amount of querying changes that.
+
+**The negative was verified with a positive control**, because a negative result from a query I
+wrote is exactly what item 184 says not to trust: the same query shape returned **6750** for
+`8809540517557` and **3448** for `8809504741653`, the two cases known to resolve.
+
+#### THE STRUCTURAL FINDING, WHICH IS BIGGER THAN THE FOUR
+
+`691266…` appears on **two different brands** — Beauty of Joseon and Haruharu Wonder — which is
+not how a manufacturer prefix behaves.
+
+| | |
+|---|---|
+| catalogue barcodes starting `691266` | **0** |
+| catalogue barcodes starting `6912` at all | **0** |
+| catalogue barcodes starting `8809` (Korean) | **9,787** |
+
+> **IT IS A US DISTRIBUTOR'S PREFIX AND OUR CATALOGUE CONTAINS NONE OF THAT NAMESPACE.** Our
+> retailers supply Korean EANs; the US importer relabels with its own UPCs.
+>
+> **SO AN ASIN CARRYING ONLY `6912…` IDENTIFIERS IS PERMANENTLY UNMATCHABLE AGAINST THIS
+> CATALOGUE.** Not unmatched — *unmatchable*, by construction, and no future harvest changes it.
+
+**That reframes 3077 and 3995 a third time.** They are not products we failed to match; they are
+listings from a distribution channel whose identifiers do not intersect ours at all.
+
+> **SO THE CLASS IS CLOSED, NOT OPEN. 3077 AND 3995 STOP BEING WORK.** A US distributor relabels
+> with its own UPCs and our retailers supply Korean EANs; **no future harvest changes that**, and
+> a barcode matcher cannot reach them however many times it runs.
+>
+> **"Unmatchable by construction" is a finished answer.** Leaving them on a list as unresolved
+> would invite somebody to re-run the matcher against them in three months and get the same
+> nothing, and read it as a gap rather than as the recorded fact it now is.
+
+#### THE POSITIVE CONTROL IS THE METHOD, NOT A COURTESY
+
+**A null result from a query I wrote is precisely what item 184 says not to trust** — an empty
+answer cannot distinguish *"there is nothing there"* from *"my query does not find things"*.
+
+> **THE SAME QUERY SHAPE RETURNING 6750 AND 3448 IS WHAT MAKES THESE NEGATIVES REAL.** The
+> control costs one extra row in the VALUES list, and without it this item would be three
+> assertions of absence backed by nothing.
+
+**It is also what surfaced item 214**, which was not the point of running it.
+
+**And 1499 gained something on the way past:** it now returns an offer (£14.59, QuipUp) with the
+title *"Skin1004 Madagascar Centella Toning Toner 210 ml"* — our product's name and size — while
+still publishing no barcode. **It is a candidate for item 186's secondary path**, which does not
+require one; the path was built for exactly this shape and nobody has put 1499 to it.
+
+---
+
+### 214. `matched_ean` recorded the wrong evidence on 13 rows, and the pairings were all correct
+
+**Raised:** 19 August 2026 · **FOUND and CORRECTED. My defect, from yesterday's insert.**
+
+> **13 OF 215 ROWS RECORDED A REASON THAT WAS NOT THE REASON.** Entirely from yesterday's insert,
+> and **the pairings were all correct** — which is worse than a wrong pairing, not better,
+> **because it looks like evidence.** A wrong pairing is findable by anyone who looks at the
+> product; a wrong justification for a right pairing is findable by nobody, and it is what a
+> later reader would rely on to re-judge the decision.
+
+The tranche-3 promotion wrote `matched_ean` as **Amazon's first identifier**:
+
+```js
+(rec[x.asin]?.eans || rec[x.asin]?.upcs || [])[0]
+```
+
+**The column means *the identifier that matched ours*.** For 202 of 215 rows Amazon's first
+identifier happened to be that one. **For 13 it was not.**
+
+| | |
+|---|---|
+| tranche-3 rows | 215 |
+| `matched_ean` the product actually carries | 202 |
+| **wrong** | **13** |
+| same check over every earlier `matched` row | **0** |
+
+> **THE PAIRINGS WERE ALL CORRECT AND ONLY THE EVIDENCE WAS WRONG.** The item 186 rule decided
+> each ASIN using the true intersection of our barcodes and Amazon's; the insert then recorded a
+> *different* number as the reason. **Every one of the 13 has a real intersection**, and all 13
+> now carry it.
+
+#### HOW IT SURFACED, WHICH IS THE ONLY REASON IT WAS FOUND
+
+It was not found by looking for it. **Item 213 established that zero catalogue barcodes begin
+`6912` — and then a count showed two `amazon_asin_map` rows whose `matched_ean` began `691266`.**
+
+> **TWO FACTS THAT COULD NOT BOTH BE TRUE.** A `matched_ean` is by definition a barcode we carry,
+> so a `matched_ean` in a namespace we hold none of is a contradiction rather than a curiosity.
+>
+> **The contradiction only existed because the negative had just been measured.** Without item
+> 213's control run minutes earlier, `0691266732783` in that column reads as a perfectly ordinary
+> barcode.
+
+#### THE FAMILY, AND THIS IS A DIFFERENT MEMBER FROM THE OTHERS
+
+Items 201, 204 and 209 are **guards** whose wording drifted from their purpose. This is a
+**field** whose writer drifted from its name.
+
+> **THE COLUMN NAME WAS RIGHT. THE THING THAT FILLED IT WAS WRONG**, and a name cannot defend
+> itself — nothing about writing `matched_ean` forces the value to be a match.
+>
+> Item 188's `via_brand` was the inverse: **the writer was reasonable and the name misled.** Here
+> the name was exact and the writer ignored it.
+
+#### THE STANDING ASSERTION IS THE FIX. THE THIRTEEN CORRECTIONS ARE NOT.
+
+**Correcting thirteen rows repairs this instance and prevents nothing.** The next insert written
+the same way produces the same defect, and there is no reason to expect the next one to be
+written more carefully — yesterday's was not written carelessly.
+
+> **THE FIX IS ONE LINE THAT CAN BE RUN AGAINST THE WHOLE TABLE AT ANY TIME:**
+>
+> *every `matched` row's `matched_ean` must be a barcode its product carries.*
+
+It reads **0** violations across all 484 published ASINs. **That is the first time this has been
+asserted rather than assumed**, and it is the thing that makes the next occurrence findable in
+seconds instead of by accident.
+
+**The thirteen corrections are cleanup. The assertion is the outcome.**
+
+---
+
+### 215. The secondary path logged confirmations but not declines
+
+**Raised:** 19 August 2026, putting product 1499 through the path · **FIXED. Both evaluations now
+recorded.**
+
+Item 186's secondary path was adopted **with logging**, because deciding it on n=1 either way was
+the wrong shape and the log was what would turn it into a rate. `asin_secondary_path_log`'s own
+comment says: *"Logged on every evaluation — fired and declined both."*
+
+> **THE CODE CALLED THE LOGGER ONLY WHEN THE PATH FIRED.**
+>
+> **A rate needs a denominator.** Recording only confirmations makes the path look **100%
+> effective forever**, which is the exact opposite of the reason it was adopted with logging at
+> all.
+
+**Found by using it**, not by reading it: product 1499 was put to the path, correctly declined,
+and nothing was written down.
+
+#### 1499 IS A GOOD FIRST DECLINE
+
+| | |
+|---|---|
+| catalogue | *SKIN1004 Madagascar Centella Toning Toner (210ml)* |
+| Amazon | *Skin1004 Madagascar Centella Toning Toner 210 ml* |
+| exact title | **true** |
+| size agrees | **true** — 210ml against 210ml |
+| brand store | **false** — QuipUp |
+| **verdict** | **declined** |
+
+**Two of three conditions passed and the path still declined.** That is the seller condition being
+load-bearing rather than one signal of three, which is exactly the 794-versus-1028 distinction
+stated when the path was adopted.
+
+**And 1499 can never be resolved by E1**: the listing publishes no barcode at all, so the
+secondary path is the only route it will ever have. **It has now had it, and the answer is no.**
+
+#### THE LOG NOW READS AS A RATE
+
+```
+794   B0DL8Y8N4G   fired    brand_store ✓  title ✓  size ✓
+1499  B09JB71319   declined brand_store ✗  title ✓  size ✓
+```
+
+**One of two**, which is a rate rather than an argument — and the decline is the more informative
+row, because it shows which condition does the work.
+
+#### THE FAMILY AGAIN, AND THIS ONE IS THE TABLE'S OWN COMMENT
+
+Items 201, 204 and 209 are guards whose wording drifted from their purpose. Item 214 is a field
+whose writer ignored its name.
+
+> **HERE THE DOCUMENTATION WAS RIGHT AND THE CODE NEVER MATCHED IT.** The migration comment
+> describing this table has said *"fired and declined both"* since the day it was written, and
+> the function it describes never did that. **A comment asserting a behaviour does not create
+> it**, and the two were written minutes apart by the same person.

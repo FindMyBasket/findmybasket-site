@@ -56,6 +56,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync, writeFileSync } from 'node:fs'
+import { pathToFileURL } from 'node:url'
 
 const START = '<!-- FMB:DEMO:START -->'
 const END = '<!-- FMB:DEMO:END -->'
@@ -72,11 +73,40 @@ const CANDIDATES = [
 ]
 
 
-function deliveryFor(r, goods) {
-  if (goods <= 0) return 0
-  if (r.delivery_model === 'flat') return Number(r.delivery_cost)
-  return goods >= Number(r.delivery_threshold) ? 0 : Number(r.delivery_cost)
-}
+/**
+ * THE SHARED RULE, IMPORTED. NOT A LOCAL COPY. Changed 2026-08-18 — work-list item 197.
+ *
+ * WHAT WAS HERE, AND WHAT IT DID:
+ *
+ *   function deliveryFor(r, goods) {
+ *     if (goods <= 0) return 0
+ *     if (r.delivery_model === 'flat') return Number(r.delivery_cost)
+ *     return goods >= Number(r.delivery_threshold) ? 0 : Number(r.delivery_cost)
+ *   }
+ *
+ * It had NO UNKNOWN BRANCH. For a retailer with delivery_model 'unknown' and NULL terms,
+ * `Number(null)` is 0, `goods >= 0` is true, and it returned **FREE DELIVERY**.
+ *
+ * That is precisely the defaulting that lib/delivery.ts exists to forbid, reintroduced in a
+ * copy that predates the unknown contract — and it would have priced Amazon's delivery at
+ * £0 on the most-visited page: option B, chosen by nobody, silently.
+ *
+ * IT WAS UNREACHABLE ONLY BY COINCIDENCE. loadData() filters `.eq('active', true)` and the
+ * two unknown retailers (Amazon 9, eBay 10) are inactive. The protection was an unrelated
+ * filter, not a decision — and activating Amazon is exactly what the Prime toggle would
+ * have required.
+ *
+ * WHY IMPORTING WORKS AND NO COPY IS NEEDED. Node strips TypeScript types on import from
+ * 22.18, and this repository already depends on that: `npm test` runs
+ * `node --test "lib/**\/*.test.ts"`. The Deno/Node boundary that justifies
+ * supabase/functions/_shared/delivery.ts existing separately DOES NOT APPLY HERE — this
+ * script is plain Node, the same runtime as the tests.
+ *
+ * If the build ever runs on Node < 22.18 this import fails and the BUILD BREAKS LOUDLY,
+ * which is strictly better than the silent £0 it replaces. package.json now declares
+ * `engines.node` so that requirement is stated rather than assumed.
+ */
+import { deliveryFor } from '../lib/delivery.ts'
 
 /**
  * Exhaustive solve. Mirrors the live optimiser's ceiling of at most two retailers
@@ -108,9 +138,19 @@ function solve(products, offers, retailers) {
       }
       if (!ok) continue
 
-      const delivered =
-        ga + (ga > 0 ? deliveryFor(a, ga) : 0) +
-        (a.id === b.id ? 0 : gb + (gb > 0 ? deliveryFor(b, gb) : 0))
+      // SKIP RATHER THAN GUESS, mirroring RoutineBuilder.tsx exactly: "If either leg's
+      // terms are unknown the PAIR's delivered total is unknown, so it cannot be ranked
+      // against pairs whose delivery is known." A guessed number competing with a real one
+      // is how the £25 default made Debenhams look free.
+      //
+      // The demo's whole claim is a DELIVERED comparison, so a candidate we cannot price
+      // delivered is not a weaker candidate — it is not a candidate. Dropping it here means
+      // the worst case is the fallback copy (no figures), never a wrong figure.
+      const da = ga > 0 ? deliveryFor(a, ga) : { known: true, cost: 0 }
+      const db = a.id === b.id || gb <= 0 ? { known: true, cost: 0 } : deliveryFor(b, gb)
+      if (!da.known || !db.known) continue
+
+      const delivered = ga + da.cost + (a.id === b.id ? 0 : gb + db.cost)
 
       all.push({ retailers: [a, b], goods, delivered, assignment })
     }
@@ -396,6 +436,16 @@ function infraFallback(reason, err) {
 
 // Any uncaught throw is infrastructure by definition: the candidate evaluation
 // never completed, so nothing is known about the catalogue. Never rethrow.
+// ── TESTABILITY. main() used to run on bare import, so `solve` could not be exercised
+//    without credentials and a network. That is why the local deliveryFor copy went
+//    three weeks without anyone noticing it priced an unknown retailer as free: nothing
+//    could reach it. The guard below is what makes the regression test possible.
+export { solve }
+
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href
+if (!isDirectRun) {
+  // Imported by a test. Do not solve, do not write, do not touch the network.
+} else
 main().catch(err => {
   try {
     infraFallback('generator threw before it could evaluate candidates', err)
