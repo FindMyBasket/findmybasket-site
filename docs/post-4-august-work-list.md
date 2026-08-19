@@ -19300,3 +19300,79 @@ written mid-week flips to `true` on the next run with no special handling.
 **And a stalled puller leaves its latest week `false` forever — excluded rather than wrongly
 included**, which is the right way round for a flag whose purpose is to stop a partial value being
 read as a real one.
+
+---
+
+### 232. An exact quotation of a limitation is the most likely form to be treated as discharging it
+
+**Raised:** 19 August 2026, from item 229 · **The sharpest thing this list has recorded about
+itself, and the least comfortable.**
+
+#### THE FINDING
+
+> **CITING A LIMITATION DOES THE PSYCHOLOGICAL WORK OF THE CAVEAT WITHOUT ANY OF ITS ANALYTICAL
+> WORK — AND IT DOES THAT WORK BETTER THE MORE PRECISELY IT IS QUOTED.**
+
+**An exact quotation of a limitation is MORE likely to be treated as having discharged it than a
+vague gesture at one.** A hand-wave leaves the objection visibly unanswered. **A verbatim citation
+looks answered**, because the words are right there, correctly attributed, in the reader's own
+paragraph.
+
+#### WHY THAT IS UNPLEASANT
+
+**Precision is normally the defence.** Nearly every remedy on this list is a form of it — state
+the bound with the finding, quote the source, put the comment where the reader will be, name the
+number rather than the impression.
+
+> **HERE PRECISION IS THE MECHANISM OF THE FAILURE RATHER THAN THE GUARD AGAINST IT.** Item 119
+> did not paraphrase its caveat loosely. It quoted `platform_changes` id 34 **verbatim** — *"GA4
+> outbound-click columns are a client-capture ratio, not a consent rate"* — and then drew a trend
+> from that ratio four paragraphs later.
+>
+> **The accuracy of the citation is what made the next paragraph feel safe to write.**
+
+#### THE INTERVAL IS COLLAPSING, AND FORGETTING IS NOT THE MECHANISM
+
+| | the lesson | where it was | survived |
+|---|---|---|---|
+| item 191 | a permanently-red check stops being read | **in the script's own comment**, unread | **six weeks** |
+| item 207 | absence is a value; ambiguity is a property of the set | **in the work list**, written that day | **hours** |
+| **item 229** | *"a client-capture ratio, not a consent rate"* | **quoted in the same item** | **four paragraphs** |
+
+> **WHATEVER IS HAPPENING, IT IS NOT THAT THE LESSONS ARE BEING FORGOTTEN.** In each successive
+> case the lesson was **more present, not less** — from an unread comment, to a same-day note, to
+> a verbatim quotation in the paragraph above the violation.
+>
+> **THE MORE PRESENT IT WAS, THE FASTER IT FAILED.**
+
+#### WHICH INVERTS THE OBVIOUS REMEDY
+
+The natural response to a lesson that did not fire is to **write it down more clearly, closer to
+the code, in the reader's path.** This list has done that repeatedly and it is usually right.
+
+**But all three of these were already there.** Making the caveat more salient did not make it more
+operative, and past some point it appears to do the opposite — *because salience is what creates
+the feeling of having dealt with it.*
+
+**What actually caught things, every time, was not writing:**
+
+| | what caught it |
+|---|---|
+| the E3 filter | **re-measuring the built rule against the same twelve** the design was measured on |
+| the cross-product set | **reading the generated SQL** before executing it |
+| `matched_ean` | **the same figure existing twice** by different routes |
+| the truncated read | **the same figure existing twice** by different routes |
+
+> **A SECOND CONFRONTATION WITH THE WORLD, NOT A BETTER SENTENCE.** Every one was caught by an
+> artefact or a measurement disagreeing with an expectation — never by a reader recalling a rule
+> at the right moment, which is the thing all the writing is trying to cause.
+
+#### THE BOUND ON THIS
+
+**Three instances, all mine, all inside one fortnight, all recorded by the person they happened
+to.** That is a pattern worth naming and not a law — item 79's rule applies to this item as much
+as to any measurement in it.
+
+**The prediction it makes is testable and should be checked rather than assumed:** if this is
+real, the next lesson to fail will be one that is *currently* being quoted approvingly, and it
+will fail *sooner* than the last. **Recording that here so it can be wrong.**
