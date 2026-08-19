@@ -19148,13 +19148,20 @@ both weeks. With twelve weeks of AWIN history around it:
 
 **And then drew a trend from that ratio anyway, four paragraphs later.**
 
-> **ITEM 191's SHAPE IN A THIRD PLACE.** `secret-divergence-check.sh` warned in its own comment
-> that a permanently-red check stops being read, and went permanently red. The E3 filter and the
-> cross-product set were lessons that failed their author within hours (item 207). **Here the
-> caveat and the violation are in the same item, by the same author, in the same sitting.**
+> **SIX WEEKS. HOURS. THE SAME PAGE.**
 >
-> **Citing a limitation is not the same as applying it.** The citation reads as having handled
-> the objection, which is precisely what makes the next paragraph feel safe to write.
+> | | the lesson | how long it survived |
+> |---|---|---|
+> | item 191 | `secret-divergence-check.sh` warning that a permanently-red check stops being read | **six weeks**, then it went permanently red |
+> | item 207 | the E3 filter and the cross-product set | **hours** |
+> | **here** | *"a client-capture ratio, not a consent rate"* | **four paragraphs** |
+>
+> **The interval is collapsing, and the third instance is the one that should worry.** The caveat
+> and the violation are in the same item, by the same author, in the same sitting.
+>
+> **CITING A LIMITATION READS AS HAVING HANDLED IT, WHICH IS WHAT MAKES THE NEXT PARAGRAPH FEEL
+> SAFE TO WRITE.** The citation does the psychological work of the caveat without doing any of
+> its analytical work — and it does that work *better* the more precisely it is quoted.
 
 ---
 
@@ -19218,3 +19225,78 @@ which would cost the operational visibility of watching a week fill up.
 > **THE CLAIM IS NARROW AND SHOULD STAY NARROW: it makes the incompleteness VISIBLE at the moment
 > of reading.** Item 119's series would have carried a `false` beside the 1.4%, and that is the
 > whole of the intervention.
+
+---
+
+### 231. `week_complete`, built — and a trigger rather than seven writers
+
+**Raised:** 19 August 2026 · **BUILT on all seven weekly metrics tables.** · **Robbie's decision:
+option A.**
+
+#### THE DECIDING ARGUMENT, KEPT
+
+> **THE ERROR WAS A READER'S, NOT A WRITER'S**, so the fix changes what a reader sees by default
+> rather than what is available on request. **An opt-in guard against a reading error is aimed at
+> the wrong person.**
+
+#### AND THE IMPLEMENTATION CHANGED ON THE SAME REASONING
+
+The plan was to set the flag in each of the seven pullers. **That is seven places to forget, and
+seven places for a new puller to be written without it.**
+
+> **NOTHING WOULD HAVE DETECTED THE OMISSION.** A `NULL` flag reads as *"not known to be
+> incomplete"* — **which is the exact ambiguity the column exists to remove**, reintroduced by the
+> mechanism meant to remove it.
+
+**So it is a `BEFORE INSERT OR UPDATE` trigger and one function.** A trigger cannot be forgotten
+by a writer that does not know about it, and `week_complete` is now `NOT NULL` on all seven —
+which the `ALTER` itself proved, since it fails on a single null row.
+
+**It also makes the flag mean what the comment says: the state when the row was LAST WRITTEN**,
+not at read time. Those differ, and the write-time reading is the useful one — *the process that
+produced these numbers ran before the week ended* is the fact that invalidates them.
+
+#### ASSERTED, NOT TRUSTED
+
+The backfill is exactly computable, so the migration **asserts its own result** and raises rather
+than reporting success:
+
+```
+every week ending before today   -> week_complete = true    (else EXCEPTION)
+the week in progress             -> week_complete = false   (else EXCEPTION)
+```
+
+**And the trigger was tested by trying to defeat it**, in both directions — writing `false` onto
+a settled week and `true` onto the current one:
+
+```
+2026-07-20   trigger overruled false -> true   OK
+2026-08-17   trigger overruled true  -> false  OK
+```
+
+*A guard that has never been shown to overrule anything is not known to guard.*
+
+#### THE NARROW CLAIM, VERBATIM IN THE COLUMN COMMENT
+
+> **IT DOES NOT STOP ANYONE CHARTING A `false` ROW.** Item 119's series would have carried a
+> `false` beside the 1.4%, and **that is the whole of the intervention.**
+
+The comment says so in the schema, because a reader meeting `week_complete` will otherwise assume
+it guards more than it does:
+
+> *"WHAT THIS FLAG DOES NOT DO: it does not filter anything, it does not stop a false row being
+> charted, and NOTHING ENFORCES IT… Treating it as a guarantee that partial weeks are excluded is
+> worse than not having it, because it moves the reader's caution into the schema where it does
+> not exist."*
+
+**A flag believed to exclude bad weeks is more dangerous than no flag**, and that sentence is in
+the database rather than only here.
+
+#### THE FAILURE DIRECTION
+
+**Self-correcting**: every puller upserts on its natural key and re-pulls earlier weeks, so a row
+written mid-week flips to `true` on the next run with no special handling.
+
+**And a stalled puller leaves its latest week `false` forever — excluded rather than wrongly
+included**, which is the right way round for a flag whose purpose is to stop a partial value being
+read as a real one.
