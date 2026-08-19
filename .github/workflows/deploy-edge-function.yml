@@ -6,7 +6,17 @@ name: Deploy an edge function
 #
 # THIS DEPLOYS FROM THE REPOSITORY, which is the source of truth, so the deployed function is
 # by construction the file that was reviewed and committed. There is no retyping step to get
-# wrong. Any inline-content deploy path should be treated as a last resort.
+# wrong.
+#
+# ── THIS IS THE ONLY ROUTE. DO NOT DEPLOY AN EDGE FUNCTION BY PASTING ITS CONTENT. ──────────
+#
+# An inline-content deploy is what made "PLACEHOLDER" deployable at all: nothing validated that
+# the content was the function, and a one-word file is syntactically valid TypeScript. The
+# hazard is not carelessness -- it is that the path accepts a hand-made copy as equivalent to
+# the reviewed file, and a transcription error in 28KB is invisible in a way an outage is not.
+#
+# If a deploy is needed and this workflow cannot do it, THAT IS A FINDING ABOUT THIS WORKFLOW.
+# Extend it. Do not route around it. Work-list items 217 and 218.
 #
 # Manual only. Deliberately not scheduled: an edge function should change when someone decides
 # it should, not on a timer.
