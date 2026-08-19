@@ -9634,6 +9634,11 @@ every tool except the PR list.
 
 ### 119. Three counts of one event, and the question is which one is the denominator
 
+> **⚠ THE CAPTURE TREND IN THIS ITEM IS WITHDRAWN — SEE ITEM 229.** The series was recorded as
+> 65% / 52% / 34% / **1.4%** and called a monotonic collapse. **The 1.4% was week 08-10 read
+> mid-week; complete it is 60.8%.** What exists is a noisy rate between 34% and 65%. The
+> description of 20 July to 3 August survives; *"capture is falling"* does not.
+
 **Raised:** 15 August 2026 · **Diagnosis complete, nothing changed.**
 
 Commission per click is the steering metric for the whole funnel — **3.7p, and break even
@@ -18992,3 +18997,141 @@ change that legitimately had to revalidate a page proved it for free.**
 > RATHER THAN BOOKING TIME OF ITS OWN.** Scheduling it separately would have meant performing a
 > revalidation for no reason except to watch it — the same shape as item 226's probe, one layer
 > down: *doing the thing in order to observe the thing.*
+
+---
+
+### 228. Clicks rose tenfold and conversion fell tenfold. No mechanism is supported.
+
+**Raised:** 19 August 2026, from Robbie's observation that GA4 sessions were falling while AWIN
+clicks rose · **OPEN. A real question with no supported answer.**
+
+#### THE CONVERSION COLLAPSE LEADS, BECAUSE IT NEEDS NO CROSS-SERIES COMPARISON
+
+| week | AWIN clicks | AWIN transactions | value | conversion |
+|---|---:|---:|---:|---:|
+| 07-13 | 40 | 1 | £10.80 | 2.5% |
+| 07-20 | 62 | 2 | £34.06 | **3.2%** |
+| 07-27 | 57 | 2 | £46.81 | 3.5% |
+| 08-03 | 170 | 1 | £36.34 | 0.6% |
+| **08-10** | **616** | **2** | £51.69 | **0.32%** |
+
+> **CLICKS ROSE TENFOLD AND CONVERSION FELL TENFOLD, WHICH IS WHAT HAPPENS WHEN THE ADDITIONAL
+> CLICKS CONVERT AT APPROXIMATELY ZERO.**
+
+**One source, counting one population.** AWIN's clicks against AWIN's transactions — no GA4, no
+server-side, no ratio between things that count different events. **It establishes itself without
+any cross-series comparison at all**, which is why it leads.
+
+**Real shopper traffic producing 616 clicks does not produce two transactions.**
+
+#### NO MECHANISM IS NAMED, AND THAT IS PART OF THE FINDING
+
+> **THE DATA SUPPORTS "THESE CLICKS CONVERT AT APPROXIMATELY ZERO". IT SUPPORTS NO PARTICULAR
+> EXPLANATION.**
+
+**Naming one would be a plausible story attached to an unmeasured movement**, which this list
+already carries several instances of. Candidates were checked and none is supported:
+
+- **Nothing of ours follows affiliate links** — checked because item 226's finding made it the
+  obvious suspicion. `optimiser_shop_button_preload` totals **1–2 clicks a week**, three orders
+  of magnitude too small.
+- **Not a reporting artefact** — single region `GB`, one row per advertiser per week, and every
+  week re-pulled on 17 August, so this is settled data.
+- **Not the Amazon promotion** — 17–18 August, the partial week *after* the rise, and
+  `amazon_crosscheck` clicks carry no `awin_mid` so they are not in this series.
+- **Not the supplements launch** — first live **5 May**, three months earlier.
+
+#### THE UNEVEN MULTIPLES RULE OUT A SINGLE ACCOUNTING CHANGE
+
+Week 08-10 rose across **every live advertiser at once** while the three closed programmes stayed
+flat — so not one programme's counting change. **But the multiples against our own count are
+wildly uneven:**
+
+| | server-side | AWIN | multiple |
+|---|---:|---:|---:|
+| Perfume Click | 3 | 118 | **39×** |
+| Debenhams | 2 | 68 | **34×** |
+| Boots | 4 | 48 | 12× |
+| Stylevana | 22 | 137 | 6× |
+| YesStyle | 21 | 64 | 3× |
+
+> **39× ON PERFUME CLICK AGAINST 3× ON YESSTYLE IS NOT WHAT A UNIFORM AWIN-SIDE CHANGE
+> PRODUCES.** Broad enough to rule out one advertiser; uneven enough to rule out one multiplier.
+
+**Left open deliberately. A real question with no supported answer is the honest state**, and it
+is not the same thing as an absence of work.
+
+---
+
+### 229. The GA4 capture trend was withdrawn, and a partial week is what made it a trend
+
+**Raised:** 19 August 2026 · **A WITHDRAWAL, not a qualification.** · **And it corrects an item
+number: this is item 119, not 154.**
+
+**Item 119** — *"Three counts of one event, and the question is which one is the denominator"* —
+recorded GA4 capture against the server-side count as **65%, 52%, 34%, 1.4%**, and called the
+*"monotonic collapse of that ratio… a defect worth its own investigation"*.
+
+#### THE FOURTH POINT WAS A PARTIAL WEEK
+
+| week | GA4 awin clicks | server-side | capture |
+|---|---:|---:|---:|
+| 07-20 | 78 | 120 | 65.0% |
+| 07-27 | 26 | 50 | 52.0% |
+| 08-03 | 17 | 50 | 34.0% |
+| **08-10** | **48** | **79** | **60.8%** |
+
+> **THE 1.4% WAS WEEK 08-10 READ MID-WEEK.** Complete, that week is **60.8%** — the highest
+> reading since the first. **There is no monotonic collapse. There is a noisy rate between 34%
+> and 65%.**
+
+**The description of 20 July to 3 August survives. "Capture is falling" does not.**
+
+#### AN INCOMPLETE WEEK COUNTED AS A DATA POINT IS WHAT MANUFACTURED THE TREND
+
+**Not too few points — a wrong one.** Three real readings wobbling between 34% and 65% look like
+noise. **Adding a partial week as though it were complete turns noise into a collapse**, because
+a mid-week reading of a weekly aggregate is not a low value: it is *most of a value that has not
+happened yet*.
+
+> **THE SAME ERROR WAS AVAILABLE TODAY AND WAS AVOIDED BY LUCK OF TIMING RATHER THAN BY A RULE.**
+> Week 08-17 currently reads **1 GA4 session and 0 capture**, and every table in item 228
+> excludes it — but only because it was obviously absurd, not because anything enforced it.
+>
+> **A partial week is not obviously absurd once it is a few days old.**
+
+It belongs beside item 195's family — `--limit 8` read as *"eight days"*, `left(name,44)` read as
+*"two products"* — with a distinct mechanism: **there the bound was on how much was looked at;
+here the bound is on how much has happened yet.** A week in progress is a bound imposed by the
+calendar, and nothing in a query says so.
+
+#### THE 20 JULY REFRAME IS THE CLEANEST CORRECTION
+
+The original reading was **opposite directions** — ours 120, AWIN 62, with no mechanism covering
+both weeks. With twelve weeks of AWIN history around it:
+
+| | series | 20 July |
+|---|---|---|
+| server-side | 29, 12, 43, **120**, 50, 50, 79 | **a clear spike** |
+| AWIN | 5, 13, 18, 21, 13, 32, 18, 40, **62**, 57 | **on trend, unremarkable** |
+
+> **AWIN'S 62 NEEDS NO EXPLANATION AND NEVER DID.** The puzzle came from treating both figures as
+> anomalies when only one was — **a demand for explanation manufactured by the framing rather
+> than by the data.**
+
+#### THE DENOMINATOR STATEMENT, AND ITEM 119 ALREADY HALF-RECORDED IT
+
+> **Item 119's ratio was GA4 ÷ server-side, and both count the same event** — a click on our site.
+> That ratio is a capture rate, and dividing is legitimate.
+>
+> **GA4 ÷ AWIN and server ÷ AWIN are not rates of anything.** Ours counts *a user clicked our
+> link*; AWIN counts *a request arrived at AWIN's redirect*. Different populations, differing by
+> anything that reaches the URL without our JavaScript running.
+>
+> **So the 7.8× is a discrepancy, not a rate, and it must not inherit any consent reading.** The
+> only denominator supporting a conclusion is **AWIN's own transactions against AWIN's own
+> clicks** — one source, one population — and that is the ratio that collapsed.
+
+**Item 119 already recorded the first half of this**, citing `platform_changes` id 34: *"GA4
+outbound-click columns are a client-capture ratio, not a consent rate."* **The caveat was written
+down and the trend was drawn anyway** — item 207's family, in the same item as its own warning.
