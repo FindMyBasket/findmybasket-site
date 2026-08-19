@@ -1,0 +1,35 @@
+name: Cohorted onboarding probe (read-only)
+
+# Produces the figures the Cohorted onboarding decision needs, BEFORE anything is configured.
+# WRITES NOTHING. No database write, no storage upload, no import trigger, no active flip.
+#
+# The doctrine makes two checks mandatory before onboarding, and this serves the first:
+#   - "a category allowlist is retailer-specific, always" — audit the feed before writing one
+#   - "delivery terms are a REQUIRED step, not a later audit" — THIS PROBE CANNOT ANSWER THAT
+#     and does not try. Delivery terms are not in AWIN and never have been; they are read from
+#     the retailer's own site.
+#
+# CREDENTIALS ARE NOT INTERCHANGEABLE. AWIN_OAUTH_TOKEN is reporting (api.awin.com);
+# AWIN_API_KEY is the FEED credential (productdata.awin.com) that eight live paths depend on.
+# Neither value is ever printed — datafeed URLs embed the api key and are redacted before output.
+
+"on":
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Probe
+        env:
+          AWIN_PUBLISHER_ID: ${{ secrets.AWIN_PUBLISHER_ID }}
+          AWIN_OAUTH_TOKEN: ${{ secrets.AWIN_OAUTH_TOKEN }}
+          AWIN_API_KEY: ${{ secrets.AWIN_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/cohorted-probe.mjs
