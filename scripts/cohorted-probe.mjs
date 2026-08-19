@@ -27,7 +27,11 @@
  * PRINTED by this script — the datafeed list returns download URLs with the api key embedded in
  * the path, so URLs are redacted before any output.
  */
-const PUB = process.env.AWIN_PUBLISHER_ID;
+// The publisher id is NOT a repo secret and does not need to be — it is a public account
+// identifier, and it is already hardcoded in scripts/awin-weekly-pull.mjs with a source
+// reference. Taking it from the same place rather than inventing a new secret: a fourth
+// AWIN credential would be the divergence class item 196 exists to detect (item 220).
+const PUB = process.env.AWIN_PUBLISHER_ID || 2841268; // supabase/functions/import-awin-feed/index.ts:265
 const OAUTH = process.env.AWIN_OAUTH_TOKEN;
 const FEEDKEY = process.env.AWIN_API_KEY;
 const SB = process.env.SUPABASE_URL;
@@ -40,7 +44,7 @@ const redact = (s) => String(s).replace(/apikey\/[^/\s]+/gi, 'apikey/REDACTED')
 function need(name, v) {
   if (!v) { console.error(`CANNOT RUN: ${name} is not set`); process.exit(1); }
 }
-need('AWIN_PUBLISHER_ID', PUB); need('AWIN_OAUTH_TOKEN', OAUTH); need('AWIN_API_KEY', FEEDKEY);
+need('AWIN_OAUTH_TOKEN', OAUTH); need('AWIN_API_KEY', FEEDKEY);
 
 console.log('==================================================================');
 console.log(' Cohorted.co.uk — onboarding probe (READ ONLY)');

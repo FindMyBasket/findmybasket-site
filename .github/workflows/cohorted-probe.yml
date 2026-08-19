@@ -27,7 +27,6 @@ jobs:
           node-version: '22'
       - name: Probe
         env:
-          AWIN_PUBLISHER_ID: ${{ secrets.AWIN_PUBLISHER_ID }}
           AWIN_OAUTH_TOKEN: ${{ secrets.AWIN_OAUTH_TOKEN }}
           AWIN_API_KEY: ${{ secrets.AWIN_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
