@@ -17779,3 +17779,109 @@ one of the twenty-five with none from either side.
 reason to prefer this evidence rather than merely to accept it.
 
 *Item 96 remains parked (item 172). This adds evidence, not a decision.*
+
+---
+
+### 213. The catalogue-wide lookup: two answered, two unanswerable, one structural finding
+
+**Raised:** 19 August 2026, running item 210's cheap step · **Query, not a harvest. Nothing
+changed.**
+
+The reframed question — *which catalogue product does this ASIN's barcode match?* — put to the
+four remaining unconfirmed rows.
+
+| product | ASIN | Amazon identifiers | catalogue match |
+|---|---|---|---|
+| **3077** BoJ Glow Deep | `B09XQBCSD8` | `691266699628` | **none** |
+| **3995** Haruharu Eye Cream | `B09ZB7GDJL` | `691266741204`, `691266703813` | **none** |
+| **1276** Biodance | `B0D8B9MKMV` | — **ASIN absent from Amazon** | *unanswerable* |
+| **1499** Skin1004 Toning Toner | `B09JB71319` | — **publishes no barcode** | *unanswerable* |
+
+> **"MATCHES NOTHING WE CARRY" IS A DIFFERENT AND USEFUL ANSWER**, and it is not the same as "we
+> could not tell". Two of the four now have a fact; the other two are unanswerable **for reasons
+> that are themselves recorded facts**, and no amount of querying changes that.
+
+**The negative was verified with a positive control**, because a negative result from a query I
+wrote is exactly what item 184 says not to trust: the same query shape returned **6750** for
+`8809540517557` and **3448** for `8809504741653`, the two cases known to resolve.
+
+#### THE STRUCTURAL FINDING, WHICH IS BIGGER THAN THE FOUR
+
+`691266…` appears on **two different brands** — Beauty of Joseon and Haruharu Wonder — which is
+not how a manufacturer prefix behaves.
+
+| | |
+|---|---|
+| catalogue barcodes starting `691266` | **0** |
+| catalogue barcodes starting `6912` at all | **0** |
+| catalogue barcodes starting `8809` (Korean) | **9,787** |
+
+> **IT IS A US DISTRIBUTOR'S PREFIX AND OUR CATALOGUE CONTAINS NONE OF THAT NAMESPACE.** Our
+> retailers supply Korean EANs; the US importer relabels with its own UPCs.
+>
+> **SO AN ASIN CARRYING ONLY `6912…` IDENTIFIERS IS PERMANENTLY UNMATCHABLE AGAINST THIS
+> CATALOGUE.** Not unmatched — *unmatchable*, by construction, and no future harvest changes it.
+
+**That reframes 3077 and 3995 a third time.** They are not products we failed to match; they are
+listings from a distribution channel whose identifiers do not intersect ours at all. **A barcode
+matcher cannot reach them and no amount of running it will.**
+
+**And 1499 gained something on the way past:** it now returns an offer (£14.59, QuipUp) with the
+title *"Skin1004 Madagascar Centella Toning Toner 210 ml"* — our product's name and size — while
+still publishing no barcode. **It is a candidate for item 186's secondary path**, which does not
+require one; the path was built for exactly this shape and nobody has put 1499 to it.
+
+---
+
+### 214. `matched_ean` recorded the wrong evidence on 13 rows, and the pairings were all correct
+
+**Raised:** 19 August 2026 · **FOUND and CORRECTED. My defect, from yesterday's insert.**
+
+The tranche-3 promotion wrote `matched_ean` as **Amazon's first identifier**:
+
+```js
+(rec[x.asin]?.eans || rec[x.asin]?.upcs || [])[0]
+```
+
+**The column means *the identifier that matched ours*.** For 202 of 215 rows Amazon's first
+identifier happened to be that one. **For 13 it was not.**
+
+| | |
+|---|---|
+| tranche-3 rows | 215 |
+| `matched_ean` the product actually carries | 202 |
+| **wrong** | **13** |
+| same check over every earlier `matched` row | **0** |
+
+> **THE PAIRINGS WERE ALL CORRECT AND ONLY THE EVIDENCE WAS WRONG.** The item 186 rule decided
+> each ASIN using the true intersection of our barcodes and Amazon's; the insert then recorded a
+> *different* number as the reason. **Every one of the 13 has a real intersection**, and all 13
+> now carry it.
+
+#### HOW IT SURFACED, WHICH IS THE ONLY REASON IT WAS FOUND
+
+It was not found by looking for it. **Item 213 established that zero catalogue barcodes begin
+`6912` — and then a count showed two `amazon_asin_map` rows whose `matched_ean` began `691266`.**
+
+> **TWO FACTS THAT COULD NOT BOTH BE TRUE.** A `matched_ean` is by definition a barcode we carry,
+> so a `matched_ean` in a namespace we hold none of is a contradiction rather than a curiosity.
+>
+> **The contradiction only existed because the negative had just been measured.** Without item
+> 213's control run minutes earlier, `0691266732783` in that column reads as a perfectly ordinary
+> barcode.
+
+#### THE FAMILY, AND THIS IS A DIFFERENT MEMBER FROM THE OTHERS
+
+Items 201, 204 and 209 are **guards** whose wording drifted from their purpose. This is a
+**field** whose writer drifted from its name.
+
+> **THE COLUMN NAME WAS RIGHT. THE THING THAT FILLED IT WAS WRONG**, and a name cannot defend
+> itself — nothing about writing `matched_ean` forces the value to be a match.
+>
+> Item 188's `via_brand` was the inverse: **the writer was reasonable and the name misled.** Here
+> the name was exact and the writer ignored it.
+
+**The check that would have caught it at write time is one line**, and it is now the standing
+assertion: *every `matched` row's `matched_ean` must be a barcode its product carries.* It reads
+**0** violations across all 484 published ASINs, which is the first time that has been asserted
+rather than assumed.
