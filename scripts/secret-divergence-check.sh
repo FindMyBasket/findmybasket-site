@@ -31,7 +31,25 @@
 #     the pair + the timestamp signal instead.
 #   - GitHub Actions secrets: write-only, no value or digest is ever returned.
 #
-# Exit code: 0 = no divergence found; 1 = at least one divergence (for CI).
+# ── EXIT CODES. CHANGED 19 AUGUST -- WORK-LIST ITEM 194. ────────────────────────────
+#
+# This script used to exit 1 on any divergence, which made "I found something" and "I am
+# broken" the same red tick. They demand opposite responses and the one that was WORKING
+# got ignored 25 days against 14 (item 191).
+#
+#   0  ok, or findings recorded  -- THE REPORTER PATH. Findings go to
+#                                   standing_check_findings and reach a human through the
+#                                   daily monitor email, which is already read.
+#   1  CANNOT RUN                -- no token, store unreachable, registry malformed.
+#                                   The check is DEAD and that is what red now means.
+#   1  ESCALATED                 -- a finding reported ESCALATION_REPORTS times without
+#                                   changing. NOT a severity judgement: it means THE
+#                                   REPORTING CHANNEL IS NOT WORKING, which is a fact about
+#                                   the channel and therefore a uniform rule.
+#   2  usage error
+#
+# gone-ids-drift already worked this way -- it detects, opens a PR, and fails only when a
+# human must judge. This makes the outlier match the case that got it right.
 #
 # Requires: bash, curl, jq. Env:
 #   SUPABASE_ACCESS_TOKEN  (or ~/.supabase/access-token)
@@ -60,11 +78,15 @@ REF="${SUPABASE_PROJECT_REF:-crtrjoescntlcjiwdtrt}"
 # It was 45 when the rule measured distance from the newest sibling. As an ABSOLUTE age, 45
 # days would flag nearly everything and rebuild the noise item 196 removed.
 STALE_DAYS="${STALE_DAYS:-180}"
+
+# Three weekly reports. A POLICY NUMBER, NOT A DERIVED ONE -- re-decide rather than tune.
+ESCALATION_REPORTS="${ESCALATION_REPORTS:-3}"
+CHECK_NAME="secret-divergence"
 TOKEN="${SUPABASE_ACCESS_TOKEN:-$(cat "${HOME}/.supabase/access-token" 2>/dev/null || true)}"
 
 if [[ -z "${TOKEN}" ]]; then
-  echo "ERROR: no access token (set SUPABASE_ACCESS_TOKEN or ~/.supabase/access-token)" >&2
-  exit 2
+  echo "CANNOT RUN: no access token (set SUPABASE_ACCESS_TOKEN or ~/.supabase/access-token)" >&2
+  exit 1
 fi
 
 api()     { curl -sS -H "Authorization: Bearer ${TOKEN}" "https://api.supabase.com/v1/projects/${REF}$1"; }
@@ -149,6 +171,10 @@ updated_of() {
 }
 
 DIVERGENCE=0
+# Findings, as key<TAB>summary. THE KEY MUST BE STABLE ACROSS RUNS -- no timestamps and no
+# measured values in it, or every run creates a new row, report_count never rises, and the
+# age escalation is silently disabled while looking like it works.
+FINDINGS=()
 
 echo "=================================================================="
 echo " Secret divergence check — project ${REF}"
@@ -164,6 +190,7 @@ for row in "${COPIES[@]}"; do
     # ABSENT IS NOT "UNCHANGED". A registered copy that has vanished from its store is a
     # finding, and the old code could only see this as one half of a pair.
     printf "  ?  %-34s MISSING from store  (role %s, expected %s…)\n" "$ref" "$role" "$pin"
+    FINDINGS+=("missing:${ref}"$'\t'"${ref} is registered but absent from its store (role ${role})")
     DIVERGENCE=1
   elif [[ "${got:0:$n}" == "$pin" ]]; then
     printf "  OK %-34s %s…  %s / %s\n" "$ref" "$pin" "$role" "$generation"
@@ -172,6 +199,7 @@ for row in "${COPIES[@]}"; do
     printf "        expected  %s…  (%s / %s)\n" "$pin" "$role" "$generation"
     printf "        found     %s…  (updated %s)\n" "${got:0:$n}" "$(updated_of "$store" "$name")"
     printf "        → the value changed, or it was rotated without updating the pin here.\n"
+    FINDINGS+=("pin:${ref}"$'\t'"${ref} does not match its pin (${role}/${generation}); rotated without updating the registry, or changed")
     DIVERGENCE=1
   fi
 done
@@ -219,8 +247,61 @@ echo "  verify by: printf '%s' '<working resend key>' | sha256sum  =="
 echo "             $(digest_of edge RESEND_API_KEY)"
 echo
 
-if (( DIVERGENCE )); then
-  echo "RESULT: DIVERGENCE FOUND — reconcile the flagged secrets."
+# ── REPORTER: write findings, resolve anything that has cleared ──────────────────────
+#
+# NEVER FAILS ON A FINDING. Findings reach a human through the daily monitor email, which
+# is already read and already carries conditional sections.
+sql_lit() { printf "%s" "$1" | sed "s/'/''/g"; }
+
+if (( ${#FINDINGS[@]} )); then
+  keys=""
+  for f in "${FINDINGS[@]}"; do
+    key="${f%%$'\t'*}"; summary="${f#*$'\t'}"
+    keys="${keys}${keys:+,}'$(sql_lit "$key")'"
+    run_sql "INSERT INTO public.standing_check_findings (check_name, finding_key, summary, status)
+             VALUES ('$(sql_lit "$CHECK_NAME")','$(sql_lit "$key")','$(sql_lit "$summary")','open')
+             ON CONFLICT (check_name, finding_key) DO UPDATE SET
+               last_seen = now(),
+               report_count = public.standing_check_findings.report_count + 1,
+               summary = EXCLUDED.summary,
+               status = 'open', resolved_at = NULL;" > /dev/null
+  done
+  # Anything previously open and no longer reported has cleared.
+  run_sql "UPDATE public.standing_check_findings SET status='resolved', resolved_at=now()
+           WHERE check_name='$(sql_lit "$CHECK_NAME")' AND status='open'
+             AND finding_key NOT IN (${keys});" > /dev/null
+else
+  run_sql "UPDATE public.standing_check_findings SET status='resolved', resolved_at=now()
+           WHERE check_name='$(sql_lit "$CHECK_NAME")' AND status='open';" > /dev/null
+fi
+
+echo
+echo "── Reporter ──────────────────────────────────────────────────────"
+ESCALATED="$(run_sql "SELECT finding_key, report_count FROM public.standing_check_findings
+                      WHERE check_name='$(sql_lit "$CHECK_NAME")' AND status='open'
+                        AND report_count >= ${ESCALATION_REPORTS} ORDER BY finding_key;" \
+             | jq -r '.[]? | "\(.finding_key) (reported \(.report_count)x)"')"
+OPEN_N="$(run_sql "SELECT count(*) AS n FROM public.standing_check_findings
+                   WHERE check_name='$(sql_lit "$CHECK_NAME")' AND status='open';" | jq -r '.[0].n // 0')"
+
+# ASSERTED, NOT OMITTED. An absent line would mean nobody asked.
+echo "  open findings: ${OPEN_N}"
+
+if [[ -n "$ESCALATED" ]]; then
+  echo
+  echo "  ESCALATED — reported ${ESCALATION_REPORTS}+ times and still open:"
+  printf '    %s\n' $ESCALATED
+  echo
+  echo "RESULT: ESCALATED. This red does NOT mean the finding is severe."
+  echo "        IT MEANS THE REPORTING CHANNEL IS NOT WORKING: this was reported"
+  echo "        ${ESCALATION_REPORTS} times and nothing changed. Act on the finding, or record a"
+  echo "        deliberate decision not to, which resolves it."
   exit 1
+fi
+
+if (( DIVERGENCE )); then
+  echo "RESULT: ${OPEN_N} finding(s) recorded for the monitor email. NOT a CI failure —"
+  echo "        a finding is not a broken check. Red here means cannot-run or escalated."
+  exit 0
 fi
 echo "RESULT: no divergence detected."

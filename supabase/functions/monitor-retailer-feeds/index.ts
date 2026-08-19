@@ -174,6 +174,30 @@ Deno.serve(async (req: Request) => {
     if (duErr) console.error("retailers_delivery_unknown read failed:", duErr);
     const deliveryUnknown = deliveryUnknownRows ?? [];
 
+    // ── STANDING CHECK FINDINGS. Added 19 August — work-list item 194. ──────────────
+    //
+    // Findings from detectors that no longer fail CI on a finding (currently
+    // secret-divergence). The detector reds only on cannot-run or escalation; the finding
+    // itself arrives here, in an email a human already reads.
+    //
+    // THIS IS PART OF THE SEND CONDITION, NOT JUST THE BODY, for exactly the reason the
+    // deliveryUnknown comment above already states:
+    //
+    //   "leaving it out of this test would reproduce the original defect one layer up:
+    //    detected, formatted, and never sent."
+    //
+    // A REPORTER SECTION IN AN EMAIL THAT DOES NOT SEND IS A REPORTER NOBODY READS, which
+    // is item 194's own failure mode one layer along. The whole point of moving findings
+    // off the red tick was that nobody was reading the red tick.
+    const { data: checkFindingRows, error: cfErr } = await supabase
+      .from("standing_check_findings")
+      .select("check_name, finding_key, summary, report_count, first_seen")
+      .eq("status", "open")
+      .order("report_count", { ascending: false });
+    // Same rule as above: an empty result and a broken query look identical downstream.
+    if (cfErr) console.error("standing_check_findings read failed:", cfErr);
+    const checkFindings = checkFindingRows ?? [];
+
     const now = Date.now();
 
     // 2. Import failures (fast signal). Read the per-retailer import status
@@ -264,7 +288,8 @@ Deno.serve(async (req: Request) => {
     // retailer with unrecorded terms is invisible to the feed checks above -- its feed
     // can be perfectly healthy -- so leaving it out of this test would reproduce the
     // original defect one layer up: detected, formatted, and never sent.
-    if (failures.length === 0 && stale.length === 0 && deliveryUnknown.length === 0 && !gateFellBack) {
+    if (failures.length === 0 && stale.length === 0 && deliveryUnknown.length === 0
+        && checkFindings.length === 0 && !gateFellBack) {
       // Everything healthy — no email, just return status
       return new Response(
         JSON.stringify({
@@ -272,6 +297,7 @@ Deno.serve(async (req: Request) => {
           checked: statuses.length,
           delivery_unknown: 0,
           // Asserted, not omitted: absent would mean nobody asked.
+          standing_check_findings: 0,
           gate_source: gateSource,
           gate_outcome: gateOutcome,
           statuses,
@@ -285,6 +311,14 @@ Deno.serve(async (req: Request) => {
     const subjectParts: string[] = [];
     if (failures.length > 0) subjectParts.push(`${failures.length} import failure${failures.length === 1 ? "" : "s"}`);
     if (stale.length > 0) subjectParts.push(`${stale.length} stale`);
+    if (checkFindings.length > 0) {
+      const escalated = checkFindings.filter((f) => f.report_count >= 3).length;
+      subjectParts.push(
+        escalated > 0
+          ? `${checkFindings.length} check finding${checkFindings.length === 1 ? "" : "s"} (${escalated} ESCALATED)`
+          : `${checkFindings.length} check finding${checkFindings.length === 1 ? "" : "s"}`,
+      );
+    }
     if (deliveryUnknown.length > 0) {
       subjectParts.push(`${deliveryUnknown.length} without delivery terms`);
     }
@@ -378,6 +412,32 @@ Check GitHub Actions and Supabase Edge Function logs.
         </td>
       </tr>`).join("");
 
+    // Item 194's reporter section. Findings arrive here because the detector no longer
+    // reds on them — see the send-condition note above for why this must not be body-only.
+    const checkFindingsSection = checkFindings.length > 0 ? `
+<h1 style="margin: 0 0 8px; font-family: Georgia, serif; font-size: 22px; color: #c0392b;">
+${checkFindings.length} standing check finding${checkFindings.length === 1 ? "" : "s"}
+</h1>
+<p style="margin: 0 0 20px; font-size: 14px; color: #4a4845;">
+These come from detectors that <strong>no longer fail CI on a finding</strong>, because a red tick could not
+distinguish "this check found something" from "this check is broken" — and the one that was working got
+ignored longer. A finding reported <strong>3 times</strong> and still open turns the detector red: that is not a
+judgement that the finding is severe, it means <strong>this channel is not working</strong>.
+Act on it, or record a deliberate decision not to, which resolves it.
+</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-bottom: 28px;">
+${checkFindings.map((f) => `
+<tr>
+  <td style="padding: 10px; border-bottom: 1px solid #e5e0d8; font-size: 14px;">
+    <strong>${escapeHtml(f.check_name)}</strong><br>
+    <span style="color:#4a4845;">${escapeHtml(f.summary)}</span>
+  </td>
+  <td style="padding: 10px; border-bottom: 1px solid #e5e0d8; font-size: 14px; text-align: right; white-space: nowrap; color: ${f.report_count >= 3 ? "#c0392b" : "#8a8680"};">
+    ${f.report_count >= 3 ? "<strong>ESCALATED</strong><br>" : ""}reported ${f.report_count}&times;
+  </td>
+</tr>`).join("")}
+</table>` : "";
+
     const deliverySection = deliveryUnknown.length > 0 ? `
 <h1 style="margin: 0 0 8px; font-family: Georgia, serif; font-size: 22px; color: #c0392b;">
 ${deliveryUnknown.length} active retailer${deliveryUnknown.length === 1 ? "" : "s"} without delivery terms
@@ -428,6 +488,7 @@ ${gateProbeError ? `<tr><td style="padding: 8px 10px; font-size: 13px; color: #6
 Find<span style="color: #c9a96e;">My</span>Basket — Feed Monitor</div>
 </td></tr>
 <tr><td style="padding: 24px 28px;">
+${checkFindingsSection}
 ${deliverySection}
 ${gateSection}
 ${failureSection}
