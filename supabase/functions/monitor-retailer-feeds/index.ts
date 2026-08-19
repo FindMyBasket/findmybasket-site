@@ -198,12 +198,27 @@ Deno.serve(async (req: Request) => {
     // off the red tick was that nobody was reading the red tick.
     const { data: checkFindingRows, error: cfErr } = await supabase
       .from("standing_check_findings")
-      .select("check_name, finding_key, summary, report_count, first_seen")
+      .select("check_name, finding_key, summary, report_count, first_seen, kind")
       .eq("status", "open")
       .order("report_count", { ascending: false });
     // Same rule as above: an empty result and a broken query look identical downstream.
     if (cfErr) console.error("standing_check_findings read failed:", cfErr);
-    const checkFindings = checkFindingRows ?? [];
+    const allCheckRows = checkFindingRows ?? [];
+
+    // FINDINGS trigger a send and escalate. COVERAGE does neither.
+    //
+    // A coverage row states a stable population a check cannot speak for -- one line, not per
+    // row. It is PRINTED because silence would read identically to "nothing is out of scope",
+    // and those are different facts (the same asserted-zero reasoning as delivery_unknown: 0).
+    //
+    // It must NOT cause a send, or the monitor emails every day to report a number that has not
+    // changed -- which is exactly the noise item 194 exists to prevent, arriving through item
+    // 194's own mechanism. IF THE COUNT MOVES, THE CHECK WRITES A kind='finding' ROW; the stable
+    // value is coverage, the delta is a finding.
+    //
+    // Same shape as gateSection below: rendered whenever an email is going out anyway.
+    const checkFindings = allCheckRows.filter((f) => f.kind !== "coverage");
+    const checkCoverage = allCheckRows.filter((f) => f.kind === "coverage");
 
     const now = Date.now();
 
@@ -305,6 +320,9 @@ Deno.serve(async (req: Request) => {
           delivery_unknown: 0,
           // Asserted, not omitted: absent would mean nobody asked.
           standing_check_findings: 0,
+          // Coverage is asserted even when healthy: its absence would read as "nothing is out
+          // of scope", which is a different fact from "nothing is wrong".
+          check_coverage: checkCoverage.map((c) => c.summary),
           gate_source: gateSource,
           gate_outcome: gateOutcome,
           statuses,
@@ -421,6 +439,17 @@ Check GitHub Actions and Supabase Edge Function logs.
 
     // Item 194's reporter section. Findings arrive here because the detector no longer
     // reds on them — see the send-condition note above for why this must not be body-only.
+    // Coverage: one line each, no escalation styling, no action demanded.
+    const coverageSection = checkCoverage.length > 0 ? `
+<div style="font-size: 11px; text-transform: uppercase; color: #8a8680; letter-spacing: 0.1em; margin-bottom: 8px;">Check coverage</div>
+<table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-bottom: 24px; background: #faf8f4; border-radius: 8px;">
+${checkCoverage.map((c) => `
+<tr>
+  <td style="padding: 8px 10px; font-size: 13px; color: #6e6a64;">${escapeHtml(c.check_name)}</td>
+  <td style="padding: 8px 10px; font-size: 13px; color: #4a4845; text-align: right;">${escapeHtml(c.summary)}</td>
+</tr>`).join("")}
+</table>` : "";
+
     const checkFindingsSection = checkFindings.length > 0 ? `
 <h1 style="margin: 0 0 8px; font-family: Georgia, serif; font-size: 22px; color: #c0392b;">
 ${checkFindings.length} standing check finding${checkFindings.length === 1 ? "" : "s"}
@@ -496,6 +525,7 @@ Find<span style="color: #c9a96e;">My</span>Basket — Feed Monitor</div>
 </td></tr>
 <tr><td style="padding: 24px 28px;">
 ${checkFindingsSection}
+${coverageSection}
 ${deliverySection}
 ${gateSection}
 ${failureSection}
