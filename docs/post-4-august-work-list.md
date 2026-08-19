@@ -19068,6 +19068,12 @@ is not the same thing as an absence of work.
 **Raised:** 19 August 2026 · **A WITHDRAWAL, not a qualification.** · **And it corrects an item
 number: this is item 119, not 154.**
 
+> **A MID-WEEK READING OF A WEEKLY AGGREGATE IS NOT A LOW VALUE. IT IS MOST OF A VALUE THAT HAS
+> NOT HAPPENED YET.**
+>
+> **Three noisy points did not become a collapse. A fourth point that was arithmetic got read as
+> data.**
+
 **Item 119** — *"Three counts of one event, and the question is which one is the denominator"* —
 recorded GA4 capture against the server-side count as **65%, 52%, 34%, 1.4%**, and called the
 *"monotonic collapse of that ratio… a defect worth its own investigation"*.
@@ -19087,18 +19093,20 @@ recorded GA4 capture against the server-side count as **65%, 52%, 34%, 1.4%**, a
 
 **The description of 20 July to 3 August survives. "Capture is falling" does not.**
 
-#### AN INCOMPLETE WEEK COUNTED AS A DATA POINT IS WHAT MANUFACTURED THE TREND
+#### NOT TOO FEW POINTS — A WRONG ONE
 
-**Not too few points — a wrong one.** Three real readings wobbling between 34% and 65% look like
-noise. **Adding a partial week as though it were complete turns noise into a collapse**, because
-a mid-week reading of a weekly aggregate is not a low value: it is *most of a value that has not
-happened yet*.
+Three real readings wobbling between 34% and 65% look like **noise**. Adding a partial week as
+though it were complete turns that noise into a **collapse**, and it does so with a value that
+was never a measurement of anything.
 
 > **THE SAME ERROR WAS AVAILABLE TODAY AND WAS AVOIDED BY LUCK OF TIMING RATHER THAN BY A RULE.**
-> Week 08-17 currently reads **1 GA4 session and 0 capture**, and every table in item 228
-> excludes it — but only because it was obviously absurd, not because anything enforced it.
+> Week 08-17 currently reads **1 GA4 session and 0% capture**, and every table in item 228
+> excludes it — **but only because it was obviously absurd, not because anything enforced it.**
 >
-> **A partial week is not obviously absurd once it is a few days old.**
+> **A partial week stops being obvious once it is a few days old.** At 1 session it is
+> unmissable; at four days it is simply a slightly low week.
+>
+> **No rule caught it either time, which is the argument for one** — see item 230.
 
 It belongs beside item 195's family — `--limit 8` read as *"eight days"*, `left(name,44)` read as
 *"two products"* — with a distinct mechanism: **there the bound was on how much was looked at;
@@ -19132,6 +19140,163 @@ both weeks. With twelve weeks of AWIN history around it:
 > only denominator supporting a conclusion is **AWIN's own transactions against AWIN's own
 > clicks** — one source, one population — and that is the ratio that collapsed.
 
-**Item 119 already recorded the first half of this**, citing `platform_changes` id 34: *"GA4
-outbound-click columns are a client-capture ratio, not a consent rate."* **The caveat was written
-down and the trend was drawn anyway** — item 207's family, in the same item as its own warning.
+#### THE CAVEAT WAS IN THE ITEM THAT DREW THE TREND
+
+**Item 119 already recorded the first half of this.** It cites `platform_changes` id 34 verbatim:
+
+> *"GA4 outbound-click columns are a **client-capture ratio, not a consent rate**."*
+
+**And then drew a trend from that ratio anyway, four paragraphs later.**
+
+> **SIX WEEKS. HOURS. THE SAME PAGE.**
+>
+> | | the lesson | how long it survived |
+> |---|---|---|
+> | item 191 | `secret-divergence-check.sh` warning that a permanently-red check stops being read | **six weeks**, then it went permanently red |
+> | item 207 | the E3 filter and the cross-product set | **hours** |
+> | **here** | *"a client-capture ratio, not a consent rate"* | **four paragraphs** |
+>
+> **The interval is collapsing, and the third instance is the one that should worry.** The caveat
+> and the violation are in the same item, by the same author, in the same sitting.
+>
+> **CITING A LIMITATION READS AS HAVING HANDLED IT, WHICH IS WHAT MAKES THE NEXT PARAGRAPH FEEL
+> SAFE TO WRITE.** The citation does the psychological work of the caveat without doing any of
+> its analytical work — and it does that work *better* the more precisely it is quoted.
+
+---
+
+### 230. Mark incomplete weeks structurally — proposed
+
+**Raised:** 19 August 2026, out of item 229 · **PROPOSED, NOT BUILT. Robbie decides the shape.**
+
+**A weekly series should mark incomplete weeks structurally rather than relying on a reader
+noticing.** No rule caught the partial week in item 119, and no rule caught it today — today was
+caught by the value being absurd rather than by anything enforcing it.
+
+#### IT IS SEVEN TABLES, NOT THREE
+
+| table | columns | marks completeness |
+|---|---:|---|
+| `metrics_ga4_weekly` | 11 | **no** |
+| `metrics_awin_weekly` | 23 | **no** |
+| `metrics_quality_weekly` | 26 | **no** |
+| `metrics_retailer_quality_weekly` | 13 | **no** |
+| `metrics_brand_spotlight_weekly` | 10 | **no** |
+| `metrics_rakuten_weekly` | 6 | **no** |
+| `metrics_social_weekly` | 5 | **no** |
+
+**None of them can distinguish a quiet week from an unfinished one.**
+
+#### THE OPTIONS
+
+| | change | reaches a reader who is not looking for it? |
+|---|---|---|
+| **A — `week_complete` column** | 7 × `ALTER`, one backfill, each writer sets it | **yes — it appears in `SELECT *`** |
+| B — a `*_complete` view per table | one migration, no writer changes | **no** — only whoever remembers the view |
+| C — a shared `is_complete_week()` function | one function, no schema change | **no** — entirely opt-in |
+
+#### RECOMMENDED: A, AND THE REASON IS WHO MADE THE MISTAKE
+
+> **THE ERROR WAS A READER'S, NOT A WRITER'S.** Item 119's author had the data in front of them
+> and read a partial row as a measurement. **I did the same today and was saved by the value
+> being absurd.**
+>
+> **So the fix has to change what a reader sees by default, not what is available if they
+> remember to ask for it.** A view and a function are both correct and both opt-in — and an
+> opt-in guard against a reading error is a guard aimed at the wrong person.
+
+**A column named `week_complete` reading `false` is in the result set**, in the same glance that
+produced the mistake.
+
+**Backfill is exact and computable now:** `week_start + 7 <= current_date`.
+
+**Self-correcting.** Every puller already upserts on its natural key and re-pulls earlier weeks,
+so a week written mid-run as `false` flips to `true` on the next run without special handling.
+
+**And its failure direction is safe.** A puller that stops running leaves its latest week marked
+incomplete forever — **excluded rather than wrongly included**, which is the right way round for
+a flag whose whole purpose is to stop a partial value being read as a real one.
+
+#### WHAT IT DOES NOT FIX
+
+**It does not stop anyone charting a `false` row.** Nothing does, short of removing the row —
+which would cost the operational visibility of watching a week fill up.
+
+> **THE CLAIM IS NARROW AND SHOULD STAY NARROW: it makes the incompleteness VISIBLE at the moment
+> of reading.** Item 119's series would have carried a `false` beside the 1.4%, and that is the
+> whole of the intervention.
+
+---
+
+### 231. `week_complete`, built — and a trigger rather than seven writers
+
+**Raised:** 19 August 2026 · **BUILT on all seven weekly metrics tables.** · **Robbie's decision:
+option A.**
+
+#### THE DECIDING ARGUMENT, KEPT
+
+> **THE ERROR WAS A READER'S, NOT A WRITER'S**, so the fix changes what a reader sees by default
+> rather than what is available on request. **An opt-in guard against a reading error is aimed at
+> the wrong person.**
+
+#### AND THE IMPLEMENTATION CHANGED ON THE SAME REASONING
+
+The plan was to set the flag in each of the seven pullers. **That is seven places to forget, and
+seven places for a new puller to be written without it.**
+
+> **NOTHING WOULD HAVE DETECTED THE OMISSION.** A `NULL` flag reads as *"not known to be
+> incomplete"* — **which is the exact ambiguity the column exists to remove**, reintroduced by the
+> mechanism meant to remove it.
+
+**So it is a `BEFORE INSERT OR UPDATE` trigger and one function.** A trigger cannot be forgotten
+by a writer that does not know about it, and `week_complete` is now `NOT NULL` on all seven —
+which the `ALTER` itself proved, since it fails on a single null row.
+
+**It also makes the flag mean what the comment says: the state when the row was LAST WRITTEN**,
+not at read time. Those differ, and the write-time reading is the useful one — *the process that
+produced these numbers ran before the week ended* is the fact that invalidates them.
+
+#### ASSERTED, NOT TRUSTED
+
+The backfill is exactly computable, so the migration **asserts its own result** and raises rather
+than reporting success:
+
+```
+every week ending before today   -> week_complete = true    (else EXCEPTION)
+the week in progress             -> week_complete = false   (else EXCEPTION)
+```
+
+**And the trigger was tested by trying to defeat it**, in both directions — writing `false` onto
+a settled week and `true` onto the current one:
+
+```
+2026-07-20   trigger overruled false -> true   OK
+2026-08-17   trigger overruled true  -> false  OK
+```
+
+*A guard that has never been shown to overrule anything is not known to guard.*
+
+#### THE NARROW CLAIM, VERBATIM IN THE COLUMN COMMENT
+
+> **IT DOES NOT STOP ANYONE CHARTING A `false` ROW.** Item 119's series would have carried a
+> `false` beside the 1.4%, and **that is the whole of the intervention.**
+
+The comment says so in the schema, because a reader meeting `week_complete` will otherwise assume
+it guards more than it does:
+
+> *"WHAT THIS FLAG DOES NOT DO: it does not filter anything, it does not stop a false row being
+> charted, and NOTHING ENFORCES IT… Treating it as a guarantee that partial weeks are excluded is
+> worse than not having it, because it moves the reader's caution into the schema where it does
+> not exist."*
+
+**A flag believed to exclude bad weeks is more dangerous than no flag**, and that sentence is in
+the database rather than only here.
+
+#### THE FAILURE DIRECTION
+
+**Self-correcting**: every puller upserts on its natural key and re-pulls earlier weeks, so a row
+written mid-week flips to `true` on the next run with no special handling.
+
+**And a stalled puller leaves its latest week `false` forever — excluded rather than wrongly
+included**, which is the right way round for a flag whose purpose is to stop a partial value being
+read as a real one.
