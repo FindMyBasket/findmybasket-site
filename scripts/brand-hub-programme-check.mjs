@@ -42,7 +42,13 @@ const sb = async (path, init) => {
   const r = await fetch(`${SB}/rest/v1/${path}`,
     { ...init, headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}`, 'Content-Type': 'application/json', ...(init?.headers ?? {}) } });
   if (!r.ok) { console.error(`CANNOT RUN: supabase ${r.status} on ${path.split('?')[0]}`); process.exit(1); }
-  return r.status === 204 ? null : r.json();
+  // AN EMPTY BODY IS A SUCCESS, NOT A PARSE ERROR. `Prefer: return=minimal` answers 201 with no
+  // body, and calling .json() on that throws "Unexpected end of JSON input" -- which crashed the
+  // first live run AFTER it had already produced the correct answer. The detection was right and
+  // the recording killed it, so the run exited non-zero and looked like cannot_run when it was a
+  // bug in the writer. Read the text first and only parse when there is something to parse.
+  const body = await r.text();
+  return body ? JSON.parse(body) : null;
 };
 
 const hubs = await sb('brand_hubs?select=slug,body_html,offer&limit=1000');
