@@ -18427,3 +18427,88 @@ page's own instruction.
 30 July while still `active = true`, because its programme had closed — so its flip required no
 copy change. **The right rule remains `active = true` AND the programme still pays**, and the
 comment now says the table and the list agreeing at 11 is a coincidence rather than the rule.
+
+---
+
+### 222. I asked for a limit and the server ignored it
+
+**Raised:** 19 August 2026, first CI run of item 219 · **FIXED. The wrong number was plausible,
+which is the dangerous kind.**
+
+The first CI run reported **39 published ASINs out of scope**. The SQL run minutes earlier had
+said **35**.
+
+**Cause:** the script asked PostgREST for `limit=10000`. **PostgREST returned 1000** — its own
+cap, applied silently, no error, no header the caller was reading. The map has **1004 rows**, so
+**four went missing**, four published products appeared to have no map row, and each was counted
+`out_of_scope`.
+
+```
+35 + 4 = 39
+```
+
+> **NOTHING LOOKED BROKEN.** 39 is a perfectly plausible number. There is no threshold it
+> crosses, no assertion it violates, and no shape to it that invites a second look. **It was
+> caught only because the same figure had been measured a different way minutes earlier and
+> disagreed.**
+
+#### THE SHARPER EDGE ON ITEM 195's SHAPE
+
+Item 195 recorded *the edge of the sample read as the edge of the data*, from `--limit 8` and
+`left(name,44)` — **bounds I chose and then forgot I had chosen.**
+
+> **HERE I STATED THE BOUND AND THE SERVER IGNORED IT.** `limit=10000` was not a bound I forgot;
+> it was a bound I set *specifically to avoid this*, and it was silently overridden by a smaller
+> one I did not know about.
+>
+> **ASKING FOR A LIMIT IS NOT THE SAME AS RECEIVING ONE.** A caller that reasons about the limit
+> it requested is reasoning about a number the server never agreed to.
+
+#### THE FIX IS AN ASSERTION, NOT A BIGGER LIMIT
+
+Raising the limit would have worked until the table passed the next cap. The read now **pages
+until a short page arrives** and then **asserts the total against the table's own count**:
+
+```
+map rows read: 1004 of 1004
+in scope 449 | findings 0 | 35 cannot be re-derived
+```
+
+**A mismatch is `cannot_run`, not a quietly smaller answer** — because a truncated read and a
+smaller table are indistinguishable downstream, which is item 22's distinction reaching the data
+layer.
+
+#### THE REGISTRY'S UNCOMPARABLE COPIES — HOW MANY EXIST
+
+Item 220 registered `SUPABASE_SERVICE_KEY` as a known copy that **cannot** be digest-compared.
+Asked how many others exist, the answer is **it was already a category with a member, and there
+are at least three**:
+
+| copy | stores | why uncomparable |
+|---|---|---|
+| **service-role key** | Vault, edge, **GitHub Actions** | Actions secrets are write-only |
+| **Resend key** | Auth SMTP `smtp_pass`, edge `RESEND_API_KEY` | different endpoint, hashing unverified |
+| **AWIN key** | edge `AWIN_API_KEY`, **GitHub Actions `AWIN_API_KEY`** | Actions secrets are write-only |
+
+> **A REGISTRY WITH ONE ACKNOWLEDGED GAP IS DIFFERENT FROM ONE WITH SEVERAL UNACKNOWLEDGED**, and
+> this was the latter. The Auth SMTP pair showed the category already existed; the other two were
+> simply never written down.
+
+**The `UNCOMPARABLE` list is now the honest half of the registry** — it does not make those
+copies checkable, and it stops the file implying they do not exist.
+
+#### AND THE CI CLAIM, PRECISELY
+
+**It runs green in CI on dispatch, with the real secret** — `map rows read: 1004 of 1004`, exit 0.
+**The scheduled run has not happened**; that is Sunday 07:00 UTC and is a separate claim. *Running
+by hand, running in CI on dispatch, and running on its cron are three different assertions and
+only two are now evidenced.*
+
+#### A COUPLING I SHOULD NOT HAVE MADE
+
+**This fix rode into the Atelier De Glow copy PR**, because I was on that branch when I found it.
+**That is the coupling item 217 recorded a day earlier** — restoring or fixing one thing inside a
+change about another. It was two reviewed changes rather than a day's accumulated work, so the
+cost was low; **the point is that the rule was known and I did it anyway**, which is item 207's
+family again and the reason the PR title had to be amended rather than left describing half its
+contents.
