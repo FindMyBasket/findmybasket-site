@@ -18736,3 +18736,107 @@ one relationship" does not quite exist here — what exists is a *table* used tw
 changes, no `active` flip. **That is exactly why nothing detected it**: brand relationships end
 with no database event at all, and the only observable is an outbound link quietly changing
 where it lands.
+
+---
+
+### 225. Corrected, and a proposed check that must not click the links it checks
+
+**Raised:** 19 August 2026 · **CORRECTIONS APPLIED. The check is PROPOSED, not built.**
+
+#### WHAT WAS CORRECTED
+
+**Robbie's decision: keep and correct, past tense.** The editorial and the eight comparison links
+are real value, the page is an internal orphan so nothing depends on it, and Abib remains
+comparable at 173 products across two retailers. *Deleting 6,364 words and unmeasured search
+traffic is not reversible once the URL 404s.*
+
+| | before | after |
+|---|---|---|
+| AWIN links | **5**, all to `closedMerchant.html` | **0** |
+| `rel="sponsored"` | 5 | **0** |
+| `/brands/abib` links | 1 | **4** |
+| product links | 8 | **8** |
+| CTA | *"View all 147 Abib products"* | *"View all Abib products"* |
+| disclosure | *"Abib **is** a brand partner"* | *"Abib **was** a brand partner… that partnership has ended"* |
+
+**THE LINK TEXT MOVED WITH THE HREF, AND THAT WAS THE WHOLE CARE OF IT.** All five anchors
+promised the brand's own store — *"at their own store"*, *"Shop the heartleaf line at Abib"*,
+*"direct from Abib"*.
+
+> **REPOINTING THOSE HREFS AT `/brands/abib` WITHOUT REWRITING THE TEXT WOULD HAVE SWAPPED ONE
+> FALSE CLAIM FOR ANOTHER.** A link reading *"their own store"* that lands on ours is not a
+> correction.
+
+**One was unlinked rather than repointed.** *"These newest lines are easiest to find direct from
+Abib"* is a statement of fact, still true — the brand's store exists, only the programme closed —
+and pointing it at our brand page would make it **false**, because those newest lines are exactly
+the ones our retailers do not carry.
+
+**And the count was removed rather than refreshed.** 147 against 173 live; a fresher number goes
+stale the same way. **No count is the durable answer**, per the frozen-state rule.
+
+*Incidentally proven: `fmb_revalidate_paths` works end to end. Item 189 listed the Vercel side of
+`REVALIDATE_SECRET` as unverified because proving it needed a side effect — this change needed
+that side effect anyway.*
+
+#### THE MECHANISM IS THE FINDING AND IT IS BIGGER THAN ABIB
+
+> **A BRAND RELATIONSHIP ENDS WITH NO DATABASE EVENT.** No retailer leaves, no `active` flip, no
+> catalogue change. **The only observable is an outbound link quietly changing where it lands —
+> and it lands on an HTTP 200.**
+
+**The departure doctrine correctly does not cover this**, and that is precisely why nothing
+detected it.
+
+#### THE PROPOSED CHECK — AND IT SHOULD NOT RESOLVE THE LINKS
+
+The obvious design is an outbound-link resolution probe: follow each affiliate link, match the
+final URL against `awin1.com/closedMerchant.html`, report. **The closed-merchant URL is a
+specific, matchable string and that part is sound.**
+
+> **BUT RESOLVING AN AFFILIATE LINK REGISTERS A CLICK.** A weekly probe over every brand hub
+> manufactures clicks that can never convert, in the same account whose click and conversion
+> figures this project already pulls into `metrics_awin_weekly`. **The check would corrupt the
+> data the project reports on, and degrade the publisher metrics a network judges us by.**
+
+**So ask the question directly instead of inferring it from a redirect:**
+
+| | |
+|---|---|
+| **the question** | *is this programme still joined?* |
+| **not** | *where does this URL land?* |
+| **source** | `GET /publishers/{pub}/programmes?relationship=joined` — already used by the Cohorted probe |
+| **method** | extract every `awinmid` from `brand_hubs.body_html` and `offer.cta_url`; any merchant id not in the joined list is a **finding** |
+| **clicks generated** | **none** |
+
+**In item 194's form**, with `finding_key = 'hub:{slug}:mid:{awinmid}'` — stable, no timestamp, no
+measured value, so `report_count` rises and the escalation works.
+
+- `ok` — every linked merchant is still joined
+- `findings` — a hub links to a merchant we are no longer joined to
+- `coverage` — *"N brand hubs, M outbound merchant links checked"*
+- `cannot_run` — the programmes endpoint is unreachable or the token is missing
+
+**A resolution probe stays worth having as a rare manual confirmation** — one link per merchant,
+by hand, when a finding needs corroborating. It is the difference between a diagnostic somebody
+runs and a standing check that runs itself.
+
+#### iLĀPOTHECARY IS WHY IT IS WORTH BUILDING
+
+| | Abib | iLĀPOTHECARY |
+|---|---|---|
+| `body_html` | 6,364 chars *(now 5,568)* | **0 — empty** |
+| offer | none | **code FMB15 + affiliate CTA** |
+| disclosure | partner claim, **no commission claim** | **explicit: "We may earn affiliate commission"** |
+| live catalogue products | 173 across 2 retailers | **0** |
+| link today | closed merchant | **resolves normally** |
+
+**They share a table and diverge in almost every field that matters — a table used two ways
+rather than a template.**
+
+> **THE SHAPE IS NOT SHARED. THE RISK IS EXACT.** Both hardcode a disclosure asserting a live
+> relationship and both depend on a programme staying open, and **nothing watches either**.
+>
+> **iLĀPOTHECARY carries the explicit commission claim that Abib never did.** If its programme
+> closes, that page keeps saying *"we may earn affiliate commission"* over a link to a
+> closed-merchant page — **a false commercial claim, failing silently, with an HTTP 200.**
