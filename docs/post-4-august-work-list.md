@@ -18903,8 +18903,15 @@ be free of side effects.
 
 An empty joined-programmes response is **far more likely a broken read than nothing being
 joined**, and treating it as data would report **every hub as closed** on the first bad response.
-That is `cannot_run`, not a finding — item 22's distinction, in the one place where getting it
-wrong produces a maximally alarming false positive.
+That is `cannot_run`, not a finding.
+
+> **THE UNREADABLE-VERSUS-EMPTY DISTINCTION, IN A NEW PLACE.** Item 22 drew it for a shopper —
+> *"Amazon doesn't stock this"* against *"we couldn't reach Amazon"*. Item 219 drew it for a
+> table — a map that cannot be read is not a map with no rows. Item 222 drew it for a paged read
+> — a truncated page is not a shorter table.
+>
+> **Here it is a third-party API, and it is the instance where getting it wrong is loudest**: an
+> empty list does not quietly under-report, it reports **every** relationship as ended at once.
 
 #### TESTED AGAINST A CASE THAT NO LONGER EXISTS
 
@@ -18976,3 +18983,12 @@ belongs in a sequence rather than a report.*
 >
 > **All three copies of `REVALIDATE_SECRET` agree** — vault, edge, and the Vercel env that
 > verifies it — which item 189 could only infer from their timestamps.
+
+**PROVEN INCIDENTALLY, WHICH IS WHY IT NEVER NEEDED ITS OWN SEQUENCE.** Item 189 was right that
+the proof required a side effect and wrong that the side effect needed scheduling: **the first
+change that legitimately had to revalidate a page proved it for free.**
+
+> **A VERIFICATION THAT REQUIRES A SIDE EFFECT SHOULD WAIT FOR WORK THAT WANTS THAT SIDE EFFECT,
+> RATHER THAN BOOKING TIME OF ITS OWN.** Scheduling it separately would have meant performing a
+> revalidation for no reason except to watch it — the same shape as item 226's probe, one layer
+> down: *doing the thing in order to observe the thing.*
