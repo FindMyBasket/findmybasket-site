@@ -57,7 +57,10 @@ import { selectCandidate, resolveAcrossProducts } from '../lib/asin-selection.ts
 
 const CHECK_NAME = 're-derive-asins';
 const SB = 'https://crtrjoescntlcjiwdtrt.supabase.co';
-const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.FMB_PUBLISHABLE_KEY
+// SUPABASE_SERVICE_KEY is the secret seven workflows already use -- no new credential was
+// added for this check. Adding one would have created a FOURTH copy of the service-role
+// credential, which is the divergence class item 196 exists to detect.
+const KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
   || 'sb_publishable_BUTEIDo6KFDkljihtGmLdQ_OkHIlF8h';
 const WRITE = process.argv.includes('--write-findings');
 

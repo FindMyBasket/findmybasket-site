@@ -143,6 +143,25 @@ COPIES=(
   "edge:SUPABASE_SERVICE_ROLE_KEY|service_role|secret_key|77a2bb9723c4"
 )
 
+# ── A THIRD COPY EXISTS AND CANNOT BE PINNED. Added 19 August -- work-list item 220.
+#
+# `SUPABASE_SERVICE_KEY` is a GitHub Actions secret used by SEVEN workflows (awin-weekly-pull,
+# gone-ids-drift, refresh-debenhams, sync-adg-feed, sync-bb-feed, ga4-weekly-pull, and the
+# read-only probes). It is a third copy of the service-role credential and it was NOT in this
+# registry until now.
+#
+# IT CANNOT BE DIGEST-COMPARED: Actions secrets are write-only and return neither value nor
+# digest, as the header of this file already states. So it cannot join COPIES.
+#
+# BUT THE REGISTRY'S STATED PURPOSE IS "WHICH SECRET LIVES WHERE", AND IT WAS RECORDING TWO OF
+# THREE STORES. An unregistered third copy is precisely the condition that made the original
+# divergence hard to reason about -- and the reason item 196 had to hash a key by hand to work
+# out which generation lived where. Recorded here as a known, uncomparable copy, exactly as the
+# Auth SMTP smtp_pass pair already is.
+UNCOMPARABLE=(
+  "gh-actions:SUPABASE_SERVICE_KEY|service_role|unknown generation — Actions secrets are write-only"
+)
+
 # ── Secrets that are legitimately static (config/URLs, provider keys that rarely
 #    rotate). Timestamp skew on these is expected and must NOT flag — otherwise
 #    the standing check goes permanently red and stops being read. Space list.
@@ -242,6 +261,10 @@ fi
 
 echo
 echo "── Not digest-comparable (manual check) ──────────────────────────"
+for row in "${UNCOMPARABLE[@]}"; do
+  IFS='|' read -r ref role why <<<"$row"
+  printf "  ~  %-34s %s — %s\n" "$ref" "$role" "$why"
+done
 echo "  Auth SMTP smtp_pass  vs  edge RESEND_API_KEY  — different endpoints;"
 echo "  verify by: printf '%s' '<working resend key>' | sha256sum  =="
 echo "             $(digest_of edge RESEND_API_KEY)"

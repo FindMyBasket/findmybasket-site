@@ -18289,3 +18289,74 @@ conflicts          0
 running it without a service-role key: `CANNOT RUN: REST 401 on amazon_asin_map`, exit 1. **An
 unreadable table and an empty one look identical downstream** — item 22's confusion, guarded
 here.
+
+---
+
+### 220. Zero findings by construction, and a third copy of the service-role key
+
+**Raised:** 19 August 2026 · **The CI loose end closed with no new secret. One finding fell out
+of closing it.**
+
+#### ZERO FINDINGS BY CONSTRUCTION IS NOT ZERO FINDINGS
+
+Item 219's first run reported **449 in scope, 0 findings**. **All 449 have exactly one
+candidate.**
+
+> **A CHECK THAT COULD NOT DISAGREE IS A DIFFERENT RESULT FROM A CHECK THAT AGREED, AND THE
+> FIRST RUN CANNOT DISTINGUISH THEM.**
+
+The rule *must* return `sole eligible candidate` for every one of them, so a green first run
+demonstrates that the check runs — **not that the published ASINs are right.** It will become a
+real result the first time a product has two barcode candidates, which today is zero published
+products and seven held ones.
+
+**Recorded because a later reader will meet "0 findings" and read it as verification.** It is
+coverage of a population that cannot currently fail.
+
+#### THE CI KEY NEEDED NO NEW SECRET, WHICH IS THE RIGHT ANSWER FOR A REASON
+
+The check reads `amazon_asin_map`, which the publishable key cannot. **`SUPABASE_SERVICE_KEY`
+already exists as a repo secret** and is used by seven workflows — `awin-weekly-pull`,
+`gone-ids-drift`, `refresh-debenhams`, `sync-adg-feed`, `sync-bb-feed`, `ga4-weekly-pull` and
+the read-only probes.
+
+> **ADDING A DEDICATED SECRET WOULD HAVE CREATED A FOURTH COPY OF THE SERVICE-ROLE CREDENTIAL** —
+> the exact divergence class item 196 exists to detect, manufactured by the person who had just
+> rebuilt the detector for it.
+
+**No credential had to change hands.** It is a workflow env line and one fallback in the script.
+
+#### AND IT SURFACED A THIRD COPY THAT WAS NOT REGISTERED
+
+`SUPABASE_SERVICE_KEY` is a **third store** holding the service-role credential, and it was
+**not in the `COPIES` registry** — whose stated purpose is *"which secret lives where"*.
+
+**It cannot be digest-compared.** GitHub Actions secrets are write-only and return neither value
+nor digest, which the script's own header already says. So it cannot be pinned.
+
+> **BUT "CANNOT BE COMPARED" IS NOT "SHOULD NOT BE RECORDED".** The registry was describing two
+> of three stores while claiming to describe where the secret lives.
+>
+> **An unregistered third copy is precisely the condition that made the original divergence hard
+> to reason about** — and the reason item 196 had to hash a key by hand to work out which
+> generation lived where.
+
+Now recorded as a known **uncomparable** copy, in the same section as the Auth SMTP `smtp_pass`
+pair, which has the same property for a different reason.
+
+**Its generation is unknown and cannot be determined from the value.** If it matters, the same
+technique item 196 used works: have CI classify its own secret's format — `eyJ` against
+`sb_secret_` — and print only the classification, never the value.
+
+#### THE RESTING STATE IS WHY THIS WAS A TASK AND NOT A DEFECT
+
+Before wiring, the check **reported `cannot_run` and exited 1** rather than returning an empty
+result.
+
+> **AN UNREADABLE TABLE AND A TABLE WITH NO ROWS LOOK IDENTICAL DOWNSTREAM** — item 22's
+> distinction. A check that silently reported "0 in scope, 0 findings" because it could not read
+> the map would have looked exactly like a healthy run, forever.
+
+**It failed correctly while incomplete**, which is what made this a loose end to close rather
+than a defect to fix — and it is the state item 191 is about: *a detector that cannot run is a
+detector nobody reads*, and one that says so is at least a detector somebody can fix.
