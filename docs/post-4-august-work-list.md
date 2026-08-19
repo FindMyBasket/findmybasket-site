@@ -18368,10 +18368,17 @@ detector nobody reads*, and one that says so is at least a detector somebody can
 **Raised:** 19 August 2026 · **FIXED. Atelier De Glow removed from both surfaces. The doctrine's
 step 5 gains the timing instruction step 6 already had.**
 
+> **A SWEEP THAT RUNS BEFORE THE EVENT IT IS SWEEPING FOR RECORDS THE TRUTH IT WAS RUN AGAINST.**
+> It produces a **conditional instruction with no trigger** — which reads as diligence and
+> behaves as a note-to-self.
+
 Atelier De Glow was flipped `active = false` on Saturday 16 August. **Its logo was still on the
 homepage on Tuesday**, and `about.html` still listed it and still claimed 12 retailers.
 
-#### NEITHER OF THE TWO OBVIOUS EXPLANATIONS IS RIGHT
+**Nothing in this was an oversight.** The sweep was correct, the surface was covered, and the
+comment describing what to do was correct, specific, and in the right file.
+
+#### NEITHER OBVIOUS EXPLANATION IS RIGHT
 
 **The strip IS in step 5's table of surfaces** — line 398, described precisely as *"hardcoded
 `<span class="hero-trust-card">` per retailer; not data-driven, does not read
@@ -18392,13 +18399,7 @@ bylines, counts and the point-in-time price pair"* (#322).
 **That instruction was correct, specific, in the right file — and had nothing attached to trigger
 it.**
 
-#### THE SHAPE
-
-> **A SWEEP THAT RUNS BEFORE THE EVENT IT IS SWEEPING FOR RECORDS THE TRUTH IT WAS RUN AGAINST.**
-> It produces a **conditional instruction with no trigger**, which reads as diligence and behaves
-> as a note-to-self.
-
-#### AND THE SAME LESSON WAS ALREADY LEARNED ONE STEP LATER IN THE SAME DOCUMENT
+#### WHAT MAKES IT STRUCTURAL RATHER THAN AN OVERSIGHT
 
 | | |
 |---|---|
@@ -18478,7 +18479,24 @@ in scope 449 | findings 0 | 35 cannot be re-derived
 smaller table are indistinguishable downstream, which is item 22's distinction reaching the data
 layer.
 
-#### THE REGISTRY'S UNCOMPARABLE COPIES — HOW MANY EXIST
+#### CAUGHT BECAUSE THE SAME FIGURE EXISTED TWICE BY DIFFERENT ROUTES
+
+**Second instance in two days**, after `matched_ean` (item 214): that surfaced only because item
+213 had measured the `6912` namespace minutes earlier, which made two map rows a contradiction
+rather than a curiosity. **This one surfaced only because the out-of-scope count had been
+computed in SQL before the script computed it.**
+
+> **NEITHER WAS FOUND BY A TEST, A REVIEW OR AN ASSERTION. BOTH WERE FOUND BY THE SAME NUMBER
+> ARRIVING TWICE ALONG DIFFERENT PATHS AND DISAGREEING.**
+
+**That is now the defence that keeps working when nothing else does** — and it is not a process
+anyone can follow deliberately, because you cannot compute everything twice. What you *can* do is
+**notice when a figure you already know turns up again, and check it against the version you
+already have** rather than accepting the newer one because it came from the newer thing.
+
+*Item 207's "second confrontation with the world", arriving by accident both times.*
+
+#### THE REGISTRY'S UNCOMPARABLE COPIES — A CORRECTION TO WHAT IT CLAIMED YESTERDAY
 
 Item 220 registered `SUPABASE_SERVICE_KEY` as a known copy that **cannot** be digest-compared.
 Asked how many others exist, the answer is **it was already a category with a member, and there
@@ -18490,9 +18508,13 @@ are at least three**:
 | **Resend key** | Auth SMTP `smtp_pass`, edge `RESEND_API_KEY` | different endpoint, hashing unverified |
 | **AWIN key** | edge `AWIN_API_KEY`, **GitHub Actions `AWIN_API_KEY`** | Actions secrets are write-only |
 
-> **A REGISTRY WITH ONE ACKNOWLEDGED GAP IS DIFFERENT FROM ONE WITH SEVERAL UNACKNOWLEDGED**, and
-> this was the latter. The Auth SMTP pair showed the category already existed; the other two were
-> simply never written down.
+> **ITEM 220 SAID "A THIRD COPY". THE HONEST STATE IS THREE UNCOMPARABLE COPIES, OF WHICH THE
+> REGISTRY ACKNOWLEDGED ONE.** That is a correction to yesterday's record rather than an addition
+> to it.
+>
+> **A registry with one acknowledged gap is a different object from one with several
+> unacknowledged.** The Auth SMTP pair proved the category already existed; the other two were
+> never written down — which is how a registry comes to describe less than it claims.
 
 **The `UNCOMPARABLE` list is now the honest half of the registry** — it does not make those
 copies checkable, and it stops the file implying they do not exist.
