@@ -18069,6 +18069,24 @@ untouched — last modified in PR #214.
 **Raised:** 19 August 2026 · **Caused, detected and fixed within minutes. Restored before the
 next scheduled run.**
 
+#### THE NEAR-MISS LEADS, BECAUSE IT WAS WORSE THAN THE OUTAGE
+
+The obvious repair was to read the 554 lines of the live function and re-send them. **I nearly
+did.**
+
+> **RE-SENDING 554 LINES BY HAND WOULD HAVE RISKED A SILENT TRANSCRIPTION ERROR IN LIVE CODE,
+> WHICH IS STRICTLY WORSE THAN THE OUTAGE IT WAS REPAIRING.**
+>
+> **An outage is loud and total. One wrong character in 28KB is neither** — it would have been
+> indistinguishable from the code that was reviewed, in a function nobody reads until it stops
+> emailing.
+
+**The repair with the better-looking optics was the more dangerous one**, and it was dangerous in
+exactly the direction this list keeps recording: a defect with no reviewable artefact, detectable
+only by something failing later.
+
+#### WHAT I ACTUALLY DID
+
 Deploying `monitor-retailer-feeds` required the file's **content inline**. I did not have 28KB of
 source to hand, and I called the deploy with:
 
@@ -18089,15 +18107,9 @@ that wired it.
 > The repository already held the correct file. **The deploy simply had no way to say "use
 > that".**
 
-#### THE NEAR-MISS INSIDE THE FIX IS THE WORSE HALF
+#### THE FIX REMOVES THE TRANSCRIPTION STEP RATHER THAN PERFORMING IT CAREFULLY
 
-The obvious repair was to read the 554 lines and re-send them. **I nearly did.**
-
-> **THAT WOULD HAVE RISKED A SILENT TRANSCRIPTION ERROR IN LIVE CODE, WHICH IS STRICTLY WORSE
-> THAN THE OUTAGE.** An outage is loud and total; a single mistyped character in a 28KB function
-> is neither, and it would have been indistinguishable from the code that was reviewed.
-
-**The fix was to remove the transcription step, not to perform it carefully:** a
+See item 218 for the general form. The repair was a
 `deploy-edge-function` workflow that runs `supabase functions deploy` **from the repository**, so
 the deployed artefact is by construction the file that was committed. Restored at version 9, 554
 lines, verified against the live function.
@@ -18115,3 +18127,53 @@ The restore went to `main` as **its own minimal PR** carrying only the workflow,
 from a previous session* and produced conflicts that looked like merge conflicts. Aborted, reset
 to the committed state, stash left intact. **Nothing was lost, and the lesson is that `stash` is
 a stack shared across sessions** — `stash@{0}` is not necessarily yours.
+
+---
+
+### 218. Never retype what a tool can move
+
+**Raised:** 19 August 2026 · **The general form, on its second instance.**
+
+> **THE ARTEFACT SHOULD BE WHAT WAS COMMITTED BY CONSTRUCTION, NOT BY CARE.**
+
+| | the transcription that was avoided | how |
+|---|---|---|
+| **`pg_get_functiondef`** | re-typing a Postgres function definition to move or re-create it | ask the database for its own definition |
+| **`deploy-edge-function`** (item 217) | re-typing 554 lines of a live edge function | deploy from the repository |
+
+**Both replace a human copy with a mechanical one**, and in both cases the mechanical route
+already existed and was simply not the obvious one at the moment of need.
+
+#### WHY THIS IS A RULE AND NOT A PREFERENCE
+
+**A transcription error is the worst-shaped defect this list records.** It has:
+
+- **no reviewable artefact** — the retyped version *looks* like the reviewed one
+- **no diff** — there is nothing to compare it against, because the copy *is* the new original
+- **no failure at the moment of the mistake** — it fails later, somewhere else
+
+**That is item 196's shape** (correct-looking, no line to point at) **arriving by hand rather than
+by platform drift.** Care does not defend against it: the reason to retype carefully is the same
+reason the error is invisible, which is that you believe you are copying accurately.
+
+#### THE TEST
+
+> **If a value, a definition or a file has to move, ask what already holds it and whether that
+> thing can hand it over directly.** The repository, the database, the API — one of them is
+> usually the source of truth, and reading from it costs less than proof-reading a copy.
+
+**When there is genuinely no such route, that is a finding about the tool**, and the fix is to
+build the route rather than to be careful once. Item 217's `deploy-edge-function` workflow was
+five minutes of work and removes the hazard permanently.
+
+#### AND A SMALLER HAZARD FROM THE SAME REPAIR
+
+`git stash pop` restored **a previous session's work** as what looked like a merge conflict.
+
+> **`stash@{0}` IS NOT NECESSARILY YOURS.** The stash is a stack shared across every session in
+> that working copy, and a `pop` after an unrelated `stash` takes the top of *that* stack, not
+> the thing you just put down. It surfaces as conflict markers in files you did not touch, which
+> reads as a merge problem and is not one.
+
+**Aborted, reset to the committed state, stash left intact.** Nothing was lost — and the reason
+nothing was lost is that the work was committed first.

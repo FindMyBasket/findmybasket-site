@@ -14,6 +14,13 @@
 //
 // Scheduled daily via pg_cron at 09:00 UTC.
 //
+// ── DEPLOYING THIS FILE ─────────────────────────────────────────────────────────────
+// Use the `Deploy an edge function` workflow, which deploys FROM THIS REPOSITORY.
+// DO NOT deploy by pasting the file's content: on 19 August 2026 that path overwrote this
+// function with the literal string "PLACEHOLDER" in production, and the obvious repair --
+// re-typing 554 lines -- would have risked a silent transcription error in live code, which
+// is worse than the outage. Work-list items 217 and 218: never retype what a tool can move.
+//
 // Required env vars (already set from send-routine-email):
 //   RESEND_API_KEY
 //   SUPABASE_URL
