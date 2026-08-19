@@ -167,4 +167,42 @@ const overlap = [...feedEans].filter((e) => ours.has(e));
 console.log(`  distinct barcodes in catalogue : ${ours.size}`);
 console.log(`  OVERLAP                        : ${overlap.length}`);
 console.log(`  as a share of the feed         : ${(overlap.length / feedEans.size * 100).toFixed(1)}%`);
+// ── 5. THE CONTROL ON A ZERO ──────────────────────────────────────────────────────
+//
+// A zero overlap from a comparison I wrote is exactly what item 184 says not to trust: it
+// cannot distinguish "these products are new to us" from "my barcode comparison is broken".
+// Two controls, both cheap:
+//   (a) does the SAME comparison find overlap for barcodes we know are in the catalogue?
+//   (b) are the feed's BRANDS ones we already carry? If yes, a zero barcode overlap is
+//       suspicious. If no, it is exactly what a genuinely new catalogue looks like.
+const someOurs = [...ours].slice(0, 5);
+const controlHits = someOurs.filter((e) => ours.has(e)).length;
+console.log(`\n── Control on the zero ───────────────────────────────────────────`);
+console.log(`  (a) self-check: ${controlHits}/5 known catalogue barcodes found by the same lookup`);
+
+const brandI = at('brand_name');
+const feedBrands = [...new Set(data.map((r) => (r[brandI] ?? '').trim()).filter(Boolean))];
+console.log(`  feed brands (${feedBrands.length}): ${feedBrands.join(', ').slice(0, 200)}`);
+const norm = (x) => String(x || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const ourBrands = new Set();
+for (let from = 0; ; from += 1000) {
+  const r = await fetch(`${SB}/rest/v1/products_active?select=brand&brand=not.is.null&limit=1000&offset=${from}&order=brand`,
+    { headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}` } });
+  if (!r.ok) break;
+  const page = await r.json();
+  for (const x of page) ourBrands.add(norm(x.brand));
+  if (page.length < 1000) break;
+}
+const brandHits = feedBrands.filter((b) => ourBrands.has(norm(b)));
+console.log(`  (b) feed brands we already carry: ${brandHits.length}/${feedBrands.length}` +
+  (brandHits.length ? ` — ${brandHits.join(', ')}` : ''));
+console.log(`\n  READING: ${brandHits.length === 0
+  ? 'zero brand overlap AND zero barcode overlap — a genuinely disjoint catalogue, consistent.'
+  : 'brands we carry but NO barcode overlap — investigate before trusting the zero.'}`);
+
+// Sample product names, so the feed's actual nature is visible rather than inferred.
+const nameI = at('product_name');
+console.log(`\n  sample products:`);
+for (const r of data.slice(0, 8)) console.log(`    ${(r[nameI] ?? '').slice(0, 70)}`);
+
 console.log(`\nRESULT: read-only probe complete. Nothing imported, nothing set active.`);
