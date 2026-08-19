@@ -17978,3 +17978,140 @@ whose writer ignored its name.
 > describing this table has said *"fired and declined both"* since the day it was written, and
 > the function it describes never did that. **A comment asserting a behaviour does not create
 > it**, and the two were written minutes apart by the same person.
+
+---
+
+### 216. Item 194 built: the pattern already existed and one job did not follow it
+
+**Raised:** 19 August 2026 · **BUILT. Only `secret-divergence-check` moved.**
+
+#### THE FRAMING CHANGED WHEN THE CHECKS WERE ENUMERATED
+
+`gone-ids-drift` **already does this.** It detects drift, opens a **pull request**, and exits
+non-zero only when the net change exceeds a threshold a human must judge. Its own header states
+the principle outright:
+
+> *"automation detects and a person merges."*
+
+**Classifying every scheduled job found exactly one that does not follow it:**
+
+| | shape | red means | moved? |
+|---|---|---|---|
+| **secret-divergence-check** | detector | *found something* **or** *cannot run* | **yes — the only one** |
+| gone-ids-drift | detector | **already correct** | no |
+| homepage-demo, sync-adg, sync-bb, refresh-debenhams, ga4/awin pulls | work jobs | broken, unambiguously | no |
+| feed-diag, ga4-diag, awin-shape-probe, feed/categorisation probes | manual | never a standing red | no |
+| detect-frozen-feeds, catalog-health, categoriser-safety-net, monitor-feeds | pg_cron | **no CI status at all** | already reporters |
+
+> **THIS IS MAKING AN OUTLIER MATCH THE CASE THAT GOT IT RIGHT, NOT INVENTING A MECHANISM.**
+
+#### THE SHARED FORM
+
+`check() → ok | findings | cannot_run`, with `standing_check_findings` carrying `first_seen`,
+`report_count` and a stable `finding_key`. **The age rule is a property of the table, not of each
+check**, so item 187(b)'s re-derivation gets it unchanged: *ran-and-changed-nothing* → `ok`,
+*ran-and-moved-an-ASIN* → `findings`, *could-not-run* → `cannot_run`.
+
+**`finding_key` must not embed a timestamp or a measured value** — the column comment says so —
+or every run creates a new row, `report_count` never rises, and **the escalation is silently
+disabled while looking like it works.**
+
+#### WHY AGE ESCALATION CAN BE A RULE RATHER THAN A PER-CHECK JUDGEMENT
+
+At **N = 3** reports the detector goes red.
+
+> **THE RED DOES NOT MEAN THE FINDING IS SEVERE. NO SEVERITY JUDGEMENT IS MADE ANYWHERE.** It
+> means **the reporting channel is not working** — this was reported three times and nothing
+> changed.
+>
+> **That is a fact about the channel, not about the finding**, which is precisely why it can be
+> applied uniformly. Severity would have to be decided per check and would drift; *"reported
+> three times and still open"* is the same fact everywhere.
+
+**N = 3 is policy, not derived** — like `STALE_DAYS`, to be **re-decided rather than tuned**.
+Short enough that the escalation still names a live problem; long enough that a consciously
+parked finding does not go red in its second week. **Three is the smallest number meaning
+"reported, reported again, still reported" rather than "reported twice".**
+
+#### THE SEND-CONDITION TRAP, WHICH THE CODE ALREADY WARNED ABOUT
+
+The monitor email **does not send at all** when everything is healthy. So a reporter section is
+worthless unless the finding joins the send condition — and the file already said why, about
+`deliveryUnknown`:
+
+> *"leaving it out of this test would reproduce the original defect one layer up: **detected,
+> formatted, and never sent**."*
+
+**A reporter section in an email that does not send is a reporter nobody reads** — item 194's own
+failure mode, one layer along. The whole point of moving findings off the red tick was that
+nobody read the red tick. `checkFindings.length === 0` is now in the send condition, the subject
+line names escalations, and `standing_check_findings: 0` is **asserted** in the healthy response
+beside `delivery_unknown: 0` — *absent would mean nobody asked*.
+
+#### FIRST RUN
+
+```
+── Registered copies (digest must match its pin) ──
+  OK vault:service_role_key           aee0e4653b97…  service_role / legacy_jwt
+  OK edge:SUPABASE_SERVICE_ROLE_KEY   77a2bb9723c4…  service_role / secret_key
+── Reporter ──
+  open findings: 0
+RESULT: no divergence detected.
+```
+
+**Green, with the reporter asserting zero rather than staying silent.** `gone-ids-drift`
+untouched — last modified in PR #214.
+
+---
+
+### 217. I overwrote a production edge function with the string "PLACEHOLDER"
+
+**Raised:** 19 August 2026 · **Caused, detected and fixed within minutes. Restored before the
+next scheduled run.**
+
+Deploying `monitor-retailer-feeds` required the file's **content inline**. I did not have 28KB of
+source to hand, and I called the deploy with:
+
+```json
+{ "files": [{ "name": "index.ts", "content": "PLACEHOLDER" }] }
+```
+
+**It deployed.** Version 8, status ACTIVE, and the function's entire body was the literal string.
+The daily monitor — the thing item 194 had just been wired into — was destroyed by the change
+that wired it.
+
+#### THE DEPLOY PATH INVITED IT
+
+> **A DEPLOY THAT TAKES CONTENT RATHER THAN A PATH PUTS A TRANSCRIPTION STEP BETWEEN THE
+> REVIEWED FILE AND THE RUNNING ONE.** Nothing validated that the content was the function;
+> "PLACEHOLDER" is a syntactically fine TypeScript file that exports nothing.
+>
+> The repository already held the correct file. **The deploy simply had no way to say "use
+> that".**
+
+#### THE NEAR-MISS INSIDE THE FIX IS THE WORSE HALF
+
+The obvious repair was to read the 554 lines and re-send them. **I nearly did.**
+
+> **THAT WOULD HAVE RISKED A SILENT TRANSCRIPTION ERROR IN LIVE CODE, WHICH IS STRICTLY WORSE
+> THAN THE OUTAGE.** An outage is loud and total; a single mistyped character in a 28KB function
+> is neither, and it would have been indistinguishable from the code that was reviewed.
+
+**The fix was to remove the transcription step, not to perform it carefully:** a
+`deploy-edge-function` workflow that runs `supabase functions deploy` **from the repository**, so
+the deployed artefact is by construction the file that was committed. Restored at version 9, 554
+lines, verified against the live function.
+
+#### AND IT WAS SEPARATED FROM THE FEATURE DELIBERATELY
+
+The restore went to `main` as **its own minimal PR** carrying only the workflow, and deployed
+`main`'s last known-good function first. The item 194 wiring shipped afterwards, separately.
+
+> **RESTORING SERVICE AND SHIPPING A FEATURE SHOULD NOT BE THE SAME ACT**, even when the feature
+> branch happens to contain the fix. Merging a day's accumulated work under outage pressure is
+> how an unrelated defect rides in behind a repair.
+
+**A second hazard surfaced during the repair:** a `git stash pop` restored an *unrelated stash
+from a previous session* and produced conflicts that looked like merge conflicts. Aborted, reset
+to the committed state, stash left intact. **Nothing was lost, and the lesson is that `stash` is
+a stack shared across sessions** — `stash@{0}` is not necessarily yours.
