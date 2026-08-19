@@ -1,0 +1,43 @@
+name: Re-derive ASINs (report only)
+
+# Work-list items 187(b) and 219. REPORTS. NEVER WRITES products.amazon_asin.
+#
+# Measured before building: a pure projection would have silently revoked 35 of 484 live Amazon
+# rows on its first run -- 7.2%, including the 7 item 184 decided not to retire. So this reports
+# disagreements and states, as one coverage line, the population it cannot speak for.
+#
+# THE TRIGGER IS A MAP CHANGE, NOT A CLOCK. A harvest, a reassignment, a corrected matched_ean.
+# 469 of 484 products have a single candidate and cannot move at all, so the weekly cron is a
+# FLOOR rather than the signal -- the same reasoning gone-ids-drift states about retailer
+# lifecycle. Run it by hand after changing the map.
+#
+# EXIT CODES follow item 194: 0 for ok or findings (a finding is not a broken check), 1 only for
+# cannot_run. Red here means the check is dead.
+#
+# NO NEW SECRET. SUPABASE_SERVICE_KEY already exists and is used by seven other workflows.
+# Adding a dedicated one would have created a FOURTH copy of the service-role credential, which
+# is the divergence class item 196 exists to detect.
+
+"on":
+  schedule:
+    - cron: '0 7 * * 0'   # Sunday 07:00 UTC — a floor, not the signal
+  workflow_dispatch:
+
+jobs:
+  re-derive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Re-derive and report
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          if [ -z "${SUPABASE_SERVICE_KEY}" ]; then
+            echo "::error::SUPABASE_SERVICE_KEY is not set — this is cannot_run, not an empty result"
+            exit 1
+          fi
+          node scripts/re-derive-asins.mjs
