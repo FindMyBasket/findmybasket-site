@@ -262,21 +262,26 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
   <h2>Who we partner with</h2>
 
   <!--
-    RETAILER LIST — 12 names. Last verified 2026-08-16.
+    RETAILER LIST — 11 names. Last verified 2026-08-19.
 
-    THE COUNT IS EXPECTED TO MOVE, AND DOWN. Do not read 12 as a target.
-      - Atelier De Glow (r29) is DEPARTING: its AWIN programme closed, but it is
-        still `active = true` and still selling, so listing it today is CORRECT.
-        When the flip lands, remove it and the count goes to 11.
-      - Branded Beauty is `active = true` and is NOT listed, deliberately. Its UK
-        affiliate programme closed 30 July 2026, so listing it would name a
-        retailer we cannot send anyone to. Its `active = false` flip has been held
-        since 2 August.
+    ATELIER DE GLOW REMOVED 19 AUGUST, THREE DAYS AFTER ITS FLIP. The previous
+    version of this comment predicted this exactly — "when the flip lands, remove
+    it and the count goes to 11" — and that instruction sat here, correct, with
+    nothing to trigger it. The sweep ran on 16 August, BEFORE the flip. See work-
+    list item 221 and the timing note now added to the doctrine's step 5.
 
-    SO THE TABLE AND THIS LIST DO NOT AGREE, AND SHOULD NOT. `retailers` has 13
-    rows at active = true; this list has 12. The difference is Branded Beauty.
-    "Match the table" is the wrong rule and following it re-adds a closed
-    programme. The right rule is: active = true AND the programme still pays.
+    THE COUNT IS EXPECTED TO MOVE. Do not read 11 as a target.
+      - Branded Beauty (r6) is now `active = false` and is NOT listed. It had been
+        deliberately unlisted since 30 July while still active, because its UK
+        affiliate programme had closed and listing it would name a retailer we
+        cannot send anyone to.
+
+    THE TABLE AND THIS LIST NOW AGREE AT 11, AND THAT IS A COINCIDENCE RATHER THAN
+    THE RULE. `retailers` has 11 rows at active = true and this list has 11
+    because both departures have now flipped. "Match the table" is still the wrong
+    rule — it was wrong for the fortnight when Branded Beauty was active and
+    unlisted, and it will be wrong again at the next programme closure. The right
+    rule is: active = true AND the programme still pays.
 
     VERIFY THE LIST, NEVER THE COUNT. On 16 August this page read "11 UK
     retailers" over a list of 11 — internally consistent, and wrong, because it
@@ -290,7 +295,7 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
     sweep this block; nothing detects it. See the copy-sweep step in
     docs/superdrug-removal-plan.md.
   -->
-  <p>Currently live across 12 UK retailers covering skincare, makeup, hair and fragrance:</p>
+  <p>Currently live across 11 UK retailers covering skincare, makeup, hair and fragrance:</p>
 
   <ul>
     <li>Boots</li>
@@ -302,7 +307,6 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
     <li>Beauty Flash</li>
     <li>Debenhams</li>
     <li>Gorgeous Shop</li>
-    <li>Atelier De Glow</li>
     <li>Perfume Click</li>
     <li>Niche Beauty</li>
   </ul>
