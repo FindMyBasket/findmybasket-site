@@ -290,8 +290,18 @@ export function selectCandidate(
         catalogueSize: ourSize, amazonSize: theirSize,
         ourBarcodes: [...ours], amazonIds: c.amazonIds.map(gtin),
       };
+      // LOGGED ON EVERY EVALUATION, FIRED AND DECLINED BOTH.
+      //
+      // The first version called this only when the path FIRED, which quietly made the log a
+      // record of confirmations rather than of evaluations — and `asin_secondary_path_log`'s
+      // own comment says "fired and declined both, so the path becomes a measured rate".
+      // A rate needs a denominator. Recording only the successes makes the path look 100%
+      // effective forever, which is the opposite of the reason it was adopted with logging.
+      //
+      // Caught 19 August putting product 1499 through it: title and size agreed, the seller was
+      // a third party, the path correctly declined — and nothing was written down.
+      onSecondaryPath?.(inputs);
       if (brandStore && exactTitle && sizeAgrees) {
-        onSecondaryPath?.(inputs);
         return { action: 'confirm', asin: c.asin, on: 'secondary_path', secondary: inputs };
       }
       const failed = [!brandStore && 'not the brand store', !exactTitle && 'title differs', !sizeAgrees && 'size differs']

@@ -108,12 +108,16 @@ test('secondary path confirms when brand store AND title AND size all agree', ()
 });
 
 test('secondary path declines a reseller even when title and size agree — the seller is load-bearing', () => {
+  const logged: unknown[] = [];
   const v = selectCandidate(P(), [C({
     amazonIds: ['8809640736254'], matchedEan: null,
     offer: { displayPrice: '£14.99', sellerName: 'Medpak EU', inStock: true },
-  })]);
+  })], (i) => logged.push(i));
   assert.equal(v.action, 'hold');
   assert.match(v.on, /not the brand store/);
+  // A DECLINE IS LOGGED TOO. A rate needs a denominator; logging only confirmations makes the
+  // path look 100% effective forever. Work-list item 215.
+  assert.equal(logged.length, 1, 'the declined evaluation must still be recorded');
 });
 
 test('secondary path declines when the size differs', () => {

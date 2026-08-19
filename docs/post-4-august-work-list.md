@@ -17823,8 +17823,26 @@ not how a manufacturer prefix behaves.
 > CATALOGUE.** Not unmatched — *unmatchable*, by construction, and no future harvest changes it.
 
 **That reframes 3077 and 3995 a third time.** They are not products we failed to match; they are
-listings from a distribution channel whose identifiers do not intersect ours at all. **A barcode
-matcher cannot reach them and no amount of running it will.**
+listings from a distribution channel whose identifiers do not intersect ours at all.
+
+> **SO THE CLASS IS CLOSED, NOT OPEN. 3077 AND 3995 STOP BEING WORK.** A US distributor relabels
+> with its own UPCs and our retailers supply Korean EANs; **no future harvest changes that**, and
+> a barcode matcher cannot reach them however many times it runs.
+>
+> **"Unmatchable by construction" is a finished answer.** Leaving them on a list as unresolved
+> would invite somebody to re-run the matcher against them in three months and get the same
+> nothing, and read it as a gap rather than as the recorded fact it now is.
+
+#### THE POSITIVE CONTROL IS THE METHOD, NOT A COURTESY
+
+**A null result from a query I wrote is precisely what item 184 says not to trust** — an empty
+answer cannot distinguish *"there is nothing there"* from *"my query does not find things"*.
+
+> **THE SAME QUERY SHAPE RETURNING 6750 AND 3448 IS WHAT MAKES THESE NEGATIVES REAL.** The
+> control costs one extra row in the VALUES list, and without it this item would be three
+> assertions of absence backed by nothing.
+
+**It is also what surfaced item 214**, which was not the point of running it.
 
 **And 1499 gained something on the way past:** it now returns an offer (£14.59, QuipUp) with the
 title *"Skin1004 Madagascar Centella Toning Toner 210 ml"* — our product's name and size — while
@@ -17836,6 +17854,12 @@ require one; the path was built for exactly this shape and nobody has put 1499 t
 ### 214. `matched_ean` recorded the wrong evidence on 13 rows, and the pairings were all correct
 
 **Raised:** 19 August 2026 · **FOUND and CORRECTED. My defect, from yesterday's insert.**
+
+> **13 OF 215 ROWS RECORDED A REASON THAT WAS NOT THE REASON.** Entirely from yesterday's insert,
+> and **the pairings were all correct** — which is worse than a wrong pairing, not better,
+> **because it looks like evidence.** A wrong pairing is findable by anyone who looks at the
+> product; a wrong justification for a right pairing is findable by nobody, and it is what a
+> later reader would rely on to re-judge the decision.
 
 The tranche-3 promotion wrote `matched_ean` as **Amazon's first identifier**:
 
@@ -17881,7 +17905,76 @@ Items 201, 204 and 209 are **guards** whose wording drifted from their purpose. 
 > Item 188's `via_brand` was the inverse: **the writer was reasonable and the name misled.** Here
 > the name was exact and the writer ignored it.
 
-**The check that would have caught it at write time is one line**, and it is now the standing
-assertion: *every `matched` row's `matched_ean` must be a barcode its product carries.* It reads
-**0** violations across all 484 published ASINs, which is the first time that has been asserted
-rather than assumed.
+#### THE STANDING ASSERTION IS THE FIX. THE THIRTEEN CORRECTIONS ARE NOT.
+
+**Correcting thirteen rows repairs this instance and prevents nothing.** The next insert written
+the same way produces the same defect, and there is no reason to expect the next one to be
+written more carefully — yesterday's was not written carelessly.
+
+> **THE FIX IS ONE LINE THAT CAN BE RUN AGAINST THE WHOLE TABLE AT ANY TIME:**
+>
+> *every `matched` row's `matched_ean` must be a barcode its product carries.*
+
+It reads **0** violations across all 484 published ASINs. **That is the first time this has been
+asserted rather than assumed**, and it is the thing that makes the next occurrence findable in
+seconds instead of by accident.
+
+**The thirteen corrections are cleanup. The assertion is the outcome.**
+
+---
+
+### 215. The secondary path logged confirmations but not declines
+
+**Raised:** 19 August 2026, putting product 1499 through the path · **FIXED. Both evaluations now
+recorded.**
+
+Item 186's secondary path was adopted **with logging**, because deciding it on n=1 either way was
+the wrong shape and the log was what would turn it into a rate. `asin_secondary_path_log`'s own
+comment says: *"Logged on every evaluation — fired and declined both."*
+
+> **THE CODE CALLED THE LOGGER ONLY WHEN THE PATH FIRED.**
+>
+> **A rate needs a denominator.** Recording only confirmations makes the path look **100%
+> effective forever**, which is the exact opposite of the reason it was adopted with logging at
+> all.
+
+**Found by using it**, not by reading it: product 1499 was put to the path, correctly declined,
+and nothing was written down.
+
+#### 1499 IS A GOOD FIRST DECLINE
+
+| | |
+|---|---|
+| catalogue | *SKIN1004 Madagascar Centella Toning Toner (210ml)* |
+| Amazon | *Skin1004 Madagascar Centella Toning Toner 210 ml* |
+| exact title | **true** |
+| size agrees | **true** — 210ml against 210ml |
+| brand store | **false** — QuipUp |
+| **verdict** | **declined** |
+
+**Two of three conditions passed and the path still declined.** That is the seller condition being
+load-bearing rather than one signal of three, which is exactly the 794-versus-1028 distinction
+stated when the path was adopted.
+
+**And 1499 can never be resolved by E1**: the listing publishes no barcode at all, so the
+secondary path is the only route it will ever have. **It has now had it, and the answer is no.**
+
+#### THE LOG NOW READS AS A RATE
+
+```
+794   B0DL8Y8N4G   fired    brand_store ✓  title ✓  size ✓
+1499  B09JB71319   declined brand_store ✗  title ✓  size ✓
+```
+
+**One of two**, which is a rate rather than an argument — and the decline is the more informative
+row, because it shows which condition does the work.
+
+#### THE FAMILY AGAIN, AND THIS ONE IS THE TABLE'S OWN COMMENT
+
+Items 201, 204 and 209 are guards whose wording drifted from their purpose. Item 214 is a field
+whose writer ignored its name.
+
+> **HERE THE DOCUMENTATION WAS RIGHT AND THE CODE NEVER MATCHED IT.** The migration comment
+> describing this table has said *"fired and declined both"* since the day it was written, and
+> the function it describes never did that. **A comment asserting a behaviour does not create
+> it**, and the two were written minutes apart by the same person.
