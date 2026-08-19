@@ -18177,3 +18177,115 @@ five minutes of work and removes the hazard permanently.
 
 **Aborted, reset to the committed state, stash left intact.** Nothing was lost — and the reason
 nothing was lost is that the work was committed first.
+
+---
+
+### 219. Item 187(b): the projection would have revoked 35 live rows, and measuring found it
+
+**Raised:** 19 August 2026 · **BUILT as a report-only check. The design changed because of what
+the measurement said.**
+
+#### THE FINDING LEADS, AND IT JUSTIFIES THE DISCIPLINE
+
+**A pure projection was the agreed design** — re-derive `products.amazon_asin` from
+`amazon_asin_map` and write it. Item 187 wanted it; item 179's guard inversion becomes
+structurally impossible under it, because there is no write-if-absent left to invert.
+
+> **IT WOULD HAVE SILENTLY REVOKED 35 OF 484 LIVE AMAZON ROWS — 7.2% — ON ITS FIRST RUN**,
+> including the 7 that item 184 explicitly decided not to retire, **and nothing in the design
+> said so.**
+
+| published ASIN's map row | products | survives re-derivation? |
+|---|---:|---|
+| `matched` with a `matched_ean` | **449** | yes, from stored data |
+| `matched_by_name` | **28** | **0 of 28** — every one read live against its product's barcodes |
+| `identifier_conflict` / `legacy_unconfirmed` | **7** | no promotable candidate at all |
+
+**All 28 name-tier ASINs currently return a live offer.** They are working rows that the rule
+cannot speak for.
+
+**It was found by measuring before building, and by nothing else.** No test would have caught
+it — the projection would have been a correct implementation of the agreed design.
+
+#### THE CATEGORY ERROR
+
+> **INABILITY TO RE-DERIVE A DECISION IS NOT EVIDENCE THE DECISION WAS WRONG.**
+
+`matched_by_name` was **a different tier with a different justification**: a human verified the
+name. Item 186's **E1 requires a shared barcode, which a name match by definition lacks**, and
+the human verification is recorded in `human_verified` — **where the rule does not consult it.**
+
+**A rule that cannot express a decision's justification will read that decision as unjustified.**
+The projection would not have been wrong about the barcodes; it would have been silently
+authoritative over a question it was never given the evidence for.
+
+#### THE FOURTH OUTCOME
+
+Item 194's form gains `out_of_scope`, which is **not a finding and never a revocation**:
+
+| | |
+|---|---|
+| `ok` | the rule re-derives what is published |
+| `findings` | the rule would choose **differently** — actionable |
+| **`out_of_scope`** | the rule **cannot** re-derive this — one coverage line |
+| `cannot_run` | the re-derivation could not complete |
+
+**Without it, 35 rows become findings on every run** — item 194's escalation firing forever on
+rows that are fine, and the mechanism discrediting itself in its first week.
+
+#### COUNTED, NOT SILENT, AND NOT PER ROW
+
+> **`35 published ASINs cannot be re-derived by the current rule.`**
+
+**The asserted-zero test, third instance** after `delivery_unknown: 0` and the reporter's
+open-findings line: *a number is worth printing only if its absence would mean something else.*
+**Silence here reads identically to "nothing is out of scope", and those are different facts.**
+
+**It is not the noise item 194 prevents**, because it does not repeat per row and does not
+escalate. *A finding recurring forever demanding action is noise; a single line stating a stable
+population is coverage.* **If it moves, that is the signal** — a change writes a separate
+`kind='finding'` row, which does send and can escalate. `kind='coverage'` is structurally
+incapable of escalating.
+
+#### HOLDING IS STABLE BY CONSTRUCTION, NOT BY LUCK
+
+Every hold reason except a tie-through-S4 reads **stable** signals — barcode, brand, generation
+token, the map itself — so holds recompute identically every run and are not re-litigated
+nightly.
+
+> **THAT IS ITEM 186's SPLIT PAYING FOR ITSELF.** Stable signals went into eligibility and
+> volatile ones into selection **for item 187's reason** — a stored output must not have its
+> IDENTITY decided by a signal that decays. **The stability of holding is a consequence of that
+> choice rather than a happy accident**, and a rule that had mixed the two would need a hold to
+> be re-argued every night.
+
+**The check reads no live offers at all.** Selection signals are deliberately absent: a nightly
+job that re-picked on stock would move ASINs nightly on decaying signals, which is the churn item
+187 warns about rather than the problem it names.
+
+#### CADENCE, AND WHAT A VANISHED OFFER DOES
+
+**The trigger is a map change, not a clock** — a harvest, a reassignment, a corrected
+`matched_ean`. **469 of 484 products have a single candidate and cannot move at all.** Weekly is
+a floor, on the same reasoning `gone-ids-drift` states about retailer lifecycle.
+
+**A `matched` row whose live offer has vanished: nothing happens, and that is already correct.**
+S1 only discriminates *between* candidates; with one candidate there is nothing to prefer it
+over. Item 184 established that a no-offer ASIN still links to the right product page, and item
+209 drew the test — *not "does it resolve" but "does it resolve to THIS product"*. A vanished
+offer says nothing about which product an ASIN is.
+
+#### FIRST RUN
+
+```
+published        484
+in scope         449      ← all with exactly ONE candidate, so the rule MUST agree
+findings           0
+conflicts          0
+35 published ASINs cannot be re-derived by the current rule.
+```
+
+**Zero findings by construction rather than by luck**, and the `cannot_run` path was verified by
+running it without a service-role key: `CANNOT RUN: REST 401 on amazon_asin_map`, exit 1. **An
+unreadable table and an empty one look identical downstream** — item 22's confusion, guarded
+here.
