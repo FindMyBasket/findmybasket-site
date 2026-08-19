@@ -18840,3 +18840,139 @@ rather than a template.**
 > **iLĀPOTHECARY carries the explicit commission claim that Abib never did.** If its programme
 > closes, that page keeps saying *"we may earn affiliate commission"* over a link to a
 > closed-merchant page — **a false commercial claim, failing silently, with an HTTP 200.**
+
+---
+
+### 226. A monitoring probe that traverses a metered path becomes part of what it measures
+
+**Raised:** 19 August 2026 · **BUILT. Robbie proposed a resolution probe and withdrew it.**
+
+The obvious check for a closed brand programme is to **follow each affiliate link** and match the
+final URL against `awin1.com/closedMerchant.html`. That string is specific and matchable, and the
+idea works.
+
+> **RESOLVING AN AFFILIATE LINK REGISTERS A CLICK.**
+>
+> A weekly probe across every brand hub manufactures **clicks that can never convert**, in the
+> **same publisher account whose click and conversion figures this project already pulls into
+> `metrics_awin_weekly`.** The check would corrupt the data it sits beside, and degrade the
+> publisher metrics the network judges us by.
+
+#### THE GENERAL FORM
+
+> **A MONITORING PROBE THAT TRAVERSES A METERED PATH BECOMES PART OF WHAT IT MEASURES.**
+
+**The cost is not the traffic, it is the contamination.** A click is not a neutral read: it is the
+unit the relationship is priced in. The probe would have been indistinguishable from a real
+shopper in every report the network produces, and the resulting click-through rate would be
+worse *because we were watching*.
+
+**Where else to look:** anything metered, rate-limited, quota'd or billed by request — and
+anything whose value is a *rate* rather than a count, because a probe changes the denominator
+silently while the numerator stays honest.
+
+#### SO ASK THE QUESTION DIRECTLY
+
+| | |
+|---|---|
+| the question | **is this programme still joined?** |
+| not | *where does this URL land?* |
+| source | `GET /publishers/{pub}/programmes?relationship=joined` |
+| clicks generated | **none** |
+
+#### AND KEEP THE RESOLUTION PROBE, FOR A DIFFERENT JOB
+
+**A diagnostic somebody runs versus a standing check that runs itself**, and only the second must
+be free of side effects.
+
+> **RESOLVING ONE LINK BY HAND TO CORROBORATE A FINDING IS FINE.** One click, deliberately, with
+> a reason. **Five links every week forever is not the same act**, and the difference is entirely
+> frequency and intent — which is why the distinction has to be written down rather than left to
+> whoever is holding the keyboard.
+
+#### WHAT IT READS, AND THE FIELD THAT WOULD HAVE HALVED IT
+
+**Both `body_html` and `offer.cta_url`.** Abib carried five links in the body and had no offer;
+**iLĀPOTHECARY has an empty body and its only link in the offer.**
+
+> **A CHECK READING ONE FIELD WOULD HAVE COVERED EXACTLY ONE OF THE TWO HUBS IT EXISTS FOR** —
+> and it would have covered the one already corrected, while missing the one carrying an explicit
+> commission claim.
+
+#### IT REFUSES TO RUN ON AN EMPTY PROGRAMME LIST
+
+An empty joined-programmes response is **far more likely a broken read than nothing being
+joined**, and treating it as data would report **every hub as closed** on the first bad response.
+That is `cannot_run`, not a finding — item 22's distinction, in the one place where getting it
+wrong produces a maximally alarming false positive.
+
+#### TESTED AGAINST A CASE THAT NO LONGER EXISTS
+
+**Abib's five links were removed before this check was written**, so live data cannot demonstrate
+a finding — the only live merchant is iLĀPOTHECARY's, which is joined.
+
+> **A CHECK THAT CANNOT BE SHOWN TO FIND ANYTHING IS NOT KNOWN TO WORK**, which is item 220's
+> "zero findings by construction" arriving before the first run rather than after it.
+
+So the detection logic is pure and unit-tested: one test **reconstructs the Abib page's shape and
+asserts the finding**, another asserts `finding_key` is stable and carries no measured value, and
+another covers the offer-only hub. **187 tests pass.**
+
+---
+
+### 227. A link's text is part of the claim
+
+**Raised:** 19 August 2026, correcting the Abib spotlight · **The substantive half of that
+change.**
+
+All five dead anchors promised the brand's own store:
+
+```
+"explore Abib's full range at their own store"   "Shop the heartleaf line at Abib."
+"direct from Abib"                               "Shop the full Abib range direct"
+```
+
+> **REPOINTING THOSE HREFS AT `/brands/abib` WOULD HAVE SWAPPED ONE FALSE CLAIM FOR ANOTHER.** A
+> link reading *"their own store"* that lands on ours is not a correction.
+>
+> **AN HREF CHANGE WITHOUT A TEXT CHANGE IS A HALF-CORRECTION THAT LOOKS COMPLETE** — and it
+> looks *more* complete than doing nothing, because the dead link is gone and every automated
+> check of link health passes.
+
+**A link is a claim made in two places at once.** The href says where; the text says what is
+there. Repointing edits one and leaves the other asserting the old destination.
+
+#### AND ONE WAS UNLINKED RATHER THAN REPOINTED, WHICH IS THE SHARPER CALL
+
+> *"These newest lines are easiest to find **direct from Abib**."*
+
+**The statement is still true.** The brand's store exists; only the affiliate programme closed.
+
+> **POINTING IT AT OUR BRAND PAGE WOULD HAVE MADE A TRUE SENTENCE FALSE**, because those newest
+> lines are precisely what our retailers do not carry — the sentence says so, which is why it
+> was linked outward in the first place.
+
+**So the repair was to remove the link and keep the sentence.** *Not every dead link wants a new
+destination; some want to stop being a link.*
+
+#### THE COUNT WAS REMOVED, NOT REFRESHED
+
+*"View all 147 Abib products"* against **173 live** → *"View all Abib products"*.
+
+**Same reasoning as the savings figure removed from the homepage on 3 August**, and the same rule
+as `docs/standing-rule-frozen-catalogue-state.md`: **a fresher number goes stale exactly as 147
+did.** Refreshing it buys a few weeks and reinstates the defect; **no count is the durable
+answer**, and the CTA loses nothing a reader wanted.
+
+#### AND `fmb_revalidate_paths` IS NOW PROVEN END TO END
+
+Item 189 listed the Vercel side of `REVALIDATE_SECRET` as **unverified**, and said so for a
+precise reason: *proving it requires exercising the endpoint, which has a side effect, so it
+belongs in a sequence rather than a report.*
+
+> **THIS CHANGE NEEDED THAT SIDE EFFECT ANYWAY.** `fmb_revalidate_paths` was called on
+> `/brands/abib-spotlight`, and the live page went from five AWIN links to zero on the next
+> fetch.
+>
+> **All three copies of `REVALIDATE_SECRET` agree** — vault, edge, and the Vercel env that
+> verifies it — which item 189 could only infer from their timestamps.
