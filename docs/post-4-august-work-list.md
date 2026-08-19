@@ -18360,3 +18360,70 @@ result.
 **It failed correctly while incomplete**, which is what made this a loose end to close rather
 than a defect to fix — and it is the state item 191 is about: *a detector that cannot run is a
 detector nobody reads*, and one that says so is at least a detector somebody can fix.
+
+---
+
+### 221. The copy sweep ran, covered the surface, and ran before the flip
+
+**Raised:** 19 August 2026 · **FIXED. Atelier De Glow removed from both surfaces. The doctrine's
+step 5 gains the timing instruction step 6 already had.**
+
+Atelier De Glow was flipped `active = false` on Saturday 16 August. **Its logo was still on the
+homepage on Tuesday**, and `about.html` still listed it and still claimed 12 retailers.
+
+#### NEITHER OF THE TWO OBVIOUS EXPLANATIONS IS RIGHT
+
+**The strip IS in step 5's table of surfaces** — line 398, described precisely as *"hardcoded
+`<span class="hero-trust-card">` per retailer; not data-driven, does not read
+`retailers.active`"*.
+
+**And the sweep DID run.** `public/index.html` was last touched on 16 August by *"claim sweep:
+bylines, counts and the point-in-time price pair"* (#322).
+
+> **IT RAN BEFORE THE FLIP.** At the moment it ran, Atelier was still `active = true` and still
+> selling — so **leaving the logo in place was correct**. The sweep was not wrong and did not
+> fail.
+
+**`about.html`'s comment proves it saw the case exactly**, because it wrote down what to do:
+
+> *"Atelier De Glow (r29) is DEPARTING… still `active = true` and still selling, so listing it
+> today is CORRECT. **When the flip lands, remove it and the count goes to 11.**"*
+
+**That instruction was correct, specific, in the right file — and had nothing attached to trigger
+it.**
+
+#### THE SHAPE
+
+> **A SWEEP THAT RUNS BEFORE THE EVENT IT IS SWEEPING FOR RECORDS THE TRUTH IT WAS RUN AGAINST.**
+> It produces a **conditional instruction with no trigger**, which reads as diligence and behaves
+> as a note-to-self.
+
+#### AND THE SAME LESSON WAS ALREADY LEARNED ONE STEP LATER IN THE SAME DOCUMENT
+
+| | |
+|---|---|
+| **Step 6** — Regenerate `GONE_IDS` **ON THE DAY** | *"Do this the same day you flip `retailers.active`, not on the following Sunday."* Added 9 August, after being missed once. |
+| **Step 5** — Copy sweep | **no timing instruction at all.** Added 1 August, after being missed once. |
+
+> **THE IDENTICAL TIMING LESSON WAS LEARNED FOR ONE STEP OF THIS DOCUMENT AND NOT FOR THE ONE
+> BESIDE IT.** Step 6's heading contains the words "ON THE DAY" in capitals. Step 5, twenty lines
+> above it, does not — and a reader following the document top to bottom meets the untimed step
+> first.
+
+**This is item 207's family** — a lesson recorded without being installed — with a sharper edge:
+the lesson was recorded **in the adjacent section of the same file**, by the same author, nine
+days earlier.
+
+#### FIXED
+
+Step 5 now reads **"RUN THIS ON THE DAY YOU FLIP, AND AGAIN AFTER THE FLIP IF YOU SWEPT BEFORE
+IT."**
+
+Both surfaces now list the same 11 names, verified by diffing the lists against each other and
+against `retailers.active` — **not by comparing counts**, which is item 121's rule and this
+page's own instruction.
+
+**Branded Beauty was already correct on both surfaces.** It had been deliberately unlisted since
+30 July while still `active = true`, because its programme had closed — so its flip required no
+copy change. **The right rule remains `active = true` AND the programme still pays**, and the
+comment now says the table and the list agreeing at 11 is a coincidence rather than the rule.

@@ -91,7 +91,34 @@ try {
   // amazon_asin_map is not readable with a publishable key; the caller must supply a
   // service-role key. THAT IS A cannot_run, NOT AN EMPTY RESULT -- an unreadable table and a
   // table with no rows look identical downstream, which is the confusion item 22 named.
-  mapRows = await rest('amazon_asin_map?select=asin,product_id,matched_ean,amazon_title,amazon_brand,match_state,human_verified&limit=10000');
+  //
+  // PAGED, AND THE PAGE SIZE IS NOT MINE TO CHOOSE. The first version asked for `limit=10000`
+  // and PostgREST returned 1000 -- its own cap, applied silently, with no error and no header
+  // the caller was reading. The map had 1004 rows, so FOUR WENT MISSING, four published
+  // products appeared to have no map row, and they were counted `out_of_scope`: 35 became 39.
+  //
+  // A PLAUSIBLE WRONG NUMBER, WHICH IS THE DANGEROUS KIND. Nothing looked broken. It was caught
+  // only because the same figure had been measured in SQL minutes earlier and disagreed.
+  //
+  // This is item 195's shape -- the edge of the sample read as the edge of the data -- with a
+  // sharper edge: I STATED THE BOUND AND THE SERVER IGNORED IT. Asking for a limit is not the
+  // same as receiving one, so the loop below reads until a short page arrives and then ASSERTS
+  // the total against the table's own count rather than trusting either.
+  mapRows = [];
+  for (let from = 0; ; from += 1000) {
+    const page = await rest(
+      `amazon_asin_map?select=asin,product_id,matched_ean,amazon_title,amazon_brand,match_state,human_verified`
+      + `&order=asin&limit=1000&offset=${from}`);
+    mapRows.push(...page);
+    if (page.length < 1000) break;
+  }
+  // ASSERTED, NOT ASSUMED. A truncated read is indistinguishable from a smaller table.
+  const [{ count: mapCount }] = await rest('amazon_asin_map?select=count');
+  if (mapRows.length !== mapCount) {
+    throw Object.assign(
+      new Error(`map read truncated: got ${mapRows.length} of ${mapCount} rows`), { cannotRun: true });
+  }
+  console.log(`  map rows read: ${mapRows.length} of ${mapCount}`);
 } catch (e) {
   console.error(`CANNOT RUN: ${e.message}`);
   process.exit(1);

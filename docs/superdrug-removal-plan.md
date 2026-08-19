@@ -351,6 +351,22 @@ After the flip nothing will ever surface them again.
 
 ### Step 5 — Copy sweep (added 2026-08-01, after it was missed once)
 
+**RUN THIS ON THE DAY YOU FLIP `retailers.active`, AND AGAIN AFTER THE FLIP IF YOU SWEPT
+BEFORE IT.** (Added 2026-08-19, after it was missed a third time — item 221.)
+
+On 16 August this sweep ran, covered the homepage strip, correctly found Atelier De Glow,
+and correctly left it in place **because the retailer was still active at that moment**. It
+wrote down what to do when the flip landed. The flip landed on the 16th and the logo was
+still there on the 19th.
+
+> **A SWEEP THAT RUNS BEFORE THE EVENT IT IS SWEEPING FOR RECORDS THE TRUTH IT WAS RUN
+> AGAINST.** It is not wrong and it does not fail; it produces a conditional instruction
+> with nothing attached to trigger it.
+
+**Step 6 already carries this lesson** — *"do this the same day you flip, not on the
+following Sunday"* — added 9 August after being missed once. **The identical timing lesson
+was learned for one step of this document and not for the one beside it.**
+
 **Steps 1–4 are all database and routing. None of them touches hand-written copy, and
 hand-written copy is where the site makes its factual claims about who we compare.**
 
