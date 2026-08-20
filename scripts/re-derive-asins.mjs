@@ -213,6 +213,36 @@ if (findings.length) {
   for (const f of findings) console.log(`  ${f.summary}`);
 }
 
+// ── RECORD. Item 194's form. ────────────────────────────────────────────────────────
+//
+// THIS WRITE PATH DID NOT EXIST UNTIL 20 AUGUST. The script accepted --write-findings, printed
+// "(nothing recorded)" when it was absent, and had no code to record anything when it was
+// present -- so the flag was a promise the script could not keep, and the coverage row in the
+// table had been inserted BY HAND and was maintained by nothing.
+//
+// A COVERAGE LINE THAT NO CHECK MAINTAINS IS THE FROZEN-STATE SHAPE: correct when written, and
+// silently wrong the moment the population it describes moves.
+if (WRITE) {
+  const post = (row) => fetch(`${SB}/rest/v1/standing_check_findings?on_conflict=check_name,finding_key`, {
+    method: 'POST',
+    headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json',
+               Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(row),
+  });
+  for (const f of findings) {
+    await post({ check_name: CHECK_NAME, finding_key: f.key, kind: 'finding', summary: f.summary, status: 'open' });
+  }
+  // ONE COVERAGE LINE, NOT PER ROW, AND kind='coverage' SO IT CANNOT ESCALATE. The database
+  // pins its report_count and public.fmb_escalated_findings excludes it -- the guard is no
+  // longer this line remembering to be right.
+  await post({
+    check_name: CHECK_NAME, finding_key: 'coverage:out_of_scope', kind: 'coverage', status: 'open',
+    summary: `${outOfScope.length} published ASINs cannot be re-derived by the current rule.`,
+    detail: { count: outOfScope.length, in_scope: verdicts.length, findings: findings.length },
+  });
+  console.log(`\n  ${findings.length} finding(s) and 1 coverage line recorded.`);
+}
+
 console.log('\nRESULT: report only. This check never writes products.amazon_asin.');
 if (!WRITE) console.log('        (--write-findings not passed; nothing recorded)');
 process.exit(0);

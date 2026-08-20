@@ -306,9 +306,11 @@ fi
 
 echo
 echo "── Reporter ──────────────────────────────────────────────────────"
-ESCALATED="$(run_sql "SELECT finding_key, report_count FROM public.standing_check_findings
-                      WHERE check_name='$(sql_lit "$CHECK_NAME")' AND status='open'
-                        AND report_count >= ${ESCALATION_REPORTS} ORDER BY finding_key;" \
+# THE ESCALATION RULE LIVES IN public.fmb_escalated_findings, NOT HERE. This query used to be
+# inline and did not mention `kind`, so a coverage row -- specified as unable to escalate --
+# would have counted toward the threshold the moment anything incremented it. One check with the
+# rule inline is one check's worth of correctness; a function is every check's.
+ESCALATED="$(run_sql "SELECT finding_key, report_count FROM public.fmb_escalated_findings('$(sql_lit "$CHECK_NAME")', ${ESCALATION_REPORTS});" \
              | jq -r '.[]? | "\(.finding_key) (reported \(.report_count)x)"')"
 OPEN_N="$(run_sql "SELECT count(*) AS n FROM public.standing_check_findings
                    WHERE check_name='$(sql_lit "$CHECK_NAME")' AND status='open';" | jq -r '.[0].n // 0')"
