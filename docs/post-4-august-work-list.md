@@ -18137,6 +18137,12 @@ a stack shared across sessions** — `stash@{0}` is not necessarily yours.
 
 ### 218. Never retype what a tool can move
 
+> **⚠ THIS ITEM OVERSTATES WHAT THE WORKFLOW REMOVED — SEE ITEM 234.** Building a repo-based
+> deploy route removed the hazard of **retyping** a file. It did not remove the hazard of **not
+> deploying** a changed file at all, and nothing notices that. The next change to
+> `monitor-retailer-feeds` after this item was written sat undeployed for 25 hours.
+> **A route existing is not a route taken.**
+
 **Raised:** 19 August 2026 · **The general form, on its second instance.**
 
 > **THE ARTEFACT SHOULD BE WHAT WAS COMMITTED BY CONSTRUCTION, NOT BY CARE.**
@@ -19388,10 +19394,21 @@ noted so it is not counted as one.
 **Raised:** 20 August 2026, from the first monitor email · **FIXED. Three defects, none of them
 the threshold.**
 
-Both entries in the first email rendered as findings. **The write site was not wrong.** Both rows
-carry `kind='coverage'`, exactly as specified.
+> **`kind='coverage'` WAS DOCUMENTATION IN A COLUMN** — written correctly by both checks, and
+> **read by no code that runs.**
 
-#### 1. THE EMAIL CODE THAT DISTINGUISHES KINDS WAS NEVER DEPLOYED
+Both entries in the first email rendered as findings. **The write site was not wrong.** Both rows
+carry `kind='coverage'`, exactly as specified — and nothing consumed it.
+
+> **IT READ AS A MECHANISM BECAUSE IT SAT WHERE MECHANISMS LIVE.** A column with a `CHECK`
+> constraint beside it, a comment describing its semantics, two writers setting it correctly —
+> every surface of a working guard, and no reader.
+>
+> **Same shape as a reading rule written next to a constraint:** the constraint enforces
+> something, the rule beside it enforces nothing, and the proximity is what makes them look
+> alike.
+
+#### 1. THE EMAIL CODE THAT DISTINGUISHES KINDS WAS NEVER DEPLOYED — SEE ITEM 234
 
 ```
 last edge-function deploy   19 Aug 07:50
@@ -19402,11 +19419,9 @@ the coverage split landed   19 Aug 09:32   (#356)
 filter, counted them all in the send condition, rendered them under *"N standing check
 findings"*, and named them in the subject.
 
-> **THE REPO WAS RIGHT AND PRODUCTION WAS BEHIND** — the two-deploy-target problem, one day after
-> building the workflow that exists to make deploying from the repository the only route. **I
-> built that route and then did not use it after the next change to the file.**
-
-Redeployed: 591 lines, the split live.
+**The repo was right and production was behind.** Redeployed: 591 lines, the split live.
+**Recorded separately as item 234, because it corrects item 218 rather than only explaining this
+email.**
 
 #### 2. THE ESCALATION WOULD NOT HAVE FIRED — AND THAT WAS AN ACCIDENT, NOT THE DESIGN
 
@@ -19418,12 +19433,16 @@ Redeployed: 591 lines, the split live.
 | its escalation query is scoped to **its own `check_name`** | so nothing looked at them |
 | the query **did not mention `kind` at all** | so nothing would have excluded them if it had |
 
-> **`kind='coverage'` WAS DOCUMENTATION IN A COLUMN.** It was written correctly by both checks and
-> **read by no code that runs.** The protection specified for it did not exist.
+> **THE TWO ACCIDENTS MATTER MORE THAN THE OUTCOME.** No red was coming, and **neither reason was
+> protection** — one was an omitted increment, the other an omitted query. The specified
+> safeguard contributed nothing.
 >
-> **Both accidents are one commit away from ending**: a new check copying the secret-divergence
-> upsert would increment, and a new escalation query written by anyone would forget `kind` —
-> because the only existing example of one does.
+> **Both are one commit away from ending.** A new check copying the secret-divergence upsert
+> would increment; a new escalation query would forget `kind`.
+>
+> **AND THE ONLY EXISTING EXAMPLE TEACHES THE OMISSION.** Anyone writing the second escalation
+> query would copy the first, which had no `kind` filter — so the mistake was not merely
+> available, it was **the documented way to do it**.
 
 **Fixed in two places, so neither omission can recur:**
 
@@ -19443,12 +19462,13 @@ Found while checking the increment. The script **accepted `--write-findings`**, 
 *"(--write-findings not passed; nothing recorded)"* when it was absent, and **had no code to
 record anything when it was present.** The workflow never passed the flag either.
 
-> **THE FLAG WAS A PROMISE THE SCRIPT COULD NOT KEEP**, and the coverage row in the table had been
-> **inserted by hand** and was maintained by nothing.
+> **THE FLAG WAS A PROMISE THE SCRIPT COULD NOT KEEP**, and the coverage row had been **inserted
+> by hand** and was maintained by nothing. **It would have gone on saying *35* forever.**
 >
-> **A coverage line that no check maintains is the frozen-state shape**: correct when written, and
-> silently wrong the moment the population it describes moves. It would have gone on saying *35*
-> forever.
+> **FROZEN STATE INSIDE A MECHANISM BUILT TO REPORT CHANGE.** That is the part worth carrying: the
+> stale number was not in a page or a comment but in the monitoring system itself — the thing whose
+> entire purpose is to notice when a population moves, quietly asserting a population that could
+> no longer move.
 
 Write path implemented; the workflow now passes the flag.
 
@@ -19464,5 +19484,70 @@ the next person will meet it:
 
 **It reports state without judging it and says so** — *"State is reported, not judged: whether
 inert or gone depends on whether the removal is meant to be on, and this monitor has no source for
-that intent."* **That is the pattern the coverage rows were trying to be**, and it was already
-correct in the one section nobody had to fix.
+that intent."*
+
+> **THAT IS EXACTLY THE PATTERN THE COVERAGE ROWS WERE TRYING TO BE, AND IT WAS ALREADY CORRECT IN
+> THE ONE SECTION NOBODY HAD TO FIX.**
+>
+> It renders whenever an email is going out anyway and **only one specific state causes a send** —
+> the same design the coverage rows needed and did not have. **It was written weeks earlier, by
+> someone reasoning about the same problem, and the later mechanism did not copy it.**
+
+---
+
+### 234. A route existing is not a route taken — and it corrects item 218
+
+**Raised:** 20 August 2026 · **A correction to a merged item, one day old.**
+
+Item 218 records *"never retype what a tool can move"*, from the day an inline-content deploy put
+the literal string `PLACEHOLDER` into production. The remedy was a workflow that deploys edge
+functions **from the repository**, so the deployed artefact is *by construction* the file that was
+reviewed.
+
+**The very next change to that file was not deployed through it.**
+
+```
+deploy-edge-function built and used     19 Aug 07:47, 07:50
+monitor-retailer-feeds changed (#356)   19 Aug 09:32
+next deploy                             20 Aug — after the wrong email arrived
+```
+
+> **A ROUTE EXISTING IS NOT A ROUTE TAKEN.**
+
+#### WHAT ITEM 218 CLAIMED, AND WHAT IT ACTUALLY REMOVED
+
+Item 218 reads as though building the workflow removed the hazard. **It removed one hazard and
+left another standing:**
+
+| hazard | status |
+|---|---|
+| **retyping** a file into a deploy | **removed** — the route cannot mistranscribe |
+| **not deploying** a changed file at all | **untouched** — nothing notices |
+
+**The second is the one that bit.** The repository held correct code for 25 hours while production
+ran the previous version, and **nothing anywhere compared them.** No test fails when a deployed
+function is stale; the deploy is an act somebody has to perform.
+
+> **REMOVING THE HAZARD IN A ROUTE IS NOT THE SAME AS MAKING THE ROUTE HAPPEN**, and item 218's
+> wording does not distinguish them. **Corrected there as well as here**, because a reader meeting
+> 218 will otherwise take the workflow as sufficient.
+
+#### AND IT IS THE SAME SHAPE AS THE THING IT SAT NEXT TO
+
+Item 195: *"a guarantee failing removes a floor rather than causing the harm."* The homepage demo
+trigger failed for fourteen days and nothing was stale, because deploys happened anyway.
+
+> **HERE THE GUARANTEE WAS NEVER INVOKED RATHER THAN FAILING**, and the outcome was the same
+> class of invisible: **correct code, not running, with no symptom until an email arrived saying
+> the wrong thing.**
+
+#### WHAT WOULD ACTUALLY CLOSE IT
+
+**Not recorded as done — this is the gap, stated.** A check comparing each deployed edge
+function's source against the repository would catch it, and it is the same shape as every
+standing check on this list: `ok` / `findings` / `cannot_run`, with the finding being *"deployed
+version differs from `main`"*.
+
+**It is not built.** Noting it as an open gap rather than closing it in the same breath as
+discovering it, because the last three things built in a hurry each needed correcting the next
+day.
