@@ -19380,3 +19380,89 @@ it fails sooner than the last.
 **A third, weaker signal:** a fortnight in which a quoted caveat is followed correctly under
 comparable pressure. *Weak because absence of failure is not evidence of a working mechanism* —
 noted so it is not counted as one.
+
+---
+
+### 233. `kind='coverage'` was written correctly and read by nothing that runs
+
+**Raised:** 20 August 2026, from the first monitor email · **FIXED. Three defects, none of them
+the threshold.**
+
+Both entries in the first email rendered as findings. **The write site was not wrong.** Both rows
+carry `kind='coverage'`, exactly as specified.
+
+#### 1. THE EMAIL CODE THAT DISTINGUISHES KINDS WAS NEVER DEPLOYED
+
+```
+last edge-function deploy   19 Aug 07:50
+the coverage split landed   19 Aug 09:32   (#356)
+```
+
+**The deployed function was 1h42m older than the fix.** It read every open row with no `kind`
+filter, counted them all in the send condition, rendered them under *"N standing check
+findings"*, and named them in the subject.
+
+> **THE REPO WAS RIGHT AND PRODUCTION WAS BEHIND** — the two-deploy-target problem, one day after
+> building the workflow that exists to make deploying from the repository the only route. **I
+> built that route and then did not use it after the next change to the file.**
+
+Redeployed: 591 lines, the split live.
+
+#### 2. THE ESCALATION WOULD NOT HAVE FIRED — AND THAT WAS AN ACCIDENT, NOT THE DESIGN
+
+**No red was coming on Friday.** But not because coverage was protected:
+
+| | |
+|---|---|
+| only `secret-divergence-check.sh` increments `report_count` | so both coverage rows sat at **1** |
+| its escalation query is scoped to **its own `check_name`** | so nothing looked at them |
+| the query **did not mention `kind` at all** | so nothing would have excluded them if it had |
+
+> **`kind='coverage'` WAS DOCUMENTATION IN A COLUMN.** It was written correctly by both checks and
+> **read by no code that runs.** The protection specified for it did not exist.
+>
+> **Both accidents are one commit away from ending**: a new check copying the secret-divergence
+> upsert would increment, and a new escalation query written by anyone would forget `kind` —
+> because the only existing example of one does.
+
+**Fixed in two places, so neither omission can recur:**
+
+- **`public.fmb_escalated_findings(check, threshold)`** — the rule in one place, with the `kind`
+  guard inside it. `secret-divergence-check.sh` now calls it instead of its inline query.
+- **A trigger pinning `report_count = 1` on coverage rows** — so the invariant holds **in the
+  data**, and an escalation query written later *without* the kind filter still cannot fire on
+  coverage.
+
+**Proven to discriminate**, because a guard never shown to fire is not known to guard: a synthetic
+`finding` at `report_count = 3` escalates; a synthetic `coverage` row inserted at 3 is pinned to 1
+and does not.
+
+#### 3. AND `re-derive-asins` HAD NO WRITE PATH AT ALL
+
+Found while checking the increment. The script **accepted `--write-findings`**, printed
+*"(--write-findings not passed; nothing recorded)"* when it was absent, and **had no code to
+record anything when it was present.** The workflow never passed the flag either.
+
+> **THE FLAG WAS A PROMISE THE SCRIPT COULD NOT KEEP**, and the coverage row in the table had been
+> **inserted by hand** and was maintained by nothing.
+>
+> **A coverage line that no check maintains is the frozen-state shape**: correct when written, and
+> silently wrong the moment the population it describes moves. It would have gone on saying *35*
+> forever.
+
+Write path implemented; the workflow now passes the flag.
+
+#### THE THRESHOLD WAS NOT TOUCHED
+
+**Raising three to five would have been tuning a number to produce silence** — the `STALE_DAYS`
+trap, recorded and then available to walk into within a week. The function's comment says so where
+the next person will meet it:
+
+> *"If it fires on something that should not escalate, the kind is wrong, not the number."*
+
+#### THE GATE SECTION NEEDED NOTHING
+
+**It reports state without judging it and says so** — *"State is reported, not judged: whether
+inert or gone depends on whether the removal is meant to be on, and this monitor has no source for
+that intent."* **That is the pattern the coverage rows were trying to be**, and it was already
+correct in the one section nobody had to fix.

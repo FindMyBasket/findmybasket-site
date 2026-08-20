@@ -40,4 +40,4 @@ jobs:
             echo "::error::SUPABASE_SERVICE_KEY is not set — this is cannot_run, not an empty result"
             exit 1
           fi
-          node scripts/re-derive-asins.mjs
+          node scripts/re-derive-asins.mjs --write-findings
