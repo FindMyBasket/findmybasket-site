@@ -1720,6 +1720,29 @@ serve(async (req) => {
   const createNewCatNameBreakdown: Record<string, number> = {};
   const sampleCreateNewEmptyCatName: any[] = [];
 
+  // ── WHAT THIS REWRITES IS WHAT A MANUAL CORRECTION CANNOT SURVIVE ──────────────
+  // Read this before hand-correcting anything on an existing row. The two halves have
+  // OPPOSITE properties and neither is obvious from the other:
+  //
+  //   REWRITTEN EVERY IMPORT, from the feed:  price, url, in_stock, EAN, MPN, image_url
+  //   NEVER TOUCHED after create:             products.name, brand, tags, top_category,
+  //                                           subcategory, product_type
+  //
+  // So a NAME correction HOLDS -- products is written only on INSERT (see the creates
+  // block below) -- and is the same creates-only property that makes product_exclusions
+  // durable. A BARCODE correction DOES NOT: both retailers supplying a wrong EAN will
+  // restore it on their next run, so correcting it locally is futile rather than merely
+  // fragile. Measured on product 96761, 21 Aug 2026, where the barcode is confirmed wrong
+  // and the name was corrected: the name fix stands, an EAN fix would not have.
+  //
+  // There is NO barcode denylist. tier1_ean_skips records ambiguity but suppresses
+  // nothing. Until one exists, a wrong feed-supplied barcode can only be worked around
+  // downstream, never corrected here.
+  //
+  // ONE CAVEAT ON THE NAME SIDE: match_key is derived from the name AT IMPORT and does
+  // not follow a manual name change, so a corrected name and its match_key disagree
+  // until the row is re-imported or the key recomputed. Harmless for display, relevant
+  // to matching.
   const updateActions: Array<{ rp_id: number; product_id: number; price: number; url: string; in_stock: boolean; ean: string; mpn: string; image_url: string }> = [];
   const linkActions: Array<{ product_id: number; ext_id: string; price: number; url: string; in_stock: boolean; ean: string; mpn: string; image_url: string }> = [];
   // v6.16: createActions now carries canonical_size + image_url

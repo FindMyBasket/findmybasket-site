@@ -1,0 +1,41 @@
+name: Migration ledger check
+
+# Detects a schema change that has a ledger entry but no file, or a file with no ledger entry.
+# `apply_migration` stamps its own version, so a migration applied that way leaves the two
+# unrelated -- and a schema change with no file never appears in a diff, is not attributable,
+# and is invisible to review. Work-list item 235, Option A.
+#
+# THE OPENING STATE IS 117 + 125 AND IS COVERAGE, NOT A FINDING. That population is the known
+# accepted backlog, frozen by version in supabase/migrations/.ledger-divergence-baseline.json.
+# This check exists to stop it GROWING, so escalating on it would fail the check on its own
+# starting conditions -- and a check that does that gets switched off, after which the new
+# divergence it was built for arrives unobserved. Same handling as the 35 unre-derivable ASINs.
+#
+# A NEW DIVERGENCE IS TOLD FROM THE OLD ONE BY SET MEMBERSHIP, NEVER BY COUNT. A count cannot
+# name the offender, and can stay flat while one divergence is added and another reconciled.
+#
+# WEEKLY, NOT PER-PUSH, DELIBERATELY. The rule it enforces is "write the file in the same change
+# as the apply", and a per-push gate would fail the push that adds the file whenever CI ran
+# between the apply and the commit. Weekly reports the state; it does not police the ordering.
+#
+# Item 194's exit contract: 0 for ok or findings, 1 only for cannot_run.
+
+"on":
+  schedule:
+    - cron: '0 8 * * 1'   # Monday 08:00 UTC, beside the other weekly standing checks
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check migration ledger against local files
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/migration-ledger-check.mjs --write-findings

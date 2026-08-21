@@ -221,7 +221,22 @@ export async function getBrandProducts(
     query = query.eq('top_category', topCategory);
   }
 
+  // `.order('id')` IS LOAD-BEARING, NOT COSMETIC. `.range()` without it is
+  // unordered LIMIT/OFFSET, which Postgres gives no stability guarantee for
+  // across pages: the same product can appear on two pages or on none, and the
+  // TOTAL still comes back right, so no count-based check detects it. This is
+  // the rule stated on fetchAllRows in lib/queries.ts (items 146, 151) — which
+  // this call never came under, because that rule was scoped to the PAGING
+  // HELPER rather than to the hazard, and this builds its own query.
+  //
+  // Scale when found, 21 Aug 2026: candidateLimit is 192 and pageSize 48, so
+  // 457 brands have more than one page and 106 exceed the 192-row window, the
+  // largest carrying 2,220 products. Work-list item 238.
+  //
+  // The in-stock/retailer-count/saving sort applied further down orders WITHIN
+  // the fetched window; it cannot fix which rows the window contained.
   const { data: products, count: totalCount } = await query
+    .order('id', { ascending: true })
     .range(offset, offset + candidateLimit - 1);
 
   if (!products || products.length === 0) {

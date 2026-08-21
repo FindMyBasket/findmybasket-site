@@ -78,6 +78,22 @@ export function stripContainerNouns(normalised: string): string {
 //   PLURAL_NOUN_RE: standalone pads/patches/pieces/sheets -> singular
 // "ea" and bare "s" (the "40S" wax-strip / "18S" patch style) are included as unit
 // words; longer alternatives precede shorter so "pieces" wins over "piece".
+// ── KNOWN FALSE POSITIVE: BARE "s" AFTER DIGITS IS NOT ALWAYS A PACK COUNT ─────
+// The bare `s` alternative below exists for the "40S" wax-strip / "18S" patch style
+// and it earns its place. But it also fires on a DECADE or shade token:
+//
+//     "Sweed Le Lipstick-90's Model"  ->  key "sweed le lipstick 90pcs model"
+//
+// Ninety pieces, from a shade name. Product 105424 is the live instance and is
+// DELIBERATELY LEFT carrying an undecoded `&#039;` entity, because the entity is
+// what currently shields it: `90&#039;s` normalises to `90 039 s`, which does not
+// match. Every other HTML-entity row in the catalogue was decoded on 21 Aug 2026;
+// that one was held. See standing_check_findings, finding_key
+// 'held:105424:entity-shields-count-unit', and work-list item 237.
+//
+// SO: IF YOU FIX THIS REGEX, THAT ROW BECOMES DECODABLE — and if you decode that
+// row without fixing this regex, you write a false pack count into the matcher's
+// key inside a change that looks like a text fix. The two are one piece of work.
 export const COUNT_UNIT_RE =
   /\b(\d+(?:\.\d+)?)\s*(?:pcs|pc|pieces|piece|pads|pad|patches|patch|sheets|sheet|ea|s)\b/g;
 export const PLURAL_NOUN_RE = /\b(pad|patch|piece|sheet)(?:e?s)\b/g;
@@ -276,6 +292,29 @@ export function extractSize(normalised: string): string {
 //   "...400ml" vs "...1L"    -> "400"  vs "1"    (1L would otherwise null out)
 // Decimals are treated as a single number ("3.5g" -> "3.5"). Numbers are sorted
 // numerically so token order in the name does not matter.
+//
+// ── LOAD-BEARING BEYOND ITS STATED PURPOSE. DO NOT NARROW. ──────────────────
+// This rule is ALSO the only thing containing the canonical_size multipack
+// defect to display, and it does so BY ACCIDENT.
+//
+// extractCanonicalSize (below) takes the LAST size token and has no notion of a
+// multiplier, so "Vida Glow ... 90 x 3g Sachets" stores canonical_size "3g" for
+// a 270g pack. 446 live products across every top_category are affected.
+// canonical_size is part of idx_products_match, so in principle a unit-size row
+// and a genuine single-unit row could collide and merge.
+//
+// They do not, because this function captures EVERY number: "90 x 3g" yields
+// "3,90" and a plain "3g" yields "3". Different signatures never merge. Nothing
+// else asserts that coverage and no test names it — it falls out of a rule
+// written for "7 pcs" vs "32 pcs".
+//
+// So: the COLUMN is wrong; the CATALOGUE STRUCTURE built on it is not. If this
+// function is ever narrowed — to ignore small numbers, to skip counts already
+// captured by extractSize, to dedupe differently — that containment disappears
+// SILENTLY and the defect stops being display-only. Any such change must cite
+// this comment and re-check the multipack population first.
+// See docs/supplements-brand-comparison-proposition.md (item B, merging
+// protection) and lib/format/pack-size.ts.
 export function extractNameNumbers(rawName: string): string {
   if (!rawName) return "";
   const nums = String(rawName).match(/\d+(?:\.\d+)?/g);

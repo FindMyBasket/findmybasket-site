@@ -13,6 +13,7 @@ import {
 import { buildBreadcrumbJsonLd } from '../../../lib/breadcrumb';
 import { SPECIALIST_IMPORTER_RETAILER_IDS, categoryToSlug, categoryDisplay } from '../../../lib/queries';
 import { displayProductTitle } from '../../../lib/format/product-name';
+import { displaySizeChip } from '../../../lib/format/pack-size';
 import { ProductDescription } from '../../../components/ProductDescription';
 import { ClickOutLink } from '../../../components/ClickOutLink';
 import { AmazonLink } from '../../../components/AmazonLink';
@@ -195,6 +196,8 @@ export default async function ProductPage({ params }: { params: { id: string } }
   // The page already renders these retailers and prices under an "Out of stock"
   // heading. Before this change the markup told Google there were none.
   const jsonLdName = displayProductTitle(product.name, product.brand);
+  // Guarded size chip — null where canonical_size is a multipack's unit size.
+  const sizeChip = displaySizeChip(product.name, product.canonical_size);
   const inStockPrices = inStockOffers.map(o => o.price);
   // Per-offer guard rather than a branch around the whole block: a single priceless
   // row must drop that Offer, not silence the markup for the product. Measured zero
@@ -394,16 +397,30 @@ export default async function ProductPage({ params }: { params: { id: string } }
               </div>
             )}
 
-            {(product.product_type || product.canonical_size || product.shade) && (
+            {/* SIZE CHIP IS GUARDED. `canonical_size` holds the UNIT size for
+                "N x M<unit>" multipack names, not the pack total, so an
+                unguarded chip understated 446 live products — worst case 90x
+                ("90 x 3g Sachets" rendering "3g" for a 270g pack). The guard
+                suppresses the chip only where the stored value equals the unit
+                size of a pack pattern in the name.
+
+                Suppression is honest here because the <h1> above renders
+                product.name RAW: for exactly these rows the pack is already
+                stated in full four lines up, so this removes a contradiction
+                rather than a fact. If that title ever stops showing the raw
+                name, revisit lib/format/pack-size.ts — the justification lapses
+                with it. The column itself is still wrong; see
+                docs/supplements-brand-comparison-proposition.md item B2. */}
+            {(product.product_type || sizeChip || product.shade) && (
               <div className="flex flex-wrap gap-2 mb-6">
                 {product.product_type && (
                   <span className="bg-warm-white border border-border rounded-full px-4 py-1.5 text-xs text-ink-light">
                     {product.product_type}
                   </span>
                 )}
-                {product.canonical_size && (
+                {sizeChip && (
                   <span className="bg-warm-white border border-border rounded-full px-4 py-1.5 text-xs text-ink-light">
-                    {product.canonical_size}
+                    {sizeChip}
                   </span>
                 )}
                 {product.shade && (

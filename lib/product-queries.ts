@@ -238,6 +238,11 @@ export async function getMoreFromBrand(
   currentCategory: string | null,
   limit = 12
 ): Promise<FeaturedProduct[]> {
+  // `.order('id')` ON EVERY CAPPED FETCH. An unordered `.limit()` is unordered
+  // LIMIT with no stability guarantee, so the candidate pool is an arbitrary
+  // draw that can differ between two renders of the same page. Lower stakes than
+  // the featured block — these are recommendations, not an eligibility test —
+  // but the same hazard, and the last instances of it in lib/. Work-list item 238.
   const base = () =>
     supabase
       .from('products_active')
@@ -254,12 +259,12 @@ export async function getMoreFromBrand(
   let rows: { id: number; name: string; brand: string | null; normalised_brand: string | null; product_type: string | null; subcategory: string | null; image_url: string | null; top_category: string | null }[] = [];
   if (currentCategory) {
     const [diff, same] = await Promise.all([
-      base().neq('top_category', currentCategory).limit(40),
-      base().eq('top_category', currentCategory).limit(40),
+      base().neq('top_category', currentCategory).order('id').limit(40),
+      base().eq('top_category', currentCategory).order('id').limit(40),
     ]);
     rows = [...(diff.data ?? []), ...(same.data ?? [])];
   } else {
-    const { data } = await base().limit(60);
+    const { data } = await base().order('id').limit(60);
     rows = data ?? [];
   }
   if (rows.length === 0) return [];
@@ -323,6 +328,9 @@ async function fetchRelated(
     .neq('id', product.id)
     .not('image_url', 'is', null)
     .neq('image_url', '')
+    // Ordered for the same reason as getMoreFromBrand above: an unordered
+    // `.limit()` makes the candidate pool an arbitrary draw. Item 238.
+    .order('id')
     .limit(40);
 
   if (matchBrand && product.brand) {
