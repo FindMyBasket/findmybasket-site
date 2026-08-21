@@ -353,69 +353,58 @@ export async function getFeaturedProducts(
   category: TopCategory,
   limit = 24
 ): Promise<FeaturedProduct[]> {
-  const { data: products } = await supabase
-    .from('products_active')
-    .select('id, name, brand, normalised_brand, product_type, subcategory, image_url')
-    .eq('top_category', category)
-    .not('image_url', 'is', null)
-    .neq('image_url', '')
-    .not('tags', 'cs', '{cleanup_remove}')
-    .limit(500);
-
-  if (!products || products.length === 0) return [];
-
-  const productIds = products.map(p => p.id);
-
-  const activeRetailerIds = await getActiveRetailerIds();
-  const { data: prices } = await supabase
-    .from('retailer_prices')
-    .select('product_id, retailer_id, price, in_stock')
-    .in('product_id', productIds)
-    .in('retailer_id', [...activeRetailerIds])
-    .eq('in_stock', true);
-
-  if (!prices) return [];
-
-  const byProduct = new Map<number, { retailer_id: number; price: number }[]>();
-  for (const p of prices) {
-    if (!p.product_id || !p.price) continue;
-    const arr = byProduct.get(p.product_id) ?? [];
-    arr.push({ retailer_id: p.retailer_id, price: Number(p.price) });
-    byProduct.set(p.product_id, arr);
-  }
-
-  const featured: FeaturedProduct[] = [];
-  for (const product of products) {
-    const rows = byProduct.get(product.id);
-    if (!rows) continue;
-    const { retailerCount, prices: priceList } = summarisePriceRows(rows);
-    // Featured deals require a genuine multi-retailer comparison.
-    if (retailerCount < 2 || priceList.length === 0) continue;
-
-    const minPrice = Math.min(...priceList);
-    const savingPct = nextBestSavingPct(priceList);
-
-    featured.push({
-      id: product.id,
-      name: product.name,
-      brand: product.brand,
-      brand_slug: product.normalised_brand ? brandSlug(product.normalised_brand) : null,
-      product_type: product.product_type,
-      subcategory: product.subcategory,
-      image_url: product.image_url,
-      retailer_count: retailerCount,
-      min_price: minPrice,
-      next_best_price: nextBestPrice(priceList),
-      saving_pct: savingPct,
-    });
-  }
-
-  featured.sort((a, b) => {
-    if (b.retailer_count !== a.retailer_count) return b.retailer_count - a.retailer_count;
-    return (b.saving_pct ?? 0) - (a.saving_pct ?? 0);
+  // THE ELIGIBILITY TEST RUNS IN THE DATABASE, OVER THE WHOLE CATEGORY.
+  //
+  // This previously fetched products_active with `.limit(500)` and NO `.order()`,
+  // then applied `retailerCount >= 2` to whatever those 500 happened to be.
+  // Measured 21 Aug 2026, qualifying vs reachable-within-the-500:
+  //   skincare 6,270/90 · makeup 2,353/42 · hair 2,341/71 · fragrance 1,132/176
+  //   bath_body 915/58 · supplements 35/2
+  // Every category lost 85-99% of its qualifying set. The big five still had more
+  // than 24 survivors, so the block filled and nothing looked wrong -- it was
+  // showing THE BEST OF AN ARBITRARY SAMPLE AS THE BEST OF THE CATEGORY. Only
+  // supplements was thin enough for the defect to reach the page, as two products.
+  //
+  // RAISING OR ORDERING THE CAP WOULD NOT HAVE FIXED THIS. A bigger sample is
+  // still a sample and ordering only makes it deterministic; the test that decides
+  // eligibility has to see every candidate. Hence the RPC, following the
+  // getCrossCategoryBrands pattern: heavy aggregation in SQL, light mapping here.
+  //
+  // The rule against unordered LIMIT was already written 60 lines above
+  // fetchAllRows -- but it was scoped to the PAGING helper, and this function does
+  // not page, so it never came under a rule it needed. Work-list item 238.
+  const { data, error } = await supabase.rpc('fmb_featured_products', {
+    p_category: category,
+    p_limit: limit,
   });
 
-  return featured.slice(0, limit);
+  if (error || !data) return [];
+
+  return (data as {
+    id: number;
+    name: string;
+    brand: string | null;
+    normalised_brand: string | null;
+    product_type: string | null;
+    subcategory: string | null;
+    image_url: string | null;
+    retailer_count: number;
+    min_price: number | string;
+    next_best_price: number | string | null;
+    saving_pct: number | null;
+  }[]).map(r => ({
+    id: r.id,
+    name: r.name,
+    brand: r.brand,
+    brand_slug: r.normalised_brand ? brandSlug(r.normalised_brand) : null,
+    product_type: r.product_type,
+    subcategory: r.subcategory,
+    image_url: r.image_url,
+    retailer_count: Number(r.retailer_count),
+    min_price: Number(r.min_price),
+    next_best_price: r.next_best_price === null ? null : Number(r.next_best_price),
+    saving_pct: r.saving_pct === null ? null : Number(r.saving_pct),
+  }));
 }
 
 export async function getSubcategories(category: TopCategory): Promise<{ name: string; count: number }[]> {

@@ -232,7 +232,20 @@ export async function getSubcategoryProducts(
     query = query.eq('product_type', productType);
   }
 
+  // `.order('id')` IS LOAD-BEARING. `.range()` without it is unordered
+  // LIMIT/OFFSET, which returns the RIGHT TOTAL from the WRONG ROWS.
+  //
+  // THIS FILE ALREADY CONTAINED THE PROOF, 70 LINES BELOW: getValidSubcategories
+  // carries item 146's write-up, where exactly this defect returned 1,719 rows —
+  // the correct total — while containing only 102 of 117 `womens-health` rows,
+  // and put the sitemap and the page into disagreement. That fix was applied to
+  // the SUBCATEGORY LIST and never to the PRODUCT LIST in the same file.
+  //
+  // The rule existed, the evidence was in this file, and this call still had the
+  // bug — because the rule was scoped to the paging helper and the evidence was
+  // written up against one caller. Work-list item 238.
   const { data: products, count: totalCount } = await query
+    .order('id', { ascending: true })
     .range(offset, offset + candidateLimit - 1);
 
   if (!products || products.length === 0) {
