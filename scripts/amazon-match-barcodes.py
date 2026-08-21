@@ -150,6 +150,13 @@ def main() -> int:
           " exists, not a finding about the retailers.")
 
     print(f"\n-- amazon_asin_map rows, {len(inserts)} product/ASIN pairs. NOT APPLIED.")
+    print("-- WHOEVER WRITES THE INSERT DECIDES THE CONFLICT CLAUSE, AND `notes` IS NOT IN")
+    print("-- THESE TUPLES. amazon_asin_map.notes carries hand-written findings that are the")
+    print("-- ONLY guard on some rows -- e.g. product 96761, where the barcode is confirmed")
+    print("-- wrong and the note is what stops the ASIN being re-promoted. An upsert that")
+    print("-- lists only the harvested columns preserves them; one written as a full-row")
+    print("-- replacement, or that sets notes, DESTROYS them silently and leaves no diff.")
+    print("-- Use: ON CONFLICT (asin) DO UPDATE SET <harvested columns only>, never notes.")
     for pid, asin, ean, title, b in inserts[:400]:
         t = (title or "").replace("'", "''")[:120]
         print(f"({pid}, '{asin}', '{ean}', '{t}', '{b}', 'matched', false),")
