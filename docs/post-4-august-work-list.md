@@ -5882,6 +5882,27 @@ afterwards.
 structural argument prevents, and most changes are not structurally inert. This is the
 exception that can be recognised, not a general licence.
 
+#### `apply_migration` IS TO SCHEMA WHAT INLINE-CONTENT DEPLOY WAS TO EDGE FUNCTIONS
+
+**Same hazard, same shape, and the argument was accepted here three days ago for the sibling
+case.** On 19 August an edge function was overwritten with a placeholder by a deploy path that
+took file **content inline** rather than a path. The fix was
+`.github/workflows/deploy-edge-function.yml` (items 217, 218), whose header states the rule:
+
+> *"THIS DEPLOYS FROM THE REPOSITORY, which is the source of truth… **THIS IS THE ONLY ROUTE. DO
+> NOT DEPLOY AN EDGE FUNCTION BY PASTING ITS CONTENT.**… If a deploy is needed and this workflow
+> cannot do it, THAT IS A FINDING ABOUT THIS WORKFLOW. Extend it. Do not route around it."*
+
+The hazard there was named precisely: *"the path accepts a hand-made copy as equivalent to the
+reviewed file, and a transcription error in 28KB is invisible in a way an outage is not."*
+**Schema has the identical path and no equivalent workflow.** A migration applied through
+`apply_migration` is a hand-made change that was never a reviewed file, and it is invisible in
+exactly the same way — with the added property that it leaves a permanent ledger entry claiming
+otherwise.
+
+The difference is only that the edge-function case announced itself with an outage. This one
+announces itself never.
+
 #### THE MEASUREMENT WAS ENTANGLED EVEN THOUGH THE OUTCOME WAS NOT
 
 A count of **477** newly-unambiguous barcodes was recorded for the filter. Re-measured on
@@ -19551,3 +19572,868 @@ version differs from `main`"*.
 **It is not built.** Noting it as an open gap rather than closing it in the same breath as
 discovering it, because the last three things built in a hurry each needed correcting the next
 day.
+
+---
+
+### 235. The repository does not describe the database, and the mechanism is the current default
+
+**Raised:** 21 August 2026, while widening a data-quality metric — the migration for it became
+the 125th instance of the thing this item is about · **OPEN. A job, not a task.** · Lifted out
+of `docs/supplements-brand-comparison-proposition.md`, where it was measured; it is not a
+supplements question.
+
+#### THE MEASUREMENT
+
+`supabase migration list`, 21 August 2026:
+
+| | n |
+|---|---|
+| Local `.sql` files in `supabase/migrations/` | 120 |
+| **Recorded in BOTH local and remote** | **3** |
+| Local only — file exists, no matching remote version | **117** |
+| Remote only — applied, no file in the repository | **125** |
+
+The three that match are `20260615195522`, `20260615204753`, `20260630190443`. **Everything
+since 30 June has diverged.** `supabase db push` is unusable: it would attempt 117 files against
+a database that already has their effects.
+
+#### THE FINDING IS THE REFRAMING, NOT THE COUNT
+
+The obvious reading is *"117 migrations were never run"*. **That is not what happened.** Eleven
+objects created by local-only migrations, checked against production:
+
+`fmb_quality_snapshot_write`, `fmb_detect_frozen_feeds`, `fmb_active_brand_names`,
+`fmb_routine_empty_streak`, `retailer_import_config.supplements_path_prefixes`,
+`retailer_import_config.freeze_min_days`, `metrics_quality_weekly.comparison_depth_num`,
+`.ean_coverage_den`, `.pack_mismatch_den`, `retailers.delivery_terms_note`,
+`.delivery_terms_source` — **all eleven live.**
+
+The contents were applied. They were applied through `apply_migration`, which stamps its own
+timestamp, so the file and the ledger entry are unrelated.
+
+> **APPLIED, APPLIED-THEN-EDITED AND NEVER-APPLIED ARE INDISTINGUISHABLE FROM THE LEDGER.**
+> This is therefore **not recoverable work — it is unanswerable questions.** Recoverable work
+> can be found and done. A question about which of the 117 is which has no artefact to consult.
+
+**The sample says the common case is benign. It cannot say the uncommon case does not exist**,
+and nothing available today can. That is the residual risk, and it is unquantified by
+construction rather than by neglect.
+
+#### IT IS ITEM 75 AT SCHEMA-HISTORY SCALE, AND ITS WORDS FIT WITHOUT ADAPTATION
+
+Item 75 found `products_active`'s live definition — carrying an `r.active` filter present in no
+migration — existing only in the database:
+
+> *"This is not a stale record. It is an absent one… **A stale record can be diffed. This
+> cannot:** the repo's version is not an old definition of the live view, it is a different view
+> that no longer exists anywhere."*
+
+**Written about one object, true of the entire history.** Item 75 was the instance; this is the
+class. Its fix is also the model — *"bring the live definition into a migration, verbatim,
+changing nothing. Not a correction — a capture"*, asserted to be provably a no-op.
+
+#### URGENT IN PRINCIPLE, NOT URGENT TODAY
+
+Nothing is broken. Nothing is degrading. No page, price or import depends on this being fixed.
+
+**But the mechanism is the current default, so it is not a historical state — it is a growth
+rate.** Today's migration is the 125th instance, and it was added by the same route on the same
+day this item was written. **Every change from here enlarges the classification step of any
+eventual reconciliation.**
+
+That is the whole shape of the urgency: the cost of the job rises monotonically with time, while
+nothing forces it to be done on any particular day.
+
+#### STEP 4 IS THE ONE THAT DECIDES WHETHER THE JOB IS WORTH DOING
+
+A reconciliation is roughly: (1) dump live schema as ground truth; (2) classify all 117 local
+files into applied-unchanged / applied-then-edited / never-applied; (3) decide the repair shape —
+squash to a captured baseline or backfill 125 files; (4) **change the default that caused it**;
+(5) verify as a no-op to item 75's standard.
+
+> **RECONCILING WITHOUT (4) RE-DIVERGES IMMEDIATELY. The job is "change how migrations are
+> applied, THEN reconcile", and the second half is worthless without the first.**
+
+So (4) is not the last step. It is the precondition, and it should be costed on its own before
+anyone commits to the other four.
+
+#### WHAT CHANGING THE DEFAULT WOULD INVOLVE — COSTED SEPARATELY
+
+**The precedent already exists in this repository, for the sibling problem, and it was built
+three days ago.**
+
+`.github/workflows/deploy-edge-function.yml` (items 217, 218) was created on 19 August after an
+edge function was overwritten with a placeholder by a deploy path taking file **content inline**
+rather than a path. Its header states the rule:
+
+> *"THIS DEPLOYS FROM THE REPOSITORY, which is the source of truth… THIS IS THE ONLY ROUTE. DO
+> NOT DEPLOY AN EDGE FUNCTION BY PASTING ITS CONTENT… If a deploy is needed and this workflow
+> cannot do it, THAT IS A FINDING ABOUT THIS WORKFLOW. Extend it. Do not route around it."*
+
+**`apply_migration` is to schema what inline-content deploy was to edge functions.** Same hazard,
+same shape, and the argument has already been accepted once here.
+
+**Two options, and they differ enormously in cost and in what they assert.**
+
+**Option A — discipline only. Small. Asserts nothing.**
+Keep using `apply_migration`, but *always* write the local file named with the version the tool
+returns, in the same change. File and ledger agree from that point on.
+
+- Cost: a documented rule plus the habit. **No repo surgery, no CLI reconciliation, no claim
+  about the 117.**
+- Effect: **the divergence stops growing.** The eventual reconciliation becomes a **fixed size —
+  117 and 125 — rather than a moving one.**
+- Limit: does not make `db push` work, and does not make schema changes appear in a diff before
+  they are applied. It records after the fact rather than reviewing before.
+- Verifiable: a standing check comparing `schema_migrations.version` against filenames would
+  fail the moment the rule lapses — the same detector shape as item 194.
+
+**Option B — make the repository the route, as with edge functions. Larger. Asserts something.**
+A `apply-migration.yml` workflow that runs `supabase db push` from the checkout, so migrations
+are applied *from committed files* and are reviewable in a diff before they exist in production.
+
+- **CI already has the credentials.** `deploy-edge-function.yml` uses `SUPABASE_ACCESS_TOKEN`
+  and `SUPABASE_PROJECT_REF`; a migration job needs the same two and a DB password.
+- **Blocked until history is repaired**, because `db push` would attempt the 117.
+  `supabase migration repair --status applied <version...>` marks versions applied without
+  running them and accepts a list, so mechanically this is one command.
+- **But that command is an assertion**, and it is precisely the unverified one: it declares all
+  117 applied when the ledger cannot show that. Sampling says it is probably true. *Probably* is
+  what item 75 exists to object to.
+
+> **RECOMMENDED READING OF THE TWO: Option A is worth doing on its own, now, independently of
+> whether the larger job is ever scheduled.** It is small, it asserts nothing false, it stops the
+> problem growing, and it converts an open-ended cleanup into a bounded one. Option B is the
+> better end state and belongs with the reconciliation, because the repair command it needs is
+> the same decision as step 3.
+
+#### OPTION A — DONE, 21 AUGUST 2026
+
+| Artefact | What it is |
+|---|---|
+| `docs/migration-rule.md` | The rule, and why not `db push` |
+| `supabase/migrations/.ledger-divergence-baseline.json` | The 117 + 125 frozen **by version** |
+| `lib/migration-ledger.ts` | `classifyDivergence()` — the set comparison |
+| `lib/__tests__/migration-ledger.test.ts` | 8 tests, including the count-cannot-see case |
+| `scripts/migration-ledger-check.mjs` | The runner, item 194's three states |
+| `.github/workflows/migration-ledger-check.yml` | Weekly, Monday 08:00 UTC |
+| migration `20260821170949` | The ledger accessor — **and the first change to follow the rule** |
+
+**The rule was demonstrated, not just written.** `20260821170949` was applied via
+`apply_migration` and its local file written in the same change under the returned version. The
+file was then verified against the ledger by hash rather than by care: `md5(statements[1])` =
+`421ab48f93fa368380507106355744a0`, identical to the file with its trailing newline stripped.
+**Byte-identical to what was applied.**
+
+**Dry-run against the real repository:** 121 local files all parsed, ledger 129 entries,
+divergence 117 local-only / 125 remote-only, **0 findings, 0 reconciled.** The opening state is
+silent, which is the property that matters most.
+
+The boundary landed exactly right: `20260821164312` — today's metric widening, applied before
+the rule existed — is **in** the accepted baseline; `20260821170949` is **not**, and is not
+divergent either, because it has a file.
+
+##### The two things that had to be got right
+
+**1. The opening state is coverage, not a finding.** 117 + 125 are recorded with
+`kind='coverage'`, one row, never per version — the same handling as the 35 unre-derivable
+ASINs. A check that fails on its own starting conditions gets switched off within a week, and
+after that the new divergence it was built for arrives unobserved. Asserted as the central test:
+*"the opening state reports ZERO findings — it must not escalate on its own backlog."*
+
+**2. A new divergence is told from the existing one BY SET MEMBERSHIP, NEVER BY COUNT.** The
+baseline enumerates all 242 versions individually. A divergent version is a finding **if and
+only if it is absent from those lists**.
+
+> **A count cannot do this job, and the failure is not hypothetical.** A count cannot name the
+> offender, so it cannot say what to fix. Worse, **it can stay perfectly flat while one
+> divergence is added and another reconciled** — which is the exact case this check exists for.
+> There is a test for precisely that: one added, one reconciled, total unchanged, and the new
+> one still named while the reconciled one is reported as progress.
+
+Counts also only ever rise here, so any threshold on one degrades into noise as the accepted
+population is worked down. **Shrinking is expected and silent**: a baseline entry that stops
+being divergent is progress, and entries leave the baseline file only via the reconciliation job,
+by a person.
+
+**Weekly rather than per-push, deliberately.** The rule is "write the file in the same change as
+the apply". A per-push gate would fail the very push that adds the file whenever CI ran between
+the apply and the commit. The check reports the state; it does not police the ordering.
+
+**Option B remains with the reconciliation.** Recorded again because it is the part that is
+tempting to pull forward: it needs `migration repair --status applied` over the 117, which
+**declares them applied when the ledger cannot show that.** That is the same decision as step 3,
+and it is the thing item 75 exists to object to.
+
+#### WHAT IT COSTS TO LEAVE
+
+- **The repo cannot answer what the database is.** Every *"why is this column here / when did
+  this filter appear / what was this for"* is unanswerable from version control. Item 75 is the
+  worked example: the reason could never have been found because the artefact could not be.
+- **No fresh environment can be built.** No staging, no local rebuild, no disaster-recovery path
+  starting from the repository. Recovery depends on the live database continuing to exist.
+- **Schema changes are unreviewable.** A migration applied via `apply_migration` never appears in
+  a diff — not attributable, not visible to `/code-review` or CI.
+- **The residual risk stays unquantified** until the classification step is done.
+
+**Nothing here competes with item 228**, which remains the open item with commercial
+consequence.
+
+---
+
+### 236. Names survive imports and barcodes do not — opposite properties on the same row
+
+**Raised:** 21 August 2026, deciding how to fix two confirmed defects on product 96761 ·
+**Applied in part: name corrected, barcode left with a note, mojibake reported not applied.**
+
+#### THE FINDING THAT MATTERS BEYOND THE ROW
+
+The question was whether a name correction survives the next import. **It does, and that was
+a real risk with a good answer: every name defect found this fortnight is durable.**
+
+`import-awin-feed` writes `products` **only on INSERT**. `updateActions` carries
+`rp_id, product_id, price, url, in_stock, ean, mpn, image_url` — **no name**. It is the same
+creates-only property the importer already states about itself for tags and categories, and
+which makes `product_exclusions` durable.
+
+> **THE ASYMMETRY IS THE THING TO CARRY.** On one row, at the same moment:
+>
+> | | Rewritten every import | Survives |
+> |---|---|---|
+> | price, url, in_stock, **EAN**, MPN, image_url | **yes** | no |
+> | **name**, brand, tags, top_category, subcategory | no | **yes** |
+>
+> **Opposite properties, same row, and NEITHER was documented at the point where somebody
+> would attempt a fix.** Now recorded on `updateActions` itself, which is the line a fixer
+> reads before hand-correcting anything.
+
+**One caveat found while applying it:** `match_key` is derived from the name AT IMPORT and does
+**not** follow a manual name change. 96761 now reads `Solgar Vitamin D3 2500 IU (62.5 µg)
+Liquid` while its `match_key` still reads `solgar vitamin d3 500 iu 625 g liquid`. Harmless for
+display, relevant to matching, and it scales with any bulk name fix.
+
+#### THE BARCODE — OPTION 1 TAKEN, AND WHY NOT THE OTHERS
+
+`0033984009479` is confirmed CoQ-10 100 mg, not our Vitamin D3 liquid. It is supplied by
+**Beauty Flash and Gorgeous Shop, which agree**, so it is feed data.
+
+| | Option | Verdict |
+|---|---|---|
+| 1 | **Leave it; the map note is the guard** | **TAKEN.** No linking harm: checked, no third retailer and no other product claims it. The harm was the ASIN, now unpublished. |
+| 2 | Build a barcode denylist | **Right eventual answer, wrong trigger.** See below. |
+| 3 | Report to both retailers | Correct at source, outside our control, unbounded latency. Not pursued. |
+| 4 | Correct or detach the barcode locally | **TRIED AND DOES NOT HOLD.** `updateActions` carries `ean`, so the next import restores it. Recorded so it is not retried. |
+
+> **ON OPTION 2 — BUILD IT WHEN THERE IS A POPULATION, NOT WHEN THERE IS AN INSTANCE.**
+> A denylist for n=1 is a mechanism built for a case that has happened once, and the shape of
+> a mechanism fitted to one example is exactly what `product_exclusions` warns about. The
+> importer already anticipates it (`index.ts:881` — *"becomes merge queue input or a barcode
+> denylist rather than a decision nobody sees"*), and `tier1_ean_skips` is where the
+> population would accumulate. **Trigger: build it when `tier1_ean_skips` plus confirmed
+> wrong-barcode rows form a set that a person cannot hold in their head — not before.**
+
+#### A ONE-EXAMPLE RULE, AND WHAT IT CAUGHT INSTEAD OF THE DEFECT
+
+Searching for the lost decimal as a class, I checked names stating both an IU and a microgram
+figure against vitamin D's conversion (1 µg = 40 IU). **Five flagged, four false positives.**
+
+| flagged | what it actually was |
+|---|---|
+| 96761 Solgar D3 `500 IU (625 µg)` | **the real defect** |
+| Osavi D3 + K2 `4000 IU 150 mcg` | the µg is the **K2**, not the D3 |
+| Osavi D3 + K2 `2000 IU 100 mcg` | same |
+| 4HIM4HER D3 K2 `800 IU + 100 µg MK7` | same — MK7 *is* K2 |
+| Solgar Dry Vitamin A `5000 IU (1502 mcg)` | **vitamin A converts at ~0.3 µg/IU**, so 5000 IU ≈ 1500 µg and 1502 is right |
+
+> **The D3+K2 case is exactly the neighbour a one-example rule catches**: a name containing
+> two actives, where the second one's units are correct and unrelated. The rule was built from
+> the single instance in hand and had no way to know the µg might belong to something else.
+> **Same trap `product_exclusions` documents** — a rule fitted to the examples available is
+> fitted to them, and its confidence is indistinguishable from its coverage.
+
+**The lost decimal is confined to 96761.** Corrected.
+
+#### THE CLASS THE SEARCH WAS LOOKING FOR WAS THERE — IT WAS NOT THE DECIMAL
+
+**58 live products carry `Â` mojibake** (UTF-8 read as latin-1), and 96761 was a member of it.
+Reported before applying; see the accompanying report for the class breakdown, the
+irreversible subset and the co-occurring HTML-entity class (52 products, only 8 overlapping).
+
+#### ONE LINE ADDED WHERE THE NEXT TRANCHE WILL READ IT
+
+`scripts/amazon-match-barcodes.py` prints INSERT tuples that **do not include `notes`**, so
+whoever writes the conflict clause decides whether hand-written findings survive. On 96761 the
+note is the only thing stopping the ASIN being re-promoted. The script now prints the warning
+above its own output.
+
+---
+
+### 237. One cause, three remedies: text passed through one decoding step too few
+
+**Raised:** 21 August 2026, from a single garbled supplement name · **ALL THREE PASSES APPLIED**, each as its own
+reviewed change, with one row held. Recorded as one item so the next instance is recognised rather than
+re-diagnosed.
+
+#### PASS 1 — APPLIED, 21 AUGUST 2026
+
+49 rows, three transformations, no key recomputation. Guards were in the `WHERE` clause rather
+than in a preceding check, so a row failing any assertion was simply not written: decode must
+succeed, result must shorten, result must contain no `Â`, and `fmb_build_match_key` must return
+the same key before and after.
+
+| | expected | actual |
+|---|---:|---:|
+| rows changed | 49 | **49** |
+| mojibake remaining in population | 0 | **0** |
+| **match keys moved** | **0** | **0** |
+
+Snapshot in `mojibake_pass1_backup_20260821` (rollback SQL on the table comment). Created via
+`execute_sql`, **not** a migration: a dated data snapshot does not belong in schema history,
+which is the reasoning `amazon_asin_map`'s own migration states.
+
+`Â£72` → `£72`. `Stay All DayÂ®` → `Stay All Day®`. `75mmÂ ` → `75mm ` — **note this one now ends
+in a real trailing non-breaking space.** The decode is correct; trimming trailing whitespace is a
+different edit and was deliberately not folded in, because the reviewed diff was for decoding.
+
+#### THE CAUSE IS ONE THING
+
+Every defect below is the same failure: **text that went through one decoding step too few**
+somewhere between a retailer's page and our column. It shows up in three forms that look
+unrelated and need three different remedies:
+
+| | Form | Population | Remedy |
+|---|---|---|---|
+| **1** | UTF-8 read as latin-1 (`Â®`, `Âµ`, `Â£`) | **49** | round-trip decode — reversible |
+| **2** | The same, with a byte destroyed (`â ` + trailing run) | **8** | truncate; **never reconstruct** |
+| **3** | HTML entities never decoded (`&amp;`, `&nbsp;`) | **52** | targeted string replace |
+
+**They are not variants of one fix.** 1 is exactly reversible, 2 is information-destroying, 3
+touches the match key and the other two do not. Treating them as one pass would apply the
+wrong remedy to two thirds of the rows.
+
+#### PASS 2 — APPLIED. 8 rows, truncated, never reconstructed
+
+All 8 stripped to complete names (`…Lipstick Raisen in Raisen`), 5–17 junk characters each.
+**8 changed, 0 keys moved, and zero `Â` left in the catalogue.** Snapshot in
+`mojibake_pass2_backup_20260821`.
+
+#### PASS 3 — APPLIED TO 51 OF 52. THE REPORT EARNED ITSELF
+
+**The recomputation decision was made explicitly, not inherited:** `match_key` WAS recomputed
+here — unlike passes 1 and 2 — because `amp` is alphanumeric and sat in 47 keys. And the chosen
+option was **report the rows that moved by more than the entity removal explains**, because
+accepting drift as a rider means a text fix silently applies a matching change.
+
+**The report found 3 riders, and they were not generic drift.** All three were
+`039 s` → `039pcs`: `normaliseCountUnits` reading the entity's own digits as a pack count. Two
+resolve cleanly once decoded. **The third does not:**
+
+| | |
+|---|---|
+| `Sweed Le Lipstick-90&#039;s Model` | stored key `sweed le lipstick 90 039 s model` |
+| decoded to `Sweed Le Lipstick-90's Model` | key would become **`sweed le lipstick 90pcs model`** |
+
+> **THE FIX WOULD HAVE MADE THIS ROW WORSE.** `90's` is a shade name; decoded, the normaliser
+> reads it as **ninety pieces**. The entity was accidentally shielding it, and removing the
+> entity introduces a false pack count into the key — the field the whole matcher keys on.
+>
+> **105424 IS HELD.** One row, named, with its reason. This is precisely what the report was
+> for: had the drift been accepted as a rider, the row would have been written and the false
+> pack count would have entered the matcher inside a change described as decoding text.
+
+##### THE GENERAL SHAPE: A DEFECT PROTECTING AGAINST A SECOND DEFECT
+
+> **The undecoded entity was ACCIDENTALLY SHIELDING the row from `normaliseCountUnits`.** Fixing
+> the first defect exposes the second. Neither is visible while the other stands: the entity
+> hides the count-unit bug, and the count-unit bug is the reason the entity cannot simply be
+> removed.
+>
+> **This is the argument for reporting riders rather than accepting them, and it is now
+> evidenced rather than argued.** The generic case for the report was "a text fix should not
+> silently apply a matching change". The actual case is stronger: **the rider was not noise
+> around the fix, it was the fix's consequence** — and a blanket application would have
+> converted a harmless shielded defect into a live one, in the field the matcher keys on, under
+> a changelog entry saying "decode HTML entities".
+>
+> A defect that is currently load-bearing does not announce itself. The only thing that found
+> this one was computing what the write *would* produce and looking at the rows where the answer
+> was surprising.
+
+##### RECORDED WHERE A FIXER WILL MEET IT, NOT ONLY HERE
+
+Two placements, because the next person could arrive from either direction:
+
+- **`standing_check_findings`**, key `held:105424:entity-shields-count-unit` — for whoever queries
+  open findings or re-runs an entity sweep and wonders why one row is left.
+- **A comment on `COUNT_UNIT_RE` in `_shared/match-key.ts`** — for whoever fixes the regex. It
+  states both directions: fix the regex and the row becomes decodable; decode the row without
+  fixing the regex and you write a false pack count into the key. **The two are one piece of
+  work**, and neither half is discoverable from the other without the note.
+
+**Result: 51 changed, 51 keys updated, 1 entity row remaining (the held one).** The 44 junk
+`amp` tokens are gone from the keys and **the three legitimate `Amp` products are untouched** —
+Wet N Wild `Amp'd Black`, Living Proof `Amp Texture Volumizer`, Benefit `17W Amp` — confirmed by
+querying the keys after the write, not by trusting the predicate.
+
+**One design decision recorded:** `&nbsp;` was decoded to a **plain space**, not U+00A0.
+Semantically the entity *is* U+00A0, but decoding it faithfully would have added rows to the
+invisible-whitespace class found the same day. Fidelity to the entity would have been infidelity
+to the intent.
+
+#### RESIDUE PASS — APPLIED. 11 rows, and they needed THREE remedies, not one
+
+The 11 rows the original `Â` scope could never have matched. "Pass 1's treatment" turned out not
+to be one treatment:
+
+| Class | n | Remedy | Why |
+|---|---:|---|---|
+| `â„¢` → `™` | 5 | round-trip via **WIN1252**, not LATIN1 | `™` and `„` are not in ISO-8859-1, so the Pass 1 codec **throws** on these |
+| `â®` → `®` | 5 | delete the spurious `â` | bytes are `E2 AE`, **invalid UTF-8** — it does not round-trip. But the `®` is PRESENT; only the `â` is spurious, so this is a **deletion, not a reconstruction** |
+| `â€‹` → removed | 1 | delete | mojibake of U+200B zero-width space. Decoding faithfully would have preserved an **invisible character** inside `2.5` |
+
+**11 changed, 0 keys moved.** `bareMinerals … LIGHT WARM 2â€‹.5 30ml` → `… 2.5 30ml`.
+Snapshot in `mojibake_residue_backup_20260821`.
+
+> **Even the residue's own scope was wrong once more.** "Apply Pass 1's treatment to 11 rows"
+> assumed one defect with one remedy; the codec threw on the first class and the second class
+> was not reversible at all. **Three sub-classes inside eleven rows.** The pattern from earlier
+> in this item repeats at one-tenth the scale: a set named by how it was found is not a set that
+> shares a remedy.
+
+**Zero mojibake of any known class now remains in the catalogue.**
+
+#### TRAILING WHITESPACE — APPLIED, AND I ADDED ONE ROW TO IT MYSELF
+
+**30 rows, not the 29 measured.** The extra one is mine: product 125624 was in Pass 3, its name
+ended in `&nbsp;`, and decoding that to a plain space **created a trailing ASCII space** — one
+new row in the very class the `&nbsp;`-to-plain-space decision was made to avoid growing.
+
+> **Recorded rather than quietly absorbed.** The decision was still right — a faithful decode
+> would have produced an *invisible* trailing U+00A0 instead of a visible one — but "avoids
+> growing the class" was too strong. It moved one row from the invisible half to the visible
+> half, where the next pass caught it. **A fix that is right in principle can still be the
+> source of the next row**, and the honest version is that the two passes had to run in that
+> order.
+
+**30 changed, 0 keys moved, 0 trailing whitespace left.**
+
+#### TRAILING WHITESPACE — ITS OWN SMALL DECISION, NOT FOLDED IN
+
+Flagging the Babyliss trailing NBSP rather than folding it into Pass 1 was right, and measuring
+it settles what kind of thing it is: **29 rows catalogue-wide**, so a small class rather than one
+fix or a sprawl.
+
+| Trailing character | n |
+|---|---:|
+| U+00A0 no-break space | 18 |
+| U+202F narrow no-break space | 11 |
+| **leading whitespace** | **0** |
+
+> **`btrim(name)` WOULD FIX NONE OF THEM.** Not one of the 29 ended in an ASCII space — all of
+> them ended in U+00A0 or U+202F, and `btrim` with no second argument strips spaces only. **The
+> obvious remedy is a no-op that reports success**, and 29 rows would have sat unchanged behind
+> a green run with nothing to indicate they had been missed.
+>
+> This is the whitespace instance of the same shape as the DQ metric that scored 437 rows
+> `agrees`: **an operation that cannot see the defect returns the answer that means "fine".**
+> The predicate must be a whitespace-CLASS regex, and it must be tested against the population
+> before the fix, not after.
+
+Also present and deliberately not scoped here: **85 names contain U+00A0 somewhere**, and **439
+contain a double space**. Trailing whitespace is either worth stripping catalogue-wide or not at
+all, and that is a different question from decoding — which is why it is recorded here and not
+done.
+
+#### THE match_key RULE, WHICH GOVERNS ALL THREE
+
+**Recompute when the fix changes ALPHANUMERIC content. Not otherwise.** Measured, not assumed:
+
+- **Pass 1 changes ZERO keys.** `normaliseForMatch` strips non-alphanumerics, and `Â`, `®`, `£`
+  and NBSP are all non-alphanumeric — they were never in the key. Verified across all 49.
+- **Pass 3 changes 47 of 52 keys**, because **`amp` IS alphanumeric** and is sitting in them.
+  47 stored keys currently contain a junk `amp` token. Decoding removes it, which is a
+  correction to matching, not a side effect of one.
+- **The one-row instance was real for the opposite reason:** 96761's fix changed digits
+  (`500`→`2500`, `625`→`62.5`), so its key did move and did need recomputing.
+
+##### THE CORRECTION IS THE FINDING, NOT THE PASS
+
+> **"Recompute alongside, or the corrected names will disagree with their keys at 50-row scale"
+> was WRONG for Pass 1 and RIGHT for Pass 3.** It was stated as a general precaution and it is
+> not general. Measured after the fact: Pass 1 moved **zero** keys of 49.
+>
+> **THE GENERAL RULE: a derived key goes stale only when the edit changes what the derivation
+> KEEPS.** `normaliseForMatch` keeps alphanumerics and discards everything else, so removing
+> punctuation-class corruption cannot move a key, while `&amp;` → `&` deletes the alphanumeric
+> token `amp` and moves 47 of them.
+>
+> The precaution was reasonable and untested. **Its cost was not a wrong write — it was 49
+> unnecessary recomputations, each carrying unrelated derivation drift.** A guard against keys
+> going stale would itself have moved 49 keys for no reason: **a precaution creating the risk it
+> guarded against.**
+>
+> **A CAUTIOUS STEP IS STILL A STEP, AND IT STILL HAS TO BE MEASURED.** Caution is not a reason
+> to skip measurement; it is the most common reason measurement gets skipped, because the step
+> feels defensive rather than consequential.
+
+**No second implementation is needed.** `fmb_build_match_key(brand, name)` exists in SQL,
+kept byte-identical to the TypeScript `buildMatchKey` by an explicit parity contract
+(`_shared/match-key.ts`, header) with `scripts/countunit-parity.mts` to diff them. So the key
+recomputes **inside the same UPDATE that fixes the name** — atomic, no drift window, and
+nothing new to keep in parity. **Item 65's shape is avoided rather than repeated.**
+
+##### THE CAVEAT THAT BELONGS WITH PASS 3, WHERE RECOMPUTATION IS UNAVOIDABLE
+
+At least one row — **105723 Babyliss** — has a key that is *already* stale against the current
+derivation: stored `babyliss pro babyliss concentrator nozzle 75mm`, recomputed
+`babyliss pro concentrator nozzle 75mm`. The difference is `stripLeadingBrandRepetition`, a
+change made after that key was written.
+
+> **RECOMPUTATION IS NOT FREE.** Calling `fmb_build_match_key` on a fix row does not just
+> refresh that row for *this* edit — it applies **every derivation change made since the key was
+> last written**, silently, in a change whose stated purpose was decoding text. Pass 3 must
+> recompute 47 keys and will carry whatever drift those rows hold.
+>
+> Two honest options for Pass 3, neither picked here: recompute and **report the rows whose key
+> moved by more than the entity removal explains**, or recompute and accept the drift as a
+> known rider. **A catalogue-wide `fmb_build_match_key` sweep is a separate and much larger
+> decision** — it would re-key every stale row at once, and its blast radius is matching, not
+> display.
+
+#### THE NEIGHBOURING TRAP: `Â` HAS NO LEGITIMATE USES AND `â` HAS SEVENTY-FOUR
+
+The instruction was to report where `Â` is legitimate rather than assume none. **Checked
+exhaustively — 49 rows, three distinct patterns, all mojibake:** `Â®`→`®` (47), `Â `→NBSP (1),
+`Â£`→`£` (1). No French or Portuguese name is involved. Pass 1 is safe.
+
+**But widening the same reasoning to `â` would be a catastrophe.** Of 93 rows containing `â`:
+
+| | n | |
+|---|---:|---|
+| **`âme pure`** | **56** | a real brand. The `â` is correct |
+| French words — `Pâte Grise`, `Châtaigne`, `Albâtre`, `Câline`, `Malikhân`, `flâneur`, `Le Hâle`, `Stimulâge` | **18** | correct |
+| `â„¢` → `™` | 5 | mojibake, reversible |
+| `â®` (Burt's Bees) | 5 | mojibake |
+| `â€…` | 1 | mojibake |
+| `â ` + trailing run | **8** | **damaged, irreversible** |
+
+**74 of 93 are correct text.** A regex written from the damaged rows would have destroyed an
+entire brand.
+
+> **THIS IS THE CASE FOR REVIEW-AS-GUARD, AND IT IS THE STRONGEST ONE ON THIS LIST.** The
+> pattern was wrong and the reading caught it. Nothing about `â` distinguishes `âme pure` from
+> `Raisenâ ` at the level a regex operates on — both are U+00E2 — and no amount of tuning
+> reaches the difference, because the difference is *what the word means*, which is outside the
+> pattern's world.
+>
+> **Same defence as re-measuring a figure and reading generated SQL before running it:** the
+> mechanism cannot check itself, so a person reads the output. Here that was affordable only
+> because the population was 93 rows. **The affordability is not a property of the method — it
+> is a property of the scope**, and it is the reason to keep these passes small rather than to
+> merge them.
+
+##### THE ORIGINAL SCOPE WAS SET BY WHAT THE FIRST QUERY MATCHED, NOT BY THE DEFECT
+
+Widening from `Â` to `â` surfaced **three further mojibake classes that the original search
+never touched**: `â„¢` → `™` (5 rows), `â®` on Burt's Bees (5), and `â€…` (1). None contains
+`Â`, so none appeared in the 58 that the first query returned, and the "58 products" figure was
+never the extent of the defect — it was the extent of one pattern.
+
+> **A POPULATION DEFINED BY A DETECTOR IS A MEASUREMENT OF THE DETECTOR.** "58 products" was the
+> reach of one pattern, carried for two rounds as the extent of the defect. **The three new
+> classes could never have appeared in the first query, because none of them contains `Â`** —
+> their absence was guaranteed by the search, not by the catalogue. Sibling case: [item 235's] 117/125 counts are of the same kind and are known to be, which
+> is why they are frozen by identity rather than trusted as a total.
+
+#### PASS 2: THE TRUNCATION HYPOTHESIS, CHECKED FIRST — AND IT DOES NOT HOLD
+
+The worry was that the 8 damaged Max Factor rows are feed-truncated as well as corrupted, so
+stripping further would compound it. **Checked before scoping the pass, and it fails: they are
+not at a cap.** Lengths run **57–68 against sibling rows at 112**, so nothing is cutting at 67
+and the clustering around 67 is coincidence, not a limit. **The junk is junk, not the symptom of
+a cap.** The
+trailing runs are 5–17 characters of pure junk and every one strips back to a complete,
+sensible product name (`…Lipstick Raisen in Raisen`, `…Moisture Kiss in Ruby Tuesday`).
+
+**Truncation, never reconstruction.** The bytes read `c3a2 20` — `â` followed by a plain ASCII
+space where a continuation byte should be. The middle byte of a three-byte sequence is gone;
+it could have been an ellipsis, a dagger, a dash or a curly quote, and **nothing in the row
+says which.** Stripping a trailing run is honest; inventing a character is not.
+
+#### PASS 3 SCOPING
+
+`&amp;` (47) and `&nbsp;` (2) and `&#39;` (3) — **52 rows, no other named or numeric entity,
+and no double-encoding** (`&amp;amp;` = 0), so one flat pass covers it.
+
+**Three products carry a legitimate `Amp` word** — Wet N Wild `Amp'd Black`, Living Proof
+`Amp Texture Volumizer`, Benefit shade `17W Amp`. None contains `&amp;`, so a replacement
+targeting the literal entity string cannot touch them. **The hazard would be "strip the token
+`amp` from the key", which would corrupt all three** — the fix must operate on the name and
+let the key be re-derived, never on the key directly.
+
+---
+
+### 238. The featured block showed the best of a sample as the best of the category, on every page
+
+**Raised:** 21 August 2026, from "the supplements page shows only two featured products" ·
+**FIXED for the featured block. A second instance found and NOT fixed — see the end.**
+
+#### THE FINDING IS THAT EVERY CATEGORY HAS BEEN AFFECTED, NOT THAT SUPPLEMENTS WAS BROKEN
+
+`getFeaturedProducts` fetched `products_active` with `.limit(500)` and **no `.order()`**, then
+applied the `retailerCount >= 2` test to whatever those 500 happened to be. Measured:
+
+| Category | Qualifying | Reachable within the 500 | Rendered |
+|---|---:|---:|---:|
+| Skincare | **6,270** | **90** | 24 |
+| Makeup | 2,353 | 42 | 24 |
+| Hair | 2,341 | 71 | 24 |
+| Fragrance | 1,132 | 176 | 24 |
+| Bath & body | 915 | 58 | 24 |
+| **Supplements** | **35** | **2** | **2** |
+
+**Every category lost 85–99% of its qualifying set.** The big five still had more than 24
+survivors, so the block filled and nothing looked wrong.
+
+> **SKINCARE'S FEATURED PRODUCTS WERE 24 OF AN ARBITRARY 90, NOT THE BEST 24 OF 6,270.** 371
+> skincare products have 4+ retailers and **52 were reachable**. The sort by retailer count and
+> saving ran over the sample, so it produced the best of an arbitrary draw and presented it as
+> the best of the category — on every page, for as long as the cap has existed.
+
+**Supplements was not a special case. It was the first pool thin enough for the defect to reach
+the page**, where it surfaced as the number two.
+
+#### THIRD INSTANCE OF THE NEWEST CATEGORY SURFACING A DEFECT DEGRADING THE OLDEST
+
+| | Defect | Found via | Largest affected share |
+|---|---|---|---|
+| 1 | `product_type` read off a discarded verdict | Boots supplements classification | **Skincare — 1,297 rows** |
+| 2 | `canonical_size` holds unit size, not pack total | Supplements per-100g feasibility | **Skincare — 145 rows** |
+| 3 | **Featured block truncated before the eligibility test** | Supplements page reading thin | **Skincare — 6,180 of 6,270 unreachable** |
+
+Three for three, and the third is the largest by far. **The mechanism is not luck**: supplements
+is the category whose outputs are still being read from scratch, and skincare is the one whose
+outputs long ago became furniture. A fresh category does not have more defects; it has more
+attention. See the pattern note in item 236.
+
+#### A RULE SCOPED TO A MECHANISM RATHER THAN TO A HAZARD
+
+The rule already existed, **sixty lines above the function**, on `fetchAllRows`:
+
+> *"EVERY CALLER MUST `.order()` A UNIQUE COLUMN BEFORE `.range()`… Unordered LIMIT/OFFSET has no
+> stability guarantee across pages, and the failure returns the RIGHT TOTAL from the WRONG ROWS,
+> so no count-based check detects it."* (items 146, 151)
+
+**It was written for the PAGING helper. `getFeaturedProducts` does not page, so it never came
+under a rule it needed.** The hazard is unordered truncation; the rule was scoped to pagination,
+which is only the most common way to meet it.
+
+> **A rule scoped to a mechanism protects only the callers that use that mechanism.** Scope the
+> rule to the HAZARD and it would have read "any `.limit()` or `.range()` without `.order()`",
+> which catches this function on sight. The same failure shape as item 179's one-directional
+> rule implemented as a symmetric guard: the sentence was right and its reach was wrong.
+
+#### THE FIX: THE TEST MOVED INTO THE QUERY, NOT THE CAP RAISED
+
+`fmb_featured_products(p_category, p_limit)` — migration `20260821190415`, following the
+`fmb_cross_category_brands` pattern of heavy aggregation in SQL and light mapping in TypeScript.
+
+**Raising or ordering the cap was rejected and the reason is worth keeping: a larger arbitrary
+sample is still arbitrary, and ordering alone makes it deterministic rather than correct.** The
+test that decides eligibility has to see every candidate.
+
+**The requirement is unchanged.** `HAVING COUNT(DISTINCT retailer_id) >= 2`, in-stock, active
+retailers only. A featured product claims a comparison, so a single-retailer row must never
+appear here however thin the category is. **The honest number for supplements under that rule is
+35, not 2.**
+
+#### WHAT IT CHANGES ON LIVE PAGES — MEASURED BEFORE APPLYING
+
+| Category | Shown before | Shown after | Survive | Replaced | Top retailer count | Best saving shown |
+|---|---:|---:|---:|---:|---|---|
+| Skincare | 24 | 24 | **0** | **24** | 6 → **9** | 52% → 47% |
+| Makeup | 24 | 24 | **0** | **24** | 3 → **6** | 61% → 54% |
+| Hair | 24 | 24 | 2 | 22 | 5 → 5 | 88% → 66% |
+| Bath & body | 24 | 24 | 2 | 22 | 4 → **6** | 60% → 50% |
+| Fragrance | 24 | 24 | 3 | 21 | 4 → **5** | 63% → 61% |
+| **Supplements** | **2** | **24** | 1 | 23 | 2 → **4** | 8% → **32%** |
+
+**Near-total churn.** Skincare and makeup replace all 24. This will read as a content change to
+anyone who notices, and it is: the pages were showing the wrong products.
+
+##### THE SAVINGS FALL IS NOT A REGRESSION — READ IT BEFORE A DASHBOARD DOES
+
+> **A CORRECT POOL FILLS WITH DEEPLY-COMPARED PRODUCTS AND PUSHES OUT THE HIGH-DISCOUNT,
+> FEWER-RETAILER ROWS THAT WERE VISIBLE BY ACCIDENT.**
+>
+> Hair 88% → 66% is **the sort working as designed on a candidate set that finally contains the
+> right candidates.** `retailer_count DESC` is the primary key and saving only the tiebreak, so
+> once the block can see all 6,270 skincare candidates instead of 90, the deeply-compared rows
+> take the slots.
+>
+> **Comparison depth rising everywhere is the same change seen from the other side** — skincare's
+> *minimum* featured product now carries 7 retailers where the block previously topped out at 6.
+> One number falls and the other rises because they are the same fact.
+>
+> **Recorded here so it is not read off a dashboard as a regression.** A saving figure that drops
+> while comparison depth rises is the expected signature of this fix; the alarming version would
+> have been both moving together.
+
+#### THE SORT IS NOW A REAL DECISION — BOTH OPTIONS MEASURED
+
+`retailer_count DESC` as primary was chosen when it ranked an arbitrary 90. **It now ranks
+6,270**, so the choice actually bites. Measured over the full qualifying sets, top 24 per
+category:
+
+| Category | Retailer-primary (shipped) | | Saving-primary | |
+|---|---:|---:|---:|---:|
+| | avg retailers | avg saving | avg retailers | avg saving |
+| Skincare | **8.0** | 7.5% | 2.0 | **85.3%** |
+| Hair | 4.4 | 30.5% | 2.3 | 64.3% |
+| Makeup | 4.2 | 27.5% | 2.3 | 63.9% |
+| Bath & body | 4.2 | 20.5% | 2.0 | 66.9% |
+| Fragrance | 4.1 | 22.2% | 2.0 | 69.6% |
+| Supplements | 2.5 | 15.2% | 2.5 | 15.2% |
+
+*(Supplements is identical under both: with 35 candidates the two orderings coincide.)*
+
+**Saving-primary collapses to the minimum comparison depth** — 23 of skincare's 24 would have
+exactly two retailers. And the reason is not preference, it is what an 85% average saving
+actually consists of:
+
+| Would be featured under saving-primary | lowest | next-best | "saving" |
+|---|---:|---:|---:|
+| `MISSHA Airy Fit Sheet Mask - Lemon - 1pc` | £0.34 | £12.66 | 97% |
+| `CNP LABORATORY Quick Soothing S.O.S Mask` | £2.49 | £34.76 | 93% |
+| `Shiseido ULTIMUNE Power Infusing Concentrate` | £12.50 | £96.74 | 87% |
+
+> **THESE ARE NOT BARGAINS, THEY ARE THE SUSPECT-PRICE POPULATION.** A 1pc sheet mask at 34p
+> against £12.66 is a pack-size mismatch; £12.50 against £96.74 for ULTIMUNE is a sample against
+> a full size. **Saving-primary would turn the featured block into a showcase of the catalogue's
+> worst data** — the exact rows `review_queue` exists to hold.
+>
+> **THE REASON IS THE FINDING, NOT THE OUTCOME.** Retailer-primary was chosen as a reasonable
+> default when it ranked an arbitrary 90. The measurement gives it a much stronger justification
+> than the one it was picked on, and nobody had written it down:
+>
+> **THE SAVING FIGURE IS ONLY TRUSTWORTHY ONCE COMPARISON DEPTH IS HIGH, SO RANKING BY DEPTH
+> FIRST IS ALSO RANKING BY RELIABILITY FIRST. A HIGH SAVING ON TWO RETAILERS IS MORE OFTEN A
+> DATA DEFECT THAN A DEAL.**
+>
+> Two prices can disagree by 97% for exactly one interesting reason and several boring ones, and
+> with n=2 there is nothing to adjudicate between them. At eight retailers a lone outlier is
+> visibly an outlier. **Depth is not just a better product signal — it is the thing that makes
+> the saving figure mean anything at all**, which is why sorting on it first is correct rather
+> than merely defensible.
+>
+> **A BLENDED SCORE REMAINS UNTRIED, NOT REJECTED.** Nothing here tests weighting depth and
+> saving together, or gating saving on a minimum retailer count. That is the obvious next thing
+> and it has no measurement behind it either way.
+
+#### VARIANT FLOODING — MEASURED, AND IT IS WORSE OUTSIDE SUPPLEMENTS
+
+Vida Glow at 12 of 24 is the flooding predicted in the collagen analysis, now live. **But
+supplements is not the worst case:**
+
+| Category | Distinct brands in top 24 | Largest single brand |
+|---|---:|---|
+| **Makeup** | **5** | **bareMinerals — 17 of 24** |
+| **Skincare** | **5** | Beauty of Joseon 12, COSRX 5, medicube 5 — **22 of 24 from three brands** |
+| Supplements | 10 | Vida Glow — 12 of 24 |
+| Fragrance | 16 | 4 |
+| Hair | 15 | 3 |
+| Bath & body | 13 | 3 |
+
+> **MAKEUP AT 17 OF 24 FROM bareMinerals WAS WORSE THAN SUPPLEMENTS AT 12 OF 24 FROM VIDA
+> GLOW** — and skincare worse still at 22 of 24 across three brands. Vida Glow is the flooding
+> the collagen analysis predicted, and it arrived on the page the day the block started working;
+> bareMinerals had been there all along and nobody had looked.
+>
+> **Third time in this item that supplements is the symptom rather than the site.** The thin
+> category makes a defect legible; it does not own it.
+
+**What a per-brand cap would do — measured, not assumed:**
+
+| Cap | Skincare | Makeup | Hair | Fragrance | Bath & body | **Supplements** |
+|---|---:|---:|---:|---:|---:|---:|
+| none | 24 | 24 | 24 | 24 | 24 | 24 |
+| **3 per brand** | 24 | 24 | 24 | 24 | 24 | **20** |
+| **2 per brand** | 24 | 24 | 24 | 24 | 24 | **17** |
+
+**The big five fill completely under either cap**, and their distinct-brand count rises from 5
+to 17–18. **Supplements is the only category a cap costs anything**: 24 → 20 at three per brand,
+24 → 17 at two.
+
+> **The worry that a cap thins supplements back toward the problem just fixed is measured and
+> does not hold.** 20 is not 2.
+
+##### APPLIED: 3 PER BRAND — migration `20260821191907`
+
+**The trade, stated as the trade it is: ONLY SUPPLEMENTS PAYS, AND IT PAYS FOUR PRODUCTS so the
+other five categories go from 5 distinct brands to 18.** Live result:
+
+| Category | Rows | Distinct brands | Max per brand |
+|---|---:|---:|---:|
+| Skincare | 24 | 13 | 3 |
+| Makeup | 24 | **17** | 3 |
+| Hair | 24 | 15 | 3 |
+| Fragrance | 24 | **17** | 3 |
+| Bath & body | 24 | 13 | 3 |
+| **Supplements** | **20** | **12** | 3 |
+
+Supplements' distinct brands rose 10 → 12 even as its row count fell 24 → 20, which is the cap
+doing what it is for. **The cost is real, it falls entirely on the thinnest category, and it was
+measured before being accepted rather than assumed away.**
+
+The cap is on `normalised_brand`, not `brand` — the display string varies (`Ancient & Brave` /
+`Ancient + Brave`), so capping on it would let a brand exceed the cap through its own spelling
+variants.
+
+#### THE SAME HAZARD ELSEWHERE — ONE FIXED, OTHERS FOUND
+
+**`lib/brand-queries.ts` — FIXED as its own change.** `getBrandProducts` called `.range()` on
+`products_active` with no `.order()`. A different symptom from the featured block: not a
+truncated eligibility test but **unstable pagination — the same product appearing on two pages or
+on none, while the total still comes back right.** `candidateLimit` is 192 and `pageSize` 48, so
+**457 brands have more than one page and 106 exceed the 192-row window**, largest 2,220 products.
+Fixed with `.order('id')`, matching the sibling modules, with the reasoning recorded at the call.
+
+**Swept the rest.** `lib/edit-queries.ts`, `lib/subcategory-queries.ts` and `lib/sitemap.ts` all
+`.order('id')` already and are safe — the sitemap notably so, where an unstable window would drop
+or duplicate indexed URLs.
+
+**`lib/product-queries.ts` — FIXED.** Four unordered `.limit()` calls building related-product
+and more-from-brand candidate pools. Lower stakes — recommendations, not eligibility or
+pagination — but the same hazard: the pool is an arbitrary draw that can differ between two
+renders of the same page.
+
+**`lib/subcategory-queries.ts` — A FOURTH INSTANCE, FOUND ON THE FINAL SWEEP, AND THE SHARPEST
+OF ALL.** `getSubcategoryProducts` called `.range()` with no `.order()`.
+
+> **THE PROOF WAS ALREADY IN THAT FILE, SEVENTY LINES BELOW THE BUG.** `getValidSubcategories`
+> carries item 146's write-up in full: the same defect returned **1,719 rows — exactly the right
+> total — while containing only 102 of 117 `womens-health` rows**, made a page 404 and 200 for
+> the same URL minutes apart, and put the sitemap and the page into disagreement.
+>
+> **That fix was applied to the subcategory LIST and never to the product LIST in the same
+> file.** The rule existed, the evidence sat in the same module, the write-up was emphatic — and
+> the caller seventy lines above it still had the bug. **A worked example is not a sweep**, and
+> a defect written up against one caller does not thereby get fixed in its neighbours.
+
+**THE SWEEP IS NOW COMPLETE.** A comment-stripped scan of every `.limit()` and `.range()` on
+`products_active` across `lib/` returns **none unordered**. (`lib/edit-queries.ts` and
+`lib/sitemap.ts` were already correct; the sitemap notably so, where an unstable window would
+drop or duplicate indexed URLs.) Five instances found in total, all fixed: featured block, brand
+pages, subcategory pages, and two recommendation pools.
+
+#### THE CLOSING POSITION, UNCHANGED BY ANY OF THIS
+
+> **The display defect was hiding the ceiling. It was not the ceiling.**
+
+Supplements goes from 2 featured products to 24, all of them real comparisons, honestly
+labelled. **1,734 of 1,769 supplements products still have exactly one retailer.** 2% comparable
+is the category's real state, and a display fix does not move it.
+
+**The brand-comparison proposition is what changes that** — see
+`docs/supplements-brand-comparison-proposition.md`. This fix makes the page show what it
+truthfully has; it does not give it more.
