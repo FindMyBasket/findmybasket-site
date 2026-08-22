@@ -20629,3 +20629,151 @@ would be holding a fix hostage to an unrelated programme.
 
 See `docs/snapshots/phase-0-task-8-pre-migration-snapshot.md` sections 1, 6 and 7 for the
 captured evidence.
+
+---
+
+### 241. The true clickout rate is 17.4%, not 4.7%, and the routine builder converts at 2%
+
+**Raised:** 22 August 2026, Phase 0 Task 2 · **DISCOVERY ONLY. Nothing changed, and
+`scripts/ga4-weekly-pull.mjs` was not modified.** Measured with a throwaway read-only script,
+`scripts/ga4-clickout-rate-diag.mjs`, run via `workflow_dispatch` where the GA4 credential
+already lives.
+
+#### WINDOW
+
+Four **complete** weeks: 2026-07-20 to 2026-08-16. `trailingWeeks()` includes the CURRENT
+partial week, so the script drops it explicitly and prints what it dropped — 2026-08-17..08-23.
+**A partial week counted as complete is what manufactured the trend withdrawn on 20 August.**
+
+#### THE TWO RATES
+
+`A` = sessions containing at least one `retailer_click`. `B` = total sessions.
+
+| week | B | A | events | **TRUE A/B** | OLD event/B | overstatement | events per clicking session |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 2026-07-20 | 135 | 27 | 85 | **20.00%** | 62.96% | 3.15× | 3.15 |
+| 2026-07-27 | 159 | 25 | 35 | **15.72%** | 22.01% | 1.40× | 1.40 |
+| 2026-08-03 | 145 | 25 | 32 | **17.24%** | 22.07% | 1.28× | 1.28 |
+| 2026-08-10 | 82 | 14 | 53 | **17.07%** | 64.63% | 3.79× | 3.79 |
+| **FULL WINDOW** | **522** | **91** | **205** | **17.43%** | **39.27%** | **2.25×** | **2.25** |
+
+#### THE 4.7% IS NEITHER QUANTITY
+
+The task's hypothesis was that 4.7% might be the event-based figure misread as a session-based
+one. **It is not.** For the week the hypothesis named, 2026-08-03 with 145 sessions and 32
+events:
+
+| | |
+|---|---|
+| true sessions-based rate | **17.24%** (25 sessions of 145) |
+| old event-based rate | **22.07%** (32 events over 145 sessions) |
+| the figure on the dashboard | **4.7%** |
+
+**4.7% of 145 implies about 7 clicking sessions. There were 25.** So the dashboard figure is not
+the old computation, not the new one, and **understates the true rate by roughly 3.7×.** Whatever
+produced it, it was not either of the two quantities this task was asked to distinguish, and it
+is wrong in the pessimistic direction. **The programme has been reasoning about access to
+retailers from a number that is nearly four times too low.**
+
+#### THE EVENT-BASED RATE IS ALSO UNSTABLE, WHICH IS A SEPARATE ARGUMENT AGAINST IT
+
+The true rate over four weeks: 20.00, 15.72, 17.24, 17.07. The old rate: 62.96, 22.01, 22.07,
+64.63.
+
+> **The old measure swings by a factor of three while the underlying behaviour barely moves.**
+> Events per clicking session ranges 1.28 to 3.79, so a handful of sessions clicking several
+> retailers moves the whole figure. **A sessions-based rate cannot exceed 100%; an events-based
+> one is unbounded.** Even setting aside which quantity the constraint wants, the event-based
+> series is too noisy to trend on at this volume.
+
+*(Weeks 07-20 and 07-27 also predate or straddle the gtag hydration fix of 2026-07-29, so their
+click counts are undercounts. The two clean weeks, 08-03 and 08-10, give 17.24% and 17.07%.)*
+
+#### LANDING PAGE DISTRIBUTION AND RATE PER BUCKET
+
+**Bucketing rule** — applied to `landingPagePlusQueryString`, query string stripped, trailing
+slash removed, **first match wins in this order**: `/` or `/index.html` → homepage;
+`/product/*` → product; `/brands*` → brand hub; `/articles*` or `/savings-hub*` → article and
+hub; `/app` or `/app/*` → routine builder; `/search*` → search;
+`/(skincare|makeup|hair|fragrance|bath-and-body|supplements)` → category; everything else →
+other. **`/finder` and `/edit/*` fall to `other` by design.**
+
+| bucket | sessions | share | clicked | **clickout rate** |
+|---|---:|---:|---:|---:|
+| product | 235 | 45.02% | 58 | **24.68%** |
+| homepage | 78 | 14.94% | 20 | **25.64%** |
+| brand hub | 71 | 13.60% | 5 | **7.04%** |
+| **routine builder** | **97** | **18.58%** | **2** | **2.06%** |
+| other | 22 | 4.21% | 2 | 9.09% |
+| article and hub | 10 | 1.92% | 0 | 0.00% |
+| search | 6 | 1.15% | 3 | 50.00% |
+| category | **2** | 0.38% | 1 | 50.00% |
+| TOTAL | 521 | | 91 | 17.47% |
+
+*(521 against B=522: one session has no landing page recorded.)*
+
+**Category pages received TWO landing sessions in four weeks.** As organic entry points they are
+effectively zero. Recorded because Phase 2 builds routes on the assumption that entry matters.
+
+#### THE /app COMPARISON — THE DECIDING NUMBER
+
+| | |
+|---|---:|
+| sessions touching `/app` (any pageview) | 140 (26.82% of all) |
+| sessions not touching `/app` | 382 |
+| sessions where a `retailer_click` fired **on** `/app` | 9 |
+| clickouts from `/app` as a share of all clicking sessions | 9.89% |
+| **clicked-on-/app ÷ touched-/app** | **6.43%** |
+| clicked-elsewhere ÷ not-touching-/app | 21.47% |
+
+And the session-scoped, exact version from the landing table:
+
+| | sessions | clickout rate |
+|---|---:|---:|
+| **landed on the routine builder** | 97 | **2.06%** |
+| landed on a product page | 235 | 24.68% |
+| landed on the homepage | 78 | 25.64% |
+
+> **BOTH ANGLES AGREE AND THEY AGREE STRONGLY. SESSIONS INVOLVING THE ROUTINE BUILDER CONVERT
+> FAR WORSE, NOT BETTER — 2.06% against 24.68% for product and 25.64% for the homepage. A
+> TWELVEFOLD GAP.**
+>
+> **SO THE BUILDER IS THE PROBLEM, NOT ACCESS TO IT, AND PHASES 1, 4 AND 5 INVERT.** That is
+> what the task said this number would decide, and it decided it against the current phase order.
+> Recorded without softening: 18.58% of all landing sessions arrive at the builder — it is the
+> second-largest entry point on the site — and 2 of those 97 sessions reached a retailer.
+>
+> Building more routes into a builder that converts at 2% adds traffic to the weakest surface
+> measured.
+
+**What is and is not computable, stated because it bounds the claim.** GA4's Data API applies an
+event-scoped `dimensionFilter` and counts distinct sessions containing a matching EVENT.
+"Sessions that touched `/app`" is therefore exact. **"Sessions that touched `/app` AND clicked
+out anywhere" is not expressible** — an `andGroup` requires one event to satisfy both conditions,
+yielding clicks that fired ON `/app` rather than sessions that visited it and clicked from
+elsewhere. That needs an audience or segment, which the Data API does not expose. **The
+landing-page split is session-scoped and exact, which is why the 2.06% is the figure to quote and
+the 6.43% is corroboration rather than the headline.**
+
+**The honest caveat on n.** The builder bucket is 2 clicks in 97 sessions. Small numerators
+widen confidence intervals — but the comparison is against 58/235 and 20/78, and a gap of that
+size does not come from noise at this n. The direction is not in doubt; the exact multiple is.
+
+#### SAMPLING AND THRESHOLDING
+
+**Neither was applied to any of the ten queries.** Checked per call rather than assumed:
+`samplingMetadatas` empty on all ten, `subjectToThresholding` false on all ten. **No figure above
+is a floor**, which matters because thresholding suppresses rows entirely rather than returning
+small numbers — a zeroed bucket would have looked like no activity.
+
+#### WHAT THIS DOES NOT SETTLE
+
+- **Where the 4.7% came from.** It matches neither computation, so it is not a units error. It is
+  stale, differently scoped, or from a different source. This task establishes it is wrong and
+  by roughly how much, not its provenance.
+- **Whether the builder converts badly because of the builder.** Sessions landing on `/app` may
+  differ in intent from sessions landing on a product page. The measurement is of outcome, not
+  of cause.
+- **The throwaway artefacts.** `scripts/ga4-clickout-rate-diag.mjs` and
+  `.github/workflows/ga4-clickout-rate-diag.yml` are deliberately disposable and should be
+  deleted once this is acted on. They are left in place only so the numbers can be re-run.
