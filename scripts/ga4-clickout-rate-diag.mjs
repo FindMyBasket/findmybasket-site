@@ -203,6 +203,59 @@ that visited /app and clicked from a product page. That needs an audience or
 segment, which the Data API does not expose. The landing-page 'routine builder'
 bucket above IS session-scoped and exact; read it as the cleaner split.`);
 
+// ── WHO ARE THE BUILDER-LANDING SESSIONS, AND DO THEY ENGAGE? ───────────────
+// Two cheap follow-ups. 18.58% of landings arriving at a page with no organic
+// presence is high, and Pinterest preloaded routine links point at /app?routine=,
+// so the mix decides what the 2.06% means. And a session that lands on a
+// preloaded routine and leaves is a different failure from one that builds a
+// basket and does not click out.
+const LP_APP = { filter: { fieldName: 'landingPagePlusQueryString', stringFilter: { matchType: 'BEGINS_WITH', value: '/app' } } };
+const LP_PROD = { filter: { fieldName: 'landingPagePlusQueryString', stringFilter: { matchType: 'BEGINS_WITH', value: '/product/' } } };
+
+line();
+console.log('BUILDER-LANDING SESSIONS: ACQUISITION MIX (full window)\n');
+const chan = await runReport('builder landings by channel',
+  { metrics: [{ name: 'sessions' }], dimensions: [{ name: 'sessionDefaultChannelGroup' }], dimensionFilter: LP_APP, limit: 100 }, [FULL]);
+const chanMap = oneByDim(chan, 'sessionDefaultChannelGroup');
+const chanTot = tot(chanMap);
+console.log('channel                    sessions   share of builder landings');
+for (const [k, v] of Object.entries(chanMap).sort((a, b) => b[1] - a[1])) {
+  console.log(`${k.padEnd(26)} ${String(v).padStart(6)}   ${pct(v, chanTot)}`);
+}
+console.log(`${'TOTAL'.padEnd(26)} ${String(chanTot).padStart(6)}`);
+
+const src = await runReport('builder landings by source/medium',
+  { metrics: [{ name: 'sessions' }], dimensions: [{ name: 'sessionSourceMedium' }], dimensionFilter: LP_APP, limit: 100 }, [FULL]);
+const srcMap = oneByDim(src, 'sessionSourceMedium');
+console.log('\nsource / medium            sessions');
+for (const [k, v] of Object.entries(srcMap).sort((a, b) => b[1] - a[1]).slice(0, 12)) {
+  console.log(`${k.padEnd(26)} ${String(v).padStart(6)}`);
+}
+
+// Does the landing URL carry a preloaded routine?
+const lpDetail = await runReport('builder landing paths',
+  { metrics: [{ name: 'sessions' }], dimensions: [{ name: 'landingPagePlusQueryString' }], dimensionFilter: LP_APP, limit: 200 }, [FULL]);
+const lpMap = oneByDim(lpDetail, 'landingPagePlusQueryString');
+let withRoutine = 0, bare = 0;
+for (const [k, v] of Object.entries(lpMap)) (/[?&]routine=/.test(k) ? (withRoutine += v) : (bare += v));
+console.log(`\nlanding URL carries ?routine=  : ${withRoutine}`);
+console.log(`landing URL is a bare builder  : ${bare}`);
+
+line();
+console.log('ENGAGEMENT: BUILDER LANDINGS vs PRODUCT LANDINGS (full window)\n');
+const ENGAGE = [{ name: 'sessions' }, { name: 'engagedSessions' }, { name: 'bounceRate' },
+                { name: 'averageSessionDuration' }, { name: 'screenPageViewsPerSession' }];
+async function engagement(label, filt) {
+  const r = await runReport(`engagement ${label}`, { metrics: ENGAGE, dimensionFilter: filt }, [FULL]);
+  const row = (r.rows || [])[0];
+  if (!row) return console.log(`${label.padEnd(22)} (no rows)`);
+  const [se, en, br, dur, ppv] = row.metricValues.map((m) => Number(m.value));
+  console.log(`${label.padEnd(22)} sessions=${String(se).padStart(4)}  engaged=${String(en).padStart(4)} (${pct(en, se)})  bounce=${(br * 100).toFixed(1)}%  avg_dur=${dur.toFixed(0)}s  pages/session=${ppv.toFixed(2)}`);
+}
+await engagement('builder landings', LP_APP);
+await engagement('product landings', LP_PROD);
+await engagement('ALL sessions', undefined);
+
 // ── SAMPLING / THRESHOLDING AUDIT ───────────────────────────────────────────
 line();
 console.log('SAMPLING AND THRESHOLDING AUDIT (every query above)\n');
