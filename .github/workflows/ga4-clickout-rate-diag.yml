@@ -1,0 +1,39 @@
+name: ga4 clickout-rate diag (read-only, throwaway)
+
+# Phase 0 Task 2: the true clickout rate. READ-ONLY DISCOVERY.
+#
+# Runs here for the same reason ga4-diag.yml does: GOOGLE_APPLICATION_CREDENTIALS_JSON
+# lives in GitHub Actions and nowhere else, so the job runs where the key already
+# is rather than creating a second unverified copy of it.
+#
+# WRITES NOTHING. No Supabase call, no upsert, no property mutation. The token is
+# minted with scope analytics.readonly only. No `set -x` in the run step: it holds
+# a service-account private key in env and tracing would print it to a log that
+# outlives the run.
+#
+# THROWAWAY. This workflow and scripts/ga4-clickout-rate-diag.mjs exist to answer
+# one question. Delete both once the answer is recorded.
+
+"on":
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # No `npm ci`: zero dependencies on purpose, same as ga4-diag.
+      - name: True clickout rate — read-only
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+          GA4_PROPERTY_ID: '415465396'
+        run: |
+          set -eu
+          node scripts/ga4-clickout-rate-diag.mjs
