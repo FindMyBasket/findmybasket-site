@@ -21110,3 +21110,109 @@ belongs in a work-list item with an owner — which is what this is.
 4. Whether the task list continues or is re-sequenced against the restated premise.
 
 **The programme rewrite waits on the first of them. Task 3 is not started.**
+
+---
+
+### 244. A non-deterministic build failure, and the RPC timing baseline it produced
+
+**Raised:** 22 August 2026, from a Vercel error email · **NON-DETERMINISTIC. NO FIX APPLIED, NO
+TIMEOUT CHANGED.** Production was never affected.
+
+#### WHAT HAPPENED
+
+Deployment `dpl_BqWCfdhRcfNsy8osga2G7SyuZo3j`, production, commit `9793dab` (#381) — a
+**docs-only** change to one markdown file.
+
+```
+⚠ Restarted static page generation for /skincare because it took more than 60 seconds   ×3
+Error: Static page generation for /skincare is still timing out after 3 attempts
+Error: Command "npm run build" exited with 1
+```
+
+**A build failure, not a runtime error** — zero runtime errors in the 24h window. Compile and
+type-check both passed; it died at `Generating static pages (15/20)`.
+
+**The live site was never affected.** Checked by loading pages rather than by reading deploy
+status: ten routes across every type — homepage, category, subcategory, product, brand, savings
+hub, `/app`, finder, search — all HTTP 200 with correct titles and plausible byte counts.
+Production continued serving the last READY deployment.
+
+#### THE RE-RUN SETTLED IT
+
+The same tree plus one markdown file built successfully in **94.7 seconds total**, where the
+failed attempt spent 180 seconds on `/skincare` alone before giving up.
+
+> **NON-DETERMINISTIC. EIGHT PRODUCTION BUILDS PASSED TODAY ON IDENTICAL CODE** — #374, #376,
+> #377, #375, #378, #379, #380 — plus two yesterday on the commit that introduced the featured
+> block. The ninth failed. The tenth passed.
+>
+> **NO FIX APPLIED.** Nothing was changed in response, and that is the finding rather than an
+> omission.
+
+**`staticPageGenerationTimeout` was NOT raised, deliberately.** It matches the evidence, and that
+is precisely the objection: it would mask the regression the timeout exists to catch, on a page
+already aggregating 45,000 rows per build. **A guard that fires once in ten builds is a guard
+reporting a real margin, and widening it deletes the signal rather than the risk.**
+
+*(No import was running: the last finished at 10:00 UTC, the build failed 16:14–16:18.)*
+
+#### THE HYPOTHESIS WAS RIGHT IN SHAPE AND WRONG IN MAGNITUDE
+
+The proposed cause was `fmb_featured_products`, which since today aggregates over the whole
+category with `HAVING COUNT(DISTINCT retailer_id) >= 2` and a per-brand cap, where the old path
+filtered 500 rows in memory. **The predicted signature was supplements fast and skincare slow, and
+that signature is exactly what the timings show.**
+
+**But 404 ms is 0.7% of a 60-second budget.** For the RPC to explain the timeout it would need to
+be roughly 150× slower than measured. `fmb_cross_category_brands` for skincare is 475 ms; no query
+on that page is within two orders of magnitude of the limit.
+
+> **A confirmed pattern is not a confirmed cause.** The shape matched and the magnitude did not,
+> and the magnitude is what decides. Had the timings not been taken, the featured block would have
+> been "confirmed" as the cause on a correct prediction about the wrong quantity.
+
+#### THE RPC TIMING BASELINE — WORTH HAVING REGARDLESS OF CAUSE
+
+Three runs per category, variance under 5%:
+
+| category | pool (`products_active`) | avg | per product |
+|---|---:|---:|---:|
+| skincare | 45,325 | **404 ms** | 8.9 µs |
+| makeup | 21,347 | 222 ms | 10.4 µs |
+| fragrance | 11,630 | 145 ms | 12.5 µs |
+| hair | 10,993 | 141 ms | 12.8 µs |
+| bath_body | 8,003 | 116 ms | 14.5 µs |
+| supplements | 1,799 | 54 ms | 30.0 µs |
+
+**Near-linear at roughly 9 µs per product at the top end**, with the per-product figure rising at
+small pools as fixed cost dominates.
+
+> **THIS IS THE NUMBER THAT WOULD MOVE IF THE CATALOGUE GREW, AND IT IS RECORDED NOW SO A LATER
+> READING HAS SOMETHING TO COMPARE AGAINST.** Skincare would need to reach roughly 6.7 million
+> products for the RPC alone to consume a 60-second budget — but the same coefficient applied to
+> the whole page's query set, not just this one, is the thing to re-measure when build times start
+> drifting.
+
+#### A CORRECTION FROM ROBBIE, RECORDED BECAUSE THE METHOD IS THE POINT
+
+> *"I assumed the mojibake fixes, pack-size guard and featured block were stranded and they had
+> all shipped."*
+
+**Measured: exactly one commit was stranded — `9793dab`, one markdown file.** Everything else had
+already deployed across the eight successful builds.
+
+**What established it was verifying against the live site rather than the deploy list.** The
+`/supplements` page was loaded and found serving 19–20 featured cards with a maximum of 3 per
+brand, which is only possible with the capped RPC from migration `20260821191907`. The deploy
+history would have supported either reading; the page could not.
+
+> **SAME DISTINCTION AS READING THE PAGE RATHER THAN THE DIFF.** A deploy list says what was
+> attempted. A rendered page says what is running. When those two can disagree — and after a
+> failed build they always can — **only the second one answers the question.**
+
+#### WHERE THIS GOES IF IT RECURS
+
+Not raised now, recorded so it is not re-derived: if `/skincare` times out again, the
+investigation goes to **what the route does at build time beyond the featured block** — the page
+runs several queries in one `Promise.all` and the featured RPC is 404 ms of an unmeasured total.
+The remaining cost is not attributed, and this item does not claim it is.
