@@ -20865,3 +20865,185 @@ for `?routine=` landings specifically, once enough of them exist. Seven is not e
 - **The throwaway artefacts.** `scripts/ga4-clickout-rate-diag.mjs` and
   `.github/workflows/ga4-clickout-rate-diag.yml` are deliberately disposable and should be
   deleted once this is acted on. They are left in place only so the numbers can be re-run.
+
+---
+
+### 242. Item 232 at document scale: the strongest instance on this list
+
+**Raised:** 22 August 2026, from item 241's provenance trace · **The 4.7 per cent clickout rate.**
+Recorded as a fourth instance of item 232 because it is the strongest one, and because it defeats
+every remedy this list has reached for.
+
+#### THE INSTANCE
+
+`docs/strategy.md` §6 rests the strategic diagnosis on **4.7% of sessions reaching a retailer**.
+Directly beneath it, in the same file:
+
+> *"**[Amended 3 Aug 2026] These figures are not safe to quote as measured.** … The 4.7 per cent
+> clickout rate used comparison views as its denominator, and that denominator was broken. The
+> conclusion may well hold; **the number should be re-derived from the week beginning 3 August
+> before it is quoted.**"*
+
+**Everything about that correction is right.** It is dated. It names the exact figure. It states
+the defect precisely — wrong denominator, and why the denominator was broken. It gives an
+explicit, executable instruction with a start date. It concedes what might still hold. It was
+written by the same author as the claim, in the same document, **forty lines away.**
+
+**And over the nineteen days that followed, the figure was quoted three more times in that same
+file** — the findings table it sits in, the paid-acquisition conclusion (*"a funnel that leaks at
+4.7%"*), and the measurement framework (*"the 4.7% number and the one to watch hardest"*). The
+re-derivation was never run until Task 2 on 22 August.
+
+#### WHY IT IS THE STRONGEST INSTANCE
+
+| | where the lesson was | outcome |
+|---|---|---|
+| item 191 | an unread script comment | survived six weeks |
+| item 207 | a same-day work-list note | survived hours |
+| item 229 | quoted verbatim in the same item | survived four paragraphs |
+| **the 4.7%** | **a dated amendment with an executable instruction, same file, forty lines from the claim, same author** | **never fired once; the claim was re-quoted three times over nineteen days** |
+
+> **THIS IS NOT A PROVENANCE FAILURE.** The provenance was known, found, written down and
+> published. It is a correction that was **written, precise, adjacent, correctly attributed and
+> actionable — and did not stop the claim being used.**
+>
+> **EVERY REMEDY THIS LIST HAS REACHED FOR WAS ALREADY SATISFIED.** Write it down: done. Put it
+> where the reader is: it is *in the same paragraph block*. Quote it exactly: it quotes the figure
+> and names the broken denominator. Give it an owner and a date: 3 August, with a start date for
+> the re-run. **There is no additional clarity that would have helped, because clarity was not
+> the missing input.**
+
+#### THE MECHANISM IS THE ONE ITEM 232 NAMES
+
+> *"Citing a limitation does the psychological work of the caveat without any of its analytical
+> work — and it does that work better the more precisely it is quoted."*
+>
+> **The amendment discharged the objection psychologically, and the instruction beneath it went
+> unrun.** A reader arriving at §6 meets the figure, then meets a precise and honest statement of
+> why it may be wrong, and leaves having been *told the truth* — which feels like the debt is
+> settled. It is not. The debt was one query.
+
+**And item 232's gradient does not merely extend here, it breaks in the informative direction.**
+The three earlier instances were *more present, and failed faster*. This one is more present than
+any of them and **did not fail fast — it never fired at all.** Time-to-failure was zero: from the
+moment the amendment was written the figure went on being used. What varied was not how long the
+lesson lasted but how long the failure did, and nineteen days is the longest on the list.
+
+#### WHAT ACTUALLY CLOSED IT, WHICH IS THE METHOD WORTH KEEPING
+
+Consistent with item 232's strongest evidence, **the correction was not caught by reading.** It
+was caught by **running the query the amendment asked for** — a measurement, nineteen days late,
+that took one workflow dispatch.
+
+**And the same thing happened again inside item 241, an hour apart.** I stated that the builder
+converts worse, therefore the builder is the problem and the phase order inverts. That claim
+stood for about an hour and was **withdrawn — not by rethinking it, but by two cheap
+measurements**: the acquisition mix of the 97 sessions (81% paid social) and their engagement
+(69.1% bounce). Neither required new reasoning. Both required asking the data one more question.
+
+> **THE METHOD, NOT THE OUTCOME, IS THE RECORD HERE. An hour between a confident claim and its
+> retraction, and what closed the gap was two measurements rather than more argument.** The claim
+> was not under-reasoned. It was under-measured, and no amount of additional thought about the
+> same numbers would have produced the retraction.
+
+#### THE CONSEQUENCE FOR THIS LIST
+
+**A correction adjacent to a claim does not retire the claim.** Only re-deriving the number, or
+deleting the claim, does.
+
+**Provisional practice, offered rather than settled:** when an amendment contains an executable
+instruction, the instruction is the artefact, not the amendment — and it should leave the
+document and become a task with an owner. **A sentence that says "this should be re-derived" is a
+task written in the one place where nothing will ever execute it.**
+
+*Consistent with item 232's own falsification standard: if a figure is next caught by a reader
+recalling its caveat rather than by a measurement, that counts against this.*
+
+---
+
+### 243. The programme needs rewriting rather than continuing
+
+**Raised:** 22 August 2026, from items 241 and 242 · **NOT STARTED. This is a strategy decision
+and it is Robbie's.** Task 3 deliberately not begun. Recorded so the inputs sit in one place when
+the decision is taken.
+
+#### THE CONSTRAINT THE PROGRAMME IS BUILT ON HAS MOVED
+
+| | was | is |
+|---|---|---|
+| Sessions reaching a retailer | **4.7%** | **17.43%** |
+
+`docs/strategy.md` §6 draws its central conclusion from the 4.7%: *"The on site journey, not the
+traffic volume, is the binding constraint. More traffic into the current funnel mostly leaks."*
+Every phase downstream inherits that. **At 17.43% the leak is roughly a quarter of what the
+premise assumed**, and the conclusion that on-site conversion is *the* binding constraint no
+longer follows from the number that produced it. It may still be true for other reasons; it is no
+longer entailed.
+
+**The paid-acquisition conclusion inherits it directly.** *"Spending to push traffic into a funnel
+that leaks at 4.7% converts budget into nothing. Revisit paid only after the clickout rate
+moves."* The stated precondition has been met — not by improvement, but by the figure having been
+wrong. **That is not a green light**, and item 241's follow-ups say why: the paid traffic measured
+here converts far worse than organic. But the sentence as written no longer holds.
+
+#### WHAT SURVIVES AND WHAT WAS WITHDRAWN — STATED SEPARATELY ON PURPOSE
+
+Recorded apart so a later reader does not discard both.
+
+**SURVIVES — measured, corroborated, and not withdrawn:**
+
+| | sessions | clickout | bounce |
+|---|---:|---:|---:|
+| landed on the builder | 97 | **2.06%** | **69.1%** |
+| landed on a product page | 235 | **24.68%** | 17.9% |
+
+Corroborated independently by `docs/strategy.md`'s own **5 clickouts of 288 from the basket
+optimiser — 1.74%** — a different period, a different method, the same answer.
+
+> **DO NOT ROUTE MORE TRAFFIC TO `/app`.** This stands on its own and does not depend on any
+> claim about cause.
+
+**WITHDRAWN — stated in item 241 and retracted an hour later:**
+
+> *"The builder is the problem rather than access to it, and Phases 1, 4 and 5 invert."*
+
+Not supported. 81% of the builder-landing sessions are paid social, and 90 of 97 arrived at a
+**bare** builder rather than a preloaded routine — the exact arrival the preload work exists to
+fix. The gap is real; **the attribution is not.**
+
+#### THE CONFOUND IS UNRESOLVABLE AT THIS VOLUME
+
+The clean test is builder conversion for organic sessions only. **The bucket contains two clicks
+in total, and two cannot be split across six channels.** No further querying of this window
+separates "the builder converts badly" from "paid social converts badly". Stated as unresolvable
+rather than as pending, because more analysis of the same four weeks cannot produce it.
+
+**The clean test, when it becomes available:** the clickout rate of the `?routine=` cohort
+specifically. There are **seven**. Until there are meaningfully more, the preload hypothesis is
+untested rather than disproved.
+
+#### THE THREE PROGRAMME CONSEQUENCES, AS INPUTS TO A DECISION
+
+**1. Phases 1, 4 and 5 stand as sequenced.** The evidence that would have inverted them was
+withdrawn. Nothing here reorders them.
+
+**2. Phase 6 does not survive its own inputs.** Independently of the clickout work, from
+`docs/supplements-brand-comparison-proposition.md`: supplements is **1.9–2.0% comparable** at two
+or more retailers, and **price per serving is not computable** — no feed carries serving size or
+servings per container, at any retailer, in any field (6.3% free-text only). Phase 6 is
+predicated on a comparison the data cannot express on a category that cannot demonstrate it.
+
+**3. The premise is restated, not deleted.** 17.43% is the measured rate. Whether on-site
+conversion remains the binding constraint at that level is exactly the question the programme was
+built to answer and can no longer assume.
+
+#### WHAT SHOULD NOT HAPPEN NEXT
+
+**Task 3 should not run until the rewrite decision is taken**, because Task 3 and everything after
+it are sequenced against a premise that has moved. Continuing the task list would spend effort
+inside a frame whose first number changed by 3.7×.
+
+**And the amendment pattern from item 242 should not repeat here.** This item is not a caveat
+attached to the programme document. If the programme is to change, the change belongs in
+`docs/strategy.md` itself — **a note recording that the premise moved, filed next to the premise,
+is precisely the artefact item 242 exists to warn about.**
