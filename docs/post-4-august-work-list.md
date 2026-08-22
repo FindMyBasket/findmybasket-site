@@ -20437,3 +20437,195 @@ is the category's real state, and a display fix does not move it.
 **The brand-comparison proposition is what changes that** — see
 `docs/supplements-brand-comparison-proposition.md`. This fix makes the page show what it
 truthfully has; it does not give it more.
+
+---
+
+### 239. Four topical patches filed as supplements, and a guard that was measured clean three days before they arrived
+
+**Raised:** 22 August 2026, from two Mediheal eye patches on the supplements page ·
+**FOUR MOVED BY HAND. The veto gap is left OPEN, deliberately — see the guard it needs.**
+
+#### WHICH RULE FILED THEM
+
+**The Boots supplements path, not the name classifier.** The signature is unambiguous:
+`product_type = NULL` with `subcategory = 'supplements'` is what the `onSupplementsPath` branch
+returns and nothing else does — it discards the beauty classifier's verdict wholesale and nulls
+the type.
+
+Both rows are stocked by Boots (£22) and Stylevana (£15); only Boots carries
+`supplements_path_prefixes`. **Boots shelved a K-beauty eye patch under `Health & Beauty >
+Health Care > Fitness & Nutrition > Vitamins & Supplements`, and the path took it at its word.**
+
+#### `patch` IS NOT IN THE VETO, AND NOR ARE ITS NEIGHBOURS
+
+```
+SUPP_TOPICAL_FORM = serum | toner | cream | lotion | mask | shampoo |
+                    conditioner | moistur* | body spray
+```
+
+`mask` is there. **`patch`, `pad`, `sheet`, `wrap` and `strip` are all absent.** The definition
+doc's Rule 2 says any applied-product noun disqualifies; the implementation names nine nouns and
+these five are not among them.
+
+#### THE POPULATION IS NINE, AND IT DOES NOT WANT ONE REMEDY
+
+| | Row | Verdict |
+|---|---|---|
+| **Topical — MOVED** | Nip+Fab Vitamin C Fix Jelly Eye Patches | → skincare/face, **Eye Care** |
+| | Mediheal Collagen Capsule Patch Retinol | → skincare/face, **Eye Care** |
+| | Mediheal Collagen Capsule Patch Vitamin C | → skincare/face, **Eye Care** |
+| | Anua PDRN Collagen Melting Patch For Neck | → skincare/face, **Treatment** |
+| **Neither — already excluded** | Vicks Vapopads Refill Scent Pads | in `product_exclusions`, reason `device`, added by Robbie 16 Aug |
+| **Correctly supplements** | Revvies Energy Strips Tropical | oral dissolving strip — ingested |
+| | Revvies Energy Strips Arctic Charge | ingested |
+| | C4 Pre-Workout Shot **Sour Patch** Bros | **"Sour Patch" is a flavour** |
+| | The What Supp Co. Protect Energy Patches | transdermal vitamin patch — **DECIDED: stays** |
+
+**THE TRANSDERMAL PATCH STAYS, AS A DECISION RATHER THAN A DEFERRAL.** A patch delivering
+nutrients is closer to a supplement in what the shopper wants it for, and the judgement does not
+need making to fix the four clear cases. Recorded so nobody re-opens it as an oversight.
+
+**DESTINATIONS WERE READ FROM THE DESCRIPTIONS, NOT THE NAMES**, which is why "report rather than
+assume" was the right instruction: **neither Mediheal name contains the word "eye"**, and both
+descriptions say *"under-eye hollowness"* and *"restores volume under sunken eyes"*. The name
+would have sent them to Treatment; the description sends them to Eye Care. The Anua row has no
+description at all and its name says **neck**, so it took Treatment — the dominant type for
+non-eye patches (214 rows) against Eye Care's 211 for eye ones.
+
+#### WHY A NAIVE WIDENING IS WORSE THAN THE GAP
+
+> **Adding `patch|pad|sheet|wrap|strip` to `SUPP_TOPICAL_FORM` produces FOUR FALSE POSITIVES IN
+> NINE.** `patch` is a flavour word (`Sour Patch`) and `strip` is an oral dosage form (`Energy
+> Strips`) — both are ingested products the veto would start throwing out.
+>
+> **This is the same shape as the guard already in that file.** `SUPP_FLAVOUR` exists precisely
+> because `cream` is a flavour word in a health catalogue — "Vanilla Ice Cream", nine rows of
+> whey protein. The file has already met this exact problem once and solved it with a
+> veto-of-the-veto. **The tokens cannot be added until that guard is extended to cover flavour
+> names and oral dosage forms**, and writing the tokens without it would trade four wrong rows
+> for four different wrong rows.
+
+**OPEN, with the guard named.** Four rows fixed by hand because four is a list, not a rule.
+
+#### THE STRUCTURAL FINDING: THE VETO ONLY EVER SEES ROWS THE RETAILER ALREADY MIS-SHELVED
+
+`COSRX Master Patch Intensive` is **stocked by Boots** and sits correctly in skincare/face.
+
+> **It was not caught by the veto. It never reached it.** Boots shelved COSRX on a *skincare*
+> path, so `onSupplementsPath` was false and the supplements branch never ran.
+>
+> **COSRX is therefore evidence that Boots' taxonomy is usually right — not evidence that the
+> veto works.** The veto has never been tested by those rows and cannot be. It is a second line
+> that only ever inspects the rows the retailer has already got wrong, so its measured accuracy
+> is an accuracy over mistakes, not over the catalogue.
+
+This matters for the path-first decision generally: `docs/supplements-definition.md` justifies it
+on the grounds that *"the retailer separated them"*. That is true until the retailer does not,
+and the veto is the whole of the fallback.
+
+#### THE SHARPER FINDING: MEASURED CLEAN, THREE DAYS BEFORE THESE ROWS EXISTED
+
+The topical list was recorded as **26 hits with zero false positives on Boots data**. That result
+was not wrong and it did not decay — **it was measured against a corpus generated 13 August**
+(`supplements-path-corpus.json`, `generated_on: 2026-08-13`).
+
+**All eight rows in this item were created 16 August.**
+
+> **"MEASURED CLEAN" MEANS CLEAN AGAINST THE ROWS MEASURED, AND THE DATE IS PART OF THE CLAIM.**
+> This is not a new retailer the list was never tried on — it is the *same* retailer, three days
+> later. The feed moved and the validation set did not.
+>
+> **A CORPUS-MEASURED GUARD NEEDS RE-MEASURING WHEN THE CORPUS MOVES, AND NOTHING SIGNALS THAT
+> IT HAS.** A frozen fixture reports the same clean result forever; its passing is evidence about
+> August 13 and is silently re-read as evidence about today. The fixture cannot know it has gone
+> stale, and no test fails when it does.
+>
+> Same family as the standing rule against baking counts and prices into committed copy — here
+> arriving on a **validation set** rather than on user-facing text, which is the harder place to
+> notice it because a green run looks like proof.
+
+**This is a general property of corpus-measured guards, not a fact about this list.** Any
+fixture-backed claim of the form "N hits, zero false positives" should carry the corpus date
+beside it, and re-measuring should be triggered by feed change rather than by suspicion.
+
+---
+
+### 240. We submit a URL for crawling that redirects to a page we forbid crawling
+
+**Raised:** 22 August 2026, from the Phase 0 Task 8 pre-migration snapshot ·
+**LIVE DEFECTS, NOT MIGRATION FINDINGS. Both fixable independently of Phase 2 and neither should
+wait for it.** Options reported; nothing picked, nothing changed.
+
+#### A. THE `/app` THREE-WAY DISAGREEMENT
+
+Three artefacts describe one page and no two of them agree:
+
+| Artefact | Says |
+|---|---|
+| `sitemap-pages.xml` | `https://www.findmybasket.co.uk/app.html` — `changefreq weekly`, `priority 0.9` |
+| Vercel redirect (`vercel.json`) | `/app.html` → `/app`, **308 permanent** |
+| `robots.txt` | `Disallow: /app` and `Disallow: /app/*` |
+
+> **WE ARE SUBMITTING A URL FOR CRAWLING THAT REDIRECTS TO A PAGE WE FORBID CRAWLING.** The
+> sitemap is an invitation, `robots.txt` is a refusal, and the redirect connects them. A crawler
+> that follows the sitemap fetches `/app.html`, receives a 308 to `/app`, and finds `/app`
+> disallowed — so the invitation resolves to a wall.
+>
+> **It is not a migration artefact.** It is live now, it has nothing to do with Phase 2, and
+> fixing it does not touch the pages Phase 2 migrates.
+
+**Note the `priority 0.9`**: the sitemap does not merely list this URL, it ranks it near the top,
+just below the homepage's 1.0 and level with the savings hub.
+
+##### THE THREE OPTIONS — NOT PICKED
+
+| | Option | What it does to indexation |
+|---|---|---|
+| **1** | **Remove `/app.html` from the sitemap.** Leave the 308 and the `Disallow` alone. | The contradiction disappears and **`/app` stays out of the index, which is the current stated intent.** The redirect keeps working for anyone holding an old link. Nothing gains indexation; the crawl budget spent on a disallowed target is returned. **The smallest change, and it makes the three artefacts agree by making two of them silent about `/app`.** |
+| **2** | **Allow `/app` in `robots.txt`.** Leave the sitemap and redirect alone. | `/app` becomes crawlable and eligible to be indexed, and the sitemap entry starts doing what a sitemap entry is for. **This is a decision to index the routine builder**, which is a product decision about whether an interactive tool should appear in search results — it was presumably disallowed on purpose. Adds a page to the index; risks a thin-content or app-shell page ranking for brand queries. |
+| **3** | **Both — remove the sitemap entry AND allow `/app`.** | Contradictory in effect: the page becomes crawlable but is no longer advertised. Discovery falls back to internal links, of which there are several (`/app` appears in both navs and both footers). **Defensible if the intent is "crawlable but not promoted"**, and pointless if the intent is either of the clean positions above. |
+
+**The question underneath all three is the one to answer first: is `/app` meant to be indexed?**
+Options 1 and 2 are opposite answers to it, and option 3 is a third position that only makes
+sense if the answer is "yes, but do not push it". Nothing in this item settles that.
+
+**One measurement that would inform it and has not been taken:** whether `/app` currently
+receives organic impressions in Search Console. A disallowed URL can still be indexed from
+external links and can accumulate impressions, in which case option 1 changes nothing about what
+is already in the index and option 2 changes a lot.
+
+#### B. EVERY INTERNAL PATH TO THE HOMEPAGE POINTS AT THE NON-CANONICAL URL
+
+`/` and `/index.html` **both return HTTP 200 with byte-identical bodies** — 62,280 bytes, md5
+`ff42edcd3b502bfed77bd1458e7bcdce`. There is no redirect between them. The only thing separating
+them is the canonical tag, which points at `/`.
+
+> **AND THE NAV LOGO ON BOTH PAGES LINKS TO `/index.html`.** Not `/`. So the site's own primary
+> internal link to its homepage — the one in the top-left of every static page, the most-followed
+> link on the site — targets the URL the canonical says is not canonical.
+
+| | |
+|---|---|
+| Canonical target | `https://www.findmybasket.co.uk/` |
+| In the sitemap | `/` only. **`/index.html` is not listed.** |
+| Nav logo href on `/index.html` | `/index.html` |
+| Nav logo href on `/savings-hub.html` | `/index.html` |
+
+**Everything except the internal links is already correct.** The canonical is right, the sitemap
+is right, and `robots.txt` allows both. The defect is that the site tells crawlers `/` is the
+homepage and then walks them to `/index.html` from every page.
+
+**Not a Phase 2 problem, but Phase 2 makes it moot if the route moves** — a Next.js homepage at
+`/` would have no `/index.html` to link to. Recorded separately because it is live today, and
+because **if Phase 2 slips, this stands.**
+
+#### WHY THESE ARE HERE AND NOT IN THE SNAPSHOT'S FINDINGS
+
+The snapshot lists ten inconsistencies and deliberately fixes none, because several of them a
+faithful migration should carry across unchanged and fixing them inside Phase 2 would make its
+diff unreadable. **These two are different: neither is about the migration.** They are live SEO
+defects that happen to have been found by a migration snapshot, and holding them until Phase 2
+would be holding a fix hostage to an unrelated programme.
+
+See `docs/snapshots/phase-0-task-8-pre-migration-snapshot.md` sections 1, 6 and 7 for the
+captured evidence.

@@ -12,6 +12,42 @@ HTML. Every figure below is reproducible from the commands in the appendix.
 
 ---
 
+## ⚠️ READ THIS FIRST — the thing most likely to go wrong in Phase 2
+
+> **ONLY `/product/[id]` EMITS OPEN GRAPH AND TWITTER TAGS. EVERY OTHER NEXT.JS ROUTE EMITS
+> ZERO. A MIGRATED HOMEPAGE WILL EMIT ZERO UNLESS PHASE 2 ADDS THEM DELIBERATELY — AND THE
+> FAILURE IS SILENCE, NOT A MISMATCH.**
+
+Measured on the live site, 22 August 2026:
+
+| Route | OG tags | Twitter tags | JSON-LD blocks |
+|---|---:|---:|---:|
+| `/finder` | **0** | **0** | 0 |
+| `/skincare` | **0** | **0** | 4 |
+| `/brands/mediheal` | **0** | **0** | 2 |
+| `/product/96761` | 4 | 4 | 4 |
+| **`/` — static, today** | **8** | **3** | 1 |
+| **`/savings-hub.html` — static, today** | **8** | **3** | 1 |
+
+`/product/[id]` has them because its `generateMetadata` sets `openGraph` and `twitter`
+explicitly. Nothing in Next.js supplies them by default, so a route that does not declare them
+produces a page with none — **which renders correctly, passes every build check, and looks
+entirely normal.**
+
+**Why this is the dangerous one.** A wrong title is visible in a diff and in a browser tab. A
+missing `og:image` is visible nowhere except in a social preview nobody generates during a
+migration. The homepage carries six-figure organic impressions and eleven OG/Twitter tags; losing
+them produces no error, no warning and no visual change.
+
+**This is why the pass condition below is written as it is.** `count must not drop` is the clause
+that catches it — a comparison that only checks the tags present on BOTH sides passes trivially
+when one side has none.
+
+*(The full route comparison and the two other by-construction differences — tag normalisation and
+JSON-LD serialisation — are in section 8.)*
+
+---
+
 ## 1. HTTP status and redirect behaviour
 
 | URL | Status | Location | Notes |
