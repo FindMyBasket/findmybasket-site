@@ -20923,11 +20923,23 @@ re-derivation was never run until Task 2 on 22 August.
 > why it may be wrong, and leaves having been *told the truth* — which feels like the debt is
 > settled. It is not. The debt was one query.
 
-**And item 232's gradient does not merely extend here, it breaks in the informative direction.**
-The three earlier instances were *more present, and failed faster*. This one is more present than
-any of them and **did not fail fast — it never fired at all.** Time-to-failure was zero: from the
-moment the amendment was written the figure went on being used. What varied was not how long the
-lesson lasted but how long the failure did, and nineteen days is the longest on the list.
+#### A NEW AXIS, NOT A FOURTH POINT ON THE OLD ONE
+
+Item 232's gradient measured **how long the lesson survived** — six weeks, hours, four paragraphs,
+each more present and each failing faster. **This instance does not sit on that line at all.**
+
+> **TIME-TO-FAILURE WAS ZERO. From the moment the amendment was written, the figure went on being
+> used.** The lesson did not survive for a while and then fail; it never fired once.
+>
+> **WHAT VARIED HERE IS HOW LONG THE FAILURE LASTED, WHICH IS A DIFFERENT AXIS.** Nineteen days,
+> the longest recorded on this list, during which the caveat and the claim sat forty lines apart
+> and the claim was re-quoted three times.
+
+**The two axes are independent and should be read as such.** A lesson can fail slowly and be
+caught quickly (item 191: six weeks to fail, then caught), or fail instantly and run for weeks
+uncaught (this one). **Item 232's claim is about the first axis; this instance is the extreme of
+the second, and it is the more expensive one** — a lesson that fails fast at least fails while
+someone is still looking at it.
 
 #### WHAT ACTUALLY CLOSED IT, WHICH IS THE METHOD WORTH KEEPING
 
@@ -20951,13 +20963,45 @@ measurements**: the acquisition mix of the 97 sessions (81% paid social) and the
 **A correction adjacent to a claim does not retire the claim.** Only re-deriving the number, or
 deleting the claim, does.
 
-**Provisional practice, offered rather than settled:** when an amendment contains an executable
-instruction, the instruction is the artefact, not the amendment — and it should leave the
-document and become a task with an owner. **A sentence that says "this should be re-derived" is a
-task written in the one place where nothing will ever execute it.**
+#### THE FIRST REMEDY ON THIS LIST THAT IS NOT "WRITE IT MORE CLEARLY"
+
+**Every prior remedy assumed the missing input was CLARITY.** Move the comment closer to the
+code. Put it in the reader's path. Quote it verbatim rather than paraphrasing. Name the date and
+the owner. **All of them are the same move, and this instance defeated every one of them at once**
+— the amendment was as clear, as close, as exact and as dated as a correction can be.
+
+> **THIS REMEDY ASSUMES THE MISSING INPUT IS LOCATION, NOT CLARITY.**
+>
+> **AN INSTRUCTION IN A DOCUMENT IS A TASK WRITTEN IN THE ONE PLACE NOTHING EXECUTES.** The
+> document is read; it is not run. No amount of improving the sentence changes which of those two
+> things happens to it.
+
+##### ADOPTED, NARROWLY — AND IT IS TESTABLE
+
+**An amendment that carries an executable instruction spawns a work-list item at the moment it is
+written, and the amendment cites that item number.**
+
+Scope, deliberately narrow: **only amendments containing an instruction that can be executed** —
+re-derive this, re-measure that, re-run before quoting. An amendment that merely records a
+limitation with nothing to do spawns nothing.
+
+> **THE TEST: AN AMENDMENT CARRYING AN INSTRUCTION AND NO ITEM NUMBER IS A DEFECT.**
+>
+> That is checkable by grep and by eye, it fails visibly rather than silently, and it does not
+> depend on anyone remembering the lesson — which is the property every previous remedy lacked.
+
+**Applied retroactively to the instance that produced it:** `docs/strategy-amendments.md` A6
+carries the instruction *"the number should be re-derived from the week beginning 3 August"* and
+cites no item. **Under this practice A6 is a defect**, and would have spawned an item on 3 August
+that stayed open until Task 2 ran it nineteen days later.
 
 *Consistent with item 232's own falsification standard: if a figure is next caught by a reader
 recalling its caveat rather than by a measurement, that counts against this.*
+
+**And a falsifier for the practice itself:** if an amendment spawns an item and the item then sits
+open and unworked for as long as the caveat would have sat unread, the practice has moved the
+problem rather than fixed it. **An item nobody works is a document nobody reads with a number on
+it.**
 
 ---
 
@@ -21043,7 +21087,26 @@ built to answer and can no longer assume.
 it are sequenced against a premise that has moved. Continuing the task list would spend effort
 inside a frame whose first number changed by 3.7×.
 
-**And the amendment pattern from item 242 should not repeat here.** This item is not a caveat
-attached to the programme document. If the programme is to change, the change belongs in
-`docs/strategy.md` itself — **a note recording that the premise moved, filed next to the premise,
-is precisely the artefact item 242 exists to warn about.**
+#### THIS GOVERNS WHAT HAPPENS NEXT
+
+> **IF THE PROGRAMME CHANGES, THE CHANGE GOES IN `docs/strategy.md` — NOT BESIDE IT.
+> DO NOT WRITE A SECOND AMENDMENT.**
+
+The figure in §6 is edited, or the conclusion drawn from it is edited, or both. **A third
+amendment recording that the premise moved would be the exact artefact item 242 exists to warn
+about** — a correction, adjacent, precise, dated, correctly attributed, and inert. The first one
+sat forty lines from its claim for nineteen days.
+
+**This item is not that amendment.** It is the input list for a decision, and it carries no
+instruction to `docs/strategy.md` because under item 242's adopted practice the instruction
+belongs in a work-list item with an owner — which is what this is.
+
+#### THE FOUR DECISIONS, ALL ROBBIE'S
+
+1. Whether on-site conversion remains the binding constraint at 17.43%.
+2. Whether Phase 6 proceeds given 1.9–2.0% comparability and no per-serving data.
+3. Whether the paid-acquisition position changes now its stated precondition has been met by the
+   figure having been wrong rather than by improvement.
+4. Whether the task list continues or is re-sequenced against the restated premise.
+
+**The programme rewrite waits on the first of them. Task 3 is not started.**
