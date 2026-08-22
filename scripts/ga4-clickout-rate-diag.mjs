@@ -87,6 +87,23 @@ const EV = (v) => ({ filter: { fieldName: 'eventName', stringFilter: { value: v 
 const byWeek = (rep, dim, ranges) => byWeekPure(rep, dim, ranges);
 const tot = (o) => Object.values(o || {}).reduce((a, b) => a + b, 0);
 
+/*
+ * SINGLE-RANGE READERS. byWeekPure() requires the implicit `dateRange` dimension,
+ * which GA4 only appends when MORE THAN ONE dateRange is supplied. The full-window
+ * queries send exactly one, so they have no such column and must be read directly.
+ * Keeping two readers rather than forcing the full window through byWeek: reading
+ * a one-range report by a dimension that is absent is what the helper is designed
+ * to refuse, and it refused correctly.
+ */
+const oneTotal = (rep) => (rep.rows || []).reduce((a, r) => a + Number(r.metricValues[0].value || 0), 0);
+const oneByDim = (rep, dimName) => {
+  const idx = (rep.dimensionHeaders || []).map((h) => h.name).indexOf(dimName);
+  if (idx === -1) die(`report has no ${dimName} dimension`);
+  const out = {};
+  for (const r of rep.rows || []) out[r.dimensionValues[idx].value] = Number(r.metricValues[0].value || 0);
+  return out;
+};
+
 // ── BUCKETING RULE, stated in code so the report cannot drift from it ───────
 // Applied to landingPagePlusQueryString with the query string stripped.
 // FIRST MATCH WINS, in this order.
@@ -135,9 +152,7 @@ for (const w of weeks) {
 const fSess = await runReport('FULL sessions', { metrics: [{ name: 'sessions' }] }, [FULL]);
 const fClk  = await runReport('FULL sessions with retailer_click', { metrics: [{ name: 'sessions' }], dimensionFilter: EV('retailer_click') }, [FULL]);
 const fEv   = await runReport('FULL eventCount retailer_click', { metrics: [{ name: 'eventCount' }], dimensionFilter: EV('retailer_click') }, [FULL]);
-const fB = tot(byWeek(fSess, null, [FULL])[FULL.start]);
-const fA = tot(byWeek(fClk, null, [FULL])[FULL.start]);
-const fE = tot(byWeek(fEv, null, [FULL])[FULL.start]);
+const fB = oneTotal(fSess), fA = oneTotal(fClk), fE = oneTotal(fEv);
 line();
 console.log(`FULL WINDOW  B=${fB}  A=${fA}  events=${fE}`);
 console.log(`   TRUE clickout rate  A/B = ${pct(fA, fB)}`);
@@ -149,7 +164,7 @@ console.log(`   events per clicking session = ${fA ? (fE/fA).toFixed(2) : 'n/a'}
 const lpAll = await runReport('FULL landing page sessions', { metrics: [{ name: 'sessions' }], dimensions: [{ name: 'landingPagePlusQueryString' }], limit: 5000 }, [FULL]);
 const lpClk = await runReport('FULL landing page sessions with retailer_click', { metrics: [{ name: 'sessions' }], dimensions: [{ name: 'landingPagePlusQueryString' }], dimensionFilter: EV('retailer_click'), limit: 5000 }, [FULL]);
 const rollup = (rep) => {
-  const m = byWeek(rep, 'landingPagePlusQueryString', [FULL])[FULL.start] || {};
+  const m = oneByDim(rep, 'landingPagePlusQueryString');
   const out = Object.fromEntries(BUCKETS.map((b) => [b, 0]));
   for (const [k, v] of Object.entries(m)) out[bucket(k)] += v;
   return out;
@@ -168,8 +183,7 @@ const APP = { filter: { fieldName: 'pagePath', stringFilter: { matchType: 'BEGIN
 const appTouch = await runReport('sessions touching /app', { metrics: [{ name: 'sessions' }], dimensionFilter: APP }, [FULL]);
 const appClickOn = await runReport('sessions with retailer_click fired ON /app',
   { metrics: [{ name: 'sessions' }], dimensionFilter: { andGroup: { expressions: [EV('retailer_click'), APP] } } }, [FULL]);
-const tApp = tot(byWeek(appTouch, null, [FULL])[FULL.start]);
-const cOnApp = tot(byWeek(appClickOn, null, [FULL])[FULL.start]);
+const tApp = oneTotal(appTouch), cOnApp = oneTotal(appClickOn);
 line();
 console.log('/app COMPARISON (full window)\n');
 console.log(`sessions touching /app (any pageview)      : ${tApp}   (${pct(tApp, fB)} of all sessions)`);
