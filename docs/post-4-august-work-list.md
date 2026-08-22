@@ -20738,13 +20738,13 @@ And the session-scoped, exact version from the landing table:
 > FAR WORSE, NOT BETTER — 2.06% against 24.68% for product and 25.64% for the homepage. A
 > TWELVEFOLD GAP.**
 >
-> **SO THE BUILDER IS THE PROBLEM, NOT ACCESS TO IT, AND PHASES 1, 4 AND 5 INVERT.** That is
-> what the task said this number would decide, and it decided it against the current phase order.
-> Recorded without softening: 18.58% of all landing sessions arrive at the builder — it is the
-> second-largest entry point on the site — and 2 of those 97 sessions reached a retailer.
+> 18.58% of all landing sessions arrive at the builder — the second-largest entry point on the
+> site — and 2 of those 97 sessions reached a retailer. **Building more routes into it adds
+> traffic to the weakest surface measured.**
 >
-> Building more routes into a builder that converts at 2% adds traffic to the weakest surface
-> measured.
+> **⚠️ THE CAUSE IS NOT ESTABLISHED. See "the two follow-ups" below: 81% of these sessions are
+> paid social and 90 of 97 landed on a bare builder rather than a preloaded routine. The gap is
+> real and the attribution is not. The inversion claim first written here has been WITHDRAWN.**
 
 **What is and is not computable, stated because it bounds the claim.** GA4's Data API applies an
 event-scoped `dimensionFilter` and counts distinct sessions containing a matching EVENT.
@@ -20766,11 +20766,99 @@ size does not come from noise at this n. The direction is not in doubt; the exac
 is a floor**, which matters because thresholding suppresses rows entirely rather than returning
 small numbers — a zeroed bucket would have looked like no activity.
 
-#### WHAT THIS DOES NOT SETTLE
+#### PROVENANCE OF THE 4.7% — FOUND, AND ALREADY RECORDED
 
-- **Where the 4.7% came from.** It matches neither computation, so it is not a units error. It is
-  stale, differently scoped, or from a different source. This task establishes it is wrong and
-  by roughly how much, not its provenance.
+**It is traceable, and it is a THIRD quantity.** `docs/strategy-amendments.md` A6:
+
+> *"The 4.7 per cent clickout rate in particular used **comparison views as its denominator**, and
+> that denominator was broken. The conclusion may still hold, but the number should not be quoted
+> as measured."*
+
+So the figure is **outbound clicks ÷ comparison views** — neither sessions-with-a-click ÷ sessions
+nor events ÷ sessions. That is why it matched neither computation this task was asked to
+distinguish. And its denominator was itself broken: the gtag hydration race meant `view_item`,
+which comparison views depend on, undercounted every cold load, which for search-engine landings
+is most of them.
+
+> **THE FINDING IS NOT THAT THE PROVENANCE IS MISSING. IT IS THAT THE PROVENANCE WAS FOUND,
+> WRITTEN DOWN ON 3 AUGUST WITH AN EXPLICIT INSTRUCTION, AND THE INSTRUCTION WAS NEVER CARRIED
+> OUT.** `docs/strategy.md` says, in the amendment directly beneath the figure: *"the number
+> should be re-derived from the week beginning 3 August before it is quoted."*
+>
+> **Task 2 is that re-derivation. It is nineteen days late, and in the interval the un-re-derived
+> figure stayed in the strategy document in three places** — the findings table (§6), the paid
+> acquisition conclusion (*"a funnel that leaks at 4.7%"*), and the measurement framework
+> (§9: *"the 4.7% number and the one to watch hardest"*).
+>
+> A caveat was recorded correctly and the figure it qualified went on being quoted. The amendment
+> and the claim live in the same file, forty lines apart.
+
+**What the re-derivation shows:** the true session-scoped rate is **17.43%**, not 4.7%. The
+premise that on-site conversion is the binding constraint was reasoned from a figure understating
+the funnel it describes by roughly 3.7×.
+
+#### THE TWO FOLLOW-UPS, AND THEY QUALIFY FINDING 2 SUBSTANTIALLY
+
+**Acquisition mix of the 97 builder landings:**
+
+| channel | sessions | share |
+|---|---:|---:|
+| **Paid Social** | **79** | **81.44%** |
+| Organic Search | 7 | 7.22% |
+| Organic Social | 5 | 5.15% |
+| Unassigned / Direct / Email | 6 | 6.19% |
+
+Source/medium: `instagram / cpc` 56, `pinterest / cpc` 23.
+
+**Only 7 of 97 landing URLs carry `?routine=`. Ninety landed on a BARE builder.**
+
+**Engagement:**
+
+| | sessions | engaged | bounce | avg duration | pages/session |
+|---|---:|---:|---:|---:|---:|
+| builder landings | 97 | 30 (**30.93%**) | **69.1%** | 119s | 2.16 |
+| product landings | 235 | 193 (**82.13%**) | 17.9% | 123s | 1.63 |
+| all sessions | 522 | 352 (67.43%) | 32.6% | 201s | 2.99 |
+
+> **THESE WEAKEN THE INVERSION ARGUMENT AND I SHOULD SAY SO PLAINLY. The 2.06% is not clean
+> evidence that the builder converts badly. Four fifths of it is paid social**, which
+> `docs/strategy.md` already records as not working (*"Paid acquisition is not viable yet. Two
+> campaigns confirmed it."*). Those 79 sessions ARE those campaigns.
+>
+> **And 90 of 97 landed on a bare builder, not a preloaded routine** — which is precisely the
+> *"blank builder"* the strategy identified as the problem and the preload work was built to fix.
+> The preload fix is represented by **seven sessions**. The 2.06% is largely a measurement of the
+> pre-fix experience, delivered to traffic already known not to convert.
+>
+> **The bounce rate says which failure it is: 69.1% against 17.9% on product landings.** Most of
+> these sessions leave rather than building a basket and failing to click out. That is a
+> different defect from "the builder does not convert" and points at arrival, not at the tool.
+>
+> **THE CONFOUND CANNOT BE RESOLVED AT THIS VOLUME.** The clean test is builder conversion for
+> organic sessions only — but the bucket contains **2 clicks in total**, and 2 cannot be split
+> across six channels. No amount of further querying separates "the builder converts badly" from
+> "paid social converts badly" on four weeks of this data.
+
+#### SO WHAT SURVIVES, AND WHAT DOES NOT
+
+**Survives.** Sessions arriving at the builder convert far worse than sessions arriving at a
+product page — 2.06% against 24.68% — and they bounce four times as often. Whatever the cause,
+**routing more traffic to `/app` today sends it to the worst-performing arrival on the site.**
+This is also corroborated independently and earlier: `docs/strategy.md` already records
+**5 clickouts of 288 from the basket optimiser — 1.74%** — measured in a different period by a
+different method, and agreeing.
+
+**Does not survive.** My earlier statement that *"the builder is the problem rather than access
+to it, and Phases 1, 4 and 5 invert"* **is not supported by this data and I withdraw it as
+stated.** The measurement cannot distinguish the builder from the traffic sent to it or from the
+bare-builder arrival the preload work already targets. **The phase order should not be inverted
+on this evidence.** What the evidence supports is narrower: *do not route additional traffic into
+`/app` until an organic-only or preload-only rate exists.*
+
+**The cheap test that would settle it**, and which this window cannot supply: the clickout rate
+for `?routine=` landings specifically, once enough of them exist. Seven is not enough.
+
+#### WHAT THIS DOES NOT SETTLE
 - **Whether the builder converts badly because of the builder.** Sessions landing on `/app` may
   differ in intent from sessions landing on a product page. The measurement is of outcome, not
   of cause.
