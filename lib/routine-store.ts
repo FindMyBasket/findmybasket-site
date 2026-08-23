@@ -91,9 +91,22 @@ export function onRoutineChange(handler: () => void): () => void {
 
 // Build a URL to send the user to the routine builder with the current
 // routine pre-loaded. The legacy /app.html supports ?routine=id1,id2,id3
+/*
+ * TARGETS /app DIRECTLY, NOT /app.html.
+ *
+ * `/app.html` 308-redirects to `/app` (vercel.json), so every internal navigation
+ * built here was costing a redirect hop before reaching the real route --
+ * app/app/page.tsx. Nothing depended on the old path: the redirect exists for
+ * inbound links from before the route moved, and it keeps working for them.
+ *
+ * Item 240 records the wider disagreement this sits inside -- `/app.html` is in the
+ * sitemap at priority 0.9, 308s to `/app`, and `/app` is Disallow'ed in robots.txt.
+ * That remains open. This change is only the internal-navigation half: our own links
+ * now point at the route we actually serve. Item 250.
+ */
 export function buildRoutineUrl(): string {
   const items = safeRead();
-  if (items.length === 0) return '/app.html';
+  if (items.length === 0) return '/app';
   const ids = items.map(p => p.id).join(',');
-  return `/app.html?routine=${ids}`;
+  return `/app?routine=${ids}`;
 }
