@@ -203,15 +203,56 @@ export const DEPARTURES: Readonly<Record<string, Departure>> = {
   },
 };
 
+// ─── RESIDUE. NOT A DEPARTURE. ───────────────────────────────────────────────
+//
+// Pages that 404 today and belong to no departure's drop set. They are what is left after
+// THREE MECHANISMS EACH CORRECTLY DECLINED TO COVER THEM:
+//   - products_active excludes them -- no active-retailer row
+//   - GONE_IDS excludes them -- not orphans when any departure set was generated
+//   - REDIRECTS excludes them -- never curated, they were not in a departing set
+// The residue of correct exclusions is nobody's population by construction. Item 254.
+//
+// DELIBERATELY OUTSIDE `DEPARTURES`. It has no retailerId and no flip date, and
+// regen-gone-ids.mts rewrites only GONE_RAW_<KEY> literals belonging to a departure -- so
+// keeping this separate means no regeneration can ever clobber it and no departure's
+// removal can ever take it with them.
+//
+// ── WHY 410 AND NOT A REDIRECT, FOR ALL ELEVEN. ─────────────────────────────────────────
+// Nine have NO PRODUCT ROW AT ALL -- deleted from `products`, so there is no name, no brand
+// and nothing to match a target against. Two have an identity and still fail the target
+// test:
+//   22179  Rimmel Provocalips 16Hr Kiss Proof -- 200 I'll Call You
+//          Eight other Provocalips shades are live; that shade is not. A shopper searching
+//          one shade landing on another is a wrong answer, not a near one.
+//   46925  KISS GLAM SHIMMER TOENAILS TWINKLE TOES
+//          Merged into 46914, but THE KEEPER IS ITSELF DEAD -- its only price row is
+//          Superdrug's, so it has no active-retailer row and resolveCanonicalKeeper
+//          correctly returned null rather than 308 into a 404. Nearest live Kiss items are
+//          a different product.
+// Both brand hubs are live and survive (Rimmel 661 products, Kiss 92), so a 301 to the hub
+// would pass the doctrine's mechanical test. IT IS REFUSED ANYWAY: these clicks came from
+// product-name queries, the hub does not answer them, and a 301 into a wrong answer is
+// worse than an honest 410. A LIVE 200 IS THE FALSE GREEN THE DOCTRINE WARNS ABOUT.
+//
+// Measured 4 clicks and 693 impressions over three months, already lost -- these URLs 404
+// today. The 410 changes what we tell Google, not what the visitor gets.
+//
+// NOT THE WHOLE POPULATION. A database query finds 1,214 dead pages that no departure
+// explains -- forty times what the GSC export surfaced -- and the nine with no row are
+// UNENUMERABLE from inside the system, because nothing is left to select. Item 254.
+const GONE_RAW_RESIDUE =
+  '7708,9762,19619,22179,36095,46925,47009,51978,54398,55925,60034';
+
 // `.filter(Boolean)` before Number() is load-bearing: an empty goneRaw splits to [''],
 // and Number('') is 0. Without it a not-yet-generated departure would silently insert
 // product id 0 into the gone set. Harmless today by luck -- there is no product 0 -- but
 // it is a malformed id in a structure that gates 20,000 URLs.
-export const GONE_IDS: ReadonlySet<number> = new Set(
-  Object.values(DEPARTURES).flatMap((d) =>
+export const GONE_IDS: ReadonlySet<number> = new Set([
+  ...Object.values(DEPARTURES).flatMap((d) =>
     d.goneRaw.split(',').filter(Boolean).map((s) => Number(s)),
   ),
-);
+  ...GONE_RAW_RESIDUE.split(',').filter(Boolean).map((s) => Number(s)),
+]);
 
 // Merged across departures. A key collision would silently resolve to whichever
 // departure is enumerated last; the regen script checks for that offline, where there is

@@ -22510,3 +22510,42 @@ state — and this workflow was written before that item existed.**
 > **It is expected to FAIL on its next run, and that is the repair working.** The gate has no
 > operable regeneration path for any existing departure. It was reporting health; it now reports
 > the truth, and will keep reporting it until item 254's successor mechanism exists.
+
+#### THEN THE ELEVEN: 410 FOR ALL OF THEM
+
+Added as `GONE_RAW_RESIDUE` — **deliberately outside `DEPARTURES`**, since it has no retailer and
+no flip date, and `regen-gone-ids.mts` rewrites only a departure's own literal, so no regeneration
+can clobber it and no departure's removal can take it with them. Gone set 22,729 → **22,740**.
+
+**Nine have no product row at all** — deleted from `products`, so there is no name, no brand and
+nothing to match a target against. **Two have an identity and still fail the target test:**
+
+| id | What it was | Why not a redirect |
+|---|---|---|
+| **22179** | Rimmel Provocalips 16Hr — **200 I'll Call You** | Eight other Provocalips shades are live; **that shade is not**. One shade is not a near-miss for another. |
+| **46925** | KISS Glam Shimmer Toenails Twinkle Toes | Merged into 46914, but **the keeper is itself dead** — Superdrug-only, no active row. Nearest live Kiss items are different products. |
+
+**Both brand hubs are live and survive** (Rimmel 661 products, Kiss 92), so a 301 to the hub would
+**pass the doctrine's mechanical test.**
+
+> **REFUSED ANYWAY. These clicks came from product-name queries; the hub does not answer them, and
+> a 301 into a wrong answer is worse than an honest 410. A LIVE 200 IS THE FALSE GREEN THE DOCTRINE
+> WARNS ABOUT** — the same test that caught `/brands/betrue` returning 200 before the flip that
+> would empty it.
+
+Cost: **4 clicks and 693 impressions over three months, already lost** — these URLs 404 today. The
+410 changes what we tell Google, not what the visitor gets.
+
+**A hazard the change creates, recorded at the middleware and here:** the gate runs before the
+page, so if 22179 or 46925 ever regains a live price row it will be **410'd while live** — exactly
+what `gone-ids-drift.yml` exists to catch, and that check now correctly reports `cannot_run`. The
+nine with no row cannot come back and carry no such risk.
+
+**And this is not the population.** A database query finds **1,214 dead pages that no departure
+explains — forty times what the export surfaced.** The export caps at 1,000 rows, so these eleven
+are the ones with measurable traffic and the rest have none.
+
+> **THE NINE WITH NO ROW ARE THE UNENUMERABLE SUB-CLASS. No query can find them, because nothing is
+> left in the database to select.** Their only trace is external — Search Console, or server logs.
+> For that sub-class the population is not merely unowned; **it cannot be listed from inside the
+> system at all.**

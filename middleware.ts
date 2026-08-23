@@ -214,8 +214,19 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     return res;
   }
 
-  // Long-tail orphans: 410 Gone. Merged/shade/unknown ids are NOT in GONE_IDS, so they
-  // pass through and keep their existing 308-to-keeper / 404 behaviour.
+  // Long-tail orphans: 410 Gone. Merged/shade/unknown ids are GENERALLY not in GONE_IDS, so
+  // they pass through and keep their existing 308-to-keeper / 404 behaviour.
+  //
+  // ONE DELIBERATE EXCEPTION, ADDED 23 AUGUST 2026 (GONE_RAW_RESIDUE, item 254). Product
+  // 46925 IS a merged id and IS in the gone set, because its keeper 46914 is itself dead --
+  // Superdrug-only, no active-retailer row -- so resolveCanonicalKeeper already returned
+  // null and the page already 404'd. The 410 replaces a 404, not a working redirect.
+  //
+  // THE HAZARD THIS CREATES, STATED SO IT IS NOT DISCOVERED LATER. This gate runs BEFORE
+  // the page, so if 22179 or 46925 ever regains a live price row it will be served 410
+  // while live -- exactly the failure gone-ids-drift.yml exists to catch, and that check
+  // currently reports cannot_run for every departure (items 254, 255). The nine ids with no
+  // `products` row at all cannot come back and carry no such risk.
   if (GONE_IDS.has(id)) {
     return new NextResponse(GONE_HTML, {
       status: 410,
