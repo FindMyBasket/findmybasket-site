@@ -22830,3 +22830,104 @@ staged but empty (`GONE_RAW_ATELIER`), its feed still runs, and its terms are un
 (item 257). **The right question is not "should the import stop" but "is this departure complete,
 and what does complete mean" — and the three-way disagreement above is the evidence that nobody has
 written that down.**
+
+---
+
+### 259. A retailer nobody can buy from scores as one of the healthiest on the board
+
+**Raised:** 23 August 2026 · **Definition written. Nothing changed.**
+
+#### ★ THE DQ FINDING IS THE CORRECTION THAT MATTERS, MORE THAN THE COST
+
+`dq_snapshot()` counts Atelier De Glow's 515 rows in four sections. Atelier is `active=false` —
+**no shopper can reach it** — and its feed is imported nightly, so:
+
+| Section | Atelier's entry |
+|---|---|
+| `identifier_coverage` | **99.0% EAN**, 99.2% MPN |
+| `price_freshness` | **0 rows stale over 7d, 14d or 30d** |
+| `url_health_sql_signals` | 0 no-url, 0 garbage chars |
+| `canonical_size_health` | 88 missing |
+
+> **A RETAILER NOBODY CAN BUY FROM SCORES AS ONE OF THE HEALTHIEST ON THE BOARD, PRECISELY BECAUSE
+> ITS FEED IS FRESH.** Freshness is what the metric rewards, and a departed retailer's feed is as
+> fresh as anyone's right up until someone turns it off.
+
+**0.46% of the population (515 of 112,633), and the direction flatters.** Both halves matter: the
+magnitude is too small to distort any decision, and **the error is not random — it makes the board
+look better than the catalogue is.** This list already carries several instances of that class; the
+distinguishing feature here is that **the flattering rows are not wrong data. They are correct data
+about a retailer that no longer counts.**
+
+#### SHOULD `dq_snapshot` SCOPE TO ACTIVE RETAILERS? NOT OBVIOUSLY
+
+Measured. Scoping the whole function would change almost nothing in magnitude:
+
+| | Now | Scoped to active |
+|---|---:|---:|
+| Population | 112,633 | 112,118 |
+| **EAN coverage** | **90.88%** | **90.85%** |
+
+**The argument is not magnitude, it is meaning — and it splits by section.**
+
+**Sections that should SCOPE**, because they answer *"how good is what we serve"*:
+- `identifier_coverage` — matching quality only matters for offers a shopper can reach.
+- `canonical_size_health` — drives the product-page size chip, which never renders for an inactive
+  retailer.
+- `duplicates / layer2_text_match` — a duplicate the shopper cannot see is not a duplicate yet.
+
+**Sections that should KEEP THE BARE TABLE**, because they answer *"is the pipeline working"*:
+- `price_freshness` — **this is the sharp one. Scoping it would blind the exact signal that tells
+  you a departed-but-importing feed has stopped**, which is the only warning that Atelier's rows
+  have started rotting.
+- `url_health_sql_signals` — a feed emitting garbage URLs is a feed defect whether or not we
+  currently serve it.
+- `duplicates / layer1_within_retailer` — an ingest-side property.
+
+> **THE DISTINCTION IS ALREADY LOAD-BEARING ELSEWHERE AND IS NOT WRITTEN DOWN ANYWHERE.**
+> **FOUR different populations are already in use** across the two metric systems:
+>
+> | Population | Rows |
+> |---|---:|
+> | `dq_snapshot` — every in-stock row with a product | **112,633** |
+> | scoped to active retailers | **112,118** |
+> | `metrics_quality_weekly.ean_coverage_den` | **111,913** |
+> | active **and** in `products_active` | **103,817** |
+>
+> **Nobody chose four. They accumulated**, and each is defensible alone. **A single global scope
+> would make three of the four sections wrong in the other direction**, which is why the
+> recommendation is per-section rather than a flag on the function.
+
+**Recommended: scope the three "what we serve" sections; leave the three "is the pipeline working"
+sections bare; and label each section with which population it uses.** Not applied — it is a change
+to the measure, and this list's own history (item 252) is that repairing a measure deserves its own
+gated pass.
+
+#### THE DEFINITION IS WRITTEN: `docs/departure-completeness.md`
+
+Six states a departed retailer must be in — `active`, import config, scheduler, gone-set, redirects,
+delivery-terms provenance — each named by what it prevents, with the three departures scored
+against it.
+
+> **NONE OF THE THREE SATISFIES ALL SIX, AND THEY FAIL IN DIFFERENT PLACES**, which is the evidence
+> that each was done from memory rather than from a list. Branded Beauty comes closest at four.
+>
+> **A missing step gets caught by a runbook. A missing definition cannot be caught by anything**,
+> because there is no statement for reality to diverge from. That is why this is a document rather
+> than a fix, and why it is what makes the fourth departure cheap.
+
+#### ⚠️ SUPERDRUG IS HELD OFF BY AN ABSENCE, NOT BY A SETTING
+
+`retailer_import_config.enabled = **true**` for r12, with **no `cron.job` row and the GitHub
+workflow renamed `.disabled`**.
+
+> **THE IMPORT IS STOPPED ONLY BECAUSE NOTHING IS CALLING IT. Add a job — or rename that workflow
+> back — and it resumes, and NOTHING WOULD OBJECT**, because the config says enabled and the config
+> is what the importer reads.
+>
+> **An absence is not a setting.** It holds until someone adds something, and adding things is
+> normal work. This is a departure held off by the shape of the schedule rather than by any
+> recorded decision.
+
+**One flag closes it.** Deliberately **not changed tonight** — applied alone it fixes one instance
+and leaves the class, and it belongs with the definition rather than ahead of it.
