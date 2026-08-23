@@ -846,7 +846,23 @@ function RetailerRow({
             isBestValue={isBestPrice}
             listPosition={position}
             source="product_page"
-            className="bg-ink text-cream px-5 py-2.5 rounded-full text-sm font-medium hover:bg-gold transition-colors whitespace-nowrap inline-block"
+            /*
+             * NO whitespace-nowrap. THIS BUTTON WAS THE WHOLE-PAGE OVERFLOW.
+             *
+             * "Buy at {retailer_name}" is unbreakable under nowrap, so its min-content
+             * was the full string -- 169px for "Buy at Beauty Flash". This row sits in
+             * `grid md:grid-cols-2`, and a grid item's min-width defaults to `auto`, so
+             * the track cannot shrink below its content's minimum. At a 390px viewport
+             * the 342px column became 403px and the ENTIRE PAGE scrolled horizontally.
+             *
+             * Measured: 403 with nowrap, 320 without. 10 of 12 live retailers overflowed;
+             * only YesStyle and Boots fit. Item 251.
+             *
+             * The label keeps the retailer name deliberately -- it is what makes the
+             * button honest about where the click goes (item 248's attribution rule).
+             * Wrapping to two lines is the cost of saying it.
+             */
+            className="bg-ink text-cream px-5 py-2.5 rounded-full text-sm font-medium hover:bg-gold transition-colors inline-block text-center"
           >
             Buy at {offer.retailer_name}
           </ClickOutLink>
