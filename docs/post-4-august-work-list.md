@@ -22029,3 +22029,183 @@ absence of a report was never evidence of absence.
 `whitespace-nowrap` removed from the buy button; `text-center` added for the wrapped case. **320,
 fits.** The retailer name stays on the button — it is what makes the button honest about where the
 click goes, and wrapping to two lines is the cost of saying it.
+
+---
+
+### 252. THE METRIC WAS 48% WRONG ABOUT ITS OWN DEFECT
+
+**Raised:** 23 August 2026 · **APPLIED** — metric repaired first, then the column.
+
+#### THE FINDING: THE MEASURE WAS FURTHER FROM TRUTH THAN THE THING IT MEASURED
+
+| | Old metric | Repaired |
+|---|---:|---:|
+| **`multipack_unit_not_pack`** | 442 | **654** |
+| `multipack_format` *(now: correctly sized)* | 1,395 | 17 |
+| `agrees` | 51,532 | 51,154 |
+
+> **654, NOT 442 — THE METRIC UNDERSTATED ITS OWN DEFECT BY 48%.**
+>
+> **378 rows were certified `agrees` while wrong.** Its regex matched only `N x M<unit>` —
+> *"3 x 34g"* — and never `M<unit> x N` — *"25ml x 5 sheets"*, the sheet-mask form. Those rows
+> equal the first size token in the name, so the metric called them healthy.
+>
+> **AND THE OLD `multipack_format` WAS 98% COMMA-FORM ROWS — 1,362 of 1,395. It was never about
+> `N x M` at all.** The bucket named for the defect contained almost none of it.
+
+**A measure can be wrong in the same direction as the thing it measures, and then it cannot report
+the error.** Every figure quoted from this metric since it shipped understated the population.
+
+#### THE ACCEPTANCE TEST NO CORRECT FIX COULD HAVE PASSED
+
+The criterion was *"`multipack_unit_not_pack` toward zero without `multipack_format` or
+`other_mismatch` rising"*. Simulated before applying anything: **−324 and +324, exactly.**
+
+> **THAT EQUALITY IS DEFINITIONAL.** `multipack_format` was the branch **immediately after**
+> `multipack_unit_not_pack` in one ordered `CASE`, on **the same regex matching the same name**.
+> A correction changes `canonical_size`; **it does not change the name**. Every row leaving the
+> first branch fell into the next.
+>
+> **The test would have reported any successful correction as a regression — and a wrong fix that
+> left the rows alone would have passed it.**
+
+**A criterion written in the metric's vocabulary without checking what the metric measured.** Same
+shape as approving the bridge rule on a figure that predated its own second condition (item 250) —
+**second instance this week.** Borrowing a measure's words imports its assumptions silently: the
+words look like a specification and are actually a claim about someone else's code.
+
+#### THE METRIC'S OWN DEFECT IS THE ONE TO KEEP
+
+> **It compares `canonical_size` to a token in the name it was extracted from, so it reports
+> agreement WITH ITS OWN SOURCE rather than with truth.**
+>
+> **Third instance of that shape**, after the 437-`agrees` case and `btrim`. The repaired metric is
+> better in coverage and vocabulary and **is still this kind of check** — it cannot tell whether the
+> name is right. That limit is written into the function comment, not only here.
+
+---
+
+#### ★ THE SELF-DISARMING GUARD
+
+`isUnitSizeOfMultipack` suppresses the size chip **only when `canonical_size` EQUALS the unit
+size**. The column now holds the pack total, so **the guard stops firing and 654 chips render
+correctly — with no code change at all.**
+
+> **THE BROAD PREDICATE WOULD NOW BE SUPPRESSING 654 CORRECT CHIPS, AND NOTHING WOULD HAVE
+> REPORTED IT.** There is no alert for a guard that keeps working after its reason has gone.
+
+**That precise predicate was chosen on 21 August for an entirely unrelated reason** — to protect 16
+rows whose names state the pack total *last*, which the extractor gets right by accident of token
+order. Firing on "name contains `N x M`" would have been simpler and would have looked identical
+at the time.
+
+> **A decision made for one reason paying off for another it was never aimed at.** The narrow
+> predicate was not chosen because someone foresaw the column being corrected; it was chosen
+> because sixteen rows were already right.
+
+**Verified by running it, not by reasoning about it** — `isUnitSizeOfMultipack` executed against
+both the old and new values for the same names:
+
+| Name | `canonical_size` | Guard |
+|---|---|---|
+| Vida Glow ... 90 x 3g Sachets | `3g` *(before)* | SUPPRESS |
+| Vida Glow ... 90 x 3g Sachets | **`270g`** *(after)* | **RENDER** |
+| Kerastase ... 30 x 6ml | `6ml` *(before)* | SUPPRESS |
+| Kerastase ... 30 x 6ml | **`180ml`** *(after)* | **RENDER** |
+
+**Reasoning would have produced the same answer and would not have been evidence** — which is the
+lesson of item 251 applied one day later.
+
+---
+
+#### THE REPAIRED BASELINE AND THE RESULT
+
+Both forms taught to the `CASE`; `multipack_format` redefined to mean **multipack, correctly
+sized**. Safe to redefine — `dq_dashboard_log` held 3 snapshots, last 27 July, **none carrying the
+key**.
+
+| Status | Repaired baseline | After backfill |
+|---|---:|---:|
+| `multipack_unit_not_pack` | 654 | **0** |
+| `multipack_format` | 17 | **671** |
+| `multipack_set_kit_held` | 187 | 187 |
+| `multi_size_comma_form` | 1,362 | 1,362 |
+| `multipack_neither_unit_nor_total` | 19 | 19 |
+| `agrees` | 51,154 | 51,154 |
+
+**Acceptance met: 654 → 0, and every other bucket unchanged.**
+
+#### THREE DEFECTS FOUND INSIDE THE REPAIR ITSELF
+
+**1. A formatter defect wearing a data finding's clothes.** `to_char(102,'FM…0.99')` returns
+**`'102.'`** — a trailing period — so the value I simulated was `"102.ml"` for every integer result.
+
+> **The `other_mismatch` +301 that was presented and reviewed was a bug in my formatter, not a
+> property of the catalogue.** The structural −324/+324 finding survived **because it turns on
+> branch ordering rather than on the value**; the number attached to it did not. **The finding and
+> its figure had different dependencies and only one of them was sound.**
+
+**2. The 0.0012oz row is the case for computing the write before writing.** `0.0012oz × 7` truncated
+to `0.008oz` at three decimals — one row in 654 that **would not have scored clean after its own
+correction**.
+
+> **READING THE CODE WOULD NEVER HAVE FOUND IT.** The formatter looks right, the rule looks right,
+> and the row is wrong. It surfaced only from computing the proposed value for every row and
+> scoring it *before* the write.
+
+**3. A bucket meaning "unclassified", rebuilt inside its own repair.** My first version put
+"genuine multipack, size is neither unit nor total" and the comma form into a single
+`multipack_other_mismatch`.
+
+> **A bucket meaning "unclassified" is exactly what this migration existed to remove. Rebuilding it
+> inside the repair would have been the defect surviving its own fix** — and it would have shipped
+> looking like an improvement. Split before the baseline was reported.
+
+#### TWO CORRECTIONS TO THE BLAST RADIUS — THE DOC OVERSTATED ONE HALF AND UNDERSTATED THE OTHER
+
+- **`idx_products_match` DOES exist** — `(normalised_brand, canonical_size, match_key)`, exactly as
+  written. **An earlier withdrawal of that claim was wrong; the withdrawal was the error, not the
+  claim.**
+- **Tier 4 does NOT read the column.** `import-awin-feed/index.ts:1017` takes its size from
+  `extractSize(exactKey)` — derived from the **name** at import — and its numbers from
+  `extractNameNumbers(p.name)`. **Correcting `canonical_size` cannot change Tier-4 matching.**
+- Layer-2 duplicate groups: **96 groups / 99 extras, identical before and after.**
+
+#### PROCESS
+
+Migrations `canonical_size_status_both_forms`, `dq_snapshot_use_canonical_size_status`,
+`canonical_size_status_split_comma_form`, `fmb_size_str_precision`,
+`canonical_size_multipack_backfill`. `dq_snapshot` was rewritten **mechanically** from
+`pg_get_functiondef` with anchor and post-conditions asserted, not retyped. Reversal snapshot in
+`canonical_size_backfill_20260823`.
+
+---
+
+#### OPEN
+
+**1. THE IMPORTER STILL WRITES THE UNIT SIZE — THE DEFECT REGENERATES.**
+
+> `extractCanonicalSize` takes the LAST size token and has no notion of a multiplier, unchanged.
+> **This backfill is a one-time correction. Every new multipack re-creates the defect.**
+>
+> **NOT TO BE TOUCHED WITHOUT ITS OWN GATED CHANGE.** `_shared/match-key.ts` is load-bearing for
+> matching, and the comment at `extractNameNumbers` carries an explicit standing instruction that
+> any narrowing must **re-check the multipack population first** — because that function is the
+> only thing containing this defect to display, and it does so by accident. **Report the diff
+> before making it.**
+
+**2. 154 catalogue rows remain wrong with NO LIVE OFFER** — outside the metric, which scores
+in-stock rows only, and outside this backfill.
+
+**3. 187 SET/KIT ROWS HELD. THIS IS A PROPOSITION DECISION, NOT A DATA ONE.**
+
+*"Viktor & Rolf Flowerbomb Gift Set 2 x 7ml Flowerbomb EDP + 7ml Ruby Orchid EDP + 7ml Tiger Lily
+EDP"* — summing to 28ml is **arithmetically right and semantically wrong**. It is not 28ml of one
+thing.
+
+> **The question is not how to compute the number. It is whether a pack total MEANS anything for a
+> kit of different products** — and that is a decision about what the site claims to compare, not a
+> derivation anyone can check.
+>
+> **The whole purpose of this correction was to make the column safe for per-unit arithmetic. On a
+> kit it would make it unsafe in a NEW way, and invisibly, because the number looks reasonable.**
