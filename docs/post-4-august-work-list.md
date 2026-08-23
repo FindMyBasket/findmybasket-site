@@ -22391,6 +22391,19 @@ What closing it would involve, none of it done:
 live rows with rows on file. **The residue is proportional to departure age, and both departures
 have it.**
 
+> **STRENGTHENED 23 AUGUST, WHILE REPAIRING THE DRIFT CHECK: THERE ARE THREE DEPARTURES, NOT TWO.**
+>
+> `DEPARTURES` also holds **`atelier`** (Atelier De Glow, retailer 29), and **it is `active=false`
+> too**. The finding above was written as "the only two departures that have residue". The true
+> statement is stronger:
+>
+> **ALL THREE DEPARTURES THE GATE COVERS ARE INACTIVE, SO THE REGEN PATH IS INOPERABLE FOR EVERY
+> ONE OF THEM. There is no departure for which this tool still works.**
+>
+> Found by writing an assertion that at least one departure is regenerable and watching it return
+> zero — not by reading the map. **The count was wrong because I checked the two departures the
+> investigation had surfaced rather than the two the map contained plus the one it also did.**
+
 #### AND 178 PAGES THAT ALREADY LEFT, STILL DRAWING SEARCH TRAFFIC
 
 Of the 778 `/product/` URLs in the export, **178 are not in `products_active` at all** — 146 hold
@@ -22473,8 +22486,17 @@ Runs affected: **16 and 23 August, both green.**
 | 2 | `BEFORE=$(git show HEAD:<file> \| …)` | A failure **inside `$(...)`** does not fail the step. Command substitution is the ordinary way to read a value. |
 | 3 | `git diff --quiet -- <file>` | On a **non-existent path** it exits 0 → `CHANGED=no`. Testing for a diff is the ordinary way to detect change. |
 
-> **NONE OF THESE IS A MISTAKE. EACH IS THE NORMAL FORM OF ITS OWN IDIOM. They compose into a
-> green tick** — and no reviewer reads three unrelated shell idioms as a system.
+> **NONE OF THESE IS A MISTAKE. EACH IS THE NORMAL FORM OF ITS OWN IDIOM, AND NO REVIEWER READS
+> THREE UNRELATED SHELL IDIOMS AS A SYSTEM.**
+>
+> **THAT IS THE PART THAT TRANSFERS, BECAUSE IT EXPLAINS WHY REVIEW WOULD NOT HAVE CAUGHT IT.**
+> There is no line to object to. Piping to `tee`, reading a value with `$(...)` and testing for a
+> diff are each the thing you would write. **The defect exists only in the composition, and
+> composition is exactly what line-by-line review does not see** — each idiom is correct in
+> isolation and review reads in isolation.
+>
+> The defence is not a sharper reviewer. It is `set -euo pipefail`, which converts all three from
+> silent to loud without anyone having to notice them.
 
 #### ★ THE SUMMARY IS PROOF OF LIFE FOR A CORPSE
 
@@ -22507,9 +22529,15 @@ state — and this workflow was written before that item existed.**
 3. `set -euo pipefail` on every step; the drift measurement additionally requires
    `lib/orphan-gate.ts` in both the working tree **and** `HEAD`.
 
-> **It is expected to FAIL on its next run, and that is the repair working.** The gate has no
-> operable regeneration path for any existing departure. It was reporting health; it now reports
-> the truth, and will keep reporting it until item 254's successor mechanism exists.
+> **IT IS EXPECTED TO FAIL ON ITS NEXT RUN. THAT IS THE REPAIR WORKING, NOT A REGRESSION.**
+>
+> All three departures are inactive, so there is no operable regeneration path for any of them.
+> **A standing TRUE signal replaces a standing FALSE one** — the red is the same fact the green was
+> concealing, and nothing about the gate got worse at the moment the tick changed colour.
+>
+> **It keeps firing weekly until item 254's successor mechanism exists**, which is the correct
+> behaviour for a check whose subject is unrepaired. **Anyone who silences it to get a clean board
+> restores the exact condition this item records.**
 
 #### THEN THE ELEVEN: 410 FOR ALL OF THEM
 
@@ -22535,6 +22563,23 @@ nothing to match a target against. **Two have an identity and still fail the tar
 
 Cost: **4 clicks and 693 impressions over three months, already lost** — these URLs 404 today. The
 410 changes what we tell Google, not what the visitor gets.
+
+#### MY OWN CHANGE FALSIFIED A CORRECT COMMENT, AND THE DIFF COULD NOT SHOW IT
+
+`middleware.ts` said: *"Merged/shade/unknown ids are **NOT** in GONE_IDS, so they pass through and
+keep their existing 308-to-keeper / 404 behaviour."* **True when written. 46925 is a merged id, and
+I put it in the set.**
+
+> **A DIFF SHOWS WHAT CHANGED AND NOT WHAT THE CHANGE MADE UNTRUE.**
+>
+> The diff for this edit is eleven ids in a new constant. **The falsified sentence is forty lines
+> away in a different file and does not appear in it.** It surfaced from reading the neighbouring
+> text at the call site — not from reviewing the change, which showed nothing wrong because nothing
+> in it was wrong.
+>
+> **A comment is an assertion about the system, so it can be broken at a distance by an edit that
+> never touches it.** The review that would have caught this is not "read the diff carefully" but
+> "read what the code you are joining already claims".
 
 **A hazard the change creates, recorded at the middleware and here:** the gate runs before the
 page, so if 22179 or 46925 ever regains a live price row it will be **410'd while live** — exactly
