@@ -22665,3 +22665,86 @@ provenance lives** — both column names — and keeps a warning on the part tha
 
 **Removing the comment outright would have left the next reader unaware that provenance exists at
 all**, which is a worse outcome than the warning it replaced.
+
+---
+
+### 257. A departed retailer whose importer never stopped
+
+**Raised:** 23 August 2026, from item 256's loose end · **Terms deliberately NOT sourced. Recorded, not otherwise changed.**
+
+#### THE STATE IT IS ACTUALLY IN
+
+| | |
+|---|---:|
+| `active` | **false** |
+| Price rows | 560, of which **515 in stock** |
+| **Median age of those in-stock rows** | **0 days** |
+| Products of its in `products_active` | 503 |
+
+> **IT IS NOT "FLIPPED INACTIVE WITH LIVE ROWS RETAINED". THE IMPORTER IS STILL RUNNING.**
+> The rows were refreshed **today**. This is a departure whose feed nobody turned off — the
+> retailer is switched out of the product surface while its data keeps arriving on schedule.
+
+That is a different state from Superdrug and Branded Beauty, which are inactive **and** stale
+(0 live rows between them). **Atelier is inactive and current**, which is why it kept slipping past
+counts framed around departed retailers.
+
+#### DO THE 515 ROWS RENDER? OBSERVED, NOT REASONED
+
+`products_active` requires an active-retailer row, so they should not. **Today has been a lesson in
+the difference**, so five live pages were fetched and read:
+
+| Page | Atelier mentions | What renders |
+|---|---:|---|
+| `/product/834` | **0** | Stylevana only |
+| `/product/1028`, `/2737` | **0** | other active retailers |
+| `/product/5312`, `/7546` | **0** | *"Out of stock"*, *"Not in our latest feed from Stylevana"* |
+
+> **CONFIRMED: NONE OF THE 515 ROWS RENDERS ANYWHERE.** `getRetailerOffers` excludes inactive
+> retailers, and the pages prove it rather than the code implying it.
+
+**And a small consequence worth naming:** on **2 pages** — 5312 and 7546 — the page says
+*"Out of stock"* while **Atelier has the product in stock today** (TIA'M eye cream at £15, Isntree
+sunscreen at £17). Those two sit inside item 253's out-of-stock-only population **because a
+retailer was switched off, not because nothing is buyable.** Only two, so it is a note rather than
+a problem — but it is item 248's shape again: **our decision, described in the vocabulary of
+someone else's stock level.**
+
+#### ITS TERMS ARE DELIBERATELY NOT SOURCED
+
+`delivery_terms_source` stays **NULL**, with the reason written into `delivery_terms_note`.
+
+> **A DEPARTED RETAILER'S TERMS ARE NOT WORTH READING FROM A SITE WE NO LONGER SEND ANYONE TO.**
+> Sourcing means reading terms from a retailer's own site on a date. Doing that here would record
+> **provenance for a figure nobody can act on** — accuracy about something with no consequences.
+>
+> **NULL plus a reason says what is true. `'site'` plus today's date would say we are maintaining
+> terms we are not.**
+
+Same treatment as **Amazon (r9) and eBay (r10)** (item 177): terms that cannot or should not carry
+a retailer-level value, recorded with the reason rather than with a number. The stored 40.00/3.49
+is retained as the last known reading (1 August), history rather than a maintained figure, and the
+note requires it to be re-read and sourced **before any offer of theirs renders again** if the
+retailer is ever reactivated.
+
+**Final state — 11 active retailers all sourced and dated; all three inactive carry a reason:**
+
+| | source | observed | reason |
+|---|---|---|---|
+| 10 active | `site` | 23 Aug | — |
+| Niche Beauty | `checkout` | 17 Aug | — |
+| Amazon, eBay | `site` | 17 Aug | ✓ |
+| **Atelier De Glow** | **NULL** | 1 Aug | **✓** |
+
+#### THE 1 AUGUST HISTORY WAS OVERWRITTEN, AND THAT IS A DECISION
+
+Item 256 set `delivery_terms_observed_at` to today on ten retailers, **replacing 2026-08-01**.
+
+> **Overwritten rather than superseded.** The column holds one date — the last reading — so the
+> earlier one is gone from the row rather than sitting behind it. `delivery_terms_note` is empty on
+> all ten and could hold a history if one is ever wanted.
+>
+> **This is a decision, not a defect.** A single-date column answers "how stale is this figure",
+> which is the question the prompt's warning actually asks. A history answers "how often do these
+> terms move", which nobody has asked yet. **Recorded so that if someone later wants the second
+> question, they know the first pass had the data and did not keep it.**
