@@ -21621,10 +21621,31 @@ would produce two voices for one situation.
 
 ---
 
-### 248. An absence in our data is evidence about our data
+### 248. Our side of a boundary, described in the other side's vocabulary
 
 **Raised:** 23 August 2026, on Robbie's correction to item 247's copy · **APPLIED.** The wording
 shipped in #392 overreached and was changed the same day.
+
+#### THE TELL, WHICH GENERALISES PAST THIS AND PAST DELIVERY
+
+> **OUR SIDE OF A BOUNDARY, DESCRIBED IN THE OTHER SIDE'S VOCABULARY.**
+
+That is the whole diagnostic, and it applies to **anything inferred across an interface** — a
+feed, an API, a webhook, a partner's dashboard, another team's table.
+
+| We observed | We are entitled to say | We are NOT entitled to say |
+|---|---|---|
+| a row stopped appearing in a feed | *"not in our latest feed"*, *"last seen on this date"* | *"out of stock"*, *"no longer listed"*, *"discontinued"* |
+| a feed carries no delivery field | *"we have not read their terms"* | *"free delivery over £25"* |
+| an API returned no barcode for an item | *"this listing published none"* | *"the resource is unsupported"* |
+| a retailer's rows stopped changing | *"the feed has not moved since X"* | *"they have stopped trading"* |
+
+**Every left-hand column entry is a fact about our own pipeline. Every right-hand one is a claim
+about somebody else's business**, reached by adding a step the observation does not support.
+
+**The vocabulary is the signal, and it is checkable without knowing the domain.** If a sentence on
+our page uses a word only the counterparty could truthfully say, it is an inference wearing the
+costume of a measurement — whoever wrote it, and however reasonable the inference.
 
 #### THE OVERREACH
 
@@ -21636,11 +21657,24 @@ all retailers. Check back soon."* — both halves unsupported. It was changed to
 **That is a claim about a retailer's range, inferred from our own ingestion.**
 
 > **WE KNOW THE ROW LEFT OUR FEED. WE DO NOT KNOW THE PRODUCT LEFT THEIR CATALOGUE.**
->
-> A feed can drop a line for a category reclassification, a temporary supplier gap, a schema fault
-> at either end, a partial export, or a freeze we have not detected — `feed_freeze_findings`
-> exists because that last one has happened. Every one of those produces exactly the same
-> observation on our side, and none of them means the retailer stopped selling the product.
+
+**Five things produce exactly the same observation on our side, and none of them means the
+retailer stopped selling the product.** These are what make the objection concrete rather than
+merely cautious:
+
+| | What happened | What we see |
+|---|---|---|
+| 1 | category reclassification — the line moved to a path we do not ingest | row absent |
+| 2 | a temporary supplier gap at the retailer | row absent |
+| 3 | a schema fault at either end | row absent |
+| 4 | a partial export | row absent |
+| 5 | **a feed freeze we have not detected** | row absent |
+
+> **KEEP (5) PROMINENT. `feed_freeze_findings` EXISTS PRECISELY BECAUSE IT HAS HAPPENED.** A
+> frozen feed re-serves the same bytes and the import reports success; rows that were in the
+> frozen copy stay, and anything the retailer has since added never arrives. **On our side that is
+> indistinguishable from a product being withdrawn** — and it is the case where the retailer's
+> range has not changed at all while our page would have announced that it had.
 
 **And it is made about a partner whose programme we depend on**, on a public page, in our own
 voice.
@@ -21682,6 +21716,27 @@ overreached.
 **And the stamping judgement stands, with its reason:** the per-row stamp appears on out-of-stock
 rows only, because **a stamp on an in-stock row says "today" on every row and carries no
 information. The value only speaks where it diverges from the import.**
+
+#### THE CLAIM WAS IN FOUR PLACES AND THE REPORT NAMED ONE
+
+I reported the overreach as a single string — the banner — and offered to change it. **It was in
+four:** the banner, the per-row stamp, the `<details>` collapse summary, and the inline heading
+used when the collapse does not fire.
+
+> **A COPY DEFECT PROPAGATES TO EVERY SURFACE RENDERING THE SAME FACT, AND A FIX SCOPED TO THE
+> REPORTED INSTANCE LEAVES THREE.**
+>
+> The four were written in the same change, minutes apart, expressing one idea. That is exactly
+> why they were easy to miss: **there was no copy-paste to notice**, and each read as correct on
+> its own. The duplication was in the *claim*, not in the text.
+>
+> The check is not "search for this string". It is **"what else renders this fact?"** — which
+> catches the three variants that say the same thing in different words, and which a string search
+> by construction cannot.
+
+This is the same shape as the eBay sweep two days earlier, where revision 1 named two locations
+and searching the whole repo found the claim rendering in places the report had not listed. **In
+both cases the reported instance was where it had been NOTICED, not where it lived.**
 
 #### STILL UNVERIFIED AT 390px
 
