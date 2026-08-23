@@ -37,7 +37,7 @@ export function RoutineIndicator() {
          Applied globally rather than conditionally: this component is rendered on
          every page and has no knowledge of which one it is on. A pill sitting a
          little higher on a page with no bar is correct-looking; a pill covering a
-         button is not. Work-list item 246, phase 0.4. */
+         button is not. Work-list item 245, phase 0.4. */
       className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] md:bottom-6 right-6 z-50 bg-ink text-cream px-5 py-3 rounded-full text-sm font-medium hover:bg-gold transition-colors shadow-lg flex items-center gap-2"
       aria-label={`Routine has ${count} product${count === 1 ? '' : 's'}`}
     >

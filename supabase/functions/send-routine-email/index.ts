@@ -312,7 +312,7 @@ function optimiseBasket(routine: Product[], prices: PriceRow[]): OptimisationRes
     // The fallback is a SINGLE synthesised option, so there is no next best to
     // anchor against and no saving can honestly be claimed. Was
     // `worstCaseTotal - fallbackTotal`, the same per-product-maximum baseline as the
-    // main path. Zero here is the truthful answer, not a degraded one. Item 246.
+    // main path. Zero here is the truthful answer, not a degraded one. Item 245.
     return {
       options: [fallback], best: fallback, worstCaseTotal,
       saving: 0,
@@ -338,7 +338,7 @@ function optimiseBasket(routine: Product[], prices: PriceRow[]): OptimisationRes
   // a guard: the reasoning was right and its reach was partial.
   //
   // options is sorted ascending by delivered total, so options[1] is the next-best
-  // basket the recipient could actually have chosen. Work-list item 246.
+  // basket the recipient could actually have chosen. Work-list item 245.
   const nextBest = allOptions.length >= 2 ? allOptions[1].total : null;
   const saving = nextBest === null ? 0 : Math.max(0, nextBest - best.total);
   const savingPercent = nextBest && nextBest > 0 ? Math.round((saving / nextBest) * 100) : 0;

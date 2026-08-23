@@ -21216,3 +21216,173 @@ Not raised now, recorded so it is not re-derived: if `/skincare` times out again
 investigation goes to **what the route does at build time beyond the featured block** — the page
 runs several queries in one `Promise.all` and the featured RPC is 404 ms of an unmeasured total.
 The remaining cost is not attributed, and this item does not claim it is.
+
+---
+
+### 245. Website Upgrade Programme phase 0: the savings anchor, and five findings from fixing it
+
+**Raised:** 22–23 August 2026, from an observed £19.63 headline on a £30.37 recommendation ·
+**0.1–0.5 APPLIED. One acceptance criterion is UNMET and is recorded as unmet.**
+
+#### ONE DEFECT IN THREE PLACES
+
+All three anchored a saving on a **maximum**:
+
+| | Surface | Baseline | Was |
+|---|---|---|---|
+| 0.1 | Builder headline | max over single-shop baskets covering everything | `worstSingleShopTotal − options[0].total` |
+| 0.2 | Builder result cards | max over all viable results | `worstViableTotal − opt.total` |
+| — | Monthly / welcome **email** | **per-product** most expensive stockist, grouped into legs | `worstCaseTotal − best.total` |
+
+All three now anchor on **next best**. `options` is sorted ascending, so `options[1]` is the next
+thing the visitor could actually have chosen.
+
+##### THE `savingVsWorst` FINDING LEADS
+
+> **The variable name stated the referent and the label stated its opposite.** It computed how
+> much **cheaper** an option is than the **worst** option, and rendered it as **`£X more`** than
+> the recommended one. **Referent and direction both wrong** — which is how a £1.85 difference
+> printed as £23.11.
+>
+> **A correctly-named variable rendered as its own inverse.** The name was not misleading; the
+> label was. Reading either alone would have found nothing.
+
+##### THE EMAIL WAS THE WORST INSTANCE
+
+The builder's anchor was at least **a basket someone could assemble** — one shop, one delivery.
+The email's assigned **each product independently to its most expensive stockist** and charged
+delivery per resulting leg. **Nobody would buy that basket. It has been sent nineteen times**,
+most recently 2 August, across monthly and welcome modes.
+
+**And the comment above it was half-corrected**, which is the finding underneath. It reasons —
+correctly — that *"a saving measured against an invented baseline is an invented saving"*, applies
+that to the **delivery** side properly (replacing a fabricated £3.95 constant with the real
+per-retailer rule), and **leaves the products side as a per-product maximum** — the half doing
+more of the inflating.
+
+> **Item 179's shape, in a comment rather than a guard: the reasoning was right and its reach was
+> partial.**
+
+#### WHAT THE HONEST NUMBERS LOOK LIKE
+
+**Recorded prominently, because the aggregate change is smaller than the sharp case suggests.**
+
+| | old anchor | **new anchor** |
+|---|---:|---:|
+| **median** | £3.99 | **£2.81** |
+| mean | £8.19 | £6.39 |
+| p25 / p75 / p90 | — | £0.45 / £6.81 / £15.91 |
+
+> **ONE IN SIX COMPARABLE BASKETS HAS A NEXT-BEST OPTION COSTING THE SAME: 2,286 of 13,113,
+> 17.4%.** That was hidden behind a worst-case figure until today. **It is the honest state of the
+> mechanic on those baskets**, and it is now shown rather than suppressed.
+
+**£26.10 → £2.00 is the sharp case, not the typical one.** The median moves £3.99 → £2.81.
+
+##### ROUTINE 36 — THE CASE IN MINIATURE
+
+**A real saved routine, belonging to a real person.** One item, eight retailers stocking it:
+
+| best | next best | worst | claimed | honest |
+|---:|---:|---:|---:|---:|
+| £18.85 | £20.85 | £44.95 | **£26.10** | **£2.00** |
+
+#### SMALL SAVINGS ARE SHOWN, AND A GENUINE ZERO IS A RESULT
+
+The `saving > 0.01` floor was written for a worst-case anchor, where a sub-penny figure meant
+nothing had been found. Under a next-best anchor **a small number is the answer**, and suppressing
+it would mean the feature only speaks when the result flatters it. Floor removed.
+
+The `suspect` guard is kept and is **not** a floor — it fires on a price spread wide enough to
+indicate a data defect, which is a correctness guard.
+
+Three zero-states are distinguished rather than collapsed: **one viable option** (nothing to
+compare against), **next best is equal** (a comparison was made and came out level), and the
+suspect case (no figure claimed at all).
+
+#### FIVE FINDINGS FROM THE WORK, EACH GENERAL
+
+##### 1. A PHASE 0 DEFECT ON A PHASE 1 SURFACE IS A REAL CATEGORY
+
+0.4's price-overlap fix landed in a file Phase 1 was rewriting, while phase 0's own scope excludes
+product-page work. Both were true at once.
+
+> **THE PHASE BOUNDARY IS DRAWN BY CONCERN AND THE FILE BOUNDARY BY SURFACE, AND THEY WILL KEEP
+> COLLIDING.**
+>
+> **The rule that follows: the phase decides WHETHER it is done; the file decides WHEN.**
+
+Applied here: the overlap was a phase 0 concern, so it was in scope; it touched markup PR #385 was
+replacing, so it waited for #385 and was fixed once rather than twice.
+
+##### 2. THE USER-FACING AND MEASUREMENT VOCABULARIES ARE DIFFERENT NAMESPACES
+
+Renaming *Add to basket* → *Add to my routine* looked like one change. It is two.
+
+| | Renamed | Consequence if it had followed the label |
+|---|---|---|
+| button label | **yes** | — |
+| `add_to_cart` | **NO** | a GA4 **reserved** event name. Breaks the series, loses built-in add-to-cart reporting, orphans the 29 July baseline `scripts/ga4-diag.mjs` checks against |
+| `basket_item_count` | **NO** | a registered GA4 custom parameter. **Stops collecting silently, and nothing in the repo can detect it** |
+
+> **A RENAME THAT LOOKS LIKE ONE CHANGE IS TWO.** Same shape as the header rename held back during
+> the orphan-gate transition: **what ops greps for is not what the user reads.**
+
+##### 3. `min-w-0` PERMITS SHRINKING; IT DOES NOT TRUNCATE
+
+The row's left column already carried `min-w-0`, which reads as the fix being in place. It is not.
+
+> **`min-w-0` REMOVES THE MINIMUM-CONTENT FLOOR SO A FLEX ITEM *MAY* SHRINK. Nothing truncates
+> until `truncate` sits beside it.** Until then the item shrinks its box and overflows its text.
+>
+> **A class that looks like the fix and is half of it** — and the visible symptom appeared
+> somewhere else entirely: with the left column unable to yield further, flex began shrinking the
+> RIGHT block, and the two price lines were the only shrinkable thing in it because the action
+> carries `whitespace-nowrap`. **The prices went under the button because the retailer name would
+> not truncate.**
+
+##### 4. `git add -A` COMMITTED AN ARTEFACT NOTHING COULD CATCH
+
+A 0-byte file named `delivery_cost`, created by a malformed shell redirect in an earlier command
+of my own, was committed into #386 by `git add -A`.
+
+> **No test, type check or lint would have found it — it is not code.** Only reading the diff
+> would, and I did not; it surfaced in the merge output afterwards. Removed in #387.
+>
+> The habit that follows is not "stop using `add -A`" but **read what it staged before
+> committing**, which is the same act that catches every other class of stray.
+
+##### 5. THE TYPE CHECKER CAUGHT WHAT REVIEW DID NOT — TWICE
+
+Removing the eBay block left an **orphaned `</div>`** and deleted `amazonSearchUrl`, still used by
+the Amazon cross-check row. Later, a JSX comment placed inside a `&&` expression container broke
+the mobile bar. **Both removals looked clean and were not.** `tsc` failed loudly in each case.
+
+**Same defence as reading generated SQL before running it, in a different tool.**
+
+#### THE UNMET ACCEPTANCE CRITERION, RECORDED AS UNMET
+
+> **0.4 AND 0.5 ARE REASONED FROM THE FLEX MODEL AND THE CLASS NAMES. THEY HAVE NOT BEEN OBSERVED
+> AT 390px.**
+
+The criterion is *"no overlapping tap targets at 390px on any product or builder screen"*, and a
+viewport is what it asks for. **Reasoning about `shrink-0`, `truncate` and `z-index` cannot
+disagree with itself** — it is the same model that produced the fix, re-run.
+
+> **ITEM 220's SHAPE: reasoning that could not disagree with itself is not verification.** The
+> classes are almost certainly right and that is not the same as knowing.
+
+**Phase 0 is complete except this criterion.** Robbie will check on a real device once it deploys.
+
+#### THE eBAY SWEEP, AND WHY IT WAS SEARCHED RATHER THAN VISITED
+
+Revision 1 recorded eBay as fixed. **It was live at `page.tsx:512` until 23 August.** Searching
+the whole repo rather than the two named locations found **two** rendering sites — the product
+page's entire *"Also try"* section, and the builder's per-item link. Both removed with their dead
+helpers, constants and imports; live pages confirm zero occurrences.
+
+What remains is GA4 network taxonomy — `AffiliateNetwork`, the host classifier, the migrations —
+which **must** stay or historical attribution breaks, and which renders nothing.
+
+**And a stale comment was corrected rather than deleted**, describing links that no longer exist:
+a reader meeting an absence has nothing to stop them re-adding it as an improvement.
