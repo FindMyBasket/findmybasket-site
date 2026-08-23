@@ -21499,3 +21499,122 @@ Added to The Fragrance Shop's entry in `docs/partnership-tracker.md`, not left h
 > **A dependency recorded only on the blocked side is discovered after the fact.** Whoever
 > picks up that onboarding needs to find the Rakuten reporting work attached to it, rather
 > than going live and then asking why nothing measures it.
+
+---
+
+### 247. These are not out-of-stock products. They are rows the importer stopped seeing.
+
+**Raised:** 23 August 2026, Phase 1 Task 3 stage 2 · **(a) and (b) APPLIED. Top-four DROPPED on
+the measured number. (c) taken into Phase 3.**
+
+#### THE FINDING CONVERTS A DISPLAY QUESTION INTO A CATALOGUE ONE
+
+Stage 2 was specified as table hygiene: collapse out-of-stock rows behind a single line. Measuring
+the population first found something the spec could not have anticipated.
+
+| | |
+|---|---:|
+| Pages with an out-of-stock row and nothing else | **12,398** (12.50% of `products_active`) |
+| …of which have exactly **one** row | **12,294 (99.2%)** |
+| **Refreshed in the last 7 days** | **0** |
+| Not touched for 30+ days | 11,030 (89%) |
+| Median days since last touch | **48.5** |
+| Oldest | **4 May 2026** |
+
+| Retailer | Pages | `absence_threshold_days` | Avg days stale |
+|---|---:|---:|---:|
+| Boots | 7,936 | **7** | **67** |
+| Stylevana | 1,911 | 21 | 80 |
+| Debenhams | 828 | 30 | 51 |
+| Escentual | 646 | 21 | 58 |
+
+> **THESE ARE NOT OUT-OF-STOCK PRODUCTS. THEY ARE ROWS THE IMPORTER STOPPED SEEING.**
+>
+> `absence_threshold_days` flips `in_stock` to false when a product stops appearing in a feed.
+> Boots' threshold is seven days and its rows in this state average **sixty-seven** — roughly two
+> months past the point the threshold fired, with nothing re-confirming any of them since.
+>
+> "Out of stock" is what the column says. **"No longer carried, as far as we can tell" is what the
+> data says.**
+
+#### BOTH CLAIMS ON THE PAGE WERE FALSE
+
+> *"Currently out of stock at all retailers. Check back soon."*
+
+**"Currently"** asserts a present-tense fact about a row last confirmed a median of **48.5 days**
+ago. **"Check back soon"** invites a return to a page with **no mechanism that would change it** —
+nothing re-checks a product that has left the feed.
+
+**And all 12,398 are in the sitemap.** `lib/sitemap.ts` selects from `products_active` with no
+stock filter, so every one is actively submitted for crawling.
+
+#### (a) APPLIED — COPY ANCHORED TO THE DATE
+
+What is true is the date, and it was already on the page: `retailer_prices.last_updated` is
+carried through `getRetailerOffers` onto every offer. No new query.
+
+Now renders *"No longer listed at Boots"* and *"Last seen 17 June 2026 — 67 days ago"*, per row
+and in the banner.
+
+#### (b) APPLIED — A COLLAPSE THAT CANNOT EMPTY THE TABLE
+
+Two conditions, both load-bearing:
+
+- **more than one** out-of-stock row — hiding a single row behind a line saying there is one row
+  is not a summary, it is a click for no information. That is 12,294 of the 12,398.
+- **at least one in-stock row** — otherwise the collapse empties the table on 12.4% of pages,
+  leaving a comparison page with nothing visible to compare.
+
+Native `<details>`, so no client JS in a server component.
+
+#### TOP-FOUR DROPPED, AND THE REASONING IS THE PRECEDENT
+
+| | |
+|---|---:|
+| Pages with more than 4 in-stock rows | **139** |
+| Share | **0.14%** |
+| Measured average in-stock rows per page | **1.05** |
+
+> **A control, a state, a default and an interaction to test — shipped for 139 pages, inert on
+> 99.86%, and still able to break the rest.**
+>
+> **Building it would be shipping a feature for a table that does not exist.** Dropping it on a
+> measured number is the better outcome, and the number to re-check if the catalogue grows into it
+> is the same one.
+
+#### PER-ROW FRESHNESS, AND WHY NOT PER PAGE
+
+> **A successful import that no longer contains a product leaves `last_import_status = 'ok'` while
+> that row's `last_updated` stops moving.**
+>
+> A page-level stamp reads the import and would report **fresh** on all 12,398 of these pages.
+> **Only the per-row value distinguishes "the import ran" from "this row was re-confirmed"**, and
+> that distinction is the entire finding above.
+
+Stamped on out-of-stock rows only: an in-stock row was re-confirmed by this morning's import, and
+stamping every one to say "today" is noise.
+
+#### (c) NOT DONE — TAKEN INTO PHASE 3
+
+Whether a page whose only offer was last seen 67 days ago belongs in `products_active` and the
+sitemap at all. **That is catalogue membership**, it touches item 75's definition of that view,
+and it must not be smuggled in as table hygiene.
+
+#### THE PHASE 3 PAIRING: SKELETON TOGETHER, NEVER THE TRIGGER OR THE COPY
+
+| | Pages | What is missing |
+|---|---:|---|
+| One in-stock retailer, no OOS row | **71,704** | a **comparison** |
+| Out-of-stock only | 12,398 | a **price** |
+| One in-stock + an OOS row | 1,931 | a comparison, with evidence of a second |
+
+**12,294 pages are both at once**, which is why neither existing treatment reaches them.
+
+**Together:** the skeleton, and the answer to *"what does this page offer when it cannot offer a
+comparison?"* — identical across **84,102 pages, 84.8% of the catalogue**, and answering it twice
+would produce two voices for one situation.
+
+> **NEVER TOGETHER: the trigger or the copy.** *"Only one retailer stocks this"* and *"no retailer
+> currently lists this"* are different facts. A shared component blurring them reintroduces
+> exactly the defect phase 0 removed from the savings headline — **one figure standing for two
+> quantities.**
