@@ -22401,8 +22401,8 @@ have it.**
 > ONE OF THEM. There is no departure for which this tool still works.**
 >
 > Found by writing an assertion that at least one departure is regenerable and watching it return
-> zero — not by reading the map. **The count was wrong because I checked the two departures the
-> investigation had surfaced rather than the two the map contained plus the one it also did.**
+> zero — **not by reading the map.** The count was wrong because I counted the departures the
+> investigation had surfaced rather than the departures the map actually holds.
 
 #### AND 178 PAGES THAT ALREADY LEFT, STILL DRAWING SEARCH TRAFFIC
 
