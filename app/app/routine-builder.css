@@ -885,3 +885,11 @@
   font-weight: 500;
   width: 100%;
 }
+
+/* Disclosure moved below the result cards and the save prompt in phase 0.5.
+   Was the first child of .rb-results, so it inherited that block's spacing;
+   standing alone it needs its own top margin to sit apart from the save card
+   rather than looking like part of it. */
+.rb-results-disclosure {
+  margin-top: 1.5rem;
+}

@@ -1262,86 +1262,6 @@ export default function RoutineBuilder() {
               </div>
             )}
 
-            {/* Save routine card — surfaced here, directly under the savings
-                figure and above the basket options, so the email capture is
-                visible at the most engaged moment rather than buried at the
-                foot of a long results list. Email only, one action, shared
-                store/logic unchanged. */}
-            {showSaveCard && (
-              <div className="rb-save-card">
-                <div className="rb-save-title">Save your routine ✨</div>
-                <p className="rb-save-desc">
-                  {authedEmail
-                    ? `Save these products to your account (${authedEmail}) and we'll track their prices for you.`
-                    : 'Create a free account to edit your routine anytime and get price-drop alerts. Just your email, no password needed.'}
-                </p>
-                {/* Account is the primary action; the email-only save below is
-                    the quieter legacy fallback we're retiring. */}
-                {!authedEmail && (
-                  <>
-                    <a href="/account" className="rb-save-btn rb-save-account-cta">
-                      Create a free account
-                    </a>
-                    <p className="rb-save-alt-lead">
-                      Or skip the account and we&apos;ll email you this
-                      routine&apos;s best prices each month:
-                    </p>
-                  </>
-                )}
-                <div className="rb-save-form">
-                  {!authedEmail && (
-                    <input
-                      type="email"
-                      className="rb-save-input"
-                      placeholder="your@email.com"
-                      value={saveEmail}
-                      disabled={emailDisabled}
-                      onChange={e => setSaveEmail(e.target.value)}
-                    />
-                  )}
-                  <button
-                    className={`rb-save-btn ${authedEmail ? '' : 'rb-save-btn-quiet'}`}
-                    onClick={saveRoutine}
-                    disabled={
-                      saveStatus === 'saving' ||
-                      saveStatus === 'success'
-                    }
-                  >
-                    {saveStatus === 'saving'
-                      ? 'Saving...'
-                      : saveStatus === 'success'
-                      ? 'Saved ✓'
-                      : authedEmail
-                      ? 'Save to my account'
-                      : 'Email me instead'}
-                  </button>
-                </div>
-                {saveStatus === 'success' && (
-                  <p className="rb-save-success">
-                    {authedEmail ? (
-                      <>
-                        ✓ Saved to your account.{' '}
-                        <a href="/account">Manage your routine</a>
-                      </>
-                    ) : (
-                      <>✓ Saved. We&apos;ll email you with this month&apos;s best prices.</>
-                    )}
-                  </p>
-                )}
-                {saveStatus === 'error' && (
-                  <p className="rb-save-error">
-                    {saveError || 'Something went wrong. Please try again.'}
-                  </p>
-                )}
-                {!authedEmail && (
-                  <p className="rb-save-fineprint">
-                    Unsubscribe link in every email.{' '}
-                    <a href="/account">Have an account? Sign in</a>
-                  </p>
-                )}
-              </div>
-            )}
-
             {/* Error / placeholder / results */}
             {errorMsg ? (
               <div className="rb-results-placeholder">
@@ -1350,7 +1270,6 @@ export default function RoutineBuilder() {
               </div>
             ) : !results ? null : (
               <div className="rb-results">
-                <AffiliateDisclosure variant="banner" />
                 {results.map((opt, i) => {
                   const isBest = i === 0;
                   // Was `worstViableTotal - opt.total` -- how much CHEAPER this
@@ -1473,6 +1392,104 @@ export default function RoutineBuilder() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {/* SAVE PROMPT SITS BELOW THE RESULT CARDS. It previously sat ABOVE
+                them, between the savings figure and the options, on the reasoning
+                that the email capture should appear "at the most engaged moment".
+                That put a commitment ask in front of the answer the visitor came
+                for: the cards ARE the value, and asking to save a result before
+                showing it inverts the exchange.
+
+                Value first, then commitment, then the disclosure. Item 246,
+                phase 0.5. */}
+            {showSaveCard && (
+              <div className="rb-save-card">
+                <div className="rb-save-title">Save your routine ✨</div>
+                <p className="rb-save-desc">
+                  {authedEmail
+                    ? `Save these products to your account (${authedEmail}) and we'll track their prices for you.`
+                    : 'Create a free account to edit your routine anytime and get price-drop alerts. Just your email, no password needed.'}
+                </p>
+                {/* Account is the primary action; the email-only save below is
+                    the quieter legacy fallback we're retiring. */}
+                {!authedEmail && (
+                  <>
+                    <a href="/account" className="rb-save-btn rb-save-account-cta">
+                      Create a free account
+                    </a>
+                    <p className="rb-save-alt-lead">
+                      Or skip the account and we&apos;ll email you this
+                      routine&apos;s best prices each month:
+                    </p>
+                  </>
+                )}
+                <div className="rb-save-form">
+                  {!authedEmail && (
+                    <input
+                      type="email"
+                      className="rb-save-input"
+                      placeholder="your@email.com"
+                      value={saveEmail}
+                      disabled={emailDisabled}
+                      onChange={e => setSaveEmail(e.target.value)}
+                    />
+                  )}
+                  <button
+                    className={`rb-save-btn ${authedEmail ? '' : 'rb-save-btn-quiet'}`}
+                    onClick={saveRoutine}
+                    disabled={
+                      saveStatus === 'saving' ||
+                      saveStatus === 'success'
+                    }
+                  >
+                    {saveStatus === 'saving'
+                      ? 'Saving...'
+                      : saveStatus === 'success'
+                      ? 'Saved ✓'
+                      : authedEmail
+                      ? 'Save to my account'
+                      : 'Email me instead'}
+                  </button>
+                </div>
+                {saveStatus === 'success' && (
+                  <p className="rb-save-success">
+                    {authedEmail ? (
+                      <>
+                        ✓ Saved to your account.{' '}
+                        <a href="/account">Manage your routine</a>
+                      </>
+                    ) : (
+                      <>✓ Saved. We&apos;ll email you with this month&apos;s best prices.</>
+                    )}
+                  </p>
+                )}
+                {saveStatus === 'error' && (
+                  <p className="rb-save-error">
+                    {saveError || 'Something went wrong. Please try again.'}
+                  </p>
+                )}
+                {!authedEmail && (
+                  <p className="rb-save-fineprint">
+                    Unsubscribe link in every email.{' '}
+                    <a href="/account">Have an account? Sign in</a>
+                  </p>
+                )}
+              </div>
+            )}
+
+
+            {/* DISCLOSURE LAST. It was the first child of the results block, above
+                the cards. It is a legal/truststatement about how the links are
+                monetised, not a piece of the answer, and putting it first delayed
+                the result to make a declaration nobody arrived for. Below the cards
+                and below the save prompt it is still on the screen, still before any
+                outbound click, and no longer standing in front of the value.
+                Item 246, phase 0.5. */}
+            {results && results.length > 0 && (
+              <div className="rb-results-disclosure">
+                <AffiliateDisclosure variant="banner" />
               </div>
             )}
 
