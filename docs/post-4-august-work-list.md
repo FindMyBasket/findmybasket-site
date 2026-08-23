@@ -22594,3 +22594,74 @@ are the ones with measurable traffic and the rest have none.
 > left in the database to select.** Their only trace is external — Search Console, or server logs.
 > For that sub-class the population is not merely unowned; **it cannot be listed from inside the
 > system at all.**
+
+---
+
+### 256. Verification that bought no correction, which was the point
+
+**Raised:** 23 August 2026 · **APPLIED.** Closes item 250's provenance gap.
+
+#### THE RESULT: NOTHING CHANGED, AND THAT IS THE FINDING
+
+Robbie verified all ten retailers' delivery terms against their own sites. Every stored figure was
+cross-checked against the verified list **before** writing.
+
+| | |
+|---|---:|
+| Retailers verified | 10 |
+| **Mismatches on model, threshold or cost** | **0** |
+| Figures altered | **0** |
+| `delivery_terms_source` set to `'site'` | 10 |
+
+**Active retailers carrying both a source and a date: 11 of 11. None missing.** Ten `'site'`
+(23 Aug), Niche Beauty `'checkout'` (17 Aug).
+
+> **THE FIGURES WERE RIGHT, SO THIS BOUGHT NO CORRECTION. WHAT IT BOUGHT IS THE ABILITY TO TELL.**
+>
+> A term with no recorded source is a term nobody can re-check, because **there is nothing to go
+> back and look at.** That was the whole objection in item 250 — **not any doubt about the
+> numbers**, which are now confirmed to have been right the entire time.
+>
+> An audit that finds nothing is usually called wasted. This one converted *"probably correct"*
+> into *"checked, on this date, against this source"* — **and those are different states even when
+> the digits are identical.**
+
+#### THE 1 AUGUST PASS WAS DONE, AND CORRECTLY. IT JUST LEFT NO RECORD OF ITSELF
+
+> **THE GAP WAS NEVER THAT THE WORK WAS NOT DONE.** All ten figures set on 1 August proved correct
+> three weeks later against the retailers' own sites. **It was that the work left no record of
+> itself** — no source, no note of what was consulted.
+>
+> **WHICH IS WHY NICHE BEAUTY COULD ARRIVE AFTERWARDS AND SIT OUTSIDE THE SET WITH NOTHING
+> NOTICING.** A pass with no record has no membership. There was nothing that said "these ten were
+> checked", so there was nothing an eleventh could be absent from. **An undocumented pass cannot
+> have a gap, because it has no edge** — and that is the property that makes the record worth more
+> than the reading.
+
+#### A CORRECTION TO ITEM 250'S WORDING
+
+Item 250 said *"the prompt cites a threshold on 19,608 offers whose provenance was never written
+down"* and *"a term nobody dated is a term nobody can re-check"*.
+
+> **THE TERMS WERE DATED. `delivery_terms_observed_at` was already 2026-08-01 on all ten.** What
+> was missing was `delivery_terms_source` — **not when they were read, but what was read.**
+>
+> I checked one column and described two. The objection survives in its accurate form — a term with
+> no source cannot be re-checked — but "nobody dated it" was false when written, and the 1 August
+> date was sitting in the row that the report said had no provenance.
+
+This overwrites 2026-08-01 with 2026-08-23 on the ten, because today is when they were last
+confirmed. The earlier reading is superseded rather than contradicted.
+
+#### THE WARNING AT THE PROMPT IS NARROWED, NOT REMOVED
+
+`app/product/[id]/page.tsx` no longer says the threshold is undated. It now says **where the
+provenance lives** — both column names — and keeps a warning on the part that is still true:
+
+> **The property is perishable.** A retailer can change its threshold on any day and nothing here
+> would know. **The columns record when we last looked, not that the figure is current.** So the
+> instruction to the next reader is to read `delivery_terms_observed_at` and judge whether that date
+> is recent enough for the claim.
+
+**Removing the comment outright would have left the next reader unaware that provenance exists at
+all**, which is a worse outcome than the warning it replaced.

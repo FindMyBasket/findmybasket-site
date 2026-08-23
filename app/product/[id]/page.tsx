@@ -780,14 +780,24 @@ function RetailerRow({
             theirs. The line leads with the number we computed and attributes the
             term. It does not say what will happen at their checkout.
 
-            THE THRESHOLD THIS RENDERS IS UNDATED. `retailers.delivery_terms_source`
-            is unrecorded for 10 of the 11 active retailers -- only Niche Beauty has
-            it, as 'checkout'. Item 248 permits "terms read from their site on this
-            date"; WE CANNOT SAY IT, because nobody wrote the date down. The figures
-            are almost certainly right and this does not block the prompt, but a term
-            nobody dated is a term nobody can re-check, and this line is the most
-            prominent place one is rendered. That gap is upstream and is a data task.
-            Item 250. */}
+            THE THRESHOLD THIS RENDERS HAS PROVENANCE, AND HERE IS WHERE IT LIVES.
+            `retailers.delivery_terms_source` and `retailers.delivery_terms_observed_at`
+            carry it: ALL 11 ACTIVE RETAILERS have both as of 23 August 2026 -- ten
+            verified against the retailers' own sites that day ('site'), Niche Beauty
+            read at checkout on 17 August ('checkout'). Item 248's permitted phrasing,
+            "terms read from their site on this date", IS NOW SAYABLE.
+
+            THE WARNING STAYS, NARROWED, BECAUSE THE PROPERTY IS PERISHABLE. A
+            retailer can change its threshold on any day and nothing here would know.
+            The columns say when we last looked, not that the figure is current -- so
+            BEFORE TRUSTING THIS LINE, READ delivery_terms_observed_at AND ASK WHETHER
+            THAT DATE IS RECENT ENOUGH FOR THE CLAIM. This is the most prominent place
+            on the site where a retailer's own term is rendered.
+
+            The 1 August pass that set these figures was thorough and every one of
+            them proved correct; what it did not do was record WHERE they came from,
+            which is why Niche Beauty could be onboarded afterwards and sit outside
+            the set with nothing noticing. Items 250 and 256. */}
         {isBestPrice && offer.in_stock && offer.delivery_model === 'tiered'
           && offer.delivery_threshold !== null && offer.delivery_cost !== null
           && offer.price < offer.delivery_threshold
