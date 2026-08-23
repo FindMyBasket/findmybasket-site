@@ -22681,13 +22681,22 @@ all**, which is a worse outcome than the warning it replaced.
 | **Median age of those in-stock rows** | **0 days** |
 | Products of its in `products_active` | 503 |
 
-> **IT IS NOT "FLIPPED INACTIVE WITH LIVE ROWS RETAINED". THE IMPORTER IS STILL RUNNING.**
-> The rows were refreshed **today**. This is a departure whose feed nobody turned off — the
-> retailer is switched out of the product surface while its data keeps arriving on schedule.
+> **A DEPARTURE WHOSE FEED NOBODY TURNED OFF.**
+> The rows were refreshed **today**. The retailer is switched out of the product surface while its
+> data keeps arriving on schedule.
 
-That is a different state from Superdrug and Branded Beauty, which are inactive **and** stale
-(0 live rows between them). **Atelier is inactive and current**, which is why it kept slipping past
-counts framed around departed retailers.
+**THIS IS A FOURTH DEPARTURE STATE, AND NOBODY HAD NAMED IT.** Superdrug and Branded Beauty are
+inactive **with zero live rows**. Atelier is inactive **with 515 rows refreshed today**.
+
+> **EVERY COUNT FRAMED AROUND DEPARTED RETAILERS LOOKED FOR INACTIVE-AND-STALE. THIS IS
+> INACTIVE-AND-CURRENT, SO IT SAT OUTSIDE THE SHAPE OF EVERY QUERY RATHER THAN BEING MISSED BY ANY
+> OF THEM.**
+>
+> The query that found the residue asked for retailers with **zero live rows** and rows on file —
+> Atelier has 515 live rows, so it was correctly excluded. The one that found departures asked
+> `active=false`, and found it, but the surrounding analysis assumed staleness came with it.
+> **A missed row is a bug in a query. A state the query does not model is a bug in the question**,
+> and it survives every re-run of that query unchanged.
 
 #### DO THE 515 ROWS RENDER? OBSERVED, NOT REASONED
 
@@ -22748,3 +22757,76 @@ Item 256 set `delivery_terms_observed_at` to today on ten retailers, **replacing
 > which is the question the prompt's warning actually asks. A history answers "how often do these
 > terms move", which nobody has asked yet. **Recorded so that if someone later wants the second
 > question, they know the first pass had the data and did not keep it.**
+
+---
+
+### 258. Three departures, three different shutdown states
+
+**Raised:** 23 August 2026 · **REPORTED ONLY. The import is still running and was not disabled.**
+
+#### SHOULD ATELIER'S IMPORT STILL BE RUNNING? FIRST, WHAT THE OTHER TWO DID
+
+| Retailer | `retailers.active` | `import_config.enabled` | cron job | Last import |
+|---|---|---|---|---|
+| **Branded Beauty** | false | **false** | `refresh-branded-beauty` **inactive** | 1 Aug |
+| **Superdrug** | false | **true** | **no job at all** (GH workflow `.disabled`) | 19 Jul |
+| **Atelier De Glow** | false | **true** | `refresh-atelier-de-glow` **ACTIVE, 07:47 nightly** | **23 Aug** |
+
+> **THREE DEPARTURES, THREE DIFFERENT SHUTDOWN STATES, AND ONLY ONE IS FULLY OFF.**
+>
+> Branded Beauty was stopped at both switches. **Superdrug was stopped only by removing its
+> scheduler — its import config is still `enabled=true`**, so it would resume the moment anyone
+> re-added a job. **Atelier was not stopped at all.**
+>
+> There is no shared "stop the feed" step that either succeeded or failed. **Each departure invented
+> its own shutdown**, which is why they disagree — and why nothing can report the disagreement,
+> since there is no definition of "off" for a check to compare against.
+
+#### THE COST IS SMALL AND THE CONSUMER IS NOT ZERO
+
+**Cost per night:** 30 runs in 30 days, 30 succeeded. The cron itself is `net.http_post` and returns
+in ~0.0s — the work is an edge-function invocation, one AWIN feed fetch, and the writes behind it.
+**One invocation nightly, ~515 rows maintained. Negligible against eleven live feeds.**
+
+**But "nothing reads its rows" is FALSE, and that is the thing to correct before deciding.** The
+product surface does not — verified by fetching live pages (item 257). **`dq_snapshot()` does**, in
+four sections:
+
+| Section | Atelier's entry |
+|---|---|
+| `identifier_coverage` | 515 in stock, **99.0% EAN**, 99.2% MPN |
+| `url_health_sql_signals` | 515 in stock, 0 no-url, 0 garbage |
+| `canonical_size_health` | 88 missing |
+| `price_freshness` | 515 rows, **0 stale over 7d, 14d or 30d** |
+
+> **A RETAILER NOBODY CAN BUY FROM CURRENTLY SCORES AS ONE OF THE HEALTHIEST ON THE BOARD**, because
+> its feed is fresh. It is **0.46% of the DQ population** (515 of 112,633), so the distortion is
+> small — but the direction is worth knowing: **the quality metrics are partly measuring a retailer
+> that does not exist to shoppers.**
+
+#### BOTH SIDES, AS ASKED
+
+**For disabling it:** an import running nightly into a surface nobody sees is **a cost with no
+consumer on the side that matters**. Disabling is **a smaller act than the departure already
+taken** — the decision to stop sending people there has been made, and this is only the data
+following it. It would also stop 515 rows flattering the DQ figures.
+
+**Against disabling it:** **the 515 go stale**, and three things follow.
+1. **Reactivation gets expensive.** Today the feed is current, so re-activating is one flag. After a
+   month of staleness it is a re-import plus a re-match, and item 254's lesson is that a list
+   generated before an event cannot be rebuilt after it.
+2. **`price_freshness` would show a retailer rotting** — 515 rows ageing past 7, 14, 30 days, with
+   `absence_threshold_days = 7`. Whether the monitors would alert on a retailer that is inactive is
+   **not established**, and `feed_freeze_findings` currently holds nothing for r29.
+3. **The two out-of-stock pages (item 257) become permanent** rather than a current oddity.
+
+**Not disabled. Reported.** The cost is small enough that this is a tidiness decision rather than an
+economic one, and the reactivation question is the only part with real weight.
+
+#### THE UNASKED QUESTION UNDERNEATH
+
+**Atelier is a departure that was never finished.** Its retailer flag is flipped, its gone-set is
+staged but empty (`GONE_RAW_ATELIER`), its feed still runs, and its terms are unsourced by decision
+(item 257). **The right question is not "should the import stop" but "is this departure complete,
+and what does complete mean" — and the three-way disagreement above is the evidence that nobody has
+written that down.**
