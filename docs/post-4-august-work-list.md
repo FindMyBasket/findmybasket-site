@@ -21888,32 +21888,69 @@ Item 248 permits *"terms read from their site on this date"*. **We cannot say it
 > only in this item**, so the next person reading that line knows the number it renders is
 > undated. Filling `delivery_terms_source` is a data task, upstream of the rendering.
 
-#### ADD TO ROUTINE — OFFERED, NOT FORCED, AND WITH NO SECOND COUNT
+#### ADD TO ROUTINE — OFFERED, NOT FORCED. **THE BRIEF NAMED A DESTINATION THE MEASUREMENT DOES NOT SUPPORT.**
 
-The confirmation toast is now the route: *"Added — see your routine →"*, linking to
-`/app?routine=…`, held for 6s rather than 2s because it is interactive.
+The confirmation toast is the route: *"Added — see your routine →"*, linking to `/app?routine=…`,
+held for 6s rather than 2s because it is interactive. **Decided, not deferred.**
 
-**Not an automatic redirect, deliberately.** Product pages convert at **24.68%** and the builder
-at **2.06%**; navigating on click moves someone off the best-performing surface on the site at the
-moment they engage with it. If a measurement later argues for auto-navigation, that is a product
-decision with a number behind it rather than a default adopted silently.
+| Surface | Conversion |
+|---|---:|
+| **Product page** | **24.68%** |
+| Routine builder | **2.06%** |
+
+> **Auto-navigating moves someone from a 24.68% surface to a 2.06% one at the moment they engage
+> with the better one.**
+>
+> **The brief's wording assumed the builder was the destination. The measurement says the product
+> page is where the value is.** The toast makes the builder available without making it
+> compulsory — the visitor who wants a basket gets one, and the visitor who was about to click
+> through to a retailer is not steered off the page that was about to convert them.
+
+**This is the brief being corrected by a number, not a spec being ignored.** *"Routing to
+`/app?routine=`"* was written before the two conversion rates sat next to each other; the route
+exists exactly as asked, and only its compulsoriness changed.
 
 > **NO COUNT ON THE BUTTON.** `RoutineIndicator` already reads the same store on every page and
 > renders the count. A second is **two components rendering one fact — item 248's propagation
 > finding arriving before it happens rather than after.**
 
-#### A DEFECT FOUND IN THE ROUTING
+#### THE REACH CORRECTION IS A PROCESS POINT, AND IT HAS A SHAPE WE HAVE SEEN
+
+**The rule was approved quoting 23,482. That figure predated the second condition of the same
+approval.** It was the count at `gap ≤ 1.0 × price` alone; `gap > delivery_cost` removes 3,834 of
+them. Actual reach **19,608**.
+
+> **The rule was right and the number attached to it was not.**
+
+**THIS IS A SMALLER VERSION OF THE 4.7% SHAPE (item 232) — a figure carried alongside a decision
+it no longer described.** The 4.7% ran nineteen days and was re-quoted three times after being
+flagged; this one survived a single approval. Same mechanism, caught in hours instead of weeks,
+because the second condition was written down in the same breath as the number and the two could
+be checked against each other.
+
+**What generalises: a figure quoted in an approval is a measurement of the rule as it stood when
+the figure was taken.** Amend the rule in the same message and the number is stale before the
+approval lands. The defence is not care — it is re-deriving the number from the rule that was
+actually approved.
+
+#### A ROUTING DEFECT — **WIDER THAN THE NEW ROUTE**
 
 `buildRoutineUrl()` returned **`/app.html?routine=…`**, and `/app.html` **308-redirects to
-`/app`**. Every internal navigation into the builder — the pill on every page, and now this route
-— was costing a redirect hop to reach a route we serve directly.
+`/app`**. Now targets `/app`.
 
-Now targets `/app`. Nothing depended on the old path: the redirect exists for inbound links from
-before the route moved and still serves them.
+> **THIS WAS NOT A DEFECT IN THE ROUTE BEING BUILT — IT WAS ALREADY LIVE ON EVERY PAGE.**
+> `RoutineIndicator` is fixed-position and renders site-wide, and it calls the same builder. **So
+> every internal navigation into the routine builder, from anywhere on the site, was paying a
+> redirect hop for a URL we do not serve directly.** The new route would have inherited it; it did
+> not introduce it.
+
+**Found only because the new route made someone read the function.** The pill has been shipping
+this on every page for as long as the redirect has existed, and nothing surfaced it — a redirect
+returns 308 and then the right page, so the cost is a round trip and never an error.
 
 **Item 240's wider disagreement remains open** — `/app.html` is in the sitemap at priority 0.9,
-308s to `/app`, and `/app` is `Disallow`ed. **This change is only the internal-navigation half.**
-
+308s to `/app`, and `/app` is `Disallow`ed in robots.txt. **This change is only the
+internal-navigation half.**
 ---
 
 ### 251. Reasoning that was locally right and scoped one level below the defect
