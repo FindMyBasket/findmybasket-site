@@ -149,6 +149,11 @@ export default async function ProductPage({ params }: { params: { id: string } }
   // the best price and [1] is the next-best. Anchor the saving to the next-best
   // price (not the most expensive) so one outlier high price cannot inflate it.
   const lowestPrice = inStockOffers.length > 0 ? inStockOffers[0].effective_price : null;
+  // The SAME offer's goods price, for the labelled secondary line. Read from
+  // inStockOffers[0] rather than min(price): the cheapest delivered offer is not
+  // always the cheapest item, and taking the minimum of each independently would
+  // print two figures that never belonged to one retailer.
+  const bestItemPrice = inStockOffers.length > 0 ? inStockOffers[0].price : null;
   const nextBestPrice = inStockOffers.length > 1 ? inStockOffers[1].effective_price : null;
   const savingPct = lowestPrice && nextBestPrice && nextBestPrice > lowestPrice
     ? Math.round(((nextBestPrice - lowestPrice) / nextBestPrice) * 100)
@@ -359,11 +364,31 @@ export default async function ProductPage({ params }: { params: { id: string } }
                 (specialist note, product chips) follows below the button. */}
             {lowestPrice !== null && (
               <div className="bg-cream border border-border rounded-2xl p-6 mb-4">
+                {/* ONE AUTHORITATIVE FIGURE: the DELIVERED price. Both this and the
+                    top table row now lead with the same quantity and both say so.
+                    Before this change the headline rendered effective_price and the
+                    row's large figure rendered price, unlabelled -- the same
+                    quantity large in one place and small in the other, 400px apart,
+                    on 76.5% of pages with an in-stock offer (66,398 of 86,835).
+                    Work-list item 245. */}
                 <p className="text-xs uppercase tracking-widest text-ink-light mb-1.5">
-                  Best price across {inStockOffers.length} retailer{inStockOffers.length === 1 ? '' : 's'}
+                  Best delivered price across {inStockOffers.length} retailer{inStockOffers.length === 1 ? '' : 's'}
                 </p>
                 <p className="font-serif text-4xl text-ink mb-1">
                   £{lowestPrice.toFixed(2)}
+                </p>
+                {/* Item price secondary and LABELLED. Rendered only when it differs,
+                    so a free-delivery offer does not show the same number twice. */}
+                {bestItemPrice !== null && bestItemPrice !== lowestPrice && (
+                  <p className="text-sm text-ink-light mb-1">
+                    £{bestItemPrice.toFixed(2)} item + £{(lowestPrice - bestItemPrice).toFixed(2)} delivery
+                  </p>
+                )}
+                {/* Stated openly rather than assumed. A delivered price is only this
+                    number for an order containing this item alone; adding anything
+                    else from the same retailer can cross a threshold and change it. */}
+                <p className="text-xs text-ink-light">
+                  Delivered prices assume an order containing this item only.
                 </p>
                 {savingPct !== null && savingPct >= 5 && (
                   <p className="text-sm text-sage">
@@ -555,7 +580,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
               {lowestPrice !== null && (
                 <div className="shrink-0 leading-none">
                   <p className="text-[10px] uppercase tracking-widest text-ink-light mb-1">
-                    Best price
+                    Best delivered
                   </p>
                   <p className="font-serif text-xl text-ink">£{lowestPrice.toFixed(2)}</p>
                 </div>
@@ -609,11 +634,16 @@ function RetailerRow({
         )}
       </div>
       <div className="flex items-center gap-4 ml-4">
+        {/* LEADS WITH THE DELIVERED PRICE so the row and the headline are the same
+            quantity. The item price stays, secondary and LABELLED -- it is what the
+            retailer charges for the goods and it is what the affiliate commission
+            and the JSON-LD offer are based on, so removing it would hide the figure
+            those are computed from. Item 245. */}
         <div className="text-right">
-          <p className="font-medium text-ink text-lg">£{offer.price.toFixed(2)}</p>
+          <p className="font-medium text-ink text-lg">£{offer.effective_price.toFixed(2)}</p>
           {offer.effective_price !== offer.price && (
             <p className="text-xs text-ink-light">
-              £{offer.effective_price.toFixed(2)} with delivery
+              £{offer.price.toFixed(2)} item
             </p>
           )}
         </div>
