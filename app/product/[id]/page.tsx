@@ -755,6 +755,48 @@ function RetailerRow({
 
             The flat branch names the charge and NOTHING ELSE: no threshold, because
             none exists, and no implication that a larger basket would change it. */}
+        {/* THE DELIVERY BRIDGE. Fires only where BOTH conditions hold:
+              gap <= 1.0 x item price   -- bridgeable by roughly one more item like
+                                           this one. The MEDIAN gap across the
+                                           catalogue is 1.50x, so this deliberately
+                                           stays silent on more than half of eligible
+                                           offers. A £30 gap on a £9 item is 3.3x and
+                                           says nothing.
+              gap > delivery_cost       -- otherwise the honest advice is to pay the
+                                           delivery. 3,834 offers have a gap SMALLER
+                                           than the charge, where prompting would ask
+                                           someone to spend more to save less.
+
+            Reach: 19,608 in-stock offers. NOT 23,482 -- that figure was quoted at
+            approval and predated its own second condition.
+
+            BEST ROW ONLY, correcting the original acceptance criterion, which said
+            every qualifying row. Two bridges on one page compete: the prompt is an
+            ARGUMENT, not a data field, so it belongs where the decision is being made
+            and nowhere else.
+
+            WORDING STATES OUR ARITHMETIC, NOT THEIR POLICY (item 248). The gap is
+            ours -- threshold minus price, a subtraction we perform. The threshold is
+            theirs. The line leads with the number we computed and attributes the
+            term. It does not say what will happen at their checkout.
+
+            THE THRESHOLD THIS RENDERS IS UNDATED. `retailers.delivery_terms_source`
+            is unrecorded for 10 of the 11 active retailers -- only Niche Beauty has
+            it, as 'checkout'. Item 248 permits "terms read from their site on this
+            date"; WE CANNOT SAY IT, because nobody wrote the date down. The figures
+            are almost certainly right and this does not block the prompt, but a term
+            nobody dated is a term nobody can re-check, and this line is the most
+            prominent place one is rendered. That gap is upstream and is a data task.
+            Item 250. */}
+        {isBestPrice && offer.in_stock && offer.delivery_model === 'tiered'
+          && offer.delivery_threshold !== null && offer.delivery_cost !== null
+          && offer.price < offer.delivery_threshold
+          && (offer.delivery_threshold - offer.price) <= offer.price
+          && (offer.delivery_threshold - offer.price) > offer.delivery_cost && (
+          <p className="text-xs text-ink mt-1">
+            £{(offer.delivery_threshold - offer.price).toFixed(2)} below {offer.retailer_name}&rsquo;s £{offer.delivery_threshold.toFixed(0)} free-delivery threshold
+          </p>
+        )}
         {offer.delivery_cost !== null && offer.delivery_model === 'flat' && (
           <p className="text-xs text-ink-light">
             £{offer.delivery_cost.toFixed(2)} delivery on every order

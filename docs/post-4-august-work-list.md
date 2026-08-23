@@ -21814,3 +21814,102 @@ required looking at what that row renders today, and the answer was: nothing.
 > case.** The question that found it — *what happens in the branch that has no data?* — is the one
 > worth carrying forward, because a guard requiring data will always have a branch nobody has
 > looked at.
+
+---
+
+### 250. The delivery bridge, best row only, and a threshold nobody dated
+
+**Raised:** 23 August 2026, Phase 1 Task 3 stage 3 · **APPLIED.**
+
+#### THE RULE, AND A CORRECTION TO THE FIGURE IT WAS APPROVED ON
+
+```
+gap ≤ 1.0 × item price   AND   gap > delivery_cost
+```
+
+| | Offers |
+|---|---:|
+| **Prompt fires** | **19,608** |
+| Excluded — gap ≤ delivery cost | 3,834 |
+| Silent — gap > item price | 38,453 |
+| Already free | 26,875 |
+| Flat, no threshold | 15,047 |
+
+> **THE RULE WAS APPROVED QUOTING 23,482, AND THAT FIGURE PREDATED ITS OWN SECOND CONDITION.**
+> 23,482 is the count at `gap ≤ 1.0 × price` alone. The `gap > delivery_cost` exclusion removes
+> 3,834 of them, and the rest is a day's catalogue drift.
+>
+> **The rule is unchanged and the reach is 16% smaller than stated when it was agreed.** Recorded
+> because the approval quoted a number, and the number was for a weaker rule than the one
+> approved.
+
+**The second condition is the better half**: 3,834 offers have a gap **smaller than the delivery
+charge**, where prompting would ask someone to spend more to save less.
+
+**And firing on under half of eligible offers is the posture, not a coverage gap.** The median gap
+across the catalogue is **1.50× item price**, so a 1.0× rule is deliberately quiet on most of the
+population. A £30 gap on a £9 item is 3.3× and says nothing.
+
+#### BEST ROW ONLY — A CORRECTION TO THE ACCEPTANCE CRITERION
+
+The criterion read *"every in-stock row with a published threshold and a gap renders the prompt"*.
+
+> **Two bridges on one page compete. The prompt is an ARGUMENT, not a data field**, so it belongs
+> where the decision is being made and nowhere else.
+>
+> A delivery line is a property of a row and every row should carry one. A bridge is a case being
+> put, and putting three cases at once is not three times the argument.
+
+#### THE WORDING, UNDER ITEM 248's RULE
+
+> **£9.05 below Boots' £25 free-delivery threshold**
+
+**The gap is ours** — `threshold − price`, a subtraction we perform. **The threshold is theirs.**
+The line leads with the number we computed and attributes the term, and says nothing about what
+happens at their checkout. Rejected: *"spend £9.05 more and Boots will deliver free"* (predicts
+their behaviour), *"you qualify for free delivery"* (asserts eligibility), *"add one more item"*
+(prescribes, and assumes such an item exists).
+
+#### THE THRESHOLD IT RENDERS IS UNDATED, AND THAT IS RECORDED AT THE CODE
+
+Item 248 permits *"terms read from their site on this date"*. **We cannot say it.**
+
+| `delivery_terms_source` | Retailers |
+|---|---|
+| `(none recorded)` | **10 of 11 active** |
+| `checkout` | Niche Beauty only |
+
+> **The prompt cites a threshold on 19,608 offers whose provenance was never written down.** The
+> figures are almost certainly right — Boots' £25/£3.95 matches its published terms — and this
+> does **not** block the bridge.
+>
+> **But a term nobody dated is a term nobody can re-check**, and this line is now the most
+> prominent place one is rendered on the site. **The warning is in the code beside the prompt, not
+> only in this item**, so the next person reading that line knows the number it renders is
+> undated. Filling `delivery_terms_source` is a data task, upstream of the rendering.
+
+#### ADD TO ROUTINE — OFFERED, NOT FORCED, AND WITH NO SECOND COUNT
+
+The confirmation toast is now the route: *"Added — see your routine →"*, linking to
+`/app?routine=…`, held for 6s rather than 2s because it is interactive.
+
+**Not an automatic redirect, deliberately.** Product pages convert at **24.68%** and the builder
+at **2.06%**; navigating on click moves someone off the best-performing surface on the site at the
+moment they engage with it. If a measurement later argues for auto-navigation, that is a product
+decision with a number behind it rather than a default adopted silently.
+
+> **NO COUNT ON THE BUTTON.** `RoutineIndicator` already reads the same store on every page and
+> renders the count. A second is **two components rendering one fact — item 248's propagation
+> finding arriving before it happens rather than after.**
+
+#### A DEFECT FOUND IN THE ROUTING
+
+`buildRoutineUrl()` returned **`/app.html?routine=…`**, and `/app.html` **308-redirects to
+`/app`**. Every internal navigation into the builder — the pill on every page, and now this route
+— was costing a redirect hop to reach a route we serve directly.
+
+Now targets `/app`. Nothing depended on the old path: the redirect exists for inbound links from
+before the route moved and still serves them.
+
+**Item 240's wider disagreement remains open** — `/app.html` is in the sitemap at priority 0.9,
+308s to `/app`, and `/app` is `Disallow`ed. **This change is only the internal-navigation half.**
