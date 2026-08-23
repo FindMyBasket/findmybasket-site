@@ -309,16 +309,39 @@ function optimiseBasket(routine: Product[], prices: PriceRow[]): OptimisationRes
       productsTotal: fallbackTotal, deliveryCost: 0,
       breakdown: fallbackBreakdown, type: "split",
     };
+    // The fallback is a SINGLE synthesised option, so there is no next best to
+    // anchor against and no saving can honestly be claimed. Was
+    // `worstCaseTotal - fallbackTotal`, the same per-product-maximum baseline as the
+    // main path. Zero here is the truthful answer, not a degraded one. Item 246.
     return {
       options: [fallback], best: fallback, worstCaseTotal,
-      saving: Math.max(0, worstCaseTotal - fallbackTotal),
-      savingPercent: worstCaseTotal > 0 ? Math.round(((worstCaseTotal - fallbackTotal) / worstCaseTotal) * 100) : 0,
+      saving: 0,
+      savingPercent: 0,
     };
   }
 
   const best = allOptions[0];
-  const saving = Math.max(0, worstCaseTotal - best.total);
-  const savingPercent = worstCaseTotal > 0 ? Math.round((saving / worstCaseTotal) * 100) : 0;
+  // NEXT-BEST ANCHOR. Was `worstCaseTotal - best.total`, where worstCaseTotal
+  // assigned EACH PRODUCT INDEPENDENTLY to its most expensive stocking retailer and
+  // then charged delivery per resulting leg.
+  //
+  // THIS WAS THE WORST OF THE THREE INSTANCES. The builder's anchor was at least a
+  // basket someone could assemble -- one shop, one delivery. This one is not: it is
+  // a cherry-picked maximum per line, and no shopper would ever buy it. It has been
+  // sent nineteen times.
+  //
+  // THE COMMENT ABOVE REASONED CORRECTLY AND REACHED HALF THE PROBLEM. It says an
+  // invented baseline gives an invented saving, and it applied that to the DELIVERY
+  // side properly -- replacing a fabricated GBP 3.95 constant with the real
+  // per-retailer rule. The PRODUCTS side was left as a per-product maximum, which is
+  // the half doing more of the inflating. Item 179's shape in a comment rather than
+  // a guard: the reasoning was right and its reach was partial.
+  //
+  // options is sorted ascending by delivered total, so options[1] is the next-best
+  // basket the recipient could actually have chosen. Work-list item 246.
+  const nextBest = allOptions.length >= 2 ? allOptions[1].total : null;
+  const saving = nextBest === null ? 0 : Math.max(0, nextBest - best.total);
+  const savingPercent = nextBest && nextBest > 0 ? Math.round((saving / nextBest) * 100) : 0;
   return { options: allOptions, best, worstCaseTotal, saving, savingPercent };
 }
 
