@@ -21951,3 +21951,81 @@ returns 308 and then the right page, so the cost is a round trip and never an er
 **Item 240's wider disagreement remains open** — `/app.html` is in the sitemap at priority 0.9,
 308s to `/app`, and `/app` is `Disallow`ed in robots.txt. **This change is only the
 internal-navigation half.**
+---
+
+### 251. Reasoning that was locally right and scoped one level below the defect
+
+**Raised:** 23 August 2026, observed by Robbie at a 390px viewport · **APPLIED.**
+
+#### THE SELF-CORRECTION IS THE FINDING
+
+Items 245 and 247 hardened the offer row against a price/name collision: `min-w-0` on the left
+block so it can shrink, `truncate` on the retailer name, `flex-wrap` on the chip row, `shrink-0` on
+the right block. **Every one of those is correct and every one still holds.** `min-w-0` does let
+the left block shrink — verified, its min-content contribution is 96px.
+
+> **THE QUESTION NEVER ASKED WAS WHAT THE RIGHT BLOCK'S FLOOR WAS, AND WHAT THE GRID WOULD DO
+> WITH IT.**
+
+The row is a flex container inside `div.grid md:grid-cols-2`. **A grid item's `min-width` defaults
+to `auto`**, so the track cannot shrink below its content's minimum — and the right block contained
+a `whitespace-nowrap` button whose min-content is the full unbreakable string `Buy at Beauty
+Flash`, **169px**. The 342px column became **403px** and the whole page scrolled sideways.
+
+**The reasoning was sound about the flex row. The defect was in the grid containing it.**
+
+#### A NAMED FAILURE MODE, NOT A ONE-OFF
+
+**This is the second flex diagnosis to land away from the symptom, and both times the local
+reasoning was correct.**
+
+> **"Reasoned from the flex model" is now a named failure mode.**
+>
+> **The shape: a model scoped to one layer answers questions about that layer correctly, and is
+> silent about the layer containing it.** The silence reads as agreement. Nothing in a flex
+> analysis says "and now check the grid" — the model returns a confident right answer to the
+> question asked, and the question was one level too low.
+
+The defence is not more care inside the model. It is **measuring the rendered page**, which is why
+the acceptance criterion asked for a real viewport rather than reasoning — and the criterion was
+right to.
+
+#### TODAY'S CHANGES CONTRIBUTE NOTHING
+
+The three suspects were the two-line out-of-stock banner (#392), the delivery prompt (#396) and the
+price row's flex behaviour (#385, #388). **All three were wrong.**
+
+| Offer row, min-content | Fits 342? |
+|---|---|
+| **As shipped** | **403** — no |
+| Bridge line removed | 403 — no |
+| `shrink-0` removed | 403 — no |
+| **ALL of today's additions removed** | **403 — no** |
+| **Buy button allowed to wrap** | **320 — yes** |
+
+**Removing every change made today leaves the number identical.** The button dates to `8285425`,
+8 May 2026; the grid to `c3d6ee6` (#47), **27 June 2026**.
+
+> **59,792 OF 93,697 LIVE PRODUCT PAGES HAVE OVERFLOWED FOR TWO MONTHS — ON THE SURFACE CARRYING
+> 85% OF SEARCH CLICKS.**
+
+**10 of 12 live retailers overflow.** Only YesStyle (exactly 342) and Boots fit. The Organic
+Pharmacy is worst at 544, **+202px**. Product pages only — `/`, `/skincare`, `/brand/*`, `/app` and
+`/supplements` all measure clean at 390.
+
+#### WHY IT WENT UNOBSERVED FOR TWO MONTHS
+
+**Window resize to 390 reported success and snapped back to 1450.** Only a same-origin iframe fixed
+at 390px reproduced it.
+
+> **A VIEWPORT THAT CANNOT BE SET IS A VIEWPORT NOBODY TESTS.**
+
+Two months of every mobile visitor being able to drag the page sideways, and the tooling answered
+"resized successfully" each time. **The failure was silent and the tool reported success** — so the
+absence of a report was never evidence of absence.
+
+#### THE FIX
+
+`whitespace-nowrap` removed from the buy button; `text-center` added for the wrapped case. **320,
+fits.** The retailer name stays on the button — it is what makes the button honest about where the
+click goes, and wrapping to two lines is the cost of saying it.
