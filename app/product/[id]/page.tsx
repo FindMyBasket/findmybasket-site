@@ -577,6 +577,9 @@ export default async function ProductPage({ params }: { params: { id: string } }
           <div className="h-24 md:hidden" aria-hidden="true" />
           <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-warm-white/95 backdrop-blur border-t border-border px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
             <div className="max-w-site mx-auto flex items-center gap-4">
+              {/* shrink-0 keeps the price intact and lets the button flex. The price
+                  is now the DELIVERED figure, which is longer than the item price it
+                  replaced, so the button is the side that must give. */}
               {lowestPrice !== null && (
                 <div className="shrink-0 leading-none">
                   <p className="text-[10px] uppercase tracking-widest text-ink-light mb-1">
@@ -610,8 +613,12 @@ function RetailerRow({
   return (
     <div className={`flex items-center justify-between px-6 py-5 border-b border-border last:border-b-0 ${!offer.in_stock ? 'opacity-60' : ''}`}>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-3 mb-1">
-          <span className="font-medium text-ink">{offer.retailer_name}</span>
+        {/* min-w-0 alone does not truncate -- it only PERMITS shrinking. The retailer
+            name needs `truncate` for the permission to have an effect, and the chip
+            row needs `flex-wrap` so two badges plus a long name do not force the row
+            wider than the viewport at 390px. */}
+        <div className="flex items-center gap-3 mb-1 flex-wrap">
+          <span className="font-medium text-ink truncate">{offer.retailer_name}</span>
           {isBestPrice && offer.in_stock && (
             <span className="bg-gold text-white text-xs font-medium px-2 py-0.5 rounded-full">
               Best price
@@ -633,7 +640,14 @@ function RetailerRow({
           </p>
         )}
       </div>
-      <div className="flex items-center gap-4 ml-4">
+      {/* shrink-0 ON THE RIGHT BLOCK. Was `flex items-center gap-4 ml-4` with no
+          shrink control. The left side is `flex-1 min-w-0` so it yields first, but
+          once it has yielded all it can -- a long retailer name plus a long delivery
+          string at 390px -- flex begins shrinking THIS block instead. The two price
+          lines are the only shrinkable thing in it, because the action carries
+          `whitespace-nowrap`, so they were driven underneath the button.
+          Two price figures overlapping a tap target. Item 246, phase 0.4. */}
+      <div className="flex items-center gap-4 ml-4 shrink-0">
         {/* LEADS WITH THE DELIVERED PRICE so the row and the headline are the same
             quantity. The item price stays, secondary and LABELLED -- it is what the
             retailer charges for the goods and it is what the affiliate commission
