@@ -22391,6 +22391,19 @@ What closing it would involve, none of it done:
 live rows with rows on file. **The residue is proportional to departure age, and both departures
 have it.**
 
+> **STRENGTHENED 23 AUGUST, WHILE REPAIRING THE DRIFT CHECK: THERE ARE THREE DEPARTURES, NOT TWO.**
+>
+> `DEPARTURES` also holds **`atelier`** (Atelier De Glow, retailer 29), and **it is `active=false`
+> too**. The finding above was written as "the only two departures that have residue". The true
+> statement is stronger:
+>
+> **ALL THREE DEPARTURES THE GATE COVERS ARE INACTIVE, SO THE REGEN PATH IS INOPERABLE FOR EVERY
+> ONE OF THEM. There is no departure for which this tool still works.**
+>
+> Found by writing an assertion that at least one departure is regenerable and watching it return
+> zero — **not by reading the map.** The count was wrong because I counted the departures the
+> investigation had surfaced rather than the departures the map actually holds.
+
 #### AND 178 PAGES THAT ALREADY LEFT, STILL DRAWING SEARCH TRAFFIC
 
 Of the 778 `/product/` URLs in the export, **178 are not in `products_active` at all** — 146 hold
@@ -22418,3 +22431,166 @@ only inactive-retailer rows. Between them **142 clicks and 8,325 impressions** i
 > **Nothing is broken and nothing will ever report it.** A defect gets found because something that
 > should contain it does not. This has no should-contain — it is defined only by what every list
 > left out, so it can only be found by deliberately looking for what is in none of them.
+
+---
+
+### 255. Reasoning about what the code should do, twice in one hour
+
+**Raised:** 23 August 2026 · **Check FIXED. The eleven 410s follow separately.**
+
+#### MY OWN CORRECTION LEADS THIS, BECAUSE IT IS THE SAME DEFECT AS THE ONE IT FOUND
+
+Item 254 recorded that **30 URLs serve a 404**. I established that by reading
+`resolveCanonicalKeeper` and concluding what it would return. **I did not fetch the URLs.**
+
+Fetching all thirty:
+
+| | Pages | Clicks | Impressions |
+|---|---:|---:|---:|
+| **Already 308 → a live 200** | **19** | 17 | 800 |
+| Actually 404 | **11** | 4 | 693 |
+
+**Nineteen of the thirty redirect correctly to live product pages** — shade variants landing on
+their parent, all 14 destinations verified 200. The residue is 11, not 30.
+
+> **REASONING ABOUT WHAT THE CODE SHOULD DO RATHER THAN OBSERVING WHAT IT DOES.**
+>
+> **The same shape as the defect this item exists to record, an hour apart, in the same
+> investigation** — and one day after item 251 named it. There I was wrong about a flex model; here
+> about a redirect path; the workflow below was wrong about its own script. **Three instances, one
+> mechanism: a confident answer derived from the code, never checked against the running system.**
+>
+> A `curl` loop over thirty URLs takes ten seconds and would have caught it before it was written
+> down.
+
+#### THE CHECK WAS GREEN FOR TWO RUNS WHILE UNABLE TO LOAD ITS OWN SCRIPT
+
+`gone-ids-drift.yml` runs weekly and exists **because a stale gone-set served HTTP 410 to 3,894
+live, in-stock products for thirteen days**. PR **#319** (16 Aug) renamed
+`scripts/regen-superdrug-gone-ids.mts` → `regen-gone-ids.mts` and `lib/superdrug-removed.ts` →
+`lib/orphan-gate.ts`. **The workflow was not updated.** From the 23 August run log:
+
+```
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '.../scripts/regen-superdrug-gone-ids.mts'
+fatal: path 'lib/superdrug-removed.ts' does not exist in 'HEAD'
+```
+
+**Conclusion: success. Summary: "No drift. The committed list matches live state."**
+Runs affected: **16 and 23 August, both green.**
+
+#### THE MECHANISM, NOT THE RENAME — THREE INDEPENDENT SILENCINGS
+
+| # | What | Why it is individually reasonable |
+|---|---|---|
+| 1 | `npx tsx <script> \| tee regen.log` | The step takes **tee's** exit code, not tsx's. `tee` is the ordinary way to keep a log. |
+| 2 | `BEFORE=$(git show HEAD:<file> \| …)` | A failure **inside `$(...)`** does not fail the step. Command substitution is the ordinary way to read a value. |
+| 3 | `git diff --quiet -- <file>` | On a **non-existent path** it exits 0 → `CHANGED=no`. Testing for a diff is the ordinary way to detect change. |
+
+> **NONE OF THESE IS A MISTAKE. EACH IS THE NORMAL FORM OF ITS OWN IDIOM, AND NO REVIEWER READS
+> THREE UNRELATED SHELL IDIOMS AS A SYSTEM.**
+>
+> **THAT IS THE PART THAT TRANSFERS, BECAUSE IT EXPLAINS WHY REVIEW WOULD NOT HAVE CAUGHT IT.**
+> There is no line to object to. Piping to `tee`, reading a value with `$(...)` and testing for a
+> diff are each the thing you would write. **The defect exists only in the composition, and
+> composition is exactly what line-by-line review does not see** — each idiom is correct in
+> isolation and review reads in isolation.
+>
+> The defence is not a sharper reviewer. It is `set -euo pipefail`, which converts all three from
+> silent to loud without anyone having to notice them.
+
+#### ★ THE SUMMARY IS PROOF OF LIFE FOR A CORPSE
+
+The workflow's own header:
+
+> *"No PR is indistinguishable from the workflow not having run, so the summary is the proof of
+> life and the PR is the proof of drift. **Do not make this conditional.**"*
+
+> **THE SUMMARY IS PROOF OF LIFE FOR A CORPSE — IT RENDERS HAPPILY FROM EMPTY VARIABLES.**
+>
+> **This is what makes it the sharpest instance of the class.** The author saw that silence was
+> ambiguous and built a positive signal to remove the ambiguity. **The positive signal has no
+> dependency on the work having happened.** `BEFORE=0`, `AFTER=0`, `CHANGED=no` render the
+> reassuring branch perfectly. A check that produced nothing would have been *suspicious*; this one
+> produced three confident answers to three questions it never asked.
+
+**A check that cannot distinguish "no drift" from "could not look" is item 194's `cannot_run`
+state — and this workflow was written before that item existed.**
+
+#### THE FIX: IT CANNOT PASS WHILE BROKEN
+
+`scripts/gone-ids-drift-preflight.mts` runs **first** and exits **1** on `cannot_run`:
+
+1. **Asserts both files exist** — the assertion whose absence let a rename go unnoticed for two
+   runs.
+2. **Asserts at least one departure is still regenerable.** Per item 254 the regen script only
+   works while the departing retailer is `active` — and **all three departures (Superdrug,
+   Branded Beauty, Atelier De Glow) are already inactive.** So the honest current answer is
+   `cannot_run`, and **the check will now say so every week** instead of saying "no drift".
+3. `set -euo pipefail` on every step; the drift measurement additionally requires
+   `lib/orphan-gate.ts` in both the working tree **and** `HEAD`.
+
+> **IT IS EXPECTED TO FAIL ON ITS NEXT RUN. THAT IS THE REPAIR WORKING, NOT A REGRESSION.**
+>
+> All three departures are inactive, so there is no operable regeneration path for any of them.
+> **A standing TRUE signal replaces a standing FALSE one** — the red is the same fact the green was
+> concealing, and nothing about the gate got worse at the moment the tick changed colour.
+>
+> **It keeps firing weekly until item 254's successor mechanism exists**, which is the correct
+> behaviour for a check whose subject is unrepaired. **Anyone who silences it to get a clean board
+> restores the exact condition this item records.**
+
+#### THEN THE ELEVEN: 410 FOR ALL OF THEM
+
+Added as `GONE_RAW_RESIDUE` — **deliberately outside `DEPARTURES`**, since it has no retailer and
+no flip date, and `regen-gone-ids.mts` rewrites only a departure's own literal, so no regeneration
+can clobber it and no departure's removal can take it with them. Gone set 22,729 → **22,740**.
+
+**Nine have no product row at all** — deleted from `products`, so there is no name, no brand and
+nothing to match a target against. **Two have an identity and still fail the target test:**
+
+| id | What it was | Why not a redirect |
+|---|---|---|
+| **22179** | Rimmel Provocalips 16Hr — **200 I'll Call You** | Eight other Provocalips shades are live; **that shade is not**. One shade is not a near-miss for another. |
+| **46925** | KISS Glam Shimmer Toenails Twinkle Toes | Merged into 46914, but **the keeper is itself dead** — Superdrug-only, no active row. Nearest live Kiss items are different products. |
+
+**Both brand hubs are live and survive** (Rimmel 661 products, Kiss 92), so a 301 to the hub would
+**pass the doctrine's mechanical test.**
+
+> **REFUSED ANYWAY. These clicks came from product-name queries; the hub does not answer them, and
+> a 301 into a wrong answer is worse than an honest 410. A LIVE 200 IS THE FALSE GREEN THE DOCTRINE
+> WARNS ABOUT** — the same test that caught `/brands/betrue` returning 200 before the flip that
+> would empty it.
+
+Cost: **4 clicks and 693 impressions over three months, already lost** — these URLs 404 today. The
+410 changes what we tell Google, not what the visitor gets.
+
+#### MY OWN CHANGE FALSIFIED A CORRECT COMMENT, AND THE DIFF COULD NOT SHOW IT
+
+`middleware.ts` said: *"Merged/shade/unknown ids are **NOT** in GONE_IDS, so they pass through and
+keep their existing 308-to-keeper / 404 behaviour."* **True when written. 46925 is a merged id, and
+I put it in the set.**
+
+> **A DIFF SHOWS WHAT CHANGED AND NOT WHAT THE CHANGE MADE UNTRUE.**
+>
+> The diff for this edit is eleven ids in a new constant. **The falsified sentence is forty lines
+> away in a different file and does not appear in it.** It surfaced from reading the neighbouring
+> text at the call site — not from reviewing the change, which showed nothing wrong because nothing
+> in it was wrong.
+>
+> **A comment is an assertion about the system, so it can be broken at a distance by an edit that
+> never touches it.** The review that would have caught this is not "read the diff carefully" but
+> "read what the code you are joining already claims".
+
+**A hazard the change creates, recorded at the middleware and here:** the gate runs before the
+page, so if 22179 or 46925 ever regains a live price row it will be **410'd while live** — exactly
+what `gone-ids-drift.yml` exists to catch, and that check now correctly reports `cannot_run`. The
+nine with no row cannot come back and carry no such risk.
+
+**And this is not the population.** A database query finds **1,214 dead pages that no departure
+explains — forty times what the export surfaced.** The export caps at 1,000 rows, so these eleven
+are the ones with measurable traffic and the rest have none.
+
+> **THE NINE WITH NO ROW ARE THE UNENUMERABLE SUB-CLASS. No query can find them, because nothing is
+> left in the database to select.** Their only trace is external — Search Console, or server logs.
+> For that sub-class the population is not merely unowned; **it cannot be listed from inside the
+> system at all.**
