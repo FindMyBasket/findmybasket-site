@@ -22418,3 +22418,95 @@ only inactive-retailer rows. Between them **142 clicks and 8,325 impressions** i
 > **Nothing is broken and nothing will ever report it.** A defect gets found because something that
 > should contain it does not. This has no should-contain — it is defined only by what every list
 > left out, so it can only be found by deliberately looking for what is in none of them.
+
+---
+
+### 255. Reasoning about what the code should do, twice in one hour
+
+**Raised:** 23 August 2026 · **Check FIXED. The eleven 410s follow separately.**
+
+#### MY OWN CORRECTION LEADS THIS, BECAUSE IT IS THE SAME DEFECT AS THE ONE IT FOUND
+
+Item 254 recorded that **30 URLs serve a 404**. I established that by reading
+`resolveCanonicalKeeper` and concluding what it would return. **I did not fetch the URLs.**
+
+Fetching all thirty:
+
+| | Pages | Clicks | Impressions |
+|---|---:|---:|---:|
+| **Already 308 → a live 200** | **19** | 17 | 800 |
+| Actually 404 | **11** | 4 | 693 |
+
+**Nineteen of the thirty redirect correctly to live product pages** — shade variants landing on
+their parent, all 14 destinations verified 200. The residue is 11, not 30.
+
+> **REASONING ABOUT WHAT THE CODE SHOULD DO RATHER THAN OBSERVING WHAT IT DOES.**
+>
+> **The same shape as the defect this item exists to record, an hour apart, in the same
+> investigation** — and one day after item 251 named it. There I was wrong about a flex model; here
+> about a redirect path; the workflow below was wrong about its own script. **Three instances, one
+> mechanism: a confident answer derived from the code, never checked against the running system.**
+>
+> A `curl` loop over thirty URLs takes ten seconds and would have caught it before it was written
+> down.
+
+#### THE CHECK WAS GREEN FOR TWO RUNS WHILE UNABLE TO LOAD ITS OWN SCRIPT
+
+`gone-ids-drift.yml` runs weekly and exists **because a stale gone-set served HTTP 410 to 3,894
+live, in-stock products for thirteen days**. PR **#319** (16 Aug) renamed
+`scripts/regen-superdrug-gone-ids.mts` → `regen-gone-ids.mts` and `lib/superdrug-removed.ts` →
+`lib/orphan-gate.ts`. **The workflow was not updated.** From the 23 August run log:
+
+```
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '.../scripts/regen-superdrug-gone-ids.mts'
+fatal: path 'lib/superdrug-removed.ts' does not exist in 'HEAD'
+```
+
+**Conclusion: success. Summary: "No drift. The committed list matches live state."**
+Runs affected: **16 and 23 August, both green.**
+
+#### THE MECHANISM, NOT THE RENAME — THREE INDEPENDENT SILENCINGS
+
+| # | What | Why it is individually reasonable |
+|---|---|---|
+| 1 | `npx tsx <script> \| tee regen.log` | The step takes **tee's** exit code, not tsx's. `tee` is the ordinary way to keep a log. |
+| 2 | `BEFORE=$(git show HEAD:<file> \| …)` | A failure **inside `$(...)`** does not fail the step. Command substitution is the ordinary way to read a value. |
+| 3 | `git diff --quiet -- <file>` | On a **non-existent path** it exits 0 → `CHANGED=no`. Testing for a diff is the ordinary way to detect change. |
+
+> **NONE OF THESE IS A MISTAKE. EACH IS THE NORMAL FORM OF ITS OWN IDIOM. They compose into a
+> green tick** — and no reviewer reads three unrelated shell idioms as a system.
+
+#### ★ THE SUMMARY IS PROOF OF LIFE FOR A CORPSE
+
+The workflow's own header:
+
+> *"No PR is indistinguishable from the workflow not having run, so the summary is the proof of
+> life and the PR is the proof of drift. **Do not make this conditional.**"*
+
+> **THE SUMMARY IS PROOF OF LIFE FOR A CORPSE — IT RENDERS HAPPILY FROM EMPTY VARIABLES.**
+>
+> **This is what makes it the sharpest instance of the class.** The author saw that silence was
+> ambiguous and built a positive signal to remove the ambiguity. **The positive signal has no
+> dependency on the work having happened.** `BEFORE=0`, `AFTER=0`, `CHANGED=no` render the
+> reassuring branch perfectly. A check that produced nothing would have been *suspicious*; this one
+> produced three confident answers to three questions it never asked.
+
+**A check that cannot distinguish "no drift" from "could not look" is item 194's `cannot_run`
+state — and this workflow was written before that item existed.**
+
+#### THE FIX: IT CANNOT PASS WHILE BROKEN
+
+`scripts/gone-ids-drift-preflight.mts` runs **first** and exits **1** on `cannot_run`:
+
+1. **Asserts both files exist** — the assertion whose absence let a rename go unnoticed for two
+   runs.
+2. **Asserts at least one departure is still regenerable.** Per item 254 the regen script only
+   works while the departing retailer is `active` — and **all three departures (Superdrug,
+   Branded Beauty, Atelier De Glow) are already inactive.** So the honest current answer is
+   `cannot_run`, and **the check will now say so every week** instead of saying "no drift".
+3. `set -euo pipefail` on every step; the drift measurement additionally requires
+   `lib/orphan-gate.ts` in both the working tree **and** `HEAD`.
+
+> **It is expected to FAIL on its next run, and that is the repair working.** The gate has no
+> operable regeneration path for any existing departure. It was reporting health; it now reports
+> the truth, and will keep reporting it until item 254's successor mechanism exists.

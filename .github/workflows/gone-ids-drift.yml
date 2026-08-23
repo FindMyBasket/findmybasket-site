@@ -16,6 +16,29 @@ name: gone-ids drift check (weekly)
 # right signal — if you are flipping retailers.active, run this by hand the same day
 # rather than waiting for Sunday.
 #
+# ── IT THEN SPENT TWO RUNS GREEN WHILE UNABLE TO LOAD ITS OWN SCRIPT. ────────────────────
+#
+# PR #319 (16 Aug 2026) renamed scripts/regen-superdrug-gone-ids.mts -> regen-gone-ids.mts
+# and lib/superdrug-removed.ts -> lib/orphan-gate.ts. This workflow was not updated. It ran
+# on 16 and 23 August, failed to load the script both times, and REPORTED SUCCESS WITH
+# "No drift. The committed list matches live state."
+#
+# Three independent silencings, each reasonable alone, composing into a green tick:
+#   1. `npx tsx <script> | tee regen.log` -- the step takes TEE's exit code, not tsx's,
+#      because the shell had no `pipefail`.
+#   2. `BEFORE=$(git show HEAD:<file> | ...)` -- a failure inside `$(...)` does not fail
+#      the step. BEFORE became empty, then 0.
+#   3. `git diff --quiet -- <file>` on a non-existent path exits 0, so CHANGED=no, so the
+#      summary printed the reassuring branch.
+#
+# The header below claims the summary is the proof of life. THE SUMMARY WAS PROOF OF LIFE
+# FOR A CORPSE -- it renders happily from empty variables. Work-list item 255.
+#
+# NOW: `set -euo pipefail` on every step, and a PREFLIGHT that asserts the script and the
+# file exist and that at least one departure is still regenerable, BEFORE anything else
+# runs. A check that cannot distinguish "no drift" from "could not look" is item 194's
+# cannot_run state, and this workflow predates that item.
+
 # WRITES NOTHING TO main. The regeneration is read-only against the database; the only
 # output is a pull request. A route change that 410s catalogue URLs is a human decision,
 # so automation detects and a person merges. See work-list item 51 and
@@ -47,25 +70,50 @@ jobs:
           node-version: 20
       - run: npm ci
 
-      - name: Regenerate GONE_IDS from live state
+      # RUNS FIRST AND EXITS 1 ON cannot_run. Nothing below can report "no drift" unless
+      # this passed, which is the whole repair. Item 255.
+      - name: Preflight -- can this check actually look?
+        shell: bash
         env:
           SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: npx --yes tsx scripts/regen-superdrug-gone-ids.mts | tee regen.log
+        run: |
+          set -euo pipefail
+          npx --yes tsx scripts/gone-ids-drift-preflight.mts
+
+      - name: Regenerate GONE_IDS from live state
+        shell: bash
+        env:
+          SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          # pipefail: without it this step takes tee's exit code and a dead script is green.
+          set -euo pipefail
+          for key in $(npx --yes tsx -e "import {DEPARTURES} from './lib/orphan-gate.ts'; console.log(Object.keys(DEPARTURES).join(' '))"); do
+            echo "::group::regen $key"
+            npx --yes tsx scripts/regen-gone-ids.mts "$key" | tee -a regen.log
+            echo "::endgroup::"
+          done
 
       # Counts come from the file, not from the script's stdout, so a change to its
       # logging cannot silently break the threshold check.
       - name: Measure the drift
         id: drift
+        shell: bash
         run: |
-          BEFORE=$(git show HEAD:lib/superdrug-removed.ts | grep -oE "GONE_IDS_RAW =\s*'[^']*'" | grep -oE "[0-9]+" | wc -l)
-          AFTER=$(grep -oE "GONE_IDS_RAW =\s*'[^']*'" lib/superdrug-removed.ts | grep -oE "[0-9]+" | wc -l)
+          set -euo pipefail
+          # The file must exist in BOTH the working tree and HEAD, or the counts below are
+          # measuring nothing. A rename must break this loudly, not silently. Item 255.
+          test -f lib/orphan-gate.ts || { echo "::error::lib/orphan-gate.ts missing"; exit 1; }
+          git cat-file -e HEAD:lib/orphan-gate.ts || { echo "::error::lib/orphan-gate.ts not in HEAD"; exit 1; }
+          BEFORE=$(git show HEAD:lib/orphan-gate.ts | grep -oE "GONE_RAW_[A-Z_]+ =\s*$" -A2 | grep -oE "[0-9]+" | wc -l)
+          AFTER=$(grep -oE "GONE_RAW_[A-Z_]+ =\s*$" -A2 lib/orphan-gate.ts | grep -oE "[0-9]+" | wc -l)
           ADDED=$(grep -oE '^  added: [0-9]+' regen.log | grep -oE '[0-9]+' || echo 0)
           # Fall back to the script's own diff line if the format above ever moves.
           ADDED=$(grep -oE 'added: [0-9]+' regen.log | grep -oE '[0-9]+' | head -1 || echo 0)
           REMOVED=$(grep -oE 'removed: [0-9]+' regen.log | grep -oE '[0-9]+' | head -1 || echo 0)
           NET=$(( AFTER - BEFORE )); NET=${NET#-}
-          CHANGED=no; git diff --quiet -- lib/superdrug-removed.ts || CHANGED=yes
+          CHANGED=no; git diff --quiet -- lib/orphan-gate.ts || CHANGED=yes
           for v in BEFORE AFTER ADDED REMOVED NET CHANGED; do echo "$v=${!v}" >> "$GITHUB_OUTPUT"; done
 
           # A RUN SUMMARY EITHER WAY. No PR is indistinguishable from the workflow not
