@@ -22209,3 +22209,212 @@ thing.
 >
 > **The whole purpose of this correction was to make the column safe for per-unit arithmetic. On a
 > kit it would make it unsafe in a NEW way, and invisibly, because the number looks reasonable.**
+
+---
+
+### 253. A metric that improves when its subject is deleted is measuring membership, not health
+
+**Raised:** 23 August 2026, item 247(c) discovery · **DECIDED: the pages stay. Nothing changed.**
+
+#### THE PROVISIONAL LEAN WAS TO REMOVE THEM. THE MEASUREMENT REVERSED IT
+
+12,396 pages in `products_active` — **12.5%** — whose only offer is out of stock. All in the
+sitemap; **none carry `noindex`**, because the product page has no `robots` metadata at all.
+
+Search Console, Web, 15 May – 14 Aug, intersected with the population:
+
+| Cohort | Pages | Clicks | Impressions | CTR | Median pos |
+|---|---:|---:|---:|---:|---:|
+| **OUT-OF-STOCK-ONLY** | 208 | **196** | 13,772 | **1.42%** | 13.0 |
+| Product, live offer | 570 | 428 | 31,311 | 1.37% | 11.2 |
+
+> **THESE PAGES TAKE 26.6% OF ALL SITE CLICKS, AT A CTR HIGHER THAN PAGES WITH SOMETHING BUYABLE
+> ON THEM. The best-performing page on the site — `/product/11070`, 15 clicks, 638 impressions —
+> is one of them.**
+
+**The bound:** the export caps at 1,000 rows and bottoms out at 1 impression, so it covers the
+click-bearing and higher-impression tail only. Absence means effectively no search performance.
+
+> **THE POPULATION IS NOT HOMOGENEOUS AND THAT IS THE WHOLE DECISION. 208 of 12,396 — 1.7% —
+> carry 26.6% of site clicks. The other ~12,190 have no measurable search performance at all.**
+> A blanket removal destroys the 1.7% to tidy the 98.3%.
+
+#### ★ THE DASHBOARD HAZARD IS THE FINDING
+
+| Metric | Now | After removal |
+|---|---:|---:|
+| Comparison depth (avg) | 1.052 | **1.202** — **+14%** |
+| Comparable share | 13.4% | **15.3%** — **+1.9pp** |
+| Comparable products (2+ retailers) | 13,261 | **13,261 — unchanged** |
+| `no_in_stock_offer_count` | 11,755 | **~0** |
+| `products_active` | 99,146 | 86,750 |
+| Distinct brands | 2,782 | **2,608 — 174 brands vanish entirely** |
+
+> **EVERY QUALITY METRIC IMPROVES ON REMOVAL WHILE A QUARTER OF SEARCH CLICKS LEAVES.**
+>
+> Not one additional product becomes comparable. **Depth rises 14% because the zero-depth rows
+> left the denominator, not because anything got deeper.**
+>
+> **And `no_in_stock_offer_count` — the metric that exists to watch exactly this population —
+> goes to zero because the rows it counts leave scope, not because anything was fixed. The
+> measure would report the problem solved by the problem being made invisible.**
+
+**A METRIC THAT IMPROVES WHEN ITS SUBJECT IS DELETED IS MEASURING MEMBERSHIP, NOT HEALTH.**
+The sharpest instance of the denominator class on this list: the featured block took the best of
+a sample as the best of a category; the 4.7% used the wrong denominator; **this one would have
+had us delete the numerator and call it progress.**
+
+`metrics_quality_weekly` already excludes them from `comparison_depth_den` (87,112, not 99,146),
+so the depth figure is honest today. It is the *change* that would be dishonest.
+
+#### THE POPULATION IS GROWING, WHICH ARGUES FOR A RULE
+
+| Week starting | Entered the state |
+|---|---:|
+| 10 Aug | 587 |
+| 3 Aug | 339 |
+| 27 Jul | 396 |
+| 20 Jul | 417 |
+| *13 Jul* | *680* |
+| *6 Jul* | ***4,212*** — bulk event |
+
+> **~435/WEEK, ROUGHLY 22,600/YEAR. THAT SETTLES IT: THIS NEEDS A RULE, NOT A ONE-OFF DECISION
+> ABOUT 12,396 ROWS.**
+>
+> A static population is a backlog and can be cleared by hand once. **This one refills faster than
+> any manual pass could keep up with**, so whatever is decided about the 12,396 has to be decided
+> about the 435 arriving next week, and the week after.
+
+**AND AN AGE CUT-OFF ALONE IS THE WRONG RULE**, because the population is heterogeneous in a way a
+single threshold cannot see:
+
+| Retailer | Rows | Median age | Newest | Retailer status |
+|---|---:|---:|---:|---|
+| **Boots** | 7,936 | **48 days** | 8 days | importing normally, 25,259 live rows |
+| **Niche Beauty** | 362 | **13 days** | **7 days** | importing normally, 8,754 live rows |
+
+> **These are different facts and one threshold treats them identically.** Boots is importing fine
+> and has not sent these products for 48 days — that is a product that left a range. Niche Beauty's
+> are **barely past their absence threshold**, which is the signature of a feed that is still
+> settling. **Same state in the column, opposite meanings**, and any cut-off between 13 and 48 days
+> sorts them by accident rather than by evidence.
+
+Per category: skincare −14.5%, makeup −14.5%, hair −11.8%, bath_body −10.5%, fragrance −5.0%,
+**supplements −0.2% (3 rows)**.
+
+#### DECISION
+
+**The pages stay in `products_active` and in the sitemap.** Removal would have destroyed 26.6% of
+site clicks to tidy a metric, and the best-performing page on the site is in the set.
+
+> **WHAT FOLLOWS IS A DIRECTION, NOT A DESIGN, AND IS RECORDED AS ONE.** "A rule keyed on age and
+> on measured search value" names the inputs and nothing else — not the thresholds, not what
+> happens to a page that fails it, not how a page re-enters if its offer returns.
+>
+> **Recording a direction as though it were a design is the shape item 242 warns about**: a
+> sentence that looks like the work has been done, sitting where the work should be, and reading as
+> settled to everyone who passes it afterwards. The 4.7% correction was right, precise and dated,
+> and was read three more times without being acted on.
+
+**The inputs are measured; the shape is a decision, and it is not taken here.** It also cannot be
+settled independently of item 254's unresolved question about what a 410 claims.
+
+---
+
+### 254. The gate is a point-in-time snapshot and orphanhood keeps accruing behind it
+
+**Raised:** 23 August 2026 · **LIVE DEFECT. Reported, not fixed.**
+
+#### 469 PAGES OF DEPARTED RETAILERS, IN NO GONE SET
+
+**Superdrug (`active=false`, 0 live rows) and Branded Beauty (`active=false`, 0 live rows).**
+
+| | |
+|---|---:|
+| Out-of-stock-only pages of these two in `products_active` | **469** |
+| In their own `GONE` set | **0** |
+| In **any** `GONE` set | **0** |
+| In `REDIRECTS` | 0 |
+
+They are in `products_active`, in the sitemap, indexable, and serve a page with nothing buyable on
+it — for retailers that no longer exist on the site.
+
+#### NOT A GENERATION ERROR. THE GENERATION WAS CORRECT AT THE TIME
+
+**All 469 had a second retailer's price row when the gone-set was generated**, so they were live
+then and correctly excluded — `regen-gone-ids.mts` computes *"products that have NO active-retailer
+price row OTHER than the departing one"*. **That second row has since gone out of stock.** None
+were created after the flip (newest `created_at` 17 July).
+
+> **THE STRUCTURAL POINT IS THE ONE TO KEEP: THE GATE IS A POINT-IN-TIME SNAPSHOT AND ORPHANHOOD
+> KEEPS ACCRUING BEHIND IT.**
+>
+> The doctrine already records the lesson in its timing form — *"the single most expensive thing
+> about the Superdrug removal was a list generated eight days before it was used"*. **This is the
+> same lesson arriving as a STANDING PROPERTY rather than a timing mistake.** Generating on the day
+> would not have helped: these pages were not orphans on the day. **No correct execution at flip
+> time could have caught them, because the condition had not happened yet.**
+
+#### ★ THE REGEN PATH BEING UNAVAILABLE IS THE FINDING
+
+`regen-gone-ids.mts` computes the drop set from rows that are **live now**, and says *"Run this
+RIGHT BEFORE the flip (while the retailer is still active)"*. **Both retailers are already
+`active=false`.**
+
+> **ITS PRECONDITION IS UNSATISFIABLE FOR THE ONLY TWO DEPARTURES THAT HAVE RESIDUE.**
+>
+> **A TOOL THAT CAN ONLY RUN BEFORE AN EVENT, ON A RESIDUE THAT ONLY EXISTS AFTER IT.**
+
+**Recorded against the doctrine, not only here.** `docs/superdrug-removal-plan.md` step 6 says
+*"Regenerate `GONE_IDS` on the day, not on the following Sunday"* — added 9 August after being
+missed once, at a cost of **3,894 live products serving 410 for thirteen days**.
+
+> **STEP 6 SAYS GENERATE ON THE DAY. THIS SAYS THE GENERATOR HAS NO SECOND USE. BOTH ARE TRUE AND
+> THE SECOND WAS NEVER STATED.**
+>
+> The doctrine learned that generating early is wrong. It never recorded that generating **at all**
+> is a one-shot capability — that the moment the flip happens, the tool that built the list can
+> never rebuild it. Step 6 reads as advice about *timing within a window*. There is no window:
+> there is one instant, and afterwards nothing.
+
+What closing it would involve, none of it done:
+1. **A different query** — orphans-as-of-today rather than orphans-at-flip, which is a new
+   derivation and not a re-run.
+2. **A decision on the 410**, which asserts permanence. See item 253: these are our pipeline's
+   silence, not the retailer's statement.
+3. **Curated redirect targets**, the expensive half — *"a regenerated gone-set is an afternoon; a
+   regenerated redirect map is not"*.
+4. **A recurring mechanism**, because at ~435 new orphans/week (item 253) any one-off list has the
+   same half-life as the one that produced this residue.
+
+**Other departures with the same residue: these two are the only ones.** No other retailer has zero
+live rows with rows on file. **The residue is proportional to departure age, and both departures
+have it.**
+
+#### AND 178 PAGES THAT ALREADY LEFT, STILL DRAWING SEARCH TRAFFIC
+
+Of the 778 `/product/` URLs in the export, **178 are not in `products_active` at all** — 146 hold
+only inactive-retailer rows. Between them **142 clicks and 8,325 impressions** in three months.
+
+| Of the 178 | Pages | Clicks | Impressions |
+|---|---:|---:|---:|
+| Handled — 410 or 301 | 148 | 121 | 6,832 |
+| **UNHANDLED — in no gate, no redirect map** | **30** | **21** | **1,493** |
+
+> **THE 30 SERVE A 404.** `getProductById` returns null, `resolveCanonicalKeeper` finds no keeper,
+> and `notFound()` runs. **They are drawing search traffic to a 404 and nothing in the codebase
+> knows they exist** — absent from `products_active`, absent from `GONE_IDS`, absent from
+> `REDIRECTS`.
+
+**THIS NAMES A CATEGORY, AND THE CATEGORY IS THE POINT:**
+
+> **THE RESIDUE OF CORRECT EXCLUSIONS IS NOBODY'S POPULATION BY CONSTRUCTION.**
+>
+> `products_active` correctly excludes them — no active-retailer row. `GONE_IDS` correctly excludes
+> them — not orphans when it was generated. `REDIRECTS` correctly excludes them — never curated,
+> because they were not in the departing set. **Three mechanisms, three correct decisions, and the
+> intersection of the exclusions is a set with no owner.**
+>
+> **Nothing is broken and nothing will ever report it.** A defect gets found because something that
+> should contain it does not. This has no should-contain — it is defined only by what every list
+> left out, so it can only be found by deliberately looking for what is in none of them.
