@@ -40,6 +40,28 @@ function buildAmazonProductUrl(asin: string): string {
   return `https://www.amazon.co.uk/dp/${encodeURIComponent(asin)}/?tag=${AMAZON_TAG}`;
 }
 
+/*
+ * LAST-SEEN FORMATTING. Reads `retailer_prices.last_updated` -- the moment THIS row
+ * was last re-confirmed by an import that actually contained the product.
+ *
+ * WHY PER ROW AND NOT PER PAGE. A successful import that no longer contains a
+ * product leaves `retailer_import_config.last_import_status = 'ok'` while that row's
+ * `last_updated` stops moving. A page-level stamp reads the import and would report
+ * FRESH on all 12,398 out-of-stock-only pages, whose rows average 48.5 days since
+ * anything last saw them. Only the per-row value can tell "the import ran" from
+ * "this row was re-confirmed". Work-list item 247.
+ */
+function lastSeen(iso: string | null): { label: string; days: number } | null {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return null;
+  const days = Math.floor((Date.now() - t) / 86_400_000);
+  const label = new Date(t).toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  });
+  return { label, days };
+}
+
 function displaySub(sub: string | null): string {
   if (!sub) return '';
   return sub.charAt(0).toUpperCase() + sub.slice(1);
@@ -447,13 +469,44 @@ export default async function ProductPage({ params }: { params: { id: string } }
               </div>
             )}
 
-            {inStockOffers.length === 0 && offers.length > 0 && (
-              <div className="bg-cream border border-border rounded-2xl p-6 mb-6">
-                <p className="text-sm text-ink-light">
-                  Currently out of stock at all retailers. Check back soon.
-                </p>
-              </div>
-            )}
+            {/* THESE ARE NOT OUT-OF-STOCK PRODUCTS. THEY ARE ROWS THE IMPORTER
+                STOPPED SEEING.
+
+                Each retailer's `absence_threshold_days` flips `in_stock` to false
+                when a product stops appearing in its feed. Measured 23 Aug 2026 over
+                the 12,398 pages in this state: ZERO refreshed in the last seven days,
+                median 48.5 days since anything last saw them, 89% over thirty days,
+                oldest 4 May. Boots is 7,936 of them averaging 67 days against a
+                SEVEN-day threshold.
+
+                The previous copy read "Currently out of stock at all retailers. Check
+                back soon." BOTH CLAIMS WERE FALSE. "Currently" asserts a present-tense
+                fact about a row last confirmed a median of 48.5 days ago, and "check
+                back soon" invites a return to a page with no mechanism that would
+                change it -- nothing re-checks a product that has left the feed.
+
+                What is true is the date. Work-list item 247. */}
+            {inStockOffers.length === 0 && offers.length > 0 && (() => {
+              const seen = outOfStockOffers
+                .map(o => lastSeen(o.last_updated))
+                .filter((x): x is { label: string; days: number } => x !== null)
+                .sort((a, b) => a.days - b.days)[0];
+              return (
+                <div className="bg-cream border border-border rounded-2xl p-6 mb-6">
+                  <p className="text-sm text-ink">
+                    {outOfStockOffers.length === 1
+                      ? `No longer listed at ${outOfStockOffers[0].retailer_name}.`
+                      : `No longer listed at any of the ${outOfStockOffers.length} retailers we track for it.`}
+                  </p>
+                  {seen && (
+                    <p className="text-sm text-ink-light mt-1">
+                      Last seen {seen.label}
+                      {seen.days >= 1 && ` — ${seen.days} day${seen.days === 1 ? '' : 's'} ago`}.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Right column: scrolls past the pinned left column. Comparison and
@@ -473,15 +526,43 @@ export default async function ProductPage({ params }: { params: { id: string } }
                   {inStockOffers.map((offer, idx) => (
                     <RetailerRow key={`${offer.retailer_id}-${idx}`} offer={offer} isBestPrice={idx === 0} position={idx} productId={product.id} />
                   ))}
+                  {/* COLLAPSE ONLY WHERE THERE IS SOMETHING TO COLLAPSE, AND
+                      SOMETHING LEFT AFTER COLLAPSING IT.
+
+                      Two conditions, both load-bearing:
+
+                        more than ONE out-of-stock row -- 12,294 of the 12,398
+                          out-of-stock-only pages have exactly one, and hiding a
+                          single row behind a line that says there is one row is
+                          not a summary, it is an extra click for no information.
+
+                        at least one IN-STOCK row -- otherwise the collapse empties
+                          the table entirely on 12.4% of pages, leaving a comparison
+                          page with nothing visible to compare.
+
+                      Where both hold the rows fold into a native <details>, which
+                      needs no client JS in a server component. Where either fails
+                      they render inline as before. Work-list item 247. */}
                   {outOfStockOffers.length > 0 && (
-                    <>
-                      <div className="bg-cream px-6 py-3 border-y border-border text-xs uppercase tracking-widest text-ink-light">
-                        Out of stock
-                      </div>
-                      {outOfStockOffers.map((offer, idx) => (
-                        <RetailerRow key={`oos-${offer.retailer_id}-${idx}`} offer={offer} isBestPrice={false} position={inStockOffers.length + idx} productId={product.id} />
-                      ))}
-                    </>
+                    outOfStockOffers.length > 1 && inStockOffers.length > 0 ? (
+                      <details className="border-t border-border">
+                        <summary className="bg-cream px-6 py-3 text-xs uppercase tracking-widest text-ink-light cursor-pointer select-none">
+                          {outOfStockOffers.length} retailers no longer listing this
+                        </summary>
+                        {outOfStockOffers.map((offer, idx) => (
+                          <RetailerRow key={`oos-${offer.retailer_id}-${idx}`} offer={offer} isBestPrice={false} position={inStockOffers.length + idx} productId={product.id} />
+                        ))}
+                      </details>
+                    ) : (
+                      <>
+                        <div className="bg-cream px-6 py-3 border-y border-border text-xs uppercase tracking-widest text-ink-light">
+                          No longer listed
+                        </div>
+                        {outOfStockOffers.map((offer, idx) => (
+                          <RetailerRow key={`oos-${offer.retailer_id}-${idx}`} offer={offer} isBestPrice={false} position={inStockOffers.length + idx} productId={product.id} />
+                        ))}
+                      </>
+                    )
                   )}
                 </>
               )}
@@ -630,6 +711,20 @@ function RetailerRow({
             </span>
           )}
         </div>
+        {/* PER-ROW FRESHNESS. Only on rows that are NOT in stock, where the age is
+            the whole point: an in-stock row was re-confirmed by this morning's
+            import, and stamping every one of those adds noise to say "today".
+            Item 247. */}
+        {!offer.in_stock && (() => {
+          const seen = lastSeen(offer.last_updated);
+          if (!seen) return null;
+          return (
+            <p className="text-xs text-ink-light">
+              Last seen {seen.label}
+              {seen.days >= 1 && ` — ${seen.days} day${seen.days === 1 ? '' : 's'} ago`}
+            </p>
+          );
+        })()}
         {offer.delivery_cost !== null && offer.delivery_threshold !== null && !(isBestPrice && offer.in_stock && (offer.delivery_cost === 0 || offer.price >= offer.delivery_threshold)) && (
           <p className="text-xs text-ink-light">
             {offer.delivery_cost === 0
