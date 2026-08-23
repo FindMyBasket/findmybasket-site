@@ -493,10 +493,17 @@ export default async function ProductPage({ params }: { params: { id: string } }
                 .sort((a, b) => a.days - b.days)[0];
               return (
                 <div className="bg-cream border border-border rounded-2xl p-6 mb-6">
+                  {/* AN ABSENCE IN OUR DATA IS EVIDENCE ABOUT OUR DATA.
+                      "No longer listed at Boots" -- the first wording here -- claims
+                      a fact about a RETAILER'S RANGE inferred from OUR OWN INGESTION.
+                      We know the row left our feed. We do not know the product left
+                      their catalogue: a feed can drop a line for a category change, a
+                      temporary supplier gap, a schema fault at either end, or a
+                      freeze we have not detected. Item 248. */}
                   <p className="text-sm text-ink">
                     {outOfStockOffers.length === 1
-                      ? `No longer listed at ${outOfStockOffers[0].retailer_name}.`
-                      : `No longer listed at any of the ${outOfStockOffers.length} retailers we track for it.`}
+                      ? `Not in our latest feed from ${outOfStockOffers[0].retailer_name}.`
+                      : `Not in our latest feed from any of the ${outOfStockOffers.length} retailers we track for it.`}
                   </p>
                   {seen && (
                     <p className="text-sm text-ink-light mt-1">
@@ -547,7 +554,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
                     outOfStockOffers.length > 1 && inStockOffers.length > 0 ? (
                       <details className="border-t border-border">
                         <summary className="bg-cream px-6 py-3 text-xs uppercase tracking-widest text-ink-light cursor-pointer select-none">
-                          {outOfStockOffers.length} retailers no longer listing this
+                          {outOfStockOffers.length} retailers not in our latest feeds
                         </summary>
                         {outOfStockOffers.map((offer, idx) => (
                           <RetailerRow key={`oos-${offer.retailer_id}-${idx}`} offer={offer} isBestPrice={false} position={inStockOffers.length + idx} productId={product.id} />
@@ -556,7 +563,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
                     ) : (
                       <>
                         <div className="bg-cream px-6 py-3 border-y border-border text-xs uppercase tracking-widest text-ink-light">
-                          No longer listed
+                          Not in our latest feed
                         </div>
                         {outOfStockOffers.map((offer, idx) => (
                           <RetailerRow key={`oos-${offer.retailer_id}-${idx}`} offer={offer} isBestPrice={false} position={inStockOffers.length + idx} productId={product.id} />
@@ -720,8 +727,8 @@ function RetailerRow({
           if (!seen) return null;
           return (
             <p className="text-xs text-ink-light">
-              Last seen {seen.label}
-              {seen.days >= 1 && ` — ${seen.days} day${seen.days === 1 ? '' : 's'} ago`}
+              Not in our latest feed · last seen {seen.label}
+              {seen.days >= 1 && ` (${seen.days} day${seen.days === 1 ? '' : 's'} ago)`}
             </p>
           );
         })()}

@@ -21618,3 +21618,73 @@ would produce two voices for one situation.
 > currently lists this"* are different facts. A shared component blurring them reintroduces
 > exactly the defect phase 0 removed from the savings headline — **one figure standing for two
 > quantities.**
+
+---
+
+### 248. An absence in our data is evidence about our data
+
+**Raised:** 23 August 2026, on Robbie's correction to item 247's copy · **APPLIED.** The wording
+shipped in #392 overreached and was changed the same day.
+
+#### THE OVERREACH
+
+Item 247 replaced a false claim with a stronger one. The page had said *"Currently out of stock at
+all retailers. Check back soon."* — both halves unsupported. It was changed to:
+
+> *"No longer listed at Boots."*
+
+**That is a claim about a retailer's range, inferred from our own ingestion.**
+
+> **WE KNOW THE ROW LEFT OUR FEED. WE DO NOT KNOW THE PRODUCT LEFT THEIR CATALOGUE.**
+>
+> A feed can drop a line for a category reclassification, a temporary supplier gap, a schema fault
+> at either end, a partial export, or a freeze we have not detected — `feed_freeze_findings`
+> exists because that last one has happened. Every one of those produces exactly the same
+> observation on our side, and none of them means the retailer stopped selling the product.
+
+**And it is made about a partner whose programme we depend on**, on a public page, in our own
+voice.
+
+#### THE CORRECTED WORDING
+
+| | |
+|---|---|
+| Banner | *"Not in our latest feed from Boots."* + *"Last seen 17 June 2026 — 67 days ago."* |
+| Row stamp | *"Not in our latest feed · last seen 17 June 2026 (67 days ago)"* |
+| Collapse summary | *"3 retailers not in our latest feeds"* |
+
+**It states what was observed, it is unarguable, and it attributes nothing.** The date carries the
+weight the adjective was carrying, and the date is a fact about our own pipeline.
+
+#### THE GENERAL FORM, WHICH IS WHY THIS IS AN ITEM
+
+> **AN ABSENCE IN OUR DATA IS EVIDENCE ABOUT OUR DATA.** Reasoning from it to the retailer's state
+> adds a step nothing in the observation supports.
+
+**This is the same move as inferring delivery terms from a feed rather than reading them from the
+retailer's own site, and that one is already recorded as wrong** — the fabricated £3.95 constant
+in `send-routine-email`, and the £25 default that "made Debenhams look free". In both cases a
+value we did not have was reconstructed from a value we did, and the reconstruction read as a
+measurement.
+
+**The tell is the same each time: our side of a boundary being described in the other side's
+vocabulary.** *"Out of stock"*, *"no longer listed"* and *"free delivery over £25"* are all
+statements about a retailer. *"Not in our latest feed"*, *"last seen on this date"* and *"terms
+read from their site on this date"* are statements about us, and only the second kind is ours to
+make.
+
+#### WHAT SURVIVES FROM 247 UNCHANGED
+
+The finding itself — **these are rows the importer stopped seeing, not out-of-stock products** —
+is unaffected. It was always a statement about our ingestion; only the copy drawn from it
+overreached.
+
+**And the stamping judgement stands, with its reason:** the per-row stamp appears on out-of-stock
+rows only, because **a stamp on an in-stock row says "today" on every row and carries no
+information. The value only speaks where it diverges from the import.**
+
+#### STILL UNVERIFIED AT 390px
+
+The `<details>` collapse and the two-line banner are **reasoned, not observed** — the same
+standing caveat as item 245. **Robbie has one viewport check outstanding and this is now part of
+it.**
