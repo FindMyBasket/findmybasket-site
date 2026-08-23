@@ -732,6 +732,34 @@ function RetailerRow({
             </p>
           );
         })()}
+        {/* A FLAT RETAILER HAS NO THRESHOLD, AND THE OLD GUARD READ THAT AS
+            NOTHING TO SAY.
+
+            The condition was `delivery_cost !== null && delivery_threshold !== null`.
+            Debenhams is `delivery_model = 'flat'`, £3.99, threshold NULL -- so the
+            guard failed and NO DELIVERY LINE RENDERED, on all 15,047 of its in-stock
+            offers.
+
+            THE ASYMMETRY WAS WORSE THAN THE SILENCE. Beside a tiered retailer every
+            other row carried a delivery line and this one carried none, so a reader
+            comparing rows saw "+£2.95 delivery" against a blank. A blank where every
+            neighbour states a charge reads as NO CHARGE. Debenhams charges £3.99 on
+            every order at every basket size.
+
+            THIS IS THE INVERSE OF THE FABRICATED £25 DEFAULT, ON THE SAME RETAILER.
+            There a value nobody measured was invented and it "made Debenhams look
+            free". Here nothing was invented and the absence produced the same
+            impression. Same wrong conclusion, opposite mechanism, same retailer --
+            which is why removing a bad default was necessary and not sufficient.
+            Work-list item 249.
+
+            The flat branch names the charge and NOTHING ELSE: no threshold, because
+            none exists, and no implication that a larger basket would change it. */}
+        {offer.delivery_cost !== null && offer.delivery_model === 'flat' && (
+          <p className="text-xs text-ink-light">
+            £{offer.delivery_cost.toFixed(2)} delivery on every order
+          </p>
+        )}
         {offer.delivery_cost !== null && offer.delivery_threshold !== null && !(isBestPrice && offer.in_stock && (offer.delivery_cost === 0 || offer.price >= offer.delivery_threshold)) && (
           <p className="text-xs text-ink-light">
             {offer.delivery_cost === 0

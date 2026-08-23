@@ -21743,3 +21743,74 @@ both cases the reported instance was where it had been NOTICED, not where it liv
 The `<details>` collapse and the two-line banner are **reasoned, not observed** — the same
 standing caveat as item 245. **Robbie has one viewport check outstanding and this is now part of
 it.**
+
+---
+
+### 249. The inverse of the fabricated £25 default, on the same retailer
+
+**Raised:** 23 August 2026, while checking what the delivery prompt should render where a retailer
+publishes no threshold · **FIXED.** Found only because stage 3 forced the question.
+
+#### THE DEFECT
+
+The product-page row rendered its delivery line under this guard:
+
+```
+offer.delivery_cost !== null && offer.delivery_threshold !== null && …
+```
+
+**Debenhams is `delivery_model = 'flat'`, £3.99, `delivery_threshold = NULL`.** The guard requires
+a non-null threshold, so it failed, and **no delivery line rendered at all — on 15,047 in-stock
+offers.**
+
+#### THE ASYMMETRY IS WORSE THAN THE SILENCE
+
+On a page where Debenhams sits beside a tiered retailer, every other row carries a delivery line
+and this one carries none.
+
+> **A BLANK WHERE EVERY NEIGHBOUR STATES A CHARGE READS AS NO CHARGE.** The reader is not shown
+> "unknown"; they are shown "+£2.95 delivery" on one row and nothing on the next, and the only
+> available inference is that the second is free. **Debenhams charges £3.99 on every order at
+> every basket size.**
+
+Verified live on `/product/146238`, a Debenhams-only page at £16.00: the £3.99 appeared **only**
+in the headline split shipped by stage 1 (*"£16.00 item + £3.99 delivery"*) and nowhere on the
+row. **Before stage 1 it appeared nowhere on the page at all.**
+
+#### IT IS THE INVERSE OF A DEFECT ALREADY FIXED, ON THE SAME RETAILER
+
+`send-routine-email` once used a fabricated £3.95 delivery constant and a £25 default threshold.
+That work-list entry records the consequence in its own words: **it "made Debenhams look free"**.
+
+| | Mechanism | Result |
+|---|---|---|
+| the £25 default | **a value was invented** that Debenhams did not have | Debenhams looked free |
+| this defect | **nothing was rendered**, because the value it needed was absent | Debenhams looked free |
+
+> **SAME WRONG CONCLUSION. OPPOSITE MECHANISM. SAME RETAILER.**
+>
+> One was fixed by removing an invented number. That was necessary and **not sufficient**, because
+> the impression the invented number created can also be produced by saying nothing — and the
+> guard that produced the silence was written to be careful. **A guard that suppresses output when
+> data is missing is correct only where the reader can tell that something is missing.** Beside
+> populated neighbours, they cannot.
+
+#### THE FIX
+
+A flat branch that names the charge and nothing else:
+
+> **£3.99 delivery on every order**
+
+**No threshold, because none exists.** No implication that a larger basket would change it. This
+follows item 248's rule directly — it states a term we hold, in our own voice, and asserts nothing
+about a policy we have not read.
+
+#### WHY IT SURFACED
+
+Stage 3 asked *"what does the prompt render where a retailer publishes no threshold?"* The answer
+required looking at what that row renders today, and the answer was: nothing.
+
+> **The bridge did not cause this defect and would not have fixed it. It made someone look at the
+> case.** The question that found it — *what happens in the branch that has no data?* — is the one
+> worth carrying forward, because a guard requiring data will always have a branch nobody has
+> looked at.
