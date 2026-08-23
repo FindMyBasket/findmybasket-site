@@ -21,7 +21,6 @@ import {
   directDestinationUrl,
   sendOutboundBeacon,
   awinMidFromHref,
-  EBAY_RETAILER_ID,
 } from '@/lib/analytics';
 import { ClickOutLink } from '@/components/ClickOutLink';
 import { retailerSubtotals } from '@/lib/basket-attribution';
@@ -29,16 +28,6 @@ import { deliveryFor } from '@/lib/delivery';
 
 // Affiliate tags — reused exactly from the previous bottom-of-basket links.
 const AMAZON_TAG = 'findmybasket-21';
-
-function amazonSearchUrl(p: RoutineItem): string {
-  const q = encodeURIComponent(displayProductTitle(p.name, p.brand).replace(/\s+/g, ' ').trim());
-  return `https://www.amazon.co.uk/s?k=${q}&tag=${AMAZON_TAG}`;
-}
-
-function ebaySearchUrl(p: RoutineItem): string {
-  const q = encodeURIComponent(displayProductTitle(p.name, p.brand).replace(/\s+/g, ' ').trim());
-  return `https://www.ebay.co.uk/sch/i.html?_nkw=${q}&_sacat=26396&mkrid=710-53481-19255-0&campid=7221119&customid=findmybasket&toolid=10001`;
-}
 
 // How long the arrival waits for a `?routine=` preload before showing the explicit
 // failure state instead of a spinner.
@@ -145,6 +134,14 @@ interface BasketOption {
 // merged_cleared is not an arrival case — it is set when the visitor takes the way
 // out below. See startFresh.
 type PreloadCase = 'clean' | 'self_reload' | 'merged' | 'merged_cleared';
+
+// Amazon search URL for the unranked cross-check row. The per-routine-item
+// "Also check Amazon" LINK was removed in phase 0.3; this builds the URL for the
+// cross-check that remains outside the ranking. Item 246.
+function amazonSearchUrl(p: RoutineItem): string {
+  const q = encodeURIComponent(`${p.brand ?? ''} ${p.name}`.trim());
+  return `https://www.amazon.co.uk/s?k=${q}&tag=${AMAZON_TAG}`;
+}
 
 const ROUTINE_EMOJIS = ['🧴', '✨', '💧', '🌿', '☀️', '🫧', '💆', '🌸'];
 
@@ -741,8 +738,19 @@ export default function RoutineBuilder() {
     let saving = 0;
     let suspect = false;
 
-    if (options.length >= 1 && worstSingleShopTotal > options[0].total) {
-      saving = worstSingleShopTotal - options[0].total;
+    // NEXT-BEST ANCHOR. Was `worstSingleShopTotal - options[0].total` -- the whole
+    // basket at the single MOST EXPENSIVE retailer that stocks everything. That is a
+    // basket nobody would assemble, and it produced a GBP 19.63 headline on a GBP
+    // 30.37 recommendation where the real gap to the next viable basket was GBP 1.85.
+    //
+    // The honest quantity is what the recommendation saves against the NEXT BEST
+    // thing the visitor could actually have chosen. options is sorted ascending by
+    // delivered total, so options[1] IS that next best. Work-list item 246.
+    //
+    // Expect this to reduce the headline substantially on most baskets. That is the
+    // point: it is what the optimiser is worth, and it is better known than hidden.
+    if (options.length >= 2) {
+      saving = Math.max(0, options[1].total - options[0].total);
     }
 
     if (options[0]?.breakdown) {
@@ -769,9 +777,22 @@ export default function RoutineBuilder() {
       }
     }
 
-    const suppressed = !(saving > 0.01 && !suspect);
+    // NO FLOOR BEYOND A GENUINE ZERO. The old `saving > 0.01` floor was written for
+    // a worst-case anchor, where a sub-penny figure meant the optimiser had found
+    // nothing. Under a next-best anchor a small number is the ANSWER, not noise:
+    // suppressing it would mean the feature only speaks when the result flatters it.
+    // A GBP 1.85 saving stated plainly is the honest figure.
+    //
+    // The `suspect` guard is NOT a floor and is kept unchanged -- it fires on a
+    // price spread wide enough to indicate a data defect rather than a bargain, and
+    // that is a correctness guard, not a presentation one.
+    //
+    // Rounds to two decimals before testing, so a float residue of 0.004 reads as
+    // the genuine zero it is rather than as a saving that renders "GBP 0.00".
+    const roundedSaving = Math.round(saving * 100) / 100;
+    const suppressed = !(roundedSaving > 0 && !suspect);
 
-    setSavings(saving);
+    setSavings(roundedSaving);
     setShowSavings(!suppressed);
     setShowSaveCard(true);
     setResults(options);
@@ -990,9 +1011,6 @@ export default function RoutineBuilder() {
 
   // ── DERIVED ───────────────────────────────────────────────────────────
 
-  const worstViableTotal =
-    results && results.length > 0 ? Math.max(...results.map(o => o.total)) : 0;
-
   // Distinct REAL retailers in the winning basket. Counted off the breakdown and
   // excluding the "Not tracked yet" row, matching how winningRetailerCount is
   // derived for basket_optimised — the two must not be able to disagree. Reading
@@ -1150,47 +1168,16 @@ export default function RoutineBuilder() {
                     <div className="rb-routine-info">
                       <div className="rb-routine-name">{p.name}</div>
                       <div className="rb-routine-brand">{p.brand}</div>
-                      <div className="rb-routine-also">
-                        <a
-                          href={amazonSearchUrl(p)}
-                          target="_blank"
-                          rel="nofollow sponsored noopener"
-                          onClick={() => {
-                            trackAffiliateClickOut('amazon', p.id);
-                            trackRetailerClick({
-                              retailerId: 9,
-                              retailerName: 'amazon',
-                              affiliateNetwork: affiliateNetworkFromUrl(amazonSearchUrl(p)),
-                              itemId: p.id,
-                              basketItemCount: routine.length,
-                              clickSource: 'routine_amazon_crosscheck',
-                            });
-                          }}
-                        >
-                          Also check Amazon ↗
-                        </a>
-                        <a
-                          href={ebaySearchUrl(p)}
-                          target="_blank"
-                          rel="nofollow sponsored noopener"
-                          onClick={() => {
-                            trackAffiliateClickOut('ebay', p.id);
-                            trackRetailerClick({
-                              // eBay is a cross-check, not one of the tracked
-                              // retailers; send the explicit sentinel id so it
-                              // reports as a labelled row, not "(not set)".
-                              retailerId: EBAY_RETAILER_ID,
-                              retailerName: 'ebay',
-                              affiliateNetwork: affiliateNetworkFromUrl(ebaySearchUrl(p)),
-                              itemId: p.id,
-                              basketItemCount: routine.length,
-                              clickSource: 'routine_ebay_crosscheck',
-                            });
-                          }}
-                        >
-                          eBay ↗
-                        </a>
-                      </div>
+                      {/* LEAK LINKS REMOVED. Every routine row carried "Also check
+                          Amazon" and an eBay link -- inside the one flow that uses the
+                          differentiating feature, next to a recommendation the optimiser
+                          had just computed. Two exits from the funnel the builder exists
+                          to complete, on every line.
+
+                          Amazon stays on PRODUCT pages, outside the ranking and already
+                          labelled as an unranked cross-check. eBay is removed everywhere:
+                          it was never ranked, never priced, and only ever a search link.
+                          Work-list item 246, phase 0.3. */}
                     </div>
                     <button
                       className="rb-remove-btn"
@@ -1230,10 +1217,12 @@ export default function RoutineBuilder() {
               <div className="rb-savings-summary">
                 <div className="rb-savings-label">YOU COULD SAVE</div>
                 <div className="rb-savings-amount">£{savings.toFixed(2)}</div>
+                {/* Names the actual comparison. The previous copy said "versus buying
+                    the whole basket at the most expensive single shop", which was an
+                    accurate description of a baseline nobody would choose. Item 246. */}
                 <div className="rb-savings-desc">
-                  this basket at its best-value split across retailers, versus buying the whole basket
-                  at the most expensive single shop. Checkout prices may be lower with active sales or
-                  member discounts.
+                  versus the next-best way to buy this basket, delivery included. Checkout prices may
+                  be lower with active sales or member discounts.
                 </div>
               </div>
             )}
@@ -1248,12 +1237,27 @@ export default function RoutineBuilder() {
                 no percentages, no retailer names, no comparison. The retailer
                 count is the only quantity and it describes the basket rather than
                 asserting anything about price. */}
+            {/* A GENUINE ZERO IS A RESULT AND IS SAID PLAINLY. Three distinct
+                states reach here and they are not the same finding:
+
+                  one viable option   -- nothing to compare against. Saying "no
+                                         saving" would imply a comparison was made.
+                  next best is equal  -- a comparison WAS made and came out level.
+                  suspect spread      -- the correctness guard fired; no figure is
+                                         claimed at all, unchanged behaviour.
+
+                Collapsing these into one sentence is what made the old copy read as
+                an apology. Each states what the optimiser found. Item 246. */}
             {!showSavings && winningRetailerCount > 0 && (
               <div className="rb-savings-summary rb-savings-qualitative">
                 <div className="rb-savings-desc">
-                  {winningRetailerCount > 1
-                    ? `Your basket is split across ${winningRetailerCount} retailers for the best total, delivery included.`
-                    : 'Everything in your basket is best value at one retailer, delivery included.'}
+                  {results && results.length === 1
+                    ? (winningRetailerCount > 1
+                        ? `One way to buy this basket, split across ${winningRetailerCount} retailers, delivery included.`
+                        : 'One retailer stocks everything in this basket, delivery included.')
+                    : winningRetailerCount > 1
+                      ? `Your basket is split across ${winningRetailerCount} retailers for the best total, delivery included. The next-best way to buy it costs the same.`
+                      : 'Everything in your basket is best value at one retailer, delivery included. The next-best way to buy it costs the same.'}
                 </div>
               </div>
             )}
@@ -1349,7 +1353,13 @@ export default function RoutineBuilder() {
                 <AffiliateDisclosure variant="banner" />
                 {results.map((opt, i) => {
                   const isBest = i === 0;
-                  const savingVsWorst = worstViableTotal - opt.total;
+                  // Was `worstViableTotal - opt.total` -- how much CHEAPER this
+                  // option is than the WORST one -- rendered with the word "more".
+                  // The variable name stated the referent and the label stated its
+                  // opposite, so a GBP 1.85 difference from the recommendation
+                  // rendered as "GBP 23.11 more". Referent and direction both wrong.
+                  // Item 246.
+                  const moreThanBest = opt.total - results[0].total;
                   const distinctRetailerCount = new Set(
                     opt.breakdown
                       .filter(b => b.retailerName && b.retailerName !== 'Not tracked yet')
@@ -1384,9 +1394,9 @@ export default function RoutineBuilder() {
                       <div className="rb-basket-desc">{descText}</div>
                       <div className="rb-basket-price-row">
                         <div className="rb-basket-total">£{opt.total.toFixed(2)}</div>
-                        {!isBest && savingVsWorst > 0 && (
+                        {!isBest && moreThanBest > 0.004 && (
                           <div className="rb-basket-saving">
-                            £{savingVsWorst.toFixed(2)} more
+                            £{moreThanBest.toFixed(2)} more
                           </div>
                         )}
                       </div>
@@ -1466,8 +1476,10 @@ export default function RoutineBuilder() {
               </div>
             )}
 
-            {/* Per-item "Also check Amazon / eBay" links now live inline with
-                each routine item above (more discoverable, honest cross-check). */}
+            {/* The per-item "Also check Amazon / eBay" links this note described were
+                REMOVED in phase 0.3. Note kept, corrected, rather than deleted: it is
+                the only record in this file that they were once here and deliberately
+                placed, so a future reader does not re-add them as an improvement. */}
             </div>
           </div>
         )}

@@ -19,14 +19,12 @@ import { ClickOutLink } from '../../../components/ClickOutLink';
 import { AmazonLink } from '../../../components/AmazonLink';
 import { AmazonLiveRow } from '../../../components/AmazonLiveRow';
 import { ProductViewTracker } from '../../../components/ProductViewTracker';
-import { EBAY_RETAILER_ID } from '../../../lib/analytics';
 
 export const revalidate = 3600;
 
 const SITE_URL = 'https://www.findmybasket.co.uk';
 
 const AMAZON_TAG = 'findmybasket-21';
-const EBAY_CAMPID = '7221119';
 
 // Use displayProductTitle so the search query carries the brand exactly once
 // (most catalogue names already start with the brand, see lib/format/product-name).
@@ -40,12 +38,6 @@ function buildAmazonSearchUrl(productName: string, brand: string | null): string
 // tag MUST be on every Amazon link (it is how we earn), so it is appended here too.
 function buildAmazonProductUrl(asin: string): string {
   return `https://www.amazon.co.uk/dp/${encodeURIComponent(asin)}/?tag=${AMAZON_TAG}`;
-}
-
-function buildEbaySearchUrl(productName: string, brand: string | null): string {
-  const query = displayProductTitle(productName, brand);
-  const encoded = encodeURIComponent(query.replace(/\s+/g, ' ').trim());
-  return `https://www.ebay.co.uk/sch/i.html?_nkw=${encoded}&campid=${EBAY_CAMPID}`;
 }
 
 function displaySub(sub: string | null): string {
@@ -277,7 +269,6 @@ export default async function ProductPage({ params }: { params: { id: string } }
   const amazonUrl = product.amazon_asin
     ? buildAmazonProductUrl(product.amazon_asin)
     : buildAmazonSearchUrl(product.name, product.brand);
-  const ebayUrl = buildEbaySearchUrl(product.name, product.brand);
 
   return (
   <SiteLayout>
@@ -502,29 +493,17 @@ export default async function ProductPage({ params }: { params: { id: string } }
         </div>
       </section>
 
-      <section className="max-w-site mx-auto px-6 py-8">
-        <h2 className="font-serif text-3xl text-ink mb-2">Also try</h2>
-        <p className="text-ink-light mb-6">
-          Search for this product on eBay. Prices not compared.
-        </p>
-        <div className="grid md:grid-cols-2 gap-4">
-          <ClickOutLink
-            href={ebayUrl}
-            retailer="ebay"
-            retailerId={EBAY_RETAILER_ID}
-            productId={product.id}
-            source="ebay_search"
-            clickSource="product_page"
-            className="group bg-warm-white border border-border rounded-2xl p-6 hover:border-gold transition-colors flex items-center justify-between"
-          >
-            <div>
-              <p className="font-medium text-ink mb-1">Search on eBay</p>
-              <p className="text-sm text-ink-light">Open results in a new tab</p>
-            </div>
-            <span className="text-2xl text-ink-light group-hover:text-gold transition-colors">→</span>
-          </ClickOutLink>
-        </div>
-      </section>
+      {/* THE "ALSO TRY" eBAY SECTION IS REMOVED. It was a whole page section --
+          heading, caption and card -- offering a SEARCH on a marketplace whose prices
+          are not compared, sitting directly below the comparison table that is the
+          point of the page. It carried its own caveat ("Prices not compared"), which
+          is honest and is also an admission that it was not doing the page's job.
+
+          eBay is now absent site-wide. Amazon stays, above, because it is a priced
+          cross-check with a verified ASIN path rather than a search link.
+
+          Revision 1 of the programme recorded this as already fixed. It was not --
+          it was live at page.tsx:512 until 23 August. Work-list item 246, phase 0.3. */}
 
       {related.length > 0 && (
         <section className="max-w-site mx-auto px-6 py-8">
