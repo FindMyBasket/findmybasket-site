@@ -22278,10 +22278,26 @@ so the depth figure is honest today. It is the *change* that would be dishonest.
 | *13 Jul* | *680* |
 | *6 Jul* | ***4,212*** — bulk event |
 
-**~435/week steady, roughly 22,600/year**, on top of one bulk event. **Static would have argued for
-a one-off; this argues for a rule.** By age it is heterogeneous too — Boots 7,936 rows at a 48-day
-median while Boots imports normally (25,259 live rows), against **Niche Beauty's 362 at a 13-day
-median, newest 7 days**, which is barely past threshold.
+> **~435/WEEK, ROUGHLY 22,600/YEAR. THAT SETTLES IT: THIS NEEDS A RULE, NOT A ONE-OFF DECISION
+> ABOUT 12,396 ROWS.**
+>
+> A static population is a backlog and can be cleared by hand once. **This one refills faster than
+> any manual pass could keep up with**, so whatever is decided about the 12,396 has to be decided
+> about the 435 arriving next week, and the week after.
+
+**AND AN AGE CUT-OFF ALONE IS THE WRONG RULE**, because the population is heterogeneous in a way a
+single threshold cannot see:
+
+| Retailer | Rows | Median age | Newest | Retailer status |
+|---|---:|---:|---:|---|
+| **Boots** | 7,936 | **48 days** | 8 days | importing normally, 25,259 live rows |
+| **Niche Beauty** | 362 | **13 days** | **7 days** | importing normally, 8,754 live rows |
+
+> **These are different facts and one threshold treats them identically.** Boots is importing fine
+> and has not sent these products for 48 days — that is a product that left a range. Niche Beauty's
+> are **barely past their absence threshold**, which is the signature of a feed that is still
+> settling. **Same state in the column, opposite meanings**, and any cut-off between 13 and 48 days
+> sorts them by accident rather than by evidence.
 
 Per category: skincare −14.5%, makeup −14.5%, hair −11.8%, bath_body −10.5%, fragrance −5.0%,
 **supplements −0.2% (3 rows)**.
@@ -22289,8 +22305,19 @@ Per category: skincare −14.5%, makeup −14.5%, hair −11.8%, bath_body −10
 #### DECISION
 
 **The pages stay in `products_active` and in the sitemap.** Removal would have destroyed 26.6% of
-site clicks to tidy a metric, and the best-performing page on the site is in the set. What the
-population needs is a rule keyed on age and on measured search value — not a sitemap deletion.
+site clicks to tidy a metric, and the best-performing page on the site is in the set.
+
+> **WHAT FOLLOWS IS A DIRECTION, NOT A DESIGN, AND IS RECORDED AS ONE.** "A rule keyed on age and
+> on measured search value" names the inputs and nothing else — not the thresholds, not what
+> happens to a page that fails it, not how a page re-enters if its offer returns.
+>
+> **Recording a direction as though it were a design is the shape item 242 warns about**: a
+> sentence that looks like the work has been done, sitting where the work should be, and reading as
+> settled to everyone who passes it afterwards. The 4.7% correction was right, precise and dated,
+> and was read three more times without being acted on.
+
+**The inputs are measured; the shape is a decision, and it is not taken here.** It also cannot be
+settled independently of item 254's unresolved question about what a 410 claims.
 
 ---
 
@@ -22328,12 +22355,27 @@ were created after the flip (newest `created_at` 17 July).
 > would not have helped: these pages were not orphans on the day. **No correct execution at flip
 > time could have caught them, because the condition had not happened yet.**
 
-#### CLOSING IT: THE REGEN PATH IS ALREADY UNAVAILABLE
+#### ★ THE REGEN PATH BEING UNAVAILABLE IS THE FINDING
 
-`regen-gone-ids.mts` says *"Run this RIGHT BEFORE the flip (while the retailer is still active)"*
-and computes the drop set from rows that are **live now**. **Both retailers are already
-`active=false`, so its precondition is unsatisfiable for both existing departures.** Re-running it
-cannot produce the residue.
+`regen-gone-ids.mts` computes the drop set from rows that are **live now**, and says *"Run this
+RIGHT BEFORE the flip (while the retailer is still active)"*. **Both retailers are already
+`active=false`.**
+
+> **ITS PRECONDITION IS UNSATISFIABLE FOR THE ONLY TWO DEPARTURES THAT HAVE RESIDUE.**
+>
+> **A TOOL THAT CAN ONLY RUN BEFORE AN EVENT, ON A RESIDUE THAT ONLY EXISTS AFTER IT.**
+
+**Recorded against the doctrine, not only here.** `docs/superdrug-removal-plan.md` step 6 says
+*"Regenerate `GONE_IDS` on the day, not on the following Sunday"* — added 9 August after being
+missed once, at a cost of **3,894 live products serving 410 for thirteen days**.
+
+> **STEP 6 SAYS GENERATE ON THE DAY. THIS SAYS THE GENERATOR HAS NO SECOND USE. BOTH ARE TRUE AND
+> THE SECOND WAS NEVER STATED.**
+>
+> The doctrine learned that generating early is wrong. It never recorded that generating **at all**
+> is a one-shot capability — that the moment the flip happens, the tool that built the list can
+> never rebuild it. Step 6 reads as advice about *timing within a window*. There is no window:
+> there is one instant, and afterwards nothing.
 
 What closing it would involve, none of it done:
 1. **A different query** — orphans-as-of-today rather than orphans-at-flip, which is a new
@@ -22362,5 +22404,17 @@ only inactive-retailer rows. Between them **142 clicks and 8,325 impressions** i
 > **THE 30 SERVE A 404.** `getProductById` returns null, `resolveCanonicalKeeper` finds no keeper,
 > and `notFound()` runs. **They are drawing search traffic to a 404 and nothing in the codebase
 > knows they exist** — absent from `products_active`, absent from `GONE_IDS`, absent from
-> `REDIRECTS`. They are not a list anyone maintains; they are what is left over after three
-> separate mechanisms each correctly declined to cover them.
+> `REDIRECTS`.
+
+**THIS NAMES A CATEGORY, AND THE CATEGORY IS THE POINT:**
+
+> **THE RESIDUE OF CORRECT EXCLUSIONS IS NOBODY'S POPULATION BY CONSTRUCTION.**
+>
+> `products_active` correctly excludes them — no active-retailer row. `GONE_IDS` correctly excludes
+> them — not orphans when it was generated. `REDIRECTS` correctly excludes them — never curated,
+> because they were not in the departing set. **Three mechanisms, three correct decisions, and the
+> intersection of the exclusions is a set with no owner.**
+>
+> **Nothing is broken and nothing will ever report it.** A defect gets found because something that
+> should contain it does not. This has no should-contain — it is defined only by what every list
+> left out, so it can only be found by deliberately looking for what is in none of them.
