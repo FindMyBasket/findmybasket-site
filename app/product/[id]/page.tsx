@@ -328,7 +328,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
 
         <div className="grid md:grid-cols-2 gap-8 mb-8 items-start">
           {/* Left column: pinned on desktop (md:sticky) so the product image,
-              price and "Add to basket" stay in view while the comparison and
+              price and "Add to my routine" stay in view while the comparison and
               description scroll on the right. Static normal flow on mobile. */}
           <div className="md:sticky md:top-24 md:self-start">
           <div className="bg-warm-white border border-border rounded-2xl h-56 md:h-[20vh] flex items-center justify-center overflow-hidden mb-6">
@@ -544,7 +544,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
       {/* Mobile only: a persistent buy bar pinned to the bottom of the viewport
           so the core action stays on screen while the visitor scrolls the
           comparison. Reuses SaveToRoutineButton, so it mirrors the same add
-          action and "Added to basket" state as the in-column button via the
+          action and "Added to my routine" state as the in-column button via the
           shared routine store. Desktop keeps the sticky left column instead. */}
       {inStockOffers.length > 0 && (
         <>
