@@ -528,7 +528,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
           cross-check with a verified ASIN path rather than a search link.
 
           Revision 1 of the programme recorded this as already fixed. It was not --
-          it was live at page.tsx:512 until 23 August. Work-list item 246, phase 0.3. */}
+          it was live at page.tsx:512 until 23 August. Work-list item 245, phase 0.3. */}
 
       {related.length > 0 && (
         <section className="max-w-site mx-auto px-6 py-8">
@@ -646,7 +646,7 @@ function RetailerRow({
           string at 390px -- flex begins shrinking THIS block instead. The two price
           lines are the only shrinkable thing in it, because the action carries
           `whitespace-nowrap`, so they were driven underneath the button.
-          Two price figures overlapping a tap target. Item 246, phase 0.4. */}
+          Two price figures overlapping a tap target. Item 245, phase 0.4. */}
       <div className="flex items-center gap-4 ml-4 shrink-0">
         {/* LEADS WITH THE DELIVERED PRICE so the row and the headline are the same
             quantity. The item price stays, secondary and LABELLED -- it is what the

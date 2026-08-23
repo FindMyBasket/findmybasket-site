@@ -137,7 +137,7 @@ type PreloadCase = 'clean' | 'self_reload' | 'merged' | 'merged_cleared';
 
 // Amazon search URL for the unranked cross-check row. The per-routine-item
 // "Also check Amazon" LINK was removed in phase 0.3; this builds the URL for the
-// cross-check that remains outside the ranking. Item 246.
+// cross-check that remains outside the ranking. Item 245.
 function amazonSearchUrl(p: RoutineItem): string {
   const q = encodeURIComponent(`${p.brand ?? ''} ${p.name}`.trim());
   return `https://www.amazon.co.uk/s?k=${q}&tag=${AMAZON_TAG}`;
@@ -745,7 +745,7 @@ export default function RoutineBuilder() {
     //
     // The honest quantity is what the recommendation saves against the NEXT BEST
     // thing the visitor could actually have chosen. options is sorted ascending by
-    // delivered total, so options[1] IS that next best. Work-list item 246.
+    // delivered total, so options[1] IS that next best. Work-list item 245.
     //
     // Expect this to reduce the headline substantially on most baskets. That is the
     // point: it is what the optimiser is worth, and it is better known than hidden.
@@ -1177,7 +1177,7 @@ export default function RoutineBuilder() {
                           Amazon stays on PRODUCT pages, outside the ranking and already
                           labelled as an unranked cross-check. eBay is removed everywhere:
                           it was never ranked, never priced, and only ever a search link.
-                          Work-list item 246, phase 0.3. */}
+                          Work-list item 245, phase 0.3. */}
                     </div>
                     <button
                       className="rb-remove-btn"
@@ -1219,7 +1219,7 @@ export default function RoutineBuilder() {
                 <div className="rb-savings-amount">£{savings.toFixed(2)}</div>
                 {/* Names the actual comparison. The previous copy said "versus buying
                     the whole basket at the most expensive single shop", which was an
-                    accurate description of a baseline nobody would choose. Item 246. */}
+                    accurate description of a baseline nobody would choose. Item 245. */}
                 <div className="rb-savings-desc">
                   versus the next-best way to buy this basket, delivery included. Checkout prices may
                   be lower with active sales or member discounts.
@@ -1247,7 +1247,7 @@ export default function RoutineBuilder() {
                                          claimed at all, unchanged behaviour.
 
                 Collapsing these into one sentence is what made the old copy read as
-                an apology. Each states what the optimiser found. Item 246. */}
+                an apology. Each states what the optimiser found. Item 245. */}
             {!showSavings && winningRetailerCount > 0 && (
               <div className="rb-savings-summary rb-savings-qualitative">
                 <div className="rb-savings-desc">
@@ -1277,7 +1277,7 @@ export default function RoutineBuilder() {
                   // The variable name stated the referent and the label stated its
                   // opposite, so a GBP 1.85 difference from the recommendation
                   // rendered as "GBP 23.11 more". Referent and direction both wrong.
-                  // Item 246.
+                  // Item 245.
                   const moreThanBest = opt.total - results[0].total;
                   const distinctRetailerCount = new Set(
                     opt.breakdown
@@ -1402,7 +1402,7 @@ export default function RoutineBuilder() {
                 for: the cards ARE the value, and asking to save a result before
                 showing it inverts the exchange.
 
-                Value first, then commitment, then the disclosure. Item 246,
+                Value first, then commitment, then the disclosure. Item 245,
                 phase 0.5. */}
             {showSaveCard && (
               <div className="rb-save-card">
@@ -1486,7 +1486,7 @@ export default function RoutineBuilder() {
                 the result to make a declaration nobody arrived for. Below the cards
                 and below the save prompt it is still on the screen, still before any
                 outbound click, and no longer standing in front of the value.
-                Item 246, phase 0.5. */}
+                Item 245, phase 0.5. */}
             {results && results.length > 0 && (
               <div className="rb-results-disclosure">
                 <AffiliateDisclosure variant="banner" />
