@@ -24463,3 +24463,72 @@ And the case cited as evidence was correct all along:
 > **VitaminExpress is what addresses it, and VitaminExpress is deferred behind the website refresh
 > (item 266). So the block on supplements work is a SCHEDULING CONSEQUENCE, not a technical one**,
 > and the two defects offered as blockers are 0.88% and zero.
+
+---
+
+### 277. The practice never existed
+
+**Raised:** 24 August 2026 · **APPLIED.** Four drafts deleted; `docs/drafts/` retired.
+
+#### WHAT WAS RETIRED
+
+`docs/drafts/how-to-read-supplement-label.md`, `supplement-capsules-vs-powder.md`,
+`supplement-dose-explained.md`, `supplement-price-per-serving.md`. **Git holds all four at #280.**
+
+#### AND IT WAS NEVER A CONVENTION
+
+| | |
+|---|---|
+| The four drafts added | **15 August 2026**, one commit — *"hold the four supplements drafts; item 115"* |
+| The four articles published | **16 August 2026** (#298) |
+| Other published articles | **13**, May to July, **with no draft at all** |
+| Drafts ever deleted before today | **none** |
+
+> **A ONE-DAY HOLD THAT OUTLIVED ITS PURPOSE BY NINE DAYS AND THEN READ AS CANONICAL.**
+>
+> Nothing reads `docs/drafts/` — no script, no config, no CI, no workflow. The only reference in
+> the repository was this list. **It was not a source anything consumed; it was a source things
+> looked like they might.**
+
+**It had already lied.** PR #301 changed the live anchor from *"browse beauty supplements"* to
+*"browse supplements"* and left all four drafts saying "beauty". That divergence sat for nine days,
+and **a `docs/drafts/` path reads as the source** — which is what made a stale copy worse than no
+copy.
+
+#### ★ THE THING WORTH PRESERVING IS THE HOLD, NOT THE FILE
+
+The cost of retiring them was first stated as *"there is no artefact between writing and
+publishing"*. **That overstates it.**
+
+> **Item 115 is the evidence.** Holding those four surfaced a third clause of the disclosure rule
+> the brief had not mentioned — **because publication was deferred and someone checked.** The `.md`
+> was **where** that review happened, not **why** it worked.
+>
+> **A future cluster wanting the same review holds publication and deletes the draft on
+> publishing**, under exactly this reasoning. The reviewable pause is the mechanism; the file is
+> scaffolding, and scaffolding left standing is mistaken for structure.
+
+#### AND HOW THE FOURTH ARTICLE WAS FOUND
+
+Item 276 corrected the stockists claim in four articles. **The list named three**, because the
+search matched *"priced across …stockists"* — the phrasing the first three used.
+`supplement-capsules-vs-powder` said *"**compare** the same product across several stockists"* and
+was invisible to it.
+
+> **It surfaced only because it was on screen for an unrelated reason** — the stale "beauty" anchor
+> put it in front of me while I was fixing that.
+>
+> **A pattern narrower than the phenomenon, in the SCOPING OF A FIX rather than in a measurement.**
+> **The same shape as the 62-character sample, one layer up: a truncated view of a name, a truncated
+> view of a corpus, both mistaken for the whole.**
+
+It shipped in #276 rather than being held to the named three, because **reverting it would have left
+a known false claim live for falling outside a list written from an incomplete search.**
+
+#### SUPPLEMENTS CLOSES HERE FOR NOW
+
+> **What blocks it is supply.** 1.9% comparable, 1,733 of 1,826 from one retailer. **VitaminExpress
+> addresses it and is deferred behind the website refresh (item 266).**
+>
+> **Phase 2 starts with hair** — 21.3% comparable depth, the highest of any category, and the same
+> crawled-and-declined verdict, so layout work reaches it.
