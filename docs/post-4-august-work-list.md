@@ -23742,3 +23742,327 @@ catalogue movement, not a disagreement.)*
 > **Three onboardings are about to happen. That is the moment the same document would pay for
 > itself** — written before they diverge rather than after. Not started, and noted so it is a
 > decision rather than an omission.
+
+---
+
+#### DEFERRED UNTIL THE WEBSITE REFRESH COMPLETES — ALL FIVE
+
+**24 August 2026.** Simply Be, VitaminExpress, CJ as a network, The Fragrance Shop, and the parked
+Rakuten reporting work. **Not a scheduling note — a reason.**
+
+> **A FIRST INTEGRATION ON AN UNFAMILIAR NETWORK, ONBOARDING INTO SURFACES THAT ARE BEING REBUILT,
+> MAKES ANY PROBLEM HARDER TO ATTRIBUTE.**
+>
+> A CJ importer will have failures — every importer did. **The question is whether the next person
+> can tell a CJ feed problem from a refresh regression**, and while both are moving at once they
+> cannot. Two unknowns changing together do not add, they multiply: each becomes the other's
+> explanation.
+
+**The same shape as the argument for closing paid acquisition. Adding supply to a funnel under
+change is spending into an unknown** — there, money into a conversion path being rebuilt; here,
+catalogue and integration work into surfaces being rebuilt. **Both buy something whose effect
+cannot be read until the thing it feeds stops moving.**
+
+**The Fragrance Shop and the Rakuten reporting work wait for the same reason**, and the cost of
+waiting is lower there because **the research is already recorded** —
+`docs/rakuten-reporting-probe-brief.md` does not decay while it sits.
+
+#### WHAT DOES DECAY: THE APPROVALS THEMSELVES
+
+> **An approved programme can be withdrawn. Three approvals sitting unused for weeks is a RISK
+> WORTH KNOWING, not a certainty.**
+
+**No stated activation window is recorded for any of the three.** Nothing in the repository names
+one, and network terms cannot be checked from here — **so the honest position is "not established",
+not "none exists".** If any of the three carries a stated window, it is in the network dashboards
+and nobody has written it down.
+
+**And the strategy already holds a position on this**, `docs/strategy.md`:
+
+> *"Every relationship taken for FindMyLook reasons must be made genuinely active on beauty. **A
+> dormant approval is not an asset.**"*
+
+That was written about approvals taken for a future product, and **it applies here unchanged**: an
+approval is a relationship, and a relationship nobody uses is one the other side may reasonably
+end. **The precedent exists** — Skin Cupid's AWIN programme closed and the deactivation went
+unreported for 52.7 days.
+
+**Deferral is still the right call**, because attribution during a rebuild is the scarcer thing.
+**But the cost is not zero and it is not fixed** — it grows with the wait, and nobody currently
+knows the rate.
+
+#### ALSO DEFERRED: THE MEASURE STACK
+
+**103,863 — `active_and_products_active`, used by nothing** (item 270) — and whether anything
+should adopt it.
+
+**Deferred until `fmb_quality_snapshot_write` and the rest of the measure stack have been read
+properly**, which was the stated condition when it was deferred and **the condition still holds**.
+
+> **Four probe defects this week is the reason still applying, not a reason that has expired.**
+> Item 268: all four were caught because the answer looked wrong, and **the defence is
+> implausibility, which only fires on large errors.** A proposal about which population a measure
+> should adopt is exactly where an eight per cent error looks plausible.
+>
+> **Proposing after four inference failures would be the fifth.**
+
+---
+
+### 267. The diagnosis was wrong, and it was what made the item read as urgent
+
+**Raised:** 24 August 2026 · **CORRECTED 24 August, same day.** Cosmetic. **A backfill is optional,
+not owed.**
+
+#### ★ WHAT THE ITEM SAID, AND WHY IT WAS WRONG
+
+> *"The SQL function is ahead of the stored keys."*
+
+**It is not.** The migration's own first line says it **mirrors** the JS —
+*"Mirror the JS `normaliseCountUnits()`"* — and running the JS confirms they agree: `5ea set` →
+`5pcs set`. **The two implementations are in parity and always were.**
+
+**The stored keys are behind BOTH implementations**, not behind one that moved deliberately.
+
+#### AND THAT CHANGES THE STORY THE ROWS TELL
+
+> **AN UNFINISHED MIGRATION WHERE ONE SIDE MOVED ON PURPOSE IS A JOB SOMEONE ABANDONED. A BACKFILL
+> THAT WAS NEVER WRITTEN IS A JOB NOBODY STARTED.**
+>
+> **Same rows, different story — and only the first implies someone decided something.** The
+> original framing put a person behind it: a migration begun, tooling built, work stopped. The
+> correct one has no such person. **The change shipped, new rows were correct from that moment, and
+> nobody ever went back — because nothing asked them to.**
+
+That difference is the whole reason the item read as urgent, and it should not have.
+
+#### THE CUTOVER IS UNAMBIGUOUS ONCE BUCKETED CORRECTLY
+
+| Week created | Divergent |
+|---|---:|
+| 29 Jun | **93%** |
+| **6 Jul onward, every week to 17 Aug** | **0%** |
+
+**My "28.6% after 3 July" was a week-boundary artefact** — 3 July sits inside the 29 June bucket, so
+the cut included rows the deployed change had not reached.
+
+> **The same shape as the partial-week trend.** A boundary drawn on the calendar rather than on the
+> event, producing a figure that is arithmetically correct and describes nothing.
+
+#### THREE TRANSFORMATIONS, NOT ONE — AND 2,709, NOT 2,368
+
+| Cause | Rows |
+|---|---:|
+| Count-unit normalisation, number-attached (`5ea`→`5pcs`) | **2,610** |
+| Count-unit normalisation, standalone plural nouns (`pads`→`pad`) | **70** |
+| **Brand-repetition stripping** (`vt cosmetics vt cica`→`vt cosmetics cica`) | **29** |
+| **Total** | **2,709** |
+
+The third is **a different change** — `20260703130000_match_key_brand_word_repetition.sql`, which
+`brandrepeat-audit.mts` exists to audit. It shipped the same day, which is why the gap looked like
+one thing.
+
+> **2,709 rather than 2,368 because the name filter was narrower than the phenomenon — it missed
+> `pads`, `patches` and `pieces`.**
+>
+> **THE WEEK'S RECURRING MECHANISM ARRIVING IN THE NUMBER THAT DEFINED THE ITEM.** A population
+> measured through a filter, and the filter's reach reported as the population's size — the same
+> error as "58 mojibake rows", "eleven places", and the 685 dead pages. **This time it was the
+> headline figure of an item written to record that very class.**
+
+#### THE NEGATIVE CONTROLS ARE THE PART TO KEEP — ITEM 268 APPLIED, NOT CITED
+
+**Grep method:** known-absent token → **0 files**; known-present token → **51 files**.
+
+**Enumeration method:** it returned `merge_products` as a reader of `match_key`. **It is a false
+positive** — that function holds a *local variable* named `match_key` containing a merge audit label
+(`layer || '_' || confidence || '_score_' || score`), unrelated to the column.
+
+> **Identifying it as wrong is the evidence, not the enumeration passing.** A method that returns
+> only expected results might be discriminating or might be pattern-matching; **one that returns a
+> known-wrong hit which can then be ruled out has demonstrated it distinguishes.**
+>
+> This is the defence item 268 said was missing: a case with a known answer, run through the
+> instrument before the instrument is trusted. **The probe defects this week all lacked one.**
+
+#### WHAT REMAINS, AND WHETHER IT IS WORTH DOING
+
+**2,709 historical `match_key` values inconsistent with both implementations.**
+
+**Read by nothing that compares them.** The matcher recomputes both sides from `brand` and `name`
+(`import-awin-feed/index.ts:1011`); `match_chunk_lookups` selects on `match_brand`;
+`capture_catalog_health` tests only NULL-ness; `bulk_update_match_keys` writes; the views SELECT
+without predicate; `lib/`, `app/` and `components/` never mention it.
+
+> **A BACKFILL IS OPTIONAL RATHER THAN OWED.** Nothing is wrong today, nothing degrades, and the
+> population is closed — zero new divergence in seven weeks.
+
+**THE CONDITION THAT WOULD MAKE IT MATTER: any future reader that computes a key fresh and compares
+it against the stored column.** Nothing does that today. The moment something does — a
+deduplication pass, a reconciliation job, a second matcher — **2,709 rows would silently fail to
+match themselves**, and the failure would look like a data problem rather than a stale column.
+
+**So the useful artefact is not the backfill. It is this record**, findable by whoever writes that
+future reader. `idx_products_match` carries `match_key` as its third column and nothing filters on
+it, which is the same fact from the other side.
+
+### 268. Four probe defects in one week, all four caught by the answer looking wrong
+
+**Raised:** 24 August 2026 · **Pattern, with the uncomfortable half.**
+
+| # | The probe | The defect | Caught because |
+|---|---|---|---|
+| 1 | JSON-LD offer extraction | looked for `price`/`seller` on an `AggregateOffer` | a "null price" appeared **on production too** |
+| 2 | Citation scanner | `grep -honE` — `-n` prepends line numbers, read as item ids | **63 dangling citations** appeared at once |
+| 3 | Citation scanner, again | id guard capped at 5000 | a **negative test passed** |
+| 4 | Parity query | `fmb_build_match_key(name, brand)`, signature is `(brand, name)` | **100% divergence** |
+
+**All four were caught. None was caught by the method being sound.**
+
+#### THE UNCOMFORTABLE HALF
+
+> **THE DEFENCE IS IMPLAUSIBILITY, AND IMPLAUSIBILITY ONLY FIRES ON LARGE ERRORS.**
+>
+> `(name, brand)` against `(brand, name)` returned **100%**, which is impossible and therefore
+> obvious. **A transposition returning 8% would not have been.** It would have been written down as
+> a finding, sat in an item, and been quoted afterwards — and everything downstream of it would have
+> been sound reasoning on a false input, which is the shape item 265 already records as *"a
+> correction travels no further than the person who repeats it"*.
+>
+> **The catch rate here is not evidence the process works. It is evidence that this week's mistakes
+> happened to be big ones.**
+
+**What would actually defend:** a known-answer case run through the probe before the probe is
+trusted — the negative test that caught defect 3 is exactly that, and it existed only because a
+check was being written as a check. **The other three probes were ad hoc and had none**, because
+nobody writes a test for a query they intend to run once.
+
+> **That is the real asymmetry: instruments get tested, and one-off measurements do not — while
+> one-off measurements are what most findings actually rest on.**
+
+---
+
+### 269. `git add -A` sweeping an unrelated change, for the second time
+
+**Raised:** 24 August 2026 · **A habit, not a slip.**
+
+**First instance:** a stray 0-byte `delivery_cost` file from a malformed shell redirect, committed
+because the sweep was indiscriminate. Recorded then as a process note — *"nothing would have caught
+it but a diff read"*.
+
+**Second instance, today:** the `package.json` test-glob edit was made on the audit branch, carried
+uncommitted across a `git checkout` to the pipeline branch during an unrelated fix, and **swept into
+that branch's merge commit by `git add -A`.** It shipped in a PR about three new retailers.
+
+> **TWICE IS A HABIT.** The first was a stray file nobody wanted; this was a wanted change on the
+> wrong branch, which is harder to see — **the diff looks like work because it is work.**
+
+#### WHAT WOULD PREVENT IT, RATHER THAN ONLY WHAT HAPPENED
+
+**The sweep is not the defect. Crossing a branch boundary with uncommitted work is.** `git add -A`
+is only dangerous because the working tree can contain something the branch was not about.
+
+1. **Commit or stash before `git checkout`, always.** Both instances began with an edit outstanding
+   at the moment of a branch switch. `git checkout` carries changes silently when they do not
+   conflict — that silence is the whole mechanism.
+2. **`git status` before `git add -A`**, and read the file list rather than the count. Both would
+   have been visible; neither was looked at.
+3. **Prefer `git add <path>`** when the change is known and small. The glob edit was one line in one
+   file and never needed a sweep.
+
+**Not a tooling change**, because a hook that blocks `add -A` would be routed around within a day.
+**A stated habit, recorded where the habit is** — and the reason it earns an item is that the second
+instance was invisible in a way the first was not.
+
+---
+
+### 270. The comment says why; the output says what
+
+**Raised:** 24 August 2026 · **APPLIED.** Labelling only — **nothing scoped, nothing reconciled.**
+
+#### THE GAP WAS NOT IN THE FUNCTION, IT WAS IN WHAT A READER RECEIVES
+
+`dq_snapshot`'s population choices are deliberate and documented in a comment dated **27 July**
+naming each figure and its reason. **That comment was never the problem and it has not been
+touched.**
+
+> **A reader gets a jsonb blob of figures with no statement of what each counts, and the reasoning
+> is a scroll away in a source they may not open.**
+>
+> **That is precisely how the wrong premise was formed on 23 August** (items 259, 261): I read the
+> output, inferred the design from the figures, and reported four accumulated populations that
+> nobody chose. **The comment answered the question. I never reached it.**
+
+**The comment says why. The output now says what. Neither replaces the other**, and the comment
+remains the reasoning.
+
+#### PER ROW, NOT PER SECTION
+
+`catalogue` mixes **three** populations:
+
+| Subsection | Population |
+|---|---|
+| `total_products`, `total_brands` | `all_products` |
+| `in_stock_rows`, `detached_rows` | `all_price_rows` |
+| `multi_retailer_products`, `avg_saving_pct`, `total_savings_pool`, `biggest_saving` | **`active_retailers_only`** |
+
+> **A section-level label would have been wrong for exactly the section whose numbers get quoted.**
+
+**A fourth column rather than a key inside the jsonb**: eight of the fifteen values are scalars
+(`to_jsonb(COUNT(*))`), and **wrapping them to carry a label would change every value's shape in
+order to add a label.**
+
+#### THE POPULATION REFERENCE — AND THE ONE NOTHING USES
+
+A `populations` section, four named populations with live counts:
+
+| Population | Rows | Used by |
+|---|---:|---|
+| `all_products` | 135,828 | `catalogue.total_products`, `total_brands` |
+| `all_price_rows` | 112,692 | identifier coverage, url health, freshness, duplicates, canonical size |
+| `active_retailers_only` | 112,177 | catalogue savings + comparison |
+| **`active_and_products_active`** | **103,863** | **NOTHING** |
+
+> **Listed BESIDE the three that are used, because that is what makes its absence visible.**
+> It is arguably the truest definition of *served* — active retailer **and** surviving
+> `products_active`'s other filters — and no measure adopts it.
+>
+> **Naming it at a section would imply it belongs there. Naming it in the reference states the fact
+> without asserting a home.** Adopting it would be a choice, not a discovery.
+
+*(103,863 rather than the 103,817 reported yesterday — the counts are live, not frozen.)*
+
+#### BUILT BY RENAMING, NOT BY EDITING FIFTEEN STATEMENTS
+
+Adding a literal to each of fifteen `SELECT`s meant fifteen regex edits inside a live 8.8KB
+function with nested subqueries — **the class of change where a transcription error leaves no diff
+to review** (item 209). Instead `ALTER FUNCTION … RENAME` carried the body **and its 27 July
+comment** verbatim into `dq_snapshot_raw`, and a wrapper adds the column.
+
+**The cost of a wrapper is that a label can drift from the source it names**, so the migration
+**asserts coverage in both directions** — no emitted row without a label, no label naming a row the
+function no longer emits. **Negative-tested rather than assumed**: a fabricated pair is detected
+(1), a real pair is not flagged (0), and no live row is unlabelled (0).
+
+#### NOTHING CONSUMES THIS, AND THAT IS THE JUSTIFICATION RATHER THAN A CAVEAT
+
+**No app code, no `lib/`, no script, no workflow reads `dq_snapshot`** — only the two migrations
+that created it. `dq_dashboard_log` is dormant: nothing writes it, its three rows date to 27 July.
+
+> **So nothing breaks — and nothing will see the labels either.**
+>
+> **The label helps the person who RUNS the function and READS the result. That person is the one
+> who formed last night's wrong premise, and that is the whole justification.** A label nobody
+> parses is not a weaker version of one a machine reads; it is aimed at a different reader.
+
+#### AND A CORRECTION IN THE MEASUREMENT THAT PRODUCED THIS
+
+My section-to-source extraction reported `catalogue.detached_rows` as reading **both**
+`retailer_prices` and `retailer_prices_live`. **It reads only the base table.**
+
+> The extraction grouped lines by statement **span** — from one `SELECT` to the next — and the span
+> for `detached_rows` **swallowed the 27 July comment block** sitting between the statements. The
+> comment mentions `retailer_prices_live`; the statement does not.
+>
+> **Reading the statement gave a different answer from reading the span** — the same distinction as
+> reading a source rather than its output, one level down. **A span is not a statement**, and a
+> boundary drawn by proximity will collect whatever is nearby.
