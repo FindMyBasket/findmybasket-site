@@ -24069,6 +24069,64 @@ My section-to-source extraction reported `catalogue.detached_rows` as reading **
 
 ---
 
+### 271. Brand alias resolution, and filter URLs that redirect instead of 404ing
+
+**Raised:** 24 August 2026 · **APPLIED** (#417). Written after the fact — see item 274.
+
+#### FIX 1: THE DATA WAS ALREADY THERE
+
+`findBrandBySlug` derives slugs from the brand string and never consulted `brand_aliases`, which
+has recorded the folds all along — **`rimmel london → Rimmel` since 19 June 2026.**
+
+**Measured by fetching all 49 candidate alias slugs, not sampled: 30 return 404** while their
+canonical serves 200. `/brands/loreal-paris` 404 against `/brands/lor-al-paris` with 1,156 products.
+
+**301 rather than render**, because `brand_aliases` is a **fold, not a synonym set** — five slugs
+fold to one L'Oréal brand, so rendering would put five URLs on identical content, and 54,056 pages
+are already crawled-and-declined.
+
+#### THREE CONSTRAINTS, EACH FROM A MEASURED CASE
+
+1. **LIVE FIRST, ALIAS ONLY ON MISS.** `/brands/nineless` and `/brands/vt-cosmetics` serve 200
+   **and** are aliases. Aliases-first would have 301'd them away from working pages. **Two rows out
+   of 196, invisible unless looked for** — which is what makes the order load-bearing rather than
+   stylistic.
+2. **CHAIN WITH A CAP, AND ON EXHAUSTION SERVE THE 404** rather than redirect to the last hop.
+   **Partial resolution is the failure mode that looks like success**: a 301 to a halfway point is
+   indistinguishable from a correct one in the response, and wrong.
+3. **VERIFY THE TARGET.** Eight aliases point at canonicals that 404. **A 301 into a 404 is worse
+   than the 404 it replaces** — the doctrine's rule deciding its second case this week.
+
+#### FIX 2B AND 2C
+
+**B — an empty filter 301s to the hub** instead of `notFound()`. We generate these URLs ourselves;
+a type empties and the link we published becomes a 404 we keep publishing. Redirect rather than
+render-empty, because a permanently crawlable thin-page surface is the wrong answer when 54,056
+pages are already declined — and the hub genuinely answers a brand query.
+
+**C — and its premise needed correcting.** See item 272: the chip query already excluded empty
+types; it counted them **without the image filter the grid applies.**
+
+#### THE CANONICAL COMMENT WAS FALSE AND IS CORRECTED
+
+It claimed the self-referencing canonical made filter variants *"consolidate to one indexed page"*.
+**A canonical on a 404 consolidates nothing** — the page never renders, so the tag is never served.
+It is true now because of the 301, and says what makes it true.
+
+#### VERIFIED ON PREVIEW, AND FOUR OF SIX NEW TESTS ARE REFUSALS
+
+`nineless` and `vt-cosmetics` **200**; `superdrug` and `makeup-academy` **404**; `rimmel-london` and
+`loreal-paris` **308**; `clean-clear?type=Cleanser` **308 → hub**.
+
+**A negative test per constraint** (item 268) — an alias that must not redirect, a chain that must
+exhaust, a cycle, a target that must fail verification. **A guard never seen to refuse is a guard
+nobody has tested.**
+
+`brandSlug` was **moved, not copied**, into `lib/brand-slug.ts` so tests can reach it without the
+database client — item 267 applied before it bites.
+
+---
+
 ### 272. A count and a listing derived separately — the third instance
 
 **Raised:** 24 August 2026, from item 271's build · **Named as a class.**
@@ -24165,3 +24223,70 @@ left by the same 30 June reversal that left the ten product rows.**
 
 **Not fixed in item 271's change**, deliberately — it is a data question about a partnership split,
 not a routing one, and the routing behaves correctly over it either way.
+
+---
+
+### 274. The check built to catch a dangling citation missed one, on case
+
+**Raised:** 24 August 2026 · **FIXED.** One day after the check shipped.
+
+#### IT HAPPENED AGAIN, AND THE GUARD PASSED
+
+Item 263 was cited in shipped code before it was written. That produced
+`scripts/check-worklist-citations.sh` (item 265). **One day later, #417 shipped four citations of
+item 271 — which did not exist — and the check passed.**
+
+> **The defect it was built to catch, missed by the check built to catch it, within twenty-four
+> hours.**
+
+**Caught by the contiguity check again** — the same accident as last time: item 272 needed a number,
+and the sequence refused.
+
+#### THE CAUSE: `grep -hoE`, NOT `-hoiE`
+
+**The dominant citation form in this repository is a capitalised `Item 271.` at the end of a
+comment.** All four of item 271's citations are that form. The check could not see a single one.
+
+| | Distinct items |
+|---|---:|
+| Cited, as the check saw it | **130** |
+| Cited, case-insensitive | **144** |
+| **Invisible to the check** | **14** |
+
+#### ★ AND THE NEGATIVE TEST SHARED THE BLIND SPOT
+
+Item 265 recorded, correctly, that a guard never seen to refuse is a guard nobody has tested — and
+built one. **It was written in the lowercase form.**
+
+> **THE GUARD WAS TESTED WITH AN INPUT SHAPED LIKE THE ONES IT COULD ALREADY SEE.**
+>
+> **A negative test that shares a blind spot with the thing it tests proves only that the blind spot
+> is consistent.** It demonstrated the check refuses a citation it can parse. It could not
+> demonstrate anything about citations it cannot parse, and nothing in it hinted that such a
+> category existed.
+>
+> This is item 268 one level up. There the defence was implausibility, which fires only on large
+> errors. **Here the defence was a negative test, and it fires only on inputs the author already
+> imagined.**
+
+**Now exercised in all three casings** — `item`, `Item`, `ITEM` — plus a valid citation that must
+still pass.
+
+#### A SMALLER ONE, WORTH THE LINE
+
+The fixed check immediately flagged **its own comment**, which used a worked example and cited an
+item not yet written.
+
+> **This file is scanned by itself, so an illustrative reference is indistinguishable from a real
+> one.** The comment now contains no worked example and says why. **A tool that reads the whole
+> repository reads its own documentation**, and prose about citations is made of citations.
+
+#### AND A FIFTH PROBE DEFECT, IN THE MEASUREMENT OF THIS
+
+The first attempt to list dangling citations used `grep -qx` against a process substitution inside a
+`while read` loop, and reported **130 dangling items including item 4, item 22 and item 191** — all
+of which plainly exist.
+
+> **Caught by implausibility, for the fifth time this week** (item 268). Rewritten in Python, the
+> true answer was **one**. The pattern holds exactly as recorded: the defence is that the answer
+> looks wrong, and it only works when the answer looks wrong *enough*.
