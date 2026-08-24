@@ -1,3 +1,5 @@
+import { brandSlug } from './brand-slug';
+export { brandSlug };
 import { supabase } from './supabase';
 import { getActiveRetailerIds } from './retailers';
 
@@ -135,13 +137,6 @@ export function nextBestPrice(prices: number[]): number | null {
   return [...prices].sort((a, b) => a - b)[1];
 }
 
-export function brandSlug(brand: string): string {
-  return brand
-    .toLowerCase()
-    .replace(/['']/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-}
 
 // Specialist import retailers: Stylevana #11, YesStyle #25, Atelier De Glow #29.
 // Presentational ONLY — drives the "Specialist import" badge so longer delivery
