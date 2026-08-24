@@ -23136,3 +23136,149 @@ the site claims to measure rather than a correction of an error.
 **DELIBERATELY NOT PROPOSED TONIGHT.** Reading `fmb_quality_snapshot_write` and the rest of the
 measure stack properly is the correct response to this item. **Proposing after three inference
 failures would be the fourth.**
+
+---
+
+### 262. Two populations with opposite dynamics inside one number
+
+**Raised:** 24 August 2026, from the 1,214 · **Discovery only. Nothing changed, nothing proposed.**
+
+#### THE CORRECTION LEADS: I DESCRIBED THE NUMBER ONCE
+
+The 1,214 was reported as static — nothing new in four weeks, median 111 days. **That was true of
+part of it.**
+
+| Sub-population | Size | Rate | Median age |
+|---|---:|---|---:|
+| **Genuinely dead** | **687** | **0/week, four weeks running** | 111 days |
+| **Buyable, no image** | **446** | **~24/week, ongoing** | — |
+| Already gated (Atelier) | 30 | — | — |
+| Deliberately excluded | 51 | — | — |
+
+> **TWO POPULATIONS WITH OPPOSITE DYNAMICS INSIDE ONE NUMBER, AND I GAVE THE NUMBER ONE
+> DESCRIPTION.** "Static" was not wrong about anything I measured; it was applied to a set that
+> contained something I had not separated yet.
+>
+> **A single aggregate invites a single adjective**, and the adjective attaches to whichever half
+> was examined first.
+
+#### THE POPULATION SPLIT, AND WHY IT MATTERS FOR TREATMENT
+
+| Population | Rate | Treatment implication |
+|---|---|---|
+| Out-of-stock-only (12,417) | **435/week** | A list is **obsolete on arrival** — needs a rule |
+| **Genuinely dead (687)** | **0/week** | **A list can be made once and stay true** |
+| Buyable, no image (446) | ~24/week | Growing — needs the feed or a rule |
+
+> **THAT IS THE DISTINCTION THAT MAKES A LIST WORTH MAKING HERE AND NOT THERE — and it is a
+> property of the population, not of how much anyone cares about it.**
+
+---
+
+#### ★ THE 446: A FALLBACK THAT CANNOT BE REACHED IS NOT A FALLBACK
+
+**Buyable products serving 404 because they have no image.** The mechanism is **one condition doing
+double duty**: `products_active` requires an image so thin pages stay out of the sitemap, **and the
+product page reads the same view.**
+
+> **Those are two decisions and only one was made.** Keeping a thin page out of search is
+> reasonable. **Refusing to serve a page someone has a link to is a different act**, and it was
+> never separately decided — it arrived as a side effect of the first.
+
+**The product page already handles a missing image.** `app/product/[id]/page.tsx:364`:
+
+```jsx
+src={product.image_url || '/placeholder-product.svg'}
+```
+
+`public/placeholder-product.svg` exists — **written 29 July 2026** — and the container is
+fixed-height (`h-56 md:h-[20vh]`), so **the layout does not depend on the image at all.**
+
+> **THE FALLBACK IS ALREADY WRITTEN AND IS UNREACHABLE. No product ever reaches it, because the
+> view excludes them first.**
+>
+> **A fallback that cannot be reached is not a fallback.** It is code that looks like resilience and
+> provides none, and it will keep passing review forever because there is nothing wrong with it.
+
+#### AN HONEST BOUND ON THAT ANSWER, WHICH IS NOT THE LAST THREE DAYS' FAILURE
+
+**The rendering behaviour above was READ FROM CODE, NOT OBSERVED.** Stated plainly because three
+findings this week turned on exactly that difference.
+
+> **It could not have been otherwise. The condition that creates these pages is the condition that
+> prevents any of them being fetched** — every instance 404s by construction, so there is no
+> instance to look at.
+>
+> **That is a bound, not a shortcut.** The distinction worth keeping: the last three days' failures
+> were cases where **the source was cheap to check and was not checked**. Here the observation is
+> unavailable without first making the change it would test.
+
+#### THE DEPENDENCY ANSWER IS THE GOOD NEWS, AND IT SCOPES THE EVENTUAL FIX
+
+**Every discovery surface carries its own image guard and would be unaffected by separating the two
+decisions:**
+
+`lib/sitemap.ts` · `lib/product-queries.ts` (related, more-from-brand) · `lib/brand-queries.ts` ·
+`lib/subcategory-queries.ts` · `lib/edit-queries.ts` · `fmb_featured_products` ·
+`capture_catalog_health`
+
+**Two functions rely on `products_active` alone and have no filter of their own:**
+
+> **`fmb_search_products` and `fmb_resolve_product`. That is the whole surface.**
+
+**The image requirement is doing real work in exactly two places, and both are namable.** Sitemap,
+cards, featured block, brand pages, subcategory pages and the edit queries all keep it themselves.
+
+#### THE 51 EXCLUDED ARE ALREADY CORRECT
+
+`product_exclusions` products serve 404, and **that is the right answer for a page we have decided
+not to have.** A deliberate exclusion should not render.
+
+> **The only part of this population that needs nothing.**
+
+#### WOULD AN IMAGE ARRIVE ON ITS OWN? NO — THIS IS A DATA GAP, NOT A RENDERING BUG
+
+| | |
+|---|---:|
+| Perfume Click | **445 of 446** |
+| Perfume Click's overall image coverage | **95.7%** |
+| Single-retailer rows | **446 (all)** |
+| **With an EAN** | **0** |
+| Same EAN elsewhere carrying an image | 0 |
+
+**No route exists.** No EAN means no identifier match; single-retailer means no second feed to
+supply one; the one supplier does not provide it. **And it is not a failed import** — it is spread
+across every week since onboarding: 339 in the first week, then 33, 26, 25, 23.
+
+**The rendering question is downstream of a real gap in one retailer's feed. Answering it does not
+close the gap, and closing the gap is not ours to do.**
+
+---
+
+#### THE DECISION IS NARROW. TWO OPTIONS, NOT PICKED
+
+> **Should a buyable product with no image be reachable at its own URL?**
+
+**Option A — leave it. A buyable no-image product stays unreachable.**
+
+- **Costs nothing today and nothing measurable ever.** Zero of the 446 appear in the GSC export: no
+  clicks, no impressions.
+- **But the measurement cannot detect the loss it is being used to dismiss.** A page that 404s
+  cannot accumulate search performance, so "no measured traffic" is guaranteed by the condition
+  rather than evidence about it. **The one number available is the one number that cannot answer
+  the question.**
+- Grows by ~24/week — currently 4.3% of Perfume Click's catalogue unreachable, and rising.
+- Any inbound link, share or existing index entry for these products 404s.
+
+**Option B — make the page reachable, keep it out of discovery.**
+
+- Requires `getProductById` to stop reading `products_active` (`lib/product-queries.ts:42`), **and**
+  `fmb_search_products` and `fmb_resolve_product` to gain their own image guard — **otherwise
+  imageless products start appearing in search results**, which is the opposite of the intent.
+- **Introduces a third state the codebase does not currently have: reachable but not discoverable.**
+  Everything today is either in `products_active` or absent, and a middle tier is a concept every
+  future reader has to learn.
+- The page renders with a placeholder — honest, and thinner than every other product page.
+- Reversible: it is a query source and two guards.
+
+**Not picked. Robbie's call.**
