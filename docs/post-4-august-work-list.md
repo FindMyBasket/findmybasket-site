@@ -23259,10 +23259,28 @@ close the gap, and closing the gap is not ours to do.**
 
 **Raised:** 24 August 2026 · **APPLIED** (#410). Implements item 262's Option B.
 
-> **WRITTEN AFTER THE FACT, ON 24 AUGUST.** #410 shipped the view and the query change with
-> comments citing "item 263" — **an item that did not exist.** The code referenced a record nobody
-> had written, which is the same defect as a comment pointing at a deleted function: it reads as
-> provenance and resolves to nothing. Caught by the contiguity check refusing item 264.
+#### A COMMENT CITING A RECORD NOBODY HAD WRITTEN
+
+**#410 shipped the view and the query change with comments citing "item 263". The item did not
+exist.**
+
+> **A reference whose weight comes from looking checkable.** Same shape as a comment pointing at a
+> deleted function: it reads as provenance, invites nobody to verify it, and resolves to nothing.
+> A reader who followed it would have concluded they had the wrong list, not that the citation was
+> empty.
+
+**WHY IT IS WORSE THAN A WRONG NUMBER.** A wrong figure is one wrong fact, and the next measurement
+corrects it.
+
+> **AN ITEM REFERENCE IS THE MECHANISM THIS ENTIRE LIST USES TO CARRY REASONING FORWARD.** Code
+> comments cite items; items cite each other; a decision made in August is reachable in December
+> only because the citations hold. **A dangling one degrades the instrument, not one comment** — it
+> makes every other citation slightly less worth following, because the reader now knows they
+> sometimes go nowhere.
+
+**Caught only because the contiguity check refused item 264.** Nothing was checking that a cited
+item exists — the check that saved it was counting gaps in a sequence, and it worked by accident of
+the next item needing a number.
 
 #### THE CHANGE
 
@@ -23444,7 +23462,27 @@ will disagree about the same chain.
 member of a rule. The residue's comment now records the move and why, rather than silently losing
 an entry.
 
-#### ONE TENSION, NOT RESOLVED
+#### THE RULE BELONGS IN SQL, AND THE NEAR-MISS IS THE ARGUMENT
+
+**The first draft of the regen script invented an RPC that does not exist** — `fmb_sql_select_ids`
+— and would have failed on its first real run. It was written because the script needed the rule
+and the rule was not anywhere yet, so the script reached for a way to carry it.
+
+> **One definition beats one in SQL and one in TypeScript drifting apart.** Putting the predicate in
+> `fmb_merged_into_departure_ids()` means the script transports a result and decides nothing. **A
+> rule expressed twice is a rule that will eventually be two rules**, and the second one is
+> discovered when they disagree about a page.
+
+#### 46925 MOVING OUT IS THE BETTER OUTCOME
+
+It was in `GONE_RAW_RESIDUE`, described individually as a one-off with its own reasoning. **It was
+never a one-off — it was an unrecognised member of a rule**, and the rule found it.
+
+> **The residue is cleaner for holding only what genuinely has none.** A constant whose whole
+> justification is "these eleven have nothing in common" is weakened by every member that turns out
+> to have something in common; removing one strengthens the ten that remain.
+
+#### ★ ONE TENSION, RECORDED WITH ITS PRECEDENCE RULE
 
 **`22179` is in the 104 class — no price rows, never had an offer — and is already gated at 410**,
 decided in item 255 because it carries search traffic and has no valid redirect target.
@@ -23452,6 +23490,19 @@ decided in item 255 because it carries search traffic and has no valid redirect 
 > **The class rule now says 404 for exactly that case.** The individual decision and the class rule
 > disagree, and the individual one is live.
 
-**Left as it is.** Reversing an approved decision as a side effect of writing a general rule would be
-the rule quietly overriding a judgement, and 1 click is not the reason to do it either way.
-**Flagged rather than resolved.**
+**Left as it is.** Reversing an approved decision as a side effect of writing a general rule would
+be **the rule quietly overriding a judgement**, and 1 click is not the reason to do it either way.
+
+> **WHICH WINS, WRITTEN DOWN RATHER THAN LEFT AS AN EXCEPTION NOBODY EXPLAINED:**
+>
+> **THE SPECIFIC DECISION WINS.** A rule derived from a class cannot know what a person saw on one
+> page. `22179` was decided with the page in front of someone — its traffic, its absent redirect
+> target, its actual name — and none of that is available to a predicate over a terminal node.
+>
+> A class rule is a good default for the members nobody has looked at, which is nearly all of them.
+> **It is not evidence about the one that somebody did look at.** So where a general rule and a
+> specific approved decision disagree, the general rule yields, and the disagreement gets recorded
+> here rather than silently resolved in either direction.
+>
+> **The failure mode this prevents:** a rule written months later, applied in bulk, quietly undoing
+> considered judgements one at a time — each reversal invisible because it looks like consistency.
