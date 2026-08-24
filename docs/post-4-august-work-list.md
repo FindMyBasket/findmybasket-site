@@ -23576,31 +23576,75 @@ number above 5000 as "implausible". **The negative test — a comment citing ite
 **Both negative tests now fail correctly**: a citation of item 9999, and a citation of a plausible
 next-number item that has not been written yet.
 
-#### WHAT ELSE IS IN THAT STATE — WRITTEN, CORRECT, RUN ONLY WHEN SOMEONE REMEMBERS
+#### WHAT ELSE RUNS ONLY BY HABIT — AND THE ANSWER IS MOSTLY "NOTHING, CORRECTLY"
 
-Asked because the contiguity finding is item 191's shape and was cheap to answer now.
+**39 of 58 scripts are invoked by neither CI nor `package.json`. That is not 39 things needing
+wiring, and reading it that way would be the wrong conclusion.**
 
-**39 of 58 scripts are invoked by neither CI nor `package.json`. Most of that is correct** —
-backfills, dry-run previews, validation harnesses and spikes are one-shot tools, and a tool that ran
-once does not want a schedule.
+> **A TOOL THAT RAN ONCE DOES NOT WANT A SCHEDULE.** Backfills, dry-run previews, validation
+> harnesses and spikes are one-shot by design. Scheduling them would manufacture noise and, worse,
+> **manufacture the impression of coverage.**
 
-**Two are standing-check shaped and unscheduled**: `brandrepeat-audit.mts` (its own header calls it
-a *"SAFETY AUDIT"* for a live matching rule) and `countunit-parity.mts` (a JS-versus-stored parity
-check). Parity and safety audits are recurring by nature; both run only by hand.
+**The question is not "what is unscheduled" but "what asserts a property that can drift".** Two
+qualify — plus one that was never unscheduled, it was **uncounted**.
 
-> **AND ONE IS WORSE THAN THE CONTIGUITY CHECK WAS.**
+#### THE TEST THAT LOOKED LIKE IT WAS IN THE SUITE — NOW FIXED
+
+`npm test` globbed `lib/**/*.test.ts` and **`scripts/**/*.test.mjs`**.
+**`scripts/streaming-csv.test.mts` is `.mts`, and had never run.**
+
+> **SHARPER THAN THE CONTIGUITY CHECK, AND THIS IS WHY: THAT ONE NEVER CLAIMED TO BE IN CI.** This
+> is named `.test.`, sits beside three `.test.mjs` files that do run, and is excluded by **one
+> character**.
 >
-> `npm test` globs `lib/**/*.test.ts` and **`scripts/**/*.test.mjs`**.
-> **`scripts/streaming-csv.test.mts` is `.mts`. It has never run in the suite.**
+> **"218 passing" carries no information about a file that was never counted.** A number that omits
+> something silently is not a weaker signal than one that includes it — **it is a different signal
+> wearing the same clothes.**
+
+A real test: parity against the legacy parser, **a cross-chunk torture test re-chunking at every
+byte boundary**, and the spec's edge cases — embedded commas and newlines, escaped quotes, CRLF/LF,
+empty and trailing fields, BOM.
+
+**Glob added. The suite went 218 → 219, all passing.** Reported because **the number everyone quotes
+changed**, and a count that moves unremarked is how the original defect survived.
+
+#### WHAT THE TWO STANDING CHECKS WOULD REPORT TODAY, BEFORE ANYTHING SCHEDULES THEM
+
+> **A standing check that starts red on its first scheduled run is worth knowing about before it
+> lands in an inbox.**
+
+**`brandrepeat-audit.mts`** — its header calls it a *"SAFETY AUDIT"* for the brand-repetition strip
+in `_shared/match-key.ts`. **Not run: it needs service credentials and there is no local `.env`.**
+Unknown, and stated as unknown rather than assumed green.
+
+**`countunit-parity.mts`** — also not runnable here, **but its SQL half is measurable and it would
+start red.**
+
+| | |
+|---|---:|
+| Live count-unit products | **3,670** |
+| Stored `match_key` differing from `fmb_build_match_key(brand, name)` | **2,368 — 64.5%** |
+
+**Completely systematic**: the SQL function normalises count units to `pcs`; the stored keys keep the
+source token — `1pc`→`1pcs`, `5ea`→`5pcs`, `4 sheets`→`4pcs`.
+
+> **THE SQL FUNCTION IS AHEAD OF THE STORED KEYS. That is not drift — it is an unfinished
+> migration**, and `countunit-parity.mts` and `countunit-mergeplan.mts` are its tooling.
 >
-> It is a real test — parity against the legacy parser, **a cross-chunk torture test that re-chunks
-> at every byte boundary**, and the spec's edge cases: embedded commas and newlines, escaped quotes,
-> CRLF/LF, empty and trailing fields, BOM. **It passes when run directly.** It sits in the same
-> directory as three `.test.mjs` files that do run.
->
-> **The contiguity check never claimed to be in CI. This one looks like it is in the suite** — it is
-> named `.test.`, it has neighbours that run, and it is excluded by **one character**. Nothing about
-> `# pass 218` suggests a file is missing from the count.
+> **SO THE RECOMMENDATION INVERTS: DO NOT SCHEDULE IT.** A standing check implies a property that
+> should hold and currently does not, for a known reason. **Scheduling it would convert an
+> unfinished job into a recurring alarm** — item 191's other half: a red meaning *"known and
+> unaddressed"* gets ignored, and takes the genuine reds with it.
+
+**Caveat, because this is not the check's own comparison.** `countunit-parity` diffs **JS against
+SQL**; I measured **stored against SQL**. Different questions — stored keys were written by the
+importer at import time, so a difference could be an outdated function or outdated rows, and this
+measurement **cannot separate them**.
+
+**And my first attempt was wrong**: I called `fmb_build_match_key(name, brand)` when the signature is
+`(brand, name)`, and got 100% divergence. **A result that implausible is the only reason it was
+checked** — the fourth probe defect this week, and the fourth caught by the answer looking wrong
+rather than by the method being sound.
 
 #### AND THE CONTIGUITY CHECK WAS NEVER WIRED INTO CI
 
