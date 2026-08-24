@@ -23909,3 +23909,97 @@ is only dangerous because the working tree can contain something the branch was 
 **Not a tooling change**, because a hook that blocks `add -A` would be routed around within a day.
 **A stated habit, recorded where the habit is** — and the reason it earns an item is that the second
 instance was invisible in a way the first was not.
+
+---
+
+### 270. The comment says why; the output says what
+
+**Raised:** 24 August 2026 · **APPLIED.** Labelling only — **nothing scoped, nothing reconciled.**
+
+#### THE GAP WAS NOT IN THE FUNCTION, IT WAS IN WHAT A READER RECEIVES
+
+`dq_snapshot`'s population choices are deliberate and documented in a comment dated **27 July**
+naming each figure and its reason. **That comment was never the problem and it has not been
+touched.**
+
+> **A reader gets a jsonb blob of figures with no statement of what each counts, and the reasoning
+> is a scroll away in a source they may not open.**
+>
+> **That is precisely how the wrong premise was formed on 23 August** (items 259, 261): I read the
+> output, inferred the design from the figures, and reported four accumulated populations that
+> nobody chose. **The comment answered the question. I never reached it.**
+
+**The comment says why. The output now says what. Neither replaces the other**, and the comment
+remains the reasoning.
+
+#### PER ROW, NOT PER SECTION
+
+`catalogue` mixes **three** populations:
+
+| Subsection | Population |
+|---|---|
+| `total_products`, `total_brands` | `all_products` |
+| `in_stock_rows`, `detached_rows` | `all_price_rows` |
+| `multi_retailer_products`, `avg_saving_pct`, `total_savings_pool`, `biggest_saving` | **`active_retailers_only`** |
+
+> **A section-level label would have been wrong for exactly the section whose numbers get quoted.**
+
+**A fourth column rather than a key inside the jsonb**: eight of the fifteen values are scalars
+(`to_jsonb(COUNT(*))`), and **wrapping them to carry a label would change every value's shape in
+order to add a label.**
+
+#### THE POPULATION REFERENCE — AND THE ONE NOTHING USES
+
+A `populations` section, four named populations with live counts:
+
+| Population | Rows | Used by |
+|---|---:|---|
+| `all_products` | 135,828 | `catalogue.total_products`, `total_brands` |
+| `all_price_rows` | 112,692 | identifier coverage, url health, freshness, duplicates, canonical size |
+| `active_retailers_only` | 112,177 | catalogue savings + comparison |
+| **`active_and_products_active`** | **103,863** | **NOTHING** |
+
+> **Listed BESIDE the three that are used, because that is what makes its absence visible.**
+> It is arguably the truest definition of *served* — active retailer **and** surviving
+> `products_active`'s other filters — and no measure adopts it.
+>
+> **Naming it at a section would imply it belongs there. Naming it in the reference states the fact
+> without asserting a home.** Adopting it would be a choice, not a discovery.
+
+*(103,863 rather than the 103,817 reported yesterday — the counts are live, not frozen.)*
+
+#### BUILT BY RENAMING, NOT BY EDITING FIFTEEN STATEMENTS
+
+Adding a literal to each of fifteen `SELECT`s meant fifteen regex edits inside a live 8.8KB
+function with nested subqueries — **the class of change where a transcription error leaves no diff
+to review** (item 209). Instead `ALTER FUNCTION … RENAME` carried the body **and its 27 July
+comment** verbatim into `dq_snapshot_raw`, and a wrapper adds the column.
+
+**The cost of a wrapper is that a label can drift from the source it names**, so the migration
+**asserts coverage in both directions** — no emitted row without a label, no label naming a row the
+function no longer emits. **Negative-tested rather than assumed**: a fabricated pair is detected
+(1), a real pair is not flagged (0), and no live row is unlabelled (0).
+
+#### NOTHING CONSUMES THIS, AND THAT IS THE JUSTIFICATION RATHER THAN A CAVEAT
+
+**No app code, no `lib/`, no script, no workflow reads `dq_snapshot`** — only the two migrations
+that created it. `dq_dashboard_log` is dormant: nothing writes it, its three rows date to 27 July.
+
+> **So nothing breaks — and nothing will see the labels either.**
+>
+> **The label helps the person who RUNS the function and READS the result. That person is the one
+> who formed last night's wrong premise, and that is the whole justification.** A label nobody
+> parses is not a weaker version of one a machine reads; it is aimed at a different reader.
+
+#### AND A CORRECTION IN THE MEASUREMENT THAT PRODUCED THIS
+
+My section-to-source extraction reported `catalogue.detached_rows` as reading **both**
+`retailer_prices` and `retailer_prices_live`. **It reads only the base table.**
+
+> The extraction grouped lines by statement **span** — from one `SELECT` to the next — and the span
+> for `detached_rows` **swallowed the 27 July comment block** sitting between the statements. The
+> comment mentions `retailer_prices_live`; the statement does not.
+>
+> **Reading the statement gave a different answer from reading the span** — the same distinction as
+> reading a source rather than its output, one level down. **A span is not a statement**, and a
+> boundary drawn by proximity will collect whatever is nearby.
