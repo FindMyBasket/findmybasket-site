@@ -23255,6 +23255,85 @@ close the gap, and closing the gap is not ours to do.**
 
 ---
 
+### 263. products_servable: reachable, as distinct from discoverable
+
+**Raised:** 24 August 2026 · **APPLIED** (#410). Implements item 262's Option B.
+
+> **WRITTEN AFTER THE FACT, ON 24 AUGUST.** #410 shipped the view and the query change with
+> comments citing "item 263" — **an item that did not exist.** The code referenced a record nobody
+> had written, which is the same defect as a comment pointing at a deleted function: it reads as
+> provenance and resolves to nothing. Caught by the contiguity check refusing item 264.
+
+#### THE CHANGE
+
+**One new view and one line in `getProductById`. Nothing existing was touched.**
+
+`products_servable` = `products_active`'s filters **minus the image requirement**. 99,861 rows
+against 99,229 — **632 extra, all imageless, of which 446 have a live in-stock offer.**
+
+#### ADDITIVE OVER SUBTRACTIVE, AND THE REASON IS THE POINT
+
+The alternative was to drop the image requirement from `products_active` and give each surface that
+needs it its own guard.
+
+> **`fmb_search_products` reads `products_active` in THREE separate places** — the full-text count,
+> the full-text matches, and the brand-hit branch. **Three edits on the site's search path, three
+> chances to miss one, and a partial fix there is imageless products silently appearing in search
+> results.**
+>
+> **The additive version edits nothing that exists**, so the sitemap, cards, featured block,
+> brand/subcategory/edit queries, `fmb_search_products` and `fmb_resolve_product` all keep the
+> image filter **for free.** Blast radius: one new view, one line.
+
+#### THE SUPERSET PROPERTY IS ASSERTED, NOT STATED
+
+The migration counts rows in `products_active` absent from `products_servable` and raises unless the
+answer is zero. **It fails loudly if the filter sets ever diverge** — a row in `products_active`
+missing from `products_servable` would mean the product page cannot serve something the sitemap
+advertises.
+
+#### THE THIRD STATE IS NAMED AT THE VIEW, NOT ONLY HERE
+
+`COMMENT ON VIEW` carries both sides: **`products_active` = DISCOVERABLE, `products_servable` =
+REACHABLE**, the difference is exactly *"we have this product and no photograph"*, and
+`products_active` is a strict subset so anything reading it is unaffected.
+
+> Every future reader meets the concept in code, and **"in `products_active` or absent" is the model
+> they arrive with.**
+
+#### VERIFIED ON THE PREVIEW BEFORE MERGE
+
+| Check | Result |
+|---|---|
+| Production control | `/product/7547` → **404** |
+| Preview | 7547, 129686, 132310 → **200** |
+| Placeholder rendered | ✓ |
+| Offer table, buy button | ✓ — Perfume Click, £3.10, £2.95 delivery |
+| **JSON-LD `image`** | **key absent, not empty** |
+| **`og:image`** | **absent, not broken** |
+| **Sitemap part 1** | 45,000 URLs, contains controls 834 and 1028, **does not contain 7547** |
+| Site search | returns a different Isntree product, **not this one** |
+
+**A near-miss worth recording:** the first probe reported a JSON-LD offer with `price: null` and no
+seller, on preview *and* production. **It is the `AggregateOffer`**, which correctly carries
+`lowPrice`/`highPrice` and has no seller. **The output was right and my extraction was wrong** —
+caught only by checking production before writing it up.
+
+#### AND THE FIX DOES NOT CLOSE THE GAP
+
+Recorded at the view as well as here: **445 of 446 are Perfume Click**, which supplies images for
+95.7% of its catalogue but not these. All single-retailer, **zero have an EAN**, none matches an
+imaged product, and ~24 arrive weekly spread evenly since onboarding — so not a failed import
+either.
+
+> **REACHABILITY IS THE REMEDY FOR THE SYMPTOM; THE FEED IS THE CAUSE**, and the cause is not ours
+> to fix.
+
+**`fmb_resolve_product` has no caller anywhere in the codebase** — built, documented in
+`docs/dashboard-build-brief.md`, unused. Worth knowing before someone maintains it.
+
+---
+
 #### THE DECISION IS NARROW. TWO OPTIONS, NOT PICKED
 
 > **Should a buyable product with no image be reachable at its own URL?**
@@ -23282,3 +23361,97 @@ close the gap, and closing the gap is not ours to do.**
 - Reversible: it is a query source and two guards.
 
 **Not picked. Robbie's call.**
+### 264. A class with a rule, and a population that moved twice under the measurement
+
+**Raised:** 24 August 2026 · **APPLIED** — 218 gated at 410, 104 left at 404.
+
+#### BOTH CORRECTIONS ARE THE SAME SHAPE: MEASURING A POPULATION AGAINST A SYSTEM THAT MOVED
+
+The "685 genuinely dead pages" was wrong twice, and neither was a counting error.
+
+| | Reported | Actual | Why |
+|---|---:|---:|---|
+| No image, not buyable | 190 dead | **186, now serving 200** | **Yesterday's `products_servable` change reached into today's population** |
+| Merged, keeper dead | 397 dead | **180 already 308 to a live page** | **A one-hop check answering a transitive question** |
+
+> **THE 186 MOVED BECAUSE OF A CHANGE I MADE MYSELF, ONE DAY EARLIER.** They have an out-of-stock
+> active-retailer row, so `products_servable` reaches them — correctly, and consistently with item
+> 253. I measured a population without accounting for my own edit to the thing defining it.
+>
+> **THE 180 MOVED BECAUSE MY FILTER ASKED WHETHER `merged_into` WAS LIVE — ONE HOP.**
+> `resolveCanonicalKeeper` follows `merged_into ?? parent_product_id` **transitively**, twelve hops.
+> `29561 → 43095 → 29560`, fetched: **308 to a live 200.** The resolver was right and my model of it
+> was one link short.
+>
+> **Both are the same shape: measuring a population against a system that moved under the
+> measurement** — once because I moved it, once because I modelled one step of something recursive.
+> **A population is not a set of rows. It is a set of rows AS SEEN BY a definition, and the
+> definition has to be the live one.**
+
+**Final: 372 dead, of which 51 are deliberate exclusions already correct. 321 needed a decision.**
+
+#### THE SPLIT: 410 THE 217, LEAVE THE 104 AT 404
+
+> **A 410 says THIS URL HAD CONTENT AND IT IS PERMANENTLY GONE.**
+
+| | Count | Verdict |
+|---|---:|---|
+| **Chain terminates on a departed retailer** | **218** | **410** — had content; **218 of 218** end at Superdrug or Branded Beauty, both `active=false`, zero live rows, departures complete under all six states |
+| **No price rows ever** | **104** | **404** — nothing ever left. *For a URL that was never a page, 404 is the honest answer* |
+
+218 rather than 217 because the general rule no longer special-cases Atelier, which is the same
+class.
+
+#### ★ THE CAVEAT TRAVELS WITH THE DECISION, NOT BENEATH IT
+
+Recorded at the constant, in the SQL function, and here:
+
+> **STATIC FOR FOUR MONTHS IS EVIDENCE ABOUT BEHAVIOUR, NOT ABOUT PERMANENCE.**
+>
+> These are **our own merges**. Their permanence is guaranteed by **nobody changing their mind**,
+> not by anything observed. **A MERGE IS PERMANENT UNTIL SOMEONE UN-MERGES IT.**
+>
+> A retailer departure is permanent because someone external decided. **This is not the same kind
+> of fact, and the 410 rests on the weaker one.** 0 new in four weeks and a 111-day median are good
+> evidence that nobody will — they are not evidence that nobody can.
+
+#### A RULE RATHER THAN A LIST — ITEM 254 APPLIED BEFORE IT BITES
+
+These 218 ids could have been pasted once. **Item 254's finding is that a hand-derived list has no
+second use**: Superdrug's and Branded Beauty's gone-sets cannot be regenerated, because the script
+requires the departing retailer to still be active and neither is. **That was discovered after it
+mattered.**
+
+> **THIS SET WILL NEED A SECOND USE THE NEXT TIME A DEPARTURE COMPLETES**, because the rule is
+> defined against departures generally and its output grows when one happens. **So it gets a
+> derivation now, while writing one is cheap.**
+
+**The rule lives in `public.fmb_merged_into_departure_ids()` — one definition, in SQL** — and
+`scripts/regen-merged-into-departure-ids.mts` transports it into the edge bundle. The script does
+not decide what belongs in the set. **The walk mirrors `resolveCanonicalKeeper` exactly**, and the
+function says so: if that traversal changes, this must change with it or the gate and the resolver
+will disagree about the same chain.
+
+#### NAMED FOR WHAT IT IS, AND SEPARATED FROM THE RESIDUE
+
+`GONE_RAW_MERGED_INTO_DEPARTURE`, not appended to `GONE_RAW_RESIDUE`.
+
+> **`GONE_RAW_RESIDUE` documents its ids INDIVIDUALLY, and that is only possible because there are
+> ten of them.** This is a class of 218 defined by a predicate. **Merging them would make the
+> residue undocumentable and this one look arbitrary.**
+
+**46925 moved out of the residue into the class** — it was never a one-off, it was an unrecognised
+member of a rule. The residue's comment now records the move and why, rather than silently losing
+an entry.
+
+#### ONE TENSION, NOT RESOLVED
+
+**`22179` is in the 104 class — no price rows, never had an offer — and is already gated at 410**,
+decided in item 255 because it carries search traffic and has no valid redirect target.
+
+> **The class rule now says 404 for exactly that case.** The individual decision and the class rule
+> disagree, and the individual one is live.
+
+**Left as it is.** Reversing an approved decision as a side effect of writing a general rule would be
+the rule quietly overriding a judgement, and 1 click is not the reason to do it either way.
+**Flagged rather than resolved.**
