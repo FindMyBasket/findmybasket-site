@@ -23745,62 +23745,102 @@ catalogue movement, not a disagreement.)*
 
 ---
 
-### 267. 2,368 keys behind the function they are meant to match
+### 267. The diagnosis was wrong, and it was what made the item read as urgent
 
-**Raised:** 24 August 2026, surfaced by item 265's audit · **OPEN. Needs an owner, not a check.**
+**Raised:** 24 August 2026 · **CORRECTED 24 August, same day.** Cosmetic. **A backfill is optional,
+not owed.**
 
-#### THE STATE
+#### ★ WHAT THE ITEM SAID, AND WHY IT WAS WRONG
 
-| | |
+> *"The SQL function is ahead of the stored keys."*
+
+**It is not.** The migration's own first line says it **mirrors** the JS —
+*"Mirror the JS `normaliseCountUnits()`"* — and running the JS confirms they agree: `5ea set` →
+`5pcs set`. **The two implementations are in parity and always were.**
+
+**The stored keys are behind BOTH implementations**, not behind one that moved deliberately.
+
+#### AND THAT CHANGES THE STORY THE ROWS TELL
+
+> **AN UNFINISHED MIGRATION WHERE ONE SIDE MOVED ON PURPOSE IS A JOB SOMEONE ABANDONED. A BACKFILL
+> THAT WAS NEVER WRITTEN IS A JOB NOBODY STARTED.**
+>
+> **Same rows, different story — and only the first implies someone decided something.** The
+> original framing put a person behind it: a migration begun, tooling built, work stopped. The
+> correct one has no such person. **The change shipped, new rows were correct from that moment, and
+> nobody ever went back — because nothing asked them to.**
+
+That difference is the whole reason the item read as urgent, and it should not have.
+
+#### THE CUTOVER IS UNAMBIGUOUS ONCE BUCKETED CORRECTLY
+
+| Week created | Divergent |
 |---|---:|
-| Live count-unit products | **3,670** |
-| Stored `match_key` ≠ `fmb_build_match_key(brand, name)` | **2,368 — 64.5%** |
+| 29 Jun | **93%** |
+| **6 Jul onward, every week to 17 Aug** | **0%** |
 
-**Completely systematic.** The SQL function normalises count units to `pcs`; the stored keys keep
-the source token:
+**My "28.6% after 3 July" was a week-boundary artefact** — 3 July sits inside the 29 June bucket, so
+the cut included rows the deployed change had not reached.
 
-| Stored | Function |
-|---|---|
-| `… serum mask 1pc` | `… serum mask 1pcs` |
-| `… foot 5ea` | `… foot 5pcs` |
-| `… dewy mask set 28g x 4 sheets` | `… x 4pcs` |
+> **The same shape as the partial-week trend.** A boundary drawn on the calendar rather than on the
+> event, producing a figure that is arithmetically correct and describes nothing.
 
-#### ★ THE DIAGNOSIS A PARITY CHECK CANNOT MAKE FOR ITSELF
+#### THREE TRANSFORMATIONS, NOT ONE — AND 2,709, NOT 2,368
 
-> **THE SQL FUNCTION IS AHEAD OF THE STORED KEYS.**
+| Cause | Rows |
+|---|---:|
+| Count-unit normalisation, number-attached (`5ea`→`5pcs`) | **2,610** |
+| Count-unit normalisation, standalone plural nouns (`pads`→`pad`) | **70** |
+| **Brand-repetition stripping** (`vt cosmetics vt cica`→`vt cosmetics cica`) | **29** |
+| **Total** | **2,709** |
+
+The third is **a different change** — `20260703130000_match_key_brand_word_repetition.sql`, which
+`brandrepeat-audit.mts` exists to audit. It shipped the same day, which is why the gap looked like
+one thing.
+
+> **2,709 rather than 2,368 because the name filter was narrower than the phenomenon — it missed
+> `pads`, `patches` and `pieces`.**
 >
-> **A parity check assumes two things SHOULD agree, and reports the size of the gap. It cannot say
-> which side moved, or whether the movement was deliberate.** Here one side moved on purpose: the
-> count-unit normalisation was added to the function and the rows were never backfilled.
+> **THE WEEK'S RECURRING MECHANISM ARRIVING IN THE NUMBER THAT DEFINED THE ITEM.** A population
+> measured through a filter, and the filter's reach reported as the population's size — the same
+> error as "58 mojibake rows", "eleven places", and the 685 dead pages. **This time it was the
+> headline figure of an item written to record that very class.**
+
+#### THE NEGATIVE CONTROLS ARE THE PART TO KEEP — ITEM 268 APPLIED, NOT CITED
+
+**Grep method:** known-absent token → **0 files**; known-present token → **51 files**.
+
+**Enumeration method:** it returned `merge_products` as a reader of `match_key`. **It is a false
+positive** — that function holds a *local variable* named `match_key` containing a merge audit label
+(`layer || '_' || confidence || '_score_' || score`), unrelated to the column.
+
+> **Identifying it as wrong is the evidence, not the enumeration passing.** A method that returns
+> only expected results might be discriminating or might be pattern-matching; **one that returns a
+> known-wrong hit which can then be ruled out has demonstrated it distinguishes.**
 >
-> **64.5% divergence that is completely systematic is not drift. It is an unfinished migration
-> wearing drift's clothes** — and the two want opposite responses. Drift wants a check. An
-> unfinished migration wants someone to finish or abandon it.
+> This is the defence item 268 said was missing: a case with a known answer, run through the
+> instrument before the instrument is trusted. **The probe defects this week all lacked one.**
 
-`countunit-parity.mts` and `countunit-mergeplan.mts` are that migration's tooling, and the
-migration stopped.
+#### WHAT REMAINS, AND WHETHER IT IS WORTH DOING
 
-#### WHY IT IS AN ITEM AND NOT A SCHEDULED CHECK
+**2,709 historical `match_key` values inconsistent with both implementations.**
 
-**Scheduling `countunit-parity` would convert a known job into a recurring alarm.**
+**Read by nothing that compares them.** The matcher recomputes both sides from `brand` and `name`
+(`import-awin-feed/index.ts:1011`); `match_chunk_lookups` selects on `match_brand`;
+`capture_catalog_health` tests only NULL-ness; `bulk_update_match_keys` writes; the views SELECT
+without predicate; `lib/`, `app/` and `components/` never mention it.
 
-> **Item 191's other half.** That item recorded two red workflows indistinguishable by colour — one
-> broken, one working as designed and reporting a real finding, both ignored. **A red that means
-> "known and unaddressed" trains people to ignore reds**, and it takes the genuine ones with it.
->
-> **2,368 rows behind their own function is a STATE. A state needs an owner. A check only tells you
-> the state is still there, weekly, in an inbox.**
+> **A BACKFILL IS OPTIONAL RATHER THAN OWED.** Nothing is wrong today, nothing degrades, and the
+> population is closed — zero new divergence in seven weeks.
 
-**Not measured, and needed before this can be decided:** whether anything reads `match_key` in a way
-that makes the divergence consequential today. The importer's matching tiers use their own
-computation; whether any query joins on the stored column is unestablished, and it is the difference
-between "cosmetic backlog" and "live matching defect".
+**THE CONDITION THAT WOULD MAKE IT MATTER: any future reader that computes a key fresh and compares
+it against the stored column.** Nothing does that today. The moment something does — a
+deduplication pass, a reconciliation job, a second matcher — **2,709 rows would silently fail to
+match themselves**, and the failure would look like a data problem rather than a stale column.
 
-**Also unestablished:** this measurement is **stored vs SQL**. The script's own check is **JS vs
-SQL**. They are different questions and only the second says whether the two *implementations*
-agree.
-
----
+**So the useful artefact is not the backfill. It is this record**, findable by whoever writes that
+future reader. `idx_products_match` carries `match_key` as its third column and nothing filters on
+it, which is the same fact from the other side.
 
 ### 268. Four probe defects in one week, all four caught by the answer looking wrong
 
