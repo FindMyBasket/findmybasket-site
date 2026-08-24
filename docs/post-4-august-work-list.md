@@ -26090,3 +26090,84 @@ that nobody will notice by eye, asserted on every run.
 **Deliberately not built in the same pass as the thing it would have caught.** Sizing it needs the
 import graph, `_shared` makes that non-trivial, and a check written in the same hour as its
 motivating incident tends to encode the incident rather than the class.
+
+---
+
+### 301. Deployed, then rendered — and the output disagreed with the version
+
+**Raised:** 24 August 2026 · **`send-routine-email` DEPLOYED, version 17. Two copy defects found by
+rendering. Nothing else deployed.**
+
+Dispatched alone, per item 300. The deployed `index.ts` is **byte-identical to the repo file**
+(sha `36afe5cb…` both sides), and the bundle carries `_shared/delivery.ts` and
+`_shared/require-service-role.ts` with it — **which is the item 300 bundling relationship, visible
+in the deploy payload.**
+
+#### THERE IS NO DRY MODE, AND NOTHING WAS SENT TO FIND OUT
+
+`?mode=test&routineId=X` **sends a real email**; it only skips the `last_emailed_at` update.
+`routine_email_log` stores `mode`, `ok` and `resend_message_id` and **not the body**, so no composed
+email can be read back after the fact.
+
+**So the body was rendered locally instead**, from the deployed source: the pure section of
+`index.ts` up to the first network call, plus `_shared/delivery.ts`, run in Node against four real
+saved routines (34, 25, 3, 42) with their real prices and real retailer delivery terms. **Output,
+not version** — and the difference turned out to matter.
+
+#### WHAT THE DEPLOY FIXED, CONFIRMED IN THE RENDERED BODY
+
+| | |
+|---|---|
+| **Em dashes** | **zero** in body and subject, all four routines |
+| **The invented £3.95** | gone — the baseline calls `deliveryFor(...)` per leg, and the rendered card reads **"Free delivery"** where the real threshold is met |
+
+#### WHAT RENDERING FOUND THAT THE VERSION COULD NOT
+
+```
+You could save
+£0.00
+vs buying everything at the most expensive retailer
+```
+
+**All four routines. Both defects.**
+
+**1. THE COPY DESCRIBES THE ANCHOR THAT WAS REPLACED.** Item 245 changed the arithmetic from
+`worstCaseTotal - best.total` to `allOptions[1].total - best.total` — a next-best anchor, correctly,
+in three places. **The sentence under the number still says "the most expensive retailer".**
+
+> **The number is now honest and the sentence beside it is not.** It claims a comparison against a
+> cherry-picked per-line maximum that the code no longer performs. **A change that corrected a
+> figure and left the words describing the old one is worse than either half alone**, because the
+> words are what a reader believes.
+
+**2. THE SAVINGS PANEL RENDERS AT ZERO.** `buildEmailSubject` gates on `result.saving > 0` and
+correctly returns "Your routine this month". `buildEmailHTML` gates the panel on `result.best`
+alone, so the body shows a large green **"You could save £0.00"** while the subject says nothing
+about saving.
+
+> **Two expressions of one rule, and only one carries the condition** — item 267's shape, in the
+> same function pair. The subject knows a zero saving is not worth announcing; the body does not.
+
+**Why zero on all four:** a single-retailer option must stock every item in the routine, so these
+routines yield one viable option each, and with one option there is no next best. **`saving = 0` is
+the truthful answer** — which is exactly what item 245 intended, and exactly what makes the stale
+sentence visible.
+
+#### THE NET EFFECT ON 1 SEPTEMBER, STATED PLAINLY
+
+August's emails claimed an inflated saving against an invented baseline. **September's will claim
+£0.00 against a baseline the code no longer uses.** The arithmetic is fixed; the presentation is
+not. **Better than August and still wrong**, and there are eight days to decide what it should say.
+
+**Not fixed tonight.** The deploy was the authorised action and the verification was the
+deliverable; changing customer copy is a separate decision with its own wording to agree.
+
+#### THE VERIFICATION METHOD IS THE TRANSFERABLE PART
+
+**Checking the version would have passed.** The bundle matches the commit, `decodeFeedName`-style
+probes would find the next-best code present, and the em-dash test — which reads the source file —
+passes. **Every version-level check says shipped.** Only composing the artefact a person receives
+showed a number and a sentence disagreeing.
+
+> **A deployment check answers "is the new code running". It cannot answer "does the new code say
+> something true."** Those are different questions and only the second one reaches the recipient.
