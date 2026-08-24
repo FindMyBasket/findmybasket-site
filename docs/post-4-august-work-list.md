@@ -23581,7 +23581,6 @@ It caught the dangling citation because someone happened to run it while writing
 Both now run in `.github/workflows/worklist-integrity.yml` on every pull request touching the list,
 the scripts, or any `.ts`/`.tsx`/`.mts`/`.sql`/`.md` file — because both failures are introduced by
 a branch and are cheapest to see before it merges.
-
 ---
 
 ### 266. Pipeline: three retailers, one of them a network we have never used
