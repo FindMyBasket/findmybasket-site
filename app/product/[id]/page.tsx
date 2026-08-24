@@ -8,11 +8,13 @@ import {
   getRetailerOffers,
   getRelatedProducts,
   getMoreFromBrand,
+  getProductMetadataFacts,
   resolveCanonicalKeeper,
 } from '../../../lib/product-queries';
 import { buildBreadcrumbJsonLd } from '../../../lib/breadcrumb';
 import { SPECIALIST_IMPORTER_RETAILER_IDS, categoryToSlug, categoryDisplay } from '../../../lib/queries';
 import { displayProductTitle } from '../../../lib/format/product-name';
+import { buildSeoDescription, productMetadataCopy } from '../../../lib/format/metadata-copy';
 import { displaySizeChip } from '../../../lib/format/pack-size';
 import { ProductDescription } from '../../../components/ProductDescription';
 import { ClickOutLink } from '../../../components/ClickOutLink';
@@ -67,29 +69,6 @@ function displaySub(sub: string | null): string {
   return sub.charAt(0).toUpperCase() + sub.slice(1);
 }
 
-function truncate(s: string, cap: number): string {
-  if (s.length <= cap) return s;
-  return s.slice(0, cap - 1).trimEnd() + '…';
-}
-
-// Build an SEO description from the real product description when available,
-// falling back to the generated template. When the description is short there's
-// room to append the brand + product name for keyword coverage.
-function buildSeoDescription(
-  description: string | null,
-  title: string,
-  fallback: string,
-  cap: number,
-): string {
-  const base = description?.trim();
-  if (!base) return truncate(fallback, cap);
-  const suffix = ` ${title}`;
-  if (base.length + suffix.length <= cap && !base.toLowerCase().includes(title.toLowerCase())) {
-    return base + suffix;
-  }
-  return truncate(base, cap);
-}
-
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const id = parseInt(params.id, 10);
   if (Number.isNaN(id)) return { title: 'Product not found | FindMyBasket' };
@@ -102,14 +81,56 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   const baseTitle = displayProductTitle(product.name, product.brand);
   const canonical = `${SITE_URL}/product/${id}`;
 
-  // Durable language only: no point-in-time prices or retailer counts baked into
-  // ISR-cached metadata, which would serve stale to crawlers. Range-based value
-  // language per the copy standing rules (no "cheapest", no specific prices).
-  const fallbackDescription =
-    `Compare ${baseTitle} prices across multiple UK retailers, with delivery factored in. Find the best value for your routine on FindMyBasket.`;
+  /*
+   * NO POINT-IN-TIME PRICES IN ISR-CACHED METADATA. Amended 24 August 2026; the rule
+   * this replaces read "no point-in-time prices OR RETAILER COUNTS", and the code below
+   * now states a count and names a retailer.
+   *
+   * THE AMENDMENT IS THE HONEST MOVE RATHER THAN THE BYPASS. A rule the code beneath it
+   * visibly breaks teaches the next reader to ignore the rule, which is worse than either
+   * the rule or the break. Item 279 settled the identical question on brand hubs and the
+   * reasoning transfers unchanged:
+   *
+   *   - `revalidate = 3600` and NO `generateStaticParams` on this route, so metadata is
+   *     regenerated on the same hourly cycle as the body it sits above. The count is
+   *     exactly as fresh as what it describes, and the two come from one regeneration.
+   *   - fmb_product_metadata_facts mirrors every condition in getRetailerOffers, so the
+   *     number in the title is the number of offers the page lists. Not an approximation
+   *     of it -- the same query shape, including the family-awareness that a naive count
+   *     gets wrong on 139 pages.
+   *
+   * WHAT THE RULE STILL FORBIDS, and this code still honours: an actual PRICE. None of
+   * the three templates carries one, because a price moves between revalidations in a way
+   * a stockist count does not, and because the copy standing rules bar "cheapest" and
+   * specific figures regardless of freshness.
+   *
+   * IF THIS ROUTE EVER GAINS `generateStaticParams` OR A LONGER WINDOW, the count and the
+   * retailer name go stale first and must be reconsidered before that change lands.
+   */
+  const facts = await getProductMetadataFacts(id);
+
+  /*
+   * THREE BRANCHES, CHOSEN BY HOW MANY RETAILERS ACTUALLY STOCK IT.
+   *
+   * The single template this replaces said "Compare {product} prices across multiple UK
+   * retailers" on every one of 99,241 pages. Measured 24 August 2026, counted the way the
+   * page counts:
+   *
+   *     2+ stockists   13,257   the comparison is real
+   *     1  stockist    73,669   there is a price, but nothing to compare it to
+   *     0  stockists   12,315   there is no price at all
+   *
+   * 86.6% of pages had a comparison claim with nothing to compare -- the same shape as the
+   * brand hubs (item 279) and the supplements articles (item 276). See item 281.
+   */
+  const { title, fallbackDescription } = productMetadataCopy({
+    baseTitle,
+    stockists: facts.stockists,
+    soleRetailer: facts.sole_retailer,
+  });
+
   const metaDescription = buildSeoDescription(product.description, baseTitle, fallbackDescription, 155);
   const socialDescription = buildSeoDescription(product.description, baseTitle, fallbackDescription, 200);
-  const title = `${baseTitle} | Compare prices | FindMyBasket`;
 
   return {
     title,

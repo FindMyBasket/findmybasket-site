@@ -3,6 +3,7 @@ import { BrandHub } from '../../../components/BrandHub';
 import { findBrandBySlug, getBrandMetadataFacts } from '../../../lib/brand-queries';
 import { getBrandHub } from '../../../lib/brand-hub-queries';
 import { categoryDisplay } from '../../../lib/queries';
+import { brandMetadataCopy } from '../../../lib/format/metadata-copy';
 
 export const revalidate = 3600;
 
@@ -59,48 +60,39 @@ export async function generateMetadata({
       alternates: { canonical },
     };
   }
-  // TWO TEMPLATES, CHOSEN BY WHETHER THERE IS ANYTHING TO COMPARE.
+  // THREE TEMPLATES, CHOSEN BY WHAT THE RANGE ACTUALLY HAS IN STOCK. The wording itself
+  // lives in lib/format/metadata-copy.ts alongside the three product-page templates, so
+  // both surfaces say the same things in the same words; what stays here is the reasoning
+  // that depends on THIS FILE's revalidate setting.
   //
-  // The single template this replaces said "Compare {Brand} prices across multiple UK
+  // The single template these replace said "Compare {Brand} prices across multiple UK
   // retailers" on EVERY brand page. Measured 24 Aug 2026: 2,121 of 2,784 brand pages -- 76.2%,
   // covering 30,935 products -- have ZERO products carried by more than one stockist. The same
   // unsupportable-claim shape as the supplements articles (item 276), sitting on the
   // highest-intent queries in the corpus: seventeen searches of the form "where is the best
   // place to buy {brand} online in the uk", 572 impressions, ZERO clicks. Item 279.
+  //
+  // THE SINGLE-STOCKIST TEMPLATE NAMES A RETAILER, AND THE COMMENT IT REPLACED FORBADE
+  // THAT: "no named retailers (a brand may not stock at any given shop)". THE RULE IS
+  // SATISFIED, NOT OVERRIDDEN. Its concern is durable copy going stale against moving
+  // stock; this name is resolved by fmb_brand_metadata_facts on the SAME call that picks
+  // the branch, then regenerated with the page every hour (revalidate = 3600, no
+  // generateStaticParams). Nothing is baked, and the retailer named is the retailer the
+  // body lists. IF THIS ROUTE EVER GAINS generateStaticParams OR A LONGER WINDOW, THIS
+  // CLAIM GOES STALE FIRST and must be reconsidered before that change lands.
+  //
+  // The third template exists because the second was covering two states: 167 hubs with
+  // NOTHING in stock were being told "delivery included in every price" when there was no
+  // price at all. Item 282.
   const facts = await getBrandMetadataFacts(brand.normalised_brand);
 
-  if (facts.comparable > 0) {
-    // GROUP 1: the comparison is real, so the count is stated rather than implied.
-    return {
-      title: `${brand.display_name} prices compared across ${facts.stockists} UK retailers | FindMyBasket`,
-      description:
-        `Compare ${brand.display_name} prices across ${facts.stockists} UK retailers with delivery ` +
-        `included, so you see what each option costs to get to your door. ` +
-        `${facts.comparable} product${facts.comparable === 1 ? '' : 's'} with more than one stockist.`,
-      alternates: { canonical },
-    };
-  }
-
-  // GROUP 2: one stockist, or none comparable. The query asks WHERE TO BUY, and for a
-  // single-stockist brand the honest answer is "one place, and here it is with delivery" --
-  // which answers the search rather than dodging it.
-  //
-  // THIS NAMES A RETAILER, AND THE COMMENT THIS REPLACES FORBADE THAT: "no named retailers
-  // (a brand may not stock at any given shop)". THE RULE IS SATISFIED, NOT OVERRIDDEN. Its
-  // concern is durable copy going stale against moving stock; this name is resolved by
-  // fmb_brand_metadata_facts on the SAME call that picks this branch, then regenerated with
-  // the page every hour (revalidate = 3600, no generateStaticParams). Nothing is baked, and
-  // the retailer named is the retailer the body lists. IF THIS ROUTE EVER GAINS
-  // generateStaticParams OR A LONGER WINDOW, THIS CLAIM GOES STALE FIRST and must be
-  // reconsidered before that change lands.
-  return {
-    title: `Where to buy ${brand.display_name} in the UK | FindMyBasket`,
-    description: facts.sole_retailer
-      ? `${brand.display_name} is stocked at ${facts.sole_retailer} from our UK retailers. ` +
-        `See the price with delivery included before you buy.`
-      : `See where to buy ${brand.display_name} in the UK, with delivery included in every price.`,
-    alternates: { canonical },
-  };
+  const { title, fallbackDescription } = brandMetadataCopy({
+    displayName: brand.display_name,
+    stockists: facts.stockists,
+    comparable: facts.comparable,
+    soleRetailer: facts.sole_retailer,
+  });
+  return { title, description: fallbackDescription, alternates: { canonical } };
 }
 
 export default async function BrandSlugPage({

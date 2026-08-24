@@ -245,6 +245,7 @@ import pako from "https://esm.sh/pako@2.1.0";
 import { streamFeedRowBatches, FeedFetchError } from "./_streaming-fetcher.ts";
 import { inferCategorisationForImport, type TopCategory, type ImportTopCategory } from "../_shared/categorisation.ts";
 import { pickDescription } from "../_shared/description.ts";
+import { decodeFeedName } from "../_shared/strip-html.ts";
 import {
   normaliseForMatch,
   buildMatchKey,
@@ -2050,7 +2051,10 @@ serve(async (req) => {
     if (fields.length === 1 && !fields[0].trim()) continue;
     feedRows++;
 
-    let name = fields[idx.product_name] || "";
+    // DECODED FIRST, ahead of the Debenhams hygiene below and everything after it, for
+    // the same reason that hygiene runs early: excludes, match_key and categorisation
+    // must all see one clean name. Item 284.
+    let name = decodeFeedName(fields[idx.product_name]);
     // Debenhams (retailer 28) only: the AWIN feed's product_name field ships
     // pre-polluted with gender tags ("Men's"/"Mens"), a trailing " in {variant}"
     // colour/shade attribute, and a " | Size:" clause. This is a feed defect, not

@@ -24752,3 +24752,431 @@ rather than hypothetical, which is exactly what item 275 said was unproven.
 
 > **What it does settle:** *"the numbering check will catch it"* is now demonstrably false, and the
 > demonstration cost nothing because the second check was already there.
+
+---
+
+### 281. Six metadata templates, and a metric that did not count the way the page counts
+
+**Raised:** 24 August 2026 · **99,241 product pages and 2,640 brand hubs. The largest metadata
+change the site has had.**
+
+#### THE CORRECTION LEADS, BECAUSE IT ALMOST SHIPPED INSIDE THE FIX
+
+The split reported to justify three branches was **13,118 / 73,681 / 12,442**. That counted each
+product's own `retailer_prices` rows. **The page does not count that way.** `getRetailerOffers` is
+family-aware: a canonical parent surfaces every shade child's offers.
+
+| | Own rows *(as first reported)* | Family-aware *(what renders)* |
+|---|---:|---:|
+| 2+ stockists | 13,118 | **13,257** |
+| 1 stockist | 73,681 | **73,669** |
+| 0 stockists | 12,442 | **12,315** |
+
+> **139 pages would have carried a "one stockist" or "not currently in stock" title while
+> rendering two or more offers.** The title would have contradicted the body directly beneath it.
+
+**This is item 255's shape arriving in metadata.** There, a drift check reported green while the
+thing it checked was broken, because the check's definition and the subject's definition had
+drifted apart. Here a count and the renderer disagree about what a stockist is, and the visible
+symptom would be a page arguing with itself.
+
+**The fix is structural, not arithmetical.** `fmb_product_metadata_facts` mirrors every condition
+in `getRetailerOffers` and `pickFamilyOffer` — the family expansion, `r.active`, the `price > 0`
+and non-empty-`url` falsy guard, and in-stock preference — and the reasoning for each is on the
+function. A metric that describes a rendered page has to be derived from the renderer's own
+definition or it is measuring something else with the same name.
+
+#### THE SIX TEMPLATES
+
+Product pages, by how many retailers stock the product:
+
+| | Pages | Says |
+|---|---:|---|
+| **A** 2+ stockists | 13,257 | `… prices compared across {N} UK retailers` |
+| **B** 1 stockist | 73,669 | `… \| {Retailer} price with delivery` |
+| **C** 0 stockists | 12,315 | `… \| Not currently in stock` |
+
+Brand hubs, by what the range has in stock: **Group 1** (629, comparable products) states the
+count; **Group 2** (1,844) names the sole retailer or keeps the general delivery line; **Group 3**
+(167, nothing in stock) claims no price at all — see item 282.
+
+**All six live in `lib/format/metadata-copy.ts`**, moved out of both routes rather than copied into
+a second file. Two surfaces saying the same thing in the same words is a property of there being
+one source, not of two files being kept in step by hand — item 267's drift shape, avoided by
+construction. The reasoning that depends on each route's `revalidate` stays at each route.
+
+#### TWO DECISIONS TAKEN EXPLICITLY
+
+**The line-105 rule was AMENDED, not bypassed.** It read *"no point-in-time prices or retailer
+counts baked into ISR-cached metadata"*, and branch A states a count while branch B names a
+retailer. Item 279 settled the identical question on brand hubs and the reasoning transfers
+unchanged: `revalidate = 3600`, no `generateStaticParams`, so metadata regenerates on the same
+hourly cycle as the body and the count is exactly as fresh as what it describes. **What the rule
+still forbids and this code still honours is an actual price**, which none of the six carries.
+
+> **A rule the code beneath it visibly breaks teaches the next reader to ignore the rule**, which
+> is worse than either the rule or the break. The comment now says what is true, including the
+> condition that would undo it: if this route ever gains `generateStaticParams` or a longer
+> window, the count and the retailer name go stale first.
+
+**The name is truncated; the suffix is kept whole.** `TITLE_CAP = 110`, and the product name is
+shortened to make room rather than the claim being cut off mid-sentence. **The suffix is the part
+that matches the query** — "prices compared across 3 UK retailers", "Boots price with delivery" —
+so a title cut mid-claim is worse than a shortened name followed by an intact one. Live titles are
+median 52 characters, p90 75, max 200, so the cap is a tail control rather than something most
+pages meet.
+
+#### THE THIRD REFUSAL
+
+> **The programme has proposed a comparison claim three times and measurement has refused it three
+> times.** 91.3% of Boots products are Boots-only; 86.6% of all product pages have one stockist or
+> none; 76.9% of brand hubs had a comparison claim with nothing to compare. Three different
+> surfaces, three different populations, the same check run before the copy each time, and **the
+> majority template has never once been the comparing one**. The pattern is not that a particular
+> claim was too strong. It is that the comparison claim is the minority case on every surface
+> measured so far, and the default should be written as though it is — with the comparing branch
+> as the exception that has to earn its count.
+
+---
+
+### 282. One branch covering two states, one size down
+
+**Raised:** 24 August 2026 · **167 brand hubs. Found before anyone saw it.**
+
+Item 279 split brand-hub metadata into two templates on whether anything was comparable. **The
+second one covered three states and chose between two lines**, on whether `sole_retailer` was set:
+
+| `comparable = 0` and… | Hubs | Line served | |
+|---|---:|---|---|
+| 1 stockist | 1,654 | "stocked at {Retailer}" | correct |
+| 2+ stockists | 190 | "delivery included in every price" | correct — prices exist |
+| **0 stockists** | **167** | **"delivery included in every price"** | **no price exists** |
+
+Polytar is the instance that surfaced it: one product, nothing in stock, `stockists = 0`,
+`sole_retailer = null`, so it fell to the fallback and asserted delivery on a price that does not
+exist.
+
+> **This is the same defect as the single template item 279 replaced, one size smaller: a branch
+> covering two states, with the weaker one inheriting the stronger one's claim.** Splitting on
+> `stockists === 0` fixes all 167 and gives them the same words as product branch C.
+
+**Recorded as mine.** It was written on 24 August and found on 24 August, by measuring a template's
+population before writing the next one rather than after someone reported it. **The only reason it
+is small is that the check ran again.**
+
+---
+
+### 283. One comma defeated the duplicate guard on 2,092 pages
+
+**Raised:** 24 August 2026 · **The only one of the three feed-copy defects that is a rendering fix.**
+
+`buildSeoDescription` appends the product title to a short description for keyword coverage, guarded
+against appending a title the description already contains:
+
+```ts
+!base.toLowerCase().includes(title.toLowerCase())
+```
+
+**An exact substring test, and one character of punctuation defeats it:**
+
+```
+description  "…Sticky Toffee Pudding Shower & Bath Gel, 500ml"
+title        "…Sticky Toffee Pudding Shower & Bath Gel 500ml"
+```
+
+so `/product/134110` served its own name twice in its meta description.
+
+| Pages taking the append branch | **4,567** |
+|---|---:|
+| …where the description already contains the title, punctuation aside | **2,092 — 45.8%** |
+
+**The guard now compares on `comparisonKey`** (letters and digits only), which closes all 2,092.
+
+> **The guard was not missing. It was written against the raw strings, so it protected against the
+> case where the two matched exactly and nothing else** — and the case where they match exactly is
+> the case least likely to occur, because the two strings come from different fields of the same
+> feed and are punctuated independently.
+
+---
+
+### 284. One corrupt character, three defects, two layers apart
+
+**Raised:** 24 August 2026 · **2 names, 57 descriptions, 7 pages serving one today.**
+
+**Product names were the one feed field never passed through the entity decoder.** `stripHtml`
+decodes descriptions; every importer took the feed's title field raw. So `products.name` on
+`/product/151174` stored `Pestle &amp; Mortar Chummi Lip Mask` while `brand` and `description` on
+the same row held a clean `&`.
+
+**The consequences were not cosmetic, and only the first was visible:**
+
+1. React escapes the stored string correctly, so the served title read **`&amp;amp;`** — double
+   escaped.
+2. `stripBrandPrefix` builds `^Pestle & Mortar[\s\-:]*`, which cannot match `Pestle &amp; Mortar`,
+   so `displayProductTitle` prepended the brand **again**: *"Pestle & Mortar Pestle & Mortar
+   Chummi Lip Mask"*.
+3. `fmb_build_match_key` kept the letters. The stored key was
+   **`pestle mortar amp mortar chummi lip mask 20g coconut`**, so the product could not match a
+   clean row for the same item from any other feed.
+
+> **ONE CORRUPT CHARACTER DEFEATED A STRING-EQUALITY GUARD TWO LAYERS DOWNSTREAM.** That is the
+> transferable part, not the ampersand. A guard written as exact string equality is only as sound
+> as the cleanliness of both sides, and neither side announces when it stops being clean.
+
+#### THE DESCRIPTION RESIDUE WAS THE VOCABULARY GAP, NOT A DIFFERENT BUG
+
+`stripHtml` **does** run on descriptions, and 57 still carried entities. `NAMED_ENTITIES` held 20
+entries; the residue was exactly what fell outside it — `&bull;` (651 occurrences), `&shy;`,
+`&ccedil;`, `&iacute;`, `&dagger;`, `&szlig;`, `&icirc;`, `&ocirc;`. **A decoder defined by a
+vocabulary decodes only that vocabulary**, and the leftovers are not random.
+
+**The replacement list was derived by counting the residue in storage**, not guessed at a second
+time. The lookup also now tries exact case before lower-case, which is what lets the real-world
+`&Bull;` decode while stopping `&Dagger;` (‡) from silently becoming `&dagger;` (†).
+
+#### THE BACKFILL WAS NOT OPTIONAL
+
+**Importers write `name` and `match_key` on CREATE only** — `updateActions` carries price, url,
+in_stock, ean, mpn and image_url. So the ingest decode fixes future creates and **would have left
+these two rows broken permanently**, on pages that are re-imported daily.
+
+**Only 7 pages serve a corrupt entity today** (2 names, plus 5 of the 57 descriptions where the
+entity falls inside the first 200 characters; the rest sit in ingredient lists past the truncation).
+**Small, and worth naming precisely rather than rounding up to 59.**
+
+#### ITEM 237 SWEPT THIS CLEAN THREE DAYS AGO, AND IT REFILLED THE NEXT DAY
+
+Item 237 decoded 51 entity rows on **21 August** and reported zero remaining. Product 151174 was
+created on **22 August**. **The sweep did not miss it; it did not exist yet.**
+
+> **Item 237 fixed the data and never closed the source.** Names were not decoded at ingest before
+> that pass and were not decoded at ingest after it, so the only possible outcome was recurrence —
+> and the measured half-life was one day.
+
+**A backfill without a source fix reports a clean population, accurately, for as long as it takes
+the next import to run.** That is the argument for **the importer change being the substance of
+this item and the backfill being the tidy-up**, rather than the other way round.
+
+##### THE GENERAL FORM
+
+> **A CLEANUP WITH AN OPEN SOURCE HAS A HALF-LIFE, NOT A RESULT.** "Zero entity rows remaining" was
+> true when item 237 wrote it and was true for one day. The number was never wrong; it was a
+> measurement of a stock while the flow was still running, reported in the grammar of a fix.
+>
+> **The tell is the tense.** A cleanup that closes its source can say "there are none". A cleanup
+> that does not can only say "there were none on 21 August" — and the difference is invisible in
+> the report, because both produce the same count. **Ask of any sweep: what refills it, and has
+> that been closed?** If the answer is "nothing writes it any more", the count is a result. If the
+> answer is "the next import", the count is a timestamp.
+
+This is why the same shape keeps arriving. It is the reason a frozen fixture reports the same clean
+result forever, and the reason a population defined by its detector measures the detector: **each
+is a number that describes the measuring, phrased as though it described the world.**
+
+#### `&Dagger;` WOULD HAVE BECOME A DIFFERENT CHARACTER, SILENTLY
+
+The lookup was `NAMED_ENTITIES[body.toLowerCase()]`. That lower-casing is load-bearing in one
+direction — it is what lets the real-world `&Bull;` (present in feed text) decode at all — and
+quietly wrong in the other: **`&Dagger;` (‡) would have resolved to the `dagger` entry and rendered
+as †.**
+
+> **A wrong character that renders is worse than one that does not.** It throws nothing, logs
+> nothing, and passes every check that asks whether the entity was decoded — because it *was*
+> decoded, into the wrong glyph. The failure mode of a decoder is not usually an error; it is a
+> plausible substitution.
+
+**The lookup now tries exact case first and falls back to lower-case**, which keeps `&Bull;` working
+and stops the substitution. Neither entity appears in the current catalogue; this was added with
+the map, before either could arrive.
+
+#### THE FALLBACK LENGTHS ARE A STATED BOUND
+
+Branches A and C were shortened after being drafted. The fallbacks fire on **27,553 of 99,241 pages
+(27.8%)** — every page with no usable catalogue description — and each repeats the product name,
+median 52 characters and p90 75. **C as first drafted was 195 characters at a median name and
+truncated on every one of them.**
+
+They are now written to fit the 155-character cap at a median-length name. **Longer names still
+truncate, and that is the intended degradation** — written in the code beside the templates rather
+than left for someone to rediscover from a truncated description. **The brand-hub wording was NOT
+shortened to match**: brand names are short, those templates never truncate, and item 279's copy
+shipped as written. Shortening it for symmetry would have changed live copy to fix a problem it
+does not have.
+
+---
+
+### 285. A hold is only as strong as the least likely route to it
+
+**Raised:** 24 August 2026 · **REVERTED. Product 105424 is back in its held state.**
+
+> **A HOLD IS ONLY AS STRONG AS THE LEAST LIKELY ROUTE TO IT.** Item 237 recorded this one in both
+> places its author expected a fixer to arrive from — **an entity sweep, and the regex** — and the
+> change arrived from a third: **a defect first seen in a page title**, which reads neither.
+
+#### THE MECHANISM
+
+Item 237, on 21 August, decoded 51 of 52 entity rows and **deliberately held one**. Product 105424
+is `Sweed Le Lipstick-90&#039;s Model`; decoded, `COUNT_UNIT_RE` reads `90's` as a pack count and
+the key becomes `sweed le lipstick 90pcs model` — **ninety pieces, from a shade name.** The
+undecoded entity was accidentally shielding it. The hold went in two places:
+
+| Placement | Written for | Read by this change? |
+|---|---|---|
+| `standing_check_findings`, `held:105424:entity-shields-count-unit`, status **open** | whoever queries open findings, or re-runs an entity sweep | **no** |
+| Comment on `COUNT_UNIT_RE` in `_shared/match-key.ts` | whoever fixes the regex | **no** |
+
+The comment states the trap in the exact words of what happened: *"if you decode that row without
+fixing this regex, you write a false pack count into the matcher's key inside a change that looks
+like a text fix."* **The backfill in item 284 decoded it anyway, and wrote `90pcs` into the key.**
+
+> **The note described the change perfectly and was never in front of the person making it.** This
+> arrived as a METADATA-COPY problem — an ampersand noticed in a `<title>` — and the path from
+> "fix the page title" to "you are about to move a matching key" passes through neither the
+> findings table nor `match-key.ts`.
+
+**Reverted within the same session**, to the exact stored name and key, verified by reading the row
+back. **The revert is not the finding.** The finding is that discoverability was scoped to the
+routes the author could foresee, and the routes an author can foresee are the ones they came by.
+
+#### THE REMEDY IS A GUARD, NOT A BETTER NOTE
+
+The instinct after this is to add a third placement. **That is the same mistake at greater length:**
+a fourth route exists and nobody has thought of it yet.
+
+`standing_check_findings` already holds the fact — machine-readable, status `open`, keyed by product
+id. **A bulk write to `products.name` or `products.match_key` that refuses the intersection catches
+every route**, including the ones nobody anticipated, because it sits at the write rather than on
+the path to it.
+
+> **That is the difference between a note and a guard.** A note has to be read by someone who does
+> not know they need it. A guard has to be passed by everyone, whether they know or not.
+
+**Scheduled as its own change**, next, ahead of the departed-brand rule (item 288).
+
+#### 151174 STANDS, AND FOR THE OPPOSITE REASON
+
+The other decoded row lost `amp` and a doubled brand from its key
+(`pestle mortar amp mortar chummi lip mask 20g coconut` → `pestle mortar chummi lip mask 20g
+coconut`) and gained nothing false. **Item 237's own rule governs both**: recompute when the edit
+changes what the derivation KEEPS. It does for both; the difference is what it changes them into,
+which is why the two rows needed to be looked at individually rather than as a population of two.
+
+#### THE INGEST DECODE REMOVES THE SHIELD FOR FUTURE ROWS, AND THAT IS ACCEPTED
+
+With names decoded at ingest, a future feed sending `90&#039;s` produces `90's` and hits the same
+regex. **This is not a new exposure.** Three rows already carry the misparse from clean feeds that
+never encoded the apostrophe at all — `70's Shimmer`, `90's Baby`, `90's Nude` — so the shield only
+ever protected rows whose feed happened to encode it. **Eight rows catalogue-wide carry
+`[0-9]+'s`; four are genuine pack counts and four are decades.** The population is measured and
+waiting for the gated `COUNT_UNIT_RE` change, which is where it belongs.
+
+### 286. Run-together supplier text, and a typo left alone
+
+**Raised:** 24 August 2026 · **Recorded, not fixed.**
+
+Two of the four sampled pages showed the same mechanism, not two:
+
+```
+/product/9269    "Boots Repel Cooling Spray 50mlTargeted skin coolling action."
+/product/14085   "HABI SUNNY SHIELD SPF40 lotion 50mlSTEP 5 - PROTECTAllantoin…"
+```
+
+The supplier's description **opens with the product name glued to the next sentence**, from block
+tags stripped upstream without a separator.
+
+| Descriptions starting with their own product name, no separator | **824** |
+|---|---:|
+| Descriptions with a run-together capital junction in the served window | **978** |
+
+**Not fixed in this pass.** Repairing it means inserting sentence boundaries into third-party prose
+by inference, and the inference is not reliable — `SPF40`, `bareMinerals` and `Dr.PAWPAW` are the
+same character pattern as the defect. **A fix that cannot tell a defect from a brand name would
+damage more than it repaired**, and the population is now measured rather than estimated.
+
+#### THE TYPO IS NOT OURS TO CORRECT
+
+`coolling` is what Boots publishes. **Repairing our own mangling and rewriting a supplier's copy
+are different acts** — the first restores what they sent, the second overrides it — and only the
+first is in scope here. **Named explicitly so that "we fixed the feed copy" is not read as covering
+it.**
+
+---
+
+### 287. Reading the artefact instead of the source, a fifth time
+
+**Raised:** 24 August 2026 · **The reported defect was correct behaviour.**
+
+`/product/134110` was reported as serving *"`&amp;` unescaped in both title and description"*. It
+was read out of the served HTML, **where `&amp;` is the correct escaping of a literal `&`.** The
+stored value is a plain ampersand. **Correct behaviour was reported as a bug.**
+
+> **It was caught by querying the row.** The count came back as one affected product, and that one
+> was a different id — which is what sent the check to the stored value, where the real defect
+> (item 284) was, and where the reported one was not.
+
+**Fifth instance of the same habit**, after the 30 URLs reasoned from `resolveCanonicalKeeper`
+rather than fetched, the `to_char` simulation, the `grep -honE` line numbers read as item ids, and
+the two sample truncations mistaken for data corruption.
+
+> **The shape is constant: a derived artefact — rendered HTML, a formatted string, a tool's output,
+> a truncated sample — was read as though it were the source, and every one of its own
+> transformations was attributed to the data.** The correction each time is the same and it is
+> cheap: look at the row.
+
+**The self-correction also changed the fix.** Had the report stood, the change would have been a
+render-layer unescape — which would have hidden a genuinely corrupt stored value behind a second
+transformation and made every real `&` indistinguishable from a broken one.
+
+---
+
+### 288. The departed-brand population: 16 hubs, 934 impressions, all 404
+
+**Raised:** 24 August 2026 · **Pebl is the instance, not the case.**
+
+**433 brands have departed** — rows in `products`, none in `products_active`. 3,037 carried ever,
+2,604 live. When a brand's last product drops out, its hub 404s, because the slug is derived from
+the brand string and nothing stores it.
+
+Matched against the 1,000-query export on word boundaries, 24 departed brands appear. **8 are
+substring accidents** — `lip gloss` catching "morphe lip gloss", `always` catching "khloe kardashian
+almost always perfume", `rescue` catching "complexion rescue vanilla", plus `vitamin c`, `vitamin e`,
+`body butter`, `witch` ("witch hazel", ingredient-led) and `superdrug` (retailer-led). The eight
+brands under four characters were scanned separately; the only hit, `pop`, was "sunflower pop
+women's fragrance" — also an accident.
+
+**16 survive as genuine brand-led demand. All 16 hub-404, each one fetched.**
+
+| Brand | Impressions | Clicks |
+|---|---:|---:|
+| **pebl** | **300** | 0 |
+| flawless *(Finishing Touch Flawless)* | 128 | 0 |
+| hero cosmetics | 116 | 0 |
+| daise | 70 | 0 |
+| mar e sol | 61 | 1 |
+| solait | 44 | 0 |
+| bubble t cosmetics | 36 | 0 |
+| makeup academy | 35 | 0 |
+| apis | 34 | 0 |
+| optimum | 26 | 0 |
+| glowjob | 22 | 0 |
+| trouble maker | 21 | 0 |
+| naturally radiant | 20 | 0 |
+| honey baby naturals | 18 | 0 |
+| technic | 2 | 1 |
+| resibo | 1 | 1 |
+| **Total** | **934** | **3** |
+
+`hero cosmetics` and `makeup academy` are **bare brand names** ranking at positions 48 and 67 — on
+pages that do not exist.
+
+#### THE SAME SHAPE AS `rimmel-london`, AND AN ALIAS DOES NOT APPLY
+
+The renamed-brand case (item 271) is recovered by `brand_aliases`, because the old name and the new
+name are the same brand. **Here the brand left.** There is no target to redirect to, so the
+question is what a departed hub should serve, and it is not settled by this record.
+
+> **This is a floor, not a total.** The export is capped at 1,000 rows with no documented ordering,
+> so 16 measures the sweep's reach and not the surface area. **417 of the 433 departed brands are
+> absent from the export, which is evidence about the export and not about them.**
+
+**Nothing changed for these 16.** The population is measured; the rule is not written.
