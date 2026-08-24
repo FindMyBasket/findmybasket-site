@@ -23057,3 +23057,82 @@ means **effectively no search performance rather than provably none.**
 
 State 5 requires redirects curated **or an explicit finding that none is needed**. It is now the
 second, recorded — **which is the difference between a state satisfied and a state skipped.**
+
+---
+
+### 261. Three inference failures in three days, on three different surfaces
+
+**Raised:** 24 August 2026 · **Finding only. Nothing proposed.**
+
+#### THE MECHANISM IS THE FINDING
+
+| # | Day | What was inferred | From | Instead of |
+|---|---|---|---|---|
+| 1 | 23 Aug | 30 URLs serve a 404 | reading `resolveCanonicalKeeper` | **fetching the 30 URLs** — 19 redirect |
+| 2 | 23 Aug | "No drift. The committed list matches live state." | a workflow **reasoning about a script it never loaded** | asserting the script exists |
+| 3 | 24 Aug | `dq_snapshot`'s scoping was accidental | **its jsonb output** | reading the function, which documents every choice |
+
+> **SAME FAILURE, THREE SURFACES: A CONFIDENT CONCLUSION DRAWN FROM A DERIVED ARTEFACT INSTEAD OF
+> THE SOURCE THAT PRODUCED IT.**
+>
+> A redirect path inferred from the code that implements it. A file's existence inferred from a
+> green tick. A design decision inferred from the numbers it produced. **Each artefact was real and
+> each inference was locally reasonable** — the redirect logic did say that, the tick was green, the
+> figures were exactly as reported.
+>
+> **What they share is that the source was cheap to check and was not checked.** A `curl` loop over
+> thirty URLs; `test -f`; scrolling to the top of a function whose middle had already been read.
+
+**Instance 3 is the sharpest because the source was already open.** `dq_snapshot`'s
+`canonical_size` `CASE` was read in full on 23 August (item 252). **The comment that explains the
+whole scoping design sits eleven lines above it and was never read**, because the question that day
+was about a different part of the same function.
+
+> **Reading part of a source does not make it a source you have read**, and nothing marks the
+> boundary between the part you read and the part you assumed.
+
+#### THE CORRECTION TRAVELLED
+
+Item 259 reported four accumulated populations and an unlabelled inconsistency. That framing was
+then repeated back as **"inconsistently right rather than consistently wrong — harder to notice, and
+worse to inherit"** — which is a good observation about a defect that does not exist.
+
+> **A CORRECTION TRAVELS NO FURTHER THAN THE PERSON WHO REPEATS IT.** The premise came from reading
+> output; the framing built on it was sound reasoning applied to a false input, and it read as
+> *more* convincing than the original because it added an insight.
+>
+> **The cost of an unverified premise is not paid by the person who forms it.** It is paid by
+> everyone downstream who reasons correctly from it, and their reasoning being good is what makes
+> the error durable.
+
+**What was actually true:** two deliberate populations (`retailer_prices` and
+`retailer_prices_live`, the latter a named view), one drift artefact (`mqw.ean_coverage_den` is the
+same population measured a week earlier — `fmb_quality_snapshot_write` reads the same view), and one
+genuinely unused. **Documented in place on 27 July 2026, naming every figure and its reason.**
+
+#### THE PAYOFF IS STRONGER WITH ITS ATTRIBUTION FIXED
+
+The bare-table decision for `price_freshness` was **not** made yesterday as item 259 implied. It was
+made **27 July 2026**, at the Superdrug retirement, on principle, and written down.
+
+> **DRAWN ON 27 JULY WITH NO CONSUMER. LOAD-BEARING ON 24 AUGUST — TWENTY-EIGHT DAYS LATER.**
+>
+> **Four weeks is better evidence than one day.** A distinction that survives a day might be luck or
+> hindsight. One drawn on what a measure *means*, with nothing depending on it, that becomes the
+> **only** instrument for a condition nobody had imagined — four weeks and one retirement later —
+> is evidence that **reasoning about meaning beats reasoning about current use**, because current
+> use is the thing most likely to change.
+
+#### THE ONLY REAL QUESTION LEFT IN THE SCOPING WORK
+
+> **103,817 — active retailers **and** in `products_active` — is used by NOTHING, and it is arguably
+> what "served" actually means.**
+
+`retailer_prices_live` scopes to active retailers but not to products that survive
+`products_active`'s other filters. Whether any measure should use the stricter definition is **a
+design question, not a repair** — nothing is broken, and adopting it would be a choice about what
+the site claims to measure rather than a correction of an error.
+
+**DELIBERATELY NOT PROPOSED TONIGHT.** Reading `fmb_quality_snapshot_write` and the rest of the
+measure stack properly is the correct response to this item. **Proposing after three inference
+failures would be the fourth.**
