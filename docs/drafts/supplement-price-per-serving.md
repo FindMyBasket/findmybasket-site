@@ -50,9 +50,9 @@ There is a second layer that makes supplement comparison even harder, and it is 
 
 So the full picture for supplements is: compare per serving to get the true value of each product, then compare the whole basket across retailers to account for delivery. Doing only the first still leaves money on the table at the checkout.
 
-## How to do it without the maths
+## What the delivered price adds
 
-This is precisely what FindMyBasket is built for. Rather than comparing sticker prices, it lets you compare the same supplement across multiple UK retailers with delivery included, so you see what each option actually costs to get delivered. You can [browse beauty supplements](/supplements) and see products such as collagen and hair, skin and nails complexes priced across several stockists at once, and add them to a basket so the whole order is priced together, delivery and thresholds included, rather than one product at a time.
+This is precisely what FindMyBasket is built for. Rather than comparing sticker prices, it lets you compare the same supplement across multiple UK retailers with delivery included, so you see what each option actually costs to get delivered. You can [browse supplements](/supplements) and see every retailer that stocks a product, delivery included, whether that is one stockist or five, then add them to a basket so the whole order is priced together, delivery and thresholds included, rather than one product at a time.
 
 Once you have decided what you want, [build your basket](/app) and compare it delivered across UK retailers.
 
