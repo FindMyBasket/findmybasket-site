@@ -21,6 +21,23 @@
 # behind it is somebody else's. Only a person reading both can catch that, and this script
 # should never be described as verifying citations -- it verifies that their TARGETS EXIST.
 #
+# ── CASE-INSENSITIVE, AND THAT WAS NOT TRUE FOR THE FIRST DAY. ──────────────────────────
+#
+# The first version used `grep -hoE`, not `-hoiE`. THE DOMINANT CITATION FORM IN THIS
+# REPOSITORY IS A CAPITALISED "Item 271." at the end of a comment, and the check could not see
+# a single one of them -- 14 distinct items invisible, and on 24 August it passed a PR that
+# shipped four citations of an item that did not exist. The defect it was built to catch,
+# missed by the check built to catch it, one day later.
+#
+# WORSE: THE NEGATIVE TEST DID NOT CATCH IT EITHER, because it was written in the lowercase
+# form. THE GUARD WAS TESTED WITH AN INPUT SHAPED LIKE THE ONES IT COULD ALREADY SEE. A
+# negative test that shares a blind spot with the thing it tests proves only that the blind
+# spot is consistent. Both forms are now exercised -- see the run instructions above.
+#
+# (This comment deliberately contains no worked example of a citation, because THIS FILE IS
+# SCANNED BY ITSELF: an illustrative reference here would be indistinguishable from a real
+# one, and the first draft of this note flagged its own prose.)
+#
 # Also unchecked: LINE references. `work-list line 1479` appears once (in
 # 20260813200000_capture_products_active.sql) and is CURRENTLY CORRECT -- but only because
 # this list is append-only. Any insertion above that line breaks it silently and no check
@@ -42,7 +59,7 @@ grep -oE '^### [0-9]+\.' "$LIST" | grep -oE '[0-9]+' | sort -n -u > "$exists"
 cites=$(git ls-files \
   | grep -E '\.(ts|tsx|mts|mjs|js|sql|md|ya?ml|sh)$' \
   | grep -v -F "$LIST" \
-  | xargs grep -hoE '\bitems?[[:space:]]+[0-9]+([[:space:]]*(,|and|to|-|&)[[:space:]]*[0-9]+)*' 2>/dev/null \
+  | xargs grep -hoiE '\bitems?[[:space:]]+[0-9]+([[:space:]]*(,|and|to|-|&)[[:space:]]*[0-9]+)*' 2>/dev/null \
   | grep -oE '[0-9]+' | sort -n -u || true)
 
 dangling=""
@@ -60,7 +77,7 @@ if [ -n "$dangling" ]; then
   for n in $dangling; do
     echo "  item $n cited at:"
     git ls-files | grep -E '\.(ts|tsx|mts|mjs|js|sql|md|ya?ml|sh)$' | grep -v -F "$LIST" \
-      | xargs grep -nE "\bitems?[[:space:]]+([0-9]+[[:space:]]*(,|and|to|-|&)[[:space:]]*)*$n\b" 2>/dev/null \
+      | xargs grep -niE "\bitems?[[:space:]]+([0-9]+[[:space:]]*(,|and|to|-|&)[[:space:]]*)*$n\b" 2>/dev/null \
       | sed 's/^/    /' | head -5
   done
   exit 1
