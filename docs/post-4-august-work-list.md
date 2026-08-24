@@ -23742,3 +23742,130 @@ catalogue movement, not a disagreement.)*
 > **Three onboardings are about to happen. That is the moment the same document would pay for
 > itself** — written before they diverge rather than after. Not started, and noted so it is a
 > decision rather than an omission.
+
+---
+
+### 267. 2,368 keys behind the function they are meant to match
+
+**Raised:** 24 August 2026, surfaced by item 265's audit · **OPEN. Needs an owner, not a check.**
+
+#### THE STATE
+
+| | |
+|---|---:|
+| Live count-unit products | **3,670** |
+| Stored `match_key` ≠ `fmb_build_match_key(brand, name)` | **2,368 — 64.5%** |
+
+**Completely systematic.** The SQL function normalises count units to `pcs`; the stored keys keep
+the source token:
+
+| Stored | Function |
+|---|---|
+| `… serum mask 1pc` | `… serum mask 1pcs` |
+| `… foot 5ea` | `… foot 5pcs` |
+| `… dewy mask set 28g x 4 sheets` | `… x 4pcs` |
+
+#### ★ THE DIAGNOSIS A PARITY CHECK CANNOT MAKE FOR ITSELF
+
+> **THE SQL FUNCTION IS AHEAD OF THE STORED KEYS.**
+>
+> **A parity check assumes two things SHOULD agree, and reports the size of the gap. It cannot say
+> which side moved, or whether the movement was deliberate.** Here one side moved on purpose: the
+> count-unit normalisation was added to the function and the rows were never backfilled.
+>
+> **64.5% divergence that is completely systematic is not drift. It is an unfinished migration
+> wearing drift's clothes** — and the two want opposite responses. Drift wants a check. An
+> unfinished migration wants someone to finish or abandon it.
+
+`countunit-parity.mts` and `countunit-mergeplan.mts` are that migration's tooling, and the
+migration stopped.
+
+#### WHY IT IS AN ITEM AND NOT A SCHEDULED CHECK
+
+**Scheduling `countunit-parity` would convert a known job into a recurring alarm.**
+
+> **Item 191's other half.** That item recorded two red workflows indistinguishable by colour — one
+> broken, one working as designed and reporting a real finding, both ignored. **A red that means
+> "known and unaddressed" trains people to ignore reds**, and it takes the genuine ones with it.
+>
+> **2,368 rows behind their own function is a STATE. A state needs an owner. A check only tells you
+> the state is still there, weekly, in an inbox.**
+
+**Not measured, and needed before this can be decided:** whether anything reads `match_key` in a way
+that makes the divergence consequential today. The importer's matching tiers use their own
+computation; whether any query joins on the stored column is unestablished, and it is the difference
+between "cosmetic backlog" and "live matching defect".
+
+**Also unestablished:** this measurement is **stored vs SQL**. The script's own check is **JS vs
+SQL**. They are different questions and only the second says whether the two *implementations*
+agree.
+
+---
+
+### 268. Four probe defects in one week, all four caught by the answer looking wrong
+
+**Raised:** 24 August 2026 · **Pattern, with the uncomfortable half.**
+
+| # | The probe | The defect | Caught because |
+|---|---|---|---|
+| 1 | JSON-LD offer extraction | looked for `price`/`seller` on an `AggregateOffer` | a "null price" appeared **on production too** |
+| 2 | Citation scanner | `grep -honE` — `-n` prepends line numbers, read as item ids | **63 dangling citations** appeared at once |
+| 3 | Citation scanner, again | id guard capped at 5000 | a **negative test passed** |
+| 4 | Parity query | `fmb_build_match_key(name, brand)`, signature is `(brand, name)` | **100% divergence** |
+
+**All four were caught. None was caught by the method being sound.**
+
+#### THE UNCOMFORTABLE HALF
+
+> **THE DEFENCE IS IMPLAUSIBILITY, AND IMPLAUSIBILITY ONLY FIRES ON LARGE ERRORS.**
+>
+> `(name, brand)` against `(brand, name)` returned **100%**, which is impossible and therefore
+> obvious. **A transposition returning 8% would not have been.** It would have been written down as
+> a finding, sat in an item, and been quoted afterwards — and everything downstream of it would have
+> been sound reasoning on a false input, which is the shape item 265 already records as *"a
+> correction travels no further than the person who repeats it"*.
+>
+> **The catch rate here is not evidence the process works. It is evidence that this week's mistakes
+> happened to be big ones.**
+
+**What would actually defend:** a known-answer case run through the probe before the probe is
+trusted — the negative test that caught defect 3 is exactly that, and it existed only because a
+check was being written as a check. **The other three probes were ad hoc and had none**, because
+nobody writes a test for a query they intend to run once.
+
+> **That is the real asymmetry: instruments get tested, and one-off measurements do not — while
+> one-off measurements are what most findings actually rest on.**
+
+---
+
+### 269. `git add -A` sweeping an unrelated change, for the second time
+
+**Raised:** 24 August 2026 · **A habit, not a slip.**
+
+**First instance:** a stray 0-byte `delivery_cost` file from a malformed shell redirect, committed
+because the sweep was indiscriminate. Recorded then as a process note — *"nothing would have caught
+it but a diff read"*.
+
+**Second instance, today:** the `package.json` test-glob edit was made on the audit branch, carried
+uncommitted across a `git checkout` to the pipeline branch during an unrelated fix, and **swept into
+that branch's merge commit by `git add -A`.** It shipped in a PR about three new retailers.
+
+> **TWICE IS A HABIT.** The first was a stray file nobody wanted; this was a wanted change on the
+> wrong branch, which is harder to see — **the diff looks like work because it is work.**
+
+#### WHAT WOULD PREVENT IT, RATHER THAN ONLY WHAT HAPPENED
+
+**The sweep is not the defect. Crossing a branch boundary with uncommitted work is.** `git add -A`
+is only dangerous because the working tree can contain something the branch was not about.
+
+1. **Commit or stash before `git checkout`, always.** Both instances began with an edit outstanding
+   at the moment of a branch switch. `git checkout` carries changes silently when they do not
+   conflict — that silence is the whole mechanism.
+2. **`git status` before `git add -A`**, and read the file list rather than the count. Both would
+   have been visible; neither was looked at.
+3. **Prefer `git add <path>`** when the change is known and small. The glob edit was one line in one
+   file and never needed a sweep.
+
+**Not a tooling change**, because a hook that blocks `add -A` would be routed around within a day.
+**A stated habit, recorded where the habit is** — and the reason it earns an item is that the second
+instance was invisible in a way the first was not.
