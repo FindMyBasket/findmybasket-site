@@ -24532,3 +24532,103 @@ a known false claim live for falling outside a list written from an incomplete s
 >
 > **Phase 2 starts with hair** — 21.3% comparable depth, the highest of any category, and the same
 > crawled-and-declined verdict, so layout work reaches it.
+
+---
+
+### 278. The demand is brand-shaped, and the programme does not mention brand hubs
+
+**Raised:** 24 August 2026, Phase 2 discovery · **Nothing built. A strategy decision, returned rather than absorbed.**
+
+#### ★ ZERO GENERIC QUERIES IN THE CORPUS
+
+Search Console, three months, 1,000 queries, 44,394 impressions. **152 match a hair or skincare
+type or category term.**
+
+| | Queries | Impressions | Clicks |
+|---|---:|---:|---:|
+| Hair — names something specific | 44 | 1,646 | 1 |
+| **Hair — generic** | **0** | **0** | 0 |
+| Skincare — names something specific | 108 | 4,287 | 4 |
+| **Skincare — generic** | **0** | **0** | 0 |
+
+**Checked three ways**, because zero is usually a detector artefact: a rule-based split on proper
+nouns, an exact-match test against a list of bare type terms (**none present**), and reading the
+eighteen shortest queries by hand.
+
+The shortest in the corpus are `e45 spf`, `habi spf`, `jvn shampoo`, `dove shampoo`, `ren skincare`,
+`espa cleanser`, `dior cleanser`. **Brand plus type, every one.**
+
+> **THE DEMAND IS NEITHER CATEGORY-LEVEL NOR TYPE-LEVEL. IT IS BRAND-PLUS-TYPE, AND THE PAGE THAT
+> ANSWERS IT IS THE BRAND HUB WITH A TYPE FILTER** — not a category root, and not a subcategory.
+>
+> **That is the surface item 271 repaired yesterday**: 30 alias URLs restored, and empty type
+> filters redirected instead of 404ing. **The programme does not mention brand hubs at all.**
+
+**THE BOUND IS PART OF THE FINDING, NOT A FOOTNOTE.** The export caps at 1,000 rows and covers the
+head. **This measures the demand we reach at an average position of 35, not the demand that exists.**
+Generic head terms are exactly what a site ranking at 35 would fail to surface.
+
+> **So it rules out a root grid as the thing to build FIRST. It does not rule one out permanently**,
+> and it is weak evidence about traffic we do not currently reach.
+
+#### THE /hair CANONICAL CLAIM IS WRONG, AND IT PLACED THE FIRST TASK
+
+Strategy put `/hair`'s indexation at the front of Phase 2 on the basis that it has **no
+user-declared canonical**. Fetched:
+
+| | |
+|---|---|
+| Status | **200** |
+| Canonical | **`<link rel="canonical" href="https://www.findmybasket.co.uk/hair"/>`** |
+| Meta robots / `X-Robots-Tag` | **none** |
+
+> **The page declares a self-referential canonical.** "No user-declared canonical" describes **GSC's
+> record**, not the page — a stale crawl, or a field it does not populate for *Crawled – currently
+> not indexed*.
+>
+> **There is nothing there to fix, and the first task of the phase was scheduled on it.**
+
+#### OPENGRAPH: PHASE 0'S FINDING CONFIRMED, AND WIDER
+
+| Route | og + twitter tags |
+|---|---:|
+| `/` | 10 |
+| `/product/834` | 8 |
+| `/articles/…` | 4 |
+| **`/hair`, `/skincare`, `/hair/oil`** | **0** |
+| **`/brands/ouai`** | **0** |
+
+Only `app/product/[id]/page.tsx` and `app/app/page.tsx` declare `openGraph` in their metadata.
+
+> **Broader than Phase 0 recorded: BRAND HUBS EMIT NONE EITHER** — and brand hubs are the surface
+> the query data points at. **Not an indexation blocker; a real gap for sharing**, and the same
+> thing a Phase 2 migration would have to add deliberately rather than inherit.
+
+#### WHAT THE HONEST VERSION OF PHASE 2 IS
+
+**Phase 2 was scoped to unbury a grid, on pages whose demand is brand-shaped.**
+
+Three of its premises do not survive measurement:
+
+| Premise | Measured |
+|---|---|
+| The grid is buried under link furniture | **There is no grid.** The root shows 24 of 45,388 with no paging; the subcategory beneath paginates 45,253 |
+| `/hair` needs an indexation fix | **It has a canonical, is 200, and carries no robots directive** |
+| Category pages are where the demand lands | **Zero generic queries. All 152 name a brand** |
+
+> **SAID PLAINLY: ON THIS EVIDENCE, BRAND HUBS MATTER MORE THAN CATEGORY PAGES.**
+>
+> Every query in the corpus that a category page could serve is one a brand hub serves better,
+> because the query names the brand. **Phase 2 should not be reshaped around that finding here** —
+> a programme built on three premises that failed is not a programme to edit, and choosing what
+> replaces it is not a measurement.
+
+**Returned to strategy as a decision.** What can be said from this side:
+
+- **The category-root question is genuinely open and does not need answering yet.** Both candidate
+  builds — a routing landing page, or a browse surface with grid and filters — answer demand the
+  corpus does not show.
+- **The brand-hub surface is measurably load-bearing and was broken until yesterday.** 30 URLs
+  404ing, empty type filters 404ing, no OpenGraph.
+- **`/hair`'s indexation task should come off the front of the phase**, because the thing it was
+  scheduled to fix is not broken.
