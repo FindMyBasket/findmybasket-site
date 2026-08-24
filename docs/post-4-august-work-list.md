@@ -23581,3 +23581,89 @@ It caught the dangling citation because someone happened to run it while writing
 Both now run in `.github/workflows/worklist-integrity.yml` on every pull request touching the list,
 the scripts, or any `.ts`/`.tsx`/`.mts`/`.sql`/`.md` file — because both failures are introduced by
 a branch and are cheapest to see before it merges.
+
+---
+
+### 266. Pipeline: three retailers, one of them a network we have never used
+
+**Raised:** 24 August 2026 · **RECORD ONLY. Not a task, not started, sits behind the current work.**
+
+| Retailer | Network | State |
+|---|---|---|
+| **Simply Be** | **CJ** | approved |
+| **VitaminExpress** | **CJ** | approved |
+| The Fragrance Shop | Rakuten | approved, onboarding pending |
+
+#### 1. CJ HAS NO IMPORTER, AND THAT IS THE SUBSTANTIAL PART
+
+`supabase/functions/` holds `import-awin-feed`, `import-rakuten-feed` and
+`import-shopify-feed`. **There is no CJ importer.**
+
+> **THE FIRST CJ ONBOARDING IS A FEED INTEGRATION, NOT A RETAILER CONFIGURATION.**
+>
+> Adding an AWIN retailer is a row in `retailer_import_config` and a cron entry. **Adding the first
+> CJ retailer is a new feed format, a new auth scheme, a new failure surface and a new set of
+> things the existing monitors do not know how to watch.** The two retailers are the small half.
+
+**Sized against what exists rather than guessed**: `import-awin-feed` carries the chunked apply, the
+five matching tiers, the multipack guard, the absence-threshold logic and the shade regrouping — a
+CJ importer either reuses that machinery through `_shared/` or reimplements it, and **which of those
+it is, is the actual scoping question.**
+
+#### 2. VITAMINEXPRESS IS THE FIRST REAL TEST OF THE SUPPLEMENTS PROPOSITION
+
+Measured today:
+
+| | |
+|---|---:|
+| Supplements products in `products_active` | **1,826** |
+| **Comparable at 2+ in-stock retailers** | **34 — 1.86%** |
+| Supplied by Boots | **1,735** |
+
+> **THE CATEGORY IS ONE RETAILER WEARING A CATEGORY'S NAME.** 95% of it is Boots, and a
+> price-comparison site with one supplier is a catalogue.
+>
+> **A second supplements retailer is what the brand-comparison proposition has been waiting on** —
+> not more products, a second *source*. Every question the supplements work parked (price per
+> serving, type derivation, the ~54% compositional ceiling) is unanswerable while comparison depth
+> is 1.86%.
+
+*(Robbie's figures were 1.9% and 1,733 of 1,799; today measures 1.86% and 1,735 of 1,826 — a day's
+catalogue movement, not a disagreement.)*
+
+#### 3. THE FRAGRANCE SHOP UNBLOCKS THE PARKED RAKUTEN REPORTING WORK
+
+**The research is already done.** `docs/rakuten-reporting-probe-brief.md` (10KB, 23 August) holds:
+
+- **Three token families, not one scheme** — recorded as *"the single most useful finding here"*,
+  because the question *"which credential scheme do we hold"* has a false premise.
+- **The trap: deprecated as a scheme, mandatory as a parameter.** The Web Services token is
+  documented as deprecated *as an authentication scheme* and is still required *as a parameter*.
+- The portal instructions for obtaining each token.
+
+> **This is the reverse of the usual position: the expensive half is finished and the cheap half is
+> blocked.** The brief was written without a Rakuten retailer to test against. The Fragrance Shop is
+> the test subject it was waiting for.
+
+#### 4. THE BEFORE-ONBOARDING STEPS APPLY TO ALL THREE
+
+- **Delivery terms read from the retailer's own site BEFORE `active = true`**, with
+  `delivery_terms_source` and `delivery_terms_observed_at` set at the same moment. Items 256, 257:
+  a term with no recorded source cannot be re-checked, and **a pass with no record has no
+  membership** — which is exactly how Niche Beauty arrived outside the set with nothing noticing.
+- **Barcode overlap measured** before the catalogue claim is believed.
+- **Product names READ, not only counted.** Every category finding this month came from reading
+  names — the multipack defect, the `â` brand, the shade-variant chains. A row count says a feed
+  arrived; it does not say what arrived.
+
+> **AND A GAP WORTH NAMING WHILE IT IS CHEAP: THERE IS NO ONBOARDING EQUIVALENT OF
+> `docs/departure-completeness.md`.**
+>
+> The departure side got a definition on 23 August — six states, each named by what it prevents,
+> with all three departures scored against it. **The onboarding side has steps that live scattered
+> across items and nowhere else**, which is the condition the departure side was in until three
+> departures had disagreed in three different places.
+>
+> **Three onboardings are about to happen. That is the moment the same document would pay for
+> itself** — written before they diverge rather than after. Not started, and noted so it is a
+> decision rather than an omission.
