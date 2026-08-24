@@ -25625,3 +25625,191 @@ place.
 **The cost of holding is one HTTP status code on 406 pages Google has already found and filed under
 "Not found".** That is the cheapest possible thing to be wrong about, which is the other half of
 why holding is right: **the reversible option is also the low-cost one.**
+
+---
+
+### 292. Phase 1 closes: the demand is a shape with no page
+
+**Raised:** 24 August 2026 · **Group 3 needs nothing. Nothing built.**
+
+> ### 66 OF THE 73 BOOTS QUERIES DO NOT NAME A PRODUCT.
+>
+> | | Queries | Impressions | Clicks |
+> |---|---:|---:|---:|
+> | Names a specific Boots line | **7** | 449 | **10** |
+> | **Type + "boots"** | **66** | **3,014** | **9** |
+>
+> `lady shaver boots`, `nail oil boots`, `shower cap boots`, `wax strips boots`, `face razor boots`.
+> **"I want a thing and I shop at Boots."** The seven that name a product convert about **eight
+> times better per query** than the sixty-six that do not.
+
+#### WHY THAT CLOSES THE LANDING-PAGE QUESTION RATHER THAN ANSWERING IT
+
+The question was whether any of the 73 lands on a page other than the product it names. **For 66 of
+them there is no product named to land on.** The question presumed the cluster was product-name
+demand and it is not — so the answer is not "no", it is "undefined for 90% of the cluster".
+
+**Stated as a limit on the method, too:** GSC's Queries and Pages exports are separate 1,000-row
+lists with no query-to-page pairing, so no landing page can be attributed to any query. Everything
+here is either the Pages export, which is real, or a name match between query text and page, which
+is a proxy and is labelled as one.
+
+#### GROUP 3 IS ALREADY SERVED, AND BRANCH B IS WHAT IT PROPOSED
+
+Every Boots-cluster page fetched live after #424 emits branch B or C:
+
+```
+38324  Boots Lady Shaver | Boots price with delivery | FindMyBasket
+13025  Boots Dermacare Acne Hydrocolloid Patches 24S | Boots price with delivery | …
+11070  Boots Expert Dry Mouthspray 50Ml | Not currently in stock | FindMyBasket
+```
+
+**Group 3 proposed writing a Boots-naming title across 20,204 pages. Branch B already writes one**,
+on 91.3% of them, from a template chosen by measurement rather than by the proposal. **It was held
+on 24 August for having 24 queries of evidence against 20,204 titles; it can now be closed for
+being unnecessary.** The two are different reasons and the second is better.
+
+> **11070 is branch C, not B — and it is the highest-clicked page on the site**, 17 clicks on 776
+> impressions. One of its four queries is `boots expert dry mouth spray 50ml discontinued`. **The
+> template that claims nothing is the one answering the strongest query in the cluster.**
+
+#### THE FOURTH REFUSAL, AND THE FIRST MEASURED ON DEMAND
+
+Across all 783 impression-earning product pages in the export:
+
+| Branch | Pages | Impressions | % | Clicks |
+|---|---:|---:|---:|---:|
+| **B: 1 stockist** | 368 | 22,246 | **50.1%** | 279 |
+| **C: 0 stockists** | 201 | 12,880 | 29.0% | 208 |
+| Not live at all | 174 | 8,005 | 18.0% | 145 |
+| **A: 2+ stockists** | **40** | **1,245** | **2.8%** | 33 |
+
+Boots is the sole retailer on **238 of the 368** branch-B pages, carrying **19,400 impressions —
+43.7% of all product-page impressions.**
+
+> **97.2% of product-page impressions land outside the comparing template. Branch A reaches 40
+> pages.**
+>
+> **The first three refusals were catalogue shares — 91.3% of Boots products, 86.6% of pages, 76.9%
+> of hubs. This one is demand.** A catalogue share says the comparing claim is untrue on most pages.
+> A traffic share says it is untrue on almost everything anyone actually sees, and the two could
+> have disagreed: the comparable pages could have been the ones earning impressions. **They are not.
+> 2.8%.**
+
+#### THE GAP: A DEMAND SHAPE WITH NO SURFACE
+
+**Recorded, not acted on.** A query wanting *a type at a retailer* is answered by neither of the two
+page types we have:
+
+| Surface | Answers | `nail oil boots` |
+|---|---|---|
+| Product page | one product | only if you already know which |
+| Brand hub | one brand's range | Boots is a retailer here, not a brand |
+| **(none)** | **a type, at a retailer** | **nothing** |
+
+> **This is the first demand shape measured that has no page.** The earlier finding was that the
+> corpus contains zero generic queries and demand is brand-plus-type — which the brand hub serves.
+> **Type-plus-RETAILER is a different axis, and nothing on the site is on it.**
+
+**A gap, not a task.** 3,014 impressions and 9 clicks is a weak case for building a surface, and
+the reason to record it is that it is a *shape* — the next retailer cluster will have the same one,
+and the count is not what makes it worth knowing.
+
+---
+
+### 293. The pipe in the description is the supplier's, and stays
+
+**Raised:** 24 August 2026 · **Recorded, not fixed. A fourth feed-copy shape.**
+
+Three Boots pages fetched after #424 end their meta description with the product name again:
+
+```
+9269   "…A cooling spray to help soothe skin. | Boots Repel Cooling Spray, 50ml"
+13025  "Boots Dermacare Acne Hydrocolloid Patches 24s. | Boots Dermacare Acne Hydrocolloid Patches 24S"
+31869  "Boots smooth care sensitive… 16s. | Boots Smooth Care Sensitive… 16S"
+```
+
+**It looks exactly like item 283's defect and it is not.** I read the stored rows: **the pipe and
+the repeated name are in Boots's own `description` field.** Item 283's guard compares on
+`comparisonKey` and correctly declined to append here — what fires is a `|`-delimited feed field
+arriving as prose.
+
+> **Two defects with the same rendered symptom and different owners.** The only thing that told them
+> apart was reading the row — the same correction as item 287, arriving in the same week, on a
+> surface where the rendered output is genuinely ambiguous about its own cause.
+
+**NOT FIXED, on item 286's reasoning, which already settles it.** Repairing our own mangling of a
+supplier's text and rewriting the supplier's text are different acts. The run-together prose in item
+286 is ours to consider because block tags were stripped without separators on our side; **this
+pipe is what Boots publishes.** Stripping it would be an editorial decision about third-party copy,
+and it is not in scope for a metadata pass.
+
+---
+
+### 294. One product, two pages, contradictory titles — and the dead twin outranks the live one
+
+**Raised:** 24 August 2026 · **FOR THE GATED `match-key.ts` CHANGE, NOT FOR HERE.**
+
+| | `match_key` | In stock | Impressions |
+|---|---|---:|---:|
+| 63061 · `Boots Nail **&** Cuticle Oil 10Ml` | `boots nail cuticle oil 10ml` | **0** | **281** |
+| 14636 · `Boots Nail **And** Cuticle Oil 10Ml` | `boots nail and cuticle oil 10ml` | 1 | 103 |
+
+**`fmb_normalise_for_match` strips `&` and keeps the word `and`**, so the two keys never met and the
+rows never merged.
+
+> **The dead twin outranks the live one 281 to 103.** Someone searching `cuticle oil boots` reaches
+> the higher-ranked page and is told *"Not currently in stock"* about a product we are selling —
+> while the page that could sell it sits below with a third of the impressions.
+>
+> **The three-branch templates make this visible for the first time.** Under the single old template
+> both pages said "Compare … across multiple UK retailers" and the contradiction was invisible,
+> because neither page committed to a stock claim. **A more honest template exposed an older defect
+> — item 269's shape, arriving again.**
+
+#### THE BOUND, SO THE GATED CHANGE HAS A POPULATION AND NOT AN INSTANCE
+
+| Groups where `and`/`&` is the only difference | **51** |
+|---|---:|
+| Products in them | **102** |
+| Groups **split live and dead** — the harmful shape | **6** |
+| Pages carrying impressions | **2** (this pair, 384 between them) |
+
+**Measured only.** `_shared/match-key.ts` and `fmb_build_match_key` carry a standing instruction that
+no change lands without its own gate and a re-check of the multipack population first, and
+`COUNT_UNIT_RE` is already waiting there with the decade misparse from item 285. **This is a second
+input to that one change**, and 51 groups is small enough that it should ride along rather than
+justify its own.
+
+**Also recorded in `standing_check_findings`** so it is visible to whoever queries open findings —
+deliberately NOT with a `held:` prefix, so the item 290 guard ignores it. It is a defect awaiting a
+fix, not a row that must not be written. **And item 285's lesson applies to this placement too:**
+the findings table is one of the two routes that already failed to stop a change once. It is a note.
+
+---
+
+### 295. 18% of impressions land on pages that are not live
+
+**Raised:** 24 August 2026 · **Open thread. Larger than branch A and not a metadata problem.**
+
+Of the 783 product pages earning impressions, **174 are not in `products_active` at all** —
+**8,005 impressions and 145 clicks**, against branch A's 1,245 and 33.
+
+| State | Pages | Impressions | Clicks |
+|---|---:|---:|---:|
+| **Row exists, not in `products_active`** | **143** | **6,320** | **126** |
+| Shade child → 308 to parent | 22 | 1,135 | 15 |
+| No `products` row at all | 7 | 523 | 2 |
+| Soft-merged → 308 to keeper | 2 | 27 | 2 |
+
+**The 143 are the thread.** They are not merged, not shade children, not gone — they have a row and
+are excluded from `products_active` by one of its other conditions, and **they are still earning
+126 clicks.**
+
+> **This was found by asking a metadata question and counting what the answer did not cover.** The
+> branch split had to account for 100% of the pages, and 18% of the impressions did not fit any of
+> the three branches — which is the only reason anyone looked.
+
+**Not scoped here.** Whether those 143 should be live, redirected or gone is a catalogue question
+with a different owner from a title template, and it wants its own discovery: what excludes each of
+them, whether the exclusion is right, and what the 126 clicks were looking for.
