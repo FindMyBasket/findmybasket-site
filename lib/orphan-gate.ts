@@ -224,11 +224,11 @@ export const DEPARTURES: Readonly<Record<string, Departure>> = {
 //   22179  Rimmel Provocalips 16Hr Kiss Proof -- 200 I'll Call You
 //          Eight other Provocalips shades are live; that shade is not. A shopper searching
 //          one shade landing on another is a wrong answer, not a near one.
-//   46925  KISS GLAM SHIMMER TOENAILS TWINKLE TOES
-//          Merged into 46914, but THE KEEPER IS ITSELF DEAD -- its only price row is
-//          Superdrug's, so it has no active-retailer row and resolveCanonicalKeeper
-//          correctly returned null rather than 308 into a 404. Nearest live Kiss items are
-//          a different product.
+//   46925  MOVED OUT on 24 August 2026 to GONE_RAW_MERGED_INTO_DEPARTURE. It was never a
+//          one-off: merged into a keeper whose only price row is Superdrug's, which is a
+//          CLASS WITH A RULE and now has 218 members. Leaving it here would have made both
+//          constants harder to read -- this one describes its ids individually, and that is
+//          only possible because there are ten of them.
 // Both brand hubs are live and survive (Rimmel 661 products, Kiss 92), so a 301 to the hub
 // would pass the doctrine's mechanical test. IT IS REFUSED ANYWAY: these clicks came from
 // product-name queries, the hub does not answer them, and a 301 into a wrong answer is
@@ -241,17 +241,54 @@ export const DEPARTURES: Readonly<Record<string, Departure>> = {
 // explains -- forty times what the GSC export surfaced -- and the nine with no row are
 // UNENUMERABLE from inside the system, because nothing is left to select. Item 254.
 const GONE_RAW_RESIDUE =
-  '7708,9762,19619,22179,36095,46925,47009,51978,54398,55925,60034';
+  '7708,9762,19619,22179,36095,47009,51978,54398,55925,60034';
 
 // `.filter(Boolean)` before Number() is load-bearing: an empty goneRaw splits to [''],
 // and Number('') is 0. Without it a not-yet-generated departure would silently insert
 // product id 0 into the gone set. Harmless today by luck -- there is no product 0 -- but
 // it is a malformed id in a structure that gates 20,000 URLs.
+// ─── MERGED INTO A DEPARTURE. A CLASS WITH A RULE, NOT A LIST. ───────────────────────────
+//
+// Soft-merged or shade-variant products that serve nothing themselves and whose redirect
+// chain terminates on a DEPARTED RETAILER'S product. The page had content, the content is
+// permanently gone, and no redirect target exists -- so 410 asserts what is true.
+//
+// GENERATED. The rule lives in public.fmb_merged_into_departure_ids() -- ONE definition, in
+// SQL -- and scripts/regen-merged-into-departure-ids.mts transports it here. Re-run it after
+// any departure completes; the set grows when one does.
+//
+// SEPARATE FROM GONE_RAW_RESIDUE ON PURPOSE. That constant holds ten unrelated ids and
+// documents each individually, which is only possible because there are ten. This is a
+// class of 218 defined by a predicate. Putting them in one constant would make the residue
+// undocumentable and this one look arbitrary.
+//
+// NOT INCLUDED: products with no price rows at all -- 104 on 24 Aug 2026. Those never had an
+// offer, so nothing ever left. A 410 claims a URL had content and lost it; for a URL that was
+// never a page, 404 is the honest answer and they keep it.
+//
+// THE CAVEAT TRAVELS WITH THE DECISION, NOT BENEATH IT. This set was static for four months
+// when it was gated -- 0 new in four weeks, median 111 days dead. THAT IS EVIDENCE ABOUT
+// BEHAVIOUR, NOT ABOUT PERMANENCE. These are OUR merges: their permanence is guaranteed by
+// nobody changing their mind rather than by anything observed. A MERGE IS PERMANENT UNTIL
+// SOMEONE UN-MERGES IT. A retailer departure is permanent because someone external decided;
+// this is not the same kind of fact, and the 410 rests on the weaker one.
+//
+// PRECEDENCE, IF THIS RULE EVER DISAGREES WITH A SPECIFIC DECISION: THE SPECIFIC DECISION
+// WINS. A rule derived from a class cannot know what a person saw on one page. Live example:
+// 22179 is in the excluded never-priced group -- this rule would leave it at 404 -- and it is
+// deliberately gated at 410 in GONE_RAW_RESIDUE, decided with its traffic and its absent
+// redirect target in front of someone (item 255). That is not a bug in either; it is a
+// considered judgement outranking a default. DO NOT "tidy" it by making them agree.
+// Items 264 and 255.
+const GONE_RAW_MERGED_INTO_DEPARTURE =
+  '16633,17431,17437,17439,17443,17444,17445,17446,17450,17660,18007,18208,18209,18265,20725,20968,21194,21195,21207,21214,21217,21253,21255,21306,21307,21316,21319,21323,21334,21345,21350,21355,21361,21368,21372,21375,21376,21377,21381,21383,21387,21394,21396,21421,21422,21423,21428,21429,21453,21461,21475,21485,21642,21643,21644,21700,21704,21712,21768,21771,21806,21903,21904,21905,21951,22195,22441,22459,46920,46921,46923,46924,46925,46926,46927,47884,50421,50624,50686,50768,50820,50980,51152,51155,51427,52259,52289,52556,52558,52651,52757,52968,52970,52973,52980,53060,53068,53115,53116,53245,53250,53729,53867,53869,65641,70503,70512,70534,70851,71035,71043,84649,84654,94742,95517,100135,100143,100147,106960,108728,109021,110672,110673,111331,111533,111534,111535,111537,111538,111539,111545,111573,111574,111575,111576,117027,117203,117335,117914,118001,118455,118916,118954,119024,119409,119418,119819,120064,120452,120718,120909,120920,120957,121084,121829,121830,121843,123500,123502,123503,123505,123506,123507,123508,123509,123544,123545,123546,123547,123557,123558,123559,123560,123562,123569,123570,123571,123572,123573,123574,123575,123576,123580,123581,123584,123586,123587,123589,123593,123595,123596,123597,123598,123599,123601,123602,123604,123605,123611,123612,123613,123617,123618,123619,123630,123631,123632,123633,123634,123635,123638,123639,123648,123649,123656,123657,123658,123659';
+
 export const GONE_IDS: ReadonlySet<number> = new Set([
   ...Object.values(DEPARTURES).flatMap((d) =>
     d.goneRaw.split(',').filter(Boolean).map((s) => Number(s)),
   ),
   ...GONE_RAW_RESIDUE.split(',').filter(Boolean).map((s) => Number(s)),
+  ...GONE_RAW_MERGED_INTO_DEPARTURE.split(',').filter(Boolean).map((s) => Number(s)),
 ]);
 
 // Merged across departures. A key collision would silently resolve to whichever
