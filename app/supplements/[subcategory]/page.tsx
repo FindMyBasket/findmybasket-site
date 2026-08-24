@@ -1,4 +1,5 @@
 import { SubcategoryPage } from '../../../components/SubcategoryPage';
+import { socialTags } from '../../../lib/format/social-tags';
 import { subcategoryDisplay } from '../../../lib/queries';
 
 export const revalidate = 3600;
@@ -23,16 +24,23 @@ export async function generateMetadata({
   const display = displayFor(sub);
   const canonical = `https://www.findmybasket.co.uk/supplements/${sub}`;
   if (searchParams.type) {
+    const title = `${searchParams.type} - ${display} best prices | FindMyBasket`;
+    const description = `Compare ${searchParams.type.toLowerCase()} prices in ${display.toLowerCase()} across UK retailers.`;
     return {
-      title: `${searchParams.type} - ${display} best prices | FindMyBasket`,
-      description: `Compare ${searchParams.type.toLowerCase()} prices in ${display.toLowerCase()} across UK retailers.`,
+      title,
+      description,
       alternates: { canonical },
+      ...socialTags({ title, description, url: canonical }),
     };
   }
+
+  const title = `${display} best prices | FindMyBasket`;
+  const description = `Compare ${display.toLowerCase()} prices across UK retailers, delivery included.`;
   return {
-    title: `${display} best prices | FindMyBasket`,
-    description: `Compare ${display.toLowerCase()} prices across UK retailers, delivery included.`,
+    title,
+    description,
     alternates: { canonical },
+    ...socialTags({ title, description, url: canonical }),
   };
 }
 

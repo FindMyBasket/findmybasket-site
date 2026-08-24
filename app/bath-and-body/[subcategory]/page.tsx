@@ -1,4 +1,5 @@
 import { SubcategoryPage } from '../../../components/SubcategoryPage';
+import { socialTags } from '../../../lib/format/social-tags';
 
 export const revalidate = 3600;
 
@@ -14,16 +15,23 @@ export async function generateMetadata({
   // Consolidate ?type=/?page= variants to the clean subcategory URL.
   const canonical = `https://www.findmybasket.co.uk/bath-and-body/${sub}`;
   if (searchParams.type) {
+    const title = `${searchParams.type} - ${display} bath & body best prices | FindMyBasket`;
+    const description = `Compare ${searchParams.type.toLowerCase()} prices in ${sub} bath and body across multiple UK retailers.`;
     return {
-      title: `${searchParams.type} - ${display} bath & body best prices | FindMyBasket`,
-      description: `Compare ${searchParams.type.toLowerCase()} prices in ${sub} bath and body across multiple UK retailers.`,
+      title,
+      description,
       alternates: { canonical },
+      ...socialTags({ title, description, url: canonical }),
     };
   }
+
+  const title = `${display} bath & body best prices | FindMyBasket`;
+  const description = `Compare ${sub} bath and body prices across multiple UK retailers. Find the best value on body wash, body lotion, hand cream, deodorant and more.`;
   return {
-    title: `${display} bath & body best prices | FindMyBasket`,
-    description: `Compare ${sub} bath and body prices across multiple UK retailers. Find the best value on body wash, body lotion, hand cream, deodorant and more.`,
+    title,
+    description,
     alternates: { canonical },
+    ...socialTags({ title, description, url: canonical }),
   };
 }
 

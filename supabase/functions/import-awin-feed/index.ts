@@ -245,7 +245,7 @@ import pako from "https://esm.sh/pako@2.1.0";
 import { streamFeedRowBatches, FeedFetchError } from "./_streaming-fetcher.ts";
 import { inferCategorisationForImport, type TopCategory, type ImportTopCategory } from "../_shared/categorisation.ts";
 import { pickDescription } from "../_shared/description.ts";
-import { decodeFeedName } from "../_shared/strip-html.ts";
+import { decodeFeedName, normaliseImageUrl } from "../_shared/strip-html.ts";
 import {
   normaliseForMatch,
   buildMatchKey,
@@ -2252,7 +2252,8 @@ serve(async (req) => {
     if (normMpn) rowsWithMpn++;
 
     // Image URL - feed-provided product image. Used for catalogue display.
-    const imageUrl = idx.image_url >= 0 ? (fields[idx.image_url] || "").trim() : "";
+    // https, always -- see normaliseImageUrl. Item 296.
+    const imageUrl = idx.image_url >= 0 ? normaliseImageUrl(fields[idx.image_url]) : "";
 
     // Description - prefer long form, fall back to short. Cleaned (HTML stripped,
     // entities decoded), capped, and nulled if empty / identical to the name.

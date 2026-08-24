@@ -1,12 +1,21 @@
 import { CategoryPage } from '../../components/CategoryPage';
+import { socialTags } from '../../lib/format/social-tags';
 
 export const revalidate = 3600;
 
+// Social tags from the same title and description the search result uses. Before this,
+// a category page shared to social produced no title, no description and no image at
+// all -- verified by fetching, not by reading. Item 296.
+const title = 'Beauty supplement prices across UK retailers | FindMyBasket';
+const description =
+  'Compare beauty supplement prices across multiple UK retailers, delivery included. Collagen, hair-skin-nails complexes and biotin from Vida Glow, Solgar, Hair Gain, Ancient + Brave and more.';
+const canonical = 'https://www.findmybasket.co.uk/supplements';
+
 export const metadata = {
-  title: 'Beauty supplement prices across UK retailers | FindMyBasket',
-  description:
-    'Compare beauty supplement prices across multiple UK retailers, delivery included. Collagen, hair-skin-nails complexes and biotin from Vida Glow, Solgar, Hair Gain, Ancient + Brave and more.',
-  alternates: { canonical: 'https://www.findmybasket.co.uk/supplements' },
+  title,
+  description,
+  alternates: { canonical },
+  ...socialTags({ title, description, url: canonical }),
 };
 
 export default async function SupplementsPage() {

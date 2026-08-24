@@ -112,7 +112,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { finaliseRun } from "../_shared/run-metrics.ts";
 import { inferCategorisationForImport } from "../_shared/categorisation.ts";
 import { normaliseDescription } from "../_shared/description.ts";
-import { decodeFeedName } from "../_shared/strip-html.ts";
+import { decodeFeedName, normaliseImageUrl } from "../_shared/strip-html.ts";
 import {
   normaliseForMatch,
   buildMatchKey,
@@ -456,7 +456,7 @@ function classify(product, ctx, acc) {
   const normMpn = normaliseMpn(rawMpn);
   if (normEan) acc.rowsWithEan++;
   if (normMpn) acc.rowsWithMpn++;
-  const imageUrl = String(product.image_url || "").trim();
+  const imageUrl = normaliseImageUrl(product.image_url);
   const description = normaliseDescription(String(product.description || ""), name) || "";
   const existing = ctx.existingByExtId.get(matchValue);
   if (existing) {

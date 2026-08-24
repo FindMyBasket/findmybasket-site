@@ -1,4 +1,5 @@
 import { SubcategoryPage } from '../../../components/SubcategoryPage';
+import { socialTags } from '../../../lib/format/social-tags';
 
 export const revalidate = 3600;
 
@@ -14,16 +15,23 @@ export async function generateMetadata({
   // Consolidate ?type=/?page= variants to the clean subcategory URL.
   const canonical = `https://www.findmybasket.co.uk/skincare/${sub}`;
   if (searchParams.type) {
+    const title = `${searchParams.type} - ${display} skincare best prices | FindMyBasket`;
+    const description = `Compare ${searchParams.type.toLowerCase()} prices in ${sub} skincare across UK retailers.`;
     return {
-      title: `${searchParams.type} - ${display} skincare best prices | FindMyBasket`,
-      description: `Compare ${searchParams.type.toLowerCase()} prices in ${sub} skincare across UK retailers.`,
+      title,
+      description,
       alternates: { canonical },
+      ...socialTags({ title, description, url: canonical }),
     };
   }
+
+  const title = `${display} skincare best prices | FindMyBasket`;
+  const description = `Compare ${sub} skincare prices across UK retailers. Find the best value on cleansers, serums, moisturisers and more.`;
   return {
-    title: `${display} skincare best prices | FindMyBasket`,
-    description: `Compare ${sub} skincare prices across UK retailers. Find the best value on cleansers, serums, moisturisers and more.`,
+    title,
+    description,
     alternates: { canonical },
+    ...socialTags({ title, description, url: canonical }),
   };
 }
 
