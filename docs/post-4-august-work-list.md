@@ -24632,3 +24632,123 @@ Three of its premises do not survive measurement:
   404ing, empty type filters 404ing, no OpenGraph.
 - **`/hair`'s indexation task should come off the front of the phase**, because the thing it was
   scheduled to fix is not broken.
+
+---
+
+### 279. A comparison claim on 2,121 pages with nothing to compare
+
+**Raised:** 24 August 2026, Phase 1 metadata harvest · **APPLIED** (Groups 1 and 2). Group 3 held.
+
+#### ★ THE POPULATION IS 2,121, NOT SIX
+
+Every brand hub emitted one templated description: *"Compare {Brand} prices across multiple UK
+retailers, delivery included, to find the best value."*
+
+| | |
+|---|---:|
+| Brand pages | **2,784** |
+| **Zero products with more than one stockist** | **2,140 — 76.9%** |
+| Products on those pages | **30,935** |
+
+> **THE SIX BRANDS IN THE SEVENTEEN ARE NOT THE POPULATION. THEY ARE THE SAMPLE THAT HAPPENED TO
+> RANK.**
+>
+> Three-quarters of brand pages assert a comparison with nothing to compare. **The same
+> unsupportable-claim shape as the supplements articles (item 276)** — and here it sits on the
+> highest-intent queries in the corpus: seventeen searches of the form *"where is the best place to
+> buy {brand} online in the uk"*, **572 impressions, zero clicks.**
+
+*(209 vs 2,784 reconciles: 209 is brand hubs that earned an impression in the export; 2,784 is the
+pages that exist. Two different questions, not a discrepancy.)*
+
+#### TWO TEMPLATES, CHOSEN BY THE FACTS
+
+**Group 1 — 680 pages, something to compare.** States the count rather than implying it:
+`bareMinerals prices compared across 7 UK retailers` · *274 products with more than one stockist.*
+
+**Group 2 — 2,140 pages, nothing to compare.** Answers the query that was asked:
+`Where to buy SVR in the UK` · *SVR is stocked at Escentual from our UK retailers.*
+
+> For a single-stockist brand the honest answer to *"where is the best place to buy X"* is **"one
+> place, and here it is with delivery"** — which answers the search rather than dodging it.
+
+#### THE GUARD'S DEFAULT IS THE WEAKER STATEMENT
+
+`getBrandMetadataFacts` treats an unreadable count as **zero comparable**, which selects Group 2.
+
+> **The old template's failure mode was asserting a comparison that did not exist, so a query
+> failure must never restore it.** A guard whose default is the weaker claim cannot fail back into
+> the defect it replaced.
+
+#### THE NAMED-RETAILER RULE IS SATISFIED, NOT OVERRIDDEN
+
+The comment replaced here forbade named retailers: *"a brand may not stock at any given shop"*.
+Group 2 names one.
+
+> **The rule's concern is DURABLE COPY going stale against moving stock. Nothing here is durable.**
+> The name is resolved by `fmb_brand_metadata_facts` on the **same call that picks the branch**, and
+> regenerated with the page every hour — `revalidate = 3600`, no `generateStaticParams` — so
+> metadata and body come from one regeneration and cannot disagree about which retailer they mean.
+
+**The reasoning lives at the code, not only here**, including the condition that would break it:
+**if this route ever gains `generateStaticParams` or a longer window, this claim goes stale first.**
+
+#### NO CROSSING CASE, AND NOTHING TRACKS CROSSINGS
+
+Asked to verify a brand that had recently moved between groups. **There isn't one to show** — only
+today's state exists, not a history of `comparable` counts.
+
+> **136 brands sit at `comparable = 1`. That is the population that flips to Group 2 on losing a
+> single stockist**, and **nothing records when a brand crosses.** A page's claim can change
+> category silently, and the only evidence would be the rendered metadata differing from what
+> someone last read.
+
+**Not fabricating one was the honest answer**, and the gap is worth knowing rather than filling.
+
+#### THE BOOTS INVERSION: A PROPOSAL THE MEASUREMENT REFUSED
+
+The document proposed that the answer beating a Boots result is *"it is stocked elsewhere too, and
+here is what each charges."*
+
+| Boots products, live | **20,204** |
+|---|---:|
+| Also stocked elsewhere | 1,765 — **8.7%** |
+| **Boots only** | **18,439 — 91.3%** |
+
+> **The proposed answer would have been the unsupportable claim in a new place**, on 91.3% of the
+> pattern. **Recorded because it was proposed and the measurement refused it** — the same discipline
+> that produced Group 2, arriving before the copy was written rather than after it shipped.
+
+**Group 3 is held.** 24 queries of evidence against 20,204 titles on the surface converting at
+24.68% and carrying 85% of search clicks. **Wrong ratio** — and Groups 1 and 2 landing first makes
+the effect readable.
+
+---
+
+### 280. Case C fired, and item 275's weaker claim proved out
+
+**Raised:** 24 August 2026 · **One instance. Not vindication.**
+
+Item 275 asked whether the citation check had ever caught anything the contiguity check would not
+have. **The answer was no**, and the honest position recorded was that it earns its place on two
+cases that had not occurred:
+
+| Scenario | Contiguity | Citation |
+|---|---|---|
+| **A** — cite an item above the max | passes ✗ | fails ✓ |
+| B — cite, then write the next item | fails ✓ | fails ✓ |
+| **C** — cite the next number, write nothing further | passes ✗ | fails ✓ |
+
+**Within twenty-four hours, case C occurred.** PR #423 cited `Item 279` in
+`app/brands/[slug]/page.tsx` and `lib/brand-queries.ts`. Item 278 was on an unmerged branch, so the
+list on main ended at 277 and no gap existed.
+
+> **The contiguity check reported "contiguous: 277 items, 1..277, no gaps, no duplicates" while two
+> files cited an item that did not exist.** The citation check failed the build.
+
+**Recorded as the weaker claim proving out, not as vindication.** One instance. **Case A has still
+never occurred**, and one firing does not establish a rate — it establishes that the case was real
+rather than hypothetical, which is exactly what item 275 said was unproven.
+
+> **What it does settle:** *"the numbering check will catch it"* is now demonstrably false, and the
+> demonstration cost nothing because the second check was already there.
