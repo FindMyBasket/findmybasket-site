@@ -24819,6 +24819,26 @@ still forbids and this code still honours is an actual price**, which none of th
 > condition that would undo it: if this route ever gains `generateStaticParams` or a longer
 > window, the count and the retailer name go stale first.
 
+##### CORRECTED THE SAME DAY: THE AMENDMENT WAS BROADER THAN THE EVIDENCE SUPPORTED
+
+**The amendment above was approved as written, and it claimed more than had been shown.** It argued
+that metadata regenerates on the same hourly cycle as the body, and let that cover the whole page.
+**The claim splits by how each value is fetched, and only half of it survives:**
+
+| Value | Fetched by | Cached by Next? | Freshness argument |
+|---|---|---|---|
+| `facts.stockists`, `facts.sole_retailer` | RPC → **POST** | no | **holds** |
+| `product.name`, `description`, `image_url` | `.select()` → **GET** | **yes** | **does not hold** |
+
+Next's Data Cache stores `fetch` GETs keyed by request URL. **It survives deployments and is not
+invalidated by a write to the underlying row.** So the count in the title is as fresh as the offers
+beneath it, and the product name wrapped around that count is not.
+
+**The correction is written INTO the amendment in `app/product/[id]/page.tsx`, not appended beneath
+it.** The amendment is what the next reader will find, and a caveat kept somewhere else leaves the
+overclaim standing exactly where it does the damage. **See item 289** for the mechanism, the
+observation that settled it, and what it implies for all three templates.
+
 **The name is truncated; the suffix is kept whole.** `TITLE_CAP = 110`, and the product name is
 shortened to make room rather than the claim being cut off mid-sentence. **The suffix is the part
 that matches the query** — "prices compared across 3 UK retailers", "Boots price with delivery" —
@@ -25180,3 +25200,80 @@ question is what a departed hub should serve, and it is not settled by this reco
 > absent from the export, which is evidence about the export and not about them.**
 
 **Nothing changed for these 16.** The population is measured; the rule is not written.
+
+---
+
+### 289. A cache a database write cannot reach, and metadata with no staleness bound
+
+**Raised:** 24 August 2026 · **Found by verifying six pages after a deploy and getting five.**
+
+Product 151174's name was corrected in the database and the correction verified there — in
+`products`, in `products_servable`, and in the recomputed `match_key`. **Its own page then served
+the pre-correction name.**
+
+#### WHAT IT IS NOT
+
+Every obvious explanation was tested and eliminated before a mechanism was proposed:
+
+| Hypothesis | Test | Result |
+|---|---|---|
+| Stale HTML from before the deploy | response headers | `x-vercel-cache: MISS`, `age: 0` |
+| Stale ISR entry | request with an unused query string — a page key that cannot have existed | renders identically stale |
+| Old code deployed | the title carries the suffix added in the same PR | code is current |
+| Stale row anywhere in the database | queried `products`, `products_servable`, PostgREST | all clean |
+| Wrong Supabase project | the page calls `fmb_product_metadata_facts`, created minutes earlier in this project, and gets the right count | same project |
+
+#### THE OBSERVATION THAT SETTLED IT, AND IT COST ONE REQUEST
+
+> **`/brands/pestle-mortar` renders that row's name CORRECTLY at the same moment `/product/151174`
+> renders it stale.** Zero occurrences of the double-escaped form anywhere on the brand page.
+>
+> **One row, one database, one deployment, two pages, two answers.** Nothing about the row can
+> explain that. The two pages differ only in the QUERY they issue, so the staleness is held per
+> query, not per row and not per page.
+
+**Mechanism:** supabase-js issues `.select()` as a `fetch` GET, and Next's Data Cache stores GETs
+keyed by request URL. `products_servable?id=eq.151174` has a stale entry; the brand hub's
+`products_active?normalised_brand=eq.…` has a fresh one. **The cache survives deployments and no
+write to the underlying row invalidates it.**
+
+#### THE SPLIT THIS CREATES IN OUR OWN METADATA
+
+| Value | supabase-js call | HTTP | Cached | Fresh? |
+|---|---|---|---|---|
+| `facts.stockists`, `facts.sole_retailer` | `.rpc()` | POST | no | **yes** |
+| `product.name`, `description`, `image_url` | `.select()` | GET | **yes** | **no bound** |
+| `brand.display_name` | `.select()` | GET | **yes** | **no bound** |
+
+**This is a correction to item 281's line-105 amendment**, which was approved as written and was
+broader than the evidence supported. It is recorded inside that amendment in the code, not beneath
+it.
+
+#### WHAT IT MEANS FOR THE SIX TEMPLATES
+
+**All three product templates embed `baseTitle`, which is built from `product.name`.** So:
+
+- **The branch choice is sound.** It reads `stockists`, which comes from the uncached RPC. A page
+  cannot be put in the wrong branch by this.
+- **The numbers inside the copy are sound.** The count and the retailer name come from the same
+  uncached call.
+- **The product name they are wrapped around has no stated staleness bound.** Not one hour — no
+  figure this codebase can currently name. The same applies to `brand.display_name` on hubs.
+
+> **A METADATA CHANGE ARGUED FROM FRESHNESS INHERITS THE FRESHNESS OF ITS SLOWEST INPUT, AND THE
+> INPUTS DO NOT ADVERTISE WHICH ONE THAT IS.** Two values a line apart in the same function, both
+> read from the same database in the same request, have different staleness properties — decided by
+> whether supabase-js chose GET or POST, which nothing at the call site shows.
+
+**A renamed product keeps its old name in its own title indefinitely**, while the same name shows
+corrected on every other surface — which is the failure mode hardest to notice, because the page
+that is wrong is the one nobody cross-checks.
+
+#### NOT FIXED HERE, AND THE OPTIONS ARE NOT EQUIVALENT
+
+Setting `{ cache: 'no-store' }` or a `revalidate` on the Supabase client's fetch would close it, and
+it is a change to how **every** query on the site is cached, on a catalogue of 99,241 pages. **That
+is a performance decision with a load profile behind it, not a metadata fix**, and it does not
+belong inside this one. Recorded with the mechanism demonstrated and the population unmeasured:
+**how many live pages currently serve a stale value is not known**, and finding out is the first
+step of that change rather than of this record.

@@ -106,6 +106,38 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
    *
    * IF THIS ROUTE EVER GAINS `generateStaticParams` OR A LONGER WINDOW, the count and the
    * retailer name go stale first and must be reconsidered before that change lands.
+   *
+   * ── CORRECTED 24 AUGUST 2026, HOURS AFTER THE AMENDMENT ABOVE WAS WRITTEN ──────────
+   *
+   * THE AMENDMENT AS FIRST WRITTEN CLAIMED MORE THAN THE EVIDENCE SUPPORTED. It argued
+   * that "metadata regenerates on the same hourly cycle as the body", full stop, and let
+   * that cover everything on the page. It does not. The claim splits by HOW THE VALUE IS
+   * FETCHED, and only half of it survives:
+   *
+   *   HOLDS -- `facts.stockists` and `facts.sole_retailer`. getProductMetadataFacts calls
+   *   an RPC, which supabase-js issues as a POST. Next does not cache POSTs, so these are
+   *   read fresh on every regeneration. The count in the title really is as fresh as the
+   *   offers listed beneath it.
+   *
+   *   DOES NOT HOLD -- `product.name`, `product.description`, `product.image_url`.
+   *   getProductById is a `.select()`, which supabase-js issues as a GET, which Next's
+   *   Data Cache stores keyed by request URL. That cache SURVIVES DEPLOYMENTS and is NOT
+   *   invalidated by a write to the underlying row.
+   *
+   * OBSERVED, NOT INFERRED. On 24 August product 151174's name was corrected in the
+   * database and the fix verified there. Its own page then rendered the PRE-CORRECTION
+   * name -- with x-vercel-cache MISS, age 0, and this file's newly deployed title suffix,
+   * so the HTML was freshly generated -- while /brands/pestle-mortar rendered the SAME ROW
+   * correctly at the same moment. One row, one database, one deployment, two pages, two
+   * answers: the brand hub's query has its own cache entry and that entry was fresh.
+   *
+   * WHAT THIS MEANS FOR THE THREE TEMPLATES BELOW: all three embed `baseTitle`, which is
+   * built from product.name. So the PRODUCT NAME in every title and description on this
+   * route has no stated staleness bound -- not one hour, not any figure this file can
+   * name. The branch CHOICE and the numbers in it are sound; the name they are wrapped
+   * around is not, and that is a property of the fetch layer rather than of this metadata.
+   * See work-list item 289. The same applies to brand.display_name on the hub route, which
+   * findBrandBySlug also reads via a `.select()`.
    */
   const facts = await getProductMetadataFacts(id);
 
