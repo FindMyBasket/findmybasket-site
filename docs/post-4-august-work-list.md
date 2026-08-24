@@ -22991,15 +22991,53 @@ assuming:**
 | `fmb_detect_frozen_feeds` (11:30) | `WHERE r.active AND ric.enabled` | **No** — now doubly excluded |
 
 > **NOTHING WILL ALERT. THE 515 ROWS WILL ROT SILENTLY, AND THAT IS THE INTENDED OUTCOME —** but it
-> is intended *silence*, not *absence of a problem*, and those look identical from the outside.
+> is **intended silence, not absence of a problem, and those look identical from the outside.**
+
+**RECORDED AS A DESIGNED STATE, NOT A SIDE EFFECT.** This is the whole reason it is written down:
+
+> **A future reader who sees no alert about these 515 rows cannot tell whether nothing is wrong or
+> nothing is watching. AS OF TODAY IT IS THE SECOND, ON PURPOSE.**
+>
+> Silence from a monitor is normally evidence. Here it has been deliberately emptied of evidential
+> value for one retailer, and **nothing in the monitors' own output will ever say so** — an inactive
+> retailer does not appear in the email as "excluded", it simply is not there. The exclusion is
+> correct and it is invisible, which is precisely the combination that gets rediscovered as a
+> surprise six months later.
+>
+> **The record is the only thing standing between "we decided this" and "nobody noticed".**
 
 **The only place the rot will ever be visible is `dq_snapshot`'s `price_freshness` section**, to
 whoever reads it.
 
 > **WHICH IS EXACTLY WHY ITEM 259 RECOMMENDED KEEPING THAT SECTION ON THE BARE TABLE RATHER THAN
-> SCOPING IT TO ACTIVE RETAILERS.** A recommendation made yesterday, on the argument that
-> `price_freshness` answers *"is the pipeline working"* rather than *"how good is what we serve"*,
-> **is now the only instrument that will show this.** It was not made for this purpose.
+> SCOPING IT TO ACTIVE RETAILERS.**
+
+**THE DECISION PAID OFF FOR A REASON IT WAS NOT MADE FOR — AND IT WAS NOT YESTERDAY'S DECISION.**
+
+**CORRECTED.** Item 259 presented "keep `price_freshness` on the bare table" as a recommendation.
+**It was already the implemented design, and already documented in `dq_snapshot` itself**, in a
+comment dated **27 July 2026** written at the Superdrug retirement:
+
+> *"The diagnostic rollups further down **deliberately stay on retailer_prices**: seeing a departed
+> retailer's rows in identifier coverage, URL health, **freshness** and canonical-size is **correct
+> for a diagnostic**."*
+
+**I re-derived an existing decision and reported it as a proposal.** The reasoning matched — which
+is reassuring about the reasoning and says nothing good about the method.
+
+> **The payoff observation survives, with its attribution fixed.** Someone drew this distinction on
+> **27 July**, on principle, with no consumer for it. **Twenty-eight days later it is the only
+> instrument that would show 515 rows rotting**, because both monitors that would otherwise notice
+> have been correctly closed off.
+>
+> **A decision made on what a measure MEANS protected a case nobody had in mind, four weeks before
+> that case existed. That is the argument for reasoning about meaning rather than about current
+> use** — current use is the thing most likely to change, and here it changed completely.
+
+**AND IT RAISES THE PRIORITY OF THE SCOPING WORK, WHICH SHOULD BE SAID PLAINLY:** `price_freshness`
+is now the sole instrument for a real and ongoing condition. **Labelling its population is no longer
+tidiness.** A reader who does not know that section counts inactive retailers cannot interpret what
+it shows them about a departed one.
 
 #### STATE 5 FOR ATELIER: CLOSED BY AN EXPLICIT FINDING, WHICH THE DEFINITION PERMITS
 
@@ -23019,3 +23057,82 @@ means **effectively no search performance rather than provably none.**
 
 State 5 requires redirects curated **or an explicit finding that none is needed**. It is now the
 second, recorded — **which is the difference between a state satisfied and a state skipped.**
+
+---
+
+### 261. Three inference failures in three days, on three different surfaces
+
+**Raised:** 24 August 2026 · **Finding only. Nothing proposed.**
+
+#### THE MECHANISM IS THE FINDING
+
+| # | Day | What was inferred | From | Instead of |
+|---|---|---|---|---|
+| 1 | 23 Aug | 30 URLs serve a 404 | reading `resolveCanonicalKeeper` | **fetching the 30 URLs** — 19 redirect |
+| 2 | 23 Aug | "No drift. The committed list matches live state." | a workflow **reasoning about a script it never loaded** | asserting the script exists |
+| 3 | 24 Aug | `dq_snapshot`'s scoping was accidental | **its jsonb output** | reading the function, which documents every choice |
+
+> **SAME FAILURE, THREE SURFACES: A CONFIDENT CONCLUSION DRAWN FROM A DERIVED ARTEFACT INSTEAD OF
+> THE SOURCE THAT PRODUCED IT.**
+>
+> A redirect path inferred from the code that implements it. A file's existence inferred from a
+> green tick. A design decision inferred from the numbers it produced. **Each artefact was real and
+> each inference was locally reasonable** — the redirect logic did say that, the tick was green, the
+> figures were exactly as reported.
+>
+> **What they share is that the source was cheap to check and was not checked.** A `curl` loop over
+> thirty URLs; `test -f`; scrolling to the top of a function whose middle had already been read.
+
+**Instance 3 is the sharpest because the source was already open.** `dq_snapshot`'s
+`canonical_size` `CASE` was read in full on 23 August (item 252). **The comment that explains the
+whole scoping design sits eleven lines above it and was never read**, because the question that day
+was about a different part of the same function.
+
+> **Reading part of a source does not make it a source you have read**, and nothing marks the
+> boundary between the part you read and the part you assumed.
+
+#### THE CORRECTION TRAVELLED
+
+Item 259 reported four accumulated populations and an unlabelled inconsistency. That framing was
+then repeated back as **"inconsistently right rather than consistently wrong — harder to notice, and
+worse to inherit"** — which is a good observation about a defect that does not exist.
+
+> **A CORRECTION TRAVELS NO FURTHER THAN THE PERSON WHO REPEATS IT.** The premise came from reading
+> output; the framing built on it was sound reasoning applied to a false input, and it read as
+> *more* convincing than the original because it added an insight.
+>
+> **The cost of an unverified premise is not paid by the person who forms it.** It is paid by
+> everyone downstream who reasons correctly from it, and their reasoning being good is what makes
+> the error durable.
+
+**What was actually true:** two deliberate populations (`retailer_prices` and
+`retailer_prices_live`, the latter a named view), one drift artefact (`mqw.ean_coverage_den` is the
+same population measured a week earlier — `fmb_quality_snapshot_write` reads the same view), and one
+genuinely unused. **Documented in place on 27 July 2026, naming every figure and its reason.**
+
+#### THE PAYOFF IS STRONGER WITH ITS ATTRIBUTION FIXED
+
+The bare-table decision for `price_freshness` was **not** made yesterday as item 259 implied. It was
+made **27 July 2026**, at the Superdrug retirement, on principle, and written down.
+
+> **DRAWN ON 27 JULY WITH NO CONSUMER. LOAD-BEARING ON 24 AUGUST — TWENTY-EIGHT DAYS LATER.**
+>
+> **Four weeks is better evidence than one day.** A distinction that survives a day might be luck or
+> hindsight. One drawn on what a measure *means*, with nothing depending on it, that becomes the
+> **only** instrument for a condition nobody had imagined — four weeks and one retirement later —
+> is evidence that **reasoning about meaning beats reasoning about current use**, because current
+> use is the thing most likely to change.
+
+#### THE ONLY REAL QUESTION LEFT IN THE SCOPING WORK
+
+> **103,817 — active retailers **and** in `products_active` — is used by NOTHING, and it is arguably
+> what "served" actually means.**
+
+`retailer_prices_live` scopes to active retailers but not to products that survive
+`products_active`'s other filters. Whether any measure should use the stricter definition is **a
+design question, not a repair** — nothing is broken, and adopting it would be a choice about what
+the site claims to measure rather than a correction of an error.
+
+**DELIBERATELY NOT PROPOSED TONIGHT.** Reading `fmb_quality_snapshot_write` and the rest of the
+measure stack properly is the correct response to this item. **Proposing after three inference
+failures would be the fourth.**
