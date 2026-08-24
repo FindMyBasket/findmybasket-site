@@ -24066,3 +24066,102 @@ My section-to-source extraction reported `catalogue.detached_rows` as reading **
 > **Reading the statement gave a different answer from reading the span** — the same distinction as
 > reading a source rather than its output, one level down. **A span is not a statement**, and a
 > boundary drawn by proximity will collect whatever is nearby.
+
+---
+
+### 272. A count and a listing derived separately — the third instance
+
+**Raised:** 24 August 2026, from item 271's build · **Named as a class.**
+
+#### THE INSTANCE, AND THE PREMISE IT CORRECTED
+
+Fix 2C was specified as *"stop emitting types with no products"*. **That was not the defect.**
+`getBrandProductTypes` already counted only types that have products.
+
+> **It counted them WITHOUT the image filter that `getBrandProducts` — the query the chip links
+> to — applies.** So a type whose products all lack images showed a chip with a non-zero count,
+> linking to a grid with nothing in it.
+
+That is what made `/brands/clean-clear?type=Cleanser` a 404 while `/brands/clean-clear` served 200:
+**the chip was counting rows the grid excludes.**
+
+#### ★ THE CLASS: A COUNT AND A LISTING DERIVED SEPARATELY WILL DISAGREE
+
+| # | Count | Listing | Where it surfaced |
+|---|---|---|---|
+| 1 | `products_active` | `products_servable` | 446 buyable products 404ing at their own URL (item 263) |
+| 2 | `dq_snapshot` sections | four different populations | a design inferred wrongly from output (items 259, 270) |
+| **3** | `getBrandProductTypes` | `getBrandProducts` | **a chip linking to an empty grid** |
+
+> **A COUNT AND A LISTING DERIVED SEPARATELY WILL DISAGREE, AND THE DISAGREEMENT ONLY SURFACES
+> WHERE ONE IS A LINK TO THE OTHER.**
+>
+> Neither query is wrong on its own terms. **The count is not a claim about itself — it is a promise
+> about what the destination will show**, and nothing in either query expresses that relationship.
+> Reviewing them separately, both pass; the defect exists only in the edge between them.
+>
+> **A chip must count exactly what its destination will show.** Where they are two queries, that is
+> an invariant nobody is enforcing.
+
+---
+
+### 273. The alias table resolved a fold the catalogue never applied
+
+**Raised:** 24 August 2026 · **REPORTED ONLY. Not fixed, deliberately.**
+
+#### THE `m.a.c` STOP WAS CORRECT BEHAVIOUR OVER INCONSISTENT DATA
+
+`/brands/mac` 308s to `/brands/m-a-c`, not to `/brands/mac-cosmetics`.
+
+> **That is constraint 3 working, not a deviation.** It stopped at a target that serves 200.
+> **Following further would have redirected away from a page serving 200**, which is precisely what
+> constraint 1 exists to prevent. The resolver behaved correctly; the data underneath it is
+> inconsistent.
+
+#### THE INCONSISTENCY
+
+`brand_aliases` says `m.a.c → MAC Cosmetics`. **Nine live products still normalise to `m.a.c`**,
+under the same display name as their 1,243 siblings.
+
+| | |
+|---|---:|
+| `MAC Cosmetics` / `normalised_brand = 'mac cosmetics'` | **1,243** |
+| `MAC Cosmetics` / `normalised_brand = 'm.a.c'` | **9** |
+
+**Same display name. Two normalisations. Two brand pages.**
+
+#### WHICH PROBLEM IT IS — AND IT IS THE ONE THAT DOES NOT RECUR
+
+The alias note records the answer: *"30Jun26 partnership split audit (was ->M.A.C; merged to MAC
+Cosmetics)"*. **The fold's DIRECTION was reversed on 30 June.**
+
+| | |
+|---|---:|
+| Split rows created **before** 30 June | **10** |
+| Split rows created **on or after** 30 June | **0** |
+| Rows on the canonical since 30 June | **142**, newest 22 August |
+
+> **THE IMPORTER'S FOLD WORKS.** Every row since the redirect has gone to the canonical. The ten are
+> historical rows created under the OLD direction and never re-normalised when it flipped.
+>
+> **This is the first problem, not the second. It does not recur** — which is why it is a record
+> rather than a fix.
+
+#### AND THE ALIAS TABLE CARRIES THE SAME RESIDUE
+
+| alias | canonical | created |
+|---|---|---|
+| `mac` | **`M.A.C`** | 6 June |
+| `m.a.c` | `MAC Cosmetics` | 6 June, redirected 30 June |
+
+**One alias row still points at a value that was itself later re-folded.** That is why the chain is
+`mac → m-a-c → mac-cosmetics` rather than one hop — **the alias table has a stale intermediate,
+left by the same 30 June reversal that left the ten product rows.**
+
+> **A fold that is redirected does not migrate what it already folded** — neither the rows it
+> normalised nor the aliases that pointed at its old target. **Both residues are from one event and
+> neither was noticed for eight weeks**, because each is individually harmless: nine products still
+> render, and a two-hop redirect still lands somewhere live.
+
+**Not fixed in item 271's change**, deliberately — it is a data question about a partnership split,
+not a routing one, and the routing behaves correctly over it either way.
