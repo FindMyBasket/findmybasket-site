@@ -23551,24 +23551,100 @@ and it had been fixed hours earlier.
 > and it says so in its own output on every successful run, because "citations resolve" is exactly
 > the phrase someone would later quote as if it meant more.
 
-#### TWO DEFECTS IN THE CHECK ITSELF, BOTH CAUGHT BEFORE IT SHIPPED
+#### ★ TWO DEFECTS IN THE CHECK ITSELF, BOTH CAUGHT BEFORE IT SHIPPED
 
-**1. It invented 63 failures that did not exist.** The extraction used `grep -honE`; **`-n` prepends
-the line number**, and the digit extraction read those line numbers as item ids. `1247:items 71, 72,
-79` became a citation of item 1247.
-
-> **A check that invents its own failures is the same defect class as one that reports success while
-> broken** — item 255's workflow. Both make the output uninformative, and the second is only more
-> dangerous because it is quieter.
-
-**2. A guard suppressed the exact case the check exists to catch.** The first version skipped any
+**1. A GUARD SUPPRESSED THE EXACT CASE THE CHECK EXISTS TO CATCH.** The first version skipped any
 number above 5000 as "implausible". **The negative test — a comment citing item 9999 — PASSED.**
 
-> **A guard that suppresses the failure mode it was written beside is worse than no guard**, because
-> it also supplies the confidence.
+> **A GUARD THAT SUPPRESSES THE FAILURE MODE IT WAS WRITTEN BESIDE IS WORSE THAN NO GUARD, BECAUSE
+> IT ALSO SUPPLIES THE CONFIDENCE.**
+>
+> Without the guard the check is absent and everyone knows it. With it, the check is present,
+> green, and blind in exactly one direction — and the green is what stops anyone looking. **The
+> guard was written in the same sitting, by the same person, to make the output tidier.**
+
+**2. Its mirror: it invented 63 failures that did not exist.** The extraction used `grep -honE`;
+**`-n` prepends the line number**, and the digit extraction read those line numbers as item ids.
+`1247:items 71, 72, 79` became a citation of item 1247.
+
+> **One check concealing a failure, one inventing them.** The second is **less dangerous only
+> because it is louder** — a wrong red gets investigated and a wrong green does not.
+>
+> Both are the family of item 255's workflow reporting success while broken: **the output stops
+> being about the thing it names.**
 
 **Both negative tests now fail correctly**: a citation of item 9999, and a citation of a plausible
 next-number item that has not been written yet.
+
+#### WHAT ELSE RUNS ONLY BY HABIT — AND THE ANSWER IS MOSTLY "NOTHING, CORRECTLY"
+
+**39 of 58 scripts are invoked by neither CI nor `package.json`. That is not 39 things needing
+wiring, and reading it that way would be the wrong conclusion.**
+
+> **A TOOL THAT RAN ONCE DOES NOT WANT A SCHEDULE.** Backfills, dry-run previews, validation
+> harnesses and spikes are one-shot by design. Scheduling them would manufacture noise and, worse,
+> **manufacture the impression of coverage.**
+
+**The question is not "what is unscheduled" but "what asserts a property that can drift".** Two
+qualify — plus one that was never unscheduled, it was **uncounted**.
+
+#### THE TEST THAT LOOKED LIKE IT WAS IN THE SUITE — NOW FIXED
+
+`npm test` globbed `lib/**/*.test.ts` and **`scripts/**/*.test.mjs`**.
+**`scripts/streaming-csv.test.mts` is `.mts`, and had never run.**
+
+> **SHARPER THAN THE CONTIGUITY CHECK, AND THIS IS WHY: THAT ONE NEVER CLAIMED TO BE IN CI.** This
+> is named `.test.`, sits beside three `.test.mjs` files that do run, and is excluded by **one
+> character**.
+>
+> **"218 passing" carries no information about a file that was never counted.** A number that omits
+> something silently is not a weaker signal than one that includes it — **it is a different signal
+> wearing the same clothes.**
+
+A real test: parity against the legacy parser, **a cross-chunk torture test re-chunking at every
+byte boundary**, and the spec's edge cases — embedded commas and newlines, escaped quotes, CRLF/LF,
+empty and trailing fields, BOM.
+
+**Glob added. The suite went 218 → 219, all passing.** Reported because **the number everyone quotes
+changed**, and a count that moves unremarked is how the original defect survived.
+
+#### WHAT THE TWO STANDING CHECKS WOULD REPORT TODAY, BEFORE ANYTHING SCHEDULES THEM
+
+> **A standing check that starts red on its first scheduled run is worth knowing about before it
+> lands in an inbox.**
+
+**`brandrepeat-audit.mts`** — its header calls it a *"SAFETY AUDIT"* for the brand-repetition strip
+in `_shared/match-key.ts`. **Not run: it needs service credentials and there is no local `.env`.**
+Unknown, and stated as unknown rather than assumed green.
+
+**`countunit-parity.mts`** — also not runnable here, **but its SQL half is measurable and it would
+start red.**
+
+| | |
+|---|---:|
+| Live count-unit products | **3,670** |
+| Stored `match_key` differing from `fmb_build_match_key(brand, name)` | **2,368 — 64.5%** |
+
+**Completely systematic**: the SQL function normalises count units to `pcs`; the stored keys keep the
+source token — `1pc`→`1pcs`, `5ea`→`5pcs`, `4 sheets`→`4pcs`.
+
+> **THE SQL FUNCTION IS AHEAD OF THE STORED KEYS. That is not drift — it is an unfinished
+> migration**, and `countunit-parity.mts` and `countunit-mergeplan.mts` are its tooling.
+>
+> **SO THE RECOMMENDATION INVERTS: DO NOT SCHEDULE IT.** A standing check implies a property that
+> should hold and currently does not, for a known reason. **Scheduling it would convert an
+> unfinished job into a recurring alarm** — item 191's other half: a red meaning *"known and
+> unaddressed"* gets ignored, and takes the genuine reds with it.
+
+**Caveat, because this is not the check's own comparison.** `countunit-parity` diffs **JS against
+SQL**; I measured **stored against SQL**. Different questions — stored keys were written by the
+importer at import time, so a difference could be an outdated function or outdated rows, and this
+measurement **cannot separate them**.
+
+**And my first attempt was wrong**: I called `fmb_build_match_key(name, brand)` when the signature is
+`(brand, name)`, and got 100% divergence. **A result that implausible is the only reason it was
+checked** — the fourth probe defect this week, and the fourth caught by the answer looking wrong
+rather than by the method being sound.
 
 #### AND THE CONTIGUITY CHECK WAS NEVER WIRED INTO CI
 
