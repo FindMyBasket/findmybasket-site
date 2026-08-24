@@ -39,7 +39,23 @@ export interface RetailerOffer {
 
 export async function getProductById(id: number): Promise<ProductDetail | null> {
   const { data, error } = await supabase
-    .from('products_active')
+    // products_servable, NOT products_active. The two views differ by ONE condition -- the
+    // image requirement -- and that condition was doing double duty: it kept thin pages out
+    // of the sitemap AND, because this function read the same view, refused to serve them
+    // at all. Those are two decisions and only one was made.
+    //
+    //   products_active   = DISCOVERABLE -- what the site offers up (sitemap, search, cards)
+    //   products_servable = REACHABLE    -- what the site serves to someone with the URL
+    //
+    // 446 products with a live, in-stock, buyable offer were returning 404 at their own URL.
+    // products_active is a STRICT SUBSET of products_servable, asserted in the migration, so
+    // this widens what this page will serve and changes nothing about what is advertised.
+    //
+    // The page already degrades: image_url falls back to /placeholder-product.svg in a
+    // fixed-height container, and the JSON-LD and og:image both OMIT the field rather than
+    // emitting an empty one. That fallback existed since 29 July and was unreachable until
+    // now. Items 262 and 263.
+    .from('products_servable')
     .select('id, name, brand, normalised_brand, top_category, subcategory, product_type, image_url, ingredients, concerns, ean, canonical_size, shade, description, amazon_asin')
     .eq('id', id)
     .single();
