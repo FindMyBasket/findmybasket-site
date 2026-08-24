@@ -23551,24 +23551,56 @@ and it had been fixed hours earlier.
 > and it says so in its own output on every successful run, because "citations resolve" is exactly
 > the phrase someone would later quote as if it meant more.
 
-#### TWO DEFECTS IN THE CHECK ITSELF, BOTH CAUGHT BEFORE IT SHIPPED
+#### ★ TWO DEFECTS IN THE CHECK ITSELF, BOTH CAUGHT BEFORE IT SHIPPED
 
-**1. It invented 63 failures that did not exist.** The extraction used `grep -honE`; **`-n` prepends
-the line number**, and the digit extraction read those line numbers as item ids. `1247:items 71, 72,
-79` became a citation of item 1247.
-
-> **A check that invents its own failures is the same defect class as one that reports success while
-> broken** — item 255's workflow. Both make the output uninformative, and the second is only more
-> dangerous because it is quieter.
-
-**2. A guard suppressed the exact case the check exists to catch.** The first version skipped any
+**1. A GUARD SUPPRESSED THE EXACT CASE THE CHECK EXISTS TO CATCH.** The first version skipped any
 number above 5000 as "implausible". **The negative test — a comment citing item 9999 — PASSED.**
 
-> **A guard that suppresses the failure mode it was written beside is worse than no guard**, because
-> it also supplies the confidence.
+> **A GUARD THAT SUPPRESSES THE FAILURE MODE IT WAS WRITTEN BESIDE IS WORSE THAN NO GUARD, BECAUSE
+> IT ALSO SUPPLIES THE CONFIDENCE.**
+>
+> Without the guard the check is absent and everyone knows it. With it, the check is present,
+> green, and blind in exactly one direction — and the green is what stops anyone looking. **The
+> guard was written in the same sitting, by the same person, to make the output tidier.**
+
+**2. Its mirror: it invented 63 failures that did not exist.** The extraction used `grep -honE`;
+**`-n` prepends the line number**, and the digit extraction read those line numbers as item ids.
+`1247:items 71, 72, 79` became a citation of item 1247.
+
+> **One check concealing a failure, one inventing them.** The second is **less dangerous only
+> because it is louder** — a wrong red gets investigated and a wrong green does not.
+>
+> Both are the family of item 255's workflow reporting success while broken: **the output stops
+> being about the thing it names.**
 
 **Both negative tests now fail correctly**: a citation of item 9999, and a citation of a plausible
 next-number item that has not been written yet.
+
+#### WHAT ELSE IS IN THAT STATE — WRITTEN, CORRECT, RUN ONLY WHEN SOMEONE REMEMBERS
+
+Asked because the contiguity finding is item 191's shape and was cheap to answer now.
+
+**39 of 58 scripts are invoked by neither CI nor `package.json`. Most of that is correct** —
+backfills, dry-run previews, validation harnesses and spikes are one-shot tools, and a tool that ran
+once does not want a schedule.
+
+**Two are standing-check shaped and unscheduled**: `brandrepeat-audit.mts` (its own header calls it
+a *"SAFETY AUDIT"* for a live matching rule) and `countunit-parity.mts` (a JS-versus-stored parity
+check). Parity and safety audits are recurring by nature; both run only by hand.
+
+> **AND ONE IS WORSE THAN THE CONTIGUITY CHECK WAS.**
+>
+> `npm test` globs `lib/**/*.test.ts` and **`scripts/**/*.test.mjs`**.
+> **`scripts/streaming-csv.test.mts` is `.mts`. It has never run in the suite.**
+>
+> It is a real test — parity against the legacy parser, **a cross-chunk torture test that re-chunks
+> at every byte boundary**, and the spec's edge cases: embedded commas and newlines, escaped quotes,
+> CRLF/LF, empty and trailing fields, BOM. **It passes when run directly.** It sits in the same
+> directory as three `.test.mjs` files that do run.
+>
+> **The contiguity check never claimed to be in CI. This one looks like it is in the suite** — it is
+> named `.test.`, it has neighbours that run, and it is excluded by **one character**. Nothing about
+> `# pass 218` suggests a file is missing from the count.
 
 #### AND THE CONTIGUITY CHECK WAS NEVER WIRED INTO CI
 
