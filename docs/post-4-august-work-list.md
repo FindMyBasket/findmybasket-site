@@ -23012,18 +23012,27 @@ whoever reads it.
 > **WHICH IS EXACTLY WHY ITEM 259 RECOMMENDED KEEPING THAT SECTION ON THE BARE TABLE RATHER THAN
 > SCOPING IT TO ACTIVE RETAILERS.**
 
-**YESTERDAY'S REASONING PAYING OFF FOR A REASON IT WAS NOT MADE FOR.** The argument was categorical:
-`price_freshness` answers *"is the pipeline working"* rather than *"how good is what we serve"*, so
-it should keep the bare table. **That argument had no consumer when it was made** — it was a
-distinction drawn on principle.
+**THE DECISION PAID OFF FOR A REASON IT WAS NOT MADE FOR — AND IT WAS NOT YESTERDAY'S DECISION.**
 
-> **It now has a live one that did not exist when the argument was made.** Twenty-four hours later
-> `price_freshness` is **the only instrument that would show 515 rows rotting**, because the two
-> monitors that would otherwise notice have both been correctly closed off.
+**CORRECTED.** Item 259 presented "keep `price_freshness` on the bare table" as a recommendation.
+**It was already the implemented design, and already documented in `dq_snapshot` itself**, in a
+comment dated **27 July 2026** written at the Superdrug retirement:
+
+> *"The diagnostic rollups further down **deliberately stay on retailer_prices**: seeing a departed
+> retailer's rows in identifier coverage, URL health, **freshness** and canonical-size is **correct
+> for a diagnostic**."*
+
+**I re-derived an existing decision and reported it as a proposal.** The reasoning matched — which
+is reassuring about the reasoning and says nothing good about the method.
+
+> **The payoff observation survives, with its attribution fixed.** Someone drew this distinction on
+> **27 July**, on principle, with no consumer for it. **Twenty-eight days later it is the only
+> instrument that would show 515 rows rotting**, because both monitors that would otherwise notice
+> have been correctly closed off.
 >
-> **A decision made on what a measure MEANS turned out to protect a case nobody had in mind. That is
-> the argument for reasoning about meaning rather than about the current use** — the current use is
-> the thing most likely to change.
+> **A decision made on what a measure MEANS protected a case nobody had in mind, four weeks before
+> that case existed. That is the argument for reasoning about meaning rather than about current
+> use** — current use is the thing most likely to change, and here it changed completely.
 
 **AND IT RAISES THE PRIORITY OF THE SCOPING WORK, WHICH SHOULD BE SAID PLAINLY:** `price_freshness`
 is now the sole instrument for a real and ongoing condition. **Labelling its population is no longer
