@@ -397,3 +397,41 @@ export async function resolveBrandAliasSlug(slug: string): Promise<string | null
 function aliasSlugOf(row: { alias?: string | null; canonical?: string | null }): string {
   return brandSlug(row.alias ?? '');
 }
+
+// ─── FACTS A BRAND HUB'S METADATA MAY CLAIM ──────────────────────────────────────────────
+//
+// Every brand hub emitted one templated description: "Compare {Brand} prices across multiple
+// UK retailers". Measured 24 Aug 2026: 2,121 of 2,784 brand pages -- 76.2%, covering 30,935
+// products -- have ZERO products with more than one stockist. THE CLAIM IS UNSUPPORTABLE ON
+// THREE-QUARTERS OF THE PAGES THAT MAKE IT. Item 279.
+//
+// NOTHING IS BAKED. The sole retailer's name and both counts are resolved per call, on the
+// same call that decides which template applies, so the template and the facts it states can
+// never disagree. A description naming Boots for a brand now at Escentual is the
+// frozen-catalogue-state defect wearing metadata, and deriving at render is the only guard.
+//
+// STALENESS IS THE PAGE'S OWN. The route sets revalidate = 3600 with no generateStaticParams,
+// so metadata and body regenerate together from live data. A count in the description cannot
+// drift from the count the page renders -- they come from the same regeneration.
+export interface BrandMetadataFacts {
+  stockists: number;
+  comparable: number;
+  sole_retailer: string | null;
+}
+
+export async function getBrandMetadataFacts(
+  normalisedBrand: string,
+): Promise<BrandMetadataFacts> {
+  const { data } = await supabase.rpc('fmb_brand_metadata_facts', {
+    p_normalised_brand: normalisedBrand,
+  });
+  const row = Array.isArray(data) ? data[0] : data;
+  // A missing row is treated as "nothing comparable", which selects the narrower claim.
+  // FAILING TOWARDS THE SMALLER CLAIM IS DELIBERATE: the failure mode of the old template was
+  // asserting a comparison that did not exist, so an unreadable count must never restore it.
+  return {
+    stockists: row?.stockists ?? 0,
+    comparable: row?.comparable ?? 0,
+    sole_retailer: row?.sole_retailer ?? null,
+  };
+}

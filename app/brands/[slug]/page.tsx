@@ -1,6 +1,6 @@
 import { BrandPage } from '../../../components/BrandPage';
 import { BrandHub } from '../../../components/BrandHub';
-import { findBrandBySlug } from '../../../lib/brand-queries';
+import { findBrandBySlug, getBrandMetadataFacts } from '../../../lib/brand-queries';
 import { getBrandHub } from '../../../lib/brand-hub-queries';
 import { categoryDisplay } from '../../../lib/queries';
 
@@ -59,13 +59,46 @@ export async function generateMetadata({
       alternates: { canonical },
     };
   }
-  // Title matches "{brand} prices" search intent and stays under ~60 chars for
-  // most brand names. Description is durable and range-based: no point-in-time
-  // prices, no named retailers (a brand may not stock at any given shop), and
-  // "multiple UK retailers" per the copy standing rules.
+  // TWO TEMPLATES, CHOSEN BY WHETHER THERE IS ANYTHING TO COMPARE.
+  //
+  // The single template this replaces said "Compare {Brand} prices across multiple UK
+  // retailers" on EVERY brand page. Measured 24 Aug 2026: 2,121 of 2,784 brand pages -- 76.2%,
+  // covering 30,935 products -- have ZERO products carried by more than one stockist. The same
+  // unsupportable-claim shape as the supplements articles (item 276), sitting on the
+  // highest-intent queries in the corpus: seventeen searches of the form "where is the best
+  // place to buy {brand} online in the uk", 572 impressions, ZERO clicks. Item 279.
+  const facts = await getBrandMetadataFacts(brand.normalised_brand);
+
+  if (facts.comparable > 0) {
+    // GROUP 1: the comparison is real, so the count is stated rather than implied.
+    return {
+      title: `${brand.display_name} prices compared across ${facts.stockists} UK retailers | FindMyBasket`,
+      description:
+        `Compare ${brand.display_name} prices across ${facts.stockists} UK retailers with delivery ` +
+        `included, so you see what each option costs to get to your door. ` +
+        `${facts.comparable} product${facts.comparable === 1 ? '' : 's'} with more than one stockist.`,
+      alternates: { canonical },
+    };
+  }
+
+  // GROUP 2: one stockist, or none comparable. The query asks WHERE TO BUY, and for a
+  // single-stockist brand the honest answer is "one place, and here it is with delivery" --
+  // which answers the search rather than dodging it.
+  //
+  // THIS NAMES A RETAILER, AND THE COMMENT THIS REPLACES FORBADE THAT: "no named retailers
+  // (a brand may not stock at any given shop)". THE RULE IS SATISFIED, NOT OVERRIDDEN. Its
+  // concern is durable copy going stale against moving stock; this name is resolved by
+  // fmb_brand_metadata_facts on the SAME call that picks this branch, then regenerated with
+  // the page every hour (revalidate = 3600, no generateStaticParams). Nothing is baked, and
+  // the retailer named is the retailer the body lists. IF THIS ROUTE EVER GAINS
+  // generateStaticParams OR A LONGER WINDOW, THIS CLAIM GOES STALE FIRST and must be
+  // reconsidered before that change lands.
   return {
-    title: `${brand.display_name} prices across UK retailers | FindMyBasket`,
-    description: `Compare ${brand.display_name} prices across multiple UK retailers, delivery included, to find the best value. Honest price comparison on FindMyBasket.`,
+    title: `Where to buy ${brand.display_name} in the UK | FindMyBasket`,
+    description: facts.sole_retailer
+      ? `${brand.display_name} is stocked at ${facts.sole_retailer} from our UK retailers. ` +
+        `See the price with delivery included before you buy.`
+      : `See where to buy ${brand.display_name} in the UK, with delivery included in every price.`,
     alternates: { canonical },
   };
 }
