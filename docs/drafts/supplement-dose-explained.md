@@ -50,4 +50,4 @@ The dose is one figure among several that together tell you what you are buying.
 
 ## Where to go next
 
-Reading the dose figure correctly, in the right unit and per serving, is what lets you compare supplements fairly rather than by whichever pack shouts the biggest number. When you are ready to compare specific products, you can [browse beauty supplements across UK retailers](/supplements) and see the same product priced across multiple stockists with delivery included, then [price your whole basket delivered](/app).
+Reading the dose figure correctly, in the right unit and per serving, is what lets you compare supplements fairly rather than by whichever pack shouts the biggest number. When you are ready to compare specific products, you can [browse supplements across UK retailers](/supplements) and see every retailer that stocks a product, with delivery included, then [price your whole basket delivered](/app).

@@ -50,4 +50,4 @@ Whichever you choose, compare on a per-serving basis rather than by pack price o
 
 ## Where to compare
 
-Once you have settled on a format, you can [browse beauty supplements across UK retailers](/supplements) and compare the same product across several stockists with delivery included, then [price the whole basket delivered](/app). That way the format you prefer is also bought at the best value once delivery is counted.
+Once you have settled on a format, you can [browse supplements across UK retailers](/supplements) and see every retailer that stocks a product, with delivery included, then [price the whole basket delivered](/app). That way the format you prefer is also bought at the best value once delivery is counted.

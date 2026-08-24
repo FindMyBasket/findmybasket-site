@@ -60,4 +60,4 @@ If the strength figure itself is what you are trying to interpret, the [guide to
 
 ## Where to go next
 
-Reading the label well is what lets you compare supplements on a fair basis rather than on packaging. When you are ready to compare specific products, you can [browse beauty supplements across UK retailers](/supplements) and see the same product priced across multiple stockists with delivery included, so the comparison reflects what you would actually pay to get it delivered. Once you have chosen, [price your basket](/app).
+Reading the label well is what lets you compare supplements on a fair basis rather than on packaging. When you are ready to compare specific products, you can [browse supplements across UK retailers](/supplements) and see every retailer that stocks a product, with delivery included, so the comparison reflects what you would actually pay to get it delivered. Once you have chosen, [price your basket](/app).

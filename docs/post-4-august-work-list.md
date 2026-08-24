@@ -24344,3 +24344,122 @@ is a weaker claim than "it has proved itself", and it is the true one.
 Neither check sees a citation to an item that **exists but says something else** — a renumbering, or
 an item edited after being cited. Item 265 records that limit and it is unchanged: **a citation can
 resolve and still be wrong about what it resolves to.**
+
+---
+
+### 276. A claim the category cannot support, and two premises that did not survive measurement
+
+**Raised:** 24 August 2026, from strategy's supplements findings · **Articles corrected. Both premises reported as unsupported.**
+
+#### THE CLAIM, AND WHY IT FAILED ON ITS OWN EXAMPLES
+
+Three articles told a reader they could see a supplement **priced across several stockists**. One
+named the examples:
+
+> *"products such as **collagen and hair, skin and nails complexes** priced across several stockists
+> at once"*
+
+| Named example | Products | **2+ stockists** |
+|---|---:|---:|
+| collagen | 175 | **13 — 7.4%** |
+| hair, skin & nails | 18 | **0 — 0%** |
+| *(biotin, named by strategy but not in any published article)* | 20 | 3 |
+
+**The most stockists any collagen product has is three.** The second named example has **none**: the
+sentence's own illustration cannot be illustrated.
+
+**Category-wide the claim is true of 1.9%.**
+
+#### THE NAMED EXAMPLES ARE DROPPED WITH NO SUBSTITUTE, AND THAT IS THE POINT
+
+> **There is no example that works. The honest illustration would be "usually one."**
+
+Replaced with what is true whether a product has one stockist or five: *"see every retailer that
+stocks a product, delivery included, whether that is one stockist or five."* **It promises a
+listing, not a comparison** — and the listing is what exists.
+
+#### THE HEADING WAS THE CLAIM, NOT THE SENTENCE
+
+`## How to do it without the maths` → `## What the delivered price adds`
+
+**The paragraph beneath was accurate**: it pivots to delivered-price comparison and never says the
+platform computes price per serving. **The heading promised what the paragraph correctly declined.**
+
+> **A claim made by a label rather than a sentence.** Every word under it was defensible, and a
+> reader could still leave believing the arithmetic was done for them.
+
+#### ★ IT WAS FOUR ARTICLES, NOT THREE
+
+`supplement-capsules-vs-powder` carried the same claim in a different verb: *"**compare** the same
+product across several stockists"* rather than *"**priced** across several stockists"*.
+
+> **My search matched the phrasing I had already seen.** A pattern narrower than the phenomenon,
+> which is the fortnight's recurring mechanism arriving in the scoping of a fix rather than in a
+> measurement. Found only because the fourth draft still contained a stale anchor and was therefore
+> still on screen.
+
+#### THE DURABLE FINDING: SIX FILES, AND NOTHING CHECKS THEY AGREE
+
+`scripts/new-article.mts` **copies** a template into `public/articles/`. After publication the draft
+in `docs/drafts/` and the published page are **independent files with no link between them.**
+
+> **THEY HAD ALREADY DIVERGED.** PR #301 changed the live anchor from *"browse beauty supplements"*
+> to *"browse supplements"* and left **all four drafts** saying "beauty". That divergence sat
+> unnoticed and is what made the fourth instance visible today.
+>
+> **Every future article correction is two edits, and nothing verifies both were made.** Editing
+> only the draft changes nothing a reader sees; editing only the page leaves the source of record
+> false.
+
+**The question this raises, not answered here:** whether that wants a check, or whether **drafts
+should stop being maintained once published**. The generator's own header already accepts the
+copy-not-link trade-off for SEO baselines. **A copy nobody updates is a copy that lies**, and a
+draft that disagrees with the live page is worse than no draft, because it reads as the source.
+
+#### PREMISE FAILURE 1: NON-INGESTIBLES DO NOT INFLATE ANYTHING
+
+Strategy named these as blocking, on the basis that they distort every supplements denominator.
+
+| | |
+|---|---:|
+| Non-ingestibles found | **16** |
+| Share of category | **0.88%** |
+| Comparable rate now | **1.86%** |
+| **Comparable rate with all 16 removed** | **1.88%** |
+
+7 × No7 Gel Finish, 3 lubricants, 1 dual ring pack, 3 bath products, 1 body butter, 1 patch pack.
+
+> **A categorisation defect worth fixing on its own merits, and not a distortion of any measurement
+> taken this fortnight.** The premise is not supported.
+
+*(First pass said 19. Three were my detector's false positives: two Haliborange matched on "**Toy**
+Story", one C4 energy shot on "Sour **Patch**".)*
+
+#### PREMISE FAILURE 2: BRAND CONTAMINATION IS ZERO, AND THE EXAMPLE WAS MINE
+
+22 of 175 collagen products match via the brand prefix alone. **None names a different active.**
+
+And the case cited as evidence was correct all along:
+
+> *"Revive Collagen Sleep & Inner Calm Functional Mushroom And Adaptogen Blend **With 6000Mg Marine
+> Collagen** 22G 14 Sachets"*
+
+**6,000mg of marine collagen, stated in the name, past a 62-character sample cut.**
+
+> **THE ARTEFACT WAS IN THE SAMPLE, NOT THE DATA — AND IT WAS MY SAMPLE, TWICE.** 62 characters
+> here; 44 characters on product 82517. **Same shape, same cause**: a display truncation read as a
+> data property, then reported as a finding and acted on by someone else.
+>
+> The first time it produced a wrong diagnosis. This time it produced a work item on strategy's
+> blocking list.
+
+#### THE CONCLUSION
+
+> **1.9% comparable. 1,733 of 1,826 from one retailer.**
+>
+> **That is a supply problem. No classifier work moves it, no category cleaning moves it, and no
+> article wording moves it** — the products are stocked once, so there is nothing to compare.
+>
+> **VitaminExpress is what addresses it, and VitaminExpress is deferred behind the website refresh
+> (item 266). So the block on supplements work is a SCHEDULING CONSEQUENCE, not a technical one**,
+> and the two defects offered as blockers are 0.88% and zero.
