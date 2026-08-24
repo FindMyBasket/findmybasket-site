@@ -24290,3 +24290,57 @@ of which plainly exist.
 > **Caught by implausibility, for the fifth time this week** (item 268). Rewritten in Python, the
 > true answer was **one**. The pattern holds exactly as recorded: the defence is that the answer
 > looks wrong, and it only works when the answer looks wrong *enough*.
+
+---
+
+### 275. Two catches by coincidence is not coverage
+
+**Raised:** 24 August 2026 · **Asked after the second instance rather than the third.**
+
+#### THE QUESTION
+
+The citation check (item 265) has now been present for both dangling-citation incidents. **The
+contiguity check found both.** So: has the citation check ever caught anything the contiguity check
+would not have?
+
+**Tested rather than reasoned.** Three scenarios, both checks run against each:
+
+| Scenario | Contiguity | Citation |
+|---|---|---|
+| **A** — cite item 500; list ends at 274 | **passes** ✗ | **fails** ✓ |
+| **B** — cite 275, then write 276 so a gap opens | **fails** ✓ | **fails** ✓ |
+| **C** — cite 275; write nothing further | **passes** ✗ | **fails** ✓ |
+
+#### THE ANSWER IS NO — AND THE TEST SHOWS WHY THAT IS NOT REASSURING
+
+**Both real incidents were case B.** The citation check has caught nothing the contiguity check
+would have missed.
+
+> **BUT CASE C IS EXACTLY WHAT BOTH INCIDENTS WERE, MINUS THE COINCIDENCE.** Items 263 and 271
+> became contiguity-detectable **only because someone wrote the next item immediately.**
+>
+> **Had work stopped after #417, item 271 would have dangled indefinitely, and the contiguity check
+> would have passed every single time.**
+
+#### AND THE CONTIGUITY CHECK NEVER CAUGHT A DANGLING CITATION AT ALL
+
+**It caught a GAP.** The gap and the dangling citation are **two symptoms of one omission** —
+writing code that cites an item you did not write — and they co-occur only when a later item is
+allocated.
+
+> **Attributing both catches to the contiguity check credits it with detecting something it cannot
+> see.** It has no knowledge of citations. It noticed that 263 and 271 were absent from a sequence,
+> which is a different fact that happened to travel with the one that mattered.
+>
+> **Two catches by coincidence is not coverage** — and naming the coincidence precisely matters,
+> because *"the numbering check will catch it"* is a conclusion someone could reasonably draw from
+> the history and act on.
+
+**So the citation check earns its place on cases A and C, neither of which has occurred yet.** That
+is a weaker claim than "it has proved itself", and it is the true one.
+
+#### WHAT IT DOES NOT COVER, STILL
+
+Neither check sees a citation to an item that **exists but says something else** — a renumbering, or
+an item edited after being cited. Item 265 records that limit and it is unchanged: **a citation can
+resolve and still be wrong about what it resolves to.**
