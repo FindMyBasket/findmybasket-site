@@ -1,0 +1,41 @@
+name: Work-list integrity
+
+# THE LIST CARRIES REASONING FORWARD BY CITATION, AND UNTIL NOW THE CITATIONS WERE UNVERIFIED.
+#
+# Two checks, both of which existed only as scripts someone had to remember to type:
+#   contiguity -- item numbers are unique and gapless. Catches an item written on a branch
+#                 that never merged, which no diff shows because a diff shows what changed
+#                 rather than what is absent.
+#   citations  -- every item cited in the repository actually exists. On 24 August 2026 PR
+#                 #410 shipped code citing "item 263" before item 263 was written; it was
+#                 caught by accident, because the contiguity check refused item 264.
+#
+# THE CONTIGUITY CHECK WAS NEVER WIRED INTO CI. It caught the dangling citation only because
+# someone ran it by hand while writing the next item. That is the check working and the
+# process not.
+#
+# Runs on pull requests, because both failures are introduced by a branch and are cheapest to
+# see before it merges.
+
+"on":
+  pull_request:
+    paths:
+      - 'docs/post-4-august-work-list.md'
+      - 'scripts/check-worklist-*.sh'
+      - '**/*.ts'
+      - '**/*.tsx'
+      - '**/*.mts'
+      - '**/*.sql'
+      - '**/*.md'
+  workflow_dispatch:
+
+jobs:
+  integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Item numbers are contiguous and unique
+        run: bash scripts/check-worklist-contiguity.sh
+      - name: Every cited item exists
+        run: bash scripts/check-worklist-citations.sh

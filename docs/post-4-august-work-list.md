@@ -23506,3 +23506,78 @@ be **the rule quietly overriding a judgement**, and 1 click is not the reason to
 >
 > **The failure mode this prevents:** a rule written months later, applied in bulk, quietly undoing
 > considered judgements one at a time — each reversal invisible because it looks like consistency.
+
+---
+
+### 265. The list carried reasoning forward by citation, and the citations were unverified
+
+**Raised:** 24 August 2026 · **APPLIED.** Closes a gap the instrument had in itself.
+
+#### THE GAP
+
+Code cites items. Items cite each other. **A decision made in August is reachable in December only
+because the citations hold** — and nothing checked that a cited item exists.
+
+**Item 263 was cited in shipped code before it was written** (#410). It was caught **by accident**:
+the contiguity check refused item 264 because 263 was missing from the sequence.
+
+> **The check that saved it counts gaps in a sequence. It worked because the next item happened to
+> need a number.** Had nothing further been written that day, the citation would have shipped and
+> stayed.
+
+#### WHAT THE SCAN FOUND
+
+**127 distinct items cited across 374 tracked files. Zero dangling.** Item 263's was the only one,
+and it had been fixed hours earlier.
+
+**Two things the scan surfaced that the check does not cover:**
+
+- **One LINE reference** — `work-list line 1479`, in `20260813200000_capture_products_active.sql`.
+  **It is currently correct**: line 1479 today says exactly what the comment claims, dated 3 August.
+  **It survives only because this list is append-only.** Any insertion above that line breaks it
+  silently, and nothing would notice. Item numbers survive edits; line numbers do not.
+- **Ten sampled citations checked against the titles they resolve to were all topically coherent** —
+  a sample, not a proof, and deliberately described as one.
+
+#### ★ WHAT IT CANNOT CHECK, WRITTEN INTO THE SCRIPT SO NOBODY MISTAKES GREEN FOR CORRECT
+
+> **A CITATION CAN RESOLVE AND STILL BE WRONG ABOUT WHAT IT RESOLVES TO.**
+>
+> If an item is edited so it no longer says what a comment citing it claims, **this check passes and
+> the comment is now false.** Renumbering has the same effect: the number is valid, the content
+> behind it belongs to somebody else.
+>
+> **Only a person reading both can catch that.** The script verifies that citation TARGETS EXIST,
+> and it says so in its own output on every successful run, because "citations resolve" is exactly
+> the phrase someone would later quote as if it meant more.
+
+#### TWO DEFECTS IN THE CHECK ITSELF, BOTH CAUGHT BEFORE IT SHIPPED
+
+**1. It invented 63 failures that did not exist.** The extraction used `grep -honE`; **`-n` prepends
+the line number**, and the digit extraction read those line numbers as item ids. `1247:items 71, 72,
+79` became a citation of item 1247.
+
+> **A check that invents its own failures is the same defect class as one that reports success while
+> broken** — item 255's workflow. Both make the output uninformative, and the second is only more
+> dangerous because it is quieter.
+
+**2. A guard suppressed the exact case the check exists to catch.** The first version skipped any
+number above 5000 as "implausible". **The negative test — a comment citing item 9999 — PASSED.**
+
+> **A guard that suppresses the failure mode it was written beside is worse than no guard**, because
+> it also supplies the confidence.
+
+**Both negative tests now fail correctly**: a citation of item 9999, and a citation of a plausible
+next-number item that has not been written yet.
+
+#### AND THE CONTIGUITY CHECK WAS NEVER WIRED INTO CI
+
+`scripts/check-worklist-contiguity.sh` has existed for weeks and **runs only when someone types it.**
+It caught the dangling citation because someone happened to run it while writing the next item.
+
+> **That is the check working and the process not.** A check nobody runs on a schedule is a check
+> whose coverage is a function of habit.
+
+Both now run in `.github/workflows/worklist-integrity.yml` on every pull request touching the list,
+the scripts, or any `.ts`/`.tsx`/`.mts`/`.sql`/`.md` file — because both failures are introduced by
+a branch and are cheapest to see before it merges.
