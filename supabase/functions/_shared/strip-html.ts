@@ -134,3 +134,35 @@ export function decodeFeedName(input: string | null | undefined): string {
   if (!input) return "";
   return decodeEntities(input).replace(/\s+/g, " ").trim();
 }
+
+/**
+ * Normalise a feed-supplied image URL to https.
+ *
+ * WHY A BLANKET UPGRADE IS SAFE, WHICH IS NOT OBVIOUS. Storing http costs us four things at
+ * once, all reading the same column: the on-page <img> (mixed content on an https page),
+ * og:image, twitter:image (Twitter will not fetch a card image over http, so those cards are
+ * imageless), and the JSON-LD `image` field.
+ *
+ * The upgrade cannot make any of them worse. A browser already refuses or silently upgrades
+ * a passive http subresource on an https page, so an http URL that has no https counterpart
+ * FAILS EITHER WAY -- the failure mode of upgrading is identical to the failure mode of not
+ * upgrading, and the success mode is strictly better. That is what makes this blanket rather
+ * than an allow-list, and it is deliberately NOT the shape of item 284's entity map: a
+ * vocabulary of known-good hosts would decode only that vocabulary and the next host to
+ * arrive would silently keep its http.
+ *
+ * Measured 24 Aug 2026: 13,390 of 99,241 live products stored http, across exactly two hosts
+ * (aff.ysi.bz 13,078, images.beautybay.com 312). Both serve https -- 16 of 16 sampled URLs
+ * returned 200, and aff.ysi.bz returned BYTE-IDENTICAL responses on both schemes. So this is
+ * a rewrite, not a fallback. Item 296.
+ *
+ * Protocol-relative (`//host/path`) is also normalised. Anything that is not http:// is
+ * returned untouched, including data: and already-https URLs.
+ */
+export function normaliseImageUrl(input: string | null | undefined): string {
+  const url = (input ?? "").trim();
+  if (!url) return "";
+  if (url.startsWith("//")) return `https:${url}`;
+  if (url.startsWith("http://")) return `https://${url.slice(7)}`;
+  return url;
+}

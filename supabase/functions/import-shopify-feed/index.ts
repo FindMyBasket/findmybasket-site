@@ -69,7 +69,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { finaliseRun } from "../_shared/run-metrics.ts";
 import { inferCategorisationForImport } from "../_shared/categorisation.ts";
-import { decodeFeedName } from "../_shared/strip-html.ts";
+import { decodeFeedName, normaliseImageUrl } from "../_shared/strip-html.ts";
 import {
   normaliseForMatch,
   buildMatchKey,
@@ -548,7 +548,7 @@ serve(async (req) => {
 
     // Image URL - workflow extracts from products.images[0].src and includes
     // in NDJSON record as image_url field.
-    const imageUrl = String(product.image_url || "").trim();
+    const imageUrl = normaliseImageUrl(product.image_url as string | null | undefined);
 
     const existing = existingByExtId.get(matchValue);
     if (existing) {

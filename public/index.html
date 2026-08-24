@@ -13,9 +13,14 @@
   <meta property="og:url" content="https://www.findmybasket.co.uk/"/>
   <meta property="og:type" content="website"/>
   <meta property="og:site_name" content="FindMyBasket"/>
+  <!-- og:image:width/height DECLARE THE FILE, NOT THE RECOMMENDATION. These read
+       1200x630 until 24 Aug 2026 for a file that is 2500x1312 -- the right aspect
+       ratio (1.905:1) and the wrong numbers. Facebook lays the card out from the
+       declared values BEFORE it fetches the image, so a mismatch reflows the card.
+       If og-image.jpg is ever replaced, change these to match it. Work-list item 296. -->
   <meta property="og:image" content="https://www.findmybasket.co.uk/og-image.jpg"/>
-  <meta property="og:image:width" content="1200"/>
-  <meta property="og:image:height" content="630"/>
+  <meta property="og:image:width" content="2500"/>
+  <meta property="og:image:height" content="1312"/>
   <meta name="twitter:card" content="summary_large_image"/>
   <meta name="twitter:title" content="FindMyBasket: Your beauty routine. Optimised. | UK Beauty Price Comparison"/>
   <meta name="twitter:description" content="Your beauty routine, optimised. FindMyBasket compares skincare, makeup, hair, fragrance, bath &amp; body and supplements prices across multiple UK beauty retailers. Free to use."/>

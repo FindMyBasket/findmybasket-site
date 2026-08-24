@@ -4,6 +4,7 @@ import { findBrandBySlug, getBrandMetadataFacts } from '../../../lib/brand-queri
 import { getBrandHub } from '../../../lib/brand-hub-queries';
 import { categoryDisplay } from '../../../lib/queries';
 import { brandMetadataCopy } from '../../../lib/format/metadata-copy';
+import { socialTags } from '../../../lib/format/social-tags';
 
 export const revalidate = 3600;
 
@@ -34,30 +35,37 @@ export async function generateMetadata({
   if (hub) {
     // A hub may carry its own title/description; otherwise derive them from
     // the brand name and lede as before.
+    const hubTitle =
+      hub.hub.seo_title ?? `${hub.hub.display_name} Brand Spotlight | FindMyBasket`;
+    const hubDescription =
+      hub.hub.meta_description ??
+      hub.hub.lede ??
+      `Discover the ${hub.hub.display_name} range on FindMyBasket.`;
     return {
-      title:
-        hub.hub.seo_title ??
-        `${hub.hub.display_name} Brand Spotlight | FindMyBasket`,
-      description:
-        hub.hub.meta_description ??
-        hub.hub.lede ??
-        `Discover the ${hub.hub.display_name} range on FindMyBasket.`,
+      title: hubTitle,
+      description: hubDescription,
       alternates: { canonical },
+      ...socialTags({ title: hubTitle, description: hubDescription, url: canonical }),
     };
   }
 
   const brand = await findBrandBySlug(params.slug);
   if (!brand) {
+    // No social tags here deliberately: this branch precedes a notFound(), so the tags
+    // would never be served. Adding them would be code that cannot run.
     return { title: 'Brand not found | FindMyBasket' };
   }
   const filterLabel =
     searchParams.type ??
     (searchParams.category ? categoryDisplay(searchParams.category) : undefined);
   if (filterLabel) {
+    const filterTitle = `${brand.display_name} ${filterLabel} prices across UK retailers | FindMyBasket`;
+    const filterDescription = `Compare ${brand.display_name} ${filterLabel.toLowerCase()} prices across multiple UK retailers, delivery included, to find the best value.`;
     return {
-      title: `${brand.display_name} ${filterLabel} prices across UK retailers | FindMyBasket`,
-      description: `Compare ${brand.display_name} ${filterLabel.toLowerCase()} prices across multiple UK retailers, delivery included, to find the best value.`,
+      title: filterTitle,
+      description: filterDescription,
       alternates: { canonical },
+      ...socialTags({ title: filterTitle, description: filterDescription, url: canonical }),
     };
   }
   // THREE TEMPLATES, CHOSEN BY WHAT THE RANGE ACTUALLY HAS IN STOCK. The wording itself
@@ -92,7 +100,19 @@ export async function generateMetadata({
     comparable: facts.comparable,
     soleRetailer: facts.sole_retailer,
   });
-  return { title, description: fallbackDescription, alternates: { canonical } };
+  // SAME TEXT, NOT A SEPARATE SOCIAL VARIANT. Measured across 2,820 hubs: titles average
+  // 52 characters and max 84, so every one fits Facebook's ~88 cut and 2,783 of 2,820 fit
+  // Twitter's ~70; descriptions average 124 and max 187, so every one fits the 200 a social
+  // card shows while only 2,028 fit the 155 a search result shows. THE BINDING CAP IS
+  // SEARCH'S, NOT SOCIAL'S -- so passing the same strings through gives the share card
+  // strictly more of the claim than the search result gets, and a separate social variant
+  // would be a second wording to keep in step for no gain. Item 296.
+  return {
+    title,
+    description: fallbackDescription,
+    alternates: { canonical },
+    ...socialTags({ title, description: fallbackDescription, url: canonical }),
+  };
 }
 
 export default async function BrandSlugPage({

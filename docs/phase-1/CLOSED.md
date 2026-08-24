@@ -40,3 +40,12 @@ measurement rather than by the proposal. **Two different reasons, and the second
 | `and`/`&` match-key collision, for the gated change | **294** | 51 groups, 6 split live/dead |
 | Brand-hub 410 for departed retailers | **291** | HELD on Superdrug reversibility |
 | Stored pipe in supplier descriptions | **293** | Recorded, not ours to fix |
+
+---
+
+## A bound for anything that writes subcategory URLs
+
+**`/skincare/moisturiser` 404s. The live subcategory is `/skincare/face`.** Subcategory slugs are
+not the product-type names they resemble — `skincare` has exactly one live subcategory, `face`,
+covering 45,388 products. Anything generating subcategory links, sitemap entries or article
+cross-links must read the live set rather than infer it from category vocabulary. Item 296.

@@ -25813,3 +25813,189 @@ are excluded from `products_active` by one of its other conditions, and **they a
 **Not scoped here.** Whether those 143 should be live, redirected or gone is a catalogue question
 with a different owner from a title template, and it wants its own discovery: what excludes each of
 them, whether the exclusion is right, and what the 126 clicks were looking for.
+
+---
+
+### 296. Social tags on 14 routes, and two live defects in the working example
+
+**Raised:** 24 August 2026 · **Phase 2, first scope item. Brand hubs + 6 category roots + 6
+subcategories + the static homepage.**
+
+Confirmed by fetching, not by reading: `/brands/cerave`, `/skincare` and `/skincare/face` all
+returned 200 with a title and a description and **no `og:` or `twitter:` tag of any kind.** A hub
+shared to social produced no title, no description and no image.
+
+#### THE PREMISE WAS OFF BY ONE, AND THE THIRD SURFACE IS THE IMPORTANT ONE
+
+The brief said only `/product/[id]` and `/app` emit them. **Three do, and the third is the
+richest** — the homepage emits `og:type`, `og:site_name`, `og:image` with declared dimensions, and
+the full twitter set, which `/product/[id]` does not.
+
+> **THE HOMEPAGE IS NOT A NEXT ROUTE.** There is no `app/page.tsx`; `next.config.js` rewrites `/`
+> to `public/index.html`, a hand-written static file, and its tags are hand-written HTML.
+>
+> **So it cannot be inherited from, and it is the bar.** Phase 5 migrates that file into Next, and
+> the migrated page must not emit less than the static one does today. **That is very likely what
+> Phase 0's snapshot meant by naming this the single thing most likely to go wrong** — not that
+> tags are missing, but that the one page with complete tags is the one being replaced, and
+> nothing in the framework carries them across.
+
+`app/layout.tsx` sets `metadataBase`, `title` and `description` and **no openGraph at all**, so
+there is no inherited default for a route to fall back to.
+
+#### THE IMAGE DECISION, WHICH IS THE SHAPE
+
+**Every live product has an image — zero nulls in `products_active` — and none of them is
+representative.** `getBrandProducts` orders by `id`, so "the first product" means "the oldest row":
+
+| Brand | Live products | First by id |
+|---|---:|---|
+| **Maybelline** | 595 | **"Lifter Glaze Berry Haze"** — one lip gloss shade |
+| **No7** | 679 | **"Naturally Sun Kissed Gradual Body Tan"** |
+| CeraVe | 173 | Foaming Cleanser — plausible, by coincidence of insertion order |
+
+> **A card showing one lip gloss shade for a 595-product brand makes a claim about the brand that
+> the ordering never intended to make.** The `.order('id')` is CORRECT — it exists because
+> LIMIT/OFFSET without a unique sort has no guaranteed row order, and it was chosen for pagination
+> stability and nothing else.
+>
+> **A decision that is right where it was made can produce a wrong-looking result somewhere else
+> entirely, and the second surface is where you find out.** Nothing about the ordering changed; a
+> new consumer arrived and read it as a ranking.
+
+Brand logos would answer it and do not exist: `brand_hubs.logo_path` is set on **both rows of a
+two-row table** against 2,640 hubs, and `public/logos/` holds **retailer** logos.
+
+**So: the site card on every hub and category, and no per-brand picker.** `public/og-image.jpg`
+already existed, served 200, and was referenced by nothing but the static homepage. **A card with
+no image is better than a broken one, and a card with the wrong image is worse than either.**
+
+#### SAME TEXT, AND THE BINDING CAP IS SEARCH'S
+
+Measured across 2,820 hubs:
+
+| | Titles | Descriptions |
+|---|---:|---:|
+| Average / max | 52 / **84** | 124 / **187** |
+| Fit search (~60 / 155) | 2,340 | 2,028 |
+| Fit Twitter (~70) | 2,783 | — |
+| **Fit Facebook (~88 / 200)** | **2,820 — all** | **2,820 — all** |
+
+**No separate social variant.** Every title fits Facebook's cut and every description fits the 200
+a card shows, while only 2,028 fit the 155 a search result shows — so the same strings give the
+share card **strictly more** of the claim than search gets. A second wording would be a second
+thing to keep in step, for nothing.
+
+**One place, not fourteen.** `lib/format/social-tags.ts`, for the same reason the six templates
+share a module: fourteen copies of one decision is fourteen places for it to drift.
+
+---
+
+### 297. 13,390 products served their image over http, and it cost four things at once
+
+**Raised:** 24 August 2026 · **Fixed at ingest and backfilled. 0 remaining.**
+
+`/product/123` emitted `og:image` as `http://aff.ysi.bz/...`. **Twitter will not fetch a card image
+over http**, so those cards were imageless. But `og:image` was only the visible quarter of it —
+four consumers read `products.image_url`:
+
+| | |
+|---|---|
+| the on-page `<img>` | **mixed content on an https page** |
+| `og:image` | Facebook |
+| `twitter:image` | **not fetched at all** |
+| JSON-LD `image` | structured data |
+
+#### A REWRITE, NOT A FALLBACK — AND THAT WAS TESTED BEFORE IT WAS DECIDED
+
+Exactly two hosts stored http: **aff.ysi.bz (13,078)** and **images.beautybay.com (312)**.
+
+- **16 of 16 sampled URLs returned 200 over https.**
+- **aff.ysi.bz returned byte-identical responses on both schemes** (6118b/6118b, 7057b/7057b).
+- beautybay's http URLs **301 to https** anyway.
+
+So the site-card fallback was not needed and the question resolved to a one-line transform.
+
+#### WHY THE UPGRADE IS BLANKET AND NOT AN ALLOW-LIST
+
+> **It cannot make anything worse.** A browser already refuses or silently upgrades a passive http
+> subresource on an https page, so an http URL with no https counterpart **fails either way** —
+> the failure mode of upgrading is identical to the failure mode of not upgrading, and the success
+> mode is strictly better.
+
+**Deliberately NOT item 284's shape.** A vocabulary of known-good hosts would upgrade only that
+vocabulary, and the next host to arrive would silently keep its http — a decoder defined by a
+vocabulary decodes only that vocabulary.
+
+#### PAIRED WITH THE INGEST FIX, AND ITEM 284's LESSON IS WHY
+
+The importers write `image_url` on **update** as well as on create, so the backfill alone would be
+overwritten by the next import. `normaliseImageUrl` went into all three importers in the same
+change. **A cleanup with an open source has a half-life, not a result.**
+
+#### ONE ROW LEFT, FOUND BY LOOKING AT THE LEFTOVER RATHER THAN ROUNDING
+
+99,240 of 99,241 are now https. The one that is neither is **129358 (Elemis)**, whose `image_url`
+is `/e/l/elemis-peptide4-overnight-radiance-peel.jpg` — **a path with no host at all**, which
+resolves against our own domain and 404s, and which `metadataBase` would turn into an absolute
+FindMyBasket URL in `og:image`. **Recorded, not fixed:** repairing it means guessing which
+retailer's CDN it belongs to, and one row does not justify a guess.
+
+---
+
+### 298. The homepage declared the wrong size for its own image
+
+**Raised:** 24 August 2026 · **One line, and it had been wrong since 29 July.**
+
+`public/index.html` declared `og:image:width 1200` and `og:image:height 630` for a file that is
+**2500×1312**. The **aspect ratio is right** — both are 1.905:1 — which is why it never looked
+wrong: the numbers were copied from the recommendation rather than read from the file.
+
+Facebook lays the card out from the declared values **before** it fetches the image, so a mismatch
+reflows the card. Corrected to the file's real dimensions, with a comment saying they describe the
+file rather than the recommendation, and to change them if the file is ever replaced.
+
+---
+
+### 299. Committed is not deployed, and the ingest fix has not been running
+
+**Raised:** 24 August 2026 · **Found while shipping a second importer change. Not deployed here.**
+
+Item 284 concluded that the importer change was the substance and the backfill the tidy-up, because
+a cleanup with an open source has a half-life. **The source fix merged this morning in #424 and has
+never run.**
+
+`.github/workflows/deploy-edge-function.yml` is `workflow_dispatch` only — manual, deliberately, so
+that an edge function changes when someone decides it should. **Nothing in merging a PR deploys
+one.** Verified by reading the deployed source rather than assuming:
+
+```
+decodeFeedName    present in deployed import-awin-feed:  FALSE
+normaliseImageUrl present in deployed import-awin-feed:  FALSE
+```
+
+> **The backfill is live and the source fix is not, which is precisely the state item 284 was
+> written to prevent — one layer up.** The item described the hazard correctly, the change
+> addressed it correctly, and the change is sitting in `main` not running. **"Merged" and
+> "running" are different facts about the same code, and only one of them was checked.**
+
+**Two importer changes are now waiting on a dispatch**: `decodeFeedName` (item 284) and
+`normaliseImageUrl` (item 297). Both are safe and neither is urgent — the backfills already moved
+the existing rows, and what is at risk is only recurrence in newly created rows.
+
+**Not deployed in this pass, deliberately.** Deploying three importers is a production change to
+the ingest path with its own blast radius, and the standing practice is to space unrelated deploys
+apart so that attribution stays readable. **Robbie's call, and the flag is the deliverable.**
+
+#### TWO SMALLER THINGS RECORDED IN PASSING
+
+**`/skincare/moisturiser` 404s; the live subcategory is `/skincare/face`.** A bound on anything
+that writes subcategory URLs — slugs are not the product-type names they resemble, and `skincare`
+has exactly one live subcategory covering 45,388 products. Also noted in `docs/phase-1/CLOSED.md`,
+where URL-writing work is more likely to start.
+
+**Product titles at `TITLE_CAP = 110` exceed Twitter's ~70-character cut.** Out of scope here —
+those routes already emit social tags — and worth knowing: **a cap chosen for search is loose for
+social, and nothing in the code currently distinguishes the two.** Brand hubs do not have the
+problem (max 84), so this is specific to product titles, where the name plus an intact suffix is
+what pushes past it.
