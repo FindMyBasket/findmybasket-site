@@ -25444,12 +25444,23 @@ The raised error carries the original finding's full summary, so whoever hits it
 
 ### 291. The definition covered product URLs, and three departures ran through it
 
-**Raised:** 24 August 2026 · **406 orphaned brand hubs. Nothing changed — the 410 decision waits on
-Superdrug's reversibility, which is Robbie's to answer.**
+**Raised:** 24 August 2026 · **406 orphaned brand hubs. The 410 is HELD, with a condition. Nothing
+applied.**
 
-> **Departure state 4 defines a gone-set for PRODUCT URLs. There is no brand-URL equivalent, and
-> `middleware.ts` matches `['/product/:path*', '/account/:path*', '/ops/:path*']` — the orphan gate
-> never sees `/brands/`.**
+> ### THE NAIVE GONE-SET WOULD 410 NINE HUNDRED AND THIRTEEN WORKING PAGES.
+>
+> **Superdrug carried 1,323 brands. 913 of them — 69% — are live at another retailer today.**
+>
+> **A slug is DERIVED and SHARED. An id is STORED and EXCLUSIVE.** A departing retailer takes all
+> of its product rows and only part of a brand's presence, so "the brands the departed retailer
+> carried" is not the same set as "the brands that left" — it is mostly the opposite.
+
+That is why the mechanism does not transfer even though the structure does, and it is the first
+thing to know before anyone reaches for the obvious extension.
+
+**Departure state 4 defines a gone-set for PRODUCT URLs. There is no brand-URL equivalent, and
+`middleware.ts` matches `['/product/:path*', '/account/:path*', '/ops/:path*']` — the orphan gate
+never sees `/brands/`.**
 
 Same brand, same departure, same day, two different signals:
 
@@ -25507,18 +25518,20 @@ Structurally the existing mechanism extends: add `/brands/:path*` to the matcher
 constant beside `GONE_IDS`, and reuse `GONE_HTML` and the Edge Config switch. 406 slugs is nothing
 against 20,849 ids in a ~40KB bundle. **Four things make it not a copy.**
 
-**1. A SLUG IS DERIVED; AN ID IS STORED.** `brandSlug()` computes the slug from the brand string and
-nothing persists it. So a gone-set of slugs is a set of derived keys, and **derived keys collide.**
+**1. THE 913, ABOVE.** `brandSlug()` computes the slug from the brand string and nothing persists
+it, so a gone-set of slugs is a set of derived keys, and derived keys are shared.
 
-> **Superdrug carried 1,323 brands. 913 of them — 69% — are still live at another retailer.** The
-> overlap between "brands a departed retailer had" and "brands that are live" is not a hypothetical
-> edge case, it is the majority. A gone-set built from "brands the departed retailer carried"
-> without subtracting live brands would **410 nine hundred and thirteen live brand hubs.**
+**1b. AND THE DRIFT IS WORSE THAN THE ONE-OFF, WHICH IS THE PART THAT KILLS THE COPY.** Subtracting
+live brands fixes the 913 *once*. It does not stay fixed:
 
-And it stays live afterwards: a gone slug becomes wrong the moment *any* retailer starts carrying
-that brand, because the string produces the same slug. **Product ids cannot do this** — a product
-row belongs to one retailer instance, and a recreated product gets a new id. **A departing retailer
-takes all of its product rows and only part of a brand's presence.**
+> **A gone slug becomes false the moment ANY retailer starts stocking that brand.** The set drifts
+> on someone else's decision rather than on ours — a buyer at Boots adding a line silently turns
+> one of our 410s into a lie about a live page.
+>
+> **Product ids never do that.** A product row belongs to one retailer instance; reviving it needs
+> the departed retailer to return, or a merge to be undone, and both are ours. **A brand gone-set
+> would need re-verification on a schedule set by the market**, and a static constant in an edge
+> bundle is the wrong shape for a fact that changes without us.
 
 **2. THE DRIFT CHECK MATTERS MORE HERE, AND THE EXISTING ONE IS UNPROVEN.** The middleware gate runs
 BEFORE the page, so a stale gone entry serves 410 over live content. `gone-ids-drift.yml` exists for
@@ -25532,11 +25545,18 @@ old slug to a live one. A 410 in middleware would pre-empt an alias redirect tha
 work. The existing REDIRECTS-before-GONE_IDS precedence is the right order and has to be stated
 rather than inherited by luck.
 
-**4. REGENERATION TIMING — recoverable here, unlike state 4.** State 4 warns the gone-set cannot be
-rebuilt after the flip because `regen-gone-ids.mts` needs a live active-retailer row. **The brand
-equivalent CAN be rebuilt**, because the price rows survive deactivation: `products` joined to
-`retailer_prices` on the departed retailer id, minus everything live now, reproduces the 410 today.
-Verified. **That is luck rather than design**, and it is why this is recoverable five weeks late.
+**4. IT IS RECOVERABLE FIVE WEEKS LATE, AND ONLY BY LUCK.** State 4 warns that a gone-set cannot be
+rebuilt after the flip, because `regen-gone-ids.mts` selects products with a live active-retailer
+row and after the flip there are none.
+
+> **The brand equivalent CAN be rebuilt, because `retailer_prices` rows survive deactivation.**
+> `products` joined to `retailer_prices` on the departed retailer id, minus everything live now,
+> reproduces the 410 exactly — verified against the catalogue on 24 August, 36 days after the flip.
+>
+> **Nothing was designed to preserve that.** Price rows persist because deletion was never worth
+> the risk, not because anyone anticipated needing to reconstruct a brand set from them. **The one
+> reason this gap is fixable at all is a side effect of an unrelated decision** — and the next gap
+> found this late may not have one.
 
 #### THE PRINCIPLE THE GATE ALREADY STATES, APPLIED
 
@@ -25564,21 +25584,44 @@ of "nothing in stock" already exists and is already served: the 167.
 **So the choice was never 406 thin pages against 406 404s.** There is no thin page to build. The
 open question is only 410 against 404 — a signal, not content.
 
-#### WHY IT IS NOT DECIDED HERE
+#### THE DECISION: 410 IS HELD, NOT DEFERRED — AND THE CONDITION IS ATTACHED
 
-**410 says deliberately removed.** That is what happened, and it matches the 20,849 product URLs
-from the same event. 200 would move 406 contentless pages out of "Not found" and into the crawlable
-set, where they are strong candidates to join the **54,056** already crawled-and-declined — the
-wrong direction on the site's largest indexation problem, for 0.75% of it.
+**The case for 410 is sound on its own terms.** It says *deliberately removed*, which matches the
+20,849 product URLs from the same event, and it ends the two-signals-for-one-decision split. A 200
+would move 406 contentless pages out of "Not found" into the crawlable set, where a page with no
+products is a strong candidate to join the **54,056** already crawled-and-declined — the wrong
+direction on the site's largest indexation problem, for 0.75% of it.
 
-**But it waits on one fact nobody has recorded.** `retailer_import_config.notes` is null for
-Superdrug and `departure-completeness.md` states reversibility for Atelier and not for Superdrug.
-**If Superdrug can return, 8,664 rows and 406 hubs return with it and 410 is the wrong signal.**
+**It is held because the premise underneath it is not true yet.**
 
-> The gate's own comment draws the distinction that makes this matter: *"A retailer departure is
-> permanent because someone external decided"* — and for Superdrug **nothing records whether the
-> decision was theirs or ours.** That is the difference between a fact and a plan, and only one of
-> them supports a 410.
+`orphan-gate.ts` states the rule the 410 rests on: *"A retailer departure is permanent because
+someone external decided."* Checked 19 August: **Superdrug's affiliate page is a holding page, with
+no active programme on any network.**
 
-**Robbie is answering it.** Recorded as pending rather than as a recommendation, because the
-recommendation is the same either way until that answer exists.
+> **THE EXTERNAL DECISION WAS TO CLOSE A PROGRAMME, NOT TO STOP EXISTING.** That reads as between
+> networks rather than exited. **Nobody has decided whether Superdrug returns** — their programme
+> closing was theirs; whether they come back is not yet anyone's decision.
+>
+> **A 410 would assert more than that supports.** It claims permanence, and what exists is an
+> absence of a programme.
+
+**HELD, NOT DEFERRED**, and the distinction is the point: deferred means the work is queued and the
+answer will arrive by working on it. **Held means the answer arrives from outside**, and the only
+thing to do is name the condition and stop.
+
+| | |
+|---|---|
+| **Trigger** | **Superdrug's affiliate page names a network.** |
+| **Then** | 8,664 rows and 406 hubs return with them; the 410 was never right |
+| **Until then** | **404 — the weaker signal, and the correct one.** It says "not found", which is true, rather than "permanently removed", which is not established |
+| **Checked** | 19 August 2026, holding page, no programme on any network |
+
+**The trigger is checkable and it is not machine-checkable from our data.** Nothing in the
+catalogue changes when a retailer rejoins a network; the evidence is a page on someone else's site.
+**Recorded as a watch item rather than a check, and named as such** — after a week spent on the
+difference between a note and a guard, calling this a check would be the same overclaim in a third
+place.
+
+**The cost of holding is one HTTP status code on 406 pages Google has already found and filed under
+"Not found".** That is the cheapest possible thing to be wrong about, which is the other half of
+why holding is right: **the reversible option is also the low-cost one.**

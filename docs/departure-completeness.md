@@ -70,9 +70,28 @@ its completeness is asserted against itself.**
 - The gate's existing rule decides membership: *a 410 claims a URL had content and lost it.* A
   departed hub had a grid and lost it; a brand that never had live products keeps its 404.
 
-**Not applied.** The 410-versus-404 decision waits on whether Superdrug's departure is reversible —
-which this document states for Atelier and does not state for Superdrug, and
-`retailer_import_config.notes` is null.
+### The 410 is HELD, and the condition is checkable
+
+**Not applied, and not deferred.** State 1's rule — a departure is permanent because someone
+external decided — is not satisfied for Superdrug. **Checked 19 August 2026: their affiliate page is
+a holding page with no active programme on any network.** That reads as *between networks* rather
+than *exited*.
+
+> **The external decision was to close a programme, not to stop existing.** Nobody has decided
+> whether Superdrug returns. A 410 claims permanence; what exists is the absence of a programme.
+
+| | |
+|---|---|
+| **Trigger** | **Superdrug's affiliate page names a network** |
+| **Then** | 8,664 rows and 406 hubs return with them |
+| **Until then** | **404** — the weaker signal, and the correct one |
+
+**A watch item, not a check.** Nothing in our data changes when a retailer rejoins a network; the
+evidence is a page on someone else's site. Calling it a check would be an overclaim.
+
+**This is the reversibility answer this document states for Atelier and could not state for
+Superdrug.** It is now stated: *unknown, with a named trigger* — which is a different answer from
+Atelier's *final*, and the difference is what holds the 410.
 
 ---
 

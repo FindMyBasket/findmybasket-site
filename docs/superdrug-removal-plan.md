@@ -11,6 +11,13 @@ service_role) and GSC monitoring of the 410 de-index over the coming weeks. Roll
 ever needed: Edge Config `superdrug_removed:false` + `active=true` (active=true alone
 restores the catalogue even without the flag).
 
+> **REVERSIBILITY, AS AT 24 AUG 2026: UNKNOWN, WITH A NAMED TRIGGER.** Their affiliate page was a
+> holding page on 19 August — no active programme on any network — which reads as between networks
+> rather than exited. **The trigger is that page naming a network**; if it does, 8,664 rows and 406
+> brand hubs return. This is why the brand-hub 410 is HELD rather than applied: a 410 claims
+> permanence and what exists is the absence of a programme. Work-list item 291,
+> `docs/departure-completeness.md`.
+
 > **DATA-QUALITY EXPECTATION TO CARRY IF r12 EVER RETURNS.** Measured 5 Aug 2026.
 > Superdrug's retained rows carry **871 barcodes that cannot normalise, out of 29,247 —
 > 3.0%**. The live-retailer rate is 0.085% (48 of 56,584). **Forty times higher.**
