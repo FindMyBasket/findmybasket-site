@@ -26093,81 +26093,137 @@ motivating incident tends to encode the incident rather than the class.
 
 ---
 
-### 301. Deployed, then rendered — and the output disagreed with the version
+### 301. A deployment check cannot answer whether the new code says something true
 
-**Raised:** 24 August 2026 · **`send-routine-email` DEPLOYED, version 17. Two copy defects found by
-rendering. Nothing else deployed.**
+**Raised:** 24 August 2026 · **`send-routine-email` DEPLOYED alone, version 17. Verification is the
+deliverable; nothing else deployed and no copy changed.**
 
-Dispatched alone, per item 300. The deployed `index.ts` is **byte-identical to the repo file**
-(sha `36afe5cb…` both sides), and the bundle carries `_shared/delivery.ts` and
-`_shared/require-service-role.ts` with it — **which is the item 300 bundling relationship, visible
-in the deploy payload.**
+> ### A DEPLOYMENT CHECK ANSWERS "IS THE NEW CODE RUNNING". IT CANNOT ANSWER "DOES THE NEW CODE SAY
+> SOMETHING TRUE." Those are different questions, and only the second one reaches the recipient.
 
-#### THERE IS NO DRY MODE, AND NOTHING WAS SENT TO FIND OUT
+**Every version-level check passed:**
 
-`?mode=test&routineId=X` **sends a real email**; it only skips the `last_emailed_at` update.
-`routine_email_log` stores `mode`, `ok` and `resend_message_id` and **not the body**, so no composed
-email can be read back after the fact.
+| Check | Result |
+|---|---|
+| Deployed `index.ts` vs repo file | **byte-identical**, sha `36afe5cb…` both sides |
+| Next-best anchor code present | yes |
+| `lib/__tests__/email-copy.test.ts` (em dashes) | **green** — it reads the source file |
+| Bundle contents | `index.ts` + `_shared/delivery.ts` + `_shared/require-service-role.ts` |
 
-**So the body was rendered locally instead**, from the deployed source: the pure section of
-`index.ts` up to the first network call, plus `_shared/delivery.ts`, run in Node against four real
-saved routines (34, 25, 3, 42) with their real prices and real retailer delivery terms. **Output,
-not version** — and the difference turned out to matter.
+**And composing the artefact a person receives showed a number and a sentence disagreeing.** Items
+302 and 303 are what rendering found; neither is visible from any of the four rows above.
 
-#### WHAT THE DEPLOY FIXED, CONFIRMED IN THE RENDERED BODY
+#### NO DRY MODE EXISTS, AND NOTHING WAS SENT TO FIND OUT
+
+`?mode=test&routineId=X` **sends a real email** — it only skips the `last_emailed_at` update — and
+`routine_email_log` stores `mode`, `ok` and `resend_message_id`, **not the body**. So there is
+neither a dry render nor a post-hoc read.
+
+**The body was rendered locally from the deployed source instead:** the pure section of `index.ts`
+up to its first network call, plus `_shared/delivery.ts`, run in Node against **four real saved
+routines** (34, 25, 3, 42) with their real prices and their retailers' real delivery terms.
+
+#### WHAT THE DEPLOY DID FIX, CONFIRMED IN THE RENDERED OUTPUT
 
 | | |
 |---|---|
 | **Em dashes** | **zero** in body and subject, all four routines |
-| **The invented £3.95** | gone — the baseline calls `deliveryFor(...)` per leg, and the rendered card reads **"Free delivery"** where the real threshold is met |
+| **The invented £3.95** | gone — the baseline calls `deliveryFor(...)` per leg, and the card reads **"Free delivery"** where the real threshold is met |
 
-#### WHAT RENDERING FOUND THAT THE VERSION COULD NOT
+**Both were fixed on 3 August and had not shipped for 21 days.** The bundling relationship item 300
+identified is visible in this deploy's payload: `_shared/delivery.ts` travels with the function,
+which is why a change to it stales every consumer silently.
+
+---
+
+### 302. The arithmetic moved and the sentence stayed
+
+**Raised:** 24 August 2026 · **Not fixed. Needs a wording decision, not a patch.**
+
+Item 245 replaced `worstCaseTotal - best.total` with `allOptions[1].total - best.total` — a
+next-best anchor — **in three places.** The copy beside it was not one of them:
 
 ```
-You could save
-£0.00
-vs buying everything at the most expensive retailer
+send-routine-email/index.ts:422
+<div style="…">vs buying everything at the most expensive retailer</div>
 ```
 
-**All four routines. Both defects.**
+> **The number is honest and the sentence claims a comparison the code no longer performs.** It
+> describes a cherry-picked per-line maximum — a basket nobody would ever assemble — which is
+> precisely the anchor item 245 removed for being unbuyable.
+>
+> **A change that corrects a figure and leaves the words describing the old one is worse than
+> either half alone**, because the words are what a reader believes. The figure got quieter and the
+> sentence kept claiming the old comparison.
 
-**1. THE COPY DESCRIBES THE ANCHOR THAT WAS REPLACED.** Item 245 changed the arithmetic from
-`worstCaseTotal - best.total` to `allOptions[1].total - best.total` — a next-best anchor, correctly,
-in three places. **The sentence under the number still says "the most expensive retailer".**
+**Item 179's shape:** the reasoning was right and its reach was partial. Item 245's own comment says
+so about the previous fix reaching the delivery side and not the products side; **this is the third
+lap of the same partial reach, and it stopped at the boundary between logic and copy.**
 
-> **The number is now honest and the sentence beside it is not.** It claims a comparison against a
-> cherry-picked per-line maximum that the code no longer performs. **A change that corrected a
-> figure and left the words describing the old one is worse than either half alone**, because the
-> words are what a reader believes.
+---
 
-**2. THE SAVINGS PANEL RENDERS AT ZERO.** `buildEmailSubject` gates on `result.saving > 0` and
-correctly returns "Your routine this month". `buildEmailHTML` gates the panel on `result.best`
-alone, so the body shows a large green **"You could save £0.00"** while the subject says nothing
-about saving.
+### 303. The subject knows; the body does not
 
-> **Two expressions of one rule, and only one carries the condition** — item 267's shape, in the
-> same function pair. The subject knows a zero saving is not worth announcing; the body does not.
+**Raised:** 24 August 2026 · **Not fixed. One line, but it depends on item 304's decision.**
 
-**Why zero on all four:** a single-retailer option must stock every item in the routine, so these
-routines yield one viable option each, and with one option there is no next best. **`saving = 0` is
-the truthful answer** — which is exactly what item 245 intended, and exactly what makes the stale
-sentence visible.
+Two functions, one rule, one condition:
 
-#### THE NET EFFECT ON 1 SEPTEMBER, STATED PLAINLY
+```ts
+buildEmailSubject:  if (result.best && result.saving > 0) return `…save £${…}`;
+buildEmailHTML:     ${result.best ? `…You could save £${result.saving.toFixed(2)}…` : ''}
+```
 
-August's emails claimed an inflated saving against an invented baseline. **September's will claim
-£0.00 against a baseline the code no longer uses.** The arithmetic is fixed; the presentation is
-not. **Better than August and still wrong**, and there are eight days to decide what it should say.
+**So the subject correctly says "Your routine this month" while the body renders a green panel
+reading "You could save £0.00".** All four rendered routines.
 
-**Not fixed tonight.** The deploy was the authorised action and the verification was the
-deliverable; changing customer copy is a separate decision with its own wording to agree.
+> **Two expressions of one rule and only one carries the condition** — item 267's shape, in a
+> function pair thirty lines apart in the same file. The subject was written knowing a zero saving
+> is not worth announcing. The body was written before that mattered, and nothing connected them.
 
-#### THE VERIFICATION METHOD IS THE TRANSFERABLE PART
+**Whether the fix is `saving > 0` on the panel depends on item 304**, which is why this is recorded
+separately rather than as a one-line correction.
 
-**Checking the version would have passed.** The bundle matches the commit, `decodeFeedName`-style
-probes would find the next-best code present, and the em-dash test — which reads the source file —
-passes. **Every version-level check says shipped.** Only composing the artefact a person receives
-showed a number and a sentence disagreeing.
+---
 
-> **A deployment check answers "is the new code running". It cannot answer "does the new code say
-> something true."** Those are different questions and only the second one reaches the recipient.
+### 304. The common case for this email is no saving, and that is a copy decision
+
+**Raised:** 24 August 2026 · **For Robbie. Not a bug — item 245 working as intended.**
+
+**All four real saved routines rendered `saving = £0.00`**, and the reason is structural rather than
+accidental: a single-retailer option must stock **every** item in the routine, so these routines
+yield **one viable option each**, and with one option there is no next best to anchor against.
+
+> **This is item 245 doing exactly what it was built to do.** The old anchor manufactured a saving
+> out of a basket nobody would buy; the honest answer for a routine with one way to buy it is zero.
+> **The consequence is that "no saving" is the normal case for this email, not the edge case** —
+> and no copy was written for the normal case.
+
+#### THE BUILDER ALREADY DECIDED THIS, AND THE EMAIL DID NOT INHERIT IT
+
+`app/app/RoutineBuilder.tsx` carries a four-branch qualitative treatment for exactly this state,
+added by item 245, with a comment saying that collapsing them into one sentence *"made the old copy
+read as an apology"*:
+
+```
+One retailer stocks everything in this basket, delivery included.
+One way to buy this basket, split across N retailers, delivery included.
+Everything in your basket is best value at one retailer, delivery included.
+  The next-best way to buy it costs the same.
+```
+
+**The same change taught the site what to say and left the email saying nothing.** Two surfaces,
+one decision, and it reached one of them.
+
+#### THE QUESTION FOR TOMORROW
+
+**When the saving is zero, should the email suppress the panel or state the result plainly?**
+
+- **Suppress** — no panel, the basket and total stand alone. Smallest change, and it says nothing
+  false. But it removes the most visually prominent element from the common case, leaving an email
+  whose reason for existing is less obvious.
+- **State it, as the builder does** — inherit the qualitative branches. Larger change, needs the
+  email's own wording, and it answers the reader's real question: *is this the best way to buy it?*
+  **The builder already decided this is the better answer**, and the argument transfers.
+
+**Eight days of headroom, which is why this goes as a decision rather than a patch.** Item 303's
+gate is a one-line fix under either option, and which line it becomes depends on this.
