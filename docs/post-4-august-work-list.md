@@ -25337,3 +25337,105 @@ not a metadata fix, and folding it into one would be deciding it by accident.
 **The population is also unmeasured: how many live pages currently serve a stale value is not
 known.** Measuring it is the first step of that change rather than of this record — and it has to
 come first, because it is what says whether this is seven pages or seventy thousand.
+
+---
+
+### 290. A guard that has to be invoked is a note with a function signature
+
+**Raised:** 24 August 2026 · **Built, tested, live. Protected population: one row.**
+
+> **A GUARD THAT HAS TO BE INVOKED IS A NOTE WITH A FUNCTION SIGNATURE.**
+
+Item 285 recorded a hold that was overridden because it was written in two places and the change
+came from a third. The remedy had to close every route, including the ones nobody has thought of,
+which rules out two of the three available shapes:
+
+| Shape | Catches | Rejected because |
+|---|---|---|
+| **`BEFORE UPDATE` trigger on `products`** | every path through the SQL executor | **chosen** |
+| A function every bulk path must call | paths that know it exists | **it is the tempting one.** It reads as tidy and it is a CONVENTION — and the change that broke the hold was a change that did not know the convention existed. It repeats the note's failure one layer down, with more code |
+| An assertion inside each migration | the migration that remembers to assert | fires **after** the write, and only when invited |
+
+#### THE SHAPE
+
+`BEFORE UPDATE ON products`, with a `WHEN` clause so it fires **only** when `name` or `match_key`
+actually changes. That keeps the function out of the hot path entirely: the importers touch these
+rows constantly with price, stock and image, while name and `match_key` are written **on create
+only** in normal operation. **The lookup is paid on a path almost never taken.**
+
+**It raises. It does not skip.** A bulk write that silently excluded the held row would report
+success and leave the caller believing coverage it does not have. **That shape is already on this
+list twice** — `btrim(name)` fixing none of the 29 trailing-whitespace rows behind a clean run
+(item 237), and the DQ rule comparing `canonical_size` to its own source and scoring 437 rows
+`agrees` (item 252, where the shape is named). **An operation that cannot see the defect returns
+the answer that means "fine".**
+
+#### RELEASE, WHICH IS WHAT MAKES IT A GUARD RATHER THAN AN OBSTRUCTION
+
+**A hold that cannot be released becomes something people route around**, which is the failure mode
+of every blocking check on this list. Two routes, both requiring an explicit act that states which
+hold:
+
+- **Temporary** — `SET LOCAL "fmb.release_hold" = '<finding_key>'` in the same transaction as the
+  write. **Naming the exact key means you read it**; a key copied from another migration does not
+  match, and `SET LOCAL` dies with the transaction so it cannot leak. The finding stays **open**,
+  which is right when the underlying condition still stands but an unrelated edit is legitimate.
+- **Permanent** — set the finding's `status` to anything but `open`. The guard reads open holds
+  only, so fixing `COUNT_UNIT_RE` and resolving the finding unlocks the row for good.
+
+**No function in this database used `current_setting` before this one.** This introduces the
+pattern rather than following one, which is the reason to keep it to **a single documented GUC
+name** rather than a family of them.
+
+#### HOLDS, NOT FINDINGS
+
+Only `held:`-prefixed keys block. `standing_check_findings` also carries ordinary reporting
+findings, and if those blocked writes then **every DQ observation would silently become a write
+lock** — turning a reporting table into a control surface nobody agreed to.
+
+#### WHAT IT CANNOT COVER — STATED IN THE MIGRATION, NOT ONLY HERE
+
+**1. DELETE-THEN-RECREATE, and this one cannot be fixed here.** The hold is keyed by `product_id`.
+A recreated row gets a **new id**, so the hold is not violated — **it is ORPHANED**, pointing at a
+row that no longer exists while the same product sits unguarded under a different id.
+
+> **Adding INSERT to the trigger does not close it.** There is nothing for an INSERT to match
+> against. It is a property of keying a hold by id, not of the trigger. `fmb_delete_products_cascade`
+> exists, so the path is real.
+
+**2. A PROSE-ONLY HOLD.** The guard reads `detail->>'product_id'`. A finding naming its subject in
+the summary and not in the detail is **invisible to it** — the note's failure relocated inside the
+guard. **Nothing enforces the convention at the point holds are written**, so the guard covers the
+holds that happen to have been recorded correctly.
+
+**3–5.** `ALTER TABLE ... DISABLE TRIGGER` and `session_replication_role = 'replica'`, both
+available to the owner; restore or branch reset, which reload rows without firing triggers; and any
+column other than `name` and `match_key`.
+
+> **"A hold is only as strong as the least likely route to it" applies to the guard.** It converts
+> the two anticipated routes plus every SQL route into one guarded route. It does not make the hold
+> unconditional, and limit 1 is a route it cannot see by construction. **A guard whose limits are
+> unstated is the next overclaim.**
+
+#### PROVED, NOT ASSUMED
+
+| Test | Result |
+|---|---|
+| `name` write to the held row | **refused** |
+| `match_key` write to the held row | **refused** |
+| catalogue-wide `match_key` rewrite | **whole statement aborted, 0 rows written** |
+| `name` write to an unheld row | allowed |
+| `image_url` write to the **held** row | allowed — trigger did not fire |
+| release by the **exact** key | allowed |
+| release by a **different** key | **still refused** |
+
+The raised error carries the original finding's full summary, so whoever hits it reads **why**
+105424 is held without leaving the error message.
+
+#### THE POPULATION IS ONE ROW
+
+13 findings exist; **one** is a hold, and **one** carries a `product_id`. They are the same row.
+
+> **This was built after ONE instance, not after a pattern.** Its value is the class rather than
+> the count, and the argument for it is that the instance cost a production write and a revert on
+> the same day. **Recorded plainly so the count is not mistaken for evidence of scale.**
