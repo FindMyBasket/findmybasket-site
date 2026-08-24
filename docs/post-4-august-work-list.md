@@ -24828,11 +24828,13 @@ that metadata regenerates on the same hourly cycle as the body, and let that cov
 | Value | Fetched by | Cached by Next? | Freshness argument |
 |---|---|---|---|
 | `facts.stockists`, `facts.sole_retailer` | RPC → **POST** | no | **holds** |
-| `product.name`, `description`, `image_url` | `.select()` → **GET** | **yes** | **does not hold** |
+| `product.name`, `description`, `image_url` | `.select()` → **GET** | **yes** | **holds only to one hour** |
 
 Next's Data Cache stores `fetch` GETs keyed by request URL. **It survives deployments and is not
-invalidated by a write to the underlying row.** So the count in the title is as fresh as the offers
-beneath it, and the product name wrapped around that count is not.
+invalidated by a write to the underlying row**; it expires on its own 3600-second timer, started
+when the entry was populated rather than when the page was rendered. So the count in the title is
+as fresh as the offers beneath it, and **the product name wrapped around that count can be up to an
+hour older** — measured, not estimated.
 
 **The correction is written INTO the amendment in `app/product/[id]/page.tsx`, not appended beneath
 it.** The amendment is what the next reader will find, and a caveat kept somewhere else leaves the
@@ -25207,13 +25209,25 @@ question is what a departed hub should serve, and it is not settled by this reco
 
 **Raised:** 24 August 2026 · **Found by verifying six pages after a deploy and getting five.**
 
-Product 151174's name was corrected in the database and the correction verified there — in
-`products`, in `products_servable`, and in the recomputed `match_key`. **Its own page then served
-the pre-correction name.**
+> **SAME ROW. SAME DATABASE. SAME DEPLOYMENT. SAME MOMENT. TWO PAGES, TWO ANSWERS.**
+>
+> `/brands/pestle-mortar` renders product 151174's corrected name while `/product/151174` renders
+> the pre-correction one. Zero occurrences of the double-escaped form anywhere on the brand page.
+>
+> **The two pages differ only in the QUERY they issue.** That eliminates every row-level and
+> database-level explanation in one observation, and it cost one request.
 
-#### WHAT IT IS NOT
+**Mechanism:** supabase-js issues `.select()` as a `fetch` GET, and Next's Data Cache stores GETs
+keyed by request URL. `products_servable?id=eq.151174` held a stale entry; the brand hub's
+`products_active?normalised_brand=eq.…` held a fresh one. **The staleness is per query — not per
+row, not per page.** The cache **survives deployments**, and **no write to the underlying row
+invalidates it**; it expires on its own timer, measured below.
 
-Every obvious explanation was tested and eliminated before a mechanism was proposed:
+#### WHAT IT IS NOT, AND THIS IS WHAT MAKES THE ABOVE A CONCLUSION
+
+The corrected name was verified in the database first — in `products`, in `products_servable`, and
+in the recomputed `match_key` — and then five explanations were tested and eliminated before any
+mechanism was proposed:
 
 | Hypothesis | Test | Result |
 |---|---|---|
@@ -25223,19 +25237,23 @@ Every obvious explanation was tested and eliminated before a mechanism was propo
 | Stale row anywhere in the database | queried `products`, `products_servable`, PostgREST | all clean |
 | Wrong Supabase project | the page calls `fmb_product_metadata_facts`, created minutes earlier in this project, and gets the right count | same project |
 
-#### THE OBSERVATION THAT SETTLED IT, AND IT COST ONE REQUEST
+**Without these, the two-page observation is a curiosity.** With them it is the only remaining
+explanation, which is the difference between a conclusion and a guess.
 
-> **`/brands/pestle-mortar` renders that row's name CORRECTLY at the same moment `/product/151174`
-> renders it stale.** Zero occurrences of the double-escaped form anywhere on the brand page.
->
-> **One row, one database, one deployment, two pages, two answers.** Nothing about the row can
-> explain that. The two pages differ only in the QUERY they issue, so the staleness is held per
-> query, not per row and not per page.
+#### A PREDICTION THAT COULD NOT BE TESTED, REPORTED AS A BOUND
 
-**Mechanism:** supabase-js issues `.select()` as a `fetch` GET, and Next's Data Cache stores GETs
-keyed by request URL. `products_servable?id=eq.151174` has a stale entry; the brand hub's
-`products_active?normalised_brand=eq.…` has a fresh one. **The cache survives deployments and no
-write to the underlying row invalidates it.**
+The hypothesis predicts that only pages fetched BEFORE the backfill carry a stale entry. Every
+product URL fetched anywhere in this session's transcript is 29 distinct ids; intersected with the
+59 rows backfilled today, **the intersection is exactly {151174}.** No second case exists, so the
+prediction was not tested.
+
+> **A FETCH LOG IS A SUBSET OF FETCHES.** Any user or crawler request populates the same entry, so
+> the two backfilled pages that render clean establish nothing about whether they were fetched.
+> **They are not weak support for the hypothesis; they are outside its testable range.**
+
+An attempt to test it against offer prices on the other 28 pages was too noisy to distinguish — the
+extra prices there come from related-product cards, not the product's own offers — and is not
+counted as evidence in either direction.
 
 #### THE SPLIT THIS CREATES IN OUR OWN METADATA
 
@@ -25249,6 +25267,35 @@ write to the underlying row invalidates it.**
 broader than the evidence supported. It is recorded inside that amendment in the code, not beneath
 it.
 
+#### THE BOUND IS ONE HOUR, MEASURED — AND THE FIRST ANSWER WAS WRONG
+
+**This was first recorded as "no staleness bound this codebase can name". A 40-minute watcher
+settled it and the answer is one hour.** Polling every 60 seconds: 24 consecutive STALE, then
+CLEAN. The timeline fits a 3600-second TTL to the second:
+
+| Time (UTC) | Event |
+|---|---|
+| **17:01:20** | page fetched — the database still held the entity, so **the cache entry is populated with it and the TTL starts** |
+| 17:12:38 | `decode_stored_html_entities_backfill` writes the corrected name |
+| ~17:32 | **new deployment** — did not clear the entry |
+| 17:34 – 18:01 | 24 requests, every one served the pre-write name |
+| **18:01:20** | 3600s after population — entry expires |
+| 18:01:51 | first request past expiry: **serves stale, revalidates in the background** |
+| **18:02:51** | **CLEAN** |
+
+**The TTL is the route's own `revalidate = 3600`.** So the bound is real and nameable: **up to one
+hour after a write, plus one request.**
+
+##### THE CLOCKS ARE INDEPENDENT, AND THAT IS WHAT THE AMENDMENT ACTUALLY GOT WRONG
+
+The amendment claimed metadata and body "come from one regeneration and cannot disagree". **They do
+come from one HTML render — over data of up to an hour's age.** The 17:34 render was fresh HTML
+reading a cache entry populated at 17:01. **Two hourly clocks, started at different moments, and
+nothing aligns them.**
+
+> **A deployment resets one clock and not the other.** That is the part that stays surprising once
+> the bound is known: the code was new, the HTML was new, and the data was 33 minutes old.
+
 #### WHAT IT MEANS FOR THE SIX TEMPLATES
 
 **All three product templates embed `baseTitle`, which is built from `product.name`.** So:
@@ -25257,13 +25304,24 @@ it.
   cannot be put in the wrong branch by this.
 - **The numbers inside the copy are sound.** The count and the retailer name come from the same
   uncached call.
-- **The product name they are wrapped around has no stated staleness bound.** Not one hour — no
-  figure this codebase can currently name. The same applies to `brand.display_name` on hubs.
+- **The product name they are wrapped around can be up to an hour stale**, independently of the
+  count beside it. The same applies to `brand.display_name` on hubs.
 
-> **A METADATA CHANGE ARGUED FROM FRESHNESS INHERITS THE FRESHNESS OF ITS SLOWEST INPUT, AND THE
-> INPUTS DO NOT ADVERTISE WHICH ONE THAT IS.** Two values a line apart in the same function, both
-> read from the same database in the same request, have different staleness properties — decided by
-> whether supabase-js chose GET or POST, which nothing at the call site shows.
+**One hour is a tolerable bound for a product name, which changes rarely.** The finding is not that
+an hour is too long. It is that **the argument for it was never made**: the amendment asserted a
+synchronisation that does not exist, and the true bound turned out to be acceptable anyway.
+
+> **Two values A LINE APART in the same function, both read from the same database in the same
+> request, have different staleness properties — decided by whether supabase-js chose GET or POST,
+> WHICH NOTHING AT THE CALL SITE SHOWS.**
+>
+> The first half is surprising. **The second half is what makes it dangerous**: there is no reading
+> of `generateMetadata` that reveals the difference. `getProductMetadataFacts(id)` and
+> `getProductById(id)` are two awaits three lines apart, identical in shape, and one is fresh and
+> one is unbounded. The property lives in a library's choice of HTTP verb.
+>
+> **General form: a change argued from freshness inherits the freshness of its slowest input, and
+> the inputs do not advertise which one that is.**
 
 **A renamed product keeps its old name in its own title indefinitely**, while the same name shows
 corrected on every other surface — which is the failure mode hardest to notice, because the page
@@ -25271,9 +25329,11 @@ that is wrong is the one nobody cross-checks.
 
 #### NOT FIXED HERE, AND THE OPTIONS ARE NOT EQUIVALENT
 
-Setting `{ cache: 'no-store' }` or a `revalidate` on the Supabase client's fetch would close it, and
-it is a change to how **every** query on the site is cached, on a catalogue of 99,241 pages. **That
-is a performance decision with a load profile behind it, not a metadata fix**, and it does not
-belong inside this one. Recorded with the mechanism demonstrated and the population unmeasured:
-**how many live pages currently serve a stale value is not known**, and finding out is the first
-step of that change rather than of this record.
+Setting `{ cache: 'no-store' }` or a `revalidate` on the Supabase client's fetch would close it.
+**It changes how EVERY query on the site is cached, across 99,241 product pages and 2,640 hubs, and
+the load profile that change would produce has not been measured.** That is a performance decision,
+not a metadata fix, and folding it into one would be deciding it by accident.
+
+**The population is also unmeasured: how many live pages currently serve a stale value is not
+known.** Measuring it is the first step of that change rather than of this record — and it has to
+come first, because it is what says whether this is seven pages or seventy thousand.

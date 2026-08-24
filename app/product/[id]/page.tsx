@@ -131,13 +131,40 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
    * correctly at the same moment. One row, one database, one deployment, two pages, two
    * answers: the brand hub's query has its own cache entry and that entry was fresh.
    *
-   * WHAT THIS MEANS FOR THE THREE TEMPLATES BELOW: all three embed `baseTitle`, which is
-   * built from product.name. So the PRODUCT NAME in every title and description on this
-   * route has no stated staleness bound -- not one hour, not any figure this file can
-   * name. The branch CHOICE and the numbers in it are sound; the name they are wrapped
-   * around is not, and that is a property of the fetch layer rather than of this metadata.
-   * See work-list item 289. The same applies to brand.display_name on the hub route, which
-   * findBrandBySlug also reads via a `.select()`.
+   * THE BOUND IS ONE HOUR, AND IT WAS MEASURED. A 40-minute watcher on the affected page
+   * polled every 60s: 24 STALE, then CLEAN. The entry was populated at 17:01:20, the write
+   * landed at 17:12:38, a DEPLOYMENT at ~17:32 did not clear it, and it flipped at 18:02 --
+   * 3600s after population, i.e. this route's own `revalidate`, with one stale-while-
+   * revalidate request at the boundary. So: UP TO ONE HOUR AFTER A WRITE, PLUS ONE REQUEST.
+   *
+   * WHAT THE AMENDMENT ABOVE ACTUALLY GOT WRONG IS NOT THE HOUR, IT IS THE SYNCHRONISATION.
+   * It said metadata and body "come from one regeneration and cannot disagree". They come
+   * from one HTML render OVER DATA OF UP TO AN HOUR'S AGE: the 17:34 render was new HTML
+   * reading a cache entry from 17:01. TWO HOURLY CLOCKS, STARTED AT DIFFERENT MOMENTS, AND
+   * NOTHING ALIGNS THEM -- a deployment resets one and not the other.
+   *
+   * FOR THE THREE TEMPLATES BELOW: all three embed `baseTitle`, built from product.name, so
+   * the PRODUCT NAME can be up to an hour stale independently of the count beside it. The
+   * branch CHOICE and the numbers in it are sound (uncached RPC). An hour is tolerable for
+   * a product name, which changes rarely -- the point is that the argument for it was never
+   * made. See work-list item 289. The same applies to brand.display_name on the hub route,
+   * which findBrandBySlug also reads via a `.select()`.
+   *
+   * ── THE GENERAL FORM, WHICH IS WHY THIS BELONGS IN THE AMENDMENT AND NOT A FOOTNOTE ──
+   *
+   * A CHANGE ARGUED FROM FRESHNESS INHERITS THE FRESHNESS OF ITS SLOWEST INPUT, AND THE
+   * INPUTS DO NOT ADVERTISE WHICH ONE THAT IS.
+   *
+   * Look at the two awaits below. `getProductMetadataFacts(id)` and `getProductById(id)`
+   * are three lines apart, identical in shape, reading the same database in the same
+   * request -- and one is fresh on every regeneration while the other has no bound. The
+   * difference is that supabase-js sends the first as a POST and the second as a GET, and
+   * NOTHING AT EITHER CALL SITE SHOWS THAT. Reading this function more carefully would not
+   * have caught it; only fetching two pages that share a row did.
+   *
+   * So: before arguing that anything here is fresh, name the fetch it comes from and check
+   * the verb. "The page revalidates hourly" is a statement about the page, not about the
+   * values on it.
    */
   const facts = await getProductMetadataFacts(id);
 
