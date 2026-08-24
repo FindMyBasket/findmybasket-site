@@ -39,48 +39,54 @@ decided quickly rather than left ambiguous.
 
 ---
 
-## Which of the three satisfy it today
+## Which of the three satisfy it — VERIFIED 24 AUGUST 2026, AFTER THE SIX-STATE PASS
 
 | | Superdrug | Branded Beauty | Atelier De Glow |
 |---|---|---|---|
 | **1** `active = false` | ✅ | ✅ | ✅ |
-| **2** import config disabled | ❌ **`enabled = true`** | ✅ | ❌ **`enabled = true`** |
-| **3** scheduler stopped | ⚠️ **no job exists** | ✅ inactive | ❌ **ACTIVE, 07:47 nightly** |
-| **4** gone-set non-empty | ✅ 20,849 | ✅ 1,821 | ✅ 59 |
-| **5** redirects curated | ✅ 54 | ✅ 22 | ❓ **0, and never assessed** |
-| **6** terms NULL + reason | ❌ no reason | ❌ no reason | ✅ |
-| **Last import** | 19 Jul | 1 Aug | **23 Aug** |
+| **2** import config disabled | ✅ | ✅ | ✅ |
+| **3** scheduler stopped | ✅ | ✅ | ✅ |
+| **4** gone-set non-empty | ✅ 20,849 | ✅ 1,821 | ✅ 57 |
+| **5** redirects curated **or explicitly unnecessary** | ✅ 54 curated | ✅ 22 curated | ✅ **explicit finding: none needed** |
+| **6** terms NULL + reason | ✅ | ✅ | ✅ |
+| Last import | 19 Jul | 1 Aug | **23 Aug — final** |
 
-> **NONE OF THE THREE SATISFIES ALL SIX.** Branded Beauty comes closest at four.
->
-> **And they fail in different places**, which is the evidence that each was done from memory
-> rather than from a list.
+> **ALL THREE SATISFY ALL SIX. Measured against the database and the repository after the pass,
+> not asserted.**
 
----
+**This table is the point of the document.** Before it existed the three departures disagreed in
+three different places and **nothing could report the disagreement, because there was no statement
+for reality to diverge from.** The scorecard is now a thing a check could run.
 
-## ⚠️ THE LIVE HAZARD: SUPERDRUG IS HELD OFF BY AN ABSENCE, NOT BY A SETTING
+### What the pass changed, 24 August 2026
 
-`retailer_import_config.enabled = true` for Superdrug (r12). **Nothing is scheduling it — the
-GitHub workflow is `refresh-superdrug.yml.disabled` and there is no `cron.job` row.**
+| Retailer | Change |
+|---|---|
+| Superdrug | `import_config.enabled` **true → false**; terms reason written |
+| Branded Beauty | terms reason written |
+| Atelier De Glow | `import_config.enabled` **true → false**; cron job 32 **disabled** |
 
-> **THE IMPORT IS STOPPED ONLY BECAUSE NOTHING IS CALLING IT. THE MOMENT ANYONE ADDS A JOB — OR
-> RENAMES THAT WORKFLOW BACK — IT RESUMES, AND NOTHING WOULD OBJECT**, because the config says it
-> is enabled and the config is what the importer reads.
->
-> **State 3 is satisfied by absence and state 2 is not satisfied at all.** An absence is not a
-> setting: it holds until someone adds something, and adding things is normal work.
+**Superdrug's flag was the substantive one.** It had been held off by an *absence* — no cron row,
+GitHub workflow renamed `.disabled` — rather than by a setting, and `enabled = true` is what the
+importer reads. **An absence holds until someone adds something, and adding things is normal work.**
 
-**One flag closes it** — `UPDATE retailer_import_config SET enabled = false WHERE retailer_id = 12`.
-**Deliberately not done tonight.** It belongs with this definition rather than ahead of it: applied
-alone it fixes one instance and leaves the class, and the point of writing the six states is that
-the next person applies all of them without having to rediscover which matter.
+### State 5 for Atelier, closed by finding rather than by curation
 
----
+**Zero of Atelier's 57 orphans appear in the GSC export** — no clicks, no impressions. There was no
+equity to preserve, so **the zero redirects were a correct decision rather than an omission.**
+
+**Corroborated independently**: the Amazon harvest found only **2 of Atelier's 553 products** in
+search at all, and the retailer onboarded **16 July** with a Korean-specialist catalogue. **Two
+methods, one conclusion** — a departure too recent and too niche to have accumulated search equity.
+
+**The bound, as always:** the export caps at 1,000 rows and bottoms out at 1 impression, so absence
+means **effectively no search performance rather than provably none.**
 
 ## Open, and not decided here
 
-- **Is Atelier's departure meant to be reversible?** It is the only one still importing, so it is
-  the only one where the answer is currently cheap. That is a business decision, not a data one.
-- **Was Atelier's `REDIRECTS` skipped or found unnecessary?** 59 orphans exist and no GSC read is
-  recorded. State 5 permits "none needed" as an answer — but only as a *recorded* answer.
+- ~~Is Atelier's departure meant to be reversible?~~ **ANSWERED 24 Aug: not expected to return.
+  The departure is final**, which is what made the pass safe to run — staleness is only a cost if
+  reactivation is on the table.
+- ~~Was Atelier's `REDIRECTS` skipped or found unnecessary?~~ **ANSWERED: found unnecessary, and
+  now recorded as such.** See above.
 - **Should `dq_snapshot` scope to active retailers?** See item 259. It is not obviously yes.

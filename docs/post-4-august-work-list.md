@@ -22931,3 +22931,91 @@ workflow renamed `.disabled`**.
 
 **One flag closes it.** Deliberately **not changed tonight** — applied alone it fixes one instance
 and leaves the class, and it belongs with the definition rather than ahead of it.
+
+---
+
+### 260. The six-state pass, and a decision that made it safe rather than a technique
+
+**Raised:** 24 August 2026 · **APPLIED across all three departures as one change.**
+
+#### THE DECISION IS WHAT MADE IT SAFE, AND IT BELONGS FIRST
+
+**Robbie confirmed Atelier De Glow is not expected to return. The departure is final.**
+
+> **THAT IS WHY THE 515 ROWS GOING STALE IS NOT A COST.** Staleness only matters if reactivation is
+> on the table. Reversal today was one flag; after a month of staleness it is a re-import plus a
+> re-match — item 254's lesson that a state cannot always be rebuilt after the event.
+>
+> **The decision was taken while it was still cheap, which is the entire reason to take it now
+> rather than later.** Nothing technical made this pass safe. A business answer did, and the pass
+> was correctly blocked on it.
+
+#### THE PASS: FIVE CHANGES, THREE RETAILERS, ONE CHANGE
+
+| Retailer | Field | Before | After |
+|---|---|---|---|
+| **Superdrug** | `import_config.enabled` | **`true`** | `false` |
+| **Superdrug** | `delivery_terms_note` | `NULL` | reason written |
+| **Branded Beauty** | `delivery_terms_note` | `NULL` | reason written |
+| **Atelier** | `import_config.enabled` | **`true`** | `false` |
+| **Atelier** | cron job 32 (`47 7 * * *`) | **active** | **disabled** |
+
+Already correct and untouched: `retailers.active` on all three, and `delivery_terms_source` — which
+was already `NULL` everywhere. **`NULL` is the required state; what was missing was the reason.**
+Without it, `NULL` is indistinguishable from *"nobody got round to it"* — the exact ambiguity item
+256 closed for the eleven active retailers.
+
+**VERIFIED AFTERWARDS, NOT CLAIMED: all three now satisfy all six states.**
+`docs/departure-completeness.md` carries the scorecard, measured against the database and the
+repository after the pass.
+
+#### SUPERDRUG'S FLAG WAS THE SUBSTANTIVE CHANGE
+
+Nothing was calling the importer. `enabled` was still `true`.
+
+> **IT HAD BEEN HELD OFF BY AN ABSENCE RATHER THAN BY A SETTING** — no `cron.job` row, GitHub
+> workflow renamed `.disabled`. **`enabled = true` is what the importer reads**, so the moment any
+> scheduler existed it would have resumed, and **nothing would have objected.**
+>
+> **An absence holds until someone adds something, and adding things is normal work.** The change
+> looks like a no-op today and is the only one of the five that closes a live hazard.
+
+#### ★ WHAT TOMORROW'S 09:00 MONITOR WILL DO WITH ATELIER'S 515 ROWS: NOTHING
+
+Atelier's rows begin going stale from tonight. **Verified by reading both monitors rather than
+assuming:**
+
+| Monitor | Scoping | Will it see them? |
+|---|---|---|
+| `monitor-retailer-feeds` (09:00) | `.eq("active", true)`, and **every downstream check flows from that list** | **No** — never stale-checked, never in the email |
+| `fmb_detect_frozen_feeds` (11:30) | `WHERE r.active AND ric.enabled` | **No** — now doubly excluded |
+
+> **NOTHING WILL ALERT. THE 515 ROWS WILL ROT SILENTLY, AND THAT IS THE INTENDED OUTCOME —** but it
+> is intended *silence*, not *absence of a problem*, and those look identical from the outside.
+
+**The only place the rot will ever be visible is `dq_snapshot`'s `price_freshness` section**, to
+whoever reads it.
+
+> **WHICH IS EXACTLY WHY ITEM 259 RECOMMENDED KEEPING THAT SECTION ON THE BARE TABLE RATHER THAN
+> SCOPING IT TO ACTIVE RETAILERS.** A recommendation made yesterday, on the argument that
+> `price_freshness` answers *"is the pipeline working"* rather than *"how good is what we serve"*,
+> **is now the only instrument that will show this.** It was not made for this purpose.
+
+#### STATE 5 FOR ATELIER: CLOSED BY AN EXPLICIT FINDING, WHICH THE DEFINITION PERMITS
+
+**Zero of Atelier's 57 orphans appear in the GSC export — no clicks, no impressions.**
+
+> **The zero redirects were a correct decision rather than an omission. There was no equity to
+> preserve.**
+
+**Corroborated independently, and it arrived by a different route**: the Amazon harvest found only
+**2 of Atelier's 553 products** in search at all, and the retailer onboarded **16 July** with a
+Korean-specialist catalogue. **Two methods, one conclusion** — a departure too recent and too niche
+to have accumulated search equity. **Agreement between two measurements that could each have been
+wrong alone is worth more than either.**
+
+**The bound, as always:** the export caps at 1,000 rows and bottoms out at 1 impression, so absence
+means **effectively no search performance rather than provably none.**
+
+State 5 requires redirects curated **or an explicit finding that none is needed**. It is now the
+second, recorded — **which is the difference between a state satisfied and a state skipped.**
