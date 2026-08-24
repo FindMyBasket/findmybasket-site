@@ -23745,6 +23745,69 @@ catalogue movement, not a disagreement.)*
 
 ---
 
+#### DEFERRED UNTIL THE WEBSITE REFRESH COMPLETES — ALL FIVE
+
+**24 August 2026.** Simply Be, VitaminExpress, CJ as a network, The Fragrance Shop, and the parked
+Rakuten reporting work. **Not a scheduling note — a reason.**
+
+> **A FIRST INTEGRATION ON AN UNFAMILIAR NETWORK, ONBOARDING INTO SURFACES THAT ARE BEING REBUILT,
+> MAKES ANY PROBLEM HARDER TO ATTRIBUTE.**
+>
+> A CJ importer will have failures — every importer did. **The question is whether the next person
+> can tell a CJ feed problem from a refresh regression**, and while both are moving at once they
+> cannot. Two unknowns changing together do not add, they multiply: each becomes the other's
+> explanation.
+
+**The same shape as the argument for closing paid acquisition. Adding supply to a funnel under
+change is spending into an unknown** — there, money into a conversion path being rebuilt; here,
+catalogue and integration work into surfaces being rebuilt. **Both buy something whose effect
+cannot be read until the thing it feeds stops moving.**
+
+**The Fragrance Shop and the Rakuten reporting work wait for the same reason**, and the cost of
+waiting is lower there because **the research is already recorded** —
+`docs/rakuten-reporting-probe-brief.md` does not decay while it sits.
+
+#### WHAT DOES DECAY: THE APPROVALS THEMSELVES
+
+> **An approved programme can be withdrawn. Three approvals sitting unused for weeks is a RISK
+> WORTH KNOWING, not a certainty.**
+
+**No stated activation window is recorded for any of the three.** Nothing in the repository names
+one, and network terms cannot be checked from here — **so the honest position is "not established",
+not "none exists".** If any of the three carries a stated window, it is in the network dashboards
+and nobody has written it down.
+
+**And the strategy already holds a position on this**, `docs/strategy.md`:
+
+> *"Every relationship taken for FindMyLook reasons must be made genuinely active on beauty. **A
+> dormant approval is not an asset.**"*
+
+That was written about approvals taken for a future product, and **it applies here unchanged**: an
+approval is a relationship, and a relationship nobody uses is one the other side may reasonably
+end. **The precedent exists** — Skin Cupid's AWIN programme closed and the deactivation went
+unreported for 52.7 days.
+
+**Deferral is still the right call**, because attribution during a rebuild is the scarcer thing.
+**But the cost is not zero and it is not fixed** — it grows with the wait, and nobody currently
+knows the rate.
+
+#### ALSO DEFERRED: THE MEASURE STACK
+
+**103,863 — `active_and_products_active`, used by nothing** (item 270) — and whether anything
+should adopt it.
+
+**Deferred until `fmb_quality_snapshot_write` and the rest of the measure stack have been read
+properly**, which was the stated condition when it was deferred and **the condition still holds**.
+
+> **Four probe defects this week is the reason still applying, not a reason that has expired.**
+> Item 268: all four were caught because the answer looked wrong, and **the defence is
+> implausibility, which only fires on large errors.** A proposal about which population a measure
+> should adopt is exactly where an eight per cent error looks plausible.
+>
+> **Proposing after four inference failures would be the fifth.**
+
+---
+
 ### 267. The diagnosis was wrong, and it was what made the item read as urgent
 
 **Raised:** 24 August 2026 · **CORRECTED 24 August, same day.** Cosmetic. **A backfill is optional,
