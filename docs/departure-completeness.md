@@ -32,6 +32,50 @@ A departed retailer must be in **all six**. Each names the thing it prevents.
 | **5** | `REDIRECTS` curated from a GSC read, **or an explicit finding that none is needed** | Click-bearing orphans losing their equity. Every target must have products in `products_active` **after** the flip — a live 200 today is a false green. |
 | **6** | `delivery_terms_source = NULL` **with a reason in `delivery_terms_note`** | A stale threshold looking maintained. We no longer send anyone to the site, so re-reading terms records provenance for a figure nobody can act on (item 257). |
 
+---
+
+## THE DEFINITION COVERS PRODUCT URLs. IT DOES NOT COVER BRAND URLs.
+
+**Added 24 August 2026, work-list item 291. A GAP, NOT A STATE — stated here rather than numbered,
+because numbering it would imply the three departures below can be scored against it, and they
+cannot: it was not in the definition when they ran.**
+
+State 4 generates a gone-set of PRODUCT ids. `middleware.ts` matches
+`['/product/:path*', '/account/:path*', '/ops/:path*']`, so **the orphan gate never sees
+`/brands/`**. A departed retailer's brand hubs simply 404:
+
+```
+/product/5289   Technic Gloss Balm Berry Nice   →  410 Gone
+/brands/technic                                 →  404 Not Found
+```
+
+**406 brand hubs are orphaned by Superdrug's departure alone** — 93.8% of the 433 brands with rows
+in `products` and none in `products_active`. They left the sitemap automatically on 19 July
+(`fmb_active_brand_names()` reads `products_active`), so nothing announced them.
+
+**All three departures pass all six states and all three left this behind.** The scorecard is
+accurate; the definition was short. **A definition is a list of the routes someone thought of, and
+its completeness is asserted against itself.**
+
+### If a brand gone-set is added, slugs are not ids
+
+- **A slug is DERIVED and shared across retailers.** Superdrug carried 1,323 brands and **913 are
+  still live elsewhere.** A gone-set built from "brands the departed retailer carried" would 410
+  913 live hubs. A gone slug also goes wrong later, whenever any other retailer starts carrying
+  that brand. Product ids have neither property.
+- **`brand_aliases` already claims this namespace** — REDIRECTS must take precedence over a brand
+  gone-set, as it does over `GONE_IDS`.
+- **Unlike state 4, the brand set CAN be rebuilt after the flip**, because price rows survive
+  deactivation. Verified for Superdrug on 24 August. **That is luck, not design.**
+- The gate's existing rule decides membership: *a 410 claims a URL had content and lost it.* A
+  departed hub had a grid and lost it; a brand that never had live products keeps its 404.
+
+**Not applied.** The 410-versus-404 decision waits on whether Superdrug's departure is reversible —
+which this document states for Atelier and does not state for Superdrug, and
+`retailer_import_config.notes` is null.
+
+---
+
 **Not a state, but a consequence to expect:** the retailer's price rows **go stale and should**.
 Staleness after a departure is the correct outcome, not a defect — but it makes reactivation a
 re-import plus a re-match rather than one flag, so a departure that might be reversed should be

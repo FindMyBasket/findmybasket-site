@@ -25439,3 +25439,146 @@ The raised error carries the original finding's full summary, so whoever hits it
 > **This was built after ONE instance, not after a pattern.** Its value is the class rather than
 > the count, and the argument for it is that the instance cost a production write and a revert on
 > the same day. **Recorded plainly so the count is not mistaken for evidence of scale.**
+
+---
+
+### 291. The definition covered product URLs, and three departures ran through it
+
+**Raised:** 24 August 2026 · **406 orphaned brand hubs. Nothing changed — the 410 decision waits on
+Superdrug's reversibility, which is Robbie's to answer.**
+
+> **Departure state 4 defines a gone-set for PRODUCT URLs. There is no brand-URL equivalent, and
+> `middleware.ts` matches `['/product/:path*', '/account/:path*', '/ops/:path*']` — the orphan gate
+> never sees `/brands/`.**
+
+Same brand, same departure, same day, two different signals:
+
+```
+/product/5289   Technic Gloss Balm Berry Nice    →  410 Gone
+/product/5290   Technic Gloss Balm Minty Fresh   →  410 Gone
+/brands/technic                                  →  404 Not Found
+```
+
+**Three departures have run through `departure-completeness.md` and 406 orphaned hubs went
+unnoticed by all three.** The document was written on 23 August specifically so the fourth
+departure would be cheap, and its own scorecard shows all three retailers passing all six states.
+**They do pass. The states are the ones its author could see.**
+
+> Same shape as the sweep that ran before the flip and could not be reconstructed after it, and as
+> the veto that only sees rows a retailer has already mis-shelved. **A definition is a list of the
+> routes someone thought of**, and its completeness is asserted against itself.
+
+#### WHAT THE 433 ACTUALLY ARE
+
+Not brands that left. **406 of 433 (93.8%) are Superdrug-only, 8,664 of 8,850 rows (97.9%).**
+Superdrug's last import was 19 July and 14 of the 16 export-visible brands share that exact
+`last_updated` date. **"433 departed brands" is very nearly one event with one cause**, and the
+cause is a decision we made rather than something that happened to us.
+
+Of the 433, **nine** have any product with an active retailer row at all.
+
+#### MY PEBL ANSWER WAS WRONG, AND SO WAS THE QUESTION'S FRAME
+
+I reported Pebl as *"four rows ever, which is the second kind — we never really carried it."*
+
+**The rows are real.** Created 5 May, priced at Superdrug, last confirmed 19 July. **Carried for two
+and a half months, then its stockist was switched off.** Four rows is a small brand, not a phantom
+one — and Pebl is the *smallest* of the sixteen, which its 300 impressions disguised. Trouble Maker
+has **318 rows**, Technic 142, Apis 116.
+
+> **The question offered three categories — stock lapsed, never really carried, or a rename — and
+> the answer was a fourth: WE TURNED THE RETAILER OFF.** Neither "it lapsed" nor "it was never
+> there" is true of a brand whose products were confirmed in stock on the last day its stockist ran.
+>
+> **A question that supplies its options constrains the answer to them**, and the reply that fits
+> none of them is the informative one. Both of us reached for the offered categories; the data fit
+> none.
+
+#### STATE 5 HOLDS — CHECKED, NOT ASSUMED
+
+**All 41 brand-hub targets of the 54 curated redirects return 200.** Every one fetched. State 5
+requires that redirect targets have products in `products_active` *after* the flip, and they do.
+**There are no redirect chains terminating in a 404** — which was worth checking precisely because
+the targets are brand hubs and brand hubs are what this item is about.
+
+#### WHAT A BRAND GONE-SET WOULD NEED, AND WHY SLUGS ARE NOT IDS
+
+Structurally the existing mechanism extends: add `/brands/:path*` to the matcher, add a second
+constant beside `GONE_IDS`, and reuse `GONE_HTML` and the Edge Config switch. 406 slugs is nothing
+against 20,849 ids in a ~40KB bundle. **Four things make it not a copy.**
+
+**1. A SLUG IS DERIVED; AN ID IS STORED.** `brandSlug()` computes the slug from the brand string and
+nothing persists it. So a gone-set of slugs is a set of derived keys, and **derived keys collide.**
+
+> **Superdrug carried 1,323 brands. 913 of them — 69% — are still live at another retailer.** The
+> overlap between "brands a departed retailer had" and "brands that are live" is not a hypothetical
+> edge case, it is the majority. A gone-set built from "brands the departed retailer carried"
+> without subtracting live brands would **410 nine hundred and thirteen live brand hubs.**
+
+And it stays live afterwards: a gone slug becomes wrong the moment *any* retailer starts carrying
+that brand, because the string produces the same slug. **Product ids cannot do this** — a product
+row belongs to one retailer instance, and a recreated product gets a new id. **A departing retailer
+takes all of its product rows and only part of a brand's presence.**
+
+**2. THE DRIFT CHECK MATTERS MORE HERE, AND THE EXISTING ONE IS UNPROVEN.** The middleware gate runs
+BEFORE the page, so a stale gone entry serves 410 over live content. `gone-ids-drift.yml` exists for
+exactly this and **reported success twice while failing to load its own script** (item 255); the
+preflight that fixes it has not yet run a scheduled cycle. A brand gone-set would inherit a check
+whose repair is untested, guarding a set that drifts on someone else's stocking decision rather than
+on ours.
+
+**3. `brand_aliases` ALREADY CLAIMS THIS NAMESPACE.** `resolveBrandAliasSlug` (item 271) chains an
+old slug to a live one. A 410 in middleware would pre-empt an alias redirect that would otherwise
+work. The existing REDIRECTS-before-GONE_IDS precedence is the right order and has to be stated
+rather than inherited by luck.
+
+**4. REGENERATION TIMING — recoverable here, unlike state 4.** State 4 warns the gone-set cannot be
+rebuilt after the flip because `regen-gone-ids.mts` needs a live active-retailer row. **The brand
+equivalent CAN be rebuilt**, because the price rows survive deactivation: `products` joined to
+`retailer_prices` on the departed retailer id, minus everything live now, reproduces the 410 today.
+Verified. **That is luck rather than design**, and it is why this is recoverable five weeks late.
+
+#### THE PRINCIPLE THE GATE ALREADY STATES, APPLIED
+
+`orphan-gate.ts` excludes products with no price rows at all: *"A 410 claims a URL had content and
+lost it; for a URL that was never a page, 404 is the honest answer."*
+
+**That discriminates cleanly here.** A departed brand hub HAD content — a grid of Superdrug products
+— and lost it, so 410 is honest. A brand that never had live products keeps its 404. **The rule
+exists; it was written for ids and never asked about slugs.**
+
+#### AND BRANDS AND PRODUCTS ARE ALREADY CONSISTENT ON THE OTHER AXIS
+
+The suspected inconsistency — thin page versus no page — is not there:
+
+| | Has rows, nothing live | No rows at all |
+|---|---|---|
+| **Product** | branch C, 200, "Not currently in stock" — **12,315** | 404, or 308 to a keeper |
+| **Brand** | Group 3, 200, "Nothing from the range is in stock right now" — **167** | 404 — **406** |
+
+**A zero-stockist product page has a product on it**: name, image, description, the retailers that
+list it with last-seen dates, related products. The absence is one fact among many. **A departed
+brand hub reads `products_active` and gets zero rows — there is nothing to render.** Its equivalent
+of "nothing in stock" already exists and is already served: the 167.
+
+**So the choice was never 406 thin pages against 406 404s.** There is no thin page to build. The
+open question is only 410 against 404 — a signal, not content.
+
+#### WHY IT IS NOT DECIDED HERE
+
+**410 says deliberately removed.** That is what happened, and it matches the 20,849 product URLs
+from the same event. 200 would move 406 contentless pages out of "Not found" and into the crawlable
+set, where they are strong candidates to join the **54,056** already crawled-and-declined — the
+wrong direction on the site's largest indexation problem, for 0.75% of it.
+
+**But it waits on one fact nobody has recorded.** `retailer_import_config.notes` is null for
+Superdrug and `departure-completeness.md` states reversibility for Atelier and not for Superdrug.
+**If Superdrug can return, 8,664 rows and 406 hubs return with it and 410 is the wrong signal.**
+
+> The gate's own comment draws the distinction that makes this matter: *"A retailer departure is
+> permanent because someone external decided"* — and for Superdrug **nothing records whether the
+> decision was theirs or ours.** That is the difference between a fact and a plan, and only one of
+> them supports a 410.
+
+**Robbie is answering it.** Recorded as pending rather than as a recommendation, because the
+recommendation is the same either way until that answer exists.
