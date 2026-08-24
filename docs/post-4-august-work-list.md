@@ -25983,6 +25983,12 @@ normaliseImageUrl present in deployed import-awin-feed:  FALSE
 `normaliseImageUrl` (item 297). Both are safe and neither is urgent — the backfills already moved
 the existing rows, and what is at risk is only recurrence in newly created rows.
 
+> **CORRECTED BY ITEM 300, WHICH ASKED THE SAME QUESTION ACROSS EVERY FUNCTION.** It is not two
+> changes and not one function. **Five functions are in this state**, the importers' gap also
+> contains `_shared/match-key.ts` from 21 August, and the most consequential one is
+> `send-routine-email` — 21 days stale, on an ACTIVE monthly cron, carrying unshipped fixes to
+> customer-facing copy. **An instance answered here; the list is in item 300.**
+
 **Not deployed in this pass, deliberately.** Deploying three importers is a production change to
 the ingest path with its own blast radius, and the standing practice is to space unrelated deploys
 apart so that attribution stays readable. **Robbie's call, and the flag is the deliverable.**
@@ -25999,3 +26005,88 @@ those routes already emit social tags — and worth knowing: **a cap chosen for 
 social, and nothing in the code currently distinguishes the two.** Brand hubs do not have the
 problem (max 84), so this is specific to product titles, where the name plus an intact suffix is
 what pushes past it.
+
+---
+
+### 300. Merged is not running, and the answer was a list of five
+
+**Raised:** 24 August 2026 · **Found while shipping a second importer change. Nothing deployed.**
+
+Item 284 concluded that the importer change was the substance and the backfill the tidy-up, because
+a cleanup with an open source has a half-life. **The source fix merged this morning in #424 and has
+never run.**
+
+`.github/workflows/deploy-edge-function.yml` is `workflow_dispatch` only — manual, deliberately, so
+an edge function changes when someone decides it should. **Nothing in merging a PR deploys one.**
+
+> **This is item 284's hazard one layer up.** The item described the hazard, the change addressed
+> it, and the change is not running. **A backfill with an undeployed source fix is the same shape
+> as a backfill with no source fix at all** — and it looks better, because the fix exists.
+
+**Found by checking the deployed source, not the merge state:**
+
+```
+decodeFeedName    present in deployed import-awin-feed:  FALSE
+normaliseImageUrl present in deployed import-awin-feed:  FALSE
+```
+
+**The same distinction as reading the page rather than the deploy list** — item 289, this morning,
+where a page was read instead of the row. Here the merge state is the derived artefact and the
+deployed bundle is the source.
+
+#### THE LIST, WHICH IS WHY THE QUESTION WAS WORTH ASKING
+
+Deployed `updated_at` against the last commit touching each function's directory:
+
+| Function | Deployed | Last commit | Gap |
+|---|---|---|---:|
+| **`send-routine-email`** | **2 Aug** | 23 Aug | **21 days** |
+| `awin-feed-count` | 22 Jul | 27 Jul | 33 days |
+| `import-awin-feed` | 17 Aug | 24 Aug | 7 days |
+| `import-rakuten-feed` | 17 Aug | 24 Aug | 7 days |
+| `import-shopify-feed` | 17 Aug | 24 Aug | 7 days |
+| `monitor-retailer-feeds` | 20 Aug | 19 Aug | current |
+| `recategorise-products` | 17 Aug | 23 Jul | current |
+
+**Five, not one.** And the importers' gap is not the two changes from today: `_shared/match-key.ts`
+changed on **21 August** (#373, item 238), and `_shared` is bundled at deploy time, **so a change to
+a shared module silently makes every function that imports it stale.** Nothing lists that
+relationship; it was found by checking the module's own commit date.
+
+#### THE ONE THAT MATTERS TONIGHT IS NOT AN IMPORTER
+
+`cron.job` 1, **`send-monthly-routines`, is ACTIVE on `0 9 1 * *`** — 09:00 on the first of each
+month — and it calls `send-routine-email`, deployed **2 August 17:03**. Merged after that deploy and
+never shipped:
+
+| PR | Merged | What is not running |
+|---|---|---|
+| #182 | 3 Aug 19:14 | **four em dashes in customer copy, two of them subject lines** |
+| #181 | 3 Aug 19:08 | **savings baseline from real delivery terms, not an invented £3.95** |
+| #180, #183, #184 | 3 Aug | delivery three-way branch; "still watching for stock" template; outcome column |
+| #386, #389 | 23 Aug | the next-best anchor, in all three places |
+
+> **The August emails went out with an invented £3.95 baseline and the em dashes the house rules
+> forbid, three weeks after both were fixed.** The next send is **1 September**, and it will do the
+> same unless the function is dispatched before then.
+
+**Eight days of headroom, so not dispatching tonight costs nothing** — which is the only reason
+this is a finding rather than an incident.
+
+#### A COMMIT MESSAGE IS NOT EVIDENCE OF DEPLOYMENT EITHER
+
+`awin-feed-count`'s outstanding commit is #122, *"feat(diag): awin-feed-count v6 **(deployed;
+record)**"*. **The message asserts the deployment; the platform says the function was last updated
+five days earlier.** Either it was deployed by a route that left no trace or the claim was written
+ahead of the act. **Recorded because the claim is the kind of thing that stops anyone checking.**
+
+#### WHAT WOULD CLOSE IT, NOT BUILT HERE
+
+The check is cheap and mechanical: compare each deployed function's `updated_at` with the last
+commit touching its directory **and every `_shared` module it imports**, and fail when a commit is
+newer. **It is the same shape as the work-list contiguity check** — a fact about the repository
+that nobody will notice by eye, asserted on every run.
+
+**Deliberately not built in the same pass as the thing it would have caught.** Sizing it needs the
+import graph, `_shared` makes that non-trivial, and a check written in the same hour as its
+motivating incident tends to encode the incident rather than the class.
