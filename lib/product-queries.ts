@@ -82,6 +82,31 @@ export async function getProductById(id: number): Promise<ProductDetail | null> 
   };
 }
 
+export interface ProductMetadataFacts {
+  stockists: number;
+  sole_retailer: string | null;
+}
+
+// The sibling of getBrandMetadataFacts (item 279): the facts generateMetadata needs to
+// pick a template, and nothing else.
+//
+// IT MUST COUNT THE WAY THE PAGE COUNTS. getRetailerOffers is family-aware -- a canonical
+// parent shows its shade children's offers -- and counting only the product's own rows
+// disagrees with the rendered body on 139 pages, which would put "one stockist" or "not
+// stocked" above a page listing two offers. fmb_product_metadata_facts mirrors every
+// condition in getRetailerOffers/pickFamilyOffer; the reasoning is on the function.
+export async function getProductMetadataFacts(id: number): Promise<ProductMetadataFacts> {
+  const { data } = await supabase.rpc('fmb_product_metadata_facts', { p_id: id });
+  const row = Array.isArray(data) ? data[0] : data;
+  // FAIL TOWARDS THE SMALLER CLAIM, as getBrandMetadataFacts does. An unreadable count
+  // selects the not-currently-stocked template, which asserts nothing about price. The
+  // failure mode being designed against is a comparison claim surviving a failed read.
+  return {
+    stockists: row?.stockists ?? 0,
+    sole_retailer: row?.sole_retailer ?? null,
+  };
+}
+
 // Resolve a requested product id to the live, indexable page that should carry
 // its SEO equity when the requested row is hidden from products_active. Two ways
 // a row gets hidden, both redirected here to the surviving canonical:

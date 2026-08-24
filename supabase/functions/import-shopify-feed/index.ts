@@ -69,6 +69,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { finaliseRun } from "../_shared/run-metrics.ts";
 import { inferCategorisationForImport } from "../_shared/categorisation.ts";
+import { decodeFeedName } from "../_shared/strip-html.ts";
 import {
   normaliseForMatch,
   buildMatchKey,
@@ -465,7 +466,10 @@ serve(async (req) => {
     //   price       → price (string, parse to float)
     //   available   → in_stock (boolean)
     //   tags        → tag array (Shopify-curated descriptive tags)
-    const name = String(product.title || "");
+    // DECODED BEFORE ANYTHING READS IT. Names were the one feed field never passed
+    // through the entity decoder, and a stored `&amp;` reaches the served title, the
+    // brand-prefix dedupe and match_key alike. Item 284.
+    const name = decodeFeedName(product.title as string | null | undefined);
     const rawBrand = String(product.vendor || "");
     const brand = lookupCanonicalBrand(rawBrand);   // canonical from here down
     const sku = String(product.sku || "");

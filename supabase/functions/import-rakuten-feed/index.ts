@@ -112,6 +112,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { finaliseRun } from "../_shared/run-metrics.ts";
 import { inferCategorisationForImport } from "../_shared/categorisation.ts";
 import { normaliseDescription } from "../_shared/description.ts";
+import { decodeFeedName } from "../_shared/strip-html.ts";
 import {
   normaliseForMatch,
   buildMatchKey,
@@ -392,7 +393,8 @@ async function buildContext(supa, config, retailerId) {
 function classify(product, ctx, acc) {
   const config = ctx.config;
   acc.feedRows++;
-  const name = String(product.name || "");
+  // DECODED BEFORE ANYTHING READS IT -- see import-shopify-feed and item 284.
+  const name = decodeFeedName(product.name);
   const skuNumber = String(product.sku || "");
   const productIdAttr = String(product.product_id || "");
   const rawBrand = String(product.brand || "");

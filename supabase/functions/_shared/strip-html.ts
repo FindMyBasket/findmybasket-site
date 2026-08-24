@@ -26,6 +26,45 @@ const NAMED_ENTITIES: Record<string, string> = {
   deg: "°",
   eacute: "é",
   egrave: "è",
+  // ADDED 24 Aug 2026. The eight above were the vocabulary; these are what the feeds
+  // actually sent that it did not cover, DERIVED BY COUNTING THE RESIDUE IN STORAGE
+  // (regexp_matches over every products.description) rather than guessed at a second time.
+  // A decoder defined by a vocabulary decodes only that vocabulary, and the leftovers
+  // are not random -- they are exactly the entries missing from the map. Item 284.
+  bull: "•",
+  middot: "·",
+  shy: "",           // soft hyphen: invisible in prose, so it is removed rather than kept
+  dagger: "†",
+  Dagger: "‡",   // exact-case; see the lookup order in decodeEntities
+  sup2: "²",
+  frac12: "½",
+  ccedil: "ç",
+  iacute: "í",
+  icirc: "î",
+  ocirc: "ô",
+  szlig: "ß",
+  agrave: "à",
+  acirc: "â",
+  ecirc: "ê",
+  iuml: "ï",
+  ouml: "ö",
+  uuml: "ü",
+  auml: "ä",
+  ntilde: "ñ",
+  oacute: "ó",
+  aacute: "á",
+  uacute: "ú",
+  euro: "€",
+  pound: "£",
+  times: "×",
+  minus: "−",
+  bdquo: "„",
+  sbquo: "‚",
+  laquo: "«",
+  raquo: "»",
+  oslash: "ø",
+  aring: "å",
+  aelig: "æ",
 };
 
 function decodeEntities(input: string): string {
@@ -42,6 +81,11 @@ function decodeEntities(input: string): string {
       }
       return match;
     }
+    // EXACT CASE FIRST, then a lower-case fallback. The fallback is what lets the
+    // real-world `&Bull;` (seen in feed text) decode at all; the exact pass is what stops
+    // it turning `&Dagger;` (‡) into `&dagger;` (†), which a lower-case-only lookup did.
+    const exact = NAMED_ENTITIES[body];
+    if (exact !== undefined) return exact;
     const named = NAMED_ENTITIES[body.toLowerCase()];
     return named !== undefined ? named : match;
   });
@@ -62,4 +106,31 @@ export function stripHtml(input: string | null | undefined): string {
   // Collapse all runs of whitespace (incl. decoded &nbsp;) to single spaces.
   out = out.replace(/\s+/g, " ").trim();
   return out;
+}
+
+/**
+ * Decode HTML entities in a feed-supplied PRODUCT NAME, without tag-stripping or
+ * whitespace collapsing beyond a trim.
+ *
+ * WHY NAMES NEED THEIR OWN ENTRY POINT. stripHtml was only ever applied to descriptions;
+ * every importer took the feed's title field raw. So `Pestle &amp; Mortar Chummi Lip Mask`
+ * was stored verbatim, and the consequences were not cosmetic:
+ *
+ *   1. React escapes the stored string correctly, producing `&amp;amp;` in the served title.
+ *   2. stripBrandPrefix builds `^Pestle & Mortar[\s\-:]*`, which cannot match
+ *      `Pestle &amp; Mortar`, so displayProductTitle prepended the brand AGAIN --
+ *      "Pestle & Mortar Pestle & Mortar Chummi Lip Mask".
+ *   3. fmb_build_match_key kept the letters: the stored key was
+ *      `pestle mortar amp mortar chummi lip mask 20g coconut`, so the product could not
+ *      match a clean row for the same item from any other feed.
+ *
+ * ONE CORRUPT CHARACTER DEFEATED A STRING-EQUALITY GUARD TWO LAYERS DOWNSTREAM. That is
+ * the transferable part, not the ampersand. Item 284.
+ *
+ * Runs BEFORE excludes, match_key and categorisation so everything downstream sees the
+ * decoded name -- the same ordering the Debenhams and slug-reconstruction hygiene uses.
+ */
+export function decodeFeedName(input: string | null | undefined): string {
+  if (!input) return "";
+  return decodeEntities(input).replace(/\s+/g, " ").trim();
 }
