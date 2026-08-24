@@ -170,11 +170,24 @@ export function compareCategories(a: string, b: string): number {
 export async function getBrandProductTypes(
   normalisedBrand: string
 ): Promise<BrandProductTypeChip[]> {
+  // FIX 2C: THE IMAGE FILTER IS LOAD-BEARING AND WAS MISSING HERE.
+  //
+  // getBrandProducts -- the query these chips LINK TO -- requires an image. This one did
+  // not, so a type whose products all lack images produced a chip with a non-zero count
+  // linking to a grid with none. That is what made /brands/clean-clear?type=Cleanser a 404
+  // while /brands/clean-clear served 200: the chip was counting rows the grid excludes.
+  //
+  // Same shape as products_active vs products_servable (item 263) -- two queries over the
+  // same table disagreeing about what qualifies, and the disagreement only visible where
+  // one links to the other. A chip must count exactly what its destination will show.
+  // Item 271.
   const { data } = await supabase
     .from('products_active')
     .select('product_type')
     .eq('normalised_brand', normalisedBrand)
     .not('product_type', 'is', null)
+    .not('image_url', 'is', null)
+    .neq('image_url', '')
     .not('tags', 'cs', '{cleanup_remove}');
 
   if (!data) return [];
@@ -323,4 +336,64 @@ export async function getBrandProducts(
     products: featured.slice(0, pageSize),
     totalCount: totalCount ?? 0,
   };
+}
+
+// ─── ALIAS FALLBACK: resolve a slug nobody serves to the canonical that does ──────────────
+//
+// Brand slugs are DERIVED from the brand string, so a rename silently orphans the old URL.
+// `brand_aliases` has recorded the folds all along -- `rimmel london -> Rimmel` since
+// 19 June 2026 -- and this route never consulted it. Measured 24 Aug: 30 of 49 candidate
+// alias slugs returned 404 while their canonical served 200, covering brands with hundreds
+// of live products. Item 271.
+//
+// ── THREE CONSTRAINTS, EACH FROM A MEASURED CASE. DO NOT REORDER. ────────────────────────
+//
+// 1. LIVE FIRST, ALIAS ONLY ON MISS. Two alias slugs are ALSO live brands:
+//    /brands/nineless (live "Nineless", alias for nine-less) and /brands/vt-cosmetics
+//    (live "VT Cosmetics", alias for vt). Both serve 200 today. Consulting aliases first
+//    would 301 them away from working pages. TWO ROWS OUT OF 196, invisible unless looked
+//    for -- which is why the order is load-bearing rather than stylistic.
+//
+// 2. FOLLOW THE CHAIN, WITH A CAP. A canonical can itself be an alias: mac -> m-a-c ->
+//    mac-cosmetics. ON EXHAUSTION THE CALLER GETS null AND SERVES THE 404 -- it does NOT
+//    redirect to the last hop reached. Partial resolution is the failure mode that would
+//    look like success: a 301 to a halfway point is indistinguishable from a correct one
+//    in the response, and wrong.
+//
+// 3. VERIFY THE TARGET BEFORE REDIRECTING. Eight aliases point at canonicals with no live
+//    products -- /brands/superdrug, /brands/johnsons, /brands/pastel-cosmetics,
+//    /brands/makeup-academy all 404. A 301 INTO A 404 IS WORSE THAN THE 404 IT REPLACES:
+//    the doctrine's own rule, deciding its second case this week.
+const ALIAS_HOP_CAP = 4;
+
+export async function resolveBrandAliasSlug(slug: string): Promise<string | null> {
+  const seen = new Set<string>([slug]);
+  let current = slug;
+
+  for (let hop = 0; hop < ALIAS_HOP_CAP; hop++) {
+    const { data } = await supabase
+      .from('brand_aliases')
+      .select('alias, canonical')
+      .limit(500);
+    if (!data) return null;
+
+    const next = data.find(r => r.canonical && brandSlug(r.canonical) !== current
+      && aliasSlugOf(r) === current);
+    if (!next?.canonical) break;
+
+    const target = brandSlug(next.canonical);
+    if (seen.has(target)) return null;      // cycle -> 404, never a partial redirect
+    seen.add(target);
+    current = target;
+
+    // CONSTRAINT 3: only return a target that actually resolves.
+    const live = await findBrandBySlug(current);
+    if (live) return current;
+  }
+
+  return null;                               // cap exhausted or no alias -> caller 404s
+}
+
+function aliasSlugOf(row: { alias?: string | null; canonical?: string | null }): string {
+  return brandSlug(row.alias ?? '');
 }

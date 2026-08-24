@@ -15,8 +15,17 @@ export async function generateMetadata({
   params: { slug: string };
   searchParams: { type?: string; category?: string };
 }) {
-  // Self-referencing canonical pointing at the clean brand URL, so ?type=,
-  // ?category= and ?page= filter variants consolidate to one indexed page.
+  // Self-referencing canonical pointing at the clean brand URL. The consolidation is done
+  // by the 301 in BrandPage, not by this tag: an empty filter now redirects to the hub, so
+  // ?type=, ?category= and ?page= variants either render with content and carry this
+  // canonical, or never render at all.
+  //
+  // CORRECTED 24 Aug 2026. This comment previously claimed the canonical made filter
+  // variants "consolidate to one indexed page". IT DID NOT AND COULD NOT: an empty filter
+  // called notFound() three files away, and A CANONICAL ON A 404 CONSOLIDATES NOTHING --
+  // the page never renders, so the tag is never served. The comment described an intent that
+  // another file cancelled. It is true now because of the redirect; it says so rather than
+  // assuming it. Item 271.
   const canonical = `${SITE_URL}/brands/${params.slug}`;
 
   // A Brand Spotlight hub takes precedence over the price-comparison page.

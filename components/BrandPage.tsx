@@ -1,9 +1,10 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { SiteLayout } from './SiteLayout';
 import { ProductCard } from './ProductCard';
 import {
   findBrandBySlug,
+  resolveBrandAliasSlug,
   getBrandStats,
   getBrandProductTypes,
   getBrandProducts,
@@ -34,7 +35,20 @@ function buildUrl(
 
 export async function BrandPage({ slug, page = 1, productType, category }: Props) {
   const brand = await findBrandBySlug(slug);
-  if (!brand) notFound();
+  if (!brand) {
+    // FIX 1: a slug nobody serves may be a RENAMED brand whose fold is already recorded in
+    // brand_aliases. 301 to the canonical rather than render there: brand_aliases is a FOLD,
+    // not a synonym set -- loreal-paris, loreal, loreal-men, lor-al and
+    // lor-al-paris-dermo-expertise all fold to one brand, so rendering would put five URLs on
+    // identical content. With 54,056 pages already crawled-and-declined, adding duplicate
+    // surfaces is the wrong direction. A redirect makes it one fact instead of five claims.
+    //
+    // resolveBrandAliasSlug returns null on a dead target, a cycle, or an exhausted hop cap,
+    // and this path then serves the correct 404. Item 271.
+    const canonical = await resolveBrandAliasSlug(slug);
+    if (canonical) permanentRedirect(`/brands/${canonical}`);
+    notFound();
+  }
 
   const [stats, productTypes, productResult] = await Promise.all([
     getBrandStats(brand.normalised_brand),
@@ -49,8 +63,19 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
     productType ?? (category ? categoryDisplay(category) : undefined);
   const hasFilter = Boolean(filterLabel);
 
+  // FIX 2B: AN EMPTY FILTER REDIRECTS TO THE HUB, IT DOES NOT 404.
+  //
+  // We generate these URLs ourselves -- buildUrl() below emits ?type= links from the types
+  // that currently have products. A type empties, the link we already published becomes a
+  // 404, and Google keeps returning to it. Measured 24 Aug: /brands/clean-clear?type=Cleanser
+  // 404 while /brands/clean-clear serves 200; ?page=2 on a brand that shrank does the same.
+  //
+  // 301 rather than render-empty: a permanently crawlable thin-page surface is the wrong
+  // answer when 54,056 pages are already crawled-and-declined. And the hub genuinely answers
+  // a brand query, so this is a redirect INTO the right answer rather than a wrong one --
+  // the distinction item 264 turned on. Item 271.
   if (hasFilter && productResult.totalCount === 0) {
-    notFound();
+    permanentRedirect(`/brands/${slug}`);
   }
 
   const totalPages = Math.ceil(productResult.totalCount / PAGE_SIZE);
