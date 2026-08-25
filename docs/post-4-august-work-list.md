@@ -28121,3 +28121,78 @@ The three departed retailers were given `unlisted_reason` values written separat
 > ordering is the entire justification for the column existing.
 >
 > **A reason column filled by template is a boolean with extra characters.**
+
+---
+
+### 339. A claim that has never moved is a claim nobody has ever checked
+
+**Raised:** 25 August 2026 · **Native app removed from both pages. Three further claims reported,
+not touched.**
+
+> ### SCRUTINY IS DRAWN TO WHATEVER HAS MOVED.
+>
+> `about.html`'s retailer **count** drifted five times and acquired a twenty-line history block
+> recording each drift, the 16 August failure and the rule *"verify the list, never the count"*.
+>
+> **The scope clause in the same sentence acquired nothing**, because it never moved — and it was
+> wrong the whole time. Supplements had a route, a nav entry and 1,831 products and the sentence
+> describing the site's coverage did not mention it.
+>
+> **The thing that changes gets a guard. The thing that was wrong once, permanently, gets read by
+> nobody.**
+
+`about.html:225` is the same shape at greater age: *"skincare, makeup, hair and K-Beauty"*, four
+sentences from the clause fixed the same morning, naming a brand cluster as a category. **It has
+been wrong longest precisely because nobody has ever had a reason to discuss it.**
+
+#### THE NATIVE APP: A DATED CAPABILITY CLAIM FOR SOMETHING NOT BEING BUILT
+
+| Source | Said |
+|---|---|
+| `about.html` roadmap | "Native app with barcode scanner" |
+| **`work-with-us.html`** | **"Native app with barcode scanner (2027)"** |
+| **`docs/strategy.md:561`** | **"It is browser based rather than an app."** |
+
+No `capacitor`, `react-native`, `expo`, `cordova` or scanner dependency exists. **Removed from
+both.**
+
+> **The work-with-us instance was the serious one: a capability claim WITH A DATE, on the page
+> prospective partners read.** A date makes a claim look tracked — it implies someone is holding it
+> against a calendar. **"(2027)" is the part that turns a stale bullet into a representation.**
+
+#### READING THE REST OF work-with-us, ON THE REASONING THAT HAD JUST PAID TWICE
+
+**Three more, all reported and none touched.**
+
+**1. `Supplements category (later in 2026)` — SHIPPED.** The identical defect to the bullet deleted
+from `about.html` this morning, on the partner-facing page. **2,274 products, its own route, its own
+nav entry, a second retailer as of today.** *(Not removed: the instruction named the native app
+specifically. Flagged because leaving a known-false claim live is the shape item 276 recorded.)*
+
+**2. `Analytics dashboard reporting on referral volume and conversion` — offered as something
+partners GET, and it does not exist.** `docs/dashboard-build-brief.md` is a **build brief**, status
+*"blocking prerequisite MET… steps 2, 3 and 7 are unblocked"* — unblocked, not built. `app/ops/quality`
+is a data-quality board, not partner referral analytics. **Same class as the native app and listed
+under a heading that reads as present tense.**
+
+**3. `100k+ products tracked in real time` — 99,865.** False by 135 products, and it will become
+true on the next import, which is the item 329 shape exactly: **a number that will be right by
+coincidence.** *"In real time"* also overstates a daily feed — and the neighbouring claim says
+*"automated **weekly** datafeed refresh"*, so the same page describes the same mechanism at two
+different frequencies and neither is daily.
+
+#### WHAT CHECKED OUT
+
+**`Genuine reach in K-Beauty. We carry COSRX, Beauty of Joseon, mixsoon, medicube`** — **all four
+present, 2,012 live rows.** Verified rather than assumed, and it is the only capability claim on the
+page that names specifics and survives being checked.
+
+#### THE BASE RATE IS THE ARGUMENT
+
+**Two of four bullets wrong on `about.html`; three of the checkable claims wrong on
+`work-with-us.html`.** At that rate, sampling a claims page is not a check.
+
+> **Every dated bullet across both pages had either shipped or contradicted the strategy document.**
+> The replacement written into `about.html` is deliberately not a date: *"more retailers stocking
+> the same products, so more of the catalogue can actually be compared"* — a direction the last
+> three onboardings support, and nothing a calendar can falsify.
