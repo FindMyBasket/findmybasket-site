@@ -27546,3 +27546,128 @@ the em-dash rule is not read as broken.
 | Class 2 — ~25 supplements in `skincare/face` | item 322, no config fix available |
 | Class 3 — ~25 food and drink | item 321, **a proposition question for Robbie** |
 | Item 314's grouping build | open on its own terms, not on MyProtein's |
+
+---
+
+### 326. A rule reading "sold as" is a rule about the retailer's framing
+
+**Raised:** 25 August 2026 · **37 rows excluded. The boundary was reported before it was applied,
+and the report changed it.**
+
+> ### THE PRINCIPLE WAS NOT RETAILER-INDEPENDENT AND THE CATALOGUE IS MEANT TO BE.
+>
+> *"Sold as a macronutrient source is in; sold as food is out"* resolves most of the population and
+> then fails on a class it cannot see:
+>
+> ```
+> 100% Instant Oats - 1kg        MyProtein: a carbohydrate source.  Tesco: breakfast.
+> All-Natural Peanut Butter      MyProtein: a fat and protein source.
+> 1839 UMF Manuka Honey          Sold as a health product. Is honey.
+> CLIF Bar                       A sports-nutrition brand. Eaten as a snack.
+> ```
+>
+> **The same row gets a different answer at a different retailer.** A rule that reads "sold as" is a
+> rule about the seller's framing, and it cannot hold a boundary in a catalogue that spans sellers.
+
+#### THE CLASS HAS A NAME, AND IT IS NOT ABOUT FOOD
+
+**Products whose identity depends on who is selling them.** It will recur on every retailer that
+straddles a category boundary — a pharmacy selling both medicine and skincare, a department store
+selling both fragrance and homeware, a supermarket selling anything.
+
+> **The failure is not that the food boundary is hard. It is that ANY boundary drawn on how a
+> product is presented moves when the presenter changes**, and a catalogue drawing boundaries has to
+> draw them on the product.
+
+**The 11 unresolved rows were reported rather than absorbed**, and Robbie decided them: oats and nut
+butters stay, CLIF stays, Manuka honey and Jimmy's Iced Coffee go, DIRTEA splits by form.
+
+#### THE THIRD CRITERION, TESTED AND NEGATIVE
+
+*"They cannot be compared because no other retailer we carry stocks them"* is genuinely testable, so
+it was tested:
+
+| Brand | Other active retailers |
+|---|---:|
+| **Bio&Me** (granola) | **1** |
+| Cosmic Dealer (cacao, tea) | 1 |
+| **MyProtein itself** | **1** |
+| **CLIF** (arguably sports) | **0** |
+| Hu, Nakd, Ombar, Freja, Bragg | 0 |
+
+> **Sound as a reason, useless as a discriminator.** It separates brands we happen to carry
+> elsewhere from brands we do not — **a fact about our catalogue, not about the product.** Granola
+> scoring the same as MyProtein is the demonstration, and CLIF scoring zero is the second half of it.
+
+#### DIRTEA: SAME BRAND, SAME SHELF, OPPOSITE ANSWERS
+
+| Out | In |
+|---|---|
+| DIRTEA Cacao Super Blend · Coffee Super Blend · Coffee Sachets · Mushroom Cacao · Mushroom Matcha | Chaga Mushroom Gummies · Tremella Mushroom Gummies · Chaga / Lion's Mane / Cordyceps / Reishi / Tremella functional powders |
+
+> **THE FORM DECIDES, NOT THE BRAND AND NOT THE INGREDIENT.** Both halves are mushroom extract from
+> one supplier on one shelf. One is a supplement; the other is a coffee that contains a supplement.
+> **A brand-level rule gets this wrong in both directions**, and it is the clearest available case
+> that the exclusion list has to be a list.
+
+#### THE VOCABULARY WAS EXTENDED RATHER THAN REUSED
+
+`product_exclusions.reason` had `not_a_supplement`, which fits loosely — granola is indeed not a
+supplement — and is what 24 existing rows use for **non-ingestibles that arrived on a supplements
+path**. A shower gel is not a supplement; granola is food.
+
+> **Flattening a new class into an old label is how a controlled vocabulary stops discriminating.**
+> Added `food_or_drink`.
+
+#### WHAT IT DID TO THE FIGURES
+
+| | Before exclusions | **After** |
+|---|---:|---:|
+| MyProtein live | 608 | **571** |
+| Supplements | 2,292 | **2,274** |
+| Sports subcategory | 639 | **624** |
+| Boots' share | 76.1% | **76.6%** |
+
+**Boots' share went UP**, because removing 37 non-Boots products shrinks the denominator. **Worth
+seeing rather than smoothing: an exclusion that improves the catalogue moves the diversity metric
+the wrong way**, and a metric that rewards keeping granola is a metric to read carefully.
+
+---
+
+### 327. Depth landed at the floor of the band, and the band was mine
+
+**Raised:** 25 August 2026.
+
+Predicted **3.5% – 5.1%**. Landed **3.49%** — **below the floor, not within the range.**
+
+The band's two ends were two assumptions: the floor counted only MyProtein-family products matching
+(48), the ceiling counted every shared-brand supplements row matching by barcode (84). **The floor
+estimate was the better one and the ceiling was optimistic** — barcode matching across a
+flavour-and-size matrix hits less often than brand overlap suggests.
+
+> **Reported as the low end rather than as "within range".** A band whose floor is the answer is a
+> band that was too generous at the top, and quoting the range afterwards would take credit for the
+> half that was wrong.
+
+---
+
+### 328. A supplier's text looking like a house-rule violation, for the second time this week
+
+**Raised:** 25 August 2026 · **Nothing to fix.**
+
+`/product/151619` renders: *"exactly what your body needs **—** and nothing it doesn't"*. **An em
+dash, in customer-facing copy, on a live page.**
+
+**It is MyProtein's product description**, verbatim from the feed. Item 286 already settles the
+distinction: **repairing our own mangling of a supplier's text and rewriting the supplier's text are
+different acts**, and only the first is ours.
+
+**Second instance this week.** The first was the `|`-delimited product name inside Boots'
+descriptions, which looked exactly like item 283's duplicate-append defect and was the supplier's
+own field.
+
+> **Both were caught by reading the stored row rather than the rendered page.** The rendered page
+> cannot distinguish our text from theirs — that is what rendering is for. **A house-rule check that
+> greps rendered HTML will fail on both**, and `lib/__tests__/email-copy.test.ts` gets this right by
+> reading source files: the rule is about copy WE write, and the only place that is legible is where
+> we write it.

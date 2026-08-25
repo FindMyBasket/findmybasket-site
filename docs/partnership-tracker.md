@@ -209,4 +209,13 @@ Three steps, all of which exist because a previous onboarding skipped one:
 | 4. Delivery terms | **done 25 Aug** — read on MyProtein's own site, £4.49 free over £55. Site was sufficient because both numbers are published; item 323 |
 | 5. `awin_merchant_id` verified | **done** — `awinmid=3196` read from the feed's own `aw_deep_link`, no fabricated click |
 | **6. Go live** | **done 25 Aug** — item 325 |
-| **7. RE-IMPORT IS HELD** | a second run would create **177 near-duplicates** (item 314's leak). Guarded by a trigger on `enabled`, item 324 |
+| 7. Food and drink excluded | **done 25 Aug** — 37 rows, `reason = food_or_drink`. Item 326 |
+| **8. RE-IMPORT IS HELD** | a second run would create **177 near-duplicates** (item 314's leak). Guarded by a trigger on `enabled`, item 324 |
+
+### Known and accepted at go-live
+
+| | |
+|---|---|
+| ~25 ingestible supplements filed as `skincare/face` | Item 322. They arrive on `Health and Beauty` paths the supplements override does not reach, and those paths are mixed at source — `Body Care` holds collagen capsules and a toothbrush. **No config fix exists.** A shelving error, not a false claim. |
+| Depth at 3.49% | Below the predicted 3.5–5.1% floor. Item 327. |
+| Re-import would create 177 duplicates | Item 314's leak. Guarded at the `enabled` flag, item 324. |
