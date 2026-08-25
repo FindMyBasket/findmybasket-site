@@ -27009,7 +27009,32 @@ whether option 1 is needed *now* or merely eventually.
 
 ### 316. The depth figure: it roughly doubles, and that is not the number that matters
 
-**Raised:** 25 August 2026 · **Measured. This is the input to the three options in item 315.**
+**Raised:** 25 August 2026 · **DECISION: OPTION 2. Onboard MyProtein with Tier 5 unchanged.**
+
+> ### DEPTH IS THE WRONG INSTRUMENT FOR JUDGING A SECOND SOURCE.
+>
+> **A second source adds mostly non-overlapping products. That is what a second source IS.** The 494
+> net-new MyProtein products are all single-stockist, so added alone they take supplements depth
+> **down** from 1.86% to **1.46%** — while delivering exactly what the proposition asked for.
+>
+> Judging them by depth marks them down for the property that makes them useful.
+
+#### THE DECISION AND ITS REASONING
+
+**Onboard collapsed. The range Tier 5 discards is lost WITHIN product lines, not across them** — the
+twelve flavours of one whey collapse, and whey, creatine, BCAA, glutamine, electrolytes and vitamins
+all still arrive. **594 products across types is range across types, which is what the proposition
+needs.** The two figures it was blocked on both move:
+
+| | Today | After |
+|---|---:|---:|
+| **Boots' share of supplements** | **95.2%** | **75.0%** |
+| **Sports subcategory** | **214 products** | **~750–800** |
+
+**Item 314's build stays open on its own terms, and MyProtein is not evidence for it.** 17,848
+ungrouped duplicates are live today, serving 76 product pages for one M.A.C foundation, and would be
+there if MyProtein had never existed. **The mechanism is owed to the catalogue; it is not owed to
+this retailer.**
 
 #### DEPTH
 
@@ -27085,3 +27110,77 @@ still be there if MyProtein were never onboarded.
 > evidence either way.**
 
 **Nothing recommended. Both decisions are Robbie's.**
+
+---
+
+### 317. Stage 3 configured: the classification moves, and the names decided two of the eleven
+
+**Raised:** 25 August 2026 · **Config written. STILL INERT — `enabled = false`, `active = false`,
+no cron, nothing imported.** Second dry run compared against the first.
+
+| Counter | Before | **After** |
+|---|---:|---:|
+| **`on_supplements_path`** | **0** | **464** |
+| `top_category` skincare | **471** | **58** |
+| v6 exclusion `supplement` | 81 | **14** |
+| `subcategory_from_map` | 0 | **463** — sports 430, supplements 33 |
+| `subcategory_map_unmatched` | 0 | **0** — the 11-value map covers every value in the feed |
+| `supplements_path_unreachable` | — | **`[]`** — the allowlist/prefix pairing guard passes |
+| brand rows canonicalised | 0 | **4** — the `My Protein` alias fires |
+| Products (creates + links) | 594 | **635** |
+
+**Creatine, whey and multivitamins are no longer skincare.** The casein powder classified as a
+`Cleanser` and the krill oil as an `Oil` are gone with them.
+
+#### AGAINST THE 1,749, AND THE UNITS ARE NOT THE SAME
+
+**1,749 was a ROW count before the collapse; 464 is a PRODUCT count after it.** The allowlist admits
+1,795 rows, 1,749 of which classify as supplements by the shipped path rule applied to raw feed
+rows. Tier 5 then collapses them to 635 products, of which **464 sit on the supplements path**.
+
+> **Reporting "464 against 1,749" as a shortfall would be comparing rows to products.** The gap is
+> the collapse this decision accepted, not a classification failure — and the classification
+> counter that matters, `subcategory_map_unmatched`, is **zero**.
+
+#### THE TWO "DECISIONS" DISSOLVED WHEN THE NAMES WERE READ
+
+Both were expected to need a judgement. Neither did.
+
+- **`Diet Products` (1 row)** is **`The Supplement: Digital Magazine + Subscription`**. Not a
+  product. At n=1 this looked like a rounding decision either way; it is a magazine.
+- **`Wellness` (34)** is **entirely third-party** — KIKI Health, Kalms, Rescue Remedy, Floradix,
+  BetterYou, Spatone, DIRTEA — and sits under `Health and Beauty`, **not the supplements path**. It
+  needed no subcategory decision at all: the path already excludes it.
+
+**And one that did need judgement, which nobody had flagged:** `Body Care` (59) is genuinely mixed —
+collagen capsules and ashwagandha alongside shower gels, deodorants and a toothbrush. **Mapping it
+either way is wrong for about half of it**, which is exactly what a `null` entry is for: out of
+scope, counted, row still created, subcategory left to the categoriser.
+
+> **The doctrine step earned its place here rather than confirming a guess.** The two flagged for
+> decision resolved to translations; the one nobody flagged is the only genuine judgement in the
+> eleven. **A count would have ranked them 34, 59, 1 and got the order of difficulty exactly
+> backwards.**
+
+#### ONE MAP DESIGN CHOICE, STATED
+
+**Only values that co-occur with the supplements path carry a subcategory.** The map sets
+`subcategory` and never `top_category`, so assigning `sports` to a shower gel would produce a
+`bath_body` product wearing a supplements subcategory. Everything under `Health and Beauty` is
+therefore `null` by construction, not by preference.
+
+#### AND A DIAGNOSTIC FIX THAT WAS ITSELF THE DOCTRINE FAILING QUIETLY
+
+`feed-diag`'s section 5c keyed on `product_type` to dump names. **MyProtein's `product_type` is 0%
+filled**, so the section returned nothing — on precisely the feed whose names needed reading.
+Corrected to fall back to `merchant_category` when `product_type` is empty on every row.
+
+> **A read-the-names step that silently reads nothing is worse than one that errors**, because its
+> empty output is indistinguishable from "nothing to see".
+
+#### STILL OUTSTANDING BEFORE `enabled = true`
+
+- **`awin_merchant_id` confirmed:** every deep link in the dry run reads `awinmid=3196`, from the
+  feed's own `aw_deep_link`. **Free, and no fabricated click.**
+- **Delivery terms unset**, and the CHECK refuses `active = true` until they are read **at a
+  checkout**. Robbie's.
