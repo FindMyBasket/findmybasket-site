@@ -152,7 +152,7 @@ source agreement, not from memory.
 
 | Field | Value |
 |---|---|
-| Status | **Stage 2: configured and inert.** `retailers.id 33`, `active = false`, `import_config.enabled = false`, no cron. Decision to proceed recorded in item 308 |
+| Status | **LIVE — `active = true`, 25 Aug 2026.** 608 products, 509 supplements. `import_config.enabled = false` and a hold refuses re-enabling (item 324). Decision to proceed in item 308, go-live figures in item 325 |
 | Network | **AWIN**, advertiser **3196** |
 | Importer | **`import-awin-feed` exists.** This is a retailer configuration, not a network integration |
 | **Feed to use** | **`3196` "Default" — 7,192 rows, 97.1% barcode.** NOT `13007` "Masterfeed" (2,054 rows, 24.2% barcode, parent-level). `10429` "Bestsellers" is a 100-row promo selection |
@@ -205,6 +205,8 @@ Three steps, all of which exist because a previous onboarding skipped one:
 |---|---|
 | 1. Feeds read, allowlist audited, MP line verified excluded | **done** — items 306, 307, 309 |
 | 2. Config row written, inert | **done 25 Aug** — item 311 |
-| **3. First import read** | **not run.** Needs `enabled = true` and no cron |
-| 4. Delivery terms read **at a checkout** | **Robbie.** Blocks `active = true` at the database |
-| 5. `awin_merchant_id` verified against the feed's `aw_deep_link` | **not done** — blocks `enabled = true` |
+| 3. First import | **done 25 Aug** — 609 created, 608 live. Item 318 |
+| 4. Delivery terms | **done 25 Aug** — read on MyProtein's own site, £4.49 free over £55. Site was sufficient because both numbers are published; item 323 |
+| 5. `awin_merchant_id` verified | **done** — `awinmid=3196` read from the feed's own `aw_deep_link`, no fabricated click |
+| **6. Go live** | **done 25 Aug** — item 325 |
+| **7. RE-IMPORT IS HELD** | a second run would create **177 near-duplicates** (item 314's leak). Guarded by a trigger on `enabled`, item 324 |

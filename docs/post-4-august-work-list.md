@@ -27382,8 +27382,18 @@ list rather than a rule.** And the list needs judgement per item rather than a k
 cookie and a protein bar are arguably sports nutrition; peanut butter is food; Manuka honey gummies
 are a supplement. **A `\bbar\b` rule would take the protein bars with the chocolate.**
 
-**Not decided here.** ~25 rows, and the question is whether a beauty price-comparison site carries
-food at all — which is a scope question, not a classification one.
+#### THIS IS A PROPOSITION QUESTION, NOT A DEFECT
+
+**Recorded for Robbie as scope rather than classification.** Nothing here is misfiled by our own
+rules: dried mango genuinely arrives under `Sports Nutrition`, and the categoriser genuinely has
+nowhere better to put a chocolate bar.
+
+> **The question is whether a beauty price-comparison site carries food, and 25 rows is small enough
+> that the ANSWER matters more than the instances.** Decide the principle and the 25 follow; decide
+> the 25 and the principle is still open the next time a retailer files a granola under nutrition.
+
+**The instances are listed above so the decision has something concrete in front of it, not so they
+can be handled one at a time.**
 
 ---
 
@@ -27436,3 +27446,103 @@ tub is a £30 gap — **2.2× item price** — so the prompt is suppressed by de
 > rule declining to make an unhelpful suggestion.** Stated at configuration so that MyProtein
 > appearing at the bottom of a prompt-coverage report is read as the rule working rather than as a
 > coverage gap — which is the reading a coverage report invites by construction.
+
+---
+
+### 324. A guard on the enabling action, and a system twice protected by an absence
+
+**Raised:** 25 August 2026 · **Built, tested, live. Three options considered.**
+
+| Option | Refuses? | Names the reason? | Cost |
+|---|---|---|---|
+| `enabled = false` alone | yes — the importer errors on a real apply | **no** | none |
+| A `standing_check_findings` note | **no — nothing reads it at import time** | yes | none |
+| **Trigger on the ENABLING action** | **yes** | **yes, in the exception** | one migration |
+
+> **`enabled = false` refuses for the WRONG REASON.** It reads as ordinary not-yet-onboarded state,
+> which is exactly what someone completing an onboarding clears without hesitating. **A guard that
+> looks like the thing it is guarding against is not a guard.**
+
+**The trigger refuses the enabling ACTION rather than the import**, so the refusal lands on the
+person making the decision at the moment they make it. Item 290's pattern, one table over, sharing
+its release mechanism (`SET LOCAL "fmb.release_hold"`, or resolve the finding).
+
+**Tested, and the first test failed in a way worth recording:** it reported "allowed" because
+`enabled` was already `true` from the import, so there was no false→true transition to fire on.
+**The test measured no transition, not no guard.** Turning it off first — also the correct resting
+state — produced: **refused while held; allowed with the exact release key; an unheld retailer
+unaffected.**
+
+#### AND THE SECOND INSTANCE OF A SYSTEM PROTECTED BY AN ABSENCE
+
+| | What was holding it | What that was |
+|---|---|---|
+| **Superdrug** | no cron row; GitHub workflow renamed `.disabled` | **an absence**, until the six-state pass set `enabled = false` |
+| **MyProtein** | no cron row | **an absence**, until this guard |
+
+> **Two instances is a pattern rather than a coincidence, and the pattern is that an absence holds
+> until someone adds something — and adding things is normal work.** Nobody has to make a mistake.
+> A colleague completing the onboarding by adding the cron everyone else has would have been doing
+> the obvious right thing.
+>
+> **An absence also cannot be found.** Nothing lists the things that are safe because a scheduler is
+> missing, so the protection is invisible to any audit and to its own beneficiaries.
+
+**The general form: if a system is correct because something is missing, write down what would go
+wrong if it were added — or make the absence a setting.**
+
+---
+
+### 325. MyProtein live: 2,292 supplements, and Boots below 80% for the first time
+
+**Raised:** 25 August 2026 · **`active = true`. Verified on the site, not in the database.**
+
+| | Predicted | Before | **Live now** |
+|---|---|---:|---:|
+| Supplements | 2,343 | 1,831 | **2,292** |
+| Comparable at 2+ | 82–118 | 34 | **80** |
+| **Comparison depth** | 3.5–5.1% | **1.86%** | **3.49%** |
+| **Boots' share** | 76.6% | **95.2%** | **76.1%** |
+| **Sports subcategory** | ~750–800 | **214** | **639** |
+| MyProtein products live | — | 0 | **608** |
+
+**Depth landed at the bottom of its predicted range** — 3.49% against a 3.5–5.1% band, so the floor
+estimate (MyProtein-family matches only) was closer than the ceiling. **Reported as the low end
+rather than as "within range".**
+
+**Sports came in under the estimate too** — 639 against ~750–800, because ~110 of the 445 sports
+products are not in `products_active` or classified elsewhere. **Still a 3× increase on 214.**
+
+#### VERIFIED ON THE SITE
+
+`/product/151619` — `Impact Whey Protein Powder 5KG, Chocolate Mint`:
+
+```
+<title>MyProtein Impact Whey Protein Powder - 5KG - 166servings - Cho…
+       | MyProtein price with delivery | FindMyBasket</title>
+
+£157.49 · Free delivery · seller MyProtein
+Home > Supplements > Sports > MyProtein Impact Whey Protein Powder
+```
+
+**Branch B fired on a retailer onboarded today** — yesterday's six templates classifying a product
+that did not exist when they were written. **"Free delivery" is correct**: £157.49 clears the £55
+threshold, so the terms read from the site an hour ago are being applied. The breadcrumb confirms
+the subcategory routing end to end, and `/supplements/sports` returns 200 with MyProtein on it.
+
+**JSON-LD complete**: price, `InStock`, seller, and an `https` image — the image-scheme work from
+item 297 holding on a feed that never needed it.
+
+**One thing that is not ours:** the rendered description contains an em dash — *"exactly what your
+body needs — and nothing it doesn't"*. **That is MyProtein's copy, not ours**, and item 286 already
+settles that repairing our own mangling and rewriting a supplier's text are different acts. Noted so
+the em-dash rule is not read as broken.
+
+#### WHAT REMAINS OPEN
+
+| | |
+|---|---|
+| **Re-import** | **guarded** — item 324 |
+| Class 2 — ~25 supplements in `skincare/face` | item 322, no config fix available |
+| Class 3 — ~25 food and drink | item 321, **a proposition question for Robbie** |
+| Item 314's grouping build | open on its own terms, not on MyProtein's |
