@@ -28482,3 +28482,105 @@ measurement is the input rather than the answer.
 | Recorded, unguarded | capability claims — a dashboard, an app, a refresh frequency |
 | Recorded, now measured | founding numbers |
 | **Named unverifiable** | **four competitive claims** |
+
+---
+
+### 345. A shared module fixed the layer it covered and left the layer above it holding two implementations of one rule
+
+**Raised:** 25 August 2026 · **The savings figure in the monthly email has been £0.00 for every recipient, structurally, not because savings were zero.**
+
+`send-routine-email` reports `saving = options[1].total - options[0].total`. Its two-retailer
+loop emits a pair for every combination `(r1, r2)`, including pairs where **every product went
+to r1** and r2's leg is empty. `deliveryFor` correctly charges nothing for an empty leg, so that
+"split" totals **exactly** what r1's single-retailer option totals. It is not a second way to buy
+the basket. It is the same basket counted twice, and with N retailers the winner was re-emitted
+N-1 times.
+
+So `options[1]` **always** tied `options[0]`, and the reported saving was **always £0.00**.
+
+`app/app/RoutineBuilder.tsx:649` has had the guard all along:
+
+```js
+if (r1Total > 0 && r1Name) retailers.push(r1Name);
+if (r2Total > 0 && r2Name) retailers.push(r2Name);
+if (retailers.length < 2) continue;
+```
+
+Measured against live prices with the production `in_stock` filter, on all 8 active routines:
+
+| routine | saved | shipped | with the guard |
+|---|---|---|---|
+| 25 | 3 | £0.00 | **£2.64** |
+| 34 | 3 | £0.00 | **£2.64** |
+| 36 | 1 | £0.00 | **£2.00** |
+| 42 | 1 | £0.00 | **£0.50** |
+| 3, 21, 26 | 3, 3, 12 | £0.00 | £0.00, no whole basket exists |
+| 37 | 1 | no basket | no basket |
+
+**Half the sends have a real saving the shipped code reported as zero.**
+
+> **This is not a duplication story, it is a layering one.** Delivery was unified into
+> `_shared/delivery.ts` in August *because* these same two files had written that rule out by
+> hand and disagreed. The extraction worked: the delivery rule is now identical in both. But
+> **option-set construction sits above the shared layer**, and it was left holding two
+> implementations of one rule, so the same class of divergence reappeared one level up — **in the
+> code that calls the unified rule**.
+>
+> **Extracting a shared module fixes what it covers and creates no obligation on what sits above
+> it.** The header of `_shared/delivery.ts` argues at length for one rule in one place. That
+> argument was applied to the rule it was about and stopped at its own boundary.
+
+**Two paths, not three.** `lib/product-queries.ts` builds no option set; grep for `type: 'split'`
+returns only these two files.
+
+---
+
+### 346. A hazard recorded next to the analytics and never carried to the copy
+
+**Raised:** 25 August 2026 · **Item 345's fix is the substance; the rest of the change is consequence. This is the part that was known and not acted on.**
+
+Three of the eight active routines have **no whole basket** — no single retailer and no pair
+covers everything — so they fall to the optimiser's fallback: cheapest price per product, **no
+delivery costed**, and **only the products that could be priced**.
+
+That fallback was typed `"split"`, so the render treated it as a comparison result:
+
+| rendered | actually |
+|---|---|
+| "Best price basket" | nothing was compared |
+| "Split across 1 retailers for best price" | one retailer, and not a split |
+| "Free delivery" | delivery was never costed |
+| Total £78.98 over 4 rows | **routine 26 saved 12 products** |
+| — | **the other 8 appeared nowhere at all** |
+
+And two lines above it the intro promised **"the best way to restock your routine"**, contradicted
+by the panel in the same single read.
+
+**The builder already knew.** At the `basket_optimised` call in `RoutineBuilder.tsx` there is a
+*NOTE for the dashboard* warning that `result_type` is **UNRELIABLE** whenever
+`unpriced_item_count > 0`, because a basket with untracked items may report `"single"` while only
+one retailer's worth of items was ever priceable.
+
+> **The hazard was recorded in one place and not carried to the other.** The figure was documented
+> as untrustworthy for the dashboard while the sentence built on the same figure went out to
+> readers. This is the week's shape again: item 289's freshness amendment, item 313's
+> near-neighbour rule, item 343's `.order()` rule sixty lines from the function that needed it.
+> **Reasoning that is right and whose reach is partial.**
+
+**Fixed by surfacing, not by softening.** A reader who saved twelve products and sees four needs
+to know *which eight are missing*; that is more useful than any hedge about the four. The email
+now lists them under **Not priced this month**, using item 245's established wording, *"Not in
+stock at any retailer we compare"*.
+
+**Also in this change:** the degenerate-pair guard (item 345); one rule, `hasMeasuredSaving`,
+feeding both the subject and the panel, which had been gated on `result.saving > 0` and
+`result.best` respectively and disagreed on 7 of 8 routines; and the four panel branches reworded
+for a single cold read — **in the builder the reader has just watched the comparison run, so "the
+next-best costs the same" lands as a result; in an email nothing precedes it**, so each branch now
+says what was compared before it says what came of it.
+
+**Four copy lines deliberately left for their own change**, since three of them assert a
+comparison or a superlative and need this treatment rather than a patch: the welcome intro's
+"best prices" promise (:380), the price-drop email's "We track the best price" (:589) and its
+third baseline, *"Total drop since you saved them"* (:595), and the footer scope claim **"UK
+skincare price comparison"** (:452, :614), which is item 334's class and a one-word fix.
