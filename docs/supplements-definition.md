@@ -347,3 +347,48 @@ on beauty names.
 Any future count states: the number, the date, and **"per `docs/supplements-definition.md`"**.
 If the definition changes, previous figures are superseded rather than corrected — they were
 right about a different question.
+
+---
+
+## READ THE NAMES. DO NOT ONLY COUNT THEM.
+
+**Added 25 August 2026, work-list item 318. A doctrine step, not an observation.**
+
+> **A count ranks buckets by size. Difficulty does not correlate with size, and on the three
+> occasions this has been tested the count got the order exactly backwards.**
+
+### Three instances
+
+| | The count said | The names said |
+|---|---|---|
+| **Cohorted** (item 223) | 0% overlap — "products we cannot compare today" | mystery boxes and gift cards — **"products that cannot be compared in principle"**, which no future harvest changes |
+| **Boots supplements** | a supplements path with N rows | non-ingestibles inside it, which a path rule cannot see |
+| **MyProtein** (item 317) | `Wellness` 34, `Body Care` 59, `Diet Products` 1 | **`Diet Products` is a magazine subscription. `Wellness` is third-party and off the supplements path. `Body Care` — the one nobody flagged — is the only real judgement, being genuinely half topical.** |
+
+**The MyProtein case is the clearest.** Two buckets were flagged as needing a decision and one was
+not. **Reading the names dissolved both flagged decisions and produced the unflagged one.** Ranked
+by rows the order of difficulty was 59, 34, 1; it was actually 59, then nothing, then nothing.
+
+### The failure mode: a name-reading step that reads nothing
+
+`feed-diag` section 5c dumps names from a taxonomy node. It keyed on `product_type`.
+
+> **MyProtein's `product_type` is 0% filled, so the section returned nothing — on precisely the feed
+> whose names needed reading.** Empty output is indistinguishable from "nothing to see", so the step
+> appears to have run and to have found nothing interesting.
+
+**The fix is a FALLBACK, not a change of key.** 5c now reads `merchant_category` when `product_type`
+is empty on every row. **Changing the key would move the same hole**: the next feed may populate
+neither column, and a step whose single source can be empty fails the same way whichever source it
+picks. **A fallback degrades; a replacement relocates.**
+
+### Corollary: `null` is a real answer
+
+A prefix map entry may be `null` — "deliberately out of scope, counted, row still created, keeps
+its inferred subcategory". **Use it when a bucket is genuinely mixed.** MyProtein's `Body Care` is
+59 rows holding collagen capsules and ashwagandha alongside shower gels, deodorants and a
+toothbrush.
+
+> **A mapping that is wrong for half a bucket is worse than no mapping**, because it asserts a
+> classification with the same confidence for the half it gets wrong. `null` is what that state is
+> for, and reaching for it is not an evasion.

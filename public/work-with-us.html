@@ -267,8 +267,17 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
       <span class="stat-label">UK retailers currently live</span>
     </div>
     <div class="stat-card">
-      <span class="stat-num">100k+</span>
-      <span class="stat-label">products tracked in real time</span>
+      <!-- WAS "100k+ products tracked in real time". It read 100k+ at 99,865 live products -- false
+           by 135, and due to become true on the next import, which is this page's own defect from
+           this morning (item 329) allowed deliberately rather than by accident.
+           A BARE INTEGER DRIFTS BY CONSTRUCTION. Replaced with a claim that stays true as the
+           catalogue moves in either direction. "Real time" also overstated a DAILY feed -- ten
+           scheduled imports, one per retailer -- and the claim two bullets below called the same
+           mechanism WEEKLY. THERE WERE FOUR COPIES, NOT TWO: a third on this page eight lines
+           below, and a fourth on about.html inside a paragraph about the founder. All four now
+           say daily. Items 340, 341. -->
+      <span class="stat-num">Every</span>
+      <span class="stat-label">product from every retailer we carry, refreshed daily</span>
     </div>
     <div class="stat-card">
       <span class="stat-num">13k+</span>
@@ -284,7 +293,7 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
   <h3>What you provide</h3>
   <ul>
     <li>Approval into your affiliate programme (AWIN or Rakuten)</li>
-    <li>Access to your product datafeed (we pull it on an automated weekly refresh)</li>
+    <li>Access to your product datafeed (we pull it on an automated daily refresh)</li>
     <li>Standard tracked deep links for product pages</li>
   </ul>
 
@@ -294,7 +303,15 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
     <li>Direct placement on relevant brand and category pages</li>
     <li>Visibility in routine builder recommendations whenever your prices win on a user's basket</li>
     <li>Inclusion in our monthly routine emails to opted-in users</li>
-    <li>Analytics dashboard reporting on referral volume and conversion</li>
+    <!-- ANALYTICS DASHBOARD CLAIM REMOVED 25 AUG 2026. It offered, in PRESENT TENSE on the page
+         partners read before signing, a capability that exists only as docs/dashboard-build-brief.md
+         -- status "unblocked", not built. Worse than a dated roadmap item: a roadmap says later and
+         this said now.
+         NOT REPLACED WITH AN EQUIVALENT. AWIN and Rakuten already give partners referral and
+         conversion reporting as standard, so a dashboard of ours would duplicate the network rather
+         than add to it. The honest line is the one below: we do not duplicate what the network
+         already provides. Item 340. -->
+    <li>Referral and conversion reporting through your existing AWIN or Rakuten dashboard, which we do not duplicate</li>
   </ul>
 
   <h3>What we ask</h3>
@@ -324,7 +341,7 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
   <ul>
     <li><strong>Whole-basket optimisation including delivery.</strong> No other UK platform does this. Most compare single products. We optimise the entire routine including each retailer's free delivery threshold.</li>
     <li><strong>Honest, defensible recommendations.</strong> The best value basket is the recommended basket. We don't bias toward higher-commission retailers, and the algorithm is auditable.</li>
-    <li><strong>Operational maturity.</strong> Automated weekly datafeed refresh, brand normalisation across retailers, real-time stock awareness. Not a slideware demo.</li>
+    <li><strong>Operational maturity.</strong> Automated daily datafeed refresh, brand normalisation across retailers, stock and price checked on every run. Not a slideware demo.</li>
     <li><strong>Genuine reach in K-Beauty.</strong> We carry COSRX, Beauty of Joseon, mixsoon, medicube and dozens more across multiple UK retailers, a category most aggregators thin out.</li>
   </ul>
 
@@ -333,10 +350,12 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
 
   <p>Active areas of growth that may matter for partners considering us:</p>
 
+  <!-- NATIVE APP BULLET REMOVED 25 AUG 2026. It was a dated capability claim -- "(2027)" -- on the
+       page prospective partners read, for something that does not exist, has no dependency in
+       package.json, and that docs/strategy.md:561 explicitly says is "browser based rather than an
+       app". A date makes a claim look tracked. Item 339. -->
   <ul>
-    <li>Continued retailer expansion across the prestige and premium tiers</li>
-    <li>Supplements category (later in 2026)</li>
-    <li>Native app with barcode scanner (2027)</li>
+    <li>Broadening retailer coverage across every category, and deepening comparison where a product is stocked in more than one place</li>
   </ul>
 
 

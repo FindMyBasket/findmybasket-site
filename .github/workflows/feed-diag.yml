@@ -88,6 +88,11 @@ name: feed-diag (read-only)
         required: false
         default: 'merchant_product_id'
         type: string
+      url_collapse:
+        description: "Section 10: measure what the importer's Tier 5 URL-collapse would merge (size vs flavour). Set to 1. Read-only."
+        required: false
+        default: ''
+        type: string
       cohort_rx:
         description: "Section 9: name regex defining a cohort, e.g. men's-health tokens. Blank = skip."
         required: false
@@ -192,6 +197,9 @@ jobs:
           SUBCAT_MATCH_COLUMN: ${{ inputs.subcat_match_column }}
           # Section 9: name-cohort x product_type cross-tab, with a membership comparison
           # rather than only a size comparison. Item 146's shape applied to a category.
+          # Section 10: URL-collapse analysis. Groups admitted rows by the URL Tier 5 keys
+          # on and reports whether the merged rows differ by SIZE or only by flavour.
+          URL_COLLAPSE: ${{ inputs.url_collapse }}
           COHORT_RX: ${{ inputs.cohort_rx }}
           COHORT_EXCLUDE_RX: ${{ inputs.cohort_exclude_rx }}
           COHORT_NODE_RX: ${{ inputs.cohort_node_rx }}

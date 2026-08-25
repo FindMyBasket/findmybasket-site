@@ -222,12 +222,28 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
 
   <p>That second bit is the part everyone else gets wrong. Most price comparison sites tell you which retailer is best value on a single moisturiser. FindMyBasket factors in everything you're actually buying, every retailer's delivery threshold, and recommends the smallest number of orders to place to get the lowest total cost.</p>
 
-  <p>It's free, no account needed, and works across skincare, makeup, hair and K-Beauty.</p>
+  <p>It's free, no account needed, and works across skincare, makeup, hair, fragrance, bath and body, and supplements.</p>
 
 
   <h2>Why it exists</h2>
 
-  <p>The numbers spoke for themselves. The average price gap on the same skincare product across UK retailers is between 40% and 70%. People weren't comparison-shopping because the existing tools were product-level, not basket-level. Buying a four-product routine across four separate retailers to get the lowest unit price often ended up more expensive than buying everything at the second-best-value retailer, once delivery thresholds were factored in.</p>
+  <!-- MEASURED 25 Aug 2026, not inherited. 13,209 products stocked IN STOCK by two or more active
+       retailers, across all six categories.
+         median 24.7%   mean 35.8%   p75 40.7%   p90 78.5%   >=50%: 18.7%   >=100%: 6.7%
+
+       MEDIAN, NOT MEAN, DELIBERATELY. The mean is 35.8% and is inflated by a long right tail;
+       leading with it would be the worst-case-baseline defect again -- true of something, presented
+       as typical (items 245, 302). The previous wording read "between 40% and 70%", which describes
+       13% of products as though it were the norm, and which measured at a 37.0% mean and a 20.2%
+       median when it was finally checked -- false on both readings of "average".
+
+       SCOPE WIDENED FROM SKINCARE, AND THAT IS THE PART THAT MATTERS. Skincare is the LOWEST-spread
+       category except supplements (median 20.2%); fragrance is 42.9%, with 45.3% of its products
+       above 50%. The sentence named skincare because that is what the site STARTED as, not because
+       it is the best case -- so it understated its own claim AND rested it on half the population.
+
+       Re-measure on a feed change rather than on suspicion. Work-list item 342. -->
+  <p>The numbers spoke for themselves. Across the products stocked by more than one retailer we carry, the price gap between the best and worst option is typically around 25%, and one in five is 50% or more. People weren't comparison-shopping because the existing tools were product-level, not basket-level. Buying a four-product routine across four separate retailers to get the lowest unit price often ended up more expensive than buying everything at the second-best-value retailer, once delivery thresholds were factored in.</p>
 
   <p>FindMyBasket exists because nobody else was doing whole-basket optimisation including delivery. That's the genuine gap in the market.</p>
 
@@ -249,7 +265,7 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
 
   <p>FindMyBasket is built and run solo by Robbie Coffin, based in Hampshire. Robbie has a public sector transformation background and builds FindMyBasket in evenings and weekends.</p>
 
-  <p>It's not a venture-backed startup or part of a larger group. The platform exists because the problem was annoying enough to be worth fixing, and the technical infrastructure (live datafeeds from major UK retailers, basket optimisation algorithms, automated weekly refreshes) was tractable enough to build alone.</p>
+  <p>It's not a venture-backed startup or part of a larger group. The platform exists because the problem was annoying enough to be worth fixing, and the technical infrastructure (live datafeeds from major UK retailers, basket optimisation algorithms, automated daily refreshes) was tractable enough to build alone.</p>
 
 
   <h2>How we make money</h2>
@@ -262,7 +278,17 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
   <h2>Who we partner with</h2>
 
   <!--
-    RETAILER LIST — 11 names. Last verified 2026-08-19.
+    RETAILER LIST — 12 names. Last verified 2026-08-25.
+
+    MYPROTEIN ADDED 25 AUGUST 2026 (retailer 33), AND THE 12 WAS DIFFED, NOT INCREMENTED.
+    The set below was compared against `select name from retailers where active` — twelve
+    names, twelve rows, same twelve. Incrementing 11 to 12 would have produced the same
+    number by arithmetic and told nobody whether the LIST was right, which is the failure
+    this block already records from 16 August.
+
+    "and supplements" added to the sentence at the same time: MyProtein is the first
+    retailer whose contribution is overwhelmingly supplements (509 of 571), and the
+    category clause had never been updated for it.
 
     ATELIER DE GLOW REMOVED 19 AUGUST, THREE DAYS AFTER ITS FLIP. The previous
     version of this comment predicted this exactly — "when the flip lands, remove
@@ -295,7 +321,7 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
     sweep this block; nothing detects it. See the copy-sweep step in
     docs/superdrug-removal-plan.md.
   -->
-  <p>Currently live across 11 UK retailers covering skincare, makeup, hair and fragrance:</p>
+  <p>Currently live across 12 UK retailers covering skincare, makeup, hair, fragrance and supplements:</p>
 
   <ul>
     <li>Boots</li>
@@ -309,6 +335,7 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
     <li>Gorgeous Shop</li>
     <li>Perfume Click</li>
     <li>Niche Beauty</li>
+    <li>MyProtein</li>
   </ul>
 
   <p>More retailers are being added throughout the year. If you're a brand or retailer interested in partnering, <a href="/work-with-us">get in touch</a>.</p>
@@ -316,11 +343,28 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
 
   <h2>What's on the roadmap</h2>
 
-  <p>The current focus is on broadening retailer coverage in skincare, makeup and hair. Coming later:</p>
+  <!-- THE SUPPLEMENTS BULLET WAS DELETED 25 AUG 2026. It advertised as "coming later" a category
+       with 2,274 products, its own route, its own nav entry and a second retailer as of that day.
+       That is false rather than stale, and it survived because every discussion of this block has
+       been about the focus sentence above it. Work-list items 334, 337.
+
+       THE FOCUS SENTENCE WAS REWRITTEN AT THE SAME TIME. It read "broadening retailer coverage in
+       skincare, makeup and hair", which the last three onboardings contradict: Niche Beauty
+       (luxury/fragrance), Perfume Click (fragrance) and MyProtein (supplements). Not one was
+       skincare, makeup or hair.
+
+       THE NATIVE APP BULLET WAS REMOVED 25 AUG 2026 FROM BOTH PAGES. docs/strategy.md:561 says
+       the scanner "is browser based rather than an app", and no capacitor, react-native, expo or
+       scanner dependency exists. It was a capability claim for something that does not exist and
+       is not being built. Item 339.
+
+       WHAT REPLACED IT IS DELIBERATELY NOT A DATE. Every dated bullet on these two pages has
+       either shipped or contradicted the strategy document; the replacement describes a direction
+       the last three onboardings actually support. -->
+  <p>The current focus is broadening retailer coverage across every category, and deepening comparison where a product is stocked in more than one place. Coming later:</p>
 
   <ul>
-    <li><strong>Supplements:</strong> the same basket optimisation approach for wellness products.</li>
-    <li><strong>Native app with barcode scanner:</strong> scan a product in store, see if it's better value online.</li>
+    <li><strong>Deeper comparison:</strong> more retailers stocking the same products, so more of the catalogue can actually be compared.</li>
   </ul>
 
 

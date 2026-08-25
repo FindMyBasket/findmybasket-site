@@ -69,7 +69,13 @@ interface BasketOption {
   productsTotal: number;
   deliveryCost: number;
   breakdown: BasketBreakdownItem[];
-  type: "single" | "split";
+  // "fallback" is not a way to buy the basket. It is the cheapest price found for each
+  // product we could price, with NO delivery costed and, usually, PRODUCTS MISSING.
+  // It used to be typed "split", which made the render treat it as a real comparison
+  // result: "Split across 1 retailers for best price", delivery GBP 0 shown as "Free
+  // delivery", over a breakdown four rows long for a twelve-product routine. Given its
+  // own type so the copy can branch on what it actually is. Item 346.
+  type: "single" | "split" | "fallback";
 }
 
 interface OptimisationResult {
@@ -280,7 +286,33 @@ function optimiseBasket(routine: Product[], prices: PriceRow[]): OptimisationRes
       if (!o1.known || !o2.known) continue;
       const d1 = o1.cost;
       const d2 = o2.cost;
-      const retailers = [r1Name, r2Name].filter(Boolean);
+
+      // DEGENERATE PAIR GUARD. Ported verbatim from app/app/RoutineBuilder.tsx, which
+      // has had these three lines all along.
+      //
+      // A pair (r1, r2) where every product went to r1 leaves r2 with an empty leg.
+      // deliveryFor correctly charges nothing for an empty leg, so the "split" total
+      // comes out IDENTICAL to r1's single-retailer option. It is not a second way to
+      // buy the basket. It is the same basket counted twice.
+      //
+      // That mattered because saving is options[1].total - options[0].total. With N
+      // retailers the winner was re-emitted N-1 times, so options[1] ALWAYS tied
+      // options[0] and the reported saving was ALWAYS GBP 0.00. Not a genuine tie:
+      // structurally unmeasurable. Measured on the eight active routines, four have a
+      // real saving this reported as zero: 2.64, 2.64, 2.00 and 0.50 pounds.
+      //
+      // WHY THE TWO PATHS DIVERGED. Delivery was unified into _shared/delivery.ts in
+      // August 2026 because the builder and this file had each written the rule out by
+      // hand and disagreed. That fixed the layer the shared module covers.
+      // OPTION-SET CONSTRUCTION SITS ABOVE THAT LAYER AND WAS LEFT HOLDING TWO
+      // IMPLEMENTATIONS OF ONE RULE, so the same class of divergence reappeared one
+      // level up, in the code that CALLS the unified rule. Extracting a shared module
+      // fixes what it covers and creates no obligation on what sits above it. Item 345.
+      const retailers: string[] = [];
+      if (r1Total > 0 && r1Name) retailers.push(r1Name);
+      if (r2Total > 0 && r2Name) retailers.push(r2Name);
+      if (retailers.length < 2) continue;
+
       twoOptions.push({
         retailers, total: total + d1 + d2,
         productsTotal: total, deliveryCost: d1 + d2,
@@ -307,7 +339,7 @@ function optimiseBasket(routine: Product[], prices: PriceRow[]): OptimisationRes
     const fallback: BasketOption = {
       retailers: ["Best available prices"], total: fallbackTotal,
       productsTotal: fallbackTotal, deliveryCost: 0,
-      breakdown: fallbackBreakdown, type: "split",
+      breakdown: fallbackBreakdown, type: "fallback",
     };
     // The fallback is a SINGLE synthesised option, so there is no next best to
     // anchor against and no saving can honestly be claimed. Was
@@ -354,18 +386,41 @@ function escapeHtml(text: string): string {
     .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
+/**
+ * THE SAVINGS RULE, EXPRESSED ONCE.
+ *
+ * Before this, the subject was gated on `result.best && result.saving > 0` and the
+ * savings panel was gated on `result.best` ALONE. Two gates for one decision, and
+ * they disagreed on every routine that had a basket and no measurable saving, which
+ * as of 20 Aug 2026 was seven of the eight active routines. The subject correctly
+ * said nothing about a saving; the panel underneath it rendered
+ *
+ *     YOU COULD SAVE / GBP 0.00 / vs buying everything at the most expensive retailer
+ *
+ * Both halves wrong at once, and independently. The number was zero for the
+ * structural reason fixed in optimiseBasket above, and the sentence still named the
+ * baseline the number stopped using when item 245 moved the anchor to next-best.
+ * The anchor moved, the sentence did not.
+ *
+ * ONE RULE. Both the subject and the panel ask this function. Do not re-derive it,
+ * and do not test `saving > 0` at a call site: that is how the asymmetry started.
+ */
+function hasMeasuredSaving(result: OptimisationResult): boolean {
+  return result.best !== null && result.saving > 0;
+}
+
 function buildEmailSubject(result: OptimisationResult, emailType: "welcome" | "monthly"): string {
   if (emailType === "welcome") return "Your routine is saved ✨";
-  if (result.best && result.saving > 0) return `Your routine this month: save £${result.saving.toFixed(2)}`;
+  if (hasMeasuredSaving(result)) return `Your routine this month: save £${result.saving.toFixed(2)}`;
   return "Your routine this month";
 }
 
 function buildEmailHTML(params: {
   result: OptimisationResult; unsubscribeToken: string;
-  routineProductIds: number[]; appBaseUrl: string;
+  routineProductIds: number[]; routineProducts: Product[]; appBaseUrl: string;
   emailType: "welcome" | "monthly";
 }): string {
-  const { result, unsubscribeToken, routineProductIds, appBaseUrl, emailType } = params;
+  const { result, unsubscribeToken, routineProductIds, routineProducts, appBaseUrl, emailType } = params;
   const unsubscribeUrl = `${appBaseUrl}/unsubscribe.html?token=${unsubscribeToken}`;
   // utm_source is load-bearing, not decoration. /app reads it for the
   // load_routine_from_url event (routineArrivalSource in app/app/RoutineBuilder.tsx)
@@ -376,9 +431,15 @@ function buildEmailHTML(params: {
   const basketUrl = `${appBaseUrl}/app.html?routine=${routineProductIds.join(",")}&utm_source=email`;
 
   const headline = emailType === "welcome" ? "Your routine is saved" : "Your routine this month";
+  // The monthly intro promised "the best way to restock your routine" two lines above
+  // a panel that then said no whole basket exists to compare. A contradiction the
+  // reader meets in one pass, on 3 of the 8 active routines. The claim is only true
+  // when a whole basket was actually found.
   const intro = emailType === "welcome"
     ? "Thanks for saving your skincare routine. We'll email you each month with the best prices on your routine across UK retailers."
-    : "We've checked prices across UK retailers. Here's the best way to restock your routine this month.";
+    : result.best?.type === "fallback"
+      ? "We've checked prices across the UK retailers we compare. Here's where your routine stands this month."
+      : "We've checked prices across UK retailers. Here's the best way to restock your routine this month.";
 
   let breakdownHtml = "";
   if (result.best) {
@@ -394,11 +455,112 @@ function buildEmailHTML(params: {
       </tr>`).join("");
   }
 
-  const retailerList = result.best?.retailers.join(" + ") || "-";
+  const isFallback = result.best?.type === "fallback";
+  const retailerList = isFallback
+    ? "" // the fallback has no winning retailer; naming one would invent a result
+    : result.best?.retailers.join(" + ") || "-";
   const totalPrice = result.best?.total.toFixed(2) || "0.00";
-  const deliveryText = result.best && result.best.deliveryCost === 0
-    ? "Free delivery"
-    : result.best ? `Delivery £${result.best.deliveryCost.toFixed(2)}` : "";
+  // A fallback basket has deliveryCost 0 because delivery was never costed, not
+  // because it is free. Rendering that as "Free delivery" stated something false to
+  // the three routines in that state.
+  const deliveryText = !result.best
+    ? ""
+    : isFallback
+      ? "Not included, depends where you buy"
+      : result.best.deliveryCost === 0
+        ? "Free delivery"
+        : `Delivery £${result.best.deliveryCost.toFixed(2)}`;
+  const totalLabel = isFallback ? "Products total" : "Total";
+
+  // PRODUCTS IN THE ROUTINE THAT NOBODY WE COMPARE HAS IN STOCK.
+  //
+  // They appear in no option's breakdown, so before this they vanished from the email
+  // completely. Routine 26 saved twelve products; four are priceable; the other eight
+  // appeared NOWHERE, under a heading that read "Best price basket" and a Total that
+  // was not the total of the routine. Softening the sentence over the four would not
+  // have helped: a reader who saved twelve and sees four needs to know WHICH eight are
+  // missing, and that is more useful than any claim about the four.
+  //
+  // The builder already knew. app/app/RoutineBuilder.tsx, at the basket_optimised
+  // call, carries a NOTE FOR THE DASHBOARD warning that result_type is UNRELIABLE
+  // whenever unpriced_item_count > 0, because a basket with untracked items may report
+  // "single" while only one retailer's worth of items was ever priceable. That hazard
+  // was recorded next to the analytics and never carried across to the copy, so the
+  // figure was documented as untrustworthy while the sentence built on it shipped.
+  // A hazard recorded in one place and not carried to the other. Item 346.
+  const pricedIds = new Set((result.best?.breakdown ?? []).map((b) => b.product.id));
+  const unpriced = routineProducts.filter((p) => !pricedIds.has(p.id));
+
+  const unpricedHtml = unpriced.length === 0 ? "" : `
+<tr><td style="padding: 24px 32px 0;">
+<div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #8a8680; font-weight: 600; margin-bottom: 10px;">Not priced this month</div>
+<div style="font-size: 13px; color: #6e6a64; margin-bottom: 12px;">${unpriced.length === 1 ? "One product in your routine is" : `${unpriced.length} of the ${routineProducts.length} products in your routine are`} not in stock at any retailer we compare, so ${unpriced.length === 1 ? "it is" : "they are"} not in the prices above.</div>
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+${unpriced.map((prod) => `
+  <tr><td style="padding: 10px 0; border-bottom: 1px solid #f0ece4; font-size: 14px; color: #6e6a64;">
+    <div style="margin-bottom: 2px;">${escapeHtml(prod.name)}</div>
+    <div style="font-size: 12px; color: #8a8680;">Not in stock at any retailer we compare</div>
+  </td></tr>`).join("")}
+</table></td></tr>`;
+
+  // THE PANEL, ONE BRANCH PER STATE, WORDED FOR A SINGLE READ.
+  //
+  // The four branches come from the builder (RoutineBuilder.tsx, the qualitative
+  // summary), whose comment records why they must stay separate: collapsing them into
+  // one sentence is what made the old copy read as an apology. Item 245.
+  //
+  // REWORDED RATHER THAN COPIED. In the builder the reader has just watched the
+  // comparison run, so "The next-best way to buy it costs the same" lands as a result.
+  // In an email nothing precedes it: it arrives cold, is read once, often on a phone,
+  // and there is no comparison on screen for it to be the result OF. So each branch
+  // states what was compared before it states what came of it.
+  const optionCount = result.options.length;
+  const comparedLine = `We compared ${optionCount} ${optionCount === 1 ? "way" : "ways"} to buy your routine`;
+
+  let panelHtml = "";
+  if (!result.best) {
+    panelHtml = "";
+  } else if (hasMeasuredSaving(result)) {
+    panelHtml = `
+<tr><td style="padding: 24px 32px 0;">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: rgba(122,158,135,0.12); border: 1px solid rgba(122,158,135,0.3); border-radius: 12px; padding: 18px 22px;">
+<tr><td>
+<div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #6a7e6f; margin-bottom: 6px;">${escapeHtml(comparedLine)}</div>
+<div style="font-family: Georgia, serif; font-size: 32px; font-weight: 600; color: #5a8970; line-height: 1;">£${result.saving.toFixed(2)}</div>
+<div style="font-size: 13px; color: #6a7e6f; margin-top: 6px;">cheaper than the next-best of them, delivery included</div>
+</td></tr></table></td></tr>`;
+  } else if (isFallback) {
+    const n = result.best.breakdown.length;
+    panelHtml = `
+<tr><td style="padding: 24px 32px 0;">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #faf8f4; border: 1px solid #f0ece4; border-radius: 12px; padding: 18px 22px;">
+<tr><td>
+<div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #8a8680; margin-bottom: 6px;">Part of your routine</div>
+<div style="font-size: 14px; color: #4a4845; line-height: 1.6;">No single retailer, and no pair of retailers, stocks everything in your routine right now, so there is no whole basket to compare. Below is the cheapest price we found for ${n === 1 ? "the one product" : `the ${n} products`} we could price. Delivery is not included, because it depends which retailers you buy from.</div>
+</td></tr></table></td></tr>`;
+  } else if (optionCount === 1) {
+    const split = result.best.retailers.length > 1;
+    panelHtml = `
+<tr><td style="padding: 24px 32px 0;">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #faf8f4; border: 1px solid #f0ece4; border-radius: 12px; padding: 18px 22px;">
+<tr><td>
+<div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #8a8680; margin-bottom: 6px;">One way to buy your routine</div>
+<div style="font-size: 14px; color: #4a4845; line-height: 1.6;">${split
+  ? `Right now only one combination of retailers stocks every product in your routine, so there is nothing to compare it against. Here it is, split across ${result.best.retailers.length} retailers, delivery included.`
+  : "Right now only one retailer stocks every product in your routine, so there is nothing to compare it against. Here it is, delivery included."}</div>
+</td></tr></table></td></tr>`;
+  } else {
+    const split = result.best.retailers.length > 1;
+    panelHtml = `
+<tr><td style="padding: 24px 32px 0;">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #faf8f4; border: 1px solid #f0ece4; border-radius: 12px; padding: 18px 22px;">
+<tr><td>
+<div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #8a8680; margin-bottom: 6px;">${escapeHtml(comparedLine)}</div>
+<div style="font-size: 14px; color: #4a4845; line-height: 1.6;">${split
+  ? `The cheapest is split across ${result.best.retailers.length} retailers, delivery included. The next-best costs exactly the same, so there is nothing to gain by shopping elsewhere this month.`
+  : "The cheapest is a single retailer, delivery included. The next-best costs exactly the same, so there is nothing to gain by shopping elsewhere this month."}</div>
+</td></tr></table></td></tr>`;
+  }
 
   return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/></head>
@@ -414,24 +576,19 @@ Find<span style="color: #c9a96e;">My</span>Basket</div></td></tr>
 <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #4a4845;">${escapeHtml(intro)}</p>
 </td></tr>
 ${result.best ? `
+${panelHtml}
 <tr><td style="padding: 24px 32px 0;">
-<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: rgba(122,158,135,0.12); border: 1px solid rgba(122,158,135,0.3); border-radius: 12px; padding: 18px 22px;">
-<tr><td>
-<div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #6a7e6f; margin-bottom: 6px;">You could save</div>
-<div style="font-family: Georgia, serif; font-size: 32px; font-weight: 600; color: #5a8970; line-height: 1;">£${result.saving.toFixed(2)}</div>
-<div style="font-size: 13px; color: #6a7e6f; margin-top: 6px;">vs buying everything at the most expensive retailer</div>
-</td></tr></table></td></tr>
-<tr><td style="padding: 24px 32px 0;">
-<div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #c9a96e; font-weight: 600; margin-bottom: 12px;">Best price basket</div>
+${isFallback ? "" : `<div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #c9a96e; font-weight: 600; margin-bottom: 12px;">${result.options.length > 1 ? "The cheapest way to buy it" : "Your routine, delivered"}</div>
 <div style="font-family: Georgia, serif; font-size: 18px; font-weight: 600; color: #1c1a18; margin-bottom: 4px;">${escapeHtml(retailerList)}</div>
-<div style="font-size: 13px; color: #6e6a64; margin-bottom: 16px;">${result.best.type === "single" ? "Shop everything from one retailer" : "Split across " + result.best.retailers.length + " retailers for best price"}</div>
+<div style="font-size: 13px; color: #6e6a64; margin-bottom: 16px;">${result.best.type === "single" ? "Everything from one retailer" : "Split across " + result.best.retailers.length + " retailers"}</div>`}
 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
 ${breakdownHtml}
 <tr><td style="padding: 14px 0 4px; font-size: 13px; color: #6e6a64;">Delivery</td>
 <td style="padding: 14px 0 4px; font-size: 13px; color: #6e6a64; text-align: right;">${deliveryText}</td></tr>
-<tr><td style="padding: 14px 0 0; font-size: 16px; font-weight: 600; color: #1c1a18; border-top: 2px solid #1c1a18;">Total</td>
+<tr><td style="padding: 14px 0 0; font-size: 16px; font-weight: 600; color: #1c1a18; border-top: 2px solid #1c1a18;">${totalLabel}</td>
 <td style="padding: 14px 0 0; font-size: 18px; font-weight: 700; color: #1c1a18; text-align: right; border-top: 2px solid #1c1a18;">£${totalPrice}</td></tr>
 </table></td></tr>
+${unpricedHtml}
 <tr><td style="padding: 32px 32px 24px;" align="center">
 <a href="${basketUrl}" style="display: inline-block; background: #1c1a18; color: #faf8f4; padding: 16px 36px; border-radius: 100px; text-decoration: none; font-size: 15px; font-weight: 600;">Open my basket →</a>
 <p style="margin: 14px 0 0; font-size: 12px; color: #8a8680;">Click to see live prices and shop your routine</p>
@@ -902,7 +1059,7 @@ Deno.serve(async (req: Request) => {
             })
           : buildEmailHTML({
               result, unsubscribeToken: routine.unsubscribe_token,
-              routineProductIds: productIds, appBaseUrl,
+              routineProductIds: productIds, routineProducts: products, appBaseUrl,
               emailType: mode === "welcome" ? "welcome" : "monthly",
             });
         const subject = isEmpty

@@ -23698,6 +23698,11 @@ a branch and are cheapest to see before it merges.
 | **VitaminExpress** | **CJ** | approved |
 | The Fragrance Shop | Rakuten | approved, onboarding pending |
 
+> **A FOURTH ARRIVED 25 AUGUST: MyProtein, on AWIN.** It does not belong in the table above without
+> a qualifier, because the qualifier is this item's whole point: **AWIN has an importer and CJ does
+> not.** MyProtein is a retailer configuration; Simply Be and VitaminExpress are a feed integration.
+> **Item 305.**
+
 #### 1. CJ HAS NO IMPORTER, AND THAT IS THE SUBSTANTIAL PART
 
 `supabase/functions/` holds `import-awin-feed`, `import-rakuten-feed` and
@@ -26256,3 +26261,2404 @@ one decision, and it reached one of them.
 
 **Eight days of headroom, which is why this goes as a decision rather than a patch.** Item 303's
 gate is a one-line fix under either option, and which line it becomes depends on this.
+
+---
+
+### 305. MyProtein: a retailer configuration, not a network integration
+
+**Raised:** 25 August 2026 · **PIPELINE. Not onboarded, nothing configured, nothing set active.**
+Extends item 266.
+
+| Retailer | Network | Importer exists | State |
+|---|---|---|---|
+| **MyProtein** | **AWIN** | **yes** | **approved 25 Aug** |
+| Simply Be | CJ | **no** | approved |
+| VitaminExpress | CJ | **no** | approved |
+| The Fragrance Shop | Rakuten | yes | approved, onboarding pending |
+
+#### 1. IT ARRIVES ON AWIN, WHICH MAKES IT A DIFFERENT KIND OF WORK FROM CJ
+
+Item 266's central point was that **the first CJ onboarding is a feed integration, not a retailer
+configuration** — new format, new auth scheme, new failure surface, and monitors that do not know
+how to watch it. `import-awin-feed` already exists, already carries the chunked apply, the five
+matching tiers, the multipack guard and the absence-threshold logic, and **already runs eleven daily
+cron jobs through it.**
+
+> **MyProtein is a row in `retailer_import_config` and a cron entry.** The two CJ retailers are the
+> substantial half of item 266 and this is not part of it. **Recorded explicitly so the pipeline is
+> not read as four equivalent units of work.**
+
+#### 2. IT IS THE RETAILER THE SUPPLEMENTS PROPOSITION WAS WAITING ON
+
+Measured today, 25 August 2026:
+
+| | |
+|---|---:|
+| Supplements in `products_active` | **1,831** |
+| **Comparable at 2+ in-stock retailers** | **34 — 1.86%** |
+| Supplied by Boots | **1,744** |
+
+*(Yesterday: 1,826 / 34 / 1,735. A day's catalogue movement, not a disagreement.)*
+
+**The category is one retailer wearing a category's name**, and every question the supplements work
+parked — price per serving, type derivation, the ~54% compositional ceiling — is unanswerable while
+comparison depth is 1.86%. **What the proposition needs is a second RANGE, not overlapping
+products**, which is exactly what an own-brand supplements retailer is.
+
+#### 3. EXPECT NEAR-ZERO PRODUCT OVERLAP, AND RECORD IT AS EXPECTED
+
+The Amazon harvest already measured MyProtein as **the extreme own-brand case: a barcode per flavour
+per size across a matrix they control, 1 of 99 matching Boots.**
+
+`docs/supplements-brand-comparison-proposition.md` already states the inversion:
+
+> *"1 of 99 matching is a failure only under product-across-retailers. Under brand-across-brands,
+> carrying the range direct is the point and the match rate is irrelevant."*
+
+> **THE POINT OF WRITING THIS DOWN NOW IS THE READING, NOT THE NUMBER.** When the feed lands and the
+> overlap measures near zero, that figure will look exactly like a reason to reject the retailer —
+> because it looks exactly like the figure that has correctly rejected others. **Cohorted was
+> rejected at 0% and Skin Cupid probed at 0%; this one is 1 of 99 and should proceed.** The
+> distinguishing fact is the business model, not the percentage, and the percentage is what a future
+> reader sees first.
+
+#### THE BEFORE-ONBOARDING STEPS APPLY, ALL THREE
+
+1. **Delivery terms read from MyProtein's own site** before `active = true`, with
+   `delivery_terms_source` set and a written reason where anything is unknown. **Item 160**: ten of
+   eleven retailers had unverifiable delivery provenance, and **item 249** is what a fabricated
+   default costs.
+2. **Barcode overlap measured**, and recorded whatever it says.
+3. **The product names read, not only counted. Item 223** rejected Cohorted on the names after the
+   overlap figure alone would have been ambiguous: *0% overlap says "products we cannot compare
+   today"; the names said "products that cannot be compared in principle."* **A count cannot tell a
+   flavour matrix from a subscription box**, and MyProtein is the first case where the names should
+   confirm proceeding rather than stopping.
+
+#### TIMING IS ROBBIE'S CALL, AND THE ARGUMENT IS WEAKER HERE THAN FOR CJ
+
+**The attribution argument applies less.** An existing importer on a working network is a smaller
+unknown than a first CJ integration, so the case for holding it behind the refresh is not the same
+case that holds the CJ pair.
+
+**It still adds catalogue to surfaces that are changing.** Six metadata templates shipped yesterday
+across 99,241 product pages and 2,640 hubs, and a new retailer moves products between branches A, B
+and C while those templates are being judged. **That is an attribution cost rather than a risk**, and
+it is the whole of the argument for waiting.
+
+**Recorded as a decision to make, not a recommendation.** Nothing here is urgent and nothing is
+blocked.
+
+---
+
+### 306. MyProtein feed shape: "Masterfeed" is the smallest of the three and the only one without barcodes
+
+**Raised:** 25 August 2026 · **READ-ONLY. Three `feed-diag` runs, nothing imported, nothing
+configured, no terms set.** Extends item 305.
+
+| Feed | fid | Rows | Barcode fill | Verdict |
+|---|---:|---:|---:|---|
+| **Default** | **3196** | **7,192** | **97.1%** | **EAN-BEARING** |
+| Masterfeed | 13007 | 2,054 | **24.2%** | **MPN-ONLY** |
+| Bestsellers | 10429 | 100 | 92.0% | EAN-BEARING |
+
+> **THE DECISIVE QUESTION WAS WHETHER MASTERFEED IS A SUPERSET. IT IS NOT — IT IS 29% OF DEFAULT
+> AND IT IS THE ONLY ONE THAT CANNOT MATCH ON A BARCODE.**
+>
+> The name implies the widest feed. **Default is the widest feed by a factor of three and a half.**
+> A name is a claim about a file made by whoever configured it, and this one points the wrong way.
+
+**All three carry the same 18 columns**, so these are different populations rather than different
+formats — as expected.
+
+#### WHAT MASTERFEED ACTUALLY IS, INFERRED AND FLAGGED AS INFERENCE
+
+The two feeds' brand tails are **identical row for row**:
+
+| Brand | Default | Masterfeed |
+|---|---:|---:|
+| NutriBullet | 33 | **33** |
+| KIKI Health | 26 | **26** |
+| Well.Actually. | 22 | **22** |
+| BetterYou | 19 | **19** |
+| Ancient + Brave | 18 | **18** |
+| COROS | 16 | **16** |
+| Dirtea | 14 | **14** |
+| Nalgene | 12 | **12** |
+
+**The entire difference is concentrated in the own-brands and the apparel houses:** MyProtein
+4,331 → 965, MP 1,341 → 352, Puma 221 → 52, Brooks 172 → 36, Saucony 169 → 40, Myvegan 63 → 15.
+
+> **That is the signature of a PARENT-LEVEL feed, not a superset.** Third-party brands list one row
+> per SKU in both because there is nothing to collapse; MyProtein's own lines collapse 4.5:1 because
+> the flavour-and-size matrix collapses to a master product. **And it explains the 24.2% barcode
+> fill directly: a master row spanning twelve flavours has no single EAN to carry.**
+
+**Stated as inference.** `feed-diag` reports distributions, not row identities, so "Masterfeed is a
+subset of Default" is strongly indicated by eight exactly-matching brand counts and not proven. **A
+row-id comparison would settle it and was not run**, because the answer it would refine does not
+change the decision.
+
+**Bestsellers is a 100-row promotional selection** — 4 brands, 80 MyProtein — and is a subset of
+either.
+
+#### THE FEED TO USE IS DEFAULT, AND THE REASON IS BOTH HALVES OF THE BRIEF
+
+Range breadth **and** matchability point the same way: Default is 3.5× the rows and 4× the barcode
+coverage. **The two criteria did not have to agree and they do**, which is worth stating because a
+feed that was wider but barcode-poor would have needed the trade-off argued.
+
+---
+
+### 307. MyProtein is the Debenhams shape, not the Cohorted shape
+
+**Raised:** 25 August 2026 · **The field-shape answer, before anything is configured.**
+
+The two feeds that caused trouble failed in different places, and the question was which one
+MyProtein resembles.
+
+| | Cohorted | Debenhams (item 90) | **MyProtein (3196)** |
+|---|---|---|---|
+| Category columns | **both empty** — allowlist cannot run | populated | **`merchant_product_category_path` 99.7%, `merchant_category` 100%** |
+| Where the wanted rows sit | n/a | **under a NON-BEAUTY path** | **under a non-beauty path** |
+| Failure mode | no allowlist possible | **rows die before the whitelist** | **same** |
+
+**Not the Cohorted shape.** Both category columns are populated, so an allowlist can run at all.
+
+**It is the Debenhams shape, and precisely.** Item 90's mechanism was that Debenhams' real
+supplements population sits under `Sports & Fitness > Fitness & Nutrition > Vitamins & Supplements`,
+so a beauty-shaped allowlist kept **11 of 1,587**. MyProtein's supplements sit under:
+
+```
+1,630   Sports and Nutrition > Sports Nutrition
+   41   Sports and Nutrition > Sports Nutrition > Vitamins
+```
+
+**Not one of them is under a `Health and Beauty` path.** A beauty-shaped allowlist would drop the
+entire reason for onboarding the retailer.
+
+#### AND THE FEED IS 74% CLOTHING, WHICH IS WHAT THE ALLOWLIST IS FOR
+
+| Path | Rows |
+|---|---:|
+| Apparel (clothing, footwear, accessories) | **5,309 — 73.8%** |
+| Sports and Nutrition | 1,671 |
+| Health and Beauty | 122 |
+| Tech / Books | 62 |
+
+**Previewed, not assumed.** Admitting `Sports and Nutrition|Health and Beauty` takes **1,795 of
+7,192 rows (25%)**, of which **1,749 classify as supplements under the shipped rule** and 46 are
+topical arriving alongside. **The allowlist step is load-bearing here rather than a formality**: run
+without one, three quarters of the import is Puma trainers and Crocs.
+
+#### THE NAMES, READ RATHER THAN COUNTED
+
+```
+Tribulus Terrestris Capsules - 90Capsules
+Impact Whey Isolate Powder - 1KG - 30servings - Snickers White
+Clear Whey Protein Powder - 500g - 20servings - Orange
+Vitamin B12 Tablets - 180 TABLETS, 180servings
+MenoSure Capsules - 120Capsules
+```
+
+**This is the flavour-and-size matrix the Amazon harvest predicted, visible in the naming
+convention:** `{product} - {size} - {servings} - {flavour}`. Item 305 said to expect near-zero
+product overlap; **the names are why**, and they confirm it before the barcode measurement rather
+than after.
+
+**Two things the names reveal that a count would not:**
+
+**1. THE BRAND IS ABSENT FROM THE PRODUCT NAME.** Roughly 90% of the catalogue carries its own brand
+as a name prefix — that is the assumption `stripBrandPrefix` and `displayProductTitle` are built on.
+**MyProtein's names carry none.** `displayProductTitle` prepends the brand when the name lacks it,
+so this works, but **it is the inverse of the usual case on 7,192 rows** and any name-based
+heuristic tuned on the 90% should be re-checked against it.
+
+**2. THE TRUNCATION DETECTOR FIRES ON 1,600 OF 1,774 NAMES — 90%.** That is a statement about the
+detector, not the feed: these names are dash-delimited by design and the rule reads a trailing
+segment as a cut-off. **Recorded so the flag is not read as a data-quality finding when it is a
+rule-fit finding**, which is the same shape as a population defined by its own detector.
+
+#### OVERLAP, AS EXPECTED
+
+| Tier | Default | Bestsellers |
+|---|---:|---:|
+| A. deepens a LIVE comparison | **8** | 0 |
+| B. matches a hidden/merged row | 1 | 0 |
+| C. same-brand new SKU | 4,859 | 97 |
+| D. net-new brand | 2,324 | 3 |
+
+**Eight products out of 7,192 deepen an existing comparison.** Exactly the 1-in-99 shape, and
+exactly what item 305 said to record as expected rather than as a failure. **The value is tiers C
+and D — 7,183 rows of range — measured against breadth, which is what the brand-comparison
+proposition asked for.**
+
+#### THE ALLOWLIST WARNING IS RECORDED WHERE THE ALLOWLIST IS CONFIGURED
+
+`retailer_import_config.category_path_must_contain` **had no column comment.** It now carries the
+Debenhams and MyProtein cases, the instruction to run `feed-diag` sections 2 and 5 before setting a
+prefix for any new retailer, and the Cohorted shape it cannot help with.
+
+> **The item is where the finding is explained; the column is where the mistake gets made.** A
+> beauty-shaped allowlist is not a careless choice — it is the correct choice for nine of eleven
+> live retailers, and the column is the only place a tenth-time configurer will be looking.
+
+#### DELIVERY TERMS REMAIN UNSET, AND THE POSITION IS SECOND-MOST-EXPENSIVE
+
+`£4.49, free over £55` is **the figure to confirm at source, not to enter.**
+
+**"Mid-range charge" was wrong.** Measured against the eleven active retailers:
+
+| | £4.49 free over £55 ranks |
+|---|---|
+| Charge | **2nd of 11**, behind Niche Beauty £9.95, ahead of Debenhams £3.99 and Boots £3.95 |
+| Threshold | **2nd of 10 with one**, behind Niche Beauty £75, against a **£30 median** |
+| Position overall | **2nd most expensive** |
+
+**A second correction, to the correction.** The revised description — *"the highest charge in the
+fleet… the most expensive delivery position of any retailer we carry"* — overstates it. **Niche
+Beauty charges £9.95 free over £75 and is strictly more expensive at every basket size**: below £55
+it is £9.95 against £4.49, between £55 and £75 it is £9.95 against free, and above £75 both are
+free. MyProtein would be second on both axes and second overall.
+
+> **Recorded rather than absorbed, because the item is about not inheriting figures from a
+> message.** Writing an unverified number into a record whose subject is unverified numbers would
+> be the same error one level down. The direction of the original correction stands: **mid-range it
+> is not.**
+
+**And this makes reading both numbers at source more important, not less.** A figure inherited from
+a message, describing the fleet's second-most-expensive terms, is exactly what item 250 exists to
+prevent — and **the fleet's most expensive terms are already the retailer whose provenance is
+`checkout` rather than `site`**, which is the one place we had to go further than a site read to get
+a true number.
+
+**High threshold plus high charge is the shape the bridgeability rule was built for**, and
+MyProtein's basket sizes will sit either side of £55 rather than clearly above or below it.
+
+#### THE BRAND-ABSENT NAMING: NOTHING DOWNSTREAM ASSUMES THE PREFIX
+
+Checked rather than assumed, and the answer is better than expected — **one consumer was already
+built around MyProtein specifically.**
+
+| Consumer | Reads | Brand-absent name |
+|---|---|---|
+| `search_vector` | `name` (A) **and `brand` (B) separately** | fine — brand is its own indexed field |
+| `fmb_build_match_key` | brand + name | fine — **prepends the brand when the name lacks it** |
+| `displayProductTitle` / `stripBrandPrefix` | brand + name | fine — explicitly handles both, with a test |
+| `fmb_strip_leading_brand_repetition` | normalised name | no-op when there is no repetition |
+| **`SPORTS_BRANDS`** | **`brand`, not `name`** | **already built for this** |
+
+The categorisation module's own comment says why:
+
+> *"`\bprotein\b` DOES NOT MATCH "Myprotein" — there is no word boundary inside the brand name — so
+> any name-based sports rule silently misses the largest sports brand in the feed because of its own
+> name. Structural, not a coverage gap, and no tuning fixes it."*
+
+**`"myprotein"` is already in `SPORTS_BRANDS`**, from the Boots-supplied rows. So the retailer whose
+naming inverts the catalogue's convention is the retailer the one name-sensitive rule was already
+rewritten to avoid depending on names for.
+
+**Recorded as a property to expect, not a defect.** ~90% of the catalogue carries its brand as a
+name prefix and MyProtein inverts that across 7,192 rows; the inversion is handled everywhere it
+matters today. **The thing to carry forward is that any NEW name-based heuristic tuned on the 90%
+must be checked against this feed**, because it is now the largest counter-example in the catalogue.
+
+*(One to watch at configuration time, not now: the `MP` apparel line is 1,341 rows under a
+two-character brand. The allowlist excludes Apparel, so it should not arrive at all — worth
+confirming rather than assuming, since two-character brands interact badly with prefix matching.)*
+
+#### THE 90% TRUNCATION FLAG IS ABOUT THE DETECTOR
+
+`feed-diag` flagged **1,600 of 1,774 names — 90%** as "names that LOOK TRUNCATED", under its own
+"rule's known failure mode — review, do not trust" caveat.
+
+> **DO NOT FILE THIS AS FEED QUALITY.** MyProtein's names are dash-delimited by design —
+> `{product} - {size} - {servings} - {flavour}` — and the detector reads a trailing segment as a
+> cut-off. **A 90% hit rate on a 7,192-row feed is a statement about the rule's fit, not about the
+> data.**
+
+**Same shape as a population defined by its own detector**: the number measures the instrument. The
+detector is not wrong to exist — it earns its place on feeds whose names really are cut off — and
+**its output on this feed carries no information about this feed.**
+
+---
+
+### 308. MyProtein proceeds, and not as an exception to the CJ deferral
+
+**Raised:** 25 August 2026 · **DECISION: proceed. Delivery terms still unset and still Robbie's read.**
+
+The CJ deferral rests on two arguments and **only one of them is about MyProtein at all.**
+
+| Argument | Simply Be / VitaminExpress | **MyProtein** |
+|---|---|---|
+| **First integration on an unfamiliar network** | new format, new auth, new failure surface, monitors that cannot watch it | **does not apply.** `import-awin-feed` runs eleven daily jobs |
+| **Attribution during a rebuild** | real | **real but weaker** |
+
+> **This is not an exception to the CJ decision. It is the CJ decision applied to a case where its
+> load-bearing half is absent.** Recording it as an exception would make the deferral look like a
+> policy about new retailers, and it is not — it is a judgement about unfamiliar integrations, and
+> that judgement is unchanged.
+
+**Against the weaker half: the supplements proposition has been blocked on a second range since
+20 August.** Comparison depth is 1.86% and Boots supplies 1,744 of 1,831; every question the
+supplements work parked is unanswerable until a second source exists. **An attribution cost is
+paid once and recovered; a blocked proposition accrues.**
+
+---
+
+### 309. The allowlist is clean, the MP line is excluded, and verifying it found a live defect
+
+**Raised:** 25 August 2026 · **STAGE 1 REPORT. Nothing configured yet.**
+
+#### THE ALLOWLIST DROPS NOTHING WE WANT
+
+Audited on `Sports and Nutrition|Health and Beauty` against fid 3196:
+
+| | |
+|---|---:|
+| Feed rows | 7,192 |
+| **Excluded by the allowlist** | **5,397 — 75.0%** |
+| **Of the excluded, supplements per the shipped rule** | **0 — 0.0%** |
+| Paths containing any supplement, among the excluded | **0** |
+
+Every excluded path is Apparel, Tech, Books or a gift voucher. **The 75% that goes is 75% we do not
+want, and none of the 25% we do want is lost.**
+
+#### THE MP LINE IS EXCLUDED, VERIFIED RATHER THAN ASSUMED
+
+All sampled MP rows are apparel and all sit in `Apparel > Clothing > Sports Apparel`, an excluded
+path:
+
+```
+MP Unisex Crew Socks (5 Pack) - Black - UK 2-5
+MP Women's Tempo Zip Through Vest - White - L
+MP Men's Rest Day Oversized Hoodie - Falcon - M
+```
+
+*(Noted in passing: some apparel rows carry `brand_name = MyProtein` while the name begins `MP `,
+so the feed's own brand/name relationship is inconsistent. Immaterial here — both are excluded.)*
+
+#### BUT THE REASON FOR CHECKING TURNED OUT TO BE A LIVE DEFECT
+
+`stripBrandPrefix` builds `^{brand}[\s\-:]*` and **has no word-boundary requirement**, so
+`[\s\-:]*` matching zero characters still lets the strip fire mid-word:
+
+```
+stripBrandPrefix('MPN Complex Capsules', 'MP')  ->  'N Complex Capsules'
+```
+
+**It already fires on the live catalogue.** 27 rows have a name that starts with its brand followed
+immediately by a letter or digit, and the split is not even:
+
+| Shape | Rows | Verdict |
+|---|---:|---|
+| Next char UPPERCASE — run-together feed text | 24 | **the strip is CORRECT**, it repairs item 286's shape |
+| Next char lowercase — mid-word | **3** | **wrong** |
+
+```
+Effn Tan     ->  "Effn Tan ning Foam Ultra Dark 200ml"      LIVE TODAY
+Goldwell     ->  "Goldwell l DOUBLE Dualsenses Silver…"     LIVE TODAY
+Just Jack    ->  "Just Jack S Italian Leather Eau De…"      LIVE TODAY  (×5)
+Some By Mi   ->  "Some By Mi Retinol Advanced Triple…"      correct
+CeraVe       ->  "CeraVe Retinol Serum with Niacinamide…"   correct
+```
+
+> **THE MISSING WORD BOUNDARY IS WHY IT WORKS AND WHY IT BREAKS, AND THOSE ARE THE SAME LINE OF
+> CODE.** Adding `\b` would fix `Effn Tanning` and simultaneously stop repairing
+> `Some By MiRetinol` — 3 rows fixed, 24 rows broken. **That is why this is reported rather than
+> patched**: it is a trade with a worse side, not an oversight.
+
+**Eight rows are wrong today and that is not the reason to care.** `MP` is a **two-character brand
+on 1,341 rows**, and a two-character prefix matches mid-word far more readily than a nine-character
+one. **The exposure multiplies by roughly fifty if MP ever arrives** — and the allowlist is what
+stops it, which is the argument for verifying the allowlist rather than trusting it.
+
+**Not fixed here.** It is shared code on a path with a real trade-off, it does not block onboarding,
+and the mitigation that matters for MyProtein is the allowlist, which is verified.
+
+#### DELIVERY TERMS: A CHECKOUT READ, AND IT IS ROBBIE'S
+
+`£4.49 free over £55` is **to confirm, not to enter.** The read must be at a **checkout, not a
+delivery page.**
+
+> **The evidence for that is in the fleet.** The only retailer more expensive than MyProtein would
+> be — Niche Beauty, £9.95 free over £75 — is **the only one of eleven whose
+> `delivery_terms_source` is `checkout` rather than `site`.** The most expensive terms on the board
+> are the ones a site read did not reach, and MyProtein would be second on both axes.
+
+**Correction accepted and recorded**: MyProtein is second on charge and second on threshold, not the
+fleet maximum.
+
+#### STAGE 1 STOPS HERE
+
+**Nothing configured.** No `retailers` row, no `retailer_import_config` row, no cron entry. The next
+stage writes the config with `active = false`, and the stage after that is a first import read with
+the supplements classification checked against what the shipped rule produces.
+
+---
+
+### 310. stripBrandPrefix: a trade with a worse side, and the sequence if anyone wants both
+
+**Raised:** 25 August 2026 · **NOT A DEFECT AWAITING A FIX. Deliberately unchanged.**
+
+`stripBrandPrefix` builds `^{brand}[\s\-:]*` with **no word-boundary requirement**, so the strip can
+fire mid-word. Measured across the live catalogue:
+
+| Shape | Rows | The strip is |
+|---|---:|---|
+| Next char UPPERCASE — run-together feed text | **24** | **correct** — it repairs item 286's shape |
+| Next char lowercase — mid-word | 3 | wrong |
+| `Just Jack` on `JUST JACKS …` | 5 | wrong |
+
+> **THE MISSING WORD BOUNDARY IS WHY IT WORKS AND WHY IT BREAKS, AND THOSE ARE THE SAME CHARACTER.**
+> Adding `\b` fixes `Effn Tan ning Foam` and simultaneously stops repairing `Some By MiRetinol`.
+> **24 correct against 8 wrong, and `\b` reverses the ratio.**
+
+**Recorded as a trade with a worse side rather than a defect awaiting a fix.** There is no version of
+this change that is an improvement on its own.
+
+#### THE SEQUENCE IF ANYONE EVER WANTS BOTH
+
+1. **Repair the run-together text at source.** Item 286 measured **824 descriptions** opening with
+   their own product name and no separator, and **declined to fix it** — the inference is unreliable,
+   because `SPF40`, `bareMinerals` and `Dr.PAWPAW` are the same character pattern as the defect.
+2. **Then add `\b`.** With the run-together text gone, the 24 correct strips have nothing left to
+   repair and the boundary is free to fix the remaining 8.
+
+> **NEITHER STEP ALONE IS AN IMPROVEMENT.** Fixing the feed text first leaves 8 rows wrong and the
+> boundary still unsafe to add. Adding the boundary first breaks 24 rows to fix 8. **The order is
+> the whole of the design**, and it is written down because the second step looks like a one-line
+> fix to anyone who arrives without the first.
+
+#### THE EXPOSURE IS NOT THE INSTANCE, AND ONLY THE INSTANCE IS SMALL
+
+**Eight wrong rows is the instance. The exposure is a property of prefix length.**
+
+> **A two-character prefix matches mid-word far more readily than a nine-character one.** `Effn Tan`
+> caught `Tanning` because eight characters happened to align; `MP` aligns with every word beginning
+> "MP". **MyProtein's `MP` line is 1,341 rows — roughly fifty times today's affected population.**
+
+**The allowlist holds it.** MP sits entirely under `Apparel > Clothing > Sports Apparel`, which
+`category_path_must_contain` excludes.
+
+> **THAT IS A LOAD-BEARING DEPENDENCY NOBODY WOULD HAVE LISTED.** The allowlist exists to keep
+> trainers out of a beauty catalogue. **It is also, incidentally, the only thing standing between a
+> two-character brand and a name-mangling bug in shared display code** — and nothing connects the
+> two. Widening that allowlist to admit Apparel would look like a catalogue decision and would be a
+> rendering one as well. Recorded on the column, not only here.
+
+#### THE FEED'S OWN BRAND RELATIONSHIP IS INCONSISTENT
+
+Sampled apparel rows carry **`brand_name = MyProtein` with names beginning `MP `**, alongside other
+rows where `brand_name = MP` for the same product line:
+
+```
+brand MP          | MP Unisex Crew Socks (5 Pack) - Black - UK 2-5
+brand MyProtein   | MP Men's Training Ultra 7" Short - Black - XS
+```
+
+**Immaterial today** — both are excluded by the allowlist. **Material the moment it changes**: the
+same product line would arrive under two brand strings, producing two brand hubs, two slugs, and a
+`stripBrandPrefix` that behaves differently on each. **Recorded now because it is invisible while
+the allowlist holds**, which is exactly when it will be forgotten.
+
+---
+
+### 311. MyProtein stage 2: configured and inert
+
+**Raised:** 25 August 2026 · **Config written. Nothing imports, nothing renders, nothing served.**
+
+| | |
+|---|---|
+| `retailers.id` | **33**, `active = false` |
+| `delivery_model` | **`unknown`**, threshold and cost NULL, `delivery_terms_source` NULL |
+| `retailer_import_config.enabled` | **false** |
+| `awin_feed_id` | **`3196`** — verified, downloaded three times on 25 Aug |
+| `category_path_must_contain` | **`["Sports and Nutrition", "Health and Beauty"]`** |
+| Cron jobs | **0** |
+| `retailer_prices` rows | **0** |
+
+**Inert by construction**, and verified after the write rather than assumed: three independent
+switches are off and none of them depends on the others.
+
+#### THE DELIVERY NOTE IS THE INSTRUCTION, NOT A PLACEHOLDER
+
+`delivery_model = 'unknown'` with a written note. **The `retailers_unknown_delivery_needs_reason`
+CHECK makes go-live impossible without one** — `active = true` with an unknown model and no note
+fails at the database. **The constraint enforces the doctrine rather than the doctrine relying on
+somebody remembering it.**
+
+The note says what to do and why a delivery page will not do it: **read at a checkout**, per the
+Niche Beauty precedent where the fleet's most expensive terms were only visible there.
+
+#### ONE FIELD IS UNVERIFIED AND IS FLAGGED IN THE MIGRATION
+
+`awin_merchant_id = '3196'` is **the advertiser id as supplied in conversation.** It is NOT NULL in
+the schema, so the row cannot be written without a value.
+
+> **It is load-bearing and it fails silently.** `buildCreadUrl(config.awin_merchant_id, …)` builds
+> every click-out URL on the legacy `awin` format, so a wrong mid produces affiliate links that
+> track nothing — visible as a revenue absence, never as an error.
+
+**Verify it against the feed's `aw_deep_link` `awinmid=` parameter before `enabled = true`.** Not
+verified here because the only direct live check is fetching the AWIN redirector, **which would
+register a click** — and a fabricated click to confirm a configuration value is not a read.
+
+#### STAGE 3, NOT RUN
+
+A first import with `enabled = true` and no cron, then: the supplements classification checked
+against what the shipped rule produces, and the range measured against the brand-comparison
+proposition rather than against comparison depth. **8 of 7,192 deepening a comparison is the
+expected result and not the measurement that matters.**
+
+---
+
+### 312. Two mechanisms for one problem, and the wrong one runs at import
+
+**Raised:** 25 August 2026 · **NOTHING CHANGED. Tier 5 untouched, MyProtein not imported.**
+
+| | **Tier 5 skip** | **`parent_product_id` family** |
+|---|---|---|
+| The variant row | **never created** | created, then grouped |
+| Product page | none | children 308 to the parent |
+| Offers | **lost** | parent shows all family offers (`pickFamilyOffer`) |
+| Runs at | **import** | a separate, partly curated process |
+| Scale | ~91,152 rows per fleet pass | 11,462 products in 1,068 families |
+
+> **THE FAMILY IS THE SITE'S REAL ANSWER TO ONE-PRODUCT-MANY-VARIANTS. TIER 5 IS STANDING IN FOR IT
+> BECAUSE FAMILY CREATION IS NOT AUTOMATIC AT IMPORT.** One keeps the row and renders one page; the
+> other throws the row away. They are not two settings of the same idea.
+
+#### WHY THAT MAKES IT A PER-RETAILER PROPERTY RATHER THAN A DEFECT
+
+Tier 5 keys on `merchantUrl.split("?")[0]` — **the query string is stripped** — so what it collapses
+depends entirely on what a retailer puts in the query:
+
+| Retailer | Feed rows | Rows Tier 5 skips | **Size/count-only groups** |
+|---|---:|---:|---:|
+| **Debenhams** | 95,835 | **77,913 — 81% of the feed** | **0** |
+| **Boots** | 38,865 | 8,870 | **0** |
+| Stylevana | 24,294 | 4,359 | 25 — 1.7% |
+| Beauty Bay | 7,696 | 10 | 0 |
+| **MyProtein** | 1,795 | 1,187 | **59 — 27.4%** |
+
+> **Boots and Debenhams put a SHADE in the query and lose nothing that matters. MyProtein puts a
+> SIZE there, and the discarded row is a different product.** `Zinc & Magnesium 270Capsules`,
+> `90Capsules` and `30Capsules` are three products; three shades of one foundation are one.
+
+**91,152 rows collapse correctly across four retailers.** A change to `buildCreadUrl` would be a
+change to all of them to fix one — which is why this is recorded as a property of the retailer, not
+a defect in the rule.
+
+#### NEITHER AVAILABLE OPTION IS RIGHT FOR MYPROTEIN
+
+- **Collapse (Tier 5 on):** 1,795 rows land as 594 products. **63% of the range is discarded**, and
+  range breadth is the entire reason for onboarding.
+- **Disable for retailer 33:** ~1,700 products, **none grouped**. Verified rather than assumed —
+  `import-awin-feed` never sets `parent_product_id` anywhere in the file, and
+  `fmb_regroup_shade_strays` only attaches strays to families that **already exist**, matching
+  against `shade_family_stems` which is derived from existing parent/child pairs. MyProtein would
+  have none, so ~1,100 near-identical pages. **A certainty, not a risk.**
+
+**MyProtein therefore waits on a build, not a configuration.** See item 315.
+
+---
+
+### 313. Twice in one session, a near-neighbour of the operative rule
+
+**Raised:** 25 August 2026 · **Both produced a confident wrong number. Both surfaced only because
+something else disagreed.**
+
+| | I measured | The code uses | Result |
+|---|---|---|---|
+| **1** | `merchant_deep_link` as the feed supplies it | `merchantUrl.split("?")[0]` | **reported ZERO collapse against a dry run's 1,187** |
+| **2** | `startsWith` for the path allowlist | case-insensitive `includes` | **Boots returned 0 rows considered** |
+
+> **MEASURING A NEAR-NEIGHBOUR OF THE OPERATIVE RULE PRODUCES A CONFIDENT WRONG NUMBER, AND THE
+> NEIGHBOUR IS CHOSEN BECAUSE IT LOOKS EQUIVALENT.** The feed column *is* the URL. `startsWith` *is*
+> a prefix test. Neither substitution looks like an assumption at the moment it is made, which is
+> why neither gets checked.
+
+**Neither was caught by looking harder at my own work.** The first was caught because the dry run
+said 1,187 and I said 0. The second because an empty set for the fleet's largest retailer is
+implausible on its face. **In both cases the disagreement was the detector, and there was no
+disagreement available for the parts I got right — so the same class may still be present in them.**
+
+**This is the same family as items 287 and 289** — reading the rendered page instead of the row, the
+merge state instead of the deployed bundle — with one difference worth naming: **those were reading
+a DERIVED artefact instead of the source. These were reading a DIFFERENT SOURCE that behaves almost
+identically.** The first is a shortcut; the second is a substitution, and it is harder to see
+because both sides are legitimate.
+
+**The cheap defence, when a measurement can be built two ways: build it the way the code does, or
+compare against something the code produced.** Both errors cost one re-run each because a second
+number existed. Neither would have surfaced alone.
+
+---
+
+### 314. Tier 5 collapses within a run, and the leak is already 17,848 products
+
+**Raised:** 25 August 2026 · **Found while sizing the MyProtein decision. Not caused by it.**
+
+> ### TIER 5 SUPPRESSES ON CREATE ONLY. IT DELAYS THE DUPLICATION BY ONE RUN.
+>
+> **17,848 independent products already sit on shared URLs across four retailers** — ten times the
+> MyProtein scale, already in the catalogue. **MyProtein made it visible; it did not cause it.**
+>
+> ```
+> M.A.C Studio Fix Fluid SPF15 Foundation  —  76 separate products, ONE url
+> No7 Stay Perfect Concealer               —  66 separate products, ONE url
+> ```
+>
+> A percentage does not convey one URL serving 76 product pages.
+
+`createdUrls` is populated **only on create** (line 2614) and seeded across slices from
+`import_run_state` **for the same `run_id`**. On the next import the parent already exists, so it
+matches via `merchant_product_id` and is *not* created — **its URL never enters `createdUrls`, and
+the variants it suppressed last time are no longer suppressed.**
+
+**Measured on live data.** `retailer_prices.url` stores the wrapped, already-?-stripped URL, so one
+URL should map to one product per retailer if the collapse held:
+
+| Retailer | Products on a shared URL | Grouped as family children | **INDEPENDENT** |
+|---|---:|---:|---:|
+| Boots | 16,322 | 9,707 | **6,615** |
+| Debenhams | 4,781 | 706 | **4,075** |
+| Escentual | 4,645 | 1,116 | **3,529** |
+| Stylevana | 2,701 | 39 | **2,662** |
+| Others | ~1,279 | 312 | ~967 |
+| **Total** | **29,728** | **11,880** | **≈17,848** |
+
+**The independent ones are exactly the duplication the collapse exists to prevent:**
+
+```
+M.A.C Studio Fix Fluid SPF15 Foundation  —  76 products, one URL
+No7 Stay Perfect Concealer               —  66 products, one URL
+M.A.C Studio Radiance Foundation         —  54 products, one URL
+```
+
+> **The family mechanism has absorbed 11,880 of them. 17,848 are ungrouped duplicate pages today.**
+> Tier 5 does not prevent this — it delays it by one run, and the family process catches up
+> unevenly: Boots 9,707 grouped, **Stylevana 39 of 2,701**.
+
+**This reframes the MyProtein decision.** Its 1,187 would not create a new defect class; **it would
+join an existing one that is ten times larger and already live.** The mechanism item 315 describes
+is needed whether or not MyProtein is onboarded — MyProtein is what made it visible.
+
+#### AND THE COLLISION RULES OUT THE OBVIOUS IMPLEMENTATION
+
+One Boots group of 65 holds **Lancome, Dr Jart and Childs Farm** on a single URL.
+
+> **URL ALONE CANNOT BE THE FAMILY KEY.** Grouping on it would turn one Boots URL holding three
+> brands into one product with 65 variants — a worse defect than the one being fixed, and produced
+> by the fix. **That is the constraint any build has to satisfy, and it eliminates the
+> implementation the existing code makes easiest**: Tier 5's key is already computed, and reusing it
+> is exactly what must not be done unguarded.
+
+---
+
+### 315. What family-grouping-at-import would involve — the input to a decision, not a proposal
+
+**Raised:** 25 August 2026 · **NOT BUILT. This sizes the question "is MyProtein worth a mechanism".**
+
+#### WHAT IDENTIFIES A FAMILY IN A FEED ROW
+
+**The key already exists and is already computed.** Tier 5 keys on the ?-stripped URL; a grouping
+build would use the same key and change the action from `continue` to "create, and set
+`parent_product_id` to the product this URL already produced". `createdUrls` would become a
+`Map<string, number>` instead of a `Set<string>` — **and the file already carries that follow-up as
+a written note**: *"createdUrls (persistent) replaces the old urlToProductId -1 sentinel … (Follow-up:
+restore DB-populated url matching in its own PR.)"*
+
+**Three things that are not solved by having the key:**
+
+1. **WHICH ROW IS THE PARENT.** First-seen wins, and feed order is arbitrary. Item 296 is the same
+   trap one surface over: ordering by `id` for pagination stability made "first product" mean
+   "oldest row", and a share card showed one lip gloss shade for a 595-product brand. **A parent
+   chosen by feed order is a canonical page chosen by feed order.**
+2. **IT MUST SURVIVE THE NEXT RUN.** Item 314's leak is exactly this: the map is per-run, so a
+   grouping build that inherits it groups correctly once and then leaks like Tier 5 does. **The
+   DB-populated lookup is the substance of the work, not the grouping.**
+3. **URL COLLISIONS ARE REAL.** One Boots group of 65 holds Lancome, Dr Jart and Childs Farm.
+   Grouping on URL alone would make them one product with 65 variants. **A guard is required** —
+   brand agreement is the obvious one and would have to be measured, not assumed.
+
+#### WHETHER MYPROTEIN'S NAMING SUPPORTS IT
+
+**Yes, and better than most.** `{product} - {size} - {servings} - {flavour}`, dash-delimited and
+consistent, which is what let the URL-collapse analysis classify 215 groups by what varies without
+a name model. `canonical_size` already extracted on 248 of 494 creates and `shade` on 268.
+
+**But the naming is not what would group them — the URL is.** The naming would matter for the
+*second* question a build raises: **which axis is a variant and which is a product.** MyProtein is
+the case where those differ within one URL: flavour is a variant, size is a product, and the same
+URL carries both. **No retailer currently onboarded has that combination**, which is why the
+mechanism has never had to answer it.
+
+#### WHAT IT WOULD DO TO THE FOUR RETAILERS RELYING ON TIER 5
+
+| Retailer | Today | Under grouping-at-import |
+|---|---|---|
+| **Debenhams** | 77,913 rows discarded per pass | **77,913 rows created as family children** |
+| **Boots** | 8,870 discarded | 8,870 created; 9,707 already grouped by the curated process |
+| Stylevana | 4,359 discarded | 4,359 created; **only 39 of 2,701 currently grouped** |
+| Beauty Bay | 10 | 10 |
+
+> **THE CATALOGUE WOULD GROW BY ROUGHLY 91,000 PRODUCT ROWS.** They would be children, so they would
+> 308 to their parents and not be indexed — but they are rows, they carry offers, they enter
+> `products_active` calculations, the sitemap logic, the six metadata templates and every count on
+> the quality board. **A 92% catalogue increase is not a side effect to absorb quietly.**
+
+**And it would change what those retailers show.** A parent page renders the whole family's offers
+via `pickFamilyOffer`, so Debenhams products would begin showing prices they do not show today.
+**That is arguably the point** — it is the same mechanism that makes shade families work — **and it
+is a change to 77,913 pages' content, which no part of the MyProtein decision authorises.**
+
+#### THE HONEST SHAPE OF THE DECISION
+
+**This is not "a mechanism for MyProtein".** Item 314 established that 17,848 ungrouped duplicates
+already exist and that the family process catches up unevenly. **The mechanism is owed to the
+catalogue either way; MyProtein is what made it visible and would be its first clean case.**
+
+Three options, none of them free:
+
+1. **Build it.** Large, touches every AWIN retailer, ~91,000 new rows, changes what Debenhams and
+   Stylevana pages show. Fixes 17,848 existing duplicates as a side effect.
+2. **Onboard MyProtein collapsed** (Tier 5 on, 594 products). Range breadth is lost, which was the
+   whole proposition — **but 594 supplements from a second source still moves comparison depth off
+   1.86%.**
+3. **Do not onboard MyProtein.** No new rows, no mechanism, and the supplements proposition stays
+   blocked.
+
+**Not recommended here.** Option 2's number — what 594 MyProtein products do to supplements
+comparison depth — is measurable and has not been measured, and it is the figure that decides
+whether option 1 is needed *now* or merely eventually.
+
+---
+
+### 316. The depth figure: it roughly doubles, and that is not the number that matters
+
+**Raised:** 25 August 2026 · **DECISION: OPTION 2. Onboard MyProtein with Tier 5 unchanged.**
+
+> ### DEPTH IS THE WRONG INSTRUMENT FOR JUDGING A SECOND SOURCE.
+>
+> **A second source adds mostly non-overlapping products. That is what a second source IS.** The 494
+> net-new MyProtein products are all single-stockist, so added alone they take supplements depth
+> **down** from 1.86% to **1.46%** — while delivering exactly what the proposition asked for.
+>
+> Judging them by depth marks them down for the property that makes them useful.
+
+#### THE DECISION AND ITS REASONING
+
+**Onboard collapsed. The range Tier 5 discards is lost WITHIN product lines, not across them** — the
+twelve flavours of one whey collapse, and whey, creatine, BCAA, glutamine, electrolytes and vitamins
+all still arrive. **594 products across types is range across types, which is what the proposition
+needs.** The two figures it was blocked on both move:
+
+| | Today | After |
+|---|---:|---:|
+| **Boots' share of supplements** | **95.2%** | **75.0%** |
+| **Sports subcategory** | **214 products** | **~750–800** |
+
+**Item 314's build stays open on its own terms, and MyProtein is not evidence for it.** 17,848
+ungrouped duplicates are live today, serving 76 product pages for one M.A.C foundation, and would be
+there if MyProtein had never existed. **The mechanism is owed to the catalogue; it is not owed to
+this retailer.**
+
+#### DEPTH
+
+| | Today | With 594 MyProtein products |
+|---|---:|---:|
+| Supplements live | 1,831 | **2,325** |
+| Comparable at 2+ in-stock retailers | 34 | **82 – 118** |
+| **Comparison depth** | **1.86%** | **3.5% – 5.1%** |
+
+**The range is a range because the ceiling is bounded by brand overlap, not by guesswork.** A
+MyProtein product can only deepen a comparison against a product we already stock in a brand
+MyProtein also carries. Measured, that population is:
+
+| Brand | Supplements rows today | Single-stockist |
+|---|---:|---:|
+| MyProtein | 41 | 41 |
+| BetterYou | 15 | 14 |
+| Ancient + Brave | 10 | 9 |
+| Dirtea | 8 | 8 |
+| Myvitamins | 7 | 7 |
+| TRIP | 4 | 4 |
+| KIKI Health | 1 | 1 |
+| **Total** | **86** | **84** |
+
+**Floor 48** (MyProtein-family only, every one matching), **ceiling 84** (every shared-brand row
+matching by barcode). The dry run's `would_link_via_ean: 98` spans the whole catalogue including
+skincare and bath_body rows for Marvis, Puma and KIKI Health, so **fewer than 98 land in
+supplements.**
+
+#### THE TWO GOALS PULL AGAINST EACH OTHER, AND THAT IS THE FINDING
+
+> **The 494 net-new products are all single-stockist, so they DILUTE depth even as they add range.**
+> Added alone, they would take depth from 1.86% to **1.46%**. The rise to 3.5–5.1% comes entirely
+> from the 48–84 that match.
+>
+> **A second source adds mostly non-overlapping products. That is what a second source IS** — and it
+> means depth is the wrong instrument for judging one.
+
+#### AGAINST THE BRAND-COMPARISON PROPOSITION, WHICH IS THE RIGHT INSTRUMENT
+
+| | Today | After |
+|---|---:|---:|
+| **Boots' share of supplements** | **1,744 of 1,831 — 95.2%** | **1,744 of 2,325 — 75.0%** |
+| Sports subcategory | **214 products** | **~750–800** |
+| MyProtein's share of sports | — | ~70% |
+
+> **THE CATEGORY STOPS BEING ONE RETAILER WEARING A CATEGORY'S NAME.** 95.2% to 75.0% is the number
+> the proposition was blocked on — not 1.86% to 5.1%.
+>
+> **And the sports range roughly quadruples.** 214 products today against ~594 arriving, in whey,
+> creatine, BCAA, glutamine, electrolytes, omega-3, glucosamine, multivitamins and caffeine.
+> `docs/supplements-brand-comparison-proposition.md` asks for comparison ACROSS BRANDS WITHIN A
+> TYPE, and 214 products is not enough of any type to compare within.
+
+#### WHAT THIS DOES TO THE THREE OPTIONS
+
+**Option 2 — onboard collapsed at 594 — is not the weak option it looked like.** It moves Boots
+from 95.2% to 75.0% and quadruples the sports range, which is what the proposition needed. **The 63%
+of range lost to Tier 5 is lost within product lines, not across them**: the twelve flavours of one
+whey collapse, but whey, creatine, BCAA and electrolytes all still arrive.
+
+**That is the honest case against building the mechanism now.** The build in item 315 costs ~91,000
+child rows across the AWIN fleet and changes what 77,913 Debenhams pages show. **The proposition's
+number moves most of the way without it.**
+
+**The case FOR building it does not rest on MyProtein at all.** Item 314's 17,848 ungrouped
+duplicates are already live, already serving 76 product pages for one M.A.C foundation, and would
+still be there if MyProtein were never onboarded.
+
+> **Those are two separate decisions and the measurement separates them.** Whether MyProtein is
+> worth a mechanism: **no — 594 collapsed products deliver most of the proposition's gain.**
+> Whether the mechanism is owed anyway: **that is item 314's question, and MyProtein is not
+> evidence either way.**
+
+**Nothing recommended. Both decisions are Robbie's.**
+
+---
+
+### 317. Stage 3 configured: the classification moves, and the names decided two of the eleven
+
+**Raised:** 25 August 2026 · **Config written. STILL INERT — `enabled = false`, `active = false`,
+no cron, nothing imported.** Second dry run compared against the first.
+
+| Counter | Before | **After** |
+|---|---:|---:|
+| **`on_supplements_path`** | **0** | **464** |
+| `top_category` skincare | **471** | **58** |
+| v6 exclusion `supplement` | 81 | **14** |
+| `subcategory_from_map` | 0 | **463** — sports 430, supplements 33 |
+| `subcategory_map_unmatched` | 0 | **0** — the 11-value map covers every value in the feed |
+| `supplements_path_unreachable` | — | **`[]`** — the allowlist/prefix pairing guard passes |
+| brand rows canonicalised | 0 | **4** — the `My Protein` alias fires |
+| Products (creates + links) | 594 | **635** |
+
+**Creatine, whey and multivitamins are no longer skincare.** The casein powder classified as a
+`Cleanser` and the krill oil as an `Oil` are gone with them.
+
+#### AGAINST THE 1,749, AND THE UNITS ARE NOT THE SAME
+
+**1,749 was a ROW count before the collapse; 464 is a PRODUCT count after it.** The allowlist admits
+1,795 rows, 1,749 of which classify as supplements by the shipped path rule applied to raw feed
+rows. Tier 5 then collapses them to 635 products, of which **464 sit on the supplements path**.
+
+> **Reporting "464 against 1,749" as a shortfall would be comparing rows to products.** The gap is
+> the collapse this decision accepted, not a classification failure — and the classification
+> counter that matters, `subcategory_map_unmatched`, is **zero**.
+
+#### THE TWO "DECISIONS" DISSOLVED WHEN THE NAMES WERE READ
+
+Both were expected to need a judgement. Neither did.
+
+- **`Diet Products` (1 row)** is **`The Supplement: Digital Magazine + Subscription`**. Not a
+  product. At n=1 this looked like a rounding decision either way; it is a magazine.
+- **`Wellness` (34)** is **entirely third-party** — KIKI Health, Kalms, Rescue Remedy, Floradix,
+  BetterYou, Spatone, DIRTEA — and sits under `Health and Beauty`, **not the supplements path**. It
+  needed no subcategory decision at all: the path already excludes it.
+
+**And one that did need judgement, which nobody had flagged:** `Body Care` (59) is genuinely mixed —
+collagen capsules and ashwagandha alongside shower gels, deodorants and a toothbrush. **Mapping it
+either way is wrong for about half of it**, which is exactly what a `null` entry is for: out of
+scope, counted, row still created, subcategory left to the categoriser.
+
+> **The doctrine step earned its place here rather than confirming a guess.** The two flagged for
+> decision resolved to translations; the one nobody flagged is the only genuine judgement in the
+> eleven. **A count would have ranked them 34, 59, 1 and got the order of difficulty exactly
+> backwards.**
+
+#### ONE MAP DESIGN CHOICE, STATED
+
+**Only values that co-occur with the supplements path carry a subcategory.** The map sets
+`subcategory` and never `top_category`, so assigning `sports` to a shower gel would produce a
+`bath_body` product wearing a supplements subcategory. Everything under `Health and Beauty` is
+therefore `null` by construction, not by preference.
+
+#### AND A DIAGNOSTIC FIX THAT WAS ITSELF THE DOCTRINE FAILING QUIETLY
+
+`feed-diag`'s section 5c keyed on `product_type` to dump names. **MyProtein's `product_type` is 0%
+filled**, so the section returned nothing — on precisely the feed whose names needed reading.
+Corrected to fall back to `merchant_category` when `product_type` is empty on every row.
+
+> **A read-the-names step that silently reads nothing is worse than one that errors**, because its
+> empty output is indistinguishable from "nothing to see".
+
+#### STILL OUTSTANDING BEFORE `enabled = true`
+
+- **`awin_merchant_id` confirmed:** every deep link in the dry run reads `awinmid=3196`, from the
+  feed's own `aw_deep_link`. **Free, and no fabricated click.**
+- **Delivery terms unset**, and the CHECK refuses `active = true` until they are read **at a
+  checkout**. Robbie's.
+
+---
+
+### 318. MyProtein imported: 609 products, and reading the 81 found three classes not one
+
+**Raised:** 25 August 2026 · **IMPORTED. `enabled = true`, one run, no cron. `active` STILL FALSE —
+nothing is on the site.** Delivery terms remain unset and the CHECK still refuses go-live.
+
+| | Dry run | **Actual** |
+|---|---:|---:|
+| Excluded by allowlist | 5,397 | 5,397 |
+| Products created + linked | 635 | **609** |
+| Price rows | — | 609 |
+| Status | — | `ok` |
+
+**26 fewer than predicted, and the dry run is the estimate rather than the actual** — a dry run
+counts what each row *would* do independently; the apply runs in slices with in-run dedup and a
+create cap, so a small shortfall is the expected direction.
+
+#### THE SUBCATEGORY SPLIT AS IT LANDED
+
+| top_category | subcategory | n |
+|---|---|---:|
+| **supplements** | **sports** | **445** |
+| **supplements** | **supplements** | **64** |
+| skincare | face | 68 |
+| bath_body | body | 15 |
+| **skincare** | **sports** | **11** |
+| **skincare** | **supplements** | **2** |
+| **bath_body** | **sports** | **1** |
+| hair / bath_body | other | 3 |
+
+**509 supplements — 445 sports and 64 supplements.** The sports subcategory more than triples on its
+own: **214 products today, 659 with these.**
+
+#### THE 14 IN THE WRONG VOCABULARY ARE MY OWN GUARD, HALF-APPLIED
+
+`skincare/sports` ×11, `skincare/supplements` ×2, `bath_body/sports` ×1.
+
+The migration comment said it plainly: *"assigning `sports` to a shower gel would produce a
+`bath_body` product carrying a supplements subcategory"* — and the guard I built for it set every
+`Health and Beauty` value to `null`. **It never occurred to me that the collision runs the other
+way**: `merchant_category = Sports Nutrition` fires the map on rows the categoriser sent to
+skincare.
+
+```
+skincare / sports  ->  Freja Beef Bone Broth 500ml
+                       KIKI Health Liquid Chlorophyll - 250ml
+                       Sunshine Delights, Dried Mango, 100g
+bath_body / sports ->  Origin Cream of Rice - 1.04KG - Cinnamon Swirl
+```
+
+> **The map keys on the FEED's taxonomy and the subcategory belongs to OURS.** Nothing makes them
+> agree, and I guarded only the direction I happened to think of. **Recorded as a defect in my
+> config, not in the mechanism** — the fix is a `top_category` condition on the map application,
+> which is a code change and is not made here.
+
+#### THE 81 NON-SUPPLEMENTS, READ RATHER THAN COUNTED — AND THERE ARE THREE CLASSES
+
+**1. Correctly topical (~45).** MyProtein carries men's grooming and third-party beauty:
+`Bulldog Original Shave Gel`, `Wild Coconut and Vanilla Deodorant`, `L'Oréal Men Expert Shower Gel`,
+`Eucerin Anti-Pigment Body Cream`. **The allowlist admitted these through `Health and Beauty` and
+the categoriser handled them correctly. No action.**
+
+**2. Ingestible supplements sitting in `skincare/face` (~25).** `Ashwagandha KSM66 Capsules`,
+`Collagen Capsules - 30Capsules`, `BetterYou Vitamin D3 + K2 Oral Spray`, `Ancient + Brave True
+Omegas+`, `Beauty Collagen Shot`. **These are supplements on a `Health and Beauty` path, which the
+supplements-path override does not reach** — the path prefix covers `Sports and Nutrition` only.
+
+**3. Food and drink, which belongs in neither (~11).** `Cosmic Dealer Chai Drinking Cacao`,
+`Cosmic Dealer Loose tea`, `Bragg Organic Apple Cider Vinegar`, `Sunshine Delights Dried Mango`,
+`Freja Beef Bone Broth`, `Nakd Fruit & Nut Bars`.
+
+> **Class 3 is the one a count could never have produced.** It is not a misclassification between
+> our categories — **it is a set of products that should not be in a beauty catalogue at all**, and
+> it arrived because the allowlist admits paths, and MyProtein files dried mango under
+> `Sports and Nutrition`. No subcategory decision fixes it; it is an exclusion question.
+
+#### SUPPLEMENTS TOTALS, AND THE 75% PREDICTION
+
+**Nothing has changed on the site.** `products_active` requires an active retailer, so supplements
+there is **still 1,831** and these 609 are catalogue-only until `active = true`.
+
+| | Now | If `active = true` |
+|---|---:|---:|
+| Supplements | 1,831 | **2,343** |
+| Boots' share | **95.2%** | **76.6%** |
+
+**Predicted 75.0%, landed 76.6%** — the 1.6-point difference is the 26 fewer products and the 14
+that classified outside supplements. **Close enough to have been worth predicting, and reported as
+a miss rather than rounded to the prediction.**
+
+---
+
+### 319. Item 284's defect reproduced fourteen hours after it was fixed
+
+**Raised:** 25 August 2026 · **One row. Corrected with the remedy already built.**
+
+The import created `Hair, Skin &amp; Nails Gummies …` with `match_key` containing `amp`.
+
+> **This is exactly item 284, and it happened because item 300 is still true: the ingest fix merged
+> yesterday morning and has never been deployed.** `decodeFeedName` is in `main` and not in the
+> running function. **A merged fix does not prevent the defect it was written for.**
+
+**The half-life item 284 measured was one day. This is the second demonstration**, and this time the
+clock was running on a fix that already existed rather than on one nobody had written.
+
+Corrected with `fmb_decode_entities`, the function built for the backfill — **the remedy was already
+there, tested, and one statement away.** `name` and `match_key` both recomputed; the row is not
+held, so the item 290 guard permitted the write.
+
+**Nothing else needed fixing.** `image_url` was `http://` on **zero** of the 609 — MyProtein's CDN
+is https throughout, so `normaliseImageUrl` being undeployed cost nothing on this feed. **That is
+luck, not evidence that the deploy can wait.**
+
+---
+
+### 320. The reverse collision, and the three importers deployed
+
+**Raised:** 25 August 2026 · **Fixed at the application site, deployed, verified. 14 rows corrected.**
+
+#### THE GUARD COVERED THE DIRECTION I THOUGHT OF
+
+> **The map keys on the FEED's taxonomy and the subcategory belongs to OURS, and nothing makes them
+> agree.** I mapped every `Health and Beauty` value to `null` precisely so a shower gel could not
+> acquire a sports subcategory — and never considered the collision running the other way.
+>
+> **`skincare/sports` is `bath_body/supplements` arriving from the other side.**
+
+```
+skincare / sports   ->  Freja Beef Bone Broth · KIKI Health Liquid Chlorophyll · Dried Mango
+bath_body / sports  ->  Origin Cream of Rice - Cinnamon Swirl
+skincare / supplements -> Biotin Tablets · Vitamin A Softgels
+```
+
+**A per-retailer config cannot fix this; only the application site can, because only it knows both
+halves.** The map is now gated on the row's own `finalTopCategory` — deployed, and the verification
+run shows `subcategory_from_map` landing on supplements rows only.
+
+**The 14 already written were corrected directly**, because the map is creates-only and a re-import
+would never have touched them. Reset to their own category's default (`face`, `body`) rather than to
+an invented value.
+
+#### THE THREE IMPORTERS ARE DEPLOYED
+
+`import-awin-feed`, `import-rakuten-feed`, `import-shopify-feed`, together, because they share
+`_shared/strip-html.ts`. Verified by reading the deployed source: `decodeFeedName` and
+`normaliseImageUrl` are both present (rakuten v54 checked directly).
+
+**Item 300's list is now two entries shorter and `send-routine-email` is done.** `awin-feed-count`
+remains stale at 33 days.
+
+#### AND THE VERIFICATION RUN DEMONSTRATED ITEM 314 ON OUR OWN NEW RETAILER
+
+The dry run against the already-imported MyProtein reports:
+
+| | |
+|---|---:|
+| `would_update_existing` | 609 |
+| **`would_create_new_product`** | **177** |
+
+> **A second import would add 177 near-duplicate products.** The 609 parents already exist, so they
+> are UPDATED rather than created, so their URLs never enter `createdUrls`, so Tier 5 no longer
+> suppresses the variants it suppressed on the first run.
+>
+> **Item 314 predicted this from reading the code and it is now observed on a retailer onboarded
+> today.** The 17,848 across Boots, Debenhams, Escentual and Stylevana were not historical accident;
+> they are what this mechanism does every run.
+
+**MyProtein must not be re-imported until item 314's build lands or Tier 5 is made durable.** No
+cron was added, so nothing will do it by itself — **but the absence of a cron is now load-bearing
+for correctness rather than just for caution.**
+
+---
+
+### 321. Class 3 is a list, not a rule — merchant_category cannot separate food from supplements
+
+**Raised:** 25 August 2026 · **Reported, not decided.**
+
+The food and drink admitted by the allowlist spans **both merchant_category values we must keep**:
+
+| Under `Sports Nutrition` → mapped to `sports` | Under Health and Beauty values → `null` |
+|---|---|
+| 100% Instant Oats · All-Natural Peanut / Almond / Cashew Butter | Cosmic Dealer Drinking Cacao, Koffee blends, Loose tea |
+| Baked & Extra Protein Cookies · Lean Layered Protein Bar | DIRTEA Coffee Super Blend, Coffee Sachets |
+| Hu Dark Chocolate Bars ×3 · Bio&Me Granola | Bragg Organic Apple Cider Vinegar |
+| 1839 UMF Manuka Honey · Bone Broth Protein | Nakd Fruit & Nut Bars · Ombar Chocolate Bar |
+| Myprotein × Jimmy's Iced Coffee ×3 | OHMG Sparkling Water |
+
+> **`Sports Nutrition` contains both Impact Whey Protein and a dark chocolate bar.** The retailer
+> files its entire nutrition range under one node, so **merchant_category does not separate them and
+> a config fix is not available.**
+
+**Only names separate them, which makes this the topical-list problem again, and the answer is a
+list rather than a rule.** And the list needs judgement per item rather than a keyword: a protein
+cookie and a protein bar are arguably sports nutrition; peanut butter is food; Manuka honey gummies
+are a supplement. **A `\bbar\b` rule would take the protein bars with the chocolate.**
+
+#### THIS IS A PROPOSITION QUESTION, NOT A DEFECT
+
+**Recorded for Robbie as scope rather than classification.** Nothing here is misfiled by our own
+rules: dried mango genuinely arrives under `Sports Nutrition`, and the categoriser genuinely has
+nowhere better to put a chocolate bar.
+
+> **The question is whether a beauty price-comparison site carries food, and 25 rows is small enough
+> that the ANSWER matters more than the instances.** Decide the principle and the 25 follow; decide
+> the 25 and the principle is still open the next time a retailer files a granola under nutrition.
+
+**The instances are listed above so the decision has something concrete in front of it, not so they
+can be handled one at a time.**
+
+---
+
+### 322. Class 2 is not reachable by a second prefix
+
+**Raised:** 25 August 2026 · **Reported. The paths are genuinely beauty-shaped.**
+
+~25 ingestible supplements sit in `skincare/face` because they arrive on `Health and Beauty` paths
+the supplements-path override does not reach. **A second prefix does not fix it, because the paths
+are mixed at source:**
+
+| Path | Rows | Contents |
+|---|---:|---|
+| `Health and Beauty > Body Care` | 59 | **collagen capsules, ashwagandha, gummies AND shower gels, deodorants, a toothbrush** |
+| `Health and Beauty > Wellness` | 45 | ~29 supplements (Floradix, Spatone, BetterYou sprays, DIRTEA) · ~5 topical (WILD deodorant, magnesium bath flakes) · ~5 food |
+
+> **Adding `Health and Beauty > Body Care` as a supplements prefix would route shower gels and a
+> toothbrush to supplements.** Adding `Wellness` would reach ~29 and misroute ~16. **Neither is a
+> config fix; both are trades.**
+
+**This is the same shape as `Body Care` being mapped to `null`:** a bucket that is genuinely mixed
+at source cannot be fixed by a rule that operates on the bucket. **The categoriser is already doing
+the right thing for the topical half** — the failure is only that the ingestible half lands in
+`skincare/face` rather than being excluded or routed.
+
+**Recorded, not fixed.** The honest options are a name list (same problem as item 321) or accepting
+~25 supplements filed as skincare, which is what happens today.
+
+---
+
+### 323. MyProtein delivery terms set, and a retailer whose prompt will rarely fire
+
+**Raised:** 25 August 2026 · **`tiered`, £55.00 / £4.49, source `site`, observed today.**
+
+**Why `site` is sufficient here and a checkout was required for Niche Beauty:** Niche Beauty
+published a **threshold and no charge**, so the charge existed nowhere on the site and a checkout was
+the only place to observe it. **MyProtein publishes both.** A checkout would confirm what the page
+already states — verification of a value already sourced, not the only route to it.
+
+**Where it sits:** threshold **second-highest** behind Niche Beauty's £75 against a £30 median;
+charge **second-highest** behind £9.95, ahead of Debenhams' £3.99. **The most expensive delivery
+position of any retailer we carry except Niche Beauty.**
+
+#### THE BRIDGEABILITY PROMPT WILL ALMOST NEVER FIRE, AND THAT IS THE RULE WORKING
+
+The rule caps a suggested top-up at **1.0× the item price**. A £55 threshold against a typical £25
+tub is a £30 gap — **2.2× item price** — so the prompt is suppressed by design.
+
+> **A retailer whose prompt does not fire because the gap is genuinely too large to bridge is the
+> rule declining to make an unhelpful suggestion.** Stated at configuration so that MyProtein
+> appearing at the bottom of a prompt-coverage report is read as the rule working rather than as a
+> coverage gap — which is the reading a coverage report invites by construction.
+
+---
+
+### 324. A guard on the enabling action, and a system twice protected by an absence
+
+**Raised:** 25 August 2026 · **Built, tested, live. Three options considered.**
+
+| Option | Refuses? | Names the reason? | Cost |
+|---|---|---|---|
+| `enabled = false` alone | yes — the importer errors on a real apply | **no** | none |
+| A `standing_check_findings` note | **no — nothing reads it at import time** | yes | none |
+| **Trigger on the ENABLING action** | **yes** | **yes, in the exception** | one migration |
+
+> **`enabled = false` refuses for the WRONG REASON.** It reads as ordinary not-yet-onboarded state,
+> which is exactly what someone completing an onboarding clears without hesitating. **A guard that
+> looks like the thing it is guarding against is not a guard.**
+
+**The trigger refuses the enabling ACTION rather than the import**, so the refusal lands on the
+person making the decision at the moment they make it. Item 290's pattern, one table over, sharing
+its release mechanism (`SET LOCAL "fmb.release_hold"`, or resolve the finding).
+
+**Tested, and the first test failed in a way worth recording:** it reported "allowed" because
+`enabled` was already `true` from the import, so there was no false→true transition to fire on.
+**The test measured no transition, not no guard.** Turning it off first — also the correct resting
+state — produced: **refused while held; allowed with the exact release key; an unheld retailer
+unaffected.**
+
+#### AND THE SECOND INSTANCE OF A SYSTEM PROTECTED BY AN ABSENCE
+
+| | What was holding it | What that was |
+|---|---|---|
+| **Superdrug** | no cron row; GitHub workflow renamed `.disabled` | **an absence**, until the six-state pass set `enabled = false` |
+| **MyProtein** | no cron row | **an absence**, until this guard |
+
+> **Two instances is a pattern rather than a coincidence, and the pattern is that an absence holds
+> until someone adds something — and adding things is normal work.** Nobody has to make a mistake.
+> A colleague completing the onboarding by adding the cron everyone else has would have been doing
+> the obvious right thing.
+>
+> **An absence also cannot be found.** Nothing lists the things that are safe because a scheduler is
+> missing, so the protection is invisible to any audit and to its own beneficiaries.
+
+**The general form: if a system is correct because something is missing, write down what would go
+wrong if it were added — or make the absence a setting.**
+
+---
+
+### 325. MyProtein live: 2,292 supplements, and Boots below 80% for the first time
+
+**Raised:** 25 August 2026 · **`active = true`. Verified on the site, not in the database.**
+
+| | Predicted | Before | **Live now** |
+|---|---|---:|---:|
+| Supplements | 2,343 | 1,831 | **2,292** |
+| Comparable at 2+ | 82–118 | 34 | **80** |
+| **Comparison depth** | 3.5–5.1% | **1.86%** | **3.49%** |
+| **Boots' share** | 76.6% | **95.2%** | **76.1%** |
+| **Sports subcategory** | ~750–800 | **214** | **639** |
+| MyProtein products live | — | 0 | **608** |
+
+**Depth landed at the bottom of its predicted range** — 3.49% against a 3.5–5.1% band, so the floor
+estimate (MyProtein-family matches only) was closer than the ceiling. **Reported as the low end
+rather than as "within range".**
+
+**Sports came in under the estimate too** — 639 against ~750–800, because ~110 of the 445 sports
+products are not in `products_active` or classified elsewhere. **Still a 3× increase on 214.**
+
+#### VERIFIED ON THE SITE
+
+`/product/151619` — `Impact Whey Protein Powder 5KG, Chocolate Mint`:
+
+```
+<title>MyProtein Impact Whey Protein Powder - 5KG - 166servings - Cho…
+       | MyProtein price with delivery | FindMyBasket</title>
+
+£157.49 · Free delivery · seller MyProtein
+Home > Supplements > Sports > MyProtein Impact Whey Protein Powder
+```
+
+**Branch B fired on a retailer onboarded today** — yesterday's six templates classifying a product
+that did not exist when they were written. **"Free delivery" is correct**: £157.49 clears the £55
+threshold, so the terms read from the site an hour ago are being applied. The breadcrumb confirms
+the subcategory routing end to end, and `/supplements/sports` returns 200 with MyProtein on it.
+
+**JSON-LD complete**: price, `InStock`, seller, and an `https` image — the image-scheme work from
+item 297 holding on a feed that never needed it.
+
+**One thing that is not ours:** the rendered description contains an em dash — *"exactly what your
+body needs — and nothing it doesn't"*. **That is MyProtein's copy, not ours**, and item 286 already
+settles that repairing our own mangling and rewriting a supplier's text are different acts. Noted so
+the em-dash rule is not read as broken.
+
+#### WHAT REMAINS OPEN
+
+| | |
+|---|---|
+| **Re-import** | **guarded** — item 324 |
+| Class 2 — ~25 supplements in `skincare/face` | item 322, no config fix available |
+| Class 3 — ~25 food and drink | item 321, **a proposition question for Robbie** |
+| Item 314's grouping build | open on its own terms, not on MyProtein's |
+
+---
+
+### 326. A rule reading "sold as" is a rule about the retailer's framing
+
+**Raised:** 25 August 2026 · **37 rows excluded. The boundary was reported before it was applied,
+and the report changed it.**
+
+> ### THE PRINCIPLE WAS NOT RETAILER-INDEPENDENT AND THE CATALOGUE IS MEANT TO BE.
+>
+> *"Sold as a macronutrient source is in; sold as food is out"* resolves most of the population and
+> then fails on a class it cannot see:
+>
+> ```
+> 100% Instant Oats - 1kg        MyProtein: a carbohydrate source.  Tesco: breakfast.
+> All-Natural Peanut Butter      MyProtein: a fat and protein source.
+> 1839 UMF Manuka Honey          Sold as a health product. Is honey.
+> CLIF Bar                       A sports-nutrition brand. Eaten as a snack.
+> ```
+>
+> **The same row gets a different answer at a different retailer.** A rule that reads "sold as" is a
+> rule about the seller's framing, and it cannot hold a boundary in a catalogue that spans sellers.
+
+#### THE CLASS HAS A NAME, AND IT IS NOT ABOUT FOOD
+
+**Products whose identity depends on who is selling them.** It will recur on every retailer that
+straddles a category boundary — a pharmacy selling both medicine and skincare, a department store
+selling both fragrance and homeware, a supermarket selling anything.
+
+> **The failure is not that the food boundary is hard. It is that ANY boundary drawn on how a
+> product is presented moves when the presenter changes**, and a catalogue drawing boundaries has to
+> draw them on the product.
+
+**The 11 unresolved rows were reported rather than absorbed**, and Robbie decided them: oats and nut
+butters stay, CLIF stays, Manuka honey and Jimmy's Iced Coffee go, DIRTEA splits by form.
+
+#### THE THIRD CRITERION, TESTED AND NEGATIVE
+
+*"They cannot be compared because no other retailer we carry stocks them"* is genuinely testable, so
+it was tested:
+
+| Brand | Other active retailers |
+|---|---:|
+| **Bio&Me** (granola) | **1** |
+| Cosmic Dealer (cacao, tea) | 1 |
+| **MyProtein itself** | **1** |
+| **CLIF** (arguably sports) | **0** |
+| Hu, Nakd, Ombar, Freja, Bragg | 0 |
+
+> **Sound as a reason, useless as a discriminator.** It separates brands we happen to carry
+> elsewhere from brands we do not — **a fact about our catalogue, not about the product.** Granola
+> scoring the same as MyProtein is the demonstration, and CLIF scoring zero is the second half of it.
+
+#### DIRTEA: SAME BRAND, SAME SHELF, OPPOSITE ANSWERS
+
+| Out | In |
+|---|---|
+| DIRTEA Cacao Super Blend · Coffee Super Blend · Coffee Sachets · Mushroom Cacao · Mushroom Matcha | Chaga Mushroom Gummies · Tremella Mushroom Gummies · Chaga / Lion's Mane / Cordyceps / Reishi / Tremella functional powders |
+
+> **THE FORM DECIDES, NOT THE BRAND AND NOT THE INGREDIENT.** Both halves are mushroom extract from
+> one supplier on one shelf. One is a supplement; the other is a coffee that contains a supplement.
+> **A brand-level rule gets this wrong in both directions**, and it is the clearest available case
+> that the exclusion list has to be a list.
+
+#### THE VOCABULARY WAS EXTENDED RATHER THAN REUSED
+
+`product_exclusions.reason` had `not_a_supplement`, which fits loosely — granola is indeed not a
+supplement — and is what 24 existing rows use for **non-ingestibles that arrived on a supplements
+path**. A shower gel is not a supplement; granola is food.
+
+> **Flattening a new class into an old label is how a controlled vocabulary stops discriminating.**
+> Added `food_or_drink`.
+
+#### WHAT IT DID TO THE FIGURES
+
+| | Before exclusions | **After** |
+|---|---:|---:|
+| MyProtein live | 608 | **571** |
+| Supplements | 2,292 | **2,274** |
+| Sports subcategory | 639 | **624** |
+| Boots' share | 76.1% | **76.6%** |
+
+**Boots' share went UP**, because removing 37 non-Boots products shrinks the denominator. **Worth
+seeing rather than smoothing: an exclusion that improves the catalogue moves the diversity metric
+the wrong way**, and a metric that rewards keeping granola is a metric to read carefully.
+
+---
+
+### 327. Depth landed at the floor of the band, and the band was mine
+
+**Raised:** 25 August 2026.
+
+Predicted **3.5% – 5.1%**. Landed **3.49%** — **below the floor, not within the range.**
+
+The band's two ends were two assumptions: the floor counted only MyProtein-family products matching
+(48), the ceiling counted every shared-brand supplements row matching by barcode (84). **The floor
+estimate was the better one and the ceiling was optimistic** — barcode matching across a
+flavour-and-size matrix hits less often than brand overlap suggests.
+
+> **Reported as the low end rather than as "within range".** A band whose floor is the answer is a
+> band that was too generous at the top, and quoting the range afterwards would take credit for the
+> half that was wrong.
+
+---
+
+### 328. A supplier's text looking like a house-rule violation, for the second time this week
+
+**Raised:** 25 August 2026 · **Nothing to fix.**
+
+`/product/151619` renders: *"exactly what your body needs **—** and nothing it doesn't"*. **An em
+dash, in customer-facing copy, on a live page.**
+
+**It is MyProtein's product description**, verbatim from the feed. Item 286 already settles the
+distinction: **repairing our own mangling of a supplier's text and rewriting the supplier's text are
+different acts**, and only the first is ours.
+
+**Second instance this week.** The first was the `|`-delimited product name inside Boots'
+descriptions, which looked exactly like item 283's duplicate-append defect and was the supplier's
+own field.
+
+> **Both were caught by reading the stored row rather than the rendered page.** The rendered page
+> cannot distinguish our text from theirs — that is what rendering is for. **A house-rule check that
+> greps rendered HTML will fail on both**, and `lib/__tests__/email-copy.test.ts` gets this right by
+> reading source files: the rule is about copy WE write, and the only place that is legible is where
+> we write it.
+
+---
+
+### 329. A number that became right by coincidence
+
+**Raised:** 25 August 2026 · **`work-with-us.html` was never touched and is now correct.**
+
+> ### IT CARRIES A HARDCODED `12` THAT WAS WRONG AT 11 ACTIVE RETAILERS AND BECAME CORRECT WHEN MYPROTEIN WAS ADDED.
+
+```html
+<span class="stat-num">12</span>
+<span class="stat-label">UK retailers currently live</span>
+```
+
+**Nobody edited it. Nobody noticed it.** It was not in the swept set on 3 August, not in the
+`about.html` block's own history, and not in this conversation until a grep for count claims found
+it.
+
+> **A number that became right by coincidence is worse than one that is wrong**, because a wrong
+> number is a defect somebody eventually reports. **This one is now indistinguishable from a
+> maintained figure** — it agrees with the database, it agrees with `about.html`, and nothing about
+> it records that the agreement is an accident. The next reader has no way to tell it apart from
+> the two that were diffed today.
+>
+> **And it will drift again on the next retailer change**, arriving back at "wrong" from a position
+> that currently looks like evidence the surface is maintained.
+
+**The 3 August sweep found the same claim in eleven places under four wordings.** This is a twelfth
+place under a fifth wording — a bare integer in a stat card, which no phrase-based sweep would match.
+
+#### THE GAP UNDERNEATH IT
+
+`lib/__tests__/nav-parity.test.ts` compares **navigation links** between `index.html` and
+`SiteNav.tsx`. It was written because two navs drifted three ways at once and none of the
+divergences was detectable from either side alone.
+
+> **The retailer roster has drifted five times — Superdrug, Gorgeous Shop, Atelier De Glow, Perfume
+> Click, Niche Beauty (missing seven days) — and has no test.** The guard exists for the surface
+> that drifted once and not for the surface that drifted five times.
+
+---
+
+### 330. What a roster test would compare, and the exception that decides whether it works
+
+**Raised:** 25 August 2026 · **Reported. Not built.**
+
+**The comparison is the easy part**, and today's change ran it by hand:
+
+```
+about.html  <li> set  : 12      in DB, missing from about : none
+index strip img alts  : 12      in about, not in DB       : none
+retailers.active      : 12      in DB, missing from strip : none
+                                in strip, not in DB       : none
+```
+
+**Two parsers, one query, set difference in both directions** — the same instrument as the nav
+parity test, which reads un-importable static HTML as text and asserts it agrees.
+
+#### THE EXCEPTIONS DO NOT MAKE IT UNWORKABLE, BUT THEY DECIDE ITS SHAPE
+
+`about.html`'s own comment states the rule the test cannot use:
+
+> *"'Match the table' is still the wrong rule — it was wrong for the fortnight when Branded Beauty
+> was active and unlisted... The right rule is: active = true AND the programme still pays."*
+
+**`retailers` has no column for "the programme still pays".** Branded Beauty was `active = true` and
+deliberately unlisted for a fortnight because its affiliate programme had closed, and **a test
+diffing against `active` alone would have failed every day of that fortnight on a surface that was
+correct.**
+
+> **A test that fails while the page is right gets suppressed, and a suppressed test is worse than
+> no test** — it is the nav guard's own argument inverted.
+
+**So the exceptions are workable only if they are NAMED IN THE TEST rather than inferred**, and that
+is the design decision:
+
+| Approach | Verdict |
+|---|---|
+| Diff against `active` alone | **unworkable** — fails for a fortnight at each programme closure |
+| Diff against `active`, minus a hardcoded exception list in the test | **workable**, and the list is a second hand-maintained thing |
+| **Add a column** — `retailers.listed_publicly`, or a reason — and diff against that | **workable, and it removes the ambiguity from the test into the data** |
+
+**The third is the honest one**, because the fact the test needs — *should this retailer be named on
+the site?* — is a fact about the retailer, and it currently lives only in a comment. **A test that
+needs a fact the schema does not hold is a request for a column, not a request for an exception
+list.**
+
+**Scope it with `work-with-us.html` in it.** A roster test that checks two surfaces while a third
+carries a bare integer would have passed all day today.
+
+---
+
+### 331. The tagline stays deferred, and the next attempt starts from these
+
+**Raised:** 25 August 2026 · **HELD. The reason has changed, which is why it is worth recording.**
+
+**The first deferral reason has expired.** Supplements has its shape: 2,274 products, a second
+retailer, Boots at 76.6% rather than 95.2%. **The category-shape blocker is gone.**
+
+**The hold now rests on two things that are not about supplements at all.**
+
+#### 1. THE REGISTER QUESTION IS UNRESOLVED
+
+"Health and beauty" is how Boots and Superdrug describe themselves, against a premium editorial
+position with the Prestige Edit and Clarins as the founding-brand conversation. **Nothing has moved
+this, and nothing in the supplements work speaks to it.**
+
+#### 2. IT IS A PHRASE PLUS THREE REWRITES
+
+Measured, so the next attempt does not rediscover it:
+
+| Surface | Now | With the longer phrase | |
+|---|---:|---:|---|
+| `index.html` `<title>` | 56 | **67** | **over 60 by 7** |
+| `app/layout.tsx` title | 56 | **67** | **over 60 by 7** |
+| `about.html` description | 152 | **163** | **over 155 by 8** |
+| `index.html` description | 117 | 128 | fits |
+
+**And four lines carry the word twice, where a substitution collides with itself:**
+
+```
+now:    FindMyBasket: Your beauty routine. Optimised. | UK Beauty Price Comparison
+after:  FindMyBasket: Your health and beauty routine. Optimised.
+        | UK Health and Health and Beauty Price Comparison
+```
+
+`og:title`, `og:description`, `twitter:title`, `twitter:description` — **exactly the four lines a
+sweep-and-replace gets wrong**, because "UK Beauty" is already a compound.
+
+> **A tagline that fits a hero line does not fit a meta description at 60 characters.** The decision
+> is not one phrase; it is a phrase and three hand-written replacements, and `about.html`'s `<h1>`
+> reads noticeably heavier at 69 characters.
+
+#### AND THE SWEEP WAS STALE BEFORE THIS CONVERSATION STARTED
+
+On record: **30 occurrences across 23 lines.** Re-run today: **35 across 28**, with the four
+double-occurrence lines matching exactly.
+
+**One of the extra files is `lib/format/social-tags.ts`, created yesterday.**
+
+> **A sweep with a date is a measurement, not a state.** It was accurate when it ran and the
+> codebase moved under it — the same shape as item 284's one-day half-life and the frozen-fixture
+> rule, arriving on a copy surface. **The next attempt should re-sweep rather than work from the
+> recorded 30**, and the difference between 30 and 35 is the argument for doing so.
+
+---
+
+### 332. `listed_publicly` is a seventh departure state, and the six do not imply it
+
+**Raised:** 25 August 2026 · **SCOPED, NOT BUILT. The next piece of work.**
+
+#### THE SIX STATES DO NOT MENTION COPY AT ALL
+
+`docs/departure-completeness.md` defines six states — `active`, `enabled`, scheduler, gone-set,
+redirects, delivery source. **Grepped: the document contains no reference to copy, listing, the
+homepage strip or `about.html`.** All six are about data and machinery.
+
+**The copy sweep exists — as step 5 of `docs/superdrug-removal-plan.md`, a different document and a
+different list.** That is why three departures satisfied all six states and still left Atelier De
+Glow's logo on the homepage for three days (item 221) and 406 brand hubs 404ing (item 291).
+
+> **A definition that is checkable and a checklist that is not are two different artefacts, and the
+> thing that drifts lives in the second one.** The six states became a scorecard a check could run;
+> the copy sweep stayed prose.
+
+#### SO YES — BUT IT IS THE ONLY ONE THAT IS ORTHOGONAL
+
+**Branded Beauty is the case, and it proves the column cannot be derived from the other six.**
+
+```
+active  = true          ← state 1 NOT satisfied
+listed  = deliberately NOT, for a fortnight
+because = its UK affiliate programme had closed and listing it would
+          name a retailer we cannot send anyone to
+```
+
+| | States 1–6 | **State 7** |
+|---|---|---|
+| What they mean | *turn the retailer off* | ***stop naming it*** |
+| Can fire alone | no — a departure sets them together | **yes — Branded Beauty, for a fortnight** |
+| Derivable from `active` | they define it | **no** |
+
+> **States 1–6 are one decision expressed six ways. State 7 is a different decision that a departure
+> also happens to require.** A retailer can be fully live and correctly unlisted; no combination of
+> the other six describes that, which is why it is a column rather than a query.
+
+**This is a change to the definition, not a column bolted beside it.** The scorecard goes to seven,
+and state 7 is the row that can legitimately be set while the other six are unset.
+
+#### WHAT THE COLUMN SHOULD BE
+
+**`retailers.unlisted_reason text NULL`** — not a boolean.
+
+| Option | Verdict |
+|---|---|
+| `listed_publicly boolean` | **records the decision and loses the reason.** Branded Beauty's fortnight is only comprehensible with "the programme closed" attached |
+| boolean **+** reason column | two columns doing one column's work, and they can disagree |
+| **`unlisted_reason text NULL`** | **NULL = listed. Non-NULL = deliberately unlisted, and the text says why. Unlisting without a reason is impossible by construction** |
+
+**This is the house pattern, not a new one.** `delivery_terms_source` + `delivery_terms_note` with
+`retailers_unknown_delivery_needs_reason` already enforces "you may not assert this state without
+writing down why", and item 311 recorded that CHECK as *"the constraint enforcing the doctrine rather
+than the doctrine relying on somebody remembering it"*. **A `length(btrim(...)) >= 20` guard on the
+reason carries that across.**
+
+**What sets it:** a departure, as state 7; a programme closure with the retailer still live, as
+Branded Beauty; and nothing at onboarding — the default is listed.
+
+---
+
+### 333. The roster test needs the database, which makes it a workflow and not a unit test
+
+**Raised:** 25 August 2026 · **SCOPED. Depends on item 332.**
+
+**Three surfaces, and a test covering two of them would have passed all day today:**
+
+| Surface | Shape | Parsed as |
+|---|---|---|
+| `public/index.html` | 12 `<img>` in `.hero-trust-logos` | the `alt` set |
+| `public/about.html` | 12 `<li>` **+ the prose count** | the `<li>` set, and the integer |
+| **`public/work-with-us.html`** | **a bare `<span class="stat-num">12</span>`** | the integer above `UK retailers currently live` |
+
+**The comparison, run by hand today:** set difference in both directions against
+`active = true AND unlisted_reason IS NULL`, plus an assertion that each surface's own count matches
+its own list. Both checks are needed and neither substitutes for the other.
+
+#### IT CANNOT BE A PURE TEST, AND THE REASON IS THE 16 AUGUST FAILURE
+
+`nav-parity.test.ts` compares two static files **to each other** and needs no credentials. A roster
+test built the same way would catch the count-versus-list disagreement — **and would have passed on
+16 August**, when `about.html` read "11 UK retailers" over a list of 11 and was wrong because it
+omitted Niche Beauty.
+
+> **Three surfaces that agree with each other and are all stale is the actual failure mode.** The
+> comparison that matters is against `retailers`, so the check must reach the database — which makes
+> it a workflow with secrets, like `gone-ids-drift.yml`, not `npm test`.
+
+**And that inherits a known hazard.** `gone-ids-drift.yml` reported success twice while failing to
+load its own script (item 255). **A roster check must fail loudly when it cannot read the table**,
+not report agreement — the preflight pattern, exit 1 for `cannot_run`.
+
+#### THE ORDER IS THE COLUMN FIRST
+
+Without `unlisted_reason` the test diffs against `active` alone, **fails for a fortnight at each
+programme closure on a page that is correct, and gets suppressed.** Item 330 recorded that; this is
+the same argument as its scheduling constraint. **Column, then test.**
+
+---
+
+### 334. A sentence describing the catalogue ages with the catalogue
+
+**Raised:** 25 August 2026 · **Corrected in passing, recorded because nothing would have caught it.**
+
+`about.html` read:
+
+> *"Currently live across 11 UK retailers covering skincare, makeup, hair and fragrance"*
+
+**The category clause had never been touched.** Supplements has been a live top-level category with
+its own route, its own nav entry and 1,831 products, and the sentence describing what the site
+covers did not mention it. **MyProtein made it visible only because it is the first retailer whose
+contribution is overwhelmingly supplements — 509 of 571.**
+
+> **The count on that line has drifted five times and has a history block above it. The category
+> clause in the same sentence has never been checked once**, because every discussion of that
+> sentence has been about the number.
+>
+> **A claim about scope ages exactly like a claim about count, and only one of them looks like a
+> number.** The roster test in item 333 would not catch this either: it diffs names and integers,
+> and "skincare, makeup, hair and fragrance" is neither.
+
+**Now reads "skincare, makeup, hair, fragrance and supplements".** Recorded rather than quietly
+fixed, because the class — prose that enumerates something the database also enumerates — is wider
+than this sentence and has no guard anywhere.
+
+---
+
+### 335. State 7 built, and a column created with nothing in it
+
+**Raised:** 25 August 2026 · **`retailers.unlisted_reason` live. Three departures backfilled.**
+
+`text NULL` with `CHECK (unlisted_reason IS NULL OR length(btrim(...)) >= 20)`. **NULL is listed;
+non-NULL is deliberately unlisted with the reason attached, and unlisting without one is impossible
+by construction** — the shape `retailers_unknown_delivery_needs_reason` already established.
+
+#### THE THREE REASONS ARE THREE DIFFERENT FACTS
+
+| | |
+|---|---|
+| **Superdrug** | programme closed, last import 19 Jul. **Return unknown** — a holding page with no programme on any network on 19 Aug, which is why the brand-hub 410 is held |
+| **Branded Beauty** | programme closed 2 Aug, **unlisted from 30 July, three days BEFORE the flip.** The case the column exists for |
+| **Atelier De Glow** | deactivated 16 Aug, **not expected to return**, recorded explicitly — which is what made the six-state pass safe |
+
+**A template would have made these one fact.** Superdrug's return is unknown and Atelier's is
+settled, and those decide different things downstream.
+
+#### THE COLUMN WAS CREATED WITH NO ROW DEMONSTRATING WHAT IT IS FOR
+
+All 12 active retailers are listed; Branded Beauty had already flipped to `active = false`. **The
+motivating case cannot be represented in the data**, so the column comment carries it.
+
+> **A column whose justification lives entirely in its comment is one refactor away from looking
+> arbitrary.** Stated so the next reader finds the Branded Beauty fortnight rather than an empty
+> column and a guess.
+
+#### AND THE AMAZON BOUNDARY IS IN THE COMMENT, BECAUSE IT IS WHAT THE NEXT READER WILL REACH FOR
+
+**Amazon is `active = false` AND named on the site** — the Associates disclosure on `about.html`,
+the `AmazonLink` component on product pages. **`active = false` and `named on the site` are
+different facts and Amazon is both.** The column governs the roster — who we compare — not every
+mention. Without that written down, the first person to meet Amazon will either set a reason it does
+not need or conclude the column is broken.
+
+---
+
+### 336. Roster parity: three surfaces, against the table, failing loudly
+
+**Raised:** 25 August 2026 · **Built. `scripts/roster-parity.mts` + `.github/workflows/roster-parity.yml`.**
+
+| Surface | Parsed | Today |
+|---|---|---:|
+| `public/index.html` | logo `alt` set | 12 |
+| `public/about.html` | `<li>` set **and the prose count** | 12 / 12 |
+| **`public/work-with-us.html`** | **the bare `<span class="stat-num">`** | **12** |
+| `retailers` | `active AND unlisted_reason IS NULL` | **12** |
+
+**The count is checked against the TABLE, never against its own list** — a count matching its own
+list says nothing, which is exactly what 16 August proved.
+
+#### IT INHERITS gone-ids-drift'S LESSON AS ASSERTIONS, NOT AS A COMMENT
+
+`gone-ids-drift.yml` reported *"No drift"* **twice** while failing to load its own script, because a
+summary renders happily from empty variables (item 255). Every input is asserted before any
+comparison:
+
+```
+missing file / missing credential      -> cannot_run, exit 1
+strip parsed 0 alts                    -> cannot_run, exit 1
+about parsed 0 <li>, or no count       -> cannot_run, exit 1
+work-with-us stat unparseable          -> cannot_run, exit 1
+retailers unreadable or empty          -> cannot_run, exit 1
+```
+
+> **AN EMPTY PARSE IS NOT AGREEMENT**, and the whole preflight exists to stop it being reported as
+> such. Item 194's contract: **0 for ok or findings, 1 only for cannot_run.**
+
+**Both cannot_run paths tested before commit**: no credentials exits 1 naming both; unreachable
+table exits cannot_run rather than printing parity. The three parsers were verified against the live
+files — 12, 12/12, 12.
+
+**Why `active AND unlisted_reason IS NULL` and not `active`:** Branded Beauty was active and
+correctly unlisted for a fortnight, and a check failing while the page is right gets suppressed.
+**That is why the column had to come first.**
+
+---
+
+### 337. Prose that enumerates what the database enumerates
+
+**Raised:** 25 August 2026 · **Two corrections applied to `about.html`. One contradiction flagged,
+not fixed.**
+
+> ### ATTENTION TO ONE PART OF A LINE IS WHAT PROTECTS THE REST OF IT FROM BEING SEEN.
+
+**Two observations, and they are the durable part:**
+
+**1. The count acquired a twenty-line history block; the scope clause beside it was never read.**
+`about.html`'s retailer count has drifted five times and carries a comment recording each one, the
+16 August failure, and the rule "verify the list, never the count". **In the same sentence,
+"covering skincare, makeup, hair and fragrance" had never been checked** — supplements had been a
+live top-level category with its own route, nav entry and 1,831 products, and the sentence
+describing the site's scope did not mention it. **Every discussion of that line had been about the
+number.**
+
+**2. `:225` has been wrong longest because nobody has ever had a reason to discuss it.**
+*"works across skincare, makeup, hair and K-Beauty"* — **four sentences from the clause fixed today,
+in the same file.** It omits three real categories and names one that has never been a
+`top_category`. **K-Beauty is a brand cluster; a brand claim in a category list is a different
+assertion wearing a list's shape**, which is why it reads as fine and is not.
+
+> **The count was wrong repeatedly and got a guard. The scope clause was wrong once, permanently,
+> and got nothing.** Scrutiny is drawn to whatever has moved, and a claim that has never moved is
+> a claim nobody has ever checked.
+
+#### THE POPULATION
+
+Eight enumerations across two files. Six carried all six live categories; two did not.
+
+| | |
+|---|---|
+| `index.html` ×5 (og, twitter, JSON-LD, ×2 body) | all six ✓ |
+| `about.html:308` | fixed earlier today |
+| **`about.html:225`** | **K-Beauty, three categories missing** — fixed |
+| **`about.html:330`** | roadmap, three of six — rewritten |
+
+**Neither the roster test nor any other check reaches this class.** Item 336 diffs names and
+integers; *"skincare, makeup, hair and K-Beauty"* is neither.
+
+#### THE ROADMAP BULLET WAS FALSE, NOT STALE
+
+*"**Supplements:** the same basket optimisation approach for wellness products"*, under **"Coming
+later"** — for a category with **2,274 products, its own route, its own nav entry and a second
+retailer as of today.**
+
+**Deleted.** And the focus sentence with it: *"broadening retailer coverage in skincare, makeup and
+hair"* is contradicted by the last three onboardings — **Niche Beauty (luxury/fragrance), Perfume
+Click (fragrance), MyProtein (supplements). Not one was skincare, makeup or hair.**
+
+Now reads: *"broadening retailer coverage across every category, and deepening comparison where a
+product is stocked in more than one place."* **The second clause is the honest constraint** — 86.8%
+of product pages have one stockist or none, and depth is what the pipeline is actually buying.
+
+#### AND THE OTHER BULLET IS A CONTRADICTION, FLAGGED NOT FIXED
+
+Reading the rest of the list rather than assuming it, as instructed, found the second bullet is
+worse than stale:
+
+| Source | Says |
+|---|---|
+| `about.html` roadmap | **"Native app with barcode scanner"** |
+| `work-with-us.html:339` | **"Native app with barcode scanner (2027)"** |
+| **`docs/strategy.md:561`** | **"It is browser based rather than an app."** |
+
+> **Two public pages advertise a native app and the strategy document says explicitly it is not
+> one.** No `capacitor`, `react-native`, `expo` or scanner dependency exists in `package.json`.
+>
+> **That is a contradiction between a public claim and the internal position, not a wording
+> problem**, and which of the two is current is Robbie's to say. **Not touched.**
+
+**One bullet advertising something shipped was the reason to read the rest.** The rest contained a
+different defect entirely, which is the argument for reading lists rather than sampling them.
+
+---
+
+### 338. Three reasons that are three different facts
+
+**Raised:** 25 August 2026 · **A line about the backfill in item 335.**
+
+The three departed retailers were given `unlisted_reason` values written separately:
+
+| | The fact |
+|---|---|
+| Superdrug | return **unknown** — a holding page, no programme on any network, 19 Aug |
+| Branded Beauty | unlisted **three days before** the flip, while `active = true` |
+| Atelier De Glow | **not expected to return**, recorded explicitly |
+
+> **A template would have made these one fact — "departed, removed from the roster" — and they
+> decide different things downstream.** Superdrug's uncertainty is what holds the brand-hub 410
+> (item 291). Atelier's certainty is what made the six-state pass safe to run. Branded Beauty's
+> ordering is the entire justification for the column existing.
+>
+> **A reason column filled by template is a boolean with extra characters.**
+
+---
+
+### 339. A claim that has never moved is a claim nobody has ever checked
+
+**Raised:** 25 August 2026 · **Native app removed from both pages. Three further claims reported,
+not touched.**
+
+> ### SCRUTINY IS DRAWN TO WHATEVER HAS MOVED.
+>
+> `about.html`'s retailer **count** drifted five times and acquired a twenty-line history block
+> recording each drift, the 16 August failure and the rule *"verify the list, never the count"*.
+>
+> **The scope clause in the same sentence acquired nothing**, because it never moved — and it was
+> wrong the whole time. Supplements had a route, a nav entry and 1,831 products and the sentence
+> describing the site's coverage did not mention it.
+>
+> **The thing that changes gets a guard. The thing that was wrong once, permanently, gets read by
+> nobody.**
+
+`about.html:225` is the same shape at greater age: *"skincare, makeup, hair and K-Beauty"*, four
+sentences from the clause fixed the same morning, naming a brand cluster as a category. **It has
+been wrong longest precisely because nobody has ever had a reason to discuss it.**
+
+#### THE NATIVE APP: A DATED CAPABILITY CLAIM FOR SOMETHING NOT BEING BUILT
+
+| Source | Said |
+|---|---|
+| `about.html` roadmap | "Native app with barcode scanner" |
+| **`work-with-us.html`** | **"Native app with barcode scanner (2027)"** |
+| **`docs/strategy.md:561`** | **"It is browser based rather than an app."** |
+
+No `capacitor`, `react-native`, `expo`, `cordova` or scanner dependency exists. **Removed from
+both.**
+
+> **The work-with-us instance was the serious one: a capability claim WITH A DATE, on the page
+> prospective partners read.** A date makes a claim look tracked — it implies someone is holding it
+> against a calendar. **"(2027)" is the part that turns a stale bullet into a representation.**
+
+#### READING THE REST OF work-with-us, ON THE REASONING THAT HAD JUST PAID TWICE
+
+**Three more, all reported and none touched.**
+
+**1. `Supplements category (later in 2026)` — SHIPPED.** The identical defect to the bullet deleted
+from `about.html` this morning, on the partner-facing page. **2,274 products, its own route, its own
+nav entry, a second retailer as of today.** *(Not removed: the instruction named the native app
+specifically. Flagged because leaving a known-false claim live is the shape item 276 recorded.)*
+
+**2. `Analytics dashboard reporting on referral volume and conversion` — offered as something
+partners GET, and it does not exist.** `docs/dashboard-build-brief.md` is a **build brief**, status
+*"blocking prerequisite MET… steps 2, 3 and 7 are unblocked"* — unblocked, not built. `app/ops/quality`
+is a data-quality board, not partner referral analytics. **Same class as the native app and listed
+under a heading that reads as present tense.**
+
+**3. `100k+ products tracked in real time` — 99,865.** False by 135 products, and it will become
+true on the next import, which is the item 329 shape exactly: **a number that will be right by
+coincidence.** *"In real time"* also overstates a daily feed — and the neighbouring claim says
+*"automated **weekly** datafeed refresh"*, so the same page describes the same mechanism at two
+different frequencies and neither is daily.
+
+#### WHAT CHECKED OUT
+
+**`Genuine reach in K-Beauty. We carry COSRX, Beauty of Joseon, mixsoon, medicube`** — **all four
+present, 2,012 live rows.** Verified rather than assumed, and it is the only capability claim on the
+page that names specifics and survives being checked.
+
+#### THE BASE RATE IS THE ARGUMENT
+
+**Two of four bullets wrong on `about.html`; three of the checkable claims wrong on
+`work-with-us.html`.** At that rate, sampling a claims page is not a check.
+
+> **Every dated bullet across both pages had either shipped or contradicted the strategy document.**
+> The replacement written into `about.html` is deliberately not a date: *"more retailers stocking
+> the same products, so more of the catalogue can actually be compared"* — a direction the last
+> three onboardings support, and nothing a calendar can falsify.
+
+---
+
+### 340. Sampling a claims page is not a check
+
+**Raised:** 25 August 2026 · **Four corrections to `work-with-us.html`. A third frequency claim
+found only because the first two were being fixed.**
+
+> ### THE BASE RATE IS THE ARGUMENT.
+>
+> **Two of four bullets wrong on `about.html`. Three of the checkable claims wrong on
+> `work-with-us.html`. Every dated bullet across both pages had either shipped or contradicted the
+> strategy document.**
+>
+> At that rate the question is not whether a given claim is wrong; it is which ones are right. **A
+> page where the majority of testable statements fail cannot be sampled — it has to be read.**
+
+#### THE FOUR
+
+**1. `Supplements category (later in 2026)` — REMOVED.** The same false claim deleted from
+`about.html` this morning, still live on the partner page. **Leaving it because the instruction named
+the native app specifically is item 276's shape: a fix scoped to the reported instance, leaving its
+siblings.**
+
+**2. The analytics dashboard — REMOVED.** *"Analytics dashboard reporting on referral volume and
+conversion"*, in the **present tense**, under *"what you get"*, on the page partners read before
+signing. It exists as `docs/dashboard-build-brief.md`, status *"unblocked"* — not built.
+
+> **Worse than a dated roadmap item: a roadmap says LATER and this said NOW.**
+
+**Not replaced with an equivalent, and that is the honest answer.** AWIN and Rakuten already give
+partners referral and conversion reporting as standard, so a dashboard of ours would duplicate the
+network rather than add to it. It now reads: *"Referral and conversion reporting through your
+existing AWIN or Rakuten dashboard, which we do not duplicate."* **Saying what we do not do is a
+claim that stays true and costs nothing to keep.**
+
+**3. `100k+ products tracked in real time` — CORRECTED, NOT LEFT TO BECOME TRUE.** 99,865 live —
+false by 135, and due to become true on the next import.
+
+> **That is this page's own defect from this morning (item 329), allowed deliberately rather than by
+> accident.** A number that becomes right by coincidence is indistinguishable from a maintained one;
+> knowingly leaving one is worse than the original.
+
+**And a bare integer was the wrong shape.** It drifts by construction — right for a day, then wrong
+in whichever direction the catalogue moves. Replaced with **"Every product from every retailer we
+carry, refreshed daily"**, which stays true as the catalogue moves in either direction and makes a
+stronger claim than a number.
+
+**4. THE FREQUENCY CONTRADICTION — AND THERE WERE THREE, NOT TWO.** The page described one mechanism
+as:
+
+| | |
+|---|---|
+| `100k+ … tracked in **real time**` | stat card |
+| `Automated **weekly** datafeed refresh` | capability list |
+| **`we pull it on an automated **weekly** refresh`** | **found only while fixing the other two** |
+
+**It is daily — ten scheduled imports, one per retailer.** All three now say daily.
+
+> **The third was not in the report because the report sampled.** Two contradicting descriptions
+> looked like the whole defect; a third copy of the wrong one was sitting eight lines away. **The
+> same class as the count and the scope clause — attention landed on the contradiction and the
+> agreement beside it went unread.**
+
+#### WHAT WAS CHECKED AND HELD
+
+- **`13k+ multi-retailer price comparisons`** — 13,209 products stocked by two or more active
+  retailers, in stock. **True.**
+- **`12 UK retailers currently live`** — true, and now guarded by item 336.
+- **K-Beauty brands** — all four named brands present, 2,012 rows.
+
+**Three of six testable claims survived.** Recorded because "we checked and it was wrong" and "we
+checked and it was right" are the same act, and only reporting the first makes the base rate look
+like bad luck rather than a property of unguarded copy.
+
+---
+
+### 341. The last read, and the founding number does not hold
+
+**Raised:** 25 August 2026 · **Both pages read in full, comments stripped, every sentence. Two
+findings, one fixed and one reported.**
+
+#### THE SAMPLING FINDING DEMONSTRATED ITSELF A SECOND TIME
+
+Item 340 recorded that the frequency claim had **three** copies where the report had seen two.
+**Reading both pages in full found a fourth**, on `about.html`, inside a paragraph about the founder:
+
+> *"the technical infrastructure (live datafeeds from major UK retailers, basket optimisation
+> algorithms, automated **weekly** refreshes) was tractable enough to build alone"*
+
+**Four copies of one wrong fact across two pages.** Fixed; all four now say daily.
+
+> **It survived three passes over the same defect**, because it is not in a claims list, a stat card
+> or a capability bullet — **it is in a sentence about a person.** Every sweep looked where claims
+> are made, and this one was in prose about how the thing got built.
+>
+> **The finding arriving inside the investigation of the finding is the third instance today**, after
+> the count and the scope clause, and after the third frequency claim. **Attention landed on the
+> contradiction and the agreement beside it went unread — twice more, in the act of fixing it.**
+
+#### THE FOUNDING NUMBER, CHECKED FOR THE FIRST TIME
+
+`about.html`, under *"Why it exists"*:
+
+> *"The average price gap on the same skincare product across UK retailers is between 40% and 70%."*
+
+**Measured across 6,335 comparable skincare products, in stock at two or more active retailers:**
+
+| | |
+|---|---:|
+| **Mean gap** | **37.0%** — below the bottom of the stated band |
+| **Median gap** | **20.2%** |
+| In the 40–70% band | 821 — **13.0%** |
+| **Below 40%** | **4,719 — 74.5%** |
+
+> **It is false on both readings of "average".** The mean sits below the band and the median is a
+> third of it. **Three quarters of comparable skincare products have a gap under 40%.**
+
+**NOT CHANGED.** This is the founding claim — the "why it exists" number, the one the whole About
+page rests on — and replacing it is a decision about what the site says it is for, not a copy fix.
+**Reported with the measurement so the replacement can be chosen rather than estimated.**
+
+> **It is the purest instance of the class.** It has never moved, so nothing has ever drawn attention
+> to it; it is the origin story, so questioning it feels like questioning the premise rather than
+> checking a number; and it is the single most load-bearing sentence on the page. **A claim that has
+> never moved is a claim nobody has ever checked** — and the longer it stands, the more it reads as
+> settled.
+
+#### WHAT ELSE THE FULL READ TURNED UP, AND HELD
+
+| Claim | |
+|---|---|
+| *"an email on the 1st of every month"* | **true** — cron job 1, `0 9 1 * *`, active |
+| *"we never charge upfront placement fees"* | true |
+| *"Usually 1 or 2 retailers, sometimes more"* | consistent with the optimiser's single/split options |
+| *"12 UK retailers"*, *"13k+ comparisons"*, K-Beauty brands | verified in item 340 |
+| *"No other UK platform does this"* | **not checkable here** — a competitive claim about other businesses, and named as unverifiable rather than passed |
+
+#### THE LAST CLAIM ALIGNED ACROSS BOTH PAGES
+
+*"Continued retailer expansion across the prestige and premium tiers"* — the only survivor of a list
+where everything else was wrong — **contradicted the pipeline**: Niche Beauty and Perfume Click are
+fragrance, MyProtein is sports nutrition. **Replaced with the wording now on `about.html`.** One
+claim, two pages, consistent, and true of what is actually happening.
+
+#### AND THE PASSES ARE RECORDED WITH THE FAILURES
+
+**"We checked and it was wrong" and "we checked and it was right" are the same act.** Reporting only
+the first makes the base rate look like bad luck rather than a property of unguarded copy — and the
+base rate is the argument: **two of four bullets wrong on one page, three of six checkable claims on
+the other, every dated bullet across both either shipped or contradicting the strategy document.**
+
+#### WHAT THE ROSTER TEST GUARDS, AND WHAT IT CANNOT
+
+| | |
+|---|---|
+| **Guarded** (item 336) | the retailer names on three surfaces, and the count on two |
+| **Not reachable** | **prose that enumerates what the database enumerates** — categories, coverage |
+| **Not reachable** | **capability claims** — a dashboard, an app, a refresh frequency |
+| **Not reachable** | **founding numbers** — the 40–70% gap |
+
+**Three classes, one guard.** Recorded so the guard is not mistaken for coverage.
+
+---
+
+### 342. Three properties that each independently discourage checking, on one sentence
+
+**Raised:** 25 August 2026 · **The founding number replaced with a measurement and its derivation.**
+
+> ### IT HAD NEVER MOVED, SO NOTHING DREW ATTENTION TO IT. IT WAS THE ORIGIN STORY, SO CHECKING IT READS AS QUESTIONING THE PREMISE. IT WAS THE MOST LOAD-BEARING SENTENCE ON THE PAGE.
+
+**Three properties, on one sentence, each of which alone would have been enough.** The retailer count
+beside it drifted five times and acquired a twenty-line history block; this one sat unchecked from
+the beginning because every reason to look at it was also a reason not to.
+
+#### WHAT IT SAID AND WHAT IT MEASURES
+
+*"The average price gap on the same skincare product across UK retailers is between 40% and 70%."*
+
+| Skincare, 6,335 comparable products | |
+|---|---:|
+| Mean | **37.0%** — below the band |
+| Median | **20.2%** |
+| In the 40–70% band | **13.0%** |
+
+**False on both readings of "average", and the range framing describes 13% of products as though it
+were the norm** — the same defect as the worst-case savings baseline: **true of something, presented
+as typical.**
+
+#### THE MEAN WAS THE TRAP, AND THIS LIST HAS SPENT A FORTNIGHT ON IT
+
+**37.0% is inside touching distance of the old band, and quoting it would have looked like a
+correction.** It is inflated by a long right tail — p90 is 81.6% — in exactly the way the old savings
+headline was.
+
+> **Leading with the mean would have repeated the defect with the measurement in hand**, which is
+> worse than the original, because the original was never measured at all.
+
+#### THE SCOPE WAS THE LARGER ERROR
+
+**Skincare is the lowest-spread category except supplements.**
+
+| | n | Median | ≥50% |
+|---|---:|---:|---:|
+| **All six** | **13,209** | **24.7%** | **18.7%** |
+| skincare | 6,335 | 20.2% | 19.7% |
+| **fragrance** | 1,171 | **42.9%** | **45.3%** |
+
+> **The sentence named skincare because that is what the site STARTED as, not because it is the best
+> case.** It understated its own claim and rested it on half the population at the same time. **A
+> scope inherited from history rather than chosen from evidence.**
+
+**Now reads:** *"Across the products stocked by more than one retailer we carry, the price gap
+between the best and worst option is typically around 25%, and one in five is 50% or more."*
+
+#### THE DERIVATION IS AT THE LINE
+
+Date, population, mean, median, p75, p90, band shares, and why the median was chosen — in a comment
+above the paragraph.
+
+> **A founding number with its derivation attached stops being a founding number and becomes a
+> measurement.** The next person can check it in one query instead of inheriting it, and the reason
+> the mean was rejected is written down where the temptation to use it will recur.
+
+---
+
+### 343. Fragrance is where the mechanic demonstrably wins, and the content has never been aimed there
+
+**Raised:** 25 August 2026 · **A strategic fact, not a copy one. Not in `docs/strategy.md`.**
+
+| | Comparable products | Median gap | Share ≥ 50% |
+|---|---:|---:|---:|
+| **Fragrance** | **1,171** | **42.9%** | **45.3%** |
+| skincare | 6,335 | 20.2% | 19.7% |
+| makeup | 2,355 | 25.0% | 8.4% |
+| hair | 2,354 | 25.0% | 10.5% |
+| bath & body | 917 | 24.7% | 26.2% |
+| supplements | 77 | 20.0% | 9.1% |
+
+> **Fragrance is more than double skincare on both measures, on 1,171 comparable products.** Nearly
+> half of comparable fragrance carries a gap of 50% or more, against one in five in skincare.
+
+**The whole-basket-including-delivery mechanic pays most where the spread is widest, and the spread
+is widest in fragrance.** The site's editorial has been aimed at skincare throughout — the articles,
+the founding story, the four live product guides.
+
+**And the pipeline has already drifted there without the strategy following.** The two onboardings
+before MyProtein were **Niche Beauty and Perfume Click — both fragrance.** The retailer selection is
+already acting on something the content has not.
+
+**Recorded for Robbie, not acted on.** It is a question about where editorial effort goes, and the
+measurement is the input rather than the answer.
+
+---
+
+### 344. What remains unverifiable rather than unverified
+
+**Raised:** 25 August 2026 · **The sweep closes. Named so the distinction is not lost.**
+
+**Every checkable claim on both pages has now been checked.** What is left is not unchecked — it is
+**not checkable from here**, and that is a different status that should not decay into the first.
+
+| Claim | Why nothing here can test it |
+|---|---|
+| **"No other UK platform does this."** (whole-basket optimisation including delivery) | **A claim about other businesses.** It requires surveying competitors' products, which is neither in the database nor in the repository. **The strongest available internal evidence — that we do it — says nothing about whether anyone else does.** |
+| "That's a very different intent profile to display advertising or social-led discovery." | A claim about other channels' audiences |
+| "a category most aggregators thin out" (K-Beauty) | **Our half is verified** — all four named brands present, 2,012 rows. **The comparative half is not.** |
+| "Setup ... typically takes a couple of weeks end-to-end" | A claim about partner-side process; our onboardings are not a sample of it |
+| "The average price gap ... " *(replaced)* | **was** unverified, is now measured — the only one that moved between categories today |
+
+> **Unverifiable is a legitimate status and unverified is not.** The four above can sit indefinitely
+> provided they are labelled; the danger is a claim in the first column being treated as though it
+> were in the second — checked once, found untestable, and thereafter assumed fine.
+>
+> **The 40–70% figure sat unchecked for months in exactly that fog**, and the thing that resolved it
+> was not new evidence but somebody running the query.
+
+**Where the guard now stands:**
+
+| | |
+|---|---|
+| Guarded by item 336 | retailer names on three surfaces, count on two |
+| Recorded, unguarded | prose enumerating what the database enumerates |
+| Recorded, unguarded | capability claims — a dashboard, an app, a refresh frequency |
+| Recorded, now measured | founding numbers |
+| **Named unverifiable** | **four competitive claims** |
+
+---
+
+### 345. A shared module fixed the layer it covered and left the layer above it holding two implementations of one rule
+
+**Raised:** 25 August 2026 · **The savings figure in the monthly email has been £0.00 for every recipient, structurally, not because savings were zero.**
+
+`send-routine-email` reports `saving = options[1].total - options[0].total`. Its two-retailer
+loop emits a pair for every combination `(r1, r2)`, including pairs where **every product went
+to r1** and r2's leg is empty. `deliveryFor` correctly charges nothing for an empty leg, so that
+"split" totals **exactly** what r1's single-retailer option totals. It is not a second way to buy
+the basket. It is the same basket counted twice, and with N retailers the winner was re-emitted
+N-1 times.
+
+So `options[1]` **always** tied `options[0]`, and the reported saving was **always £0.00**.
+
+`app/app/RoutineBuilder.tsx:649` has had the guard all along:
+
+```js
+if (r1Total > 0 && r1Name) retailers.push(r1Name);
+if (r2Total > 0 && r2Name) retailers.push(r2Name);
+if (retailers.length < 2) continue;
+```
+
+Measured against live prices with the production `in_stock` filter, on all 8 active routines:
+
+| routine | saved | shipped | with the guard |
+|---|---|---|---|
+| 25 | 3 | £0.00 | **£2.64** |
+| 34 | 3 | £0.00 | **£2.64** |
+| 36 | 1 | £0.00 | **£2.00** |
+| 42 | 1 | £0.00 | **£0.50** |
+| 3, 21, 26 | 3, 3, 12 | £0.00 | £0.00, no whole basket exists |
+| 37 | 1 | no basket | no basket |
+
+**Half the sends have a real saving the shipped code reported as zero.**
+
+> **This is not a duplication story, it is a layering one.** Delivery was unified into
+> `_shared/delivery.ts` in August *because* these same two files had written that rule out by
+> hand and disagreed. The extraction worked: the delivery rule is now identical in both. But
+> **option-set construction sits above the shared layer**, and it was left holding two
+> implementations of one rule, so the same class of divergence reappeared one level up — **in the
+> code that calls the unified rule**.
+>
+> **Extracting a shared module fixes what it covers and creates no obligation on what sits above
+> it.** The header of `_shared/delivery.ts` argues at length for one rule in one place. That
+> argument was applied to the rule it was about and stopped at its own boundary.
+
+**Two paths, not three.** `lib/product-queries.ts` builds no option set; grep for `type: 'split'`
+returns only these two files.
+
+**Recorded where the next person will meet it.** The transferable half of this is not the guard,
+it is the layering rule, and a work-list item is not where someone extracting a shared module will
+look. It is now in the header of **`supabase/functions/_shared/delivery.ts`** — the worked example
+anyone doing the next extraction will read and copy — under *"BEFORE YOU EXTRACT THE NEXT SHARED
+MODULE"*: when you extract a module the question is not "are the copies gone", it is **"what still
+calls this in two places, and do those two callers agree."**
+
+---
+
+### 346. A type name standing in for a state
+
+**Raised:** 25 August 2026 · **The report called these three routines the "one retailer stocks everything" case. They were not that case at all.**
+
+Three of the eight active routines have **no whole basket** — no single retailer and no pair
+covers everything — so they fall to the optimiser's fallback: cheapest price per product, **no
+delivery costed**, and **only the products that could be priced**. Nothing was compared.
+
+**The fallback was typed `"split"`**, because `"split"` was the nearest available name and the
+option carried more than one retailer's worth of items. It is not a split. It is not a way to buy
+the basket. But the type is what every sentence downstream reads, so **each of them inherited the
+wrong state and stated it confidently:**
+
+| rendered | actually |
+|---|---|
+| "Best price basket" | nothing was compared |
+| "Split across 1 retailers for best price" | one retailer, and not a split |
+| "Free delivery" | delivery was never costed |
+| Total £78.98 over 4 rows | **routine 26 saved 12 products** |
+| — | **the other 8 appeared nowhere at all** |
+
+And two lines above it the intro promised **"the best way to restock your routine"**, contradicted
+by the panel in the same single read.
+
+**The builder already knew.** At the `basket_optimised` call in `RoutineBuilder.tsx` there is a
+*NOTE for the dashboard* warning that `result_type` is **UNRELIABLE** whenever
+`unpriced_item_count > 0`, because a basket with untracked items may report `"single"` while only
+one retailer's worth of items was ever priceable.
+
+> **The hazard was recorded in one place and not carried to the other.** The figure was documented
+> as untrustworthy for the dashboard while the sentence built on the same figure went out to
+> readers. This is the week's shape again: item 289's freshness amendment, item 313's
+> near-neighbour rule, item 343's `.order()` rule sixty lines from the function that needed it.
+> **Reasoning that is right and whose reach is partial.**
+
+**The fix worth stating is the type, not the strings.** The obvious repair was to branch the copy
+on `retailers[0] === "Best available prices"`, the label the fallback happens to carry. That would
+have worked and it would have been wrong: **the display string was a symptom and the type was the
+claim.** A render that asks a label what state it is in has no way to be told it is in a new one.
+The fallback now has its own `type: "fallback"`, so every branch below it asks the option what it
+is rather than what it says.
+
+> **A type name standing in for a state.** `"single" | "split"` described how many retailers an
+> option involved, and was then used to answer a different question: whether a comparison had
+> happened. For every real option those two questions have the same answer, which is why it held
+> for months. The fallback is the case where they come apart, and there was no name for it, so it
+> borrowed one — and every consumer downstream believed the borrowed name.
+
+**Fixed by surfacing, not by softening.** A reader who saved twelve products and sees four needs
+to know *which eight are missing*; that is more useful than any hedge about the four. The email
+now lists them under **Not priced this month**, using item 245's established wording, *"Not in
+stock at any retailer we compare"*.
+
+**Also in this change:** the degenerate-pair guard (item 345); one rule, `hasMeasuredSaving`,
+feeding both the subject and the panel, which had been gated on `result.saving > 0` and
+`result.best` respectively and disagreed on 7 of 8 routines; and the four panel branches reworded
+for a single cold read — **in the builder the reader has just watched the comparison run, so "the
+next-best costs the same" lands as a result; in an email nothing precedes it**, so each branch now
+says what was compared before it says what came of it.
+
+**Four copy lines deliberately left for their own change**, since three of them assert a
+comparison or a superlative and need this treatment rather than a patch: the welcome intro's
+"best prices" promise (:380), the price-drop email's "We track the best price" (:589) and its
+third baseline, *"Total drop since you saved them"* (:595), and the footer scope claim **"UK
+skincare price comparison"** (:452, :614), which is item 334's class and a one-word fix.
+
+
+---
+
+### 347. The previous baseline is still being calculated after the claim it fed was replaced
+
+**Raised:** 25 August 2026 · **Two small things found while fixing items 345 and 346. Recorded, deliberately not fixed.**
+
+| | |
+|---|---|
+| **`worstCaseTotal`** | Computed on every send by a loop that walks every product, finds its **most expensive** stocking retailer, and costs delivery per resulting leg. Returned in `OptimisationResult`. **Used by nothing.** It fed the pre-item-245 saving claim, that claim was replaced by the next-best anchor, and the calculation was left running. |
+| **The delivery row** | Renders as `Delivery … Delivery £2.95`. The label is repeated inside the value. Cosmetic, pre-existing, visible in every email that now shows a saving. |
+
+> **Dead code that looks like a live measurement is worse than dead code.** `worstCaseTotal` is a
+> plausible, well-commented, correctly-computed number sitting in the result object that the email
+> renderer receives. Nothing marks it as retired. The next person needing a baseline will find it
+> already there, already named, already trusted — and it is **the exact baseline item 245 removed
+> for being a cherry-picked maximum no shopper would ever buy**, which had by then been sent
+> nineteen times.
+>
+> A deleted claim leaves a hole someone notices. A claim whose *number* survives its own
+> retirement leaves a trap.
+
+**Not fixed here** because removing it touches the `OptimisationResult` shape and the fallback
+return path on the evening of a verified deploy, for no behavioural gain. It goes with the four
+copy lines.
