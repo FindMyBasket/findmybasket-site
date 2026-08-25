@@ -28270,3 +28270,91 @@ as:
 **Three of six testable claims survived.** Recorded because "we checked and it was wrong" and "we
 checked and it was right" are the same act, and only reporting the first makes the base rate look
 like bad luck rather than a property of unguarded copy.
+
+---
+
+### 341. The last read, and the founding number does not hold
+
+**Raised:** 25 August 2026 · **Both pages read in full, comments stripped, every sentence. Two
+findings, one fixed and one reported.**
+
+#### THE SAMPLING FINDING DEMONSTRATED ITSELF A SECOND TIME
+
+Item 340 recorded that the frequency claim had **three** copies where the report had seen two.
+**Reading both pages in full found a fourth**, on `about.html`, inside a paragraph about the founder:
+
+> *"the technical infrastructure (live datafeeds from major UK retailers, basket optimisation
+> algorithms, automated **weekly** refreshes) was tractable enough to build alone"*
+
+**Four copies of one wrong fact across two pages.** Fixed; all four now say daily.
+
+> **It survived three passes over the same defect**, because it is not in a claims list, a stat card
+> or a capability bullet — **it is in a sentence about a person.** Every sweep looked where claims
+> are made, and this one was in prose about how the thing got built.
+>
+> **The finding arriving inside the investigation of the finding is the third instance today**, after
+> the count and the scope clause, and after the third frequency claim. **Attention landed on the
+> contradiction and the agreement beside it went unread — twice more, in the act of fixing it.**
+
+#### THE FOUNDING NUMBER, CHECKED FOR THE FIRST TIME
+
+`about.html`, under *"Why it exists"*:
+
+> *"The average price gap on the same skincare product across UK retailers is between 40% and 70%."*
+
+**Measured across 6,335 comparable skincare products, in stock at two or more active retailers:**
+
+| | |
+|---|---:|
+| **Mean gap** | **37.0%** — below the bottom of the stated band |
+| **Median gap** | **20.2%** |
+| In the 40–70% band | 821 — **13.0%** |
+| **Below 40%** | **4,719 — 74.5%** |
+
+> **It is false on both readings of "average".** The mean sits below the band and the median is a
+> third of it. **Three quarters of comparable skincare products have a gap under 40%.**
+
+**NOT CHANGED.** This is the founding claim — the "why it exists" number, the one the whole About
+page rests on — and replacing it is a decision about what the site says it is for, not a copy fix.
+**Reported with the measurement so the replacement can be chosen rather than estimated.**
+
+> **It is the purest instance of the class.** It has never moved, so nothing has ever drawn attention
+> to it; it is the origin story, so questioning it feels like questioning the premise rather than
+> checking a number; and it is the single most load-bearing sentence on the page. **A claim that has
+> never moved is a claim nobody has ever checked** — and the longer it stands, the more it reads as
+> settled.
+
+#### WHAT ELSE THE FULL READ TURNED UP, AND HELD
+
+| Claim | |
+|---|---|
+| *"an email on the 1st of every month"* | **true** — cron job 1, `0 9 1 * *`, active |
+| *"we never charge upfront placement fees"* | true |
+| *"Usually 1 or 2 retailers, sometimes more"* | consistent with the optimiser's single/split options |
+| *"12 UK retailers"*, *"13k+ comparisons"*, K-Beauty brands | verified in item 340 |
+| *"No other UK platform does this"* | **not checkable here** — a competitive claim about other businesses, and named as unverifiable rather than passed |
+
+#### THE LAST CLAIM ALIGNED ACROSS BOTH PAGES
+
+*"Continued retailer expansion across the prestige and premium tiers"* — the only survivor of a list
+where everything else was wrong — **contradicted the pipeline**: Niche Beauty and Perfume Click are
+fragrance, MyProtein is sports nutrition. **Replaced with the wording now on `about.html`.** One
+claim, two pages, consistent, and true of what is actually happening.
+
+#### AND THE PASSES ARE RECORDED WITH THE FAILURES
+
+**"We checked and it was wrong" and "we checked and it was right" are the same act.** Reporting only
+the first makes the base rate look like bad luck rather than a property of unguarded copy — and the
+base rate is the argument: **two of four bullets wrong on one page, three of six checkable claims on
+the other, every dated bullet across both either shipped or contradicting the strategy document.**
+
+#### WHAT THE ROSTER TEST GUARDS, AND WHAT IT CANNOT
+
+| | |
+|---|---|
+| **Guarded** (item 336) | the retailer names on three surfaces, and the count on two |
+| **Not reachable** | **prose that enumerates what the database enumerates** — categories, coverage |
+| **Not reachable** | **capability claims** — a dashboard, an app, a refresh frequency |
+| **Not reachable** | **founding numbers** — the 40–70% gap |
+
+**Three classes, one guard.** Recorded so the guard is not mistaken for coverage.
