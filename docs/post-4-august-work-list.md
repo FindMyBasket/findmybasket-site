@@ -26665,3 +26665,119 @@ fleet maximum.
 **Nothing configured.** No `retailers` row, no `retailer_import_config` row, no cron entry. The next
 stage writes the config with `active = false`, and the stage after that is a first import read with
 the supplements classification checked against what the shipped rule produces.
+
+---
+
+### 310. stripBrandPrefix: a trade with a worse side, and the sequence if anyone wants both
+
+**Raised:** 25 August 2026 · **NOT A DEFECT AWAITING A FIX. Deliberately unchanged.**
+
+`stripBrandPrefix` builds `^{brand}[\s\-:]*` with **no word-boundary requirement**, so the strip can
+fire mid-word. Measured across the live catalogue:
+
+| Shape | Rows | The strip is |
+|---|---:|---|
+| Next char UPPERCASE — run-together feed text | **24** | **correct** — it repairs item 286's shape |
+| Next char lowercase — mid-word | 3 | wrong |
+| `Just Jack` on `JUST JACKS …` | 5 | wrong |
+
+> **THE MISSING WORD BOUNDARY IS WHY IT WORKS AND WHY IT BREAKS, AND THOSE ARE THE SAME CHARACTER.**
+> Adding `\b` fixes `Effn Tan ning Foam` and simultaneously stops repairing `Some By MiRetinol`.
+> **24 correct against 8 wrong, and `\b` reverses the ratio.**
+
+**Recorded as a trade with a worse side rather than a defect awaiting a fix.** There is no version of
+this change that is an improvement on its own.
+
+#### THE SEQUENCE IF ANYONE EVER WANTS BOTH
+
+1. **Repair the run-together text at source.** Item 286 measured **824 descriptions** opening with
+   their own product name and no separator, and **declined to fix it** — the inference is unreliable,
+   because `SPF40`, `bareMinerals` and `Dr.PAWPAW` are the same character pattern as the defect.
+2. **Then add `\b`.** With the run-together text gone, the 24 correct strips have nothing left to
+   repair and the boundary is free to fix the remaining 8.
+
+> **NEITHER STEP ALONE IS AN IMPROVEMENT.** Fixing the feed text first leaves 8 rows wrong and the
+> boundary still unsafe to add. Adding the boundary first breaks 24 rows to fix 8. **The order is
+> the whole of the design**, and it is written down because the second step looks like a one-line
+> fix to anyone who arrives without the first.
+
+#### THE EXPOSURE IS NOT THE INSTANCE, AND ONLY THE INSTANCE IS SMALL
+
+**Eight wrong rows is the instance. The exposure is a property of prefix length.**
+
+> **A two-character prefix matches mid-word far more readily than a nine-character one.** `Effn Tan`
+> caught `Tanning` because eight characters happened to align; `MP` aligns with every word beginning
+> "MP". **MyProtein's `MP` line is 1,341 rows — roughly fifty times today's affected population.**
+
+**The allowlist holds it.** MP sits entirely under `Apparel > Clothing > Sports Apparel`, which
+`category_path_must_contain` excludes.
+
+> **THAT IS A LOAD-BEARING DEPENDENCY NOBODY WOULD HAVE LISTED.** The allowlist exists to keep
+> trainers out of a beauty catalogue. **It is also, incidentally, the only thing standing between a
+> two-character brand and a name-mangling bug in shared display code** — and nothing connects the
+> two. Widening that allowlist to admit Apparel would look like a catalogue decision and would be a
+> rendering one as well. Recorded on the column, not only here.
+
+#### THE FEED'S OWN BRAND RELATIONSHIP IS INCONSISTENT
+
+Sampled apparel rows carry **`brand_name = MyProtein` with names beginning `MP `**, alongside other
+rows where `brand_name = MP` for the same product line:
+
+```
+brand MP          | MP Unisex Crew Socks (5 Pack) - Black - UK 2-5
+brand MyProtein   | MP Men's Training Ultra 7" Short - Black - XS
+```
+
+**Immaterial today** — both are excluded by the allowlist. **Material the moment it changes**: the
+same product line would arrive under two brand strings, producing two brand hubs, two slugs, and a
+`stripBrandPrefix` that behaves differently on each. **Recorded now because it is invisible while
+the allowlist holds**, which is exactly when it will be forgotten.
+
+---
+
+### 311. MyProtein stage 2: configured and inert
+
+**Raised:** 25 August 2026 · **Config written. Nothing imports, nothing renders, nothing served.**
+
+| | |
+|---|---|
+| `retailers.id` | **33**, `active = false` |
+| `delivery_model` | **`unknown`**, threshold and cost NULL, `delivery_terms_source` NULL |
+| `retailer_import_config.enabled` | **false** |
+| `awin_feed_id` | **`3196`** — verified, downloaded three times on 25 Aug |
+| `category_path_must_contain` | **`["Sports and Nutrition", "Health and Beauty"]`** |
+| Cron jobs | **0** |
+| `retailer_prices` rows | **0** |
+
+**Inert by construction**, and verified after the write rather than assumed: three independent
+switches are off and none of them depends on the others.
+
+#### THE DELIVERY NOTE IS THE INSTRUCTION, NOT A PLACEHOLDER
+
+`delivery_model = 'unknown'` with a written note. **The `retailers_unknown_delivery_needs_reason`
+CHECK makes go-live impossible without one** — `active = true` with an unknown model and no note
+fails at the database. **The constraint enforces the doctrine rather than the doctrine relying on
+somebody remembering it.**
+
+The note says what to do and why a delivery page will not do it: **read at a checkout**, per the
+Niche Beauty precedent where the fleet's most expensive terms were only visible there.
+
+#### ONE FIELD IS UNVERIFIED AND IS FLAGGED IN THE MIGRATION
+
+`awin_merchant_id = '3196'` is **the advertiser id as supplied in conversation.** It is NOT NULL in
+the schema, so the row cannot be written without a value.
+
+> **It is load-bearing and it fails silently.** `buildCreadUrl(config.awin_merchant_id, …)` builds
+> every click-out URL on the legacy `awin` format, so a wrong mid produces affiliate links that
+> track nothing — visible as a revenue absence, never as an error.
+
+**Verify it against the feed's `aw_deep_link` `awinmid=` parameter before `enabled = true`.** Not
+verified here because the only direct live check is fetching the AWIN redirector, **which would
+register a click** — and a fabricated click to confirm a configuration value is not a read.
+
+#### STAGE 3, NOT RUN
+
+A first import with `enabled = true` and no cron, then: the supplements classification checked
+against what the shipped rule produces, and the range measured against the brand-comparison
+proposition rather than against comparison depth. **8 of 7,192 deepening a comparison is the
+expected result and not the measurement that matters.**

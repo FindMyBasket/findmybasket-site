@@ -152,7 +152,7 @@ source agreement, not from memory.
 
 | Field | Value |
 |---|---|
-| Status | Approved, pending integration. **Not parked** — timing is Robbie's call, see below |
+| Status | **Stage 2: configured and inert.** `retailers.id 33`, `active = false`, `import_config.enabled = false`, no cron. Decision to proceed recorded in item 308 |
 | Network | **AWIN**, advertiser **3196** |
 | Importer | **`import-awin-feed` exists.** This is a retailer configuration, not a network integration |
 | **Feed to use** | **`3196` "Default" — 7,192 rows, 97.1% barcode.** NOT `13007` "Masterfeed" (2,054 rows, 24.2% barcode, parent-level). `10429` "Bestsellers" is a 100-row promo selection |
@@ -198,3 +198,13 @@ Three steps, all of which exist because a previous onboarding skipped one:
    overlap figure alone would have been ambiguous: *0% overlap says "products we cannot compare
    today"; the names said "products that cannot be compared in principle".* A count cannot tell a
    flavour matrix from a subscription box.
+
+### Stage log
+
+| Stage | State |
+|---|---|
+| 1. Feeds read, allowlist audited, MP line verified excluded | **done** — items 306, 307, 309 |
+| 2. Config row written, inert | **done 25 Aug** — item 311 |
+| **3. First import read** | **not run.** Needs `enabled = true` and no cron |
+| 4. Delivery terms read **at a checkout** | **Robbie.** Blocks `active = true` at the database |
+| 5. `awin_merchant_id` verified against the feed's `aw_deep_link` | **not done** — blocks `enabled = true` |
