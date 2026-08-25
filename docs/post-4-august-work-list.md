@@ -27298,3 +27298,141 @@ held, so the item 290 guard permitted the write.
 **Nothing else needed fixing.** `image_url` was `http://` on **zero** of the 609 — MyProtein's CDN
 is https throughout, so `normaliseImageUrl` being undeployed cost nothing on this feed. **That is
 luck, not evidence that the deploy can wait.**
+
+---
+
+### 320. The reverse collision, and the three importers deployed
+
+**Raised:** 25 August 2026 · **Fixed at the application site, deployed, verified. 14 rows corrected.**
+
+#### THE GUARD COVERED THE DIRECTION I THOUGHT OF
+
+> **The map keys on the FEED's taxonomy and the subcategory belongs to OURS, and nothing makes them
+> agree.** I mapped every `Health and Beauty` value to `null` precisely so a shower gel could not
+> acquire a sports subcategory — and never considered the collision running the other way.
+>
+> **`skincare/sports` is `bath_body/supplements` arriving from the other side.**
+
+```
+skincare / sports   ->  Freja Beef Bone Broth · KIKI Health Liquid Chlorophyll · Dried Mango
+bath_body / sports  ->  Origin Cream of Rice - Cinnamon Swirl
+skincare / supplements -> Biotin Tablets · Vitamin A Softgels
+```
+
+**A per-retailer config cannot fix this; only the application site can, because only it knows both
+halves.** The map is now gated on the row's own `finalTopCategory` — deployed, and the verification
+run shows `subcategory_from_map` landing on supplements rows only.
+
+**The 14 already written were corrected directly**, because the map is creates-only and a re-import
+would never have touched them. Reset to their own category's default (`face`, `body`) rather than to
+an invented value.
+
+#### THE THREE IMPORTERS ARE DEPLOYED
+
+`import-awin-feed`, `import-rakuten-feed`, `import-shopify-feed`, together, because they share
+`_shared/strip-html.ts`. Verified by reading the deployed source: `decodeFeedName` and
+`normaliseImageUrl` are both present (rakuten v54 checked directly).
+
+**Item 300's list is now two entries shorter and `send-routine-email` is done.** `awin-feed-count`
+remains stale at 33 days.
+
+#### AND THE VERIFICATION RUN DEMONSTRATED ITEM 314 ON OUR OWN NEW RETAILER
+
+The dry run against the already-imported MyProtein reports:
+
+| | |
+|---|---:|
+| `would_update_existing` | 609 |
+| **`would_create_new_product`** | **177** |
+
+> **A second import would add 177 near-duplicate products.** The 609 parents already exist, so they
+> are UPDATED rather than created, so their URLs never enter `createdUrls`, so Tier 5 no longer
+> suppresses the variants it suppressed on the first run.
+>
+> **Item 314 predicted this from reading the code and it is now observed on a retailer onboarded
+> today.** The 17,848 across Boots, Debenhams, Escentual and Stylevana were not historical accident;
+> they are what this mechanism does every run.
+
+**MyProtein must not be re-imported until item 314's build lands or Tier 5 is made durable.** No
+cron was added, so nothing will do it by itself — **but the absence of a cron is now load-bearing
+for correctness rather than just for caution.**
+
+---
+
+### 321. Class 3 is a list, not a rule — merchant_category cannot separate food from supplements
+
+**Raised:** 25 August 2026 · **Reported, not decided.**
+
+The food and drink admitted by the allowlist spans **both merchant_category values we must keep**:
+
+| Under `Sports Nutrition` → mapped to `sports` | Under Health and Beauty values → `null` |
+|---|---|
+| 100% Instant Oats · All-Natural Peanut / Almond / Cashew Butter | Cosmic Dealer Drinking Cacao, Koffee blends, Loose tea |
+| Baked & Extra Protein Cookies · Lean Layered Protein Bar | DIRTEA Coffee Super Blend, Coffee Sachets |
+| Hu Dark Chocolate Bars ×3 · Bio&Me Granola | Bragg Organic Apple Cider Vinegar |
+| 1839 UMF Manuka Honey · Bone Broth Protein | Nakd Fruit & Nut Bars · Ombar Chocolate Bar |
+| Myprotein × Jimmy's Iced Coffee ×3 | OHMG Sparkling Water |
+
+> **`Sports Nutrition` contains both Impact Whey Protein and a dark chocolate bar.** The retailer
+> files its entire nutrition range under one node, so **merchant_category does not separate them and
+> a config fix is not available.**
+
+**Only names separate them, which makes this the topical-list problem again, and the answer is a
+list rather than a rule.** And the list needs judgement per item rather than a keyword: a protein
+cookie and a protein bar are arguably sports nutrition; peanut butter is food; Manuka honey gummies
+are a supplement. **A `\bbar\b` rule would take the protein bars with the chocolate.**
+
+**Not decided here.** ~25 rows, and the question is whether a beauty price-comparison site carries
+food at all — which is a scope question, not a classification one.
+
+---
+
+### 322. Class 2 is not reachable by a second prefix
+
+**Raised:** 25 August 2026 · **Reported. The paths are genuinely beauty-shaped.**
+
+~25 ingestible supplements sit in `skincare/face` because they arrive on `Health and Beauty` paths
+the supplements-path override does not reach. **A second prefix does not fix it, because the paths
+are mixed at source:**
+
+| Path | Rows | Contents |
+|---|---:|---|
+| `Health and Beauty > Body Care` | 59 | **collagen capsules, ashwagandha, gummies AND shower gels, deodorants, a toothbrush** |
+| `Health and Beauty > Wellness` | 45 | ~29 supplements (Floradix, Spatone, BetterYou sprays, DIRTEA) · ~5 topical (WILD deodorant, magnesium bath flakes) · ~5 food |
+
+> **Adding `Health and Beauty > Body Care` as a supplements prefix would route shower gels and a
+> toothbrush to supplements.** Adding `Wellness` would reach ~29 and misroute ~16. **Neither is a
+> config fix; both are trades.**
+
+**This is the same shape as `Body Care` being mapped to `null`:** a bucket that is genuinely mixed
+at source cannot be fixed by a rule that operates on the bucket. **The categoriser is already doing
+the right thing for the topical half** — the failure is only that the ingestible half lands in
+`skincare/face` rather than being excluded or routed.
+
+**Recorded, not fixed.** The honest options are a name list (same problem as item 321) or accepting
+~25 supplements filed as skincare, which is what happens today.
+
+---
+
+### 323. MyProtein delivery terms set, and a retailer whose prompt will rarely fire
+
+**Raised:** 25 August 2026 · **`tiered`, £55.00 / £4.49, source `site`, observed today.**
+
+**Why `site` is sufficient here and a checkout was required for Niche Beauty:** Niche Beauty
+published a **threshold and no charge**, so the charge existed nowhere on the site and a checkout was
+the only place to observe it. **MyProtein publishes both.** A checkout would confirm what the page
+already states — verification of a value already sourced, not the only route to it.
+
+**Where it sits:** threshold **second-highest** behind Niche Beauty's £75 against a £30 median;
+charge **second-highest** behind £9.95, ahead of Debenhams' £3.99. **The most expensive delivery
+position of any retailer we carry except Niche Beauty.**
+
+#### THE BRIDGEABILITY PROMPT WILL ALMOST NEVER FIRE, AND THAT IS THE RULE WORKING
+
+The rule caps a suggested top-up at **1.0× the item price**. A £55 threshold against a typical £25
+tub is a £30 gap — **2.2× item price** — so the prompt is suppressed by design.
+
+> **A retailer whose prompt does not fire because the gap is genuinely too large to bridge is the
+> rule declining to make an unhelpful suggestion.** Stated at configuration so that MyProtein
+> appearing at the bottom of a prompt-coverage report is read as the rule working rather than as a
+> coverage gap — which is the reading a coverage report invites by construction.
