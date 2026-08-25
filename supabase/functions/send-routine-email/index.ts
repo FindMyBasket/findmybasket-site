@@ -392,8 +392,29 @@ function buildEmailHTML(params: {
   // a panel that then said no whole basket exists to compare. A contradiction the
   // reader meets in one pass, on 3 of the 8 active routines. The claim is only true
   // when a whole basket was actually found.
+  //
+  // WELCOME IS NOT A MODE THAT OVERRIDES STATE. It used to be: the ternary tested
+  // emailType first, so a welcome email for a routine with no whole basket promised
+  // "the best prices on your routine" directly above a panel saying there is no whole
+  // basket to compare. Promise and refutation, adjacent, in one read, on roughly 3 in
+  // 8 saves at today's mix. Welcome and fallback are ORTHOGONAL and both have to be
+  // answered, so the branch is now state-first with the welcome opener prepended.
+  //
+  // "your skincare routine" also went: the catalogue is six categories -- skincare,
+  // makeup, hair, bath and body, fragrance, supplements -- and a routine can hold any
+  // of them. Item 334's class.
+  const WELCOME_OPENER =
+    "Thanks for saving your routine. Each month we'll check it against every retailer " +
+    "we compare and email you the best way to buy it, delivery included.";
   const intro = emailType === "welcome"
-    ? "Thanks for saving your skincare routine. We'll email you each month with the best prices on your routine across UK retailers."
+    ? (result.best?.type === "fallback"
+        // THE LAST CLAUSE DOES NOT RESTATE THE PROBLEM, AND THAT IS DELIBERATE. The
+        // panel two lines below already says no retailer and no pair stocks everything.
+        // Saying it twice is what makes a welcome read as an apology -- the builder's
+        // lesson from item 245, applied to a surface item 245 never reached. This hands
+        // off to the panel instead: it names the situation and points down.
+        ? `${WELCOME_OPENER} Not all of it is in stock today, so here is where it stands.`
+        : WELCOME_OPENER)
     : result.best?.type === "fallback"
       ? "We've checked prices across the UK retailers we compare. Here's where your routine stands this month."
       : "We've checked prices across UK retailers. Here's the best way to restock your routine this month.";
@@ -600,10 +621,31 @@ function buildAlertsSubject(items: AlertItem[]): string {
  *
  * NO EM DASHES. Guarded by lib/__tests__/email-copy.test.ts.
  */
+/**
+ * A TEMPLATE THAT COULD NOT TELL A FIRST CONTACT FROM A MONTHLY REPORT.
+ *
+ * `isEmpty` is tested before `emailType` at the call site, so a user whose very first
+ * email found nothing in stock received "Your routine: still watching for stock" over a
+ * headline reading "Still watching for stock" -- correct content, wrong occasion, and
+ * no acknowledgement anywhere that they had just signed up. Nothing was welcomed.
+ *
+ * The function had no way to be told. It took products, a token and a base URL, and the
+ * one thing it needed to know was not among them. THAT IS ITEM 346's SHAPE IN A
+ * SIGNATURE RATHER THAN A TYPE NAME: the caller knew the occasion, the template
+ * answered as though there were only one, and every sentence below inherited it.
+ */
 function buildEmptyRoutineEmailHTML(params: {
   products: Product[]; unsubscribeToken: string; appBaseUrl: string;
+  emailType: "welcome" | "monthly";
 }): string {
-  const { products, unsubscribeToken, appBaseUrl } = params;
+  const { products, unsubscribeToken, appBaseUrl, emailType } = params;
+  const isWelcome = emailType === "welcome";
+  const headline = isWelcome ? "Your routine is saved" : "Still watching for stock";
+  const opening = isWelcome
+    ? "Thanks for saving your routine. Each month we'll check it against every retailer " +
+      "we compare and email you the best way to buy it, delivery included. Nothing in it " +
+      "is in stock today, so there are no prices yet. We'll tell you as soon as that changes."
+    : "We could not find your routine in stock at any retailer we compare this month.";
   const unsubscribeUrl = `${appBaseUrl}/unsubscribe.html?token=${unsubscribeToken}`;
   const basketUrl = `${appBaseUrl}/app.html?routine=${products.map((p) => p.id).join(",")}&utm_source=email`;
 
@@ -622,13 +664,13 @@ function buildEmptyRoutineEmailHTML(params: {
     <div style="font-family:Georgia,serif;font-size:18px;font-weight:600;">Find<span style="color:#c9a96e;">My</span>Basket</div>
   </td></tr>
   <tr><td style="padding:28px;">
-    <h1 style="margin:0 0 14px;font-family:Georgia,serif;font-size:22px;color:#1c1a18;">Still watching for stock</h1>
+    <h1 style="margin:0 0 14px;font-family:Georgia,serif;font-size:22px;color:#1c1a18;">${escapeHtml(headline)}</h1>
     <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#4a4845;">
-      We could not find your routine in stock at any of our retailers this month.
+      ${escapeHtml(opening)}
     </p>
     <table cellspacing="0" cellpadding="0" border="0" width="100%">${rows}</table>
     <p style="margin:22px 0 0;font-size:15px;line-height:1.6;color:#4a4845;">
-      We are still watching it. As soon as it is back in stock at any of our retailers,
+      We are still watching it. As soon as it is back in stock at any retailer we compare,
       your next monthly email will show the best price, delivered.
     </p>
     <p style="margin:14px 0 24px;font-size:14px;line-height:1.6;color:#6e6a64;">
@@ -1010,18 +1052,21 @@ Deno.serve(async (req: Request) => {
         // which was worse. The step-down made a pre-existing emptiness visible.
         const isEmpty = !result.best || result.best.breakdown.length === 0;
 
+        const emailType = mode === "welcome" ? "welcome" as const : "monthly" as const;
         const html = isEmpty
           ? buildEmptyRoutineEmailHTML({
-              products, unsubscribeToken: routine.unsubscribe_token, appBaseUrl,
+              products, unsubscribeToken: routine.unsubscribe_token, appBaseUrl, emailType,
             })
           : buildEmailHTML({
               result, unsubscribeToken: routine.unsubscribe_token,
               routineProductIds: productIds, routineProducts: products, appBaseUrl,
-              emailType: mode === "welcome" ? "welcome" : "monthly",
+              emailType,
             });
+        // A first contact is a welcome whatever the stock says. Empty no longer wins
+        // over welcome here either: the subject was the other half of the same defect.
         const subject = isEmpty
-          ? "Your routine: still watching for stock"
-          : buildEmailSubject(result, mode === "welcome" ? "welcome" : "monthly");
+          ? (emailType === "welcome" ? "Your routine is saved ✨" : "Your routine: still watching for stock")
+          : buildEmailSubject(result, emailType);
 
         const resendRes = await fetch(RESEND_API, {
           method: "POST",

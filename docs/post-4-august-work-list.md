@@ -28702,6 +28702,15 @@ other to have happened first.** The only way out is a new pull request from the 
 The first is better where a stack is deliberate. The second is the one to reach for by default,
 because it requires knowing nothing about what else is open.
 
+**APPLIED THE SAME DAY.** The branch carrying this item, `worklist-348-349`, immediately became the
+base of the next one. **It will not be deleted on merge**, and the dependent was stacked onto it
+rather than onto `main` precisely because of what is written above.
+
+> **A finding that changes behaviour within a day of being recorded is rarer than one that gets
+> recorded**, and the difference is worth naming. Most of this list is reasoning banked against a
+> future reader who may or may not arrive. This one had its first reader immediately, and the thing
+> it changed was the very next action taken after writing it.
+
 ##### AND A THIRD STATE THE ITEM 300 DISTINCTION DID NOT COVER
 
 Item 300 separated **stale in its number** (a merge problem, fix the number) from **stale in its
