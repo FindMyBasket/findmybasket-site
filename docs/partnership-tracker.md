@@ -143,3 +143,56 @@ Listed for completeness because The Fragrance Shop is queued behind it.
 **The blank rows are the point.** They are marked unrecorded rather than left out, so the
 gap is visible at onboarding time instead of being discovered then. Fill them from the
 source agreement, not from memory.
+
+---
+
+## MyProtein — `approved-pending-integration`
+
+**Approved 25 August 2026 via AWIN.**
+
+| Field | Value |
+|---|---|
+| Status | Approved, pending integration. **Not parked** — timing is Robbie's call, see below |
+| Network | **AWIN** |
+| Importer | **`import-awin-feed` exists.** This is a retailer configuration, not a network integration |
+| Commission | **Not recorded** — fill from the source agreement, not from memory |
+| Delivery terms | **Not recorded, and must be read from their own site before `active = true`** |
+| Barcode overlap | **Not measured.** Expect near zero — see below |
+| Work-list | item 305 |
+
+### Materially different from the CJ pair
+
+Simply Be and VitaminExpress are the first CJ retailers, so onboarding either one is **a feed
+integration**: new format, new auth, new failure surface, monitors that do not know how to watch it
+(item 266). **MyProtein is a row in `retailer_import_config` and a cron entry.** The machinery
+already exists and already runs eleven daily jobs through it.
+
+### This is the retailer the supplements proposition was waiting on
+
+Measured 25 August 2026: **1,831 live supplements, 34 comparable at two or more in-stock retailers
+— 1.86%. Boots supplies 1,744 of them.** The category is one retailer wearing a category's name,
+and `docs/supplements-brand-comparison-proposition.md` needs **a second range**, not overlapping
+products.
+
+### EXPECT NEAR-ZERO PRODUCT OVERLAP, AND THAT IS NOT A FAILURE
+
+The Amazon harvest already measured MyProtein as the extreme own-brand case: **a barcode per flavour
+per size across a matrix they control, 1 of 99 matching Boots.** The proposition document already
+states the inversion — *"1 of 99 matching is a failure only under product-across-retailers; under
+brand-across-brands, carrying the range direct is the point and the match rate is irrelevant."*
+
+**Written here so that a near-zero overlap measurement at onboarding is read as the expected result
+rather than as a reason to reject the retailer** — which is what happened to the number the first
+time it was measured.
+
+### Before `active = true`
+
+Three steps, all of which exist because a previous onboarding skipped one:
+
+1. **Delivery terms read from MyProtein's own site**, with `delivery_terms_source` set and a written
+   reason if anything is unknown. Item 160: ten of eleven retailers had unverifiable provenance.
+2. **Barcode overlap measured** against the live catalogue — recorded whatever it says.
+3. **The product names read, not only counted.** Item 223 rejected Cohorted on the names after the
+   overlap figure alone would have been ambiguous: *0% overlap says "products we cannot compare
+   today"; the names said "products that cannot be compared in principle".* A count cannot tell a
+   flavour matrix from a subscription box.

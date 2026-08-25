@@ -23669,6 +23669,11 @@ a branch and are cheapest to see before it merges.
 | **VitaminExpress** | **CJ** | approved |
 | The Fragrance Shop | Rakuten | approved, onboarding pending |
 
+> **A FOURTH ARRIVED 25 AUGUST: MyProtein, on AWIN.** It does not belong in the table above without
+> a qualifier, because the qualifier is this item's whole point: **AWIN has an importer and CJ does
+> not.** MyProtein is a retailer configuration; Simply Be and VitaminExpress are a feed integration.
+> **Item 305.**
+
 #### 1. CJ HAS NO IMPORTER, AND THAT IS THE SUBSTANTIAL PART
 
 `supabase/functions/` holds `import-awin-feed`, `import-rakuten-feed` and
@@ -26227,3 +26232,90 @@ one decision, and it reached one of them.
 
 **Eight days of headroom, which is why this goes as a decision rather than a patch.** Item 303's
 gate is a one-line fix under either option, and which line it becomes depends on this.
+
+---
+
+### 305. MyProtein: a retailer configuration, not a network integration
+
+**Raised:** 25 August 2026 · **PIPELINE. Not onboarded, nothing configured, nothing set active.**
+Extends item 266.
+
+| Retailer | Network | Importer exists | State |
+|---|---|---|---|
+| **MyProtein** | **AWIN** | **yes** | **approved 25 Aug** |
+| Simply Be | CJ | **no** | approved |
+| VitaminExpress | CJ | **no** | approved |
+| The Fragrance Shop | Rakuten | yes | approved, onboarding pending |
+
+#### 1. IT ARRIVES ON AWIN, WHICH MAKES IT A DIFFERENT KIND OF WORK FROM CJ
+
+Item 266's central point was that **the first CJ onboarding is a feed integration, not a retailer
+configuration** — new format, new auth scheme, new failure surface, and monitors that do not know
+how to watch it. `import-awin-feed` already exists, already carries the chunked apply, the five
+matching tiers, the multipack guard and the absence-threshold logic, and **already runs eleven daily
+cron jobs through it.**
+
+> **MyProtein is a row in `retailer_import_config` and a cron entry.** The two CJ retailers are the
+> substantial half of item 266 and this is not part of it. **Recorded explicitly so the pipeline is
+> not read as four equivalent units of work.**
+
+#### 2. IT IS THE RETAILER THE SUPPLEMENTS PROPOSITION WAS WAITING ON
+
+Measured today, 25 August 2026:
+
+| | |
+|---|---:|
+| Supplements in `products_active` | **1,831** |
+| **Comparable at 2+ in-stock retailers** | **34 — 1.86%** |
+| Supplied by Boots | **1,744** |
+
+*(Yesterday: 1,826 / 34 / 1,735. A day's catalogue movement, not a disagreement.)*
+
+**The category is one retailer wearing a category's name**, and every question the supplements work
+parked — price per serving, type derivation, the ~54% compositional ceiling — is unanswerable while
+comparison depth is 1.86%. **What the proposition needs is a second RANGE, not overlapping
+products**, which is exactly what an own-brand supplements retailer is.
+
+#### 3. EXPECT NEAR-ZERO PRODUCT OVERLAP, AND RECORD IT AS EXPECTED
+
+The Amazon harvest already measured MyProtein as **the extreme own-brand case: a barcode per flavour
+per size across a matrix they control, 1 of 99 matching Boots.**
+
+`docs/supplements-brand-comparison-proposition.md` already states the inversion:
+
+> *"1 of 99 matching is a failure only under product-across-retailers. Under brand-across-brands,
+> carrying the range direct is the point and the match rate is irrelevant."*
+
+> **THE POINT OF WRITING THIS DOWN NOW IS THE READING, NOT THE NUMBER.** When the feed lands and the
+> overlap measures near zero, that figure will look exactly like a reason to reject the retailer —
+> because it looks exactly like the figure that has correctly rejected others. **Cohorted was
+> rejected at 0% and Skin Cupid probed at 0%; this one is 1 of 99 and should proceed.** The
+> distinguishing fact is the business model, not the percentage, and the percentage is what a future
+> reader sees first.
+
+#### THE BEFORE-ONBOARDING STEPS APPLY, ALL THREE
+
+1. **Delivery terms read from MyProtein's own site** before `active = true`, with
+   `delivery_terms_source` set and a written reason where anything is unknown. **Item 160**: ten of
+   eleven retailers had unverifiable delivery provenance, and **item 249** is what a fabricated
+   default costs.
+2. **Barcode overlap measured**, and recorded whatever it says.
+3. **The product names read, not only counted. Item 223** rejected Cohorted on the names after the
+   overlap figure alone would have been ambiguous: *0% overlap says "products we cannot compare
+   today"; the names said "products that cannot be compared in principle."* **A count cannot tell a
+   flavour matrix from a subscription box**, and MyProtein is the first case where the names should
+   confirm proceeding rather than stopping.
+
+#### TIMING IS ROBBIE'S CALL, AND THE ARGUMENT IS WEAKER HERE THAN FOR CJ
+
+**The attribution argument applies less.** An existing importer on a working network is a smaller
+unknown than a first CJ integration, so the case for holding it behind the refresh is not the same
+case that holds the CJ pair.
+
+**It still adds catalogue to surfaces that are changing.** Six metadata templates shipped yesterday
+across 99,241 product pages and 2,640 hubs, and a new retailer moves products between branches A, B
+and C while those templates are being judged. **That is an attribution cost rather than a risk**, and
+it is the whole of the argument for waiting.
+
+**Recorded as a decision to make, not a recommendation.** Nothing here is urgent and nothing is
+blocked.
