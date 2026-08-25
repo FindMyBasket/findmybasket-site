@@ -26464,16 +26464,90 @@ exactly what item 305 said to record as expected rather than as a failure. **The
 and D — 7,183 rows of range — measured against breadth, which is what the brand-comparison
 proposition asked for.**
 
-#### DELIVERY TERMS REMAIN UNSET
+#### THE ALLOWLIST WARNING IS RECORDED WHERE THE ALLOWLIST IS CONFIGURED
 
-`£4.49, free over £55` is **the figure to confirm at source, not to enter.** Two notes for whoever
-reads it:
+`retailer_import_config.category_path_must_contain` **had no column comment.** It now carries the
+Debenhams and MyProtein cases, the instruction to run `feed-diag` sections 2 and 5 before setting a
+prefix for any new retailer, and the Cohorted shape it cannot help with.
 
-- **£55 would be the second-highest threshold in the fleet**, behind Niche Beauty's £75, against a
-  median of £30 across the ten active retailers that have one.
-- **£4.49 would be the second-highest CHARGE too**, behind Niche Beauty's £9.95 and ahead of
-  Debenhams' £3.99 and Boots' £3.95. **It was described as mid-range and the fleet says otherwise** —
-  a small correction, and the reason to read both numbers at source rather than either.
+> **The item is where the finding is explained; the column is where the mistake gets made.** A
+> beauty-shaped allowlist is not a careless choice — it is the correct choice for nine of eleven
+> live retailers, and the column is the only place a tenth-time configurer will be looking.
+
+#### DELIVERY TERMS REMAIN UNSET, AND THE POSITION IS SECOND-MOST-EXPENSIVE
+
+`£4.49, free over £55` is **the figure to confirm at source, not to enter.**
+
+**"Mid-range charge" was wrong.** Measured against the eleven active retailers:
+
+| | £4.49 free over £55 ranks |
+|---|---|
+| Charge | **2nd of 11**, behind Niche Beauty £9.95, ahead of Debenhams £3.99 and Boots £3.95 |
+| Threshold | **2nd of 10 with one**, behind Niche Beauty £75, against a **£30 median** |
+| Position overall | **2nd most expensive** |
+
+**A second correction, to the correction.** The revised description — *"the highest charge in the
+fleet… the most expensive delivery position of any retailer we carry"* — overstates it. **Niche
+Beauty charges £9.95 free over £75 and is strictly more expensive at every basket size**: below £55
+it is £9.95 against £4.49, between £55 and £75 it is £9.95 against free, and above £75 both are
+free. MyProtein would be second on both axes and second overall.
+
+> **Recorded rather than absorbed, because the item is about not inheriting figures from a
+> message.** Writing an unverified number into a record whose subject is unverified numbers would
+> be the same error one level down. The direction of the original correction stands: **mid-range it
+> is not.**
+
+**And this makes reading both numbers at source more important, not less.** A figure inherited from
+a message, describing the fleet's second-most-expensive terms, is exactly what item 250 exists to
+prevent — and **the fleet's most expensive terms are already the retailer whose provenance is
+`checkout` rather than `site`**, which is the one place we had to go further than a site read to get
+a true number.
 
 **High threshold plus high charge is the shape the bridgeability rule was built for**, and
 MyProtein's basket sizes will sit either side of £55 rather than clearly above or below it.
+
+#### THE BRAND-ABSENT NAMING: NOTHING DOWNSTREAM ASSUMES THE PREFIX
+
+Checked rather than assumed, and the answer is better than expected — **one consumer was already
+built around MyProtein specifically.**
+
+| Consumer | Reads | Brand-absent name |
+|---|---|---|
+| `search_vector` | `name` (A) **and `brand` (B) separately** | fine — brand is its own indexed field |
+| `fmb_build_match_key` | brand + name | fine — **prepends the brand when the name lacks it** |
+| `displayProductTitle` / `stripBrandPrefix` | brand + name | fine — explicitly handles both, with a test |
+| `fmb_strip_leading_brand_repetition` | normalised name | no-op when there is no repetition |
+| **`SPORTS_BRANDS`** | **`brand`, not `name`** | **already built for this** |
+
+The categorisation module's own comment says why:
+
+> *"`\bprotein\b` DOES NOT MATCH "Myprotein" — there is no word boundary inside the brand name — so
+> any name-based sports rule silently misses the largest sports brand in the feed because of its own
+> name. Structural, not a coverage gap, and no tuning fixes it."*
+
+**`"myprotein"` is already in `SPORTS_BRANDS`**, from the Boots-supplied rows. So the retailer whose
+naming inverts the catalogue's convention is the retailer the one name-sensitive rule was already
+rewritten to avoid depending on names for.
+
+**Recorded as a property to expect, not a defect.** ~90% of the catalogue carries its brand as a
+name prefix and MyProtein inverts that across 7,192 rows; the inversion is handled everywhere it
+matters today. **The thing to carry forward is that any NEW name-based heuristic tuned on the 90%
+must be checked against this feed**, because it is now the largest counter-example in the catalogue.
+
+*(One to watch at configuration time, not now: the `MP` apparel line is 1,341 rows under a
+two-character brand. The allowlist excludes Apparel, so it should not arrive at all — worth
+confirming rather than assuming, since two-character brands interact badly with prefix matching.)*
+
+#### THE 90% TRUNCATION FLAG IS ABOUT THE DETECTOR
+
+`feed-diag` flagged **1,600 of 1,774 names — 90%** as "names that LOOK TRUNCATED", under its own
+"rule's known failure mode — review, do not trust" caveat.
+
+> **DO NOT FILE THIS AS FEED QUALITY.** MyProtein's names are dash-delimited by design —
+> `{product} - {size} - {servings} - {flavour}` — and the detector reads a trailing segment as a
+> cut-off. **A 90% hit rate on a 7,192-row feed is a statement about the rule's fit, not about the
+> data.**
+
+**Same shape as a population defined by its own detector**: the number measures the instrument. The
+detector is not wrong to exist — it earns its place on feeds whose names really are cut off — and
+**its output on this feed carries no information about this feed.**
