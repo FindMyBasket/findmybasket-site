@@ -27671,3 +27671,147 @@ own field.
 > greps rendered HTML will fail on both**, and `lib/__tests__/email-copy.test.ts` gets this right by
 > reading source files: the rule is about copy WE write, and the only place that is legible is where
 > we write it.
+
+---
+
+### 329. A number that became right by coincidence
+
+**Raised:** 25 August 2026 · **`work-with-us.html` was never touched and is now correct.**
+
+> ### IT CARRIES A HARDCODED `12` THAT WAS WRONG AT 11 ACTIVE RETAILERS AND BECAME CORRECT WHEN MYPROTEIN WAS ADDED.
+
+```html
+<span class="stat-num">12</span>
+<span class="stat-label">UK retailers currently live</span>
+```
+
+**Nobody edited it. Nobody noticed it.** It was not in the swept set on 3 August, not in the
+`about.html` block's own history, and not in this conversation until a grep for count claims found
+it.
+
+> **A number that became right by coincidence is worse than one that is wrong**, because a wrong
+> number is a defect somebody eventually reports. **This one is now indistinguishable from a
+> maintained figure** — it agrees with the database, it agrees with `about.html`, and nothing about
+> it records that the agreement is an accident. The next reader has no way to tell it apart from
+> the two that were diffed today.
+>
+> **And it will drift again on the next retailer change**, arriving back at "wrong" from a position
+> that currently looks like evidence the surface is maintained.
+
+**The 3 August sweep found the same claim in eleven places under four wordings.** This is a twelfth
+place under a fifth wording — a bare integer in a stat card, which no phrase-based sweep would match.
+
+#### THE GAP UNDERNEATH IT
+
+`lib/__tests__/nav-parity.test.ts` compares **navigation links** between `index.html` and
+`SiteNav.tsx`. It was written because two navs drifted three ways at once and none of the
+divergences was detectable from either side alone.
+
+> **The retailer roster has drifted five times — Superdrug, Gorgeous Shop, Atelier De Glow, Perfume
+> Click, Niche Beauty (missing seven days) — and has no test.** The guard exists for the surface
+> that drifted once and not for the surface that drifted five times.
+
+---
+
+### 330. What a roster test would compare, and the exception that decides whether it works
+
+**Raised:** 25 August 2026 · **Reported. Not built.**
+
+**The comparison is the easy part**, and today's change ran it by hand:
+
+```
+about.html  <li> set  : 12      in DB, missing from about : none
+index strip img alts  : 12      in about, not in DB       : none
+retailers.active      : 12      in DB, missing from strip : none
+                                in strip, not in DB       : none
+```
+
+**Two parsers, one query, set difference in both directions** — the same instrument as the nav
+parity test, which reads un-importable static HTML as text and asserts it agrees.
+
+#### THE EXCEPTIONS DO NOT MAKE IT UNWORKABLE, BUT THEY DECIDE ITS SHAPE
+
+`about.html`'s own comment states the rule the test cannot use:
+
+> *"'Match the table' is still the wrong rule — it was wrong for the fortnight when Branded Beauty
+> was active and unlisted... The right rule is: active = true AND the programme still pays."*
+
+**`retailers` has no column for "the programme still pays".** Branded Beauty was `active = true` and
+deliberately unlisted for a fortnight because its affiliate programme had closed, and **a test
+diffing against `active` alone would have failed every day of that fortnight on a surface that was
+correct.**
+
+> **A test that fails while the page is right gets suppressed, and a suppressed test is worse than
+> no test** — it is the nav guard's own argument inverted.
+
+**So the exceptions are workable only if they are NAMED IN THE TEST rather than inferred**, and that
+is the design decision:
+
+| Approach | Verdict |
+|---|---|
+| Diff against `active` alone | **unworkable** — fails for a fortnight at each programme closure |
+| Diff against `active`, minus a hardcoded exception list in the test | **workable**, and the list is a second hand-maintained thing |
+| **Add a column** — `retailers.listed_publicly`, or a reason — and diff against that | **workable, and it removes the ambiguity from the test into the data** |
+
+**The third is the honest one**, because the fact the test needs — *should this retailer be named on
+the site?* — is a fact about the retailer, and it currently lives only in a comment. **A test that
+needs a fact the schema does not hold is a request for a column, not a request for an exception
+list.**
+
+**Scope it with `work-with-us.html` in it.** A roster test that checks two surfaces while a third
+carries a bare integer would have passed all day today.
+
+---
+
+### 331. The tagline stays deferred, and the next attempt starts from these
+
+**Raised:** 25 August 2026 · **HELD. The reason has changed, which is why it is worth recording.**
+
+**The first deferral reason has expired.** Supplements has its shape: 2,274 products, a second
+retailer, Boots at 76.6% rather than 95.2%. **The category-shape blocker is gone.**
+
+**The hold now rests on two things that are not about supplements at all.**
+
+#### 1. THE REGISTER QUESTION IS UNRESOLVED
+
+"Health and beauty" is how Boots and Superdrug describe themselves, against a premium editorial
+position with the Prestige Edit and Clarins as the founding-brand conversation. **Nothing has moved
+this, and nothing in the supplements work speaks to it.**
+
+#### 2. IT IS A PHRASE PLUS THREE REWRITES
+
+Measured, so the next attempt does not rediscover it:
+
+| Surface | Now | With the longer phrase | |
+|---|---:|---:|---|
+| `index.html` `<title>` | 56 | **67** | **over 60 by 7** |
+| `app/layout.tsx` title | 56 | **67** | **over 60 by 7** |
+| `about.html` description | 152 | **163** | **over 155 by 8** |
+| `index.html` description | 117 | 128 | fits |
+
+**And four lines carry the word twice, where a substitution collides with itself:**
+
+```
+now:    FindMyBasket: Your beauty routine. Optimised. | UK Beauty Price Comparison
+after:  FindMyBasket: Your health and beauty routine. Optimised.
+        | UK Health and Health and Beauty Price Comparison
+```
+
+`og:title`, `og:description`, `twitter:title`, `twitter:description` — **exactly the four lines a
+sweep-and-replace gets wrong**, because "UK Beauty" is already a compound.
+
+> **A tagline that fits a hero line does not fit a meta description at 60 characters.** The decision
+> is not one phrase; it is a phrase and three hand-written replacements, and `about.html`'s `<h1>`
+> reads noticeably heavier at 69 characters.
+
+#### AND THE SWEEP WAS STALE BEFORE THIS CONVERSATION STARTED
+
+On record: **30 occurrences across 23 lines.** Re-run today: **35 across 28**, with the four
+double-occurrence lines matching exactly.
+
+**One of the extra files is `lib/format/social-tags.ts`, created yesterday.**
+
+> **A sweep with a date is a measurement, not a state.** It was accurate when it ran and the
+> codebase moved under it — the same shape as item 284's one-day half-life and the frozen-fixture
+> rule, arriving on a copy surface. **The next attempt should re-sweep rather than work from the
+> recorded 30**, and the difference between 30 and 35 is the argument for doing so.

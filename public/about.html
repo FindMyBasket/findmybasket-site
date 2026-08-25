@@ -262,7 +262,17 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
   <h2>Who we partner with</h2>
 
   <!--
-    RETAILER LIST — 11 names. Last verified 2026-08-19.
+    RETAILER LIST — 12 names. Last verified 2026-08-25.
+
+    MYPROTEIN ADDED 25 AUGUST 2026 (retailer 33), AND THE 12 WAS DIFFED, NOT INCREMENTED.
+    The set below was compared against `select name from retailers where active` — twelve
+    names, twelve rows, same twelve. Incrementing 11 to 12 would have produced the same
+    number by arithmetic and told nobody whether the LIST was right, which is the failure
+    this block already records from 16 August.
+
+    "and supplements" added to the sentence at the same time: MyProtein is the first
+    retailer whose contribution is overwhelmingly supplements (509 of 571), and the
+    category clause had never been updated for it.
 
     ATELIER DE GLOW REMOVED 19 AUGUST, THREE DAYS AFTER ITS FLIP. The previous
     version of this comment predicted this exactly — "when the flip lands, remove
@@ -295,7 +305,7 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
     sweep this block; nothing detects it. See the copy-sweep step in
     docs/superdrug-removal-plan.md.
   -->
-  <p>Currently live across 11 UK retailers covering skincare, makeup, hair and fragrance:</p>
+  <p>Currently live across 12 UK retailers covering skincare, makeup, hair, fragrance and supplements:</p>
 
   <ul>
     <li>Boots</li>
@@ -309,6 +319,7 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
     <li>Gorgeous Shop</li>
     <li>Perfume Click</li>
     <li>Niche Beauty</li>
+    <li>MyProtein</li>
   </ul>
 
   <p>More retailers are being added throughout the year. If you're a brand or retailer interested in partnering, <a href="/work-with-us">get in touch</a>.</p>
