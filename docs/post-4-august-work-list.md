@@ -28196,3 +28196,77 @@ page that names specifics and survives being checked.
 > The replacement written into `about.html` is deliberately not a date: *"more retailers stocking
 > the same products, so more of the catalogue can actually be compared"* — a direction the last
 > three onboardings support, and nothing a calendar can falsify.
+
+---
+
+### 340. Sampling a claims page is not a check
+
+**Raised:** 25 August 2026 · **Four corrections to `work-with-us.html`. A third frequency claim
+found only because the first two were being fixed.**
+
+> ### THE BASE RATE IS THE ARGUMENT.
+>
+> **Two of four bullets wrong on `about.html`. Three of the checkable claims wrong on
+> `work-with-us.html`. Every dated bullet across both pages had either shipped or contradicted the
+> strategy document.**
+>
+> At that rate the question is not whether a given claim is wrong; it is which ones are right. **A
+> page where the majority of testable statements fail cannot be sampled — it has to be read.**
+
+#### THE FOUR
+
+**1. `Supplements category (later in 2026)` — REMOVED.** The same false claim deleted from
+`about.html` this morning, still live on the partner page. **Leaving it because the instruction named
+the native app specifically is item 276's shape: a fix scoped to the reported instance, leaving its
+siblings.**
+
+**2. The analytics dashboard — REMOVED.** *"Analytics dashboard reporting on referral volume and
+conversion"*, in the **present tense**, under *"what you get"*, on the page partners read before
+signing. It exists as `docs/dashboard-build-brief.md`, status *"unblocked"* — not built.
+
+> **Worse than a dated roadmap item: a roadmap says LATER and this said NOW.**
+
+**Not replaced with an equivalent, and that is the honest answer.** AWIN and Rakuten already give
+partners referral and conversion reporting as standard, so a dashboard of ours would duplicate the
+network rather than add to it. It now reads: *"Referral and conversion reporting through your
+existing AWIN or Rakuten dashboard, which we do not duplicate."* **Saying what we do not do is a
+claim that stays true and costs nothing to keep.**
+
+**3. `100k+ products tracked in real time` — CORRECTED, NOT LEFT TO BECOME TRUE.** 99,865 live —
+false by 135, and due to become true on the next import.
+
+> **That is this page's own defect from this morning (item 329), allowed deliberately rather than by
+> accident.** A number that becomes right by coincidence is indistinguishable from a maintained one;
+> knowingly leaving one is worse than the original.
+
+**And a bare integer was the wrong shape.** It drifts by construction — right for a day, then wrong
+in whichever direction the catalogue moves. Replaced with **"Every product from every retailer we
+carry, refreshed daily"**, which stays true as the catalogue moves in either direction and makes a
+stronger claim than a number.
+
+**4. THE FREQUENCY CONTRADICTION — AND THERE WERE THREE, NOT TWO.** The page described one mechanism
+as:
+
+| | |
+|---|---|
+| `100k+ … tracked in **real time**` | stat card |
+| `Automated **weekly** datafeed refresh` | capability list |
+| **`we pull it on an automated **weekly** refresh`** | **found only while fixing the other two** |
+
+**It is daily — ten scheduled imports, one per retailer.** All three now say daily.
+
+> **The third was not in the report because the report sampled.** Two contradicting descriptions
+> looked like the whole defect; a third copy of the wrong one was sitting eight lines away. **The
+> same class as the count and the scope clause — attention landed on the contradiction and the
+> agreement beside it went unread.**
+
+#### WHAT WAS CHECKED AND HELD
+
+- **`13k+ multi-retailer price comparisons`** — 13,209 products stocked by two or more active
+  retailers, in stock. **True.**
+- **`12 UK retailers currently live`** — true, and now guarded by item 336.
+- **K-Beauty brands** — all four named brands present, 2,012 rows.
+
+**Three of six testable claims survived.** Recorded because "we checked and it was wrong" and "we
+checked and it was right" are the same act, and only reporting the first makes the base rate look
+like bad luck rather than a property of unguarded copy.
