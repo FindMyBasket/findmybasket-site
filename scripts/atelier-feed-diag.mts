@@ -998,12 +998,21 @@ if (process.env.URL_COLLAPSE === "1") {
     ? body.filter(r => PREFIX10.some(p => get(r, catField10).startsWith(p)))
     : body;
 
-  // Tier 5 keys on the wrapped URL, which is built from merchant_deep_link.
+  // Tier 5 keys on the WRAPPED url, and buildCreadUrl does `merchantUrl.split("?")[0]`
+  // -- IT STRIPS THE QUERY STRING. That single line is the whole mechanism: a retailer
+  // that carries the variant in a query parameter has every variant collapse to one path.
+  // CORRECTED after a first run keyed on the raw column and reported 1,795 distinct URLs
+  // and zero collapse, against a dry run that reported 1,074 skips. Measuring the feed
+  // column is not measuring what the importer does with it.
   const urlCol = col("merchant_deep_link") >= 0 ? "merchant_deep_link" : "aw_deep_link";
+  const tier5Key = (u: string) => u.split("?")[0];
   const groups = new Map<string, string[][]>();
+  let rawDistinct = new Set<string>();
   for (const r of rows10) {
-    const u = get(r, urlCol);
-    if (!u) continue;
+    const raw = get(r, urlCol);
+    if (!raw) continue;
+    rawDistinct.add(raw);
+    const u = tier5Key(raw);
     const g = groups.get(u) ?? [];
     g.push(r);
     groups.set(u, g);
@@ -1050,7 +1059,8 @@ if (process.env.URL_COLLAPSE === "1") {
 
   console.log("\n=== 10. URL-COLLAPSE ANALYSIS (what Tier 5 would merge) ===");
   console.log("  rows considered (after ADMIT_PREFIX):", rows10.length);
-  console.log("  distinct URLs                       :", groups.size);
+  console.log("  distinct RAW urls                   :", rawDistinct.size);
+  console.log("  distinct after ?-strip (Tier 5 key) :", groups.size);
   console.log("  URLs with 2+ rows                   :", gMulti);
   console.log("  rows in those groups                :", rowsMulti);
   console.log("  ROWS TIER 5 WOULD SKIP              :", wouldSkip);
