@@ -95,6 +95,31 @@ Atelier's *final*, and the difference is what holds the 410.
 
 ---
 
+### 7 — PROPOSED, NOT YET A STATE: removed from the public roster
+
+**Scoped 25 August 2026, work-list item 332. NOT built, and deliberately numbered so the gap is
+visible in the table below as a blank column rather than as an absence.**
+
+| # | State | Prevents |
+|---|---|---|
+| **7** | **`retailers.unlisted_reason` set** | **the site naming a retailer it cannot send anyone to.** Today this is step 5 of `superdrug-removal-plan.md` — a prose checklist in a different document — which is why Atelier De Glow's logo sat on the homepage for three days after its flip (item 221). |
+
+**THE SIX ABOVE DO NOT IMPLY IT.** This document contains no reference to copy, listing, the homepage
+strip or `about.html`; all six states are about data and machinery.
+
+**AND IT IS THE ONLY ORTHOGONAL ONE.** Branded Beauty was `active = true` and deliberately unlisted
+for a fortnight because its affiliate programme had closed. **States 1–6 are one decision expressed
+six ways — turn the retailer off. State 7 is a different decision that a departure also requires**,
+and no combination of the other six describes a retailer that is live and correctly unnamed.
+
+**A REASON COLUMN RATHER THAN A BOOLEAN.** `unlisted_reason text NULL`: NULL means listed, non-NULL
+means deliberately unlisted and the text says why. Branded Beauty's fortnight is only comprehensible
+with "the programme closed" attached, and a boolean loses it. Same shape as
+`retailers_unknown_delivery_needs_reason`, which already enforces that you may not assert a state
+without writing down why.
+
+---
+
 **Not a state, but a consequence to expect:** the retailer's price rows **go stale and should**.
 Staleness after a departure is the correct outcome, not a defect — but it makes reactivation a
 re-import plus a re-match rather than one flag, so a departure that might be reversed should be

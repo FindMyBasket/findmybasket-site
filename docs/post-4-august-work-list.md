@@ -27815,3 +27815,132 @@ double-occurrence lines matching exactly.
 > codebase moved under it — the same shape as item 284's one-day half-life and the frozen-fixture
 > rule, arriving on a copy surface. **The next attempt should re-sweep rather than work from the
 > recorded 30**, and the difference between 30 and 35 is the argument for doing so.
+
+---
+
+### 332. `listed_publicly` is a seventh departure state, and the six do not imply it
+
+**Raised:** 25 August 2026 · **SCOPED, NOT BUILT. The next piece of work.**
+
+#### THE SIX STATES DO NOT MENTION COPY AT ALL
+
+`docs/departure-completeness.md` defines six states — `active`, `enabled`, scheduler, gone-set,
+redirects, delivery source. **Grepped: the document contains no reference to copy, listing, the
+homepage strip or `about.html`.** All six are about data and machinery.
+
+**The copy sweep exists — as step 5 of `docs/superdrug-removal-plan.md`, a different document and a
+different list.** That is why three departures satisfied all six states and still left Atelier De
+Glow's logo on the homepage for three days (item 221) and 406 brand hubs 404ing (item 291).
+
+> **A definition that is checkable and a checklist that is not are two different artefacts, and the
+> thing that drifts lives in the second one.** The six states became a scorecard a check could run;
+> the copy sweep stayed prose.
+
+#### SO YES — BUT IT IS THE ONLY ONE THAT IS ORTHOGONAL
+
+**Branded Beauty is the case, and it proves the column cannot be derived from the other six.**
+
+```
+active  = true          ← state 1 NOT satisfied
+listed  = deliberately NOT, for a fortnight
+because = its UK affiliate programme had closed and listing it would
+          name a retailer we cannot send anyone to
+```
+
+| | States 1–6 | **State 7** |
+|---|---|---|
+| What they mean | *turn the retailer off* | ***stop naming it*** |
+| Can fire alone | no — a departure sets them together | **yes — Branded Beauty, for a fortnight** |
+| Derivable from `active` | they define it | **no** |
+
+> **States 1–6 are one decision expressed six ways. State 7 is a different decision that a departure
+> also happens to require.** A retailer can be fully live and correctly unlisted; no combination of
+> the other six describes that, which is why it is a column rather than a query.
+
+**This is a change to the definition, not a column bolted beside it.** The scorecard goes to seven,
+and state 7 is the row that can legitimately be set while the other six are unset.
+
+#### WHAT THE COLUMN SHOULD BE
+
+**`retailers.unlisted_reason text NULL`** — not a boolean.
+
+| Option | Verdict |
+|---|---|
+| `listed_publicly boolean` | **records the decision and loses the reason.** Branded Beauty's fortnight is only comprehensible with "the programme closed" attached |
+| boolean **+** reason column | two columns doing one column's work, and they can disagree |
+| **`unlisted_reason text NULL`** | **NULL = listed. Non-NULL = deliberately unlisted, and the text says why. Unlisting without a reason is impossible by construction** |
+
+**This is the house pattern, not a new one.** `delivery_terms_source` + `delivery_terms_note` with
+`retailers_unknown_delivery_needs_reason` already enforces "you may not assert this state without
+writing down why", and item 311 recorded that CHECK as *"the constraint enforcing the doctrine rather
+than the doctrine relying on somebody remembering it"*. **A `length(btrim(...)) >= 20` guard on the
+reason carries that across.**
+
+**What sets it:** a departure, as state 7; a programme closure with the retailer still live, as
+Branded Beauty; and nothing at onboarding — the default is listed.
+
+---
+
+### 333. The roster test needs the database, which makes it a workflow and not a unit test
+
+**Raised:** 25 August 2026 · **SCOPED. Depends on item 332.**
+
+**Three surfaces, and a test covering two of them would have passed all day today:**
+
+| Surface | Shape | Parsed as |
+|---|---|---|
+| `public/index.html` | 12 `<img>` in `.hero-trust-logos` | the `alt` set |
+| `public/about.html` | 12 `<li>` **+ the prose count** | the `<li>` set, and the integer |
+| **`public/work-with-us.html`** | **a bare `<span class="stat-num">12</span>`** | the integer above `UK retailers currently live` |
+
+**The comparison, run by hand today:** set difference in both directions against
+`active = true AND unlisted_reason IS NULL`, plus an assertion that each surface's own count matches
+its own list. Both checks are needed and neither substitutes for the other.
+
+#### IT CANNOT BE A PURE TEST, AND THE REASON IS THE 16 AUGUST FAILURE
+
+`nav-parity.test.ts` compares two static files **to each other** and needs no credentials. A roster
+test built the same way would catch the count-versus-list disagreement — **and would have passed on
+16 August**, when `about.html` read "11 UK retailers" over a list of 11 and was wrong because it
+omitted Niche Beauty.
+
+> **Three surfaces that agree with each other and are all stale is the actual failure mode.** The
+> comparison that matters is against `retailers`, so the check must reach the database — which makes
+> it a workflow with secrets, like `gone-ids-drift.yml`, not `npm test`.
+
+**And that inherits a known hazard.** `gone-ids-drift.yml` reported success twice while failing to
+load its own script (item 255). **A roster check must fail loudly when it cannot read the table**,
+not report agreement — the preflight pattern, exit 1 for `cannot_run`.
+
+#### THE ORDER IS THE COLUMN FIRST
+
+Without `unlisted_reason` the test diffs against `active` alone, **fails for a fortnight at each
+programme closure on a page that is correct, and gets suppressed.** Item 330 recorded that; this is
+the same argument as its scheduling constraint. **Column, then test.**
+
+---
+
+### 334. A sentence describing the catalogue ages with the catalogue
+
+**Raised:** 25 August 2026 · **Corrected in passing, recorded because nothing would have caught it.**
+
+`about.html` read:
+
+> *"Currently live across 11 UK retailers covering skincare, makeup, hair and fragrance"*
+
+**The category clause had never been touched.** Supplements has been a live top-level category with
+its own route, its own nav entry and 1,831 products, and the sentence describing what the site
+covers did not mention it. **MyProtein made it visible only because it is the first retailer whose
+contribution is overwhelmingly supplements — 509 of 571.**
+
+> **The count on that line has drifted five times and has a history block above it. The category
+> clause in the same sentence has never been checked once**, because every discussion of that
+> sentence has been about the number.
+>
+> **A claim about scope ages exactly like a claim about count, and only one of them looks like a
+> number.** The roster test in item 333 would not catch this either: it diffs names and integers,
+> and "skincare, makeup, hair and fragrance" is neither.
+
+**Now reads "skincare, makeup, hair, fragrance and supplements".** Recorded rather than quietly
+fixed, because the class — prose that enumerates something the database also enumerates — is wider
+than this sentence and has no guard anywhere.
