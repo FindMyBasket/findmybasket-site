@@ -81,7 +81,6 @@ interface BasketOption {
 interface OptimisationResult {
   options: BasketOption[];
   best: BasketOption | null;
-  worstCaseTotal: number;
   saving: number;
   savingPercent: number;
 }
@@ -131,7 +130,7 @@ function num(v: number | string | null | undefined): number {
 // =============================================
 function optimiseBasket(routine: Product[], prices: PriceRow[]): OptimisationResult {
   if (routine.length === 0 || !prices || prices.length === 0) {
-    return { options: [], best: null, worstCaseTotal: 0, saving: 0, savingPercent: 0 };
+    return { options: [], best: null, saving: 0, savingPercent: 0 };
   }
 
   const priceMap: Record<number, Record<number, {
@@ -167,52 +166,6 @@ function optimiseBasket(routine: Product[], prices: PriceRow[]): OptimisationRes
   }
 
   const allRetailerIds = Array.from(new Set(prices.map((p) => p.retailer_id)));
-
-  // THE SAVINGS BASELINE: what you would pay buying each item at its worst price.
-  //
-  // Rewritten 3 August 2026 (work-list item 29). It previously read:
-  //
-  //     const worstDelivery = uniqueRetailerCount * 3.95;
-  //
-  // which was wrong twice. £3.95 is a fabricated constant — only two of twelve
-  // retailers charge exactly that, the real spread is £0.00 to £3.99, and Debenhams
-  // charges on every basket while the rest go free above a threshold. And
-  // uniqueRetailerCount counted every retailer stocking ANY item in the routine,
-  // not the number of orders you would actually place.
-  //
-  // A saving measured against an invented baseline is an invented saving. That is the
-  // r12 problem in a different place: a headline figure inflated by a number nobody
-  // measured. Expect this to REDUCE the reported saving. That is the point.
-  //
-  // The baseline now: assign each product to its most expensive stocking retailer,
-  // group those into real legs, and charge each leg that retailer's real delivery via
-  // the shared rule. Same rule the recommendation uses, so the two are comparable.
-  const worstLegs = new Map<number, number>();
-  let worstCaseProducts = 0;
-  for (const product of routine) {
-    const productPrices = priceMap[product.id];
-    if (!productPrices) continue;
-    let worstRid = -1;
-    let worstPrice = -Infinity;
-    for (const [ridStr, pp] of Object.entries(productPrices)) {
-      if (pp.price > worstPrice) { worstPrice = pp.price; worstRid = Number(ridStr); }
-    }
-    if (worstRid < 0) continue;
-    worstCaseProducts += worstPrice;
-    worstLegs.set(worstRid, (worstLegs.get(worstRid) ?? 0) + worstPrice);
-  }
-
-  // If any leg's delivery terms are unknown the baseline is unknown, so no saving is
-  // claimed rather than a guessed one. Same contract as the recommendation path.
-  let worstDelivery = 0;
-  let worstDeliveryKnown = true;
-  for (const [rid, legTotal] of worstLegs) {
-    const outcome = deliveryFor(retailerInfoMap[rid] ?? {}, legTotal);
-    if (!outcome.known) { worstDeliveryKnown = false; break; }
-    worstDelivery += outcome.cost;
-  }
-
-  const worstCaseTotal = worstDeliveryKnown ? worstCaseProducts + worstDelivery : 0;
 
   // Single-retailer options
   const singleOptions: BasketOption[] = [];
@@ -342,20 +295,24 @@ function optimiseBasket(routine: Product[], prices: PriceRow[]): OptimisationRes
       breakdown: fallbackBreakdown, type: "fallback",
     };
     // The fallback is a SINGLE synthesised option, so there is no next best to
-    // anchor against and no saving can honestly be claimed. Was
-    // `worstCaseTotal - fallbackTotal`, the same per-product-maximum baseline as the
-    // main path. Zero here is the truthful answer, not a degraded one. Item 245.
+    // anchor against and no saving can honestly be claimed. It once anchored against a
+    // per-product-maximum basket, the same invented baseline the main path used; item
+    // 245 removed both. Zero here is the truthful answer, not a degraded one.
     return {
-      options: [fallback], best: fallback, worstCaseTotal,
+      options: [fallback], best: fallback,
       saving: 0,
       savingPercent: 0,
     };
   }
 
   const best = allOptions[0];
-  // NEXT-BEST ANCHOR. Was `worstCaseTotal - best.total`, where worstCaseTotal
-  // assigned EACH PRODUCT INDEPENDENTLY to its most expensive stocking retailer and
-  // then charged delivery per resulting leg.
+  // NEXT-BEST ANCHOR. The baseline it replaced assigned EACH PRODUCT INDEPENDENTLY to
+  // its most expensive stocking retailer and then charged delivery per resulting leg.
+  // That basket is no longer computed: it was still being calculated here long after
+  // the claim it fed was withdrawn, which item 347 recorded as dead code that looks
+  // like a live measurement. Deleted 25 August 2026. Nothing below names it, and this
+  // comment deliberately does not either -- a comment naming a removed variable
+  // recreates the same trap in prose.
   //
   // THIS WAS THE WORST OF THE THREE INSTANCES. The builder's anchor was at least a
   // basket someone could assemble -- one shop, one delivery. This one is not: it is
@@ -374,7 +331,7 @@ function optimiseBasket(routine: Product[], prices: PriceRow[]): OptimisationRes
   const nextBest = allOptions.length >= 2 ? allOptions[1].total : null;
   const saving = nextBest === null ? 0 : Math.max(0, nextBest - best.total);
   const savingPercent = nextBest && nextBest > 0 ? Math.round((saving / nextBest) * 100) : 0;
-  return { options: allOptions, best, worstCaseTotal, saving, savingPercent };
+  return { options: allOptions, best, saving, savingPercent };
 }
 
 // =============================================
@@ -606,7 +563,7 @@ ${unpricedHtml}
 <a href="mailto:hello@findmybasket.co.uk" style="color: #8a8680; text-decoration: underline;">Contact</a>
 </p></td></tr>
 </table>
-<p style="margin: 16px 0 0; font-size: 11px; color: #b0aca4;">© 2026 FindMyBasket. UK skincare price comparison.</p>
+<p style="margin: 16px 0 0; font-size: 11px; color: #b0aca4;">© 2026 FindMyBasket. UK beauty price comparison.</p>
 </td></tr></table></body></html>`;
 }
 
@@ -743,7 +700,7 @@ function buildAlertsEmailHTML(params: {
 Find<span style="color: #c9a96e;">My</span>Basket</div></td></tr>
 <tr><td style="padding: 32px 32px 8px;">
 <h1 style="margin: 0 0 12px; font-family: Georgia, serif; font-size: 28px; font-weight: 600; color: #1c1a18; line-height: 1.2;">${escapeHtml(headline)}</h1>
-<p style="margin: 0; font-size: 15px; line-height: 1.6; color: #4a4845;">We track the best price across UK retailers for the products in your routine. Here${items.length === 1 ? "'s the one that" : " are the ones that"} just got cheaper.</p>
+<p style="margin: 0; font-size: 15px; line-height: 1.6; color: #4a4845;">We track the best price at any retailer we compare for the products in your routine. Here${items.length === 1 ? "'s the one that" : " are the ones that"} just got cheaper.</p>
 </td></tr>
 ${totalSaving > 0 ? `
 <tr><td style="padding: 24px 32px 0;">
@@ -768,7 +725,7 @@ ${rowsHtml}
 <a href="mailto:hello@findmybasket.co.uk" style="color: #8a8680; text-decoration: underline;">Contact</a>
 </p></td></tr>
 </table>
-<p style="margin: 16px 0 0; font-size: 11px; color: #b0aca4;">© 2026 FindMyBasket. UK skincare price comparison.</p>
+<p style="margin: 16px 0 0; font-size: 11px; color: #b0aca4;">© 2026 FindMyBasket. UK beauty price comparison.</p>
 </td></tr></table></body></html>`;
 }
 

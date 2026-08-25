@@ -28783,3 +28783,83 @@ was my report calling it a deviation**, and this item is where that is retracted
 
 **Open, unchanged:** MyProtein is the only recent logo carrying no `.webp` alongside its `.png`.
 That is a real gap and a separate one, blocked on an encoder rather than on a decision.
+
+---
+
+### 350. A defect awaiting an instance, and the condition that would create one
+
+**Raised:** 25 August 2026 · **Reported, deliberately not fixed. Nothing live is affected and the condition that would change that is nameable.**
+
+The price-drop email's panel reads **"Total drop since you saved them"** over
+`Σ max(0, baseline_price − (current_price ?? alerted_price))`.
+
+**The measurement is sound.** `baseline_price` is `fmb_family_best_price(product_id).best_price`
+captured when the user tracked the product; `fmb_generate_alerts` compares against **the same
+function**. Both sides are the same instrument, which is what the worst-case baseline never was.
+
+**And it is a different claim, not a stale one.** It is a time-series delta on one product since
+tracking, not a comparison across retailers. Correct for a price-drop email, and properly unrelated
+to the next-best anchor and to the per-product-maximum basket deleted today.
+
+**Where the copy and the schema part company:**
+
+| column | records |
+|---|---|
+| `tracked_products.added_at` | when the user saved it |
+| `tracked_products.baseline_captured_at` | when a price was first available to record |
+
+They are equal on **all 4 tracked rows today**, max gap 0 seconds. They are not equal by
+construction. `fmb_track_product` writes `baseline_captured_at` as `CASE WHEN v_bp IS NOT NULL THEN
+now() END`, so a product with no price at save time gets **NULL**, and the nightly
+`fmb_fill_missing_baselines` later sets both the price and `baseline_captured_at = now()`.
+
+> **THE CONDITION, STATED SO IT CAN BE RECOGNISED RATHER THAN REDISCOVERED:**
+>
+> **This copy becomes wrong the first time `fmb_fill_missing_baselines` touches a row that later
+> drops in price.** At that moment "since you saved them" measures from the backfill, not from the
+> save, and the gap is however long the product was unpriceable.
+>
+> **The schema distinguishes two moments and the copy does not.** That is not an oversight in the
+> schema; the two columns exist precisely because the moments differ. The copy collapsed them.
+
+**A defect awaiting an instance is not the same as a defect**, and recording it as one would be
+overstating it. It is also not nothing: the difference between the two is a single nightly run over
+a row that has never had a price. **`routine_alerts` currently holds zero rows, delivered or
+pending** — this email has never been sent to anyone — so the whole path is unshipped copy, which
+lowers the urgency and not the accuracy.
+
+---
+
+### 351. worstCaseTotal's sibling in the alerts path
+
+**Raised:** 25 August 2026 · **Named while the first one was being deleted, rather than found separately in three months.**
+
+`pct_below_baseline` is computed by `fmb_generate_alerts`, stored on every `routine_alerts` row,
+declared in the `AlertItem` interface at the top of `send-routine-email/index.ts`, and **read zero
+times**.
+
+The email recomputes the figure instead:
+
+```ts
+const saving = Math.max(0, was - now);
+const pct = was > 0 ? Math.round((saving / was) * 100) : 0;
+```
+
+**Recomputing is the right choice**, and this is the part that makes it a sibling rather than a
+duplicate. The stored value was computed from `alerted_price` at the moment the alert fired. The
+email renders `current_price ?? alerted_price`, so if the price has moved since, **the email shows
+the drop as it stands rather than as it stood** — which is what a reader opening the email is
+entitled to. The two figures can legitimately disagree, and the displayed one is the honest one.
+
+> **SAME CLASS AS ITEM 347: A FIGURE CARRIED FORWARD THAT NOTHING READS.** Where `worstCaseTotal`
+> was computed and returned in memory, this one is **computed, written to a table, and carried
+> through an interface** — three places asserting it matters, and no consumer anywhere.
+>
+> **The trap is identical.** The next person needing a percentage finds `pct_below_baseline`
+> already stored, already named, already plausible, and uses it — reintroducing the stale-at-send
+> figure the render deliberately avoids. Nothing marks it as superseded, and being *in the
+> database* makes it look more authoritative than the in-memory field just deleted, not less.
+
+**Not deleted here.** Unlike `worstCaseTotal` it is a stored column with a migration behind it, and
+removing it is a schema change rather than an edit. **`routine_alerts` holds zero rows**, so the
+cost of removing it will never be lower than it is now. Recorded so the decision is a decision.
