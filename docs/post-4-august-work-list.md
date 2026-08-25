@@ -28023,3 +28023,101 @@ files — 12, 12/12, 12.
 **Why `active AND unlisted_reason IS NULL` and not `active`:** Branded Beauty was active and
 correctly unlisted for a fortnight, and a check failing while the page is right gets suppressed.
 **That is why the column had to come first.**
+
+---
+
+### 337. Prose that enumerates what the database enumerates
+
+**Raised:** 25 August 2026 · **Two corrections applied to `about.html`. One contradiction flagged,
+not fixed.**
+
+> ### ATTENTION TO ONE PART OF A LINE IS WHAT PROTECTS THE REST OF IT FROM BEING SEEN.
+
+**Two observations, and they are the durable part:**
+
+**1. The count acquired a twenty-line history block; the scope clause beside it was never read.**
+`about.html`'s retailer count has drifted five times and carries a comment recording each one, the
+16 August failure, and the rule "verify the list, never the count". **In the same sentence,
+"covering skincare, makeup, hair and fragrance" had never been checked** — supplements had been a
+live top-level category with its own route, nav entry and 1,831 products, and the sentence
+describing the site's scope did not mention it. **Every discussion of that line had been about the
+number.**
+
+**2. `:225` has been wrong longest because nobody has ever had a reason to discuss it.**
+*"works across skincare, makeup, hair and K-Beauty"* — **four sentences from the clause fixed today,
+in the same file.** It omits three real categories and names one that has never been a
+`top_category`. **K-Beauty is a brand cluster; a brand claim in a category list is a different
+assertion wearing a list's shape**, which is why it reads as fine and is not.
+
+> **The count was wrong repeatedly and got a guard. The scope clause was wrong once, permanently,
+> and got nothing.** Scrutiny is drawn to whatever has moved, and a claim that has never moved is
+> a claim nobody has ever checked.
+
+#### THE POPULATION
+
+Eight enumerations across two files. Six carried all six live categories; two did not.
+
+| | |
+|---|---|
+| `index.html` ×5 (og, twitter, JSON-LD, ×2 body) | all six ✓ |
+| `about.html:308` | fixed earlier today |
+| **`about.html:225`** | **K-Beauty, three categories missing** — fixed |
+| **`about.html:330`** | roadmap, three of six — rewritten |
+
+**Neither the roster test nor any other check reaches this class.** Item 336 diffs names and
+integers; *"skincare, makeup, hair and K-Beauty"* is neither.
+
+#### THE ROADMAP BULLET WAS FALSE, NOT STALE
+
+*"**Supplements:** the same basket optimisation approach for wellness products"*, under **"Coming
+later"** — for a category with **2,274 products, its own route, its own nav entry and a second
+retailer as of today.**
+
+**Deleted.** And the focus sentence with it: *"broadening retailer coverage in skincare, makeup and
+hair"* is contradicted by the last three onboardings — **Niche Beauty (luxury/fragrance), Perfume
+Click (fragrance), MyProtein (supplements). Not one was skincare, makeup or hair.**
+
+Now reads: *"broadening retailer coverage across every category, and deepening comparison where a
+product is stocked in more than one place."* **The second clause is the honest constraint** — 86.8%
+of product pages have one stockist or none, and depth is what the pipeline is actually buying.
+
+#### AND THE OTHER BULLET IS A CONTRADICTION, FLAGGED NOT FIXED
+
+Reading the rest of the list rather than assuming it, as instructed, found the second bullet is
+worse than stale:
+
+| Source | Says |
+|---|---|
+| `about.html` roadmap | **"Native app with barcode scanner"** |
+| `work-with-us.html:339` | **"Native app with barcode scanner (2027)"** |
+| **`docs/strategy.md:561`** | **"It is browser based rather than an app."** |
+
+> **Two public pages advertise a native app and the strategy document says explicitly it is not
+> one.** No `capacitor`, `react-native`, `expo` or scanner dependency exists in `package.json`.
+>
+> **That is a contradiction between a public claim and the internal position, not a wording
+> problem**, and which of the two is current is Robbie's to say. **Not touched.**
+
+**One bullet advertising something shipped was the reason to read the rest.** The rest contained a
+different defect entirely, which is the argument for reading lists rather than sampling them.
+
+---
+
+### 338. Three reasons that are three different facts
+
+**Raised:** 25 August 2026 · **A line about the backfill in item 335.**
+
+The three departed retailers were given `unlisted_reason` values written separately:
+
+| | The fact |
+|---|---|
+| Superdrug | return **unknown** — a holding page, no programme on any network, 19 Aug |
+| Branded Beauty | unlisted **three days before** the flip, while `active = true` |
+| Atelier De Glow | **not expected to return**, recorded explicitly |
+
+> **A template would have made these one fact — "departed, removed from the roster" — and they
+> decide different things downstream.** Superdrug's uncertainty is what holds the brand-hub 410
+> (item 291). Atelier's certainty is what made the six-state pass safe to run. Branded Beauty's
+> ordering is the entire justification for the column existing.
+>
+> **A reason column filled by template is a boolean with extra characters.**
