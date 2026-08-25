@@ -2514,7 +2514,23 @@ serve(async (req) => {
     // in the table. Those need the backfill. A run that reports zero here on an existing
     // retailer is reporting "no new products", not "the map did nothing".
     let finalSubcategory: string | null = cat.subcategory;
-    if (subcategoryMapEnabled && subcategorySourceIdx !== -1) {
+    // THE MAP KEYS ON THE FEED'S TAXONOMY AND THE SUBCATEGORY BELONGS TO OURS, AND NOTHING
+    // MAKES THEM AGREE. Gated on the row's OWN final top_category so a mapped value can never
+    // land on a product our categoriser filed somewhere else.
+    //
+    // MyProtein, 25 Aug 2026: 14 of 609 imported products carried a subcategory from another
+    // category's vocabulary -- `skincare/sports` on Freja Bone Broth and KIKI Health Liquid
+    // Chlorophyll, `bath_body/sports` on Origin Cream of Rice -- because merchant_category
+    // "Sports Nutrition" fired the map on rows the categoriser had sent to skincare.
+    //
+    // THE CONFIG GUARD COVERED ONLY ONE DIRECTION. Every "Health and Beauty" value was mapped
+    // to null precisely so a shower gel could not acquire a sports subcategory. The collision
+    // running the other way -- a sports-nutrition value landing on a skincare row -- was not
+    // considered, and `skincare/sports` is `bath_body/supplements` arriving from the other
+    // side. A per-retailer config cannot fix that; only the application site can, because only
+    // it knows both halves. Item 320.
+    const mappedTopCategories = new Set(["supplements"]);
+    if (subcategoryMapEnabled && subcategorySourceIdx !== -1 && mappedTopCategories.has(finalTopCategory)) {
       const sourceValue = (fields[subcategorySourceIdx] || "").trim();
       if (!sourceValue) {
         countSubcategoryMapSourceEmpty++;
