@@ -1,0 +1,39 @@
+name: roster parity (read-only)
+
+# THE RETAILER ROSTER IS NAMED BY HAND IN THREE PLACES AND HAS DRIFTED FIVE TIMES.
+# Superdrug, Gorgeous Shop, Atelier De Glow, Perfume Click, and Niche Beauty — which was live for
+# seven days before about.html mentioned it. lib/__tests__/nav-parity.test.ts exists because two
+# NAVS drifted once; the roster, which drifted five times, had no check until this one.
+#
+# WHY A WORKFLOW AND NOT A UNIT TEST. A file-to-file comparison needs no credentials and would have
+# PASSED ON 16 AUGUST 2026, when about.html read "11 UK retailers" over a list of 11 and was wrong.
+# Three surfaces agreeing with each other and all stale is the actual failure mode, so the
+# comparison has to be against `retailers` — which needs a key, which needs to run where the key is.
+#
+# WRITES NOTHING. Reads three files and one table, prints, exits.
+#
+# EXIT CONTRACT (item 194): 0 for ok or findings, 1 ONLY for cannot_run. A run that could not read
+# a file, could not parse a surface, or could not reach the table exits 1 — it does NOT report
+# agreement. gone-ids-drift.yml reported "No drift" twice while failing to load its own script
+# (item 255); the preflight in roster-parity.mts is that lesson written down as assertions.
+
+"on":
+  schedule:
+    - cron: "20 8 * * 1"      # Mondays, after the weekend imports
+  workflow_dispatch:
+
+jobs:
+  roster:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --omit=dev --no-audit --no-fund || npm i --no-audit --no-fund
+      - name: Compare the three surfaces against retailers
+        env:
+          SUPABASE_URL: https://crtrjoescntlcjiwdtrt.supabase.co
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: npx tsx scripts/roster-parity.mts

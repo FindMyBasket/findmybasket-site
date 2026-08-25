@@ -27944,3 +27944,82 @@ contribution is overwhelmingly supplements — 509 of 571.**
 **Now reads "skincare, makeup, hair, fragrance and supplements".** Recorded rather than quietly
 fixed, because the class — prose that enumerates something the database also enumerates — is wider
 than this sentence and has no guard anywhere.
+
+---
+
+### 335. State 7 built, and a column created with nothing in it
+
+**Raised:** 25 August 2026 · **`retailers.unlisted_reason` live. Three departures backfilled.**
+
+`text NULL` with `CHECK (unlisted_reason IS NULL OR length(btrim(...)) >= 20)`. **NULL is listed;
+non-NULL is deliberately unlisted with the reason attached, and unlisting without one is impossible
+by construction** — the shape `retailers_unknown_delivery_needs_reason` already established.
+
+#### THE THREE REASONS ARE THREE DIFFERENT FACTS
+
+| | |
+|---|---|
+| **Superdrug** | programme closed, last import 19 Jul. **Return unknown** — a holding page with no programme on any network on 19 Aug, which is why the brand-hub 410 is held |
+| **Branded Beauty** | programme closed 2 Aug, **unlisted from 30 July, three days BEFORE the flip.** The case the column exists for |
+| **Atelier De Glow** | deactivated 16 Aug, **not expected to return**, recorded explicitly — which is what made the six-state pass safe |
+
+**A template would have made these one fact.** Superdrug's return is unknown and Atelier's is
+settled, and those decide different things downstream.
+
+#### THE COLUMN WAS CREATED WITH NO ROW DEMONSTRATING WHAT IT IS FOR
+
+All 12 active retailers are listed; Branded Beauty had already flipped to `active = false`. **The
+motivating case cannot be represented in the data**, so the column comment carries it.
+
+> **A column whose justification lives entirely in its comment is one refactor away from looking
+> arbitrary.** Stated so the next reader finds the Branded Beauty fortnight rather than an empty
+> column and a guess.
+
+#### AND THE AMAZON BOUNDARY IS IN THE COMMENT, BECAUSE IT IS WHAT THE NEXT READER WILL REACH FOR
+
+**Amazon is `active = false` AND named on the site** — the Associates disclosure on `about.html`,
+the `AmazonLink` component on product pages. **`active = false` and `named on the site` are
+different facts and Amazon is both.** The column governs the roster — who we compare — not every
+mention. Without that written down, the first person to meet Amazon will either set a reason it does
+not need or conclude the column is broken.
+
+---
+
+### 336. Roster parity: three surfaces, against the table, failing loudly
+
+**Raised:** 25 August 2026 · **Built. `scripts/roster-parity.mts` + `.github/workflows/roster-parity.yml`.**
+
+| Surface | Parsed | Today |
+|---|---|---:|
+| `public/index.html` | logo `alt` set | 12 |
+| `public/about.html` | `<li>` set **and the prose count** | 12 / 12 |
+| **`public/work-with-us.html`** | **the bare `<span class="stat-num">`** | **12** |
+| `retailers` | `active AND unlisted_reason IS NULL` | **12** |
+
+**The count is checked against the TABLE, never against its own list** — a count matching its own
+list says nothing, which is exactly what 16 August proved.
+
+#### IT INHERITS gone-ids-drift'S LESSON AS ASSERTIONS, NOT AS A COMMENT
+
+`gone-ids-drift.yml` reported *"No drift"* **twice** while failing to load its own script, because a
+summary renders happily from empty variables (item 255). Every input is asserted before any
+comparison:
+
+```
+missing file / missing credential      -> cannot_run, exit 1
+strip parsed 0 alts                    -> cannot_run, exit 1
+about parsed 0 <li>, or no count       -> cannot_run, exit 1
+work-with-us stat unparseable          -> cannot_run, exit 1
+retailers unreadable or empty          -> cannot_run, exit 1
+```
+
+> **AN EMPTY PARSE IS NOT AGREEMENT**, and the whole preflight exists to stop it being reported as
+> such. Item 194's contract: **0 for ok or findings, 1 only for cannot_run.**
+
+**Both cannot_run paths tested before commit**: no credentials exits 1 naming both; unreachable
+table exits cannot_run rather than printing parity. The three parsers were verified against the live
+files — 12, 12/12, 12.
+
+**Why `active AND unlisted_reason IS NULL` and not `active`:** Branded Beauty was active and
+correctly unlisted for a fortnight, and a check failing while the page is right gets suppressed.
+**That is why the column had to come first.**
