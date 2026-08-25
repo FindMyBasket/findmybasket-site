@@ -975,3 +975,96 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
     }
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 10: URL-COLLAPSE ANALYSIS  (set URL_COLLAPSE=1)
+//
+// WHY THIS EXISTS. The importer's Tier 5 skips a feed row when its wrapped URL has
+// already produced a product this run ("shade variant"), on the reasoning that Boots
+// sends one row per shade against a single product page with a shade dropdown. That
+// reasoning is retailer-shaped, and a retailer whose product page also carries a SIZE
+// dropdown collapses 1kg and 5kg into one product — which is a pack-size defect wearing
+// a shade defect's name.
+//
+// This measures it BEFORE an import rather than after: group the admitted rows by the
+// URL Tier 5 keys on, and for every group of two or more, classify what actually differs
+// across its members — size only, flavour only, or both. SIZE IS NOT A SHADE UNDER ANY
+// READING, so a large size-only share settles the question without needing the flavour
+// argument resolved. Read-only. Work-list item 312.
+if (process.env.URL_COLLAPSE === "1") {
+  const PREFIX10 = (process.env.ADMIT_PREFIX || "").split("|").map(s => s.trim()).filter(Boolean);
+  const catField10 = col("merchant_product_category_path") >= 0 ? "merchant_product_category_path" : "merchant_category";
+  const rows10 = PREFIX10.length
+    ? body.filter(r => PREFIX10.some(p => get(r, catField10).startsWith(p)))
+    : body;
+
+  // Tier 5 keys on the wrapped URL, which is built from merchant_deep_link.
+  const urlCol = col("merchant_deep_link") >= 0 ? "merchant_deep_link" : "aw_deep_link";
+  const groups = new Map<string, string[][]>();
+  for (const r of rows10) {
+    const u = get(r, urlCol);
+    if (!u) continue;
+    const g = groups.get(u) ?? [];
+    g.push(r);
+    groups.set(u, g);
+  }
+
+  // Name segments are dash-delimited: "{product} - {size} - {servings} - {flavour}".
+  const SIZE_RX = /^\s*\d+(?:[.,]\d+)?\s*(?:kg|g|ml|l|litre|litres)\s*$/i;
+  const COUNT_RX = /^\s*\d+\s*(?:x\s*\d+\s*[a-z]*\s*)?(?:servings?|capsules?|tablets?|softgels?|gummies|pcs|pieces?|sachets?|bars?)\s*$/i;
+  const facets = (name: string) => {
+    const parts = name.split(/\s+[-–|]\s+/).map(s => s.trim()).filter(Boolean);
+    const sizes: string[] = [], counts: string[] = [], others: string[] = [];
+    parts.slice(1).forEach(p => {
+      if (SIZE_RX.test(p)) sizes.push(p.toLowerCase().replace(/\s+/g, ""));
+      else if (COUNT_RX.test(p)) counts.push(p.toLowerCase().replace(/\s+/g, ""));
+      else others.push(p.toLowerCase());
+    });
+    return { sizes, counts, others };
+  };
+
+  let gMulti = 0, rowsMulti = 0, wouldSkip = 0;
+  let sizeOnly = 0, flavOnly = 0, both = 0, neither = 0, countOnly = 0;
+  let rowsSizeOnly = 0, rowsFlavOnly = 0, rowsBoth = 0, rowsCountOnly = 0, rowsNeither = 0;
+  const sampleSize: string[] = [], sampleBoth: string[] = [], sampleFlav: string[] = [];
+
+  for (const [, g] of groups) {
+    if (g.length < 2) continue;
+    gMulti++; rowsMulti += g.length; wouldSkip += g.length - 1;
+    const f = g.map(r => facets(get(r, "product_name")));
+    const uniq = (xs: string[][]) => new Set(xs.map(x => x.slice().sort().join("+")));
+    const sizeVaries  = uniq(f.map(x => x.sizes)).size > 1;
+    const countVaries = uniq(f.map(x => x.counts)).size > 1;
+    const flavVaries  = uniq(f.map(x => x.others)).size > 1;
+    const dimSize = sizeVaries || countVaries;
+    if (dimSize && flavVaries) { both++; rowsBoth += g.length;
+      if (sampleBoth.length < 6) sampleBoth.push(g.map(r => get(r, "product_name")).slice(0, 3).join("   ||   ")); }
+    else if (sizeVaries) { sizeOnly++; rowsSizeOnly += g.length;
+      if (sampleSize.length < 8) sampleSize.push(g.map(r => get(r, "product_name")).slice(0, 3).join("   ||   ")); }
+    else if (countVaries) { countOnly++; rowsCountOnly += g.length;
+      if (sampleSize.length < 8) sampleSize.push(g.map(r => get(r, "product_name")).slice(0, 3).join("   ||   ")); }
+    else if (flavVaries) { flavOnly++; rowsFlavOnly += g.length;
+      if (sampleFlav.length < 6) sampleFlav.push(g.map(r => get(r, "product_name")).slice(0, 3).join("   ||   ")); }
+    else { neither++; rowsNeither += g.length; }
+  }
+
+  console.log("\n=== 10. URL-COLLAPSE ANALYSIS (what Tier 5 would merge) ===");
+  console.log("  rows considered (after ADMIT_PREFIX):", rows10.length);
+  console.log("  distinct URLs                       :", groups.size);
+  console.log("  URLs with 2+ rows                   :", gMulti);
+  console.log("  rows in those groups                :", rowsMulti);
+  console.log("  ROWS TIER 5 WOULD SKIP              :", wouldSkip);
+  console.log("\n  what varies inside a collapsed group:");
+  const pc = (n: number) => gMulti ? (100 * n / gMulti).toFixed(1) + "%" : "-";
+  console.log(`    SIZE only          : ${String(sizeOnly).padStart(5)} groups (${pc(sizeOnly)})  ${rowsSizeOnly} rows`);
+  console.log(`    COUNT only         : ${String(countOnly).padStart(5)} groups (${pc(countOnly)})  ${rowsCountOnly} rows`);
+  console.log(`    flavour only       : ${String(flavOnly).padStart(5)} groups (${pc(flavOnly)})  ${rowsFlavOnly} rows`);
+  console.log(`    BOTH size+flavour  : ${String(both).padStart(5)} groups (${pc(both)})  ${rowsBoth} rows`);
+  console.log(`    neither (dupes?)   : ${String(neither).padStart(5)} groups (${pc(neither)})  ${rowsNeither} rows`);
+  console.log("\n  SIZE-ONLY samples — these are NOT shades under any reading:");
+  sampleSize.forEach(s => console.log("   * " + s.slice(0, 150)));
+  console.log("\n  BOTH samples:");
+  sampleBoth.forEach(s => console.log("   * " + s.slice(0, 150)));
+  console.log("\n  FLAVOUR-ONLY samples — the arguable case:");
+  sampleFlav.forEach(s => console.log("   * " + s.slice(0, 150)));
+}
