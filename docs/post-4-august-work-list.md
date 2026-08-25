@@ -26871,6 +26871,18 @@ number existed. Neither would have surfaced alone.
 
 **Raised:** 25 August 2026 · **Found while sizing the MyProtein decision. Not caused by it.**
 
+> ### TIER 5 SUPPRESSES ON CREATE ONLY. IT DELAYS THE DUPLICATION BY ONE RUN.
+>
+> **17,848 independent products already sit on shared URLs across four retailers** — ten times the
+> MyProtein scale, already in the catalogue. **MyProtein made it visible; it did not cause it.**
+>
+> ```
+> M.A.C Studio Fix Fluid SPF15 Foundation  —  76 separate products, ONE url
+> No7 Stay Perfect Concealer               —  66 separate products, ONE url
+> ```
+>
+> A percentage does not convey one URL serving 76 product pages.
+
 `createdUrls` is populated **only on create** (line 2614) and seeded across slices from
 `import_run_state` **for the same `run_id`**. On the next import the parent already exists, so it
 matches via `merchant_product_id` and is *not* created — **its URL never enters `createdUrls`, and
@@ -26904,9 +26916,15 @@ M.A.C Studio Radiance Foundation         —  54 products, one URL
 join an existing one that is ten times larger and already live.** The mechanism item 315 describes
 is needed whether or not MyProtein is onboarded — MyProtein is what made it visible.
 
-**One other shape, noted not scoped:** one Boots group of 65 holds unrelated products — Lancome,
-Dr Jart, Childs Farm — sharing a URL. That is a URL collision, not a variant family, and a
-grouping mechanism keyed on URL would merge them. **Any build has to survive it.**
+#### AND THE COLLISION RULES OUT THE OBVIOUS IMPLEMENTATION
+
+One Boots group of 65 holds **Lancome, Dr Jart and Childs Farm** on a single URL.
+
+> **URL ALONE CANNOT BE THE FAMILY KEY.** Grouping on it would turn one Boots URL holding three
+> brands into one product with 65 variants — a worse defect than the one being fixed, and produced
+> by the fix. **That is the constraint any build has to satisfy, and it eliminates the
+> implementation the existing code makes easiest**: Tier 5's key is already computed, and reusing it
+> is exactly what must not be done unguarded.
 
 ---
 
@@ -26986,3 +27004,84 @@ Three options, none of them free:
 **Not recommended here.** Option 2's number — what 594 MyProtein products do to supplements
 comparison depth — is measurable and has not been measured, and it is the figure that decides
 whether option 1 is needed *now* or merely eventually.
+
+---
+
+### 316. The depth figure: it roughly doubles, and that is not the number that matters
+
+**Raised:** 25 August 2026 · **Measured. This is the input to the three options in item 315.**
+
+#### DEPTH
+
+| | Today | With 594 MyProtein products |
+|---|---:|---:|
+| Supplements live | 1,831 | **2,325** |
+| Comparable at 2+ in-stock retailers | 34 | **82 – 118** |
+| **Comparison depth** | **1.86%** | **3.5% – 5.1%** |
+
+**The range is a range because the ceiling is bounded by brand overlap, not by guesswork.** A
+MyProtein product can only deepen a comparison against a product we already stock in a brand
+MyProtein also carries. Measured, that population is:
+
+| Brand | Supplements rows today | Single-stockist |
+|---|---:|---:|
+| MyProtein | 41 | 41 |
+| BetterYou | 15 | 14 |
+| Ancient + Brave | 10 | 9 |
+| Dirtea | 8 | 8 |
+| Myvitamins | 7 | 7 |
+| TRIP | 4 | 4 |
+| KIKI Health | 1 | 1 |
+| **Total** | **86** | **84** |
+
+**Floor 48** (MyProtein-family only, every one matching), **ceiling 84** (every shared-brand row
+matching by barcode). The dry run's `would_link_via_ean: 98` spans the whole catalogue including
+skincare and bath_body rows for Marvis, Puma and KIKI Health, so **fewer than 98 land in
+supplements.**
+
+#### THE TWO GOALS PULL AGAINST EACH OTHER, AND THAT IS THE FINDING
+
+> **The 494 net-new products are all single-stockist, so they DILUTE depth even as they add range.**
+> Added alone, they would take depth from 1.86% to **1.46%**. The rise to 3.5–5.1% comes entirely
+> from the 48–84 that match.
+>
+> **A second source adds mostly non-overlapping products. That is what a second source IS** — and it
+> means depth is the wrong instrument for judging one.
+
+#### AGAINST THE BRAND-COMPARISON PROPOSITION, WHICH IS THE RIGHT INSTRUMENT
+
+| | Today | After |
+|---|---:|---:|
+| **Boots' share of supplements** | **1,744 of 1,831 — 95.2%** | **1,744 of 2,325 — 75.0%** |
+| Sports subcategory | **214 products** | **~750–800** |
+| MyProtein's share of sports | — | ~70% |
+
+> **THE CATEGORY STOPS BEING ONE RETAILER WEARING A CATEGORY'S NAME.** 95.2% to 75.0% is the number
+> the proposition was blocked on — not 1.86% to 5.1%.
+>
+> **And the sports range roughly quadruples.** 214 products today against ~594 arriving, in whey,
+> creatine, BCAA, glutamine, electrolytes, omega-3, glucosamine, multivitamins and caffeine.
+> `docs/supplements-brand-comparison-proposition.md` asks for comparison ACROSS BRANDS WITHIN A
+> TYPE, and 214 products is not enough of any type to compare within.
+
+#### WHAT THIS DOES TO THE THREE OPTIONS
+
+**Option 2 — onboard collapsed at 594 — is not the weak option it looked like.** It moves Boots
+from 95.2% to 75.0% and quadruples the sports range, which is what the proposition needed. **The 63%
+of range lost to Tier 5 is lost within product lines, not across them**: the twelve flavours of one
+whey collapse, but whey, creatine, BCAA and electrolytes all still arrive.
+
+**That is the honest case against building the mechanism now.** The build in item 315 costs ~91,000
+child rows across the AWIN fleet and changes what 77,913 Debenhams pages show. **The proposition's
+number moves most of the way without it.**
+
+**The case FOR building it does not rest on MyProtein at all.** Item 314's 17,848 ungrouped
+duplicates are already live, already serving 76 product pages for one M.A.C foundation, and would
+still be there if MyProtein were never onboarded.
+
+> **Those are two separate decisions and the measurement separates them.** Whether MyProtein is
+> worth a mechanism: **no — 594 collapsed products deliver most of the proposition's gain.**
+> Whether the mechanism is owed anyway: **that is item 314's question, and MyProtein is not
+> evidence either way.**
+
+**Nothing recommended. Both decisions are Robbie's.**
