@@ -28533,17 +28533,27 @@ Measured against live prices with the production `in_stock` filter, on all 8 act
 **Two paths, not three.** `lib/product-queries.ts` builds no option set; grep for `type: 'split'`
 returns only these two files.
 
+**Recorded where the next person will meet it.** The transferable half of this is not the guard,
+it is the layering rule, and a work-list item is not where someone extracting a shared module will
+look. It is now in the header of **`supabase/functions/_shared/delivery.ts`** — the worked example
+anyone doing the next extraction will read and copy — under *"BEFORE YOU EXTRACT THE NEXT SHARED
+MODULE"*: when you extract a module the question is not "are the copies gone", it is **"what still
+calls this in two places, and do those two callers agree."**
+
 ---
 
-### 346. A hazard recorded next to the analytics and never carried to the copy
+### 346. A type name standing in for a state
 
-**Raised:** 25 August 2026 · **Item 345's fix is the substance; the rest of the change is consequence. This is the part that was known and not acted on.**
+**Raised:** 25 August 2026 · **The report called these three routines the "one retailer stocks everything" case. They were not that case at all.**
 
 Three of the eight active routines have **no whole basket** — no single retailer and no pair
 covers everything — so they fall to the optimiser's fallback: cheapest price per product, **no
-delivery costed**, and **only the products that could be priced**.
+delivery costed**, and **only the products that could be priced**. Nothing was compared.
 
-That fallback was typed `"split"`, so the render treated it as a comparison result:
+**The fallback was typed `"split"`**, because `"split"` was the nearest available name and the
+option carried more than one retailer's worth of items. It is not a split. It is not a way to buy
+the basket. But the type is what every sentence downstream reads, so **each of them inherited the
+wrong state and stated it confidently:**
 
 | rendered | actually |
 |---|---|
@@ -28567,6 +28577,19 @@ one retailer's worth of items was ever priceable.
 > near-neighbour rule, item 343's `.order()` rule sixty lines from the function that needed it.
 > **Reasoning that is right and whose reach is partial.**
 
+**The fix worth stating is the type, not the strings.** The obvious repair was to branch the copy
+on `retailers[0] === "Best available prices"`, the label the fallback happens to carry. That would
+have worked and it would have been wrong: **the display string was a symptom and the type was the
+claim.** A render that asks a label what state it is in has no way to be told it is in a new one.
+The fallback now has its own `type: "fallback"`, so every branch below it asks the option what it
+is rather than what it says.
+
+> **A type name standing in for a state.** `"single" | "split"` described how many retailers an
+> option involved, and was then used to answer a different question: whether a comparison had
+> happened. For every real option those two questions have the same answer, which is why it held
+> for months. The fallback is the case where they come apart, and there was no name for it, so it
+> borrowed one — and every consumer downstream believed the borrowed name.
+
 **Fixed by surfacing, not by softening.** A reader who saved twelve products and sees four needs
 to know *which eight are missing*; that is more useful than any hedge about the four. The email
 now lists them under **Not priced this month**, using item 245's established wording, *"Not in
@@ -28584,3 +28607,29 @@ comparison or a superlative and need this treatment rather than a patch: the wel
 "best prices" promise (:380), the price-drop email's "We track the best price" (:589) and its
 third baseline, *"Total drop since you saved them"* (:595), and the footer scope claim **"UK
 skincare price comparison"** (:452, :614), which is item 334's class and a one-word fix.
+
+
+---
+
+### 347. The previous baseline is still being calculated after the claim it fed was replaced
+
+**Raised:** 25 August 2026 · **Two small things found while fixing items 345 and 346. Recorded, deliberately not fixed.**
+
+| | |
+|---|---|
+| **`worstCaseTotal`** | Computed on every send by a loop that walks every product, finds its **most expensive** stocking retailer, and costs delivery per resulting leg. Returned in `OptimisationResult`. **Used by nothing.** It fed the pre-item-245 saving claim, that claim was replaced by the next-best anchor, and the calculation was left running. |
+| **The delivery row** | Renders as `Delivery … Delivery £2.95`. The label is repeated inside the value. Cosmetic, pre-existing, visible in every email that now shows a saving. |
+
+> **Dead code that looks like a live measurement is worse than dead code.** `worstCaseTotal` is a
+> plausible, well-commented, correctly-computed number sitting in the result object that the email
+> renderer receives. Nothing marks it as retired. The next person needing a baseline will find it
+> already there, already named, already trusted — and it is **the exact baseline item 245 removed
+> for being a cherry-picked maximum no shopper would ever buy**, which had by then been sent
+> nineteen times.
+>
+> A deleted claim leaves a hole someone notices. A claim whose *number* survives its own
+> retirement leaves a trap.
+
+**Not fixed here** because removing it touches the `OptimisationResult` shape and the fallback
+return path on the evening of a verified deploy, for no behavioural gain. It goes with the four
+copy lines.

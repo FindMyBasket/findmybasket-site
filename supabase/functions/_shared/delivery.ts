@@ -34,6 +34,31 @@
  * module at runtime. The two are kept honest by lib/__tests__/delivery.test.ts,
  * which imports BOTH and asserts they agree on every case in a shared table.
  * If you change this file, change that one, and the test will tell you if you didn't.
+ *
+ * ── BEFORE YOU EXTRACT THE NEXT SHARED MODULE, READ THIS ────────────────────────
+ *
+ * EXTRACTING A SHARED MODULE FIXES WHAT IT COVERS AND CREATES NO OBLIGATION ON WHAT
+ * SITS ABOVE IT.
+ *
+ * This extraction worked. The delivery rule is now identical in the builder and in
+ * send-routine-email, and the GBP 3.95 / GBP 25 divergence it was written to end is
+ * genuinely ended.
+ *
+ * It did not end the CLASS. On 25 August 2026 the same two files were found holding
+ * two different implementations of OPTION-SET CONSTRUCTION -- the layer that CALLS
+ * this one. The builder discarded a two-retailer pair whose second leg was empty;
+ * the email kept it. Because an empty leg correctly costs nothing (the rule above,
+ * shared and agreed), that pair totalled exactly what the single-retailer option
+ * totalled, so options[1] always tied options[0] and the email's reported saving was
+ * ALWAYS GBP 0.00. Four of eight live routines had a real saving reported as zero.
+ *
+ * The header you are reading argues at length for one rule in one place. That
+ * argument was applied to the rule it was about and stopped at its own boundary.
+ * The divergence did not disappear; it MOVED UP ONE LEVEL, into the code that
+ * consumes the now-shared rule, where nothing was looking for it.
+ *
+ * So: when you extract a module, the question is not "are the copies gone." It is
+ * "what still calls this in two places, and do those two callers agree." Item 345.
  */
 
 export type DeliveryModel = 'tiered' | 'flat' | 'unknown';
