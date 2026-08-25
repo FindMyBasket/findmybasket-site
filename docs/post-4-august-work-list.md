@@ -28358,3 +28358,127 @@ the other, every dated bullet across both either shipped or contradicting the st
 | **Not reachable** | **founding numbers** — the 40–70% gap |
 
 **Three classes, one guard.** Recorded so the guard is not mistaken for coverage.
+
+---
+
+### 342. Three properties that each independently discourage checking, on one sentence
+
+**Raised:** 25 August 2026 · **The founding number replaced with a measurement and its derivation.**
+
+> ### IT HAD NEVER MOVED, SO NOTHING DREW ATTENTION TO IT. IT WAS THE ORIGIN STORY, SO CHECKING IT READS AS QUESTIONING THE PREMISE. IT WAS THE MOST LOAD-BEARING SENTENCE ON THE PAGE.
+
+**Three properties, on one sentence, each of which alone would have been enough.** The retailer count
+beside it drifted five times and acquired a twenty-line history block; this one sat unchecked from
+the beginning because every reason to look at it was also a reason not to.
+
+#### WHAT IT SAID AND WHAT IT MEASURES
+
+*"The average price gap on the same skincare product across UK retailers is between 40% and 70%."*
+
+| Skincare, 6,335 comparable products | |
+|---|---:|
+| Mean | **37.0%** — below the band |
+| Median | **20.2%** |
+| In the 40–70% band | **13.0%** |
+
+**False on both readings of "average", and the range framing describes 13% of products as though it
+were the norm** — the same defect as the worst-case savings baseline: **true of something, presented
+as typical.**
+
+#### THE MEAN WAS THE TRAP, AND THIS LIST HAS SPENT A FORTNIGHT ON IT
+
+**37.0% is inside touching distance of the old band, and quoting it would have looked like a
+correction.** It is inflated by a long right tail — p90 is 81.6% — in exactly the way the old savings
+headline was.
+
+> **Leading with the mean would have repeated the defect with the measurement in hand**, which is
+> worse than the original, because the original was never measured at all.
+
+#### THE SCOPE WAS THE LARGER ERROR
+
+**Skincare is the lowest-spread category except supplements.**
+
+| | n | Median | ≥50% |
+|---|---:|---:|---:|
+| **All six** | **13,209** | **24.7%** | **18.7%** |
+| skincare | 6,335 | 20.2% | 19.7% |
+| **fragrance** | 1,171 | **42.9%** | **45.3%** |
+
+> **The sentence named skincare because that is what the site STARTED as, not because it is the best
+> case.** It understated its own claim and rested it on half the population at the same time. **A
+> scope inherited from history rather than chosen from evidence.**
+
+**Now reads:** *"Across the products stocked by more than one retailer we carry, the price gap
+between the best and worst option is typically around 25%, and one in five is 50% or more."*
+
+#### THE DERIVATION IS AT THE LINE
+
+Date, population, mean, median, p75, p90, band shares, and why the median was chosen — in a comment
+above the paragraph.
+
+> **A founding number with its derivation attached stops being a founding number and becomes a
+> measurement.** The next person can check it in one query instead of inheriting it, and the reason
+> the mean was rejected is written down where the temptation to use it will recur.
+
+---
+
+### 343. Fragrance is where the mechanic demonstrably wins, and the content has never been aimed there
+
+**Raised:** 25 August 2026 · **A strategic fact, not a copy one. Not in `docs/strategy.md`.**
+
+| | Comparable products | Median gap | Share ≥ 50% |
+|---|---:|---:|---:|
+| **Fragrance** | **1,171** | **42.9%** | **45.3%** |
+| skincare | 6,335 | 20.2% | 19.7% |
+| makeup | 2,355 | 25.0% | 8.4% |
+| hair | 2,354 | 25.0% | 10.5% |
+| bath & body | 917 | 24.7% | 26.2% |
+| supplements | 77 | 20.0% | 9.1% |
+
+> **Fragrance is more than double skincare on both measures, on 1,171 comparable products.** Nearly
+> half of comparable fragrance carries a gap of 50% or more, against one in five in skincare.
+
+**The whole-basket-including-delivery mechanic pays most where the spread is widest, and the spread
+is widest in fragrance.** The site's editorial has been aimed at skincare throughout — the articles,
+the founding story, the four live product guides.
+
+**And the pipeline has already drifted there without the strategy following.** The two onboardings
+before MyProtein were **Niche Beauty and Perfume Click — both fragrance.** The retailer selection is
+already acting on something the content has not.
+
+**Recorded for Robbie, not acted on.** It is a question about where editorial effort goes, and the
+measurement is the input rather than the answer.
+
+---
+
+### 344. What remains unverifiable rather than unverified
+
+**Raised:** 25 August 2026 · **The sweep closes. Named so the distinction is not lost.**
+
+**Every checkable claim on both pages has now been checked.** What is left is not unchecked — it is
+**not checkable from here**, and that is a different status that should not decay into the first.
+
+| Claim | Why nothing here can test it |
+|---|---|
+| **"No other UK platform does this."** (whole-basket optimisation including delivery) | **A claim about other businesses.** It requires surveying competitors' products, which is neither in the database nor in the repository. **The strongest available internal evidence — that we do it — says nothing about whether anyone else does.** |
+| "That's a very different intent profile to display advertising or social-led discovery." | A claim about other channels' audiences |
+| "a category most aggregators thin out" (K-Beauty) | **Our half is verified** — all four named brands present, 2,012 rows. **The comparative half is not.** |
+| "Setup ... typically takes a couple of weeks end-to-end" | A claim about partner-side process; our onboardings are not a sample of it |
+| "The average price gap ... " *(replaced)* | **was** unverified, is now measured — the only one that moved between categories today |
+
+> **Unverifiable is a legitimate status and unverified is not.** The four above can sit indefinitely
+> provided they are labelled; the danger is a claim in the first column being treated as though it
+> were in the second — checked once, found untestable, and thereafter assumed fine.
+>
+> **The 40–70% figure sat unchecked for months in exactly that fog**, and the thing that resolved it
+> was not new evidence but somebody running the query.
+
+**Where the guard now stands:**
+
+| | |
+|---|---|
+| Guarded by item 336 | retailer names on three surfaces, count on two |
+| Recorded, unguarded | prose enumerating what the database enumerates |
+| Recorded, unguarded | capability claims — a dashboard, an app, a refresh frequency |
+| Recorded, now measured | founding numbers |
+| **Named unverifiable** | **four competitive claims** |

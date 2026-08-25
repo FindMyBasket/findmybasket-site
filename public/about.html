@@ -227,7 +227,23 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
 
   <h2>Why it exists</h2>
 
-  <p>The numbers spoke for themselves. The average price gap on the same skincare product across UK retailers is between 40% and 70%. People weren't comparison-shopping because the existing tools were product-level, not basket-level. Buying a four-product routine across four separate retailers to get the lowest unit price often ended up more expensive than buying everything at the second-best-value retailer, once delivery thresholds were factored in.</p>
+  <!-- MEASURED 25 Aug 2026, not inherited. 13,209 products stocked IN STOCK by two or more active
+       retailers, across all six categories.
+         median 24.7%   mean 35.8%   p75 40.7%   p90 78.5%   >=50%: 18.7%   >=100%: 6.7%
+
+       MEDIAN, NOT MEAN, DELIBERATELY. The mean is 35.8% and is inflated by a long right tail;
+       leading with it would be the worst-case-baseline defect again -- true of something, presented
+       as typical (items 245, 302). The previous wording read "between 40% and 70%", which describes
+       13% of products as though it were the norm, and which measured at a 37.0% mean and a 20.2%
+       median when it was finally checked -- false on both readings of "average".
+
+       SCOPE WIDENED FROM SKINCARE, AND THAT IS THE PART THAT MATTERS. Skincare is the LOWEST-spread
+       category except supplements (median 20.2%); fragrance is 42.9%, with 45.3% of its products
+       above 50%. The sentence named skincare because that is what the site STARTED as, not because
+       it is the best case -- so it understated its own claim AND rested it on half the population.
+
+       Re-measure on a feed change rather than on suspicion. Work-list item 342. -->
+  <p>The numbers spoke for themselves. Across the products stocked by more than one retailer we carry, the price gap between the best and worst option is typically around 25%, and one in five is 50% or more. People weren't comparison-shopping because the existing tools were product-level, not basket-level. Buying a four-product routine across four separate retailers to get the lowest unit price often ended up more expensive than buying everything at the second-best-value retailer, once delivery thresholds were factored in.</p>
 
   <p>FindMyBasket exists because nobody else was doing whole-basket optimisation including delivery. That's the genuine gap in the market.</p>
 
