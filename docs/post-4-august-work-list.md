@@ -26319,3 +26319,161 @@ it is the whole of the argument for waiting.
 
 **Recorded as a decision to make, not a recommendation.** Nothing here is urgent and nothing is
 blocked.
+
+---
+
+### 306. MyProtein feed shape: "Masterfeed" is the smallest of the three and the only one without barcodes
+
+**Raised:** 25 August 2026 · **READ-ONLY. Three `feed-diag` runs, nothing imported, nothing
+configured, no terms set.** Extends item 305.
+
+| Feed | fid | Rows | Barcode fill | Verdict |
+|---|---:|---:|---:|---|
+| **Default** | **3196** | **7,192** | **97.1%** | **EAN-BEARING** |
+| Masterfeed | 13007 | 2,054 | **24.2%** | **MPN-ONLY** |
+| Bestsellers | 10429 | 100 | 92.0% | EAN-BEARING |
+
+> **THE DECISIVE QUESTION WAS WHETHER MASTERFEED IS A SUPERSET. IT IS NOT — IT IS 29% OF DEFAULT
+> AND IT IS THE ONLY ONE THAT CANNOT MATCH ON A BARCODE.**
+>
+> The name implies the widest feed. **Default is the widest feed by a factor of three and a half.**
+> A name is a claim about a file made by whoever configured it, and this one points the wrong way.
+
+**All three carry the same 18 columns**, so these are different populations rather than different
+formats — as expected.
+
+#### WHAT MASTERFEED ACTUALLY IS, INFERRED AND FLAGGED AS INFERENCE
+
+The two feeds' brand tails are **identical row for row**:
+
+| Brand | Default | Masterfeed |
+|---|---:|---:|
+| NutriBullet | 33 | **33** |
+| KIKI Health | 26 | **26** |
+| Well.Actually. | 22 | **22** |
+| BetterYou | 19 | **19** |
+| Ancient + Brave | 18 | **18** |
+| COROS | 16 | **16** |
+| Dirtea | 14 | **14** |
+| Nalgene | 12 | **12** |
+
+**The entire difference is concentrated in the own-brands and the apparel houses:** MyProtein
+4,331 → 965, MP 1,341 → 352, Puma 221 → 52, Brooks 172 → 36, Saucony 169 → 40, Myvegan 63 → 15.
+
+> **That is the signature of a PARENT-LEVEL feed, not a superset.** Third-party brands list one row
+> per SKU in both because there is nothing to collapse; MyProtein's own lines collapse 4.5:1 because
+> the flavour-and-size matrix collapses to a master product. **And it explains the 24.2% barcode
+> fill directly: a master row spanning twelve flavours has no single EAN to carry.**
+
+**Stated as inference.** `feed-diag` reports distributions, not row identities, so "Masterfeed is a
+subset of Default" is strongly indicated by eight exactly-matching brand counts and not proven. **A
+row-id comparison would settle it and was not run**, because the answer it would refine does not
+change the decision.
+
+**Bestsellers is a 100-row promotional selection** — 4 brands, 80 MyProtein — and is a subset of
+either.
+
+#### THE FEED TO USE IS DEFAULT, AND THE REASON IS BOTH HALVES OF THE BRIEF
+
+Range breadth **and** matchability point the same way: Default is 3.5× the rows and 4× the barcode
+coverage. **The two criteria did not have to agree and they do**, which is worth stating because a
+feed that was wider but barcode-poor would have needed the trade-off argued.
+
+---
+
+### 307. MyProtein is the Debenhams shape, not the Cohorted shape
+
+**Raised:** 25 August 2026 · **The field-shape answer, before anything is configured.**
+
+The two feeds that caused trouble failed in different places, and the question was which one
+MyProtein resembles.
+
+| | Cohorted | Debenhams (item 90) | **MyProtein (3196)** |
+|---|---|---|---|
+| Category columns | **both empty** — allowlist cannot run | populated | **`merchant_product_category_path` 99.7%, `merchant_category` 100%** |
+| Where the wanted rows sit | n/a | **under a NON-BEAUTY path** | **under a non-beauty path** |
+| Failure mode | no allowlist possible | **rows die before the whitelist** | **same** |
+
+**Not the Cohorted shape.** Both category columns are populated, so an allowlist can run at all.
+
+**It is the Debenhams shape, and precisely.** Item 90's mechanism was that Debenhams' real
+supplements population sits under `Sports & Fitness > Fitness & Nutrition > Vitamins & Supplements`,
+so a beauty-shaped allowlist kept **11 of 1,587**. MyProtein's supplements sit under:
+
+```
+1,630   Sports and Nutrition > Sports Nutrition
+   41   Sports and Nutrition > Sports Nutrition > Vitamins
+```
+
+**Not one of them is under a `Health and Beauty` path.** A beauty-shaped allowlist would drop the
+entire reason for onboarding the retailer.
+
+#### AND THE FEED IS 74% CLOTHING, WHICH IS WHAT THE ALLOWLIST IS FOR
+
+| Path | Rows |
+|---|---:|
+| Apparel (clothing, footwear, accessories) | **5,309 — 73.8%** |
+| Sports and Nutrition | 1,671 |
+| Health and Beauty | 122 |
+| Tech / Books | 62 |
+
+**Previewed, not assumed.** Admitting `Sports and Nutrition|Health and Beauty` takes **1,795 of
+7,192 rows (25%)**, of which **1,749 classify as supplements under the shipped rule** and 46 are
+topical arriving alongside. **The allowlist step is load-bearing here rather than a formality**: run
+without one, three quarters of the import is Puma trainers and Crocs.
+
+#### THE NAMES, READ RATHER THAN COUNTED
+
+```
+Tribulus Terrestris Capsules - 90Capsules
+Impact Whey Isolate Powder - 1KG - 30servings - Snickers White
+Clear Whey Protein Powder - 500g - 20servings - Orange
+Vitamin B12 Tablets - 180 TABLETS, 180servings
+MenoSure Capsules - 120Capsules
+```
+
+**This is the flavour-and-size matrix the Amazon harvest predicted, visible in the naming
+convention:** `{product} - {size} - {servings} - {flavour}`. Item 305 said to expect near-zero
+product overlap; **the names are why**, and they confirm it before the barcode measurement rather
+than after.
+
+**Two things the names reveal that a count would not:**
+
+**1. THE BRAND IS ABSENT FROM THE PRODUCT NAME.** Roughly 90% of the catalogue carries its own brand
+as a name prefix — that is the assumption `stripBrandPrefix` and `displayProductTitle` are built on.
+**MyProtein's names carry none.** `displayProductTitle` prepends the brand when the name lacks it,
+so this works, but **it is the inverse of the usual case on 7,192 rows** and any name-based
+heuristic tuned on the 90% should be re-checked against it.
+
+**2. THE TRUNCATION DETECTOR FIRES ON 1,600 OF 1,774 NAMES — 90%.** That is a statement about the
+detector, not the feed: these names are dash-delimited by design and the rule reads a trailing
+segment as a cut-off. **Recorded so the flag is not read as a data-quality finding when it is a
+rule-fit finding**, which is the same shape as a population defined by its own detector.
+
+#### OVERLAP, AS EXPECTED
+
+| Tier | Default | Bestsellers |
+|---|---:|---:|
+| A. deepens a LIVE comparison | **8** | 0 |
+| B. matches a hidden/merged row | 1 | 0 |
+| C. same-brand new SKU | 4,859 | 97 |
+| D. net-new brand | 2,324 | 3 |
+
+**Eight products out of 7,192 deepen an existing comparison.** Exactly the 1-in-99 shape, and
+exactly what item 305 said to record as expected rather than as a failure. **The value is tiers C
+and D — 7,183 rows of range — measured against breadth, which is what the brand-comparison
+proposition asked for.**
+
+#### DELIVERY TERMS REMAIN UNSET
+
+`£4.49, free over £55` is **the figure to confirm at source, not to enter.** Two notes for whoever
+reads it:
+
+- **£55 would be the second-highest threshold in the fleet**, behind Niche Beauty's £75, against a
+  median of £30 across the ten active retailers that have one.
+- **£4.49 would be the second-highest CHARGE too**, behind Niche Beauty's £9.95 and ahead of
+  Debenhams' £3.99 and Boots' £3.95. **It was described as mid-range and the fleet says otherwise** —
+  a small correction, and the reason to read both numbers at source rather than either.
+
+**High threshold plus high charge is the shape the bridgeability rule was built for**, and
+MyProtein's basket sizes will sit either side of £55 rather than clearly above or below it.

@@ -153,12 +153,14 @@ source agreement, not from memory.
 | Field | Value |
 |---|---|
 | Status | Approved, pending integration. **Not parked** — timing is Robbie's call, see below |
-| Network | **AWIN** |
+| Network | **AWIN**, advertiser **3196** |
 | Importer | **`import-awin-feed` exists.** This is a retailer configuration, not a network integration |
+| **Feed to use** | **`3196` "Default" — 7,192 rows, 97.1% barcode.** NOT `13007` "Masterfeed" (2,054 rows, 24.2% barcode, parent-level). `10429` "Bestsellers" is a 100-row promo selection |
 | Commission | **Not recorded** — fill from the source agreement, not from memory |
-| Delivery terms | **Not recorded, and must be read from their own site before `active = true`** |
-| Barcode overlap | **Not measured.** Expect near zero — see below |
-| Work-list | item 305 |
+| Delivery terms | **UNSET. `£4.49, free over £55` is the figure to CONFIRM at source, not to enter.** £55 would be the second-highest threshold in the fleet (after Niche Beauty £75, median £30); £4.49 the second-highest charge (after £9.95) |
+| Allowlist | **REQUIRED, and non-beauty.** Supplements sit under `Sports and Nutrition > Sports Nutrition`; the feed is 73.8% Apparel. `Sports and Nutrition\|Health and Beauty` admits 1,795 of 7,192 |
+| Barcode overlap | **Measured 25 Aug: 8 of 7,192 deepen a live comparison.** Expected — see item 305 |
+| Work-list | items 305, 306, 307 |
 
 ### Materially different from the CJ pair
 
