@@ -27184,3 +27184,117 @@ Corrected to fall back to `merchant_category` when `product_type` is empty on ev
   feed's own `aw_deep_link`. **Free, and no fabricated click.**
 - **Delivery terms unset**, and the CHECK refuses `active = true` until they are read **at a
   checkout**. Robbie's.
+
+---
+
+### 318. MyProtein imported: 609 products, and reading the 81 found three classes not one
+
+**Raised:** 25 August 2026 · **IMPORTED. `enabled = true`, one run, no cron. `active` STILL FALSE —
+nothing is on the site.** Delivery terms remain unset and the CHECK still refuses go-live.
+
+| | Dry run | **Actual** |
+|---|---:|---:|
+| Excluded by allowlist | 5,397 | 5,397 |
+| Products created + linked | 635 | **609** |
+| Price rows | — | 609 |
+| Status | — | `ok` |
+
+**26 fewer than predicted, and the dry run is the estimate rather than the actual** — a dry run
+counts what each row *would* do independently; the apply runs in slices with in-run dedup and a
+create cap, so a small shortfall is the expected direction.
+
+#### THE SUBCATEGORY SPLIT AS IT LANDED
+
+| top_category | subcategory | n |
+|---|---|---:|
+| **supplements** | **sports** | **445** |
+| **supplements** | **supplements** | **64** |
+| skincare | face | 68 |
+| bath_body | body | 15 |
+| **skincare** | **sports** | **11** |
+| **skincare** | **supplements** | **2** |
+| **bath_body** | **sports** | **1** |
+| hair / bath_body | other | 3 |
+
+**509 supplements — 445 sports and 64 supplements.** The sports subcategory more than triples on its
+own: **214 products today, 659 with these.**
+
+#### THE 14 IN THE WRONG VOCABULARY ARE MY OWN GUARD, HALF-APPLIED
+
+`skincare/sports` ×11, `skincare/supplements` ×2, `bath_body/sports` ×1.
+
+The migration comment said it plainly: *"assigning `sports` to a shower gel would produce a
+`bath_body` product carrying a supplements subcategory"* — and the guard I built for it set every
+`Health and Beauty` value to `null`. **It never occurred to me that the collision runs the other
+way**: `merchant_category = Sports Nutrition` fires the map on rows the categoriser sent to
+skincare.
+
+```
+skincare / sports  ->  Freja Beef Bone Broth 500ml
+                       KIKI Health Liquid Chlorophyll - 250ml
+                       Sunshine Delights, Dried Mango, 100g
+bath_body / sports ->  Origin Cream of Rice - 1.04KG - Cinnamon Swirl
+```
+
+> **The map keys on the FEED's taxonomy and the subcategory belongs to OURS.** Nothing makes them
+> agree, and I guarded only the direction I happened to think of. **Recorded as a defect in my
+> config, not in the mechanism** — the fix is a `top_category` condition on the map application,
+> which is a code change and is not made here.
+
+#### THE 81 NON-SUPPLEMENTS, READ RATHER THAN COUNTED — AND THERE ARE THREE CLASSES
+
+**1. Correctly topical (~45).** MyProtein carries men's grooming and third-party beauty:
+`Bulldog Original Shave Gel`, `Wild Coconut and Vanilla Deodorant`, `L'Oréal Men Expert Shower Gel`,
+`Eucerin Anti-Pigment Body Cream`. **The allowlist admitted these through `Health and Beauty` and
+the categoriser handled them correctly. No action.**
+
+**2. Ingestible supplements sitting in `skincare/face` (~25).** `Ashwagandha KSM66 Capsules`,
+`Collagen Capsules - 30Capsules`, `BetterYou Vitamin D3 + K2 Oral Spray`, `Ancient + Brave True
+Omegas+`, `Beauty Collagen Shot`. **These are supplements on a `Health and Beauty` path, which the
+supplements-path override does not reach** — the path prefix covers `Sports and Nutrition` only.
+
+**3. Food and drink, which belongs in neither (~11).** `Cosmic Dealer Chai Drinking Cacao`,
+`Cosmic Dealer Loose tea`, `Bragg Organic Apple Cider Vinegar`, `Sunshine Delights Dried Mango`,
+`Freja Beef Bone Broth`, `Nakd Fruit & Nut Bars`.
+
+> **Class 3 is the one a count could never have produced.** It is not a misclassification between
+> our categories — **it is a set of products that should not be in a beauty catalogue at all**, and
+> it arrived because the allowlist admits paths, and MyProtein files dried mango under
+> `Sports and Nutrition`. No subcategory decision fixes it; it is an exclusion question.
+
+#### SUPPLEMENTS TOTALS, AND THE 75% PREDICTION
+
+**Nothing has changed on the site.** `products_active` requires an active retailer, so supplements
+there is **still 1,831** and these 609 are catalogue-only until `active = true`.
+
+| | Now | If `active = true` |
+|---|---:|---:|
+| Supplements | 1,831 | **2,343** |
+| Boots' share | **95.2%** | **76.6%** |
+
+**Predicted 75.0%, landed 76.6%** — the 1.6-point difference is the 26 fewer products and the 14
+that classified outside supplements. **Close enough to have been worth predicting, and reported as
+a miss rather than rounded to the prediction.**
+
+---
+
+### 319. Item 284's defect reproduced fourteen hours after it was fixed
+
+**Raised:** 25 August 2026 · **One row. Corrected with the remedy already built.**
+
+The import created `Hair, Skin &amp; Nails Gummies …` with `match_key` containing `amp`.
+
+> **This is exactly item 284, and it happened because item 300 is still true: the ingest fix merged
+> yesterday morning and has never been deployed.** `decodeFeedName` is in `main` and not in the
+> running function. **A merged fix does not prevent the defect it was written for.**
+
+**The half-life item 284 measured was one day. This is the second demonstration**, and this time the
+clock was running on a fix that already existed rather than on one nobody had written.
+
+Corrected with `fmb_decode_entities`, the function built for the backfill — **the remedy was already
+there, tested, and one statement away.** `name` and `match_key` both recomputed; the row is not
+held, so the item 290 guard permitted the write.
+
+**Nothing else needed fixing.** `image_url` was `http://` on **zero** of the 609 — MyProtein's CDN
+is https throughout, so `normaliseImageUrl` being undeployed cost nothing on this feed. **That is
+luck, not evidence that the deploy can wait.**
