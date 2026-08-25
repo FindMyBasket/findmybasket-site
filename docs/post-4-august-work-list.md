@@ -26781,3 +26781,208 @@ A first import with `enabled = true` and no cron, then: the supplements classifi
 against what the shipped rule produces, and the range measured against the brand-comparison
 proposition rather than against comparison depth. **8 of 7,192 deepening a comparison is the
 expected result and not the measurement that matters.**
+
+---
+
+### 312. Two mechanisms for one problem, and the wrong one runs at import
+
+**Raised:** 25 August 2026 · **NOTHING CHANGED. Tier 5 untouched, MyProtein not imported.**
+
+| | **Tier 5 skip** | **`parent_product_id` family** |
+|---|---|---|
+| The variant row | **never created** | created, then grouped |
+| Product page | none | children 308 to the parent |
+| Offers | **lost** | parent shows all family offers (`pickFamilyOffer`) |
+| Runs at | **import** | a separate, partly curated process |
+| Scale | ~91,152 rows per fleet pass | 11,462 products in 1,068 families |
+
+> **THE FAMILY IS THE SITE'S REAL ANSWER TO ONE-PRODUCT-MANY-VARIANTS. TIER 5 IS STANDING IN FOR IT
+> BECAUSE FAMILY CREATION IS NOT AUTOMATIC AT IMPORT.** One keeps the row and renders one page; the
+> other throws the row away. They are not two settings of the same idea.
+
+#### WHY THAT MAKES IT A PER-RETAILER PROPERTY RATHER THAN A DEFECT
+
+Tier 5 keys on `merchantUrl.split("?")[0]` — **the query string is stripped** — so what it collapses
+depends entirely on what a retailer puts in the query:
+
+| Retailer | Feed rows | Rows Tier 5 skips | **Size/count-only groups** |
+|---|---:|---:|---:|
+| **Debenhams** | 95,835 | **77,913 — 81% of the feed** | **0** |
+| **Boots** | 38,865 | 8,870 | **0** |
+| Stylevana | 24,294 | 4,359 | 25 — 1.7% |
+| Beauty Bay | 7,696 | 10 | 0 |
+| **MyProtein** | 1,795 | 1,187 | **59 — 27.4%** |
+
+> **Boots and Debenhams put a SHADE in the query and lose nothing that matters. MyProtein puts a
+> SIZE there, and the discarded row is a different product.** `Zinc & Magnesium 270Capsules`,
+> `90Capsules` and `30Capsules` are three products; three shades of one foundation are one.
+
+**91,152 rows collapse correctly across four retailers.** A change to `buildCreadUrl` would be a
+change to all of them to fix one — which is why this is recorded as a property of the retailer, not
+a defect in the rule.
+
+#### NEITHER AVAILABLE OPTION IS RIGHT FOR MYPROTEIN
+
+- **Collapse (Tier 5 on):** 1,795 rows land as 594 products. **63% of the range is discarded**, and
+  range breadth is the entire reason for onboarding.
+- **Disable for retailer 33:** ~1,700 products, **none grouped**. Verified rather than assumed —
+  `import-awin-feed` never sets `parent_product_id` anywhere in the file, and
+  `fmb_regroup_shade_strays` only attaches strays to families that **already exist**, matching
+  against `shade_family_stems` which is derived from existing parent/child pairs. MyProtein would
+  have none, so ~1,100 near-identical pages. **A certainty, not a risk.**
+
+**MyProtein therefore waits on a build, not a configuration.** See item 315.
+
+---
+
+### 313. Twice in one session, a near-neighbour of the operative rule
+
+**Raised:** 25 August 2026 · **Both produced a confident wrong number. Both surfaced only because
+something else disagreed.**
+
+| | I measured | The code uses | Result |
+|---|---|---|---|
+| **1** | `merchant_deep_link` as the feed supplies it | `merchantUrl.split("?")[0]` | **reported ZERO collapse against a dry run's 1,187** |
+| **2** | `startsWith` for the path allowlist | case-insensitive `includes` | **Boots returned 0 rows considered** |
+
+> **MEASURING A NEAR-NEIGHBOUR OF THE OPERATIVE RULE PRODUCES A CONFIDENT WRONG NUMBER, AND THE
+> NEIGHBOUR IS CHOSEN BECAUSE IT LOOKS EQUIVALENT.** The feed column *is* the URL. `startsWith` *is*
+> a prefix test. Neither substitution looks like an assumption at the moment it is made, which is
+> why neither gets checked.
+
+**Neither was caught by looking harder at my own work.** The first was caught because the dry run
+said 1,187 and I said 0. The second because an empty set for the fleet's largest retailer is
+implausible on its face. **In both cases the disagreement was the detector, and there was no
+disagreement available for the parts I got right — so the same class may still be present in them.**
+
+**This is the same family as items 287 and 289** — reading the rendered page instead of the row, the
+merge state instead of the deployed bundle — with one difference worth naming: **those were reading
+a DERIVED artefact instead of the source. These were reading a DIFFERENT SOURCE that behaves almost
+identically.** The first is a shortcut; the second is a substitution, and it is harder to see
+because both sides are legitimate.
+
+**The cheap defence, when a measurement can be built two ways: build it the way the code does, or
+compare against something the code produced.** Both errors cost one re-run each because a second
+number existed. Neither would have surfaced alone.
+
+---
+
+### 314. Tier 5 collapses within a run, and the leak is already 17,848 products
+
+**Raised:** 25 August 2026 · **Found while sizing the MyProtein decision. Not caused by it.**
+
+`createdUrls` is populated **only on create** (line 2614) and seeded across slices from
+`import_run_state` **for the same `run_id`**. On the next import the parent already exists, so it
+matches via `merchant_product_id` and is *not* created — **its URL never enters `createdUrls`, and
+the variants it suppressed last time are no longer suppressed.**
+
+**Measured on live data.** `retailer_prices.url` stores the wrapped, already-?-stripped URL, so one
+URL should map to one product per retailer if the collapse held:
+
+| Retailer | Products on a shared URL | Grouped as family children | **INDEPENDENT** |
+|---|---:|---:|---:|
+| Boots | 16,322 | 9,707 | **6,615** |
+| Debenhams | 4,781 | 706 | **4,075** |
+| Escentual | 4,645 | 1,116 | **3,529** |
+| Stylevana | 2,701 | 39 | **2,662** |
+| Others | ~1,279 | 312 | ~967 |
+| **Total** | **29,728** | **11,880** | **≈17,848** |
+
+**The independent ones are exactly the duplication the collapse exists to prevent:**
+
+```
+M.A.C Studio Fix Fluid SPF15 Foundation  —  76 products, one URL
+No7 Stay Perfect Concealer               —  66 products, one URL
+M.A.C Studio Radiance Foundation         —  54 products, one URL
+```
+
+> **The family mechanism has absorbed 11,880 of them. 17,848 are ungrouped duplicate pages today.**
+> Tier 5 does not prevent this — it delays it by one run, and the family process catches up
+> unevenly: Boots 9,707 grouped, **Stylevana 39 of 2,701**.
+
+**This reframes the MyProtein decision.** Its 1,187 would not create a new defect class; **it would
+join an existing one that is ten times larger and already live.** The mechanism item 315 describes
+is needed whether or not MyProtein is onboarded — MyProtein is what made it visible.
+
+**One other shape, noted not scoped:** one Boots group of 65 holds unrelated products — Lancome,
+Dr Jart, Childs Farm — sharing a URL. That is a URL collision, not a variant family, and a
+grouping mechanism keyed on URL would merge them. **Any build has to survive it.**
+
+---
+
+### 315. What family-grouping-at-import would involve — the input to a decision, not a proposal
+
+**Raised:** 25 August 2026 · **NOT BUILT. This sizes the question "is MyProtein worth a mechanism".**
+
+#### WHAT IDENTIFIES A FAMILY IN A FEED ROW
+
+**The key already exists and is already computed.** Tier 5 keys on the ?-stripped URL; a grouping
+build would use the same key and change the action from `continue` to "create, and set
+`parent_product_id` to the product this URL already produced". `createdUrls` would become a
+`Map<string, number>` instead of a `Set<string>` — **and the file already carries that follow-up as
+a written note**: *"createdUrls (persistent) replaces the old urlToProductId -1 sentinel … (Follow-up:
+restore DB-populated url matching in its own PR.)"*
+
+**Three things that are not solved by having the key:**
+
+1. **WHICH ROW IS THE PARENT.** First-seen wins, and feed order is arbitrary. Item 296 is the same
+   trap one surface over: ordering by `id` for pagination stability made "first product" mean
+   "oldest row", and a share card showed one lip gloss shade for a 595-product brand. **A parent
+   chosen by feed order is a canonical page chosen by feed order.**
+2. **IT MUST SURVIVE THE NEXT RUN.** Item 314's leak is exactly this: the map is per-run, so a
+   grouping build that inherits it groups correctly once and then leaks like Tier 5 does. **The
+   DB-populated lookup is the substance of the work, not the grouping.**
+3. **URL COLLISIONS ARE REAL.** One Boots group of 65 holds Lancome, Dr Jart and Childs Farm.
+   Grouping on URL alone would make them one product with 65 variants. **A guard is required** —
+   brand agreement is the obvious one and would have to be measured, not assumed.
+
+#### WHETHER MYPROTEIN'S NAMING SUPPORTS IT
+
+**Yes, and better than most.** `{product} - {size} - {servings} - {flavour}`, dash-delimited and
+consistent, which is what let the URL-collapse analysis classify 215 groups by what varies without
+a name model. `canonical_size` already extracted on 248 of 494 creates and `shade` on 268.
+
+**But the naming is not what would group them — the URL is.** The naming would matter for the
+*second* question a build raises: **which axis is a variant and which is a product.** MyProtein is
+the case where those differ within one URL: flavour is a variant, size is a product, and the same
+URL carries both. **No retailer currently onboarded has that combination**, which is why the
+mechanism has never had to answer it.
+
+#### WHAT IT WOULD DO TO THE FOUR RETAILERS RELYING ON TIER 5
+
+| Retailer | Today | Under grouping-at-import |
+|---|---|---|
+| **Debenhams** | 77,913 rows discarded per pass | **77,913 rows created as family children** |
+| **Boots** | 8,870 discarded | 8,870 created; 9,707 already grouped by the curated process |
+| Stylevana | 4,359 discarded | 4,359 created; **only 39 of 2,701 currently grouped** |
+| Beauty Bay | 10 | 10 |
+
+> **THE CATALOGUE WOULD GROW BY ROUGHLY 91,000 PRODUCT ROWS.** They would be children, so they would
+> 308 to their parents and not be indexed — but they are rows, they carry offers, they enter
+> `products_active` calculations, the sitemap logic, the six metadata templates and every count on
+> the quality board. **A 92% catalogue increase is not a side effect to absorb quietly.**
+
+**And it would change what those retailers show.** A parent page renders the whole family's offers
+via `pickFamilyOffer`, so Debenhams products would begin showing prices they do not show today.
+**That is arguably the point** — it is the same mechanism that makes shade families work — **and it
+is a change to 77,913 pages' content, which no part of the MyProtein decision authorises.**
+
+#### THE HONEST SHAPE OF THE DECISION
+
+**This is not "a mechanism for MyProtein".** Item 314 established that 17,848 ungrouped duplicates
+already exist and that the family process catches up unevenly. **The mechanism is owed to the
+catalogue either way; MyProtein is what made it visible and would be its first clean case.**
+
+Three options, none of them free:
+
+1. **Build it.** Large, touches every AWIN retailer, ~91,000 new rows, changes what Debenhams and
+   Stylevana pages show. Fixes 17,848 existing duplicates as a side effect.
+2. **Onboard MyProtein collapsed** (Tier 5 on, 594 products). Range breadth is lost, which was the
+   whole proposition — **but 594 supplements from a second source still moves comparison depth off
+   1.86%.**
+3. **Do not onboard MyProtein.** No new rows, no mechanism, and the supplements proposition stays
+   blocked.
+
+**Not recommended here.** Option 2's number — what 594 MyProtein products do to supplements
+comparison depth — is measurable and has not been measured, and it is the figure that decides
+whether option 1 is needed *now* or merely eventually.
