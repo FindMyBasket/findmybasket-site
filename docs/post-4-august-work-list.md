@@ -21335,11 +21335,21 @@ The row's left column already carried `min-w-0`, which reads as the fix being in
 > **`min-w-0` REMOVES THE MINIMUM-CONTENT FLOOR SO A FLEX ITEM *MAY* SHRINK. Nothing truncates
 > until `truncate` sits beside it.** Until then the item shrinks its box and overflows its text.
 >
-> **A class that looks like the fix and is half of it** — and the visible symptom appeared
-> somewhere else entirely: with the left column unable to yield further, flex began shrinking the
-> RIGHT block, and the two price lines were the only shrinkable thing in it because the action
-> carries `whitespace-nowrap`. **The prices went under the button because the retailer name would
-> not truncate.**
+> **A class that looks like the fix and is half of it.**
+
+##### AND THE CONSEQUENCE IS THE PART TO KEEP PROMINENT
+
+> **THE SYMPTOM APPEARED NOWHERE NEAR THE CAUSE.**
+>
+> The retailer name would not truncate, so the left column could not yield past its content
+> width. Flex then took what it needed from the **right** block instead — and the two price lines
+> were the only shrinkable thing in it, because the action carries `whitespace-nowrap`. **The
+> prices went under the button because the name would not shorten.**
+>
+> **A fix in one place for a defect visible in another.** Anyone debugging the overlap would have
+> been looking at the price block, which was behaving correctly under the constraints it was
+> given. Nothing in that block was wrong. The three classes that fixed it are split across both
+> sides of the row, and only one of them is where the damage showed.
 
 ##### 4. `git add -A` COMMITTED AN ARTEFACT NOTHING COULD CATCH
 
@@ -21348,9 +21358,28 @@ of my own, was committed into #386 by `git add -A`.
 
 > **No test, type check or lint would have found it — it is not code.** Only reading the diff
 > would, and I did not; it surfaced in the merge output afterwards. Removed in #387.
+
+##### AND A SECOND OF THE SAME CLASS, THE NEXT DAY
+
+Writing this item, I numbered it **244** — the next free number **on main**. PR #383, open at the
+time, also added a 244. Merging both would have produced a duplicate.
+
+**The contiguity check would have caught it at merge.** It did not have to, because #383 landed
+first and the collision surfaced while renumbering — but the guard was there and would have
+fired.
+
+> **TWO SLIPS, ONE CLASS: A NUMBER ASSERTED RATHER THAN THE CURRENT STATE READ.** `git add -A`
+> asserted "everything here is mine to commit". `### 244` asserted "244 is free". Neither was
+> checked against what was actually there, and both were cheap to check.
 >
-> The habit that follows is not "stop using `add -A`" but **read what it staged before
-> committing**, which is the same act that catches every other class of stray.
+> **THE CONTIGUITY CHECK CATCHING IT IS THE CHECK WORKING, NOT THE PROCESS WORKING.** A guard
+> that fires is doing its job and is also evidence that nothing upstream stopped the mistake
+> being made. The stray file had no guard at all and reached `main`.
+>
+> **Taken together they argue for READING STATE BEFORE WRITING, not for a better habit.** "Be
+> careful with `add -A`" and "check the item number" are two habits; `git status` before commit
+> and `grep '^### '` before numbering are the same single act — looking at what is there — and it
+> covers both plus the next variant, which will not resemble either.
 
 ##### 5. THE TYPE CHECKER CAUGHT WHAT REVIEW DID NOT — TWICE
 
