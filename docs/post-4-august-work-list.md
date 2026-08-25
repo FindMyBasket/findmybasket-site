@@ -26551,3 +26551,117 @@ confirming rather than assuming, since two-character brands interact badly with 
 **Same shape as a population defined by its own detector**: the number measures the instrument. The
 detector is not wrong to exist — it earns its place on feeds whose names really are cut off — and
 **its output on this feed carries no information about this feed.**
+
+---
+
+### 308. MyProtein proceeds, and not as an exception to the CJ deferral
+
+**Raised:** 25 August 2026 · **DECISION: proceed. Delivery terms still unset and still Robbie's read.**
+
+The CJ deferral rests on two arguments and **only one of them is about MyProtein at all.**
+
+| Argument | Simply Be / VitaminExpress | **MyProtein** |
+|---|---|---|
+| **First integration on an unfamiliar network** | new format, new auth, new failure surface, monitors that cannot watch it | **does not apply.** `import-awin-feed` runs eleven daily jobs |
+| **Attribution during a rebuild** | real | **real but weaker** |
+
+> **This is not an exception to the CJ decision. It is the CJ decision applied to a case where its
+> load-bearing half is absent.** Recording it as an exception would make the deferral look like a
+> policy about new retailers, and it is not — it is a judgement about unfamiliar integrations, and
+> that judgement is unchanged.
+
+**Against the weaker half: the supplements proposition has been blocked on a second range since
+20 August.** Comparison depth is 1.86% and Boots supplies 1,744 of 1,831; every question the
+supplements work parked is unanswerable until a second source exists. **An attribution cost is
+paid once and recovered; a blocked proposition accrues.**
+
+---
+
+### 309. The allowlist is clean, the MP line is excluded, and verifying it found a live defect
+
+**Raised:** 25 August 2026 · **STAGE 1 REPORT. Nothing configured yet.**
+
+#### THE ALLOWLIST DROPS NOTHING WE WANT
+
+Audited on `Sports and Nutrition|Health and Beauty` against fid 3196:
+
+| | |
+|---|---:|
+| Feed rows | 7,192 |
+| **Excluded by the allowlist** | **5,397 — 75.0%** |
+| **Of the excluded, supplements per the shipped rule** | **0 — 0.0%** |
+| Paths containing any supplement, among the excluded | **0** |
+
+Every excluded path is Apparel, Tech, Books or a gift voucher. **The 75% that goes is 75% we do not
+want, and none of the 25% we do want is lost.**
+
+#### THE MP LINE IS EXCLUDED, VERIFIED RATHER THAN ASSUMED
+
+All sampled MP rows are apparel and all sit in `Apparel > Clothing > Sports Apparel`, an excluded
+path:
+
+```
+MP Unisex Crew Socks (5 Pack) - Black - UK 2-5
+MP Women's Tempo Zip Through Vest - White - L
+MP Men's Rest Day Oversized Hoodie - Falcon - M
+```
+
+*(Noted in passing: some apparel rows carry `brand_name = MyProtein` while the name begins `MP `,
+so the feed's own brand/name relationship is inconsistent. Immaterial here — both are excluded.)*
+
+#### BUT THE REASON FOR CHECKING TURNED OUT TO BE A LIVE DEFECT
+
+`stripBrandPrefix` builds `^{brand}[\s\-:]*` and **has no word-boundary requirement**, so
+`[\s\-:]*` matching zero characters still lets the strip fire mid-word:
+
+```
+stripBrandPrefix('MPN Complex Capsules', 'MP')  ->  'N Complex Capsules'
+```
+
+**It already fires on the live catalogue.** 27 rows have a name that starts with its brand followed
+immediately by a letter or digit, and the split is not even:
+
+| Shape | Rows | Verdict |
+|---|---:|---|
+| Next char UPPERCASE — run-together feed text | 24 | **the strip is CORRECT**, it repairs item 286's shape |
+| Next char lowercase — mid-word | **3** | **wrong** |
+
+```
+Effn Tan     ->  "Effn Tan ning Foam Ultra Dark 200ml"      LIVE TODAY
+Goldwell     ->  "Goldwell l DOUBLE Dualsenses Silver…"     LIVE TODAY
+Just Jack    ->  "Just Jack S Italian Leather Eau De…"      LIVE TODAY  (×5)
+Some By Mi   ->  "Some By Mi Retinol Advanced Triple…"      correct
+CeraVe       ->  "CeraVe Retinol Serum with Niacinamide…"   correct
+```
+
+> **THE MISSING WORD BOUNDARY IS WHY IT WORKS AND WHY IT BREAKS, AND THOSE ARE THE SAME LINE OF
+> CODE.** Adding `\b` would fix `Effn Tanning` and simultaneously stop repairing
+> `Some By MiRetinol` — 3 rows fixed, 24 rows broken. **That is why this is reported rather than
+> patched**: it is a trade with a worse side, not an oversight.
+
+**Eight rows are wrong today and that is not the reason to care.** `MP` is a **two-character brand
+on 1,341 rows**, and a two-character prefix matches mid-word far more readily than a nine-character
+one. **The exposure multiplies by roughly fifty if MP ever arrives** — and the allowlist is what
+stops it, which is the argument for verifying the allowlist rather than trusting it.
+
+**Not fixed here.** It is shared code on a path with a real trade-off, it does not block onboarding,
+and the mitigation that matters for MyProtein is the allowlist, which is verified.
+
+#### DELIVERY TERMS: A CHECKOUT READ, AND IT IS ROBBIE'S
+
+`£4.49 free over £55` is **to confirm, not to enter.** The read must be at a **checkout, not a
+delivery page.**
+
+> **The evidence for that is in the fleet.** The only retailer more expensive than MyProtein would
+> be — Niche Beauty, £9.95 free over £75 — is **the only one of eleven whose
+> `delivery_terms_source` is `checkout` rather than `site`.** The most expensive terms on the board
+> are the ones a site read did not reach, and MyProtein would be second on both axes.
+
+**Correction accepted and recorded**: MyProtein is second on charge and second on threshold, not the
+fleet maximum.
+
+#### STAGE 1 STOPS HERE
+
+**Nothing configured.** No `retailers` row, no `retailer_import_config` row, no cron entry. The next
+stage writes the config with `active = false`, and the stage after that is a first import read with
+the supplements classification checked against what the shipped rule produces.
