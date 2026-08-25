@@ -461,7 +461,16 @@ for (const [b, n] of feedBrandsWeCarry.slice(0, 25)) console.log(`  ${String(n).
     // dumps names from the nodes named in BARE_NODES so that limit is visible in the
     // report rather than inferred from a count.
     const BARE = (process.env.BARE_NODES || "").split("|").map(s => s.trim()).filter(Boolean);
-    const ptc = col("product_type");
+    // product_type FIRST, falling back to merchant_category when product_type is present
+    // but empty on every row. MyProtein is that shape: product_type 0% filled, and the
+    // discriminating taxonomy lives in merchant_category. Without the fallback this section
+    // silently returns nothing on exactly the feed that needs its names read, which is the
+    // doctrine step ("read the names, do not only count them") failing quietly. Item 317.
+    let ptc = col("product_type");
+    if (ptc >= 0 && !body.some(r => (r[ptc] ?? "").trim() !== "")) {
+      const alt = col("merchant_category");
+      if (alt >= 0) { console.log(`\n  [5c] product_type is EMPTY on every row — reading merchant_category instead.`); ptc = alt; }
+    }
     if (BARE.length && ptc >= 0) {
       const SPORT = /\b(whey|casein|creatine|electrolyte|electrolytes|hydration|hydrate|isotonic|pre[\s-]?workout|bcaa|eaa|amino|glutamine|endurance|protein|isolate|gainer|energy gel)\b/i;
       for (const node of BARE) {
