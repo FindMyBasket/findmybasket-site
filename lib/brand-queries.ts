@@ -32,6 +32,13 @@ export async function findBrandBySlug(slug: string): Promise<BrandLookup | null>
   let chosenNormalised: string | null = null;
   // LEGACY SLUG MATCH, collected in the same scan. See the redirect note below.
   let legacyNormalised: string | null = null;
+  // Display names for the legacy match too. Needed because a brand that KEEPS its
+  // legacy slug now renders at it rather than redirecting, so it needs a real display
+  // name and not the lowercase normalised form.
+  const legacyMatches = new Map<string, number>();
+  // Every brand seen, so folded-slug ownership can be counted after the scan.
+  // ~2,700 distinct values; the scan already reads every row.
+  const allBrands = new Set<string>();
 
   while (true) {
     const { data, error } = await supabase
@@ -65,6 +72,7 @@ export async function findBrandBySlug(slug: string): Promise<BrandLookup | null>
 
     for (const row of data) {
       if (!row.normalised_brand) continue;
+      allBrands.add(row.normalised_brand);
       if (brandSlug(row.normalised_brand) === slug) {
         chosenNormalised = row.normalised_brand;
         const display = row.brand ?? row.normalised_brand;
@@ -84,6 +92,8 @@ export async function findBrandBySlug(slug: string): Promise<BrandLookup | null>
         brandSlug(row.normalised_brand) !== slug
       ) {
         legacyNormalised = row.normalised_brand;
+        const display = row.brand ?? row.normalised_brand;
+        legacyMatches.set(display, (legacyMatches.get(display) ?? 0) + 1);
       }
     }
 
@@ -91,11 +101,56 @@ export async function findBrandBySlug(slug: string): Promise<BrandLookup | null>
     offset += PAGE_SIZE;
   }
 
+  // ── BRANDS THAT KEEP A DISTINGUISHABLE LEGACY SLUG ──────────────────────────────
+  //
+  // NAMED FOR WHAT IT DOES, NOT FOR THE CLASS. This is NOT a collision guard and must
+  // not be read as one. Measured 26 Aug 2026: 49 folded slugs are shared by more than
+  // one brand, covering 102 brands and 4,530 products. THIS HANDLES SEVEN OF THEM.
+  //
+  // The other 42 collided long before accents were folded -- `dr. jart+` and `dr jart`,
+  // `st ives` and `st. ives`, `about tone` in three spellings -- and their LEGACY slugs
+  // are identical too, so there is no pair of distinct addresses to fall back to.
+  // Nothing here helps them and nothing here could.
+  //
+  // The seven accented pairs are the subset whose legacy slugs DIFFER (`k-rastase`
+  // against `kerastase`), which is the only reason a fallback address exists. They were
+  // never a special class -- they are the visible part of one. Items 386 and 387.
+  const keepsLegacySlug = (nb: string): boolean => {
+    const folded = brandSlug(nb);
+    if (folded === legacyBrandSlug(nb)) return false;          // nothing to fall back to
+    let owners = 0;
+    for (const other of allBrands) if (brandSlug(other) === folded) owners++;
+    return owners > 1;                                          // folded address is contested
+  };
+
+  // A brand that keeps its legacy slug does not answer at its folded one, so the
+  // uncontested sibling can. Without this, /brands/kerastase served Kérastase and the
+  // 125-product Kerastase had no page at all.
+  if (chosenNormalised && keepsLegacySlug(chosenNormalised)) {
+    let replacement: string | null = null;
+    for (const other of allBrands) {
+      if (other !== chosenNormalised && brandSlug(other) === slug && !keepsLegacySlug(other)) {
+        replacement = other;
+        break;
+      }
+    }
+    chosenNormalised = replacement;
+    if (!replacement) matches.clear();
+  }
+
   // An exact match always wins. The legacy match is only consulted when nothing
   // resolves today, so a brand cannot be redirected away from its own live page.
   if (!chosenNormalised) {
     if (legacyNormalised) {
-      return { normalised_brand: legacyNormalised, display_name: legacyNormalised,
+      // A brand keeping its legacy slug RENDERS here rather than redirecting: this IS
+      // its address. Only brands whose folded slug is uncontested redirect to it.
+      let legacyDisplay = legacyNormalised;
+      let best = 0;
+      for (const [d, n] of legacyMatches.entries()) if (n > best) { legacyDisplay = d; best = n; }
+      if (keepsLegacySlug(legacyNormalised)) {
+        return { normalised_brand: legacyNormalised, display_name: legacyDisplay };
+      }
+      return { normalised_brand: legacyNormalised, display_name: legacyDisplay,
                legacyRedirectTo: brandSlug(legacyNormalised) };
     }
     return null;
