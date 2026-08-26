@@ -39,7 +39,15 @@
 // WORST MISS, and MISSING IS SAFE WHERE OVER-STRIPPING IS NOT.
 
 const ALNUM = /[a-z0-9]/;
-const SEPARATOR = /[\s\-:.,]/;
+// Anything that is not alphanumeric. DELIBERATELY NOT AN ENUMERATED LIST: the first
+// draft used `[\s\-:.,]` and a real row broke it -- brand "So...?" against name
+// "So...? So…? Unique Truffle Cream Body Mist". The `?` was not in the list, so
+// consumption stopped inside the punctuation and the rule then matched the SECOND
+// "So" and chewed into the product name, yielding "So...? …? Unique Truffle...".
+// An enumerated separator list is a guess about which punctuation exists; the
+// comparison is already alphanumeric-only, so the boundary must be too. Found by
+// sampling the 4,312 changed titles rather than by reasoning about them.
+const SEPARATOR = /[^a-z0-9]/i;
 
 /** The brand reduced to lowercase letters and digits, which is what we compare on. */
 function brandAlnum(brand: string): string {

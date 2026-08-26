@@ -57,6 +57,21 @@ test('consumes every consecutive copy of the brand, not just one', () => {
   );
 });
 
+test('the separator boundary is any non-alphanumeric, not an enumerated list', () => {
+  // REGRESSION. The first draft used `[\s\-:.,]`. This real row broke it: `?` was not
+  // in the list, so consumption stopped inside the punctuation, the rule then matched
+  // the SECOND "So", and the title came out as "So...? …? Unique Truffle Cream...".
+  //
+  // An enumerated separator list is a guess about which punctuation exists in supplier
+  // data. The comparison is already alphanumeric-only, so the boundary has to be too.
+  // Found by SAMPLING the 4,312 changed titles, not by reasoning about them -- which is
+  // the argument for reading a large diff rather than trusting it.
+  assert.equal(
+    stripBrandPrefix('So...? So\u2026? Unique Truffle Cream Body Mist 150ml', 'So...?'),
+    'Unique Truffle Cream Body Mist 150ml'
+  );
+});
+
 test('MID-WORD GUARD: does not strip a brand that opens a longer word', () => {
   // "Phytophanere" is a product line, not a repeat of "Phyto". Same for "OPIcons"
   // under brand "o_p_i", and "Bondi Bronze" under "Bondi Sands" -- the last is the
@@ -211,6 +226,9 @@ const AGREEMENT_CASES: Array<[name: string, brand: string | null]> = [
   ['Phyto Phytophanere Ultra Serum 50ml', 'Phyto'],
   ['Bondi Sands Bondi Bronze Tanning Foam', 'Bondi Sands'],
   ['o_p_i OPIcons - Infinite Shine 15ml', 'o_p_i'],
+  // separator boundary
+  ['So...? So\u2026? Unique Truffle Cream Body Mist 150ml', 'So...?'],
+  ['Tiffany & Co. Eau de Parfum Spray 50ml', 'Tiffany & Co'],
   // separators the old regex left stranded
   ['Nivea. Body Lotion 400ml', 'Nivea'],
   ['NYX - Soft Matte Lip Cream', 'NYX'],
