@@ -25,6 +25,9 @@ interface UrlEntry {
 const STATIC_PAGES: UrlEntry[] = [
   { loc: '/', changefreq: 'daily', priority: 1.0 },
   { loc: '/finder', changefreq: 'weekly', priority: 0.7 },
+  // The brand index. Its 2,451 destinations are already listed individually below;
+  // this is the page a visitor browses them from. Item 419.
+  { loc: '/brands/all', changefreq: 'weekly', priority: 0.7 },
   { loc: '/savings-hub.html', changefreq: 'daily', priority: 0.9 },
   { loc: '/app.html', changefreq: 'weekly', priority: 0.9 },
   { loc: '/product-finder.html', changefreq: 'weekly', priority: 0.7 },

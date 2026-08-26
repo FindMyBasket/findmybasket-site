@@ -206,7 +206,13 @@ export async function CategoryPage({ category, displayName, intro, browse }: Pro
         <section className="max-w-site mx-auto px-6 py-12">
           <h2 className="font-serif text-3xl text-ink mb-2">Top brands</h2>
           <p className="text-ink-light mb-8">
-            {stats.total_brands.toLocaleString()} brands in {displayName.toLowerCase()}. Here are the most stocked.
+            {stats.total_brands.toLocaleString()} brands in {displayName.toLowerCase()}. Here are the most stocked.{' '}
+            {/* THE BLOCK SHOWS 16 OF 555 ON HAIR -- a browse affordance reaching 3% of
+                what it appears to offer. One line, rather than a second page: the index
+                already exists and lists every brand. Item 419. */}
+            <Link href="/brands/all" className="text-gold underline hover:no-underline">
+              See all brands
+            </Link>.
           </p>
           <div className="flex flex-wrap gap-2">
             {brands.map(brand => (

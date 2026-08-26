@@ -32722,3 +32722,66 @@ reported it changing.
 gate. `findBrandBySlug` already scanned every member. The change is `normalised_brand: string` to a
 list, five `.eq()` becoming `.in()`, and an array overload of `fmb_brand_metadata_facts`. **The display
 half of the union existed; only the product half was missing.**
+
+---
+
+### 419. The brand index, and two premises in the brief that measuring refuted
+
+**Raised:** 26 August 2026 · **`/brands/all` built. Spotlight untouched.**
+
+**PREMISE 1 -- "`/brands` does not exist". It does, and it is something else.** `app/brands/page.tsx`
+returns 200 and serves **Brand Spotlight**: partnered content, `brand_hubs`, **2 rows**, carrying an
+explicit trust firewall -- *"these are brand partnerships... they sit alongside, and stay separate from,
+our independent price comparison"*. `SiteNav` places it last, behind a separator, in a lighter weight,
+with a comment saying that is deliberate.
+
+> **An A-Z of every compared brand at that URL would break the statement rather than the layout.** The
+> index lives at `/brands/all`, reachable from the Spotlight and from the nav, displacing nothing.
+
+**PREMISE 2 -- "every hub is orphaned from internal navigation". It was, and the grid closed it four
+days ago without anyone aiming at that.** Every hub with a live product is reachable in three clicks:
+category root, product card, brand link. Verified: `/product/136197` links to `/brands/marvis`, and
+`/hair` now pages all 9,707 products at 48 a page. **Before item 408 it was 24 featured products per
+category** -- that was the orphaning, and it closed as a side effect of a change made for a different
+reason.
+
+> **The premise was true when the brief was drafted and false by the time it was written.** Worth
+> recording as a property of a long queue rather than as an error: the work list changes what the next
+> item is about.
+
+**THE HONEST CASE IS DISCOVERY, NOT REACHABILITY.** Nobody finds a brand by paging 9,707 products. That
+still argues for an index and it is a weaker argument than the one in the brief. **Stating the weaker
+true one rather than the stronger false one.**
+
+**BUILT AS SCOPED.** All **2,451** brands with at least one live product -- 2,457 members collapsing to
+2,451 slugs -- with counts, no threshold. A-Z anchors **plus a `#` bucket for the 13 names starting
+with a digit or symbol** (`2btanned`, `& honey`, `o.p.i`), because a name rendered in no section is the
+same invisible incompleteness a threshold was rejected for. One page, ~230 kB of markup, one URL and
+one crawl; per-letter paging was the fallback if that failed and it did not.
+
+**`fmb_active_brand_names_with_counts` EXTENDS THE SITEMAP'S RPC RATHER THAN SITTING BESIDE IT.** Fifth
+instance of the replacement existing one function away, and the answer should not be a sixth function.
+
+**416's QUESTION, ASKED AT THE QUERY AND RECORDED THERE:**
+
+> **A brand index is unbounded by construction.** Nothing filters it: one row per distinct brand,
+> growing with every retailer onboarded. **2,458 is today's data, not a property of the query.** So it
+> aggregates in SQL from the first line and never pages-and-counts -- the shape items 238, 412 and 415
+> each arrived at separately, each after shipping the previous one.
+
+**Slug grouping happens in TypeScript, not SQL**, because `brandSlug()` is the same function that
+builds the links and a second implementation in SQL is exactly the duplication items 406, 407 and 417
+are about.
+
+**Six slugs show one row each**, per item 418: the hub unions their members, so two entries with
+different names and one destination would advertise a distinction the site cannot honour.
+
+**"See all brands" appended to the existing Top brands block**, not a second page. That block shows 16
+of 555 on hair -- **a browse affordance reaching 3% of what it appears to offer** -- and one line fixes
+it because the index already lists every brand.
+
+**BOTH NAVS, AND THE GUARD CAUGHT IT.** Added to `SiteNav`'s `NAV_LINKS` and to **both** static blocks
+in `public/index.html`. `nav-parity.test.ts` failed on the first attempt with exactly the message it
+was written to produce -- *"a link in the React nav and not the static one is invisible"* -- naming the
+desktop and mobile blocks separately. **The guard from item 68 did its job on the first new nav entry
+since it was written.**
