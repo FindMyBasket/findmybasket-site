@@ -29817,9 +29817,26 @@ For those, recategorisation purges a path that is not the page. M.A.C is one: `b
 
 ---
 
-### 364. An alias added to work around a defect nobody had identified
+### 364. ~~An alias added to work around a defect nobody had identified~~ — WITHDRAWN
 
-**Raised:** 26 August 2026 · **The finding underneath item 361, and the reason the class stayed invisible for months.**
+**Raised:** 26 August 2026 · **REPLACED BY ITEM 367 THE SAME DAY. Not qualified, not amended: the premise is false and the finding built on it does not stand.**
+
+> **`lor-al` IS NOT AN ALIAS ROW.** `select count(*) from brand_aliases where alias ilike '%lor-al%'`
+> returns **0**. It is a slug, named in a `BrandPage.tsx` comment that enumerates the slugs which
+> resolve to one brand. **I read a comment listing derived values and built a general form on them
+> being stored ones.**
+>
+> The general form -- *"a workaround entered in a table whose ordinary contents look identical to it
+> removes its own evidence"* -- is a satisfying shape and there is no instance of it here. The
+> practical instruction attached to it was wrong too: the `notes` column is used on **87 of 197
+> rows** with 44 distinct values, and it already names the accent class.
+>
+> **Item 367 is the replacement, and it is a better finding because it does not need a general form
+> to be true.** Same table, opposite conventions, one of which silently produces an unreachable URL.
+
+The text below is kept unedited, struck through, so the correction is legible rather than tidy.
+
+~~The original claim followed.~~
 
 Item 271 added `brand_aliases` rows so a renamed brand's URL would reach its canonical hub instead
 of 404ing. Among the L'Oréal rows its own comment lists: **`lor-al`** and
@@ -29980,3 +29997,311 @@ accented side, 519 on the ASCII side.**
 >
 > So the 44 split into **25 that a slug fix alone repairs** and **7 that need a brand merge decided
 > first**. That is the difference between a rename and a merge, and it is not visible from the URL.
+
+
+---
+
+### 368. What merging the seven would involve, measured and not done
+
+**Raised:** 26 August 2026 · **Step 3 held. 1,502 products, and it is a catalogue merge dressed as a URL change.**
+
+Seven accented brands have an ASCII sibling that already exists as a separate brand, so
+transliterating their slug would land two `normalised_brand` values on one URL and
+`findBrandBySlug` would resolve it to whichever it matched first. **That is a merge performed as a
+side effect.**
+
+| accented | products | ASCII sibling | products |
+|---|---:|---|---:|
+| kérastase | 520 | kerastase | 125 |
+| l'oréal professionnel | 401 | l'oreal professionnel | 83 |
+| avène | 47 | avene | **159** |
+| chloé | 11 | chloe | **88** |
+| bioré | 2 | biore | 8 |
+| l'oréal men expert | 1 | l'oreal men expert | **52** |
+| khloé kardashian | 1 | khloe kardashian | 4 |
+| **total** | **983** | | **519** |
+
+**On three of the seven the ASCII side is the larger one**, so "the accented spelling is the brand's
+and the ASCII is noise" does not decide which page survives on product count.
+
+##### TWO IDENTIFIER TESTS RUN, BOTH VACUOUS, AND SAYING SO IS THE POINT
+
+| test | result | worth |
+|---|---|---|
+| shared `match_key` between sides | **0 across all seven** | **NONE. The brand is IN the match key** -- `buildMatchKey` re-prepends it -- so two spellings can never share one. The test could only ever return zero. |
+| shared `ean` between sides | **0 across all seven** | **NONE. `products.ean` is empty for all 1,502 rows** on both sides. Zero overlap of nothing. |
+| identical normalised product name | **0 across all seven** | **Real.** Names are always populated, and no product on one side shares a name with any on the other. |
+
+> **TWO OF THE THREE CHECKS I REACHED FOR FIRST WERE CIRCULAR OR EMPTY, AND BOTH RETURNED A CLEAN
+> ZERO THAT LOOKED LIKE EVIDENCE.** "No shared EANs" reads as *these are different products*. It
+> actually reads as *nobody recorded an EAN*. Item 342's shape again: a check comparing a column to
+> its own source, or to an absence, reports agreement rather than truth.
+
+##### AND THE RETAILER SPLIT REFUTES THE OBVIOUS READ
+
+The working hypothesis was that one retailer spells it with the accent and another without, making
+the ASCII side supplier noise. **It is not that.**
+
+| brand | accented side supplied by | ASCII side supplied by |
+|---|---|---|
+| Kérastase | Beauty Flash, Boots, Gorgeous Shop, Perfume Click, Stylevana, YesStyle | **Beauty Flash, Boots, Gorgeous Shop** |
+| L'Oréal Professionnel | Beauty Flash, Boots, Debenhams, Gorgeous Shop, Perfume Click | **Beauty Flash, Boots, Debenhams, Gorgeous Shop** |
+
+**The same retailers supply both spellings.** The split runs *through* individual feeds, not between
+them, so it cannot be attributed to a single source and cannot be fixed by correcting one.
+
+##### WHAT A MERGE WOULD ACTUALLY HAVE TO DECIDE
+
+1. **Which `normalised_brand` survives** -- and it cannot be settled by size, because the larger side
+   differs per brand, nor by provenance, because the sources are the same.
+2. **What happens to `match_key` on the losing side.** Every one of those products' keys contains the
+   losing spelling. Rewriting them is a `match_key` change, which is under its own gate, and it would
+   move keys for up to 983 products.
+3. **Whether the two sides then collide.** With names disjoint today, a merge produces one brand with
+   1,502 distinct products and no dedupe -- **but only because the keys differed by brand spelling.**
+   Re-key both sides to one spelling and the previously-impossible collisions become possible, which
+   is the merge's real work and is invisible until it is attempted.
+4. **The barcode question stays open**, because there are no barcodes to answer it with.
+
+**Held, and deliberately not proposed.** Point 2 puts this behind the `match-key.ts` gate, and point
+3 means the dedupe outcome cannot be predicted from the current data -- it has to be computed against
+a re-keyed set. That is a measurement to commission, not a call to make today.
+
+
+---
+
+### 369. The readable URL exists and redirects to the unreadable one
+
+**Raised:** 26 August 2026 · **Found while preparing step 2, and it stops step 2 as specified.**
+
+```
+/brands/loreal-paris   308 ->  /brands/lor-al-paris
+/brands/lancome        308 ->  /brands/lanc-me
+```
+
+**The clean URLs already exist and actively redirect to the mangled ones.** `brand_aliases` holds
+`loreal paris -> L'Oréal Paris` (noted *"accent + apostrophe dropped"*), a correct row about supplier
+spelling -- and because the redirect target is slugified at read time, the alias sends the readable
+address to the unreadable one. **The table is pointing the right URL at the wrong page**, which is
+the inverse of what an alias is for.
+
+##### AND STEP 2 IS NOT SEPARABLE FROM STEP 3
+
+Step 2 was scoped as "the 25 that no sibling collides with", on the assumption that the 7 could be
+left alone. **They cannot**, and the reason is structural:
+
+> **`brandSlug` IS A PURE FUNCTION OF ONE BRAND STRING. IT CANNOT KNOW ABOUT SIBLINGS.** Change it
+> to transliterate and it transliterates all 32 -- including the 7 whose ASCII twin already occupies
+> the destination. `/brands/kerastase` (125 products, live 200) and `/brands/k-rastase` (520, live
+> 200) would both resolve to `kerastase`, and `findBrandBySlug` takes the last match in id order, so
+> one brand's products become unreachable at any URL.
+>
+> **There is no version of "fix the 25 and hold the 7" that changes which URL is canonical**, because
+> the thing that decides the URL is a string function with no view of the catalogue.
+
+**The options, and none is free:**
+
+| | what it does | cost |
+|---|---|---|
+| **A. Transliterate everything** | 25 fixed, 7 collide | **makes the held merge happen by accident** -- the exact outcome item 368 was written to prevent |
+| **B. Resolve-only** -- accept both spellings in `findBrandBySlug`, exact match preferred | clean URLs start working; the 7 keep exact-match behaviour and are untouched | **the mangled URL stays canonical.** Two live URLs per brand, self-canonicalising, which adds a duplicate surface to a site with 54,056 pages already crawled-and-declined |
+| **C. Collision-aware emission** -- a slug generator that sees the whole brand set and declines to transliterate where it would collide | correct for all 32 | not a pure function; needs the brand list wherever a link is built, and **encodes the 7's unresolved state in the URL scheme** |
+| **D. Do step 3 first** | dissolves the problem | 1,502 products behind the match-key gate |
+
+> **THE SCOPING WAS WRONG AND THE MEASUREMENT THAT PRODUCED IT WAS RIGHT.** "25 clean, 7 colliding"
+> is accurate as a description of the data and false as a work breakdown. **Separability was assumed
+> from the shape of the numbers**, not derived from how the slug is computed -- and the numbers
+> genuinely do split 25/7, which is what made the assumption invisible.
+>
+> **Second time in this phase that a correct measurement supported an incorrect plan.** Item 356 was
+> the first: the group split was real and the causal reading drawn from it was not.
+
+**Not applied. Reported as a fork**, because every option above is a decision about the seven, and
+the seven were explicitly held.
+
+---
+
+### 370. The match-key gate has stopped being a caution and become a queue
+
+**Raised:** 26 August 2026 · **Scoping what it would take to open it. Not the merge — the gate.**
+
+Four separate pieces of work now wait behind `_shared/match-key.ts`:
+
+| | waiting item | what it needs |
+|---|---|---|
+| 1 | **item 294** — `Boots Nail **&** Cuticle Oil` and `Boots Nail **And** Cuticle Oil` are two products, and the dead twin outranks the live one on 281 impressions | a rule change |
+| 2 | **item 368** — the seven split brands, 1,502 products | a re-keying collision measurement |
+| 3 | **2,709 stale keys** inconsistent with both implementations | a backfill |
+| 4 | **`COUNT_UNIT_RE`** — product 105424 held since 21 Aug because `90's` reads as a pack count | a different function, a different bug |
+
+##### ★ THREE OF THE FOUR ARE ONE BUG
+
+`normaliseForMatch` is the core of `buildMatchKey`, and its character class is `[^a-z0-9]+ -> " "`.
+**Every character outside a-z0-9 is deleted, not folded.** Measured against the live function:
+
+```
+"L'Oréal Paris Revitalift"  ->  "l or al paris revitalift"
+"L'Oreal Paris Revitalift"  ->  "l oreal paris revitalift"
+"Avène Thermal Water"       ->  "av ne thermal water"
+"Avene Thermal Water"       ->  "avene thermal water"
+```
+
+> **TWO SPELLINGS OF THE SAME PRODUCT PRODUCE DIFFERENT KEYS, SO THEY CANNOT MATCH.** This is not a
+> cosmetic defect. Matching is what the site does; a product listed by Boots as "Avène Thermal Water"
+> and by Escentual as "Avene Thermal Water" is two products with two prices and no comparison.
+>
+> **Item 294 is the same bug wearing a different character.** `&` is outside `a-z0-9`, so it is
+> deleted, while the word "and" survives -- `nail & cuticle` and `nail and cuticle` never meet.
+>
+> **And item 368's seven split brands are a CONSEQUENCE of it, not an independent problem.** They are
+> split because their products never matched. I recorded "zero shared match_key" as structurally
+> guaranteed by the brand being in the key, which is true and was not the whole reason.
+
+**Same root as items 355 and 361: an ASCII-only character class meeting non-ASCII supplier data.**
+Third instance in two days, and this is the one that costs comparisons rather than titles or URLs.
+
+##### CAN THE BACKFILL AND THE COLLISION MEASUREMENT SHARE ONE CHANGE? YES, AND THEY MUST
+
+**15,030 products — 14.9% of the catalogue — carry a `&` or an accent in their name**, so a rule
+change moves their keys. That subsumes the 2,709: once every key is recomputed, "inconsistent with
+both implementations" stops being a category.
+
+> **THEY CANNOT BE SEQUENCED AS TWO CHANGES.** Backfilling 2,709 to today's rule, then changing the
+> rule, means re-keying twice and measuring collisions against a set that is about to move. **The
+> collision measurement is not a step before the backfill; it is the backfill, inspected before it
+> is written.**
+>
+> This contradicts the standing note that *derived keys stale only on kept characters, so punctuation
+> fixes move no key*. **That note is right about fixes which change only already-stripped
+> characters, and this is not one** -- transliteration changes what SURVIVES normalisation, so keys
+> move by construction. The note should not be read as covering this.
+
+**`COUNT_UNIT_RE` does not belong in the same change.** Different function, different defect, and its
+hold is one product. Riding it along would mean one change proving two unrelated things.
+
+##### WHAT THE STANDING INSTRUCTION ACTUALLY REQUIRES
+
+Read from the file rather than remembered:
+
+| requirement | source |
+|---|---|
+| **`buildMatchKey` byte-identical to `fmb_build_match_key()`** in `20260703120000_match_key_deal_paren.sql`; any change mirrored in both | module header |
+| **`scripts/match-key-harness.mts` must pass** — ~50 regression cases, one per false-positive class learned from real catalogue data (pack counts, hidden sizes, shades, concentration, versions, sets, truncation) | module header |
+| **Any narrowing of `extractNameNumbers` must cite its comment and re-check the multipack population first** | line 313 |
+| **Report the diff before making it** | item 253 |
+
+##### WHAT A CHANGE WOULD HAVE TO PROVE
+
+1. **That it merges what should merge.** 138 transliterated names currently span more than one key
+   — a floor, since the approximation ignores the brand prefix.
+2. **That it merges nothing that should stay apart.** The harness's 50 cases are the floor, not the
+   ceiling; the new risk is that folding characters makes previously-impossible collisions possible,
+   and **that population does not exist until the keys are recomputed.**
+3. **That the SQL twin agrees**, byte for byte, on the same corpus.
+4. **That the multipack population is unchanged**, if `extractNameNumbers` is touched at all — and a
+   transliteration fix should not need to touch it, which is worth asserting rather than assuming.
+
+> **The honest shape is one gated change with three phases: recompute off-line, measure the collisions
+> against the recomputed set, then write.** Point 2 is the whole risk and it cannot be assessed from
+> the current data — which is the same wall item 368 hit, arrived at from the other side.
+
+**Nothing applied. This is the scoping, and the merge decision should wait on it rather than the
+other way round.**
+
+> **THE INVERSION, STATED PLAINLY:** the seven split brands are not a catalogue question that happens
+> to need a re-key. They are **one of several symptoms of a rule that deletes characters it should
+> fold.** Item 368's merge decision waits on this gate; the gate does not wait on it.
+
+---
+
+### 371. Phases 1 and 2, measured against a recomputed set. Nothing applied.
+
+**Raised:** 26 August 2026 · **Both phases run off-line on scratch functions, patched mechanically from the live SQL source and dropped afterwards. Phase 3 stays unwritten.**
+
+The candidate change: fold accented letters to ASCII and map `&` to `and`, **before** the
+`[^a-z0-9]+` strip. Modelled by copying `fmb_build_match_key`'s own source and substituting only the
+two helper names, so the body is the live one rather than a retyped one.
+
+```
+Avène Thermal Spring Water 300ml   avene av ne thermal spring water 300ml
+                               ->  avene thermal spring water 300ml
+Boots Nail & Cuticle Oil 10Ml      boots nail cuticle oil 10ml
+Boots Nail And Cuticle Oil 10Ml    boots nail and cuticle oil 10ml
+                               ->  boots nail and cuticle oil 10ml   (BOTH)
+```
+
+**Item 294's two products produce one key.**
+
+##### PHASE 1 — RECOMPUTE
+
+| | |
+|---|---:|
+| products | 99,967 |
+| **keys that move** | **16,754 (16.76%)** |
+| distinct keys before | 99,595 |
+| distinct keys after | 99,470 |
+| **net key reduction** | **125** |
+| **merge groups** (a new key gathering >1 old key) | **128** |
+| products inside a merge | 257 |
+| groups spanning more than one brand | 13 |
+| largest group | 2 old keys |
+
+**My predicted floor was 138 and the measured figure is 128.** The approximation was rough and in the
+right region; the real number is what stands.
+
+##### PHASE 1 ALSO CORRECTS A NUMBER EVERYONE IS WORKING FROM
+
+**Stored keys differing from what the SQL function produces today: 5,344, not 2,709.**
+
+> Those may not be the same population -- 2,709 was measured as "inconsistent with **both**
+> implementations" and 5,344 is "differs from the SQL one" -- so this is **not** a claim that the
+> drift doubled. It is a claim that **the figure in circulation is not the figure this query returns,
+> and nobody should plan a backfill on the old one without re-deriving it.**
+
+##### PHASE 2 — COLLISIONS, READ RATHER THAN COUNTED
+
+**All 13 cross-brand groups read in full. All nine name-divergent groups read in full.** (They
+overlap; 18 distinct groups inspected.) The remaining 106 have identical names after folding and are
+safe by construction rather than by inspection -- **which is a weaker guarantee and is stated as
+such.**
+
+**Every merge read was correct.** Three shapes, no fourth:
+
+| shape | example |
+|---|---|
+| one brand, two spellings | `Kérastase` / `Kerastase` · `L'Oréal Professionnel` / `L'Oreal Professionnel` |
+| **`&` against the word `and`** | `Percy & Reed` / `Percy and Reed` · `Zadig & Voltaire` / `Zadig and Voltaire` |
+| brand repeated in the name, unfoldable until now | `Hermes **Hermès** 24 Faubourg` folding onto `Hermes 24 Faubourg` |
+
+> **ZERO FALSE MERGES IN THE POPULATION THAT COULD CONTAIN ONE.** The risk was that folding
+> characters makes previously-impossible collisions possible; 128 became possible and all 18
+> inspected are the same product. **That is the strongest evidence available before writing, and it
+> is not proof** -- 106 groups rest on name-identity rather than on someone reading them.
+>
+> **And it is a smaller change than the 16.76% suggests.** Most moved keys move alone: 16,754 rows
+> re-key and only 257 land beside anything. The rule is being corrected far more often than it is
+> being made to merge.
+
+##### THE MULTIPACK POPULATION, ASSERTED
+
+The standing instruction at `extractNameNumbers` requires re-checking the multipack population
+before any narrowing. **A transliteration fix should not touch numbers at all, so the assertion is
+that nothing changes** -- and it was run rather than assumed:
+
+**75,926 rows carry a number. On zero of them does the fold alter the extracted number set.**
+
+> `zz_fold` translates letters and maps `&`; digits are outside both. Verified across all 99,967
+> rows rather than argued from the character class -- **a surprise here would have been exactly the
+> kind the instruction exists to catch.**
+
+##### WHAT PHASE 3 WOULD STILL NEED
+
+1. The TypeScript twin changed to match, and **`scripts/match-key-harness.mts` passing** -- 50 cases,
+   none of which currently exercise an accent or an ampersand.
+2. **Byte-parity re-asserted between `buildMatchKey` and `fmb_build_match_key`** on the same corpus.
+3. A decision on **`&` -> `and` versus stripping the word `and`**. Both merge item 294's pair; the
+   first is modelled here, the second is more aggressive and was not measured.
+4. The 5,344 re-derived, since a re-key writes all of them anyway.
+
+**Scaffolding dropped. Nothing applied, and Phase 3 is deliberately unwritten until 1 and 2 are
+read.**
