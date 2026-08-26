@@ -32725,103 +32725,140 @@ half of the union existed; only the product half was missing.**
 
 ---
 
-### 419. The brand index, and two premises in the brief that measuring refuted
+### 419. A short alphabetical list looks exactly like a complete one
 
-**Raised:** 26 August 2026 · **`/brands/all` built. Spotlight untouched.**
+**Raised:** 26 August 2026 · **`/brands/all` built. The first build of it was two-thirds empty and nothing said so.**
 
-**PREMISE 1 -- "`/brands` does not exist". It does, and it is something else.** `app/brands/page.tsx`
-returns 200 and serves **Brand Spotlight**: partnered content, `brand_hubs`, **2 rows**, carrying an
-explicit trust firewall -- *"these are brand partnerships... they sit alongside, and stay separate from,
-our independent price comparison"*. `SiteNav` places it last, behind a separator, in a lighter weight,
-with a comment saying that is deliberate.
+**It rendered 934 brands and nine letter sections, ending at "I".** Expected 2,451 and twenty-seven.
 
-> **An A-Z of every compared brand at that URL would break the statement rather than the layout.** The
-> index lives at `/brands/all`, reachable from the Spotlight and from the nav, displacing nothing.
+> **HTTP 200. No error. Typecheck clean. Both integrity checks green. And ending at I.**
+>
+> **A short alphabetical list looks exactly like a complete one.** The sections present were correct,
+> the counts inside them were correct, the letters were in order. There is no internal evidence of
+> absence in an A-Z that stops early -- and **nothing in the system knew what the right length was.**
 
-**PREMISE 2 -- "every hub is orphaned from internal navigation". It was, and the grid closed it four
-days ago without anyone aiming at that.** Every hub with a live product is reachable in three clicks:
-category root, product card, brand link. Verified: `/product/136197` links to `/brands/marvis`, and
-`/hair` now pages all 9,707 products at 48 a page. **Before item 408 it was 24 featured products per
-category** -- that was the orphaning, and it closed as a side effect of a change made for a different
-reason.
+**THE MECHANISM IS THE PART THAT TRANSFERS.** The cause was PostgREST's 1,000-row cap. The function I
+was extending, `fmb_active_brand_names()`, **exists for no other reason than to sidestep that cap**,
+and says so in the comment I read while writing the replacement:
 
-> **The premise was true when the brief was drafted and false by the time it was written.** Worth
-> recording as a property of a long queue rather than as an error: the work list changes what the next
-> item is about.
+> *"returns the distinct set as ONE ROW containing an array, which sidesteps the row cap entirely
+> rather than reducing the number of pages."*
 
-**THE HONEST CASE IS DISCOVERY, NOT REACHABILITY.** Nobody finds a brand by paging 9,707 products. That
-still argues for an index and it is a weaker argument than the one in the brief. **Stating the weaker
-true one rather than the stronger false one.**
+**I extended the function's DATA and changed its SHAPE.** `returns table (...)` instead of one row of
+`jsonb`. The data was what I needed; the shape was the whole reason the function existed.
 
-**BUILT AS SCOPED.** All **2,451** brands with at least one live product -- 2,457 members collapsing to
-2,451 slugs -- with counts, no threshold. A-Z anchors **plus a `#` bucket for the 13 names starting
-with a digit or symbol** (`2btanned`, `& honey`, `o.p.i`), because a name rendered in no section is the
-same invisible incompleteness a threshold was rejected for. One page, ~230 kB of markup, one URL and
-one crawl; per-letter paging was the fallback if that failed and it did not.
+**AND THAT IS THE LIMIT OF THE INSTRUCTION.** "Extend rather than write a sixth function" was the right
+call and it does not protect the property that made extending correct. **Following a rule is not the
+same as preserving what the rule was for.** A sixth function written from scratch would have needed the
+cap solved from first principles; extending let me inherit the name and the intent while discarding
+the mechanism, and inheriting is what made it feel safe.
 
-**`fmb_active_brand_names_with_counts` EXTENDS THE SITEMAP'S RPC RATHER THAN SITTING BESIDE IT.** Fifth
-instance of the replacement existing one function away, and the answer should not be a sixth function.
+**Fixed:** `fmb_brand_index()` returns `jsonb` -- one row, 2,457 entries, 80 kB.
 
-**416's QUESTION, ASKED AT THE QUERY AND RECORDED THERE:**
+**THE GUARD IS A DETECTOR, NOT A COUNT ASSERTION, AND THE REASONING SITS AT IT.** The page throws below
+1,500 brands.
 
-> **A brand index is unbounded by construction.** Nothing filters it: one row per distinct brand,
-> growing with every retailer onboarded. **2,458 is today's data, not a property of the query.** So it
-> aggregates in SQL from the first line and never pages-and-counts -- the shape items 238, 412 and 415
-> each arrived at separately, each after shipping the previous one.
+> **A tighter floor goes stale as the catalogue grows; a loose one still catches the cap**, which is
+> the failure it exists for. Asserting 2,451 would be the frozen-catalogue-state mistake and would
+> break on the next retailer onboarding. The failure this guards is order-of-magnitude, so the floor
+> should be too.
 
-**Slug grouping happens in TypeScript, not SQL**, because `brandSlug()` is the same function that
-builds the links and a second implementation in SQL is exactly the duplication items 406, 407 and 417
-are about.
+Same construction as `lib/sitemap-brands.ts`, which throws rather than emitting a brandless sitemap,
+and for the same reason: **a quiet failure here is discovered in search console weeks later.**
 
-**Six slugs show one row each**, per item 418: the hub unions their members, so two entries with
-different names and one destination would advertise a distinction the site cannot honour.
-
-**"See all brands" appended to the existing Top brands block**, not a second page. That block shows 16
-of 555 on hair -- **a browse affordance reaching 3% of what it appears to offer** -- and one line fixes
-it because the index already lists every brand.
-
-**BOTH NAVS, AND THE GUARD CAUGHT IT.** Added to `SiteNav`'s `NAV_LINKS` and to **both** static blocks
-in `public/index.html`. `nav-parity.test.ts` failed on the first attempt with exactly the message it
-was written to produce -- *"a link in the React nav and not the static one is invisible"* -- naming the
-desktop and mobile blocks separately. **The guard from item 68 did its job on the first new nav entry
-since it was written.**
+**THE VERIFICATION THAT CAUGHT IT WAS COUNTING THE LINKS ON THE RENDERED PAGE.** Every check that could
+run without fetching the page passed.
 
 ---
 
-### 420. I quoted the comment about the row cap, then reproduced the defect it describes
+**VERIFIED AFTER, AGAINST THE DATABASE FIGURE:**
 
-**Raised:** 26 August 2026 · **Caught by reading the rendered page, not by any error.**
+| | Rendered | Database |
+|---|---|---|
+| Brand rows | **2,451** | **2,451** |
+| Letter sections | 27 (`#` then A-Z) | -- |
+| `W` section | **59** | **59** |
+| `Weleda` | 208 | 208 |
+| `60 SECOND MAKEOVER` | 138 | 138 |
+| `Zure Solaris` | present, last | last alphabetically |
 
-**The first build of `/brands/all` rendered 934 brands and nine letter sections, ending at "I".**
-Expected 2,451 and twenty-seven. **Nothing reported it.** HTTP 200, no error, no warning, typecheck
-clean, integrity checks green.
+**Checked at W and at a digit deliberately**, because the first build's failure was invisible at the
+front of the alphabet -- everything before "I" was correct in both builds.
 
-> **A SHORT ALPHABETICAL LIST LOOKS EXACTLY LIKE A COMPLETE ONE.** An A-Z that stops at I still reads
-> as an A-Z -- the sections present are correct, the counts inside them are correct, the letters are
-> in order. **There is no internal evidence of absence**, which is the same reason item 393's food
-> review could not see the row miscategorised out of its scope.
+**Two `âme pure` rows sit in `#` rather than under A**, because `bucketOf` reads the raw first
+character while `brandSlug` folds accents. **Two brands affected**, recorded rather than fixed.
 
-**Cause: `fmb_active_brand_names_with_counts` returned `table (...)` -- 2,624 rows -- and PostgREST
-caps a response at 1,000.**
+---
 
-**AND THE CAP IS THE EXACT THING THE FUNCTION I WAS EXTENDING EXISTS TO AVOID.**
-`app/sitemap-pages.xml/route.ts` says so in the comment I quoted while writing the replacement:
+**BOTH BRIEF PREMISES REFUTED BY MEASURING.**
 
-> *"fmb_active_brand_names() returns the distinct set as ONE ROW containing an array, which sidesteps
-> the row cap entirely rather than reducing the number of pages."*
+**1. "`/brands` does not exist."** It does, returns 200, and serves **Brand Spotlight** -- partnered
+content, `brand_hubs`, **2 rows**, with an explicit trust firewall: *"these are brand partnerships...
+they sit alongside, and stay separate from, our independent price comparison."* **An A-Z of every
+compared brand at that URL would break the statement rather than the layout.** The index lives at
+`/brands/all` and displaces nothing.
 
-**I extended the function's DATA and changed its SHAPE, when the shape was the entire point of it.**
-"Extend rather than write a sixth function" was the right instruction and I followed it into the one
-mistake it could not prevent: I kept the name and the intent and dropped the mechanism.
+**2. "Every hub is orphaned from internal navigation."** It was -- and **item 408's grid closed it four
+days ago without anyone aiming at that.** Three clicks: category root, product card, brand link. Before
+the grid it was 24 featured products per category. **The premise was true when the brief was drafted
+and false by the time it was written**, which is a property of a long queue rather than an error.
 
-**Fixed:** `fmb_brand_index()` returns `jsonb` -- one row, 2,457 entries, 80 kB payload.
+**THE HONEST CASE IS DISCOVERY, NOT REACHABILITY.** Nobody finds a brand by paging 9,707 products.
+Weaker argument than the brief's, and the true one.
 
-**A TRUNCATION GUARD ON THE PAGE, NOT A COUNT ASSERTION.** It throws below 1,500 brands. **The floor
-sits far below today's 2,451 deliberately**: it detects truncation, and a tighter number would be the
-frozen-catalogue-state mistake, going stale the next time the classifier runs. Same reasoning as
-`lib/sitemap-brands.ts`, which throws rather than emitting a brandless sitemap, and for the same reason
--- **a quiet failure here is discovered in search console weeks later.**
+---
 
-> **The verification that caught it was reading the rendered page and counting the links.** The query
-> was right, the RPC was right, the types were right, and the page was two-thirds empty. **Every check
-> that could run without a browser passed.**
+**THE PARITY GUARD REFUSED, ON ITS FIRST REAL USE SINCE IT WAS WRITTEN.**
+
+`nav-parity.test.ts` failed the moment `/brands/all` was added to `SiteNav` and not to the static
+blocks, with the message item 68 wrote for it -- *"a link in the React nav and not the static one is
+invisible: both navs still render, every link still resolves, and a homepage visitor simply cannot
+reach the page"* -- **naming the desktop and mobile blocks separately.**
+
+> **A guard seen to refuse.** It has existed since 12 August and this is the first new nav entry in
+> that period, so this is the first evidence it works rather than merely passes. Both static blocks
+> were updated and it went green.
+
+**Built as scoped otherwise:** all 2,451 brands with counts and no threshold, A-Z plus a `#` bucket,
+one page at ~230 kB, `fmb_brand_index` extending the sitemap's RPC, slug grouping in TypeScript because
+`brandSlug()` is the same function that builds the links, six colliding slugs showing one row each per
+item 418, "See all brands" on the Top brands block, and the sitemap entry.
+
+---
+
+### 420. Eleven brands appear twice under the same name, and the index is the first thing to show it
+
+**Raised:** 26 August 2026 · **Surfaced by counting rendered rows. Not an index defect. Not fixed.**
+
+Counting distinct display names against rendered rows: **2,451 rows, 2,440 distinct names, 11 names
+appearing twice.**
+
+| Name | Two destinations |
+|---|---|
+| `MAC Cosmetics` | `/m-a-c` (7) · `/mac-cosmetics` (1,100) |
+| `L'Oréal Paris` | `/l-oreal-men-expert` (43) · `/loreal-paris` (869) |
+| `bareMinerals` | `/bare-minerals` (1) · `/bareminerals` (462) |
+| `Tonymoly` | `/tony-moly` (2) · `/tonymoly` (383) |
+| `Garnier` | `/garnier` (331) · `/garnier-pure-active` (1) |
+| `A'pieu` | `/apieu` (188) · `/a-pieu` (1) |
+| `Round Lab` | `/round-lab` (167) · `/roundlab` (6) |
+| `e.l.f.` | `/e-l-f` (141) · `/elf` (1) |
+| `Dr.PAWPAW` | `/dr-pawpaw` (29) · `/dr-paw-paw` (7) |
+| `âme pure` | `/ame-pure` (16) · `/ame-pure-uk` (25) |
+| `BarberPro` | `/barber-pro` (3) · `/barberpro` (7) |
+
+**THESE ARE NOT SLUG COLLISIONS AND ITEM 418 DOES NOT TOUCH THEM.** The slugs DIFFER, so both hubs
+exist and both are reachable; the *display names* are identical. `Child's Farm` and `Nalas Baby` are
+absent from this list, which confirms the union collapsed the six that did collide.
+
+**This is the visible surface of the 42 pre-fold collisions from item 386**, which need a brand merge
+and sit behind the match-key gate. **The index does not create the problem and does not hide it.**
+
+> **Until today these pairs were only reachable one at a time, so nothing put them side by side.** A
+> visitor searching "MAC" met one hub or the other and had no way to know the other existed. The index
+> shows both rows, identical names, one with 7 products and one with 1,100 -- **which is the first time
+> the catalogue has had to state this out loud.**
+
+**Reported, not fixed.** The remedy is the gated merge, and shipping an index that quietly hid one of
+each pair would repeat the argument that rejected a product threshold: incomplete in a way the visitor
+cannot see.
