@@ -33050,14 +33050,26 @@ nothing; Beauty Bay is the only one of the three configured for it, which is why
 that ran. I forced streaming for dry runs. **Still failed.**
 
 **Three — "the ambiguity makes itself uninspectable."** `loadChunkMaps` prefetches every candidate for
-every MPN in a chunk, and `"0"` alone pulls 561 products with their names. Sharp, testable, and it
-predicted that refusing `"0"` *before* the prefetch would let the feed survive. **I moved the check to
-the collection site and both feeds still died at 3,000 rows.**
+every MPN in a chunk, and `"0"` alone pulls 561 products with their names. The claim was that the
+defect made itself unmeasurable and the guard that fixes it is also what makes it visible.
 
-> **What actually distinguishes the cases was available the whole time and I never asked for it:
-> Gorgeous Shop completes at `max_rows: 50` in ten seconds.** The failure is row-dependent. The
-> download was never the problem, and diagnosis two was reasoning built on diagnosis one without
-> either being measured.
+> **IT IS CLEANLY REFUTED, AND THAT IS A STRONGER RESULT THAN LEAVING IT OPEN.** The check moved to the
+> collection site, so `"0"` is never sent to the database and its 561 candidates never materialise.
+> **Both feeds still died at 3,000 rows.** The chunk map is not the memory failure -- not "probably
+> not", not "unproven". The hypothesis made a prediction, the prediction was tested directly, and it
+> failed.
+
+**The change stays**, because not querying a value you are going to refuse is correct independently of
+what it explains. **A fix kept for its own reason after its motivating theory collapses is not a
+leftover.**
+
+> **What distinguishes the cases was available the whole time and the question was never asked:
+> Gorgeous Shop completes at `max_rows: 50` in TEN SECONDS.** One request. It refutes diagnoses one and
+> two outright -- a feed that dies during download does not complete at any row count -- and it cost
+> less than any of the three investigations built on top of them.
+>
+> **Three diagnoses, each offered as cause before measurement, and the second built on the first.** The
+> cheapest possible discriminator sat unasked behind all of them.
 
 **A PARAMETER ADDED AT THE WRONG LAYER LOOKS LIKE THE FIX AND REACHES NOTHING.** `max_rows` made Beauty
 Bay's run cheaper and left the two feeds it was added for exactly as unreachable.
@@ -33072,10 +33084,14 @@ The first N rows of an alphabetical feed measure one letter — one brand block,
 barcode prefix. The result reports `rows_seen`, `rows_kept` and `tail_unsampled`, **so a sampled run
 cannot be read as a whole-feed run by accident.**
 
-**MARGINALITY, STATED PLAINLY.** At 1,500 rows both feeds sit on the memory boundary and the outcome
-flips between runs: Gorgeous Shop succeeded, then failed on retry with the same body; Beauty Flash
-succeeded guarded and failed on the baseline build. **Numbers from these runs are worth less than
-their precision suggests**, and the pair of them is not a controlled comparison.
+**THE BOUNDARY FLIPS BETWEEN RUNS WITH IDENTICAL BODIES.** At 1,500 rows both feeds sit on it:
+Gorgeous Shop succeeded, then failed on retry with the same request; Beauty Flash succeeded on the
+guarded build and failed on the baseline.
+
+> **Any A/B across that boundary compares which deployment got lucky.** That is why the Beauty Flash
+> comparison is ABSENT rather than pending -- it is not a measurement waiting to be taken, it is a
+> measurement the instrument cannot make at that size. Numbers from runs near the boundary are worth
+> less than their precision suggests.
 
 ---
 
@@ -33124,3 +33140,44 @@ Hunk 4 only bites when a name-matched row re-seeds an ambiguous barcode **within
 that did not happen in 1,924 or 1,500 sampled rows. **The 462 Tier-1 skips are real; the adoption path
 they leak through is rarer than either of us implied.** Unproven on a full feed rather than disproven —
 a sample that never exercised the path is not evidence the path is cold.
+
+---
+
+### 427. Baseline captured before the first real run of the guarded build
+
+**Raised:** 26 August 2026 · **The 06:00 Gorgeous Shop cron runs the guarded build. This is what it will be measured against.**
+
+**A real sliced run is the only thing that produces a full-feed number**, and the dry-run path cannot
+reach these feeds (item 425). So the comparison has to be made against state recorded beforehand,
+because after the run there is nothing to compare to.
+
+Captured to `_pre_guard_baseline_20260826` at **18:53 UTC, 26 August**:
+
+| | |
+|---|---|
+| products, total | **136,612** |
+| products, live | 122,356 |
+| Gorgeous Shop rows | **7,923** |
+| Gorgeous Shop distinct products | 7,923 |
+| **Gorgeous Shop rows with `mpn = "0"`** | **485** |
+| products created today, before the run | 109 |
+| `tier2_mpn_skips` rows so far | 956 |
+
+**WHAT TO READ TOMORROW, AND THE ONE TO WATCH.**
+
+- tier counts: `would_link_via_ean / mpn / name_exact / name_stripped`
+- `tier1_ambiguous_skipped`, and whether it moves now that the learning path consults it
+- `tier2_mpn_skips` for retailer 30, split by `reason`
+- **products created**
+
+> **44 creates on a 1,500-row sample extrapolates to roughly 230 on the full 7,923-row feed, and the
+> extrapolation is the part to distrust.** Creating a product per shade is correct where the baseline
+> was collapsing `JEWELZ` into `Twinkle` (item 426). Creating hundreds is worth seeing once before it
+> repeats — and the 485 rows carrying `mpn = "0"` are the ones most likely to arrive at Tier 5, since
+> the placeholder is now refused before the prefetch and those rows have no barcode that resolved.
+
+**The importer's own sanity cap is 20,000 creates in one run**, so nothing catastrophic can land
+unattended, but that cap is a backstop and not a review.
+
+**A single retailer, deliberately.** The other fourteen keep their schedules; if the result is wrong,
+one feed is affected for one day and the previous build redeploys in two minutes.
