@@ -11,6 +11,15 @@ export async function generateMetadata({
   searchParams: { type?: string };
 }) {
   const sub = params.subcategory;
+  // LABEL DERIVED FROM THE SLUG, AND THAT IS A TRAP RATHER THAN A BUG TODAY.
+  // Capitalising the slug is correct for every subcategory in THIS category, because
+  // none of them appears in SUBCATEGORY_DISPLAY in lib/queries.ts -- the derivation
+  // agrees with the map by coincidence of the data, not by construction. THE MOMENT
+  // YOU ADD A SUBCATEGORY WHOSE LABEL DIFFERS FROM ITS SLUG, this line ships a page
+  // whose body copy reads the label and whose <title> reads the slug. That is not
+  // hypothetical: it happened to bath_body/mouth ("Oral care") the day the shelf
+  // shipped -- see item 406. Use displayFor()/subcategoryDisplay as the
+  // bath-and-body and supplements routes do.
   const display = sub.charAt(0).toUpperCase() + sub.slice(1);
   // Consolidate ?type=/?page= variants to the clean subcategory URL.
   const canonical = `https://www.findmybasket.co.uk/skincare/${sub}`;
