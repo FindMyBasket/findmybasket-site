@@ -31171,3 +31171,754 @@ the evidence that they are two brands rather than one page twice.
 *"L'Oréal Paris"*. `bestDisplay` picks the most common `brand` string among matching rows and those
 rows carry the parent brand's name. **Pre-existing, not caused by this change**, and it is item 386's
 defect showing through: two `normalised_brand` values whose `brand` strings disagree.
+
+---
+
+### 389. A third normalisation, on the day the codebase reduced two to one
+
+**Raised:** 26 August 2026 · **Six of the 49 brand groups do not converge, and the reason is that two canonicalising functions disagree.**
+
+The merge rule was `fmb_match_brand(normalised_brand)` -- the form both sides already agree on in the
+match key, derivable rather than chosen. **It does not converge six groups**, found by a probe that
+reported `102 brands -> 55 canonical` where 49 was expected.
+
+**Two separate disagreements, and only one is about the 26 August fold:**
+
+| | `fmb_match_brand` | `brandSlug` | example |
+|---|---|---|---|
+| **`&` versus `+`** | `&` -> ` and `, `+` -> separator | both -> separator | `ancient & brave` -> **`ancient and brave`** · `ancient + brave` -> **`ancient brave`** |
+| **the apostrophe** | -> a **space** | **vanishes** | `child's farm` -> **`child s farm`** · `childs farm` -> **`childs farm`** |
+
+The first was **introduced by the fold**: mapping `&` to a word while leaving `+` a separator split
+two spellings that previously collapsed together. The second **predates it** and has always been
+there -- `brandSlug` strips `'` before the character class, `fmb_match_brand` does not.
+
+> **SO THERE ARE THREE NORMALISATIONS, NOT ONE, ON THE DAY THIS CODEBASE SPENT ITSELF REDUCING TWO
+> TO ONE.** Item 384 closed the gap between `brandSlug` and `normaliseForMatch` on accents. It did
+> not close it on apostrophes, and it opened a new one on `+`.
+>
+> The six affected: `ancient-brave`, `childs-farm`, `honey`, `im-from`, `nalas-baby`, `vitalitys`.
+
+##### AND THE THREE-SHARED-KEYS FIGURE WAS WRONG FOR THOSE SIX
+
+I reported "3 shared match keys across 49 groups" as evidence the two sides hold different products,
+having checked that the brand portion collapses identically for both spellings.
+
+**For these six it does not collapse.** `ancient and brave` and `ancient brave` are different brand
+prefixes, so their keys **could not have matched whatever the products were**.
+
+> **THEIR ZERO WAS GUARANTEED, NOT MEASURED** -- item 368's shape, in six of forty-nine, and found
+> only because the probe forced the question. The figure stands for the 43 and says nothing about
+> the six.
+
+**The migration claims 43 and says why.** A migration that overstates its own reach is the same class
+as a check reporting coverage it does not have.
+
+**Fixing the disagreement is a `match-key.ts` change and goes behind the gate**, where it now joins
+the seven and the 42's remainder.
+
+---
+
+### 390. A consequence stated as pending is a consequence stated as never
+
+**Raised:** 26 August 2026 · **The fourth thing this week held by an absence rather than a setting.**
+
+The brand merge widens the input to `fmb_regroup_shade_strays`, which matches un-parented products
+to shade families **where `normalised_brand` is in the family-brand set**. **15 strays become newly
+eligible** and could be reparented.
+
+I recorded that as a product-level consequence of the next run, and undertook to watch it.
+
+**Nothing schedules that function.** It is invoked by hand. There is no cron entry, no workflow, no
+trigger.
+
+> **SO "WATCH THE NEXT RUN" HAS NO TRIGGER TO WATCH.** The 15 strays are not pending until tomorrow;
+> **they are pending until somebody decides to run a job nobody has scheduled** -- which, on the
+> evidence of this list, may be never.
+>
+> **A consequence stated as pending reads as a thing that will happen and be observed. Stated
+> accurately it is a thing that will not happen at all** unless someone acts, and those are opposite
+> operational facts wearing the same words.
+
+##### FOURTH INSTANCE THIS WEEK
+
+| | held by |
+|---|---|
+| item 352 | MyProtein not re-importing -- **the absence of a cron**, the only working layer of three |
+| item 375 | 105424 not re-keyed -- a guard that **did** fire, the one that worked |
+| item 387 | the seven not colliding -- **a comment**, which held nothing |
+| **item 390** | 15 strays not reparented -- **the absence of a schedule** |
+
+> **Two of the four are absences doing load-bearing work.** An absence is not a decision and cannot
+> be reviewed: nothing in a config dump shows a job that is not scheduled, and nothing distinguishes
+> "deliberately unscheduled" from "nobody got round to it".
+
+---
+
+### 391. The merge did not fix the display defect, and I said it would
+
+**Raised:** 26 August 2026 · **A prediction of mine, checked afterwards and false.**
+
+`/brands/loreal-men-expert` renders the display name **"L'Oréal Paris"**. I kept it as visible
+evidence of item 386 and predicted the merge would repair it for free, because `bestDisplay` picks
+the commonest `brand` string and merging changes the pool.
+
+**The pool changed. The majority did not.** That record now carries **two** `brand` spellings and the
+commonest is still the parent's name.
+
+**And the same defect from the other side:** `/brands/about-tone` now heads with **`ABOUT_TONE.`** --
+the commonest of three spellings across the merged record is the one with a trailing full stop.
+
+> **`bestDisplay` PICKS BY FREQUENCY, AND FREQUENCY IS AN ARTEFACT OF WHICH RETAILER CARRIES MORE
+> SKUs.** It is not a judgement about which spelling is right; it is a count of which supplier is
+> larger. A hub heading now shows feed punctuation, and it does so *because* the merge worked --
+> three spellings that used to sit on three unreachable records now compete on one page.
+>
+> **This is item 386 in the display layer, surviving the merge that was supposed to resolve it.**
+
+**The fix is `brand` corrected at source, not a records merge.** Filed for tomorrow.
+
+---
+
+### 392. The probe's assertion held in production, not only in the transaction
+
+**Raised:** 26 August 2026 · **Worth stating plainly because it is the stronger claim.**
+
+The whole case for the merge rested on one number: that re-keying afterwards is a no-op. It was
+asserted in a rolled-back transaction and returned **0**.
+
+**After applying, `products_active` reports exactly one row whose stored key differs from its
+recomputed key — product 105424**, which was already the single outstanding row before the merge ran
+and is deliberately skipped (item 376).
+
+> **ZERO KEYS MOVED FROM THE MERGE.** The probe measured a hypothetical; production measured the
+> thing itself, and they agree. **A rolled-back measurement is evidence about a transaction; the same
+> number after the commit is evidence about the database.**
+
+**The hubs are ISR-cached and were reported as such.** `/brands/kerastase` still rendered the
+pre-merge retailer count when checked; the database shows the merged record at **645 products**
+(520 + 125). Verified in the database and reported as *not yet reflecting* rather than as verified --
+which is the distinction item 300 exists for.
+---
+
+### 393. Two mechanisms failed on the same row for the same reason
+
+**Raised:** 26 August 2026 · **Nine rows excluded as `food_or_drink`. The blind spot is the finding.**
+
+Product 151821, MyProtein `Origin Cream of Rice - 1.04KG, 20servings - Cinnamon Swirl`, was live in
+`bath_body/body` with `product_type` **Moisturiser**. It is breakfast cereal. The categoriser read
+`cream`.
+
+**It should have been caught twice, and was caught neither time:**
+
+| Mechanism | Why it should have caught the row | Why it did not |
+|---|---|---|
+| The categoriser | The name says *Cream of Rice, 20servings* | Read `cream` as a skincare form word |
+| The 24 August food review (37 exclusions) | It was a review *for food* | It was scoped to `supplements` and `skincare` |
+
+The review was scoped to supplements and skincare **because that is where food was expected to be**.
+The categoriser put this row somewhere else, and the review's scope was drawn from the same
+assumption the categoriser encodes. **The miscategorisation is what carried the row outside the
+search for miscategorised rows.** Not two independent failures: one belief, held by both.
+
+> **A review scoped by where the defect is expected cannot find the case that was miscategorised out
+> of that scope.** All 37 of Monday's exclusions were in `supplements` or `skincare`. **None in
+> `bath_body`** -- which read as coverage and was actually the shape of the assumption.
+
+**Nine excluded** (`product_exclusions`, `food_or_drink`, now 46 total): Cream of Rice (151821), the
+two Sunshine Delights dried fruits (151953, 151943), the four Dose & Co creamers (86133, 86145,
+86131, 86134), the Beauty Collagen Shot (151708), the KIKI aloe juice (151683).
+
+**DIRTEA Chaga Powder stays, and the two readings agreed.** Monday's rule was form-based -- gummies
+and powders in, drink blends out. A chaga powder is the powder form, so it is kept. The name mentions
+neither coffee nor cacao, so the *literal* reading also keeps it. **Recording the agreement because
+the interesting case is when they diverge**, and knowing this one did not is what makes the rule
+usable without re-deriving intent each time. Consistent rather than an oversight.
+
+---
+
+### 394. A bound established on one dimension, read as bounding a second
+
+**Raised:** 26 August 2026 · **Replaces the claim in item 393, and states the class it belongs to.**
+
+**What I measured:** the `cream` token does not misbehave. Whey named `Ice Cream` goes to
+`supplements`, `Cream Soda` lipsticks go to `makeup`, the Korean capsule creams go to `skincare`.
+Across the whole catalogue **Cream of Rice is the only row the token misplaced.**
+
+**What I then claimed:** that this made it a MyProtein feed finding, bounded to one retailer.
+
+**What refutes it:**
+
+- **Three of the four Dose & Co creamers predate MyProtein.** Ids 86131-86145, created from Beauty Bay
+  and Boots imports. Coffee creamer has been sitting in `skincare/face` untouched since long before
+  MyProtein onboarded; MyProtein merely also stocks one of the four.
+- **The generic `Skincare` fallback that lands these rows is 17,108 rows across 14 retailers.**
+  MyProtein contributes 47, or 0.27%.
+
+> **THE CLASS: a bound measured on one dimension gets read as bounding a second, because the instance
+> that prompted the measurement happened to sit on both.** Cream of Rice was simultaneously *the only
+> token failure* and *a MyProtein row*. The first is a property of the rule and was measured. The
+> second is a property of the population and was never measured -- it arrived attached to the example.
+> The example is where the two dimensions coincide, which is exactly why it cannot distinguish them.
+
+**The negative result keeps its value and loses its reach.** "Only one row failed" remains true and
+remains useful: it says the defect is not in token handling. It says nothing about which retailers
+carry the defect, and the natural-sounding extension of it was wrong.
+
+**Related:** the same shape as item 393, one step out. There, a review scoped by *where the defect was
+expected* could not see the row miscategorised out of that scope. Here, a bound established on *how
+the rule behaves* was read as a bound on *whose data it behaves that way for*.
+
+---
+
+### 395. Proposal: the Niche Beauty suffix rule, and what a bare-token rule cannot do
+
+**Raised:** 26 August 2026 · **Nothing applied to the 164. This is the proposal, not the change.**
+
+**The rule.** Reclassify to `supplements` where the product name ends in one of:
+
+```
+ - Tablets, Pills & Capsules
+ - Powder
+ - Liquid
+```
+
+**Reach: 164 rows** in `skincare` on the generic `Skincare` `product_type`, of which **159 are Niche
+Beauty alone** and 5 are Niche Beauty products another retailer also stocks. **A further 50 rows
+already sit correctly in `supplements` carrying the same suffix** -- that is the confirmation the
+suffix means what it appears to mean, measured rather than assumed.
+
+**The suffix is the feed's own category, appended to the name by the Niche Beauty import.** It is not
+a description someone wrote; it is structure that survived into a text field. That is why it
+discriminates where product words do not.
+
+**WHY THE BARE-TOKEN APPROACH FAILS FOR A REAL REASON, NOT A TUNING ONE.** Matching
+`capsules?|tablets?|softgels?|sachets?` anywhere in the name hits **223 legitimate skincare products**
+with genuine product types: `medicube` and `d'Alba` capsule creams, `Elizabeth Arden Advanced Ceramide
+Capsules`, `Pixi Capsulecare`, `VT PDRN Capsule Cream`. Widening to `powder|spray|drops` adds setting
+powders, hair sprays and powder brushes.
+
+> **`Capsule` and `powder` name a physical form that cosmetics and supplements genuinely share.** No
+> threshold separates them because there is no signal to threshold -- a capsule cream really is a
+> cream in a capsule. **This is not a rule that needs tuning; it is the wrong feature.** The suffix
+> works because it carries the *supplier's own classification*, which the form word never did.
+
+**THE COST: two false positives in 164, and they are excluded by name.**
+
+| Row | Why it matches | Why it is not a supplement |
+|---|---|---|
+| `Pat McGrath Labs - Sublime Setting Powder DEEP 5 - Powder` | Ends in ` - Powder` | Setting powder |
+| `Combeau - The Moisturizer - Powder` | Ends in ` - Powder` | Powder-form moisturiser |
+
+**Excluded by name rather than by narrowing the rule.** Dropping ` - Powder` from the suffix list
+would remove both, and would also remove every genuine powder supplement the rule reaches -- the
+`Ancient + Brave` blends, `WelleCo`, `HER ONE`, `Equi London`. **Two named exceptions cost two lines;
+narrowing costs a large share of the yield.** Same reasoning as the ~13 false positives measured
+against 4,400 correct matches in `COUNT_UNIT_RE` (item 380), reaching the opposite decision because
+here the exceptions are enumerable and there they were not.
+
+**A SECOND, SMALLER POPULATION: five supplements the rule would also fix, and they are worse off than
+the 164.** Outside the generic bucket the suffix matches 7 rows. Five are genuine supplements sitting
+on a **specific, confidently wrong** product type:
+
+| id | Name | Landed as | The word that caught it |
+|---|---|---|---|
+| 140578 | `FOONDIERT - M-EYE VISION Support Complex` | `skincare/face` **Eye Care** | *Eye* |
+| 150501 | `WelleCo - The Hair Elixir` | `hair/treatment` **Hair Care** | *Hair* |
+| 137463 | `Equi London - Menopause Oil Edition - 30 days` | `skincare/face` **Oil** | *Oil* |
+| 142138 | `Avea - Cell Primer` | `makeup/face` **Primer** | *Primer* |
+| 142284 | `Sun Matters - BARRIER BOOST SUN SUPPORT` | `skincare/face` **SPF** | *Sun* |
+
+> **Every one was caught by a word naming the cosmetic product type it is a supplement FOR.** An
+> ingestible hair supplement reads as hair care; an oral sun-protection supplement reads as SPF. **The
+> 164 are unclassified; these five are confidently misclassified**, which is the worse state -- and a
+> rule scoped to the generic fallback bucket would miss exactly the rows that are most wrong.
+
+**Not proposed, and blocking:** see item 396.
+
+---
+
+### 396. Applied: 164 by rule, five by name, two exceptions held out
+
+**Raised:** 26 August 2026 · **Applied. 169 rows moved to `supplements`; `supplements` is now 2,449.**
+
+**The 164.** Names ending ` - Tablets, Pills & Capsules`, ` - Powder` or ` - Liquid`, on the generic
+`Skincare` `product_type`, with **two ids named in the predicate rather than matched around**:
+
+```sql
+and id not in (138977, 142308)   -- Pat McGrath Sublime Setting Powder, Combeau The Moisturizer
+```
+
+**Verified after: 164 moved, both exceptions untouched, zero suffix rows left in the generic bucket.**
+
+**The suffix is the feed's own category surviving into a text field.** Niche Beauty's import appends
+its category to the product name, so what looks like a naming convention is actually structure that
+escaped a structured field. **That is why it discriminates where product words cannot** -- it is not a
+description of the product, it is the supplier's classification of it, and the 50 rows already sitting
+correctly in `supplements` with the same suffix are the confirmation.
+
+**THE BARE-TOKEN APPROACH FAILS STRUCTURALLY, NOT BY TUNING.** `capsules?|tablets?|softgels?` matches
+**223 legitimate skincare products** with real product types: `medicube` and `d'Alba` capsule creams,
+`Elizabeth Arden Advanced Ceramide Capsules`, `Pixi Capsulecare`, `VT PDRN Capsule Cream`.
+
+> **`Capsule` and `powder` name a physical form that cosmetics and supplements genuinely share.** A
+> capsule cream really is a cream in a capsule. There is no threshold that separates the sets because
+> there is no signal to threshold. **This is the wrong feature, not a badly-tuned right one** -- and
+> the distinction matters because a wrong feature cannot be rescued by more work on it.
+
+**THE EXCEPTIONS ARE NAMED, AND THAT IS THE OPPOSITE CALL TO ITEM 380 BY THE SAME REASONING.**
+
+| | `COUNT_UNIT_RE` (item 380) | The suffix rule (here) |
+|---|---|---|
+| False positives | ~13 | 2 |
+| Correct matches | 4,400 | 164 |
+| Decision | Declined | Applied with exceptions |
+
+The reasoning is identical and the answer differs on one property: **whether the exceptions can be
+enumerated.** There, the ~13 were a *sample* of an open-ended class -- naming them would have left the
+next one unnamed. Here the 2 are the complete set, established by reading all 7 rows the suffix
+reaches outside the target bucket. **Two named ids cost two lines; narrowing the rule by dropping
+` - Powder` would have cost every genuine powder supplement it reaches** -- `Ancient + Brave`,
+`WelleCo`, `HER ONE`, `Equi London`. Narrowing costs more than it saves, so the cost is paid as an
+exception list.
+
+---
+
+### 397. The five were a different population, and the reason generalises
+
+**Raised:** 26 August 2026 · **Applied separately from the 164, deliberately.**
+
+| id | Name | Was | The word that caught it |
+|---|---|---|---|
+| 140578 | `FOONDIERT - M-EYE VISION Support Complex` | `skincare/face` **Eye Care** | *Eye* |
+| 150501 | `WelleCo - The Hair Elixir` | `hair/treatment` **Hair Care** | *Hair* |
+| 137463 | `Equi London - Menopause Oil Edition - 30 days` | `skincare/face` **Oil** | *Oil* |
+| 142138 | `Avea - Cell Primer` | `makeup/face` **Primer** | *Primer* |
+| 142284 | `Sun Matters - BARRIER BOOST SUN SUPPORT` | `skincare/face` **SPF** | *Sun* |
+
+**Every one was caught by a word naming the cosmetic product type it is a supplement FOR.** An
+ingestible hair supplement reads as hair care. An oral sun-protection supplement reads as SPF. The
+categoriser is not confused about the words; it is reading a *benefit* as a *form*, and for this class
+of product the benefit is always named after the cosmetic it replaces.
+
+**They sat on specific, confident product types -- not on the generic fallback.** That is the
+difference from the 164, and it is the wrong direction:
+
+> **The 164 were unclassified. The five were MISCLASSIFIED.** A row on `Skincare` is a row the
+> categoriser declined to place. A row on `SPF` is a row it placed wrongly and did not flag.
+
+**THE TRANSFERABLE HALF: a rule scoped to the generic bucket misses the rows that are most wrong.**
+Confidence in a wrong answer is exactly what keeps a row *out* of the unclassified set. So any remedy
+aimed at the fallback bucket -- which is the obvious place to aim, because that is where the
+uncertainty is advertised -- systematically excludes the worst cases. **The unclassified set is
+selected for the categoriser's honesty, not for its accuracy.** These five were found only because the
+suffix rule was checked outside the bucket it was written for.
+
+---
+
+### 398. ESCALATION: 44 oral care products and no category to put them in
+
+**Raised:** 26 August 2026 · **Nothing created. This is a proposition question and belongs with Robbie.**
+
+**Marvis was one instance of an absent category, not an individual correction.** Looking for the
+destination is what found the population.
+
+**The state today:** toothpaste is sold on this site as face skincare, and two products are sold as
+perfume.
+
+| Where the 44 sit | Count |
+|---|---|
+| `skincare/face` on generic `Skincare` | 37 |
+| `skincare/face` on `Oil` | 4 |
+| `fragrance/scent` as **`Parfum`** | 2 |
+| `skincare/face` on `Serum` | 1 |
+
+Brands: `Marvis` x6, `LEBON` x8, `MINT by Dr. Mintcheva` x6, `SELAHATIN` x3, `Spotlight Oral Care`,
+`Pyunkang Yul` kids toothpaste, `Keeko` floss. They carry the same Niche Beauty suffix convention
+(` - Tooth Paste`, ` - Oral Care`), so **the rule to reach them already exists and is proven** -- what
+does not exist is somewhere to send them.
+
+**WHAT CREATING A TOP-LEVEL CATEGORY WOULD INVOLVE.** Measured from the `supplements` precedent rather
+than estimated. The header of `lib/__tests__/category-labels.test.ts` records that adding `supplements`
+**meant seven edits across seven copies of the category list, and missing any one failed silently.**
+Six of those copies have since been consolidated into `lib/queries.ts`, so the cost today is lower
+than the cost then:
+
+| Surface | What changes | Cost now |
+|---|---|---|
+| `lib/queries.ts` | `TopCategory`, `CATEGORY_SLUGS`, `CATEGORY_DISPLAY`, `ALL_CATEGORIES` | One edit, four constants |
+| `components/SiteNav.tsx` | One nav entry | One line |
+| `app/<cat>/page.tsx` | Category route | ~32 lines, delegates to `CategoryPage` |
+| `app/<cat>/[subcategory]/page.tsx` | Subcategory route | ~64 lines, delegates to `SubcategoryPage` |
+| `app/sitemap-pages.xml/route.ts` | **No change** -- reads `ALL_CATEGORIES` and the `active_category_subcategories` view | Free |
+| `import-awin-feed` `catRoutes` | Revalidation path | **Cannot be consolidated** -- Deno edge function, cannot import a Next module. Guarded by the parity test |
+| `_shared/categorisation.ts` | Detection rules for the new category | **The real work** |
+
+**The templates are thin and the plumbing is mostly solved. The categoriser is not.** A category with
+no detection rules is a category only a manual backfill populates.
+
+**WHETHER 44 PRODUCTS JUSTIFY IT -- and this is the part that is not a schema question.**
+
+| Category | Products | Comparable |
+|---|---|---|
+| skincare | 45,357 | 6,335 |
+| makeup | 21,405 | 2,358 |
+| fragrance | 11,678 | 1,181 |
+| hair | 11,025 | 2,361 |
+| bath_body | 8,050 | 918 |
+| **supplements** (smallest today) | **2,449** | **84** |
+| *oral care, if created* | **44** | **4** |
+
+> **Four comparable products.** The 44 come from three retailers -- Escentual, MyProtein and Niche
+> Beauty -- and 37 are Niche Beauty alone. **A top-level category holding 44 products and four price
+> comparisons is a nav entry that mostly leads to single-stockist pages**, which is the shape item 358
+> established is not worth a hub.
+
+**The alternative shape: a subcategory rather than a top-level category.** `bath_body` already holds
+`hand`, `body` and similar; an `oral` subcategory there needs no new route, no nav entry, no sitemap
+change and no `catRoutes` edit -- **only the categoriser rules and a backfill.** It would take
+toothpaste out of face skincare without asserting that oral care is a fifth of what this site is
+about.
+
+**Three things worth deciding together, none of them mine:**
+
+1. **Is oral care part of the proposition at all?** The site compares beauty prices. Toothpaste is
+   plausibly in and plausibly out, and the answer determines everything else.
+2. **If in, top-level or subcategory?** 44 products and 4 comparisons argue for subcategory. Intent to
+   grow the range argues for top-level.
+3. **Either way, the categoriser needs rules**, and until it has them the 44 stay where they are.
+
+**In the meantime the 44 are wrong and known.** Recorded rather than quietly corrected into a
+destination chosen by whoever noticed first.
+
+---
+
+### 399. The remaining ~34 stay as item 306's class 2, confirmed
+
+**Raised:** 26 August 2026 · **Recorded rather than solved. No rule proposed.**
+
+After 9 food exclusions (item 393), 13 reachable by a MyProtein-scoped token rule, and 2 individual
+corrections applied (item 400), the residue of the MyProtein 47 is roughly **34 rows no configuration
+reaches**: the seven `Kind Patches`, the four `Rescue Remedy` Bach products, the `KIKI Health` liquid
+concentrates, `Floradix Liquid Iron`, `BetterYou` oral spray, `DIRTEA Chaga Powder`, and
+`Core Gel 1 44 g`, which cannot be classified from its name at all.
+
+**No feed-category suffix, no usable `merchant_category`, no form word.** `Kind Patches Energy
+Patches` is a transdermal supplement whose only distinguishing token is *Patches*, which the catalogue
+also uses for hydrocolloid spot patches -- a genuine collision, not a gap.
+
+> **Item 306's class 2 confirmed rather than reopened.** The class is real, configuration still does
+> not reach it, and the honest record is that these rows are wrong and stay wrong until something
+> other than the product name is available.
+
+**A scoped note that is not a proposal:** within retailer 33 the token rule matches 142 rows -- **129
+already in `supplements`, 13 misfiled, zero false positives** -- because MyProtein sells no capsule
+creams. **The same token set produces 223 false positives catalogue-wide and none inside this one
+feed**, which is the sharpest available statement of why item 396's rule had to come from the
+supplier's own classification rather than from the product words.
+
+---
+
+### 400. Two individual corrections applied
+
+**Raised:** 26 August 2026 · **Applied and verified.**
+
+| id | Name | Was | Now |
+|---|---|---|---|
+| 151661 | `Bulldog Original Beard Shampoo & Conditioner 200ml` | `skincare/face` Skincare | `hair/cleanse` **Shampoo** |
+| 151852 | `BetterYou Magnesium Bath Flakes 1kg` | `skincare/face` Skincare | `bath_body/body` **Bath & Shower** |
+
+Both destinations were checked to exist in the live vocabulary before the update rather than assumed
+(`hair/cleanse/Shampoo`, 3,753 rows; `bath_body/body/Bath & Shower`, 2,092 rows). **The third of the
+three, `Marvis`, had no destination and became item 398.**
+
+---
+
+### 401. Test a rule against its complement, not against its target
+
+**Raised:** 26 August 2026 · **Item 397's line, promoted to a standing argument. Decided: `oral` ships as a subcategory of `bath_body`.**
+
+> **THE UNCLASSIFIED SET IS SELECTED FOR THE CATEGORISER'S HONESTY, NOT FOR ITS ACCURACY.**
+
+That is why the five in item 397 were found only by checking the suffix rule **outside** the bucket it
+was written for. A rule aimed at `product_type = 'Skincare'` is aimed at rows the categoriser
+*declined to place* -- which is the obvious target, because that is where the uncertainty is
+advertised. **The rows it placed wrongly and did not flag are, by construction, somewhere else.**
+Confidence in a wrong answer is exactly what keeps a row out of the unclassified set.
+
+**The standing form:** when a rule is written to fix a bucket, run it against the complement of that
+bucket before applying it. The matches there are either false positives, which bound the cost, or
+they are rows that are more wrong than the ones the rule was written for. **Both outcomes are worth
+more than another pass over the target set**, and the second is invisible to any amount of care spent
+inside it.
+
+**Confirmed as filed:** item 396's exception decision -- same reasoning as item 380, opposite call,
+separated by whether the exceptions can be enumerated -- is the correct filing. The property that
+distinguishes the two cases is stated in the item rather than left to be inferred, which is the point.
+
+**The decision this item accompanies.** Oral care becomes a **subcategory of `bath_body`**, not a
+top-level category. The reasoning is recorded as Robbie's: *toothpaste selling as face skincare is a
+live defect and the fix is a shelf rather than a category*, and the smallest category that earned
+top-level status has 2,449 products and 84 comparable. A shelf needs no route, no nav entry, no
+sitemap change and no `catRoutes` edit -- **only categoriser rules and a backfill**, which item 398
+already established is the real work either way.
+
+---
+
+### 402. The 44 measured the suffix's reach. The population is 98
+
+**Raised:** 26 August 2026 · **Corrects the figures in item 398. The decision it informed still holds.**
+
+I reported 44 rows, 4 comparable, 3 retailers. **Those were the properties of rows carrying the Niche
+Beauty suffix, which is the detector I happened to have.** Searching on oral-care vocabulary instead
+of on the suffix:
+
+| | Reported (item 398) | Measured |
+|---|---|---|
+| Rows | 44 | **98** |
+| Comparable (2+ live stockists) | 4 | **30** |
+| Retailers | 3 | **9** |
+
+The nine are Beauty Bay, Beauty Flash, Boots, Debenhams, Escentual, Gorgeous Shop, MyProtein, Niche
+Beauty and Stylevana. **The 54 rows I missed carry no suffix**: `Spotlight Oral Care` (~28, Boots),
+`Smile Science Harley Street` (8), `Pyunkang Yul` kids toothpaste, `Colgate Max White`,
+`skinChemists`, `Uriage Bébé`.
+
+> **The same error as item 394, one week apart and in the other direction.** There I read a bound on a
+> rule as a bound on a population. Here I read **a detector's yield as a population's size** -- and
+> `docs/` already carries this as a standing note. The suffix is a Niche Beauty convention, so
+> counting with it could only ever return Niche Beauty's share. **Every number I gave Robbie for the
+> proposition decision was a floor wearing the clothes of a total.**
+
+**THE DECISION HOLDS AND THE MARGIN IS NARROWER THAN THE NUMBER IT WAS MADE ON.** 30 comparable
+against supplements' 84 is a third rather than a twentieth. A shelf is still right at 98 products; the
+argument is no longer overwhelming, and the honest version is that it is comfortable rather than
+obvious.
+
+---
+
+### 403. Proposed: the categoriser rules for `bath_body/oral`, and a device question inside them
+
+**Raised:** 26 August 2026 · **NOTHING APPLIED. Rules reported first because they decide what lands there.**
+
+**NAMING -- and the existing shelves argue against `oral`.**
+
+| `bath_body` shelf | Rows |
+|---|---|
+| `body` | 6,896 |
+| `hand` | 1,039 |
+| `foot` | 115 |
+
+**Nothing anywhere in the catalogue is named `oral`** -- no subcategory, no `product_type` -- so there
+is no collision. But `hand`, `foot` and `body` are **body-part nouns**, and `oral` is an adjective.
+**`mouth` sits consistently beside them; `oral` does not.** The display map in `lib/queries.ts`
+(`SUBCATEGORY_DISPLAY`) can label it "Oral care" either way, so the slug and the label need not agree
+-- item 66's precedent, where `supplements/supplements` renders as "Beauty supplements".
+**Recommending `mouth` as the slug, "Oral care" as the label.** Flagged rather than chosen.
+
+**RULE 1 -- the supplier's own classification. Reaches 44.**
+
+```
+name ends in ' - Tooth Paste' or ' - Oral Care'
+```
+
+Proven structure, same mechanism as item 396: Niche Beauty's feed category surviving into the name.
+
+**RULE 2 -- product vocabulary. Reaches the other 54.**
+
+```
+toothpaste | tooth paste | mouthwash | dental floss | tooth floss | teeth whitening
+| whitening strips | tongue cleaner | tongue scraper | interdental | water flosser
+| dental oil | mundwasser
+```
+
+**THE HAZARD, AND IT IS SPECIFIC: `Oral Care` IS PART OF A BRAND NAME.** 31 of the 98 rows are brand
+`Spotlight Oral Care`. A rule matching `oral care` anywhere in the name therefore sweeps in **every
+Spotlight product**, including sonic toothbrush heads, water flosser replacement tips and UV
+sterilisers. **The token is not describing the product; it is naming the company.** Rule 2 must match
+oral-care *nouns*, never the phrase `oral care`, and Rule 1's version is safe only because it is
+anchored to the end of the string by a feed convention.
+
+**THE SEVEN CONFIDENT-ELSEWHERE ROWS, READ BY NAME RATHER THAN MOVED BY RULE** -- item 397 is a day
+old and says exactly this:
+
+| id | Name | Sitting on | Reading |
+|---|---|---|---|
+| 147890/147891/147892 | `DR. NINA GIULIA SAUTTER - DENTAL OIL RITUAL - COCONUT` x3 | `Oil` | Oil-pulling. **Oral.** The word *Oil* caught it |
+| 141093 | `DR. NINA GIULIA SAUTTER - DENTAL OIL RITUAL - SET` | `Oil` | Same, gift set. **Oral** |
+| 141407 | `MINT by Dr. Mintcheva - GUM SERUM HYALURONIC` | `Serum` | Gum treatment. **Oral.** *Serum* caught it |
+| 140807 | `SELAHATIN - Eau d'extrait oral` | `fragrance/scent` **Parfum** | A mouthwash. *Eau* caught it |
+| 140808 | `SELAHATIN - RICK OWENS X SELAHATIN EAU D'EXTRAIT ORAL` | `fragrance/scent` **Parfum** | Same, collaboration |
+
+**THE FIVE ON `SPF` BELONG IN THIS TABLE, NOT IN A FOOTNOTE** -- same mechanism, different cosmetic
+form word:
+
+| ids | Name | Sitting on | The word that did it |
+|---|---|---|---|
+| 87548, 97478, 135496, 87540 | `Spotlight Oral Care Water Flosser with UV Steriliser` (+ variants) | `SPF` | *UV* |
+| 97477 | `UV Steriliser Tips for Spotlight Oral Care Water Flosser` | `SPF` | *UV* |
+
+**All twelve were caught by a word naming a cosmetic form or property** -- `Oil`, `Serum`, `Eau`, `UV`
+-- read instead of the function. **Twelve confidently-misplaced against 86 unclassified, and item
+397's second measurement in two days.** The pattern is not that the categoriser is weak on oral care;
+it is that a product whose name contains any cosmetic-adjacent noun gets placed by that noun, and
+placed *confidently*, which is what keeps it out of the set anyone would think to review.
+
+**A SECOND PROPOSITION QUESTION INSIDE THIS ONE, AND IT IS NOT MINE EITHER.** 29 of the 98 are
+**devices**: sonic toothbrushes, water flossers, replacement heads and tips, LED whitening kits.
+`product_exclusions` already carries a `device` reason with 13 rows. **Do electric toothbrushes belong
+on this site at all?** They are the majority of the Boots contribution and a large share of the 30
+comparable, so the answer materially changes what the shelf looks like on its first day. **Reported,
+not decided.**
+
+**THE BACKFILL, HELD.** Two statements, then the seven and the five by explicit id list -- never by
+widening a rule to reach them. Nothing runs until the rules above are approved and the device question
+is answered, because the device answer changes the population the rules should match.
+
+---
+
+### 404. What excluding the devices leaves, reported before applying
+
+**Raised:** 26 August 2026 · **NOTHING EXCLUDED YET. Slug decided: `mouth`, label "Oral care".**
+
+**Reading the 29 by name found the regex over-reaching, which is why they were read.**
+
+`Spotlight Oral Care Bamboo Interdental Brush 06 8 pack` was caught by the token `brush`. **An
+interdental brush is a disposable consumable, the same kind of thing as floss** -- not a small
+appliance, and it fails Robbie's stated criterion directly. It is retained. Two more are genuinely
+ambiguous from their names alone: `Teeth Whitening Starter Kit` and `Smile Rejuvenation Kit`, which
+may be gel-and-tray or may contain an LED unit. **Recommending they go with the devices** (the
+separate `LED Teeth Whitening Kit` is unambiguous and clearly does), but flagging rather than deciding.
+
+| Exclusion set | Rows removed | Shelf left | Comparable | Retailers |
+|---|---|---|---|---|
+| None (today) | -- | 98 | 30 | 9 |
+| **26 clear devices, 2 kits kept** | 26 | 72 | 18 | 9 |
+| **28 including both kits** (recommended) | 28 | **70** | **16** | **9** |
+
+**IT IS NOT A HANDFUL FROM TWO RETAILERS. The shelf survives, and its shape changes completely.**
+
+| Retailer | Rows left | Comparable |
+|---|---|---|
+| Niche Beauty | 45 | 4 |
+| Beauty Flash | 13 | **12** |
+| Gorgeous Shop | 11 | **11** |
+| Beauty Bay | 6 | 3 |
+| Escentual | 5 | 4 |
+| Debenhams | 4 | 0 |
+| **Boots** | **2** | **0** |
+| MyProtein | 1 | 1 |
+| Stylevana | 1 | 0 |
+
+> **Boots does not merely shrink, it leaves.** Boots' entire oral care contribution was Spotlight
+> hardware; two rows and zero comparisons remain. **The comparison engine is Beauty Flash and Gorgeous
+> Shop**, which between them carry 23 rows and 23 comparisons. Niche Beauty has the most rows by far
+> and almost no comparisons -- a single-stockist boutique range, item 358's shape.
+
+**The 16 comparisons read by name, because "16 comparable" could mean one product line:**
+
+- **`Marvis` toothpaste x4** -- Classic Strong Mint (3 stockists), Whitening Mint, Smokers Whitening
+  Mint, Sensitive Gums
+- **`Smile Science Harley Street` professional whitening x4**
+- **`Spotlight Oral Care` consumables x8** -- Ultra Whitening Strips (3), Whitening Pen (3),
+  Anti-Stain Tooth Powder, Diamond PAP+ Powder, Accelerator Gel, 7 Day Strips, the interdental brush,
+  a gift set
+
+**Three brands, two product ideas: toothpaste and teeth whitening.** Coherent rather than
+miscellaneous, and it is genuinely mostly whitening.
+
+**MY READ, AND THE DECISION IS ROBBIE'S.** 16 comparisons against supplements' 84 is a fifth, on a
+shelf that costs no route, no nav entry, no sitemap change and no `catRoutes` edit. **The alternative
+-- recategorise out of `skincare` and leave the shelf unbuilt -- has to send 70 rows somewhere, and
+`bath_body/body` is where they would land**, which is the same move as building the shelf minus the
+ability to browse it. On those terms the shelf looks worth building; **the honest caveat is that
+Niche Beauty's 45 single-stockist rows will dominate it visually while 23 rows from two retailers do
+all the comparison work.**
+
+**Still held:** the Rule 2 hazard stands as written in item 403 -- oral-care **nouns**, never the
+phrase `oral care`, since `Spotlight Oral Care` is a brand and 31 rows carry it. Nothing runs until
+the exclusion set is confirmed.
+
+---
+
+### 405. `bath_body/mouth` built. The brand rule found what the name rules could not, including two more devices
+
+**Raised:** 26 August 2026 · **APPLIED. Shelf: 71 products, 16 brands, 18 comparable. 30 devices excluded.**
+
+**THE INTERDENTAL BRUSH, AND WHY IT WAS READ RATHER THAN COUNTED.** The device regex caught
+`Spotlight Oral Care Bamboo Interdental Brush 06 8 pack` on the token `brush`. **A disposable
+consumable is not a small appliance** -- an 8-pack of bamboo brushes is the same kind of object as
+floss, and it fails the stated criterion directly. `brush` was the token over-reaching, because it
+appears in both *sonic replacement brush heads* and *a bag of disposable sticks*. **Reading the 29
+names is what separated them; the count could not.** Retained, and it is one of the shelf's 18
+comparisons.
+
+**BOOTS DOES NOT SHRINK, IT LEAVES.**
+
+| Retailer | Rows after exclusion | Comparable |
+|---|---|---|
+| Niche Beauty | 45 | 4 |
+| Beauty Flash | 13 | **12** |
+| Gorgeous Shop | 11 | **11** |
+| Beauty Bay | 6 | 3 |
+| Escentual | 5 | 4 |
+| Debenhams | 4 | 0 |
+| **Boots** | **2** | **0** |
+
+> **A retailer that looked like the shelf's anchor turns out to have been supplying the part being
+> excluded.** Boots' entire oral care contribution was Spotlight hardware -- sonic brushes, water
+> flossers, replacement heads. Two rows and zero comparisons remain. **The exclusion did not trim the
+> largest contributor; it removed it**, and nothing in the row counts before the read would have
+> predicted that.
+
+**THE COMPARISON ENGINE IS TWO RETAILERS.** Beauty Flash and Gorgeous Shop carry **23 rows and do 23
+comparisons**. Niche Beauty carries **45 rows and does 4**. That is item 358's shape exactly: rows and
+comparability are close to unrelated, and the biggest range is a single-stockist boutique one.
+
+**This informs the shelf's COPY, not the decision.** The four-branch metadata already handles a page
+where most products have one stockist -- it was built for precisely this, and does not need changing.
+What it means is that a visitor browsing by row count meets Niche Beauty and a visitor looking for a
+price comparison meets Marvis toothpaste and Spotlight whitening. **Worth knowing when the shelf's
+intro line is written; not a reason to build it differently.**
+
+**THE BRAND RULE FOUND FOUR ROWS NO NAME RULE COULD REACH.** Rule 3 matched `brand = 'Spotlight Oral
+Care'` -- the brand as a brand, never the phrase in a name. Four rows carry **no oral vocabulary
+whatsoever**:
+
+| id | Name | Verdict |
+|---|---|---|
+| 99402 | `Mouth Tape 30 pack` | Oral care. On the shelf |
+| 99403 | `Enamel Protect Pro Serum` | Oral care, sitting on **`Serum`**. A **13th** confidently-misplaced row |
+| 110880 | `Sonic One & Original Replacement Brush Heads in Pink` | **Device. Excluded** |
+| 110558 | `Ultra Whitening Starter Kit` | **Device, same class as the two kits. Excluded** |
+
+> **Two devices escaped the original 28 because their names contain nothing to search for.** The
+> population was defined by oral-care vocabulary and these rows have none; only the brand reaches
+> them. **A second instance of the detector defining the population**, one day after item 402, and the
+> device count went 28 to 30 as a result.
+
+**THE RULE 2 HAZARD VINDICATED ITSELF IN BOTH DIRECTIONS.** Dropping the phrase `oral care` from the
+noun rule was justified because `Spotlight Oral Care` is a brand. It also dropped
+**`Uriage Bebe 1st Peri-Oral Care 30ml`** -- and *peri-oral* means **around the mouth**. It is a baby
+face cream, correctly staying in skincare. **The phrase was matching two different wrong things at
+once**, a company and an anatomical adjective, and the noun rule excludes both without being told
+about either.
+
+**403's PATTERN IS THE ONE TO CARRY.** With `Enamel Protect Pro Serum` the tally is **thirteen rows,
+five separate cosmetic form words, one mechanism**: `Oil`, `Serum`, `Eau`, `UV`, and the earlier
+`Primer`/`SPF`/`Eye Care`/`Hair Care` set.
+
+> **Any cosmetic-adjacent noun in a name places the row confidently, and confidence is what keeps it
+> out of the set anyone would review.** The categoriser is not weak on oral care specifically. It
+> resolves on the first word it recognises and records no doubt, so the rows it gets most wrong are
+> precisely the rows that never appear in a fallback bucket.
+
+**Schema.** `subcategory` carries a CHECK constraint enumerating allowed values; `mouth` was added by
+migration `add_mouth_subcategory`. **The constraint caught the write rather than the write silently
+succeeding** -- the whole statement rolled back atomically and nothing partially applied, verified
+before retrying.
+
+**Applied:** migration; 30 device exclusions (`device` now 41 total); 71 rows to
+`bath_body/mouth`/`Oral Care`; `SUBCATEGORY_DISPLAY.mouth = 'Oral care'` in `lib/queries.ts` with the
+slug-versus-label reasoning in a comment. **No route, no nav entry, no sitemap edit and no `catRoutes`
+change**, exactly as item 398 predicted for a shelf.

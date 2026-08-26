@@ -66,6 +66,11 @@ export function sortCategories(cats: string[]): string[] {
 export const SUBCATEGORY_DISPLAY: Record<string, string> = {
   supplements: 'Beauty supplements',
   sports: 'Sports nutrition',
+  // Slug and label deliberately differ. The sibling shelves under bath_body are
+  // BODY-PART NOUNS -- body, hand, foot -- so 'oral' (an adjective) would have been
+  // the odd one out in the URL. 'mouth' sits beside them; "Oral care" is what the
+  // category is called. Item 405.
+  mouth: 'Oral care',
 };
 
 export function subcategoryDisplay(sub: string): string {
