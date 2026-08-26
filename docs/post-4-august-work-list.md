@@ -32380,3 +32380,45 @@ maps in items 406 and 407 began.
 **Only visible because skincare was opted in.** Hair's 1.2s never looked wrong, and the page is
 ISR-cached at `revalidate = 3600`, so a cold render is the only render that shows it. **The defect was
 present at every scale and legible at one.**
+
+---
+
+### 413. Skincare's two numbers, and Tuesday's 3,309 corroborated by arithmetic that was not aimed at it
+
+**Raised:** 26 August 2026 · **Measured on production, same iframe instrument as items 409 and 410.**
+
+| 390 x 844 | Before | After |
+|---|---|---|
+| Filter chips | -- | **713** (above the fold) |
+| First product card | **3,309** *(Tuesday)* | **1,133** |
+| Screens | *not comparable, see item 410* | **1.34** |
+
+| 1440 x 900 | After |
+|---|---|
+| Filter chips | **765** |
+| First product card | **945**, 1.05 screens |
+
+**TUESDAY'S 3,309 IS CORROBORATED, AND BY A SUM THAT WAS NOT TRYING TO.** Reconstructing the old
+layout from blocks measured today at 390px: hero ends at 535, plus "Brands also in other categories"
+939, "Browse by type" 1,013 and "Top brands" 623 -- **2,575px of furniture** -- plus the old "Featured
+products" heading and its line of copy at roughly 200.
+
+```
+535 + 2,575 + ~200  =  ~3,310      Tuesday measured 3,309
+```
+
+> **Item 410 said the screens figure was never comparable and only the pixels were. This is the pixel
+> half of that claim being paid off.** The reconstruction uses no part of Tuesday's method -- different
+> instrument, different day -- and lands within a pixel. **The height of that window remains unknown
+> and still cannot be recovered**, which is exactly the asymmetry: the pixel measurement survives a
+> broken instrument, the derived one does not.
+
+**Skincare's first card sits 132px lower than hair's** (1,133 against 1,001) for one reason: **fifteen
+chips wrap to more rows than six.** The filter bar is at 713 on both, because the hero is identical.
+More types is a deeper bar, and that is the cost of the facet being useful.
+
+**The first row clears the fold on neither, and the gap is wider here** -- 289px against hair's 157.
+Left alone for the same reason: closing it means cutting the intro, the stats or the padding, which is
+a decision about what a category page says.
+
+**Reduction: 3,309 to 1,133, or 66%.** Three screens became one short scroll.
