@@ -13,29 +13,83 @@ import {
   subcategoryDisplay,
   type TopCategory,
 } from '../lib/queries';
-import { getProductTypes } from '../lib/subcategory-queries';
+import { getProductTypes, getSubcategoryProducts } from '../lib/subcategory-queries';
 
 const SITE_URL = 'https://www.findmybasket.co.uk';
+
+/**
+ * Browse state for the category ROOT grid. Absent means the old behaviour: 24
+ * featured products, no paging, no filter (item 408 opts routes in one at a time
+ * rather than switching six pages at once).
+ */
+export interface CategoryBrowse {
+  page: number;
+  productType?: string;
+  /** Select the complement of the named type chips (the classifier's default). */
+  other?: boolean;
+  /** Show only products stocked by more than one retailer. OFF by default. */
+  comparable: boolean;
+}
 
 interface Props {
   category: TopCategory;
   displayName: string;
   intro: string;
+  browse?: CategoryBrowse;
 }
 
-export async function CategoryPage({ category, displayName, intro }: Props) {
+const BROWSE_PAGE_SIZE = 48;
+
+function browseUrl(
+  slug: string,
+  opts: { type?: string | null; other?: boolean; page?: number; comparable?: boolean }
+): string {
+  const params = new URLSearchParams();
+  if (opts.type) params.set('type', opts.type);
+  // A separate param, not `?type=other`: a category could legitimately have a product
+  // type literally named "Other", and the two would be indistinguishable.
+  if (opts.other) params.set('other', '1');
+  if (opts.comparable) params.set('comparable', '1');
+  if (opts.page && opts.page > 1) params.set('page', String(opts.page));
+  const qs = params.toString();
+  return `/${slug}${qs ? `?${qs}` : ''}`;
+}
+
+export async function CategoryPage({ category, displayName, intro, browse }: Props) {
   // Route slug (identity except bath_body -> bath-and-body). Queries use the raw
   // `category` DB value; links/canonicals use `slug`. The hero-image filenames are
   // keyed by the raw `category` value (e.g. bath_body-desktop.jpg), so the hero
   // <div> below deliberately keeps `${category}`, not `${slug}`.
   const slug = categoryToSlug(category);
-  const [stats, brands, products, subcategories, crossBrands] = await Promise.all([
-    getCategoryStats(category),
-    getTopBrands(category, 16),
-    getFeaturedProducts(category, 24),
-    getSubcategories(category),
-    getCrossCategoryBrands(category, 13),
-  ]);
+  // Facets are fetched BEFORE the grid because the complement query needs the named
+  // type list to negate.
+  const browseTypes = browse ? await getProductTypes(category, null, 24) : null;
+  const complementNames =
+    browse?.other && browseTypes?.complement
+      ? browseTypes.types.map(t => t.product_type)
+      : undefined;
+
+  const [stats, brands, products, subcategories, crossBrands, browseResult] =
+    await Promise.all([
+      getCategoryStats(category),
+      getTopBrands(category, 16),
+      // Skipped entirely when browsing: the grid replaces this block, so the RPC would
+      // be a second full-category aggregation whose result is never rendered.
+      browse ? Promise.resolve([]) : getFeaturedProducts(category, 24),
+      getSubcategories(category),
+      getCrossCategoryBrands(category, 13),
+      browse
+        ? getSubcategoryProducts(
+            category,
+            null,
+            browse.page,
+            BROWSE_PAGE_SIZE,
+            browse.productType,
+            browse.comparable,
+            complementNames
+          )
+        : Promise.resolve(null),
+    ]);
 
   // A category that has collapsed to a single subcategory (skincare -> 'face'
   // after the face-only programme) can't browse by area, so surface product_type
@@ -43,10 +97,15 @@ export async function CategoryPage({ category, displayName, intro }: Props) {
   // uniform for skincare). Links into the single subcategory with ?type=, which the
   // subcategory page already handles. Extra query runs only for single-sub categories.
   const singleSub = subcategories.length === 1 ? subcategories[0].name : null;
-  const productTypes = singleSub ? await getProductTypes(category, singleSub, 13) : [];
+  const singleSubFacets = singleSub ? await getProductTypes(category, singleSub, 13) : null;
+  const productTypes = singleSubFacets?.types ?? [];
 
   // Structured data. BreadcrumbList (Home > Category) matches SubcategoryPage;
   // CollectionPage marks this as a category listing for the catalogue.
+  const totalBrowsePages = browseResult
+    ? Math.ceil(browseResult.totalCount / BROWSE_PAGE_SIZE)
+    : 0;
+
   const breadcrumbJsonLd = buildBreadcrumbJsonLd([
     { name: 'Home', url: '/' },
     { name: displayName, url: `/${slug}` },
@@ -224,6 +283,141 @@ export async function CategoryPage({ category, displayName, intro }: Props) {
         </section>
       )}
 
+      {browse && browseResult ? (
+        <section className="max-w-site mx-auto px-6 py-12">
+          <h2 className="font-serif text-3xl text-ink mb-2">
+            {browse.productType
+              ? `${browse.productType} in ${displayName.toLowerCase()}`
+              : browse.other
+                ? `Everything else in ${displayName.toLowerCase()}`
+                : `All ${displayName.toLowerCase()}`}
+          </h2>
+          <p className="text-ink-light mb-8">
+            {browseResult.totalCount.toLocaleString()} products
+            {browse.comparable ? ' stocked by more than one retailer' : ''}.
+          </p>
+
+          {/* FILTER BAR. Brand is deliberately NOT here: the brand hubs already answer
+              that query, they rank, and they carry four-branch metadata and OpenGraph.
+              A ?brand= param would be a second URL answering the same question while
+              competing with the page that already answers it. The grid links OUT to the
+              hub from each card instead. Item 408. */}
+          {/* NO TYPES, NO BAR. supplements has product_type null on all 2,448 rows, so
+              the bar is ABSENT rather than rendered empty. Not a special case for that
+              category -- the same rule everywhere. Item 408. */}
+          {browseTypes && browseTypes.types.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-8">
+            <Link
+              href={browseUrl(slug, { comparable: browse.comparable })}
+              className={`px-4 py-2 rounded-full text-sm border transition-colors ${
+                browse.productType || browse.other
+                  ? 'border-border text-ink-light hover:border-gold hover:text-ink'
+                  : 'border-gold bg-gold text-white'
+              }`}
+            >
+              All types
+            </Link>
+            {(browseTypes?.types ?? []).map(t => (
+              <Link
+                key={t.product_type}
+                href={browseUrl(slug, { type: t.product_type, comparable: browse.comparable })}
+                className={`px-4 py-2 rounded-full text-sm border transition-colors ${
+                  browse.productType === t.product_type
+                    ? 'border-gold bg-gold text-white'
+                    : 'border-border text-ink-light hover:border-gold hover:text-ink'
+                }`}
+              >
+                {t.product_type} <span className="opacity-60">{t.count.toLocaleString()}</span>
+              </Link>
+            ))}
+            {/* THE COMPLEMENT CHIP. Present only when every real type is already a chip,
+                so "Everything else" can only mean the classifier's default. When a real
+                type did not fit, getProductTypes returns complement: null and this
+                disappears -- suppressed rather than mislabelled. Item 408. */}
+            {browseTypes.complement && (
+              <Link
+                href={browseUrl(slug, { other: true, comparable: browse.comparable })}
+                className={`px-4 py-2 rounded-full text-sm border transition-colors ${
+                  browse.other
+                    ? 'border-gold bg-gold text-white'
+                    : 'border-border text-ink-light hover:border-gold hover:text-ink'
+                }`}
+              >
+                Everything else{' '}
+                <span className="opacity-60">{browseTypes.complement.count.toLocaleString()}</span>
+              </Link>
+            )}
+          </div>
+          )}
+
+          {/* NAMED FOR WHAT IT DOES, NOT AS A FILTER. "Comparable" is a claim about the
+              CATALOGUE -- how many shops we found it in -- not a property of the product,
+              so the label says so. Off by default: on, it hides 79% of hair. Item 408. */}
+          <div className="mb-8">
+            <Link
+              href={browseUrl(slug, { type: browse.productType, other: browse.other, comparable: !browse.comparable })}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm border transition-colors ${
+                browse.comparable
+                  ? 'border-gold bg-gold text-white'
+                  : 'border-border text-ink-light hover:border-gold hover:text-ink'
+              }`}
+            >
+              <span aria-hidden="true">{browse.comparable ? '\u2713' : '\u2715'}</span>
+              Only show products stocked by more than one retailer
+            </Link>
+          </div>
+
+          {browseResult.products.length === 0 ? (
+            <div className="bg-warm-white border border-border rounded-2xl p-12 text-center text-ink-light">
+              {browse.comparable ? (
+                <>
+                  Nothing in {displayName.toLowerCase()}
+                  {browse.productType ? ` under ${browse.productType.toLowerCase()}` : ''} is
+                  stocked by more than one retailer yet.{' '}
+                  <Link href={browseUrl(slug, { type: browse.productType, other: browse.other })} className="text-gold underline">
+                    Show everything
+                  </Link>
+                  .
+                </>
+              ) : (
+                <>Nothing to show here right now.</>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {browseResult.products.map(product => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+
+              {totalBrowsePages > 1 && (
+                <nav className="flex items-center justify-center gap-4 mt-12" aria-label="Pagination">
+                  {browse.page > 1 && (
+                    <Link
+                      href={browseUrl(slug, { type: browse.productType, other: browse.other, comparable: browse.comparable, page: browse.page - 1 })}
+                      className="px-5 py-2 rounded-full border border-border text-ink-light hover:border-gold hover:text-ink transition-colors"
+                    >
+                      Previous
+                    </Link>
+                  )}
+                  <span className="text-ink-light text-sm">
+                    Page {browse.page.toLocaleString()} of {totalBrowsePages.toLocaleString()}
+                  </span>
+                  {browse.page < totalBrowsePages && (
+                    <Link
+                      href={browseUrl(slug, { type: browse.productType, other: browse.other, comparable: browse.comparable, page: browse.page + 1 })}
+                      className="px-5 py-2 rounded-full border border-border text-ink-light hover:border-gold hover:text-ink transition-colors"
+                    >
+                      Next
+                    </Link>
+                  )}
+                </nav>
+              )}
+            </>
+          )}
+        </section>
+      ) : (
       <section className="max-w-site mx-auto px-6 py-12">
         <h2 className="font-serif text-3xl text-ink mb-2">Featured products</h2>
         <p className="text-ink-light mb-8">
@@ -256,6 +450,7 @@ export async function CategoryPage({ category, displayName, intro }: Props) {
           </div>
         )}
       </section>
+      )}
     </SiteLayout>
   );
 }

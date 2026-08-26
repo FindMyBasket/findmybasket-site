@@ -8,6 +8,23 @@ export interface SubcategoryStats {
   total_retailers: number;
 }
 
+/**
+ * Browse facets for a grid: the named type chips, plus an optional complement chip
+ * standing for everything they do not cover.
+ *
+ * WHY THE COMPLEMENT CAN BE null. "Everything else" is literally true whatever it
+ * contains -- which is exactly the problem. While every REAL type is a chip, it means
+ * "the classifier's default", the one honest reading. The moment a real type does not
+ * fit under `limit`, the same words silently start meaning "the default plus whatever
+ * was cut", with no signal that the claim changed. So the chip is SUPPRESSED rather
+ * than allowed to mislabel: degrading to named-types-only is honest, a false label is
+ * not. Item 408.
+ */
+export interface ProductTypeFacets {
+  types: ProductTypeChip[];
+  complement: { count: number } | null;
+}
+
 export interface ProductTypeChip {
   product_type: string;
   count: number;
@@ -114,20 +131,20 @@ export async function getSubcategoryStats(
 
 export async function getProductTypes(
   category: TopCategory,
-  subcategory: string,
+  subcategory: string | null,
   limit = 12
-): Promise<ProductTypeChip[]> {
-  const data = await fetchAllRows<{ product_type: string | null }>(offset =>
-    supabase
+): Promise<ProductTypeFacets> {
+  const data = await fetchAllRows<{ product_type: string | null }>(offset => {
+    let q = supabase
       .from('products_active')
       .select('product_type')
       .eq('top_category', category)
-      .eq('subcategory', subcategory)
       .not('product_type', 'is', null)
-      .not('tags', 'cs', '{cleanup_remove}')
-      .order('id')
-      .range(offset, offset + PAGE_SIZE - 1),
-  );
+      .not('tags', 'cs', '{cleanup_remove}');
+    // null subcategory means the whole category -- the root's browse facet.
+    if (subcategory) q = q.eq('subcategory', subcategory);
+    return q.order('id').range(offset, offset + PAGE_SIZE - 1);
+  });
 
   // CATEGORY-NAME DEFAULTS: the value the classifier emits when it has no better
   // answer. They are not product types and must never render as browse chips.
@@ -148,16 +165,32 @@ export async function getProductTypes(
   const JUNK_TYPES = new Set(['Skincare', 'Makeup', 'Hair', 'Hair Care', 'Fragrance']);
 
   const counts = new Map<string, number>();
+  let totalRows = 0;
   for (const row of data) {
     if (!row.product_type) continue;
+    totalRows += 1;
     if (JUNK_TYPES.has(row.product_type)) continue;
     counts.set(row.product_type, (counts.get(row.product_type) ?? 0) + 1);
   }
 
-  return Array.from(counts.entries())
+  const ranked = Array.from(counts.entries())
     .map(([product_type, count]) => ({ product_type, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit);
+    .sort((a, b) => b.count - a.count);
+
+  const types = ranked.slice(0, limit);
+
+  // Everything the named chips do not cover: the suppressed defaults, plus any real
+  // type that did not fit. THE GUARD: if a real type was cut, the complement no longer
+  // means "the default" and the chip is dropped rather than relabelled.
+  const everyRealTypeIsAChip = ranked.length <= limit;
+  const namedTotal = types.reduce((n, t) => n + t.count, 0);
+  const complementCount = totalRows - namedTotal;
+
+  return {
+    types,
+    complement:
+      everyRealTypeIsAChip && complementCount > 0 ? { count: complementCount } : null,
+  };
 }
 
 export async function getSubcategoryTopBrands(
@@ -206,12 +239,29 @@ export async function getSubcategoryTopBrands(
     .slice(0, limit);
 }
 
+/**
+ * Paginated products for a category, optionally narrowed to one subcategory.
+ *
+ * GENERALISED RATHER THAN COPIED (item 408). The category ROOT needs exactly this
+ * query with one `.eq()` fewer, and this file's last three findings were all about a
+ * second copy of something drifting from the first. `subcategory: null` means the
+ * whole category.
+ *
+ * `comparableOnly` restricts to products stocked by more than one retailer. It is a
+ * CLAIM ABOUT THE CATALOGUE, not a property of the product, and it is OFF by default:
+ * on, it hides 86% of skincare and 79% of hair behind a control the visitor did not
+ * set, and makes the root stricter than the pages beneath it -- which is the defect
+ * this whole change exists to remove.
+ */
 export async function getSubcategoryProducts(
   category: TopCategory,
-  subcategory: string,
+  subcategory: string | null,
   page = 1,
   pageSize = 48,
-  productType?: string
+  productType?: string,
+  comparableOnly = false,
+  /** Select the COMPLEMENT of these named types instead of a single type. */
+  complementOf?: string[]
 ): Promise<{ products: FeaturedProduct[]; totalCount: number }> {
   // Note: this function paginates by design via `.range()`. The 1,000-row
   // cap is irrelevant because we only ever ask for `pageSize * 4` rows
@@ -223,13 +273,23 @@ export async function getSubcategoryProducts(
     .from('products_active')
     .select('id, name, brand, normalised_brand, product_type, subcategory, image_url', { count: 'exact' })
     .eq('top_category', category)
-    .eq('subcategory', subcategory)
     .not('image_url', 'is', null)
     .neq('image_url', '')
     .not('tags', 'cs', '{cleanup_remove}');
 
+  if (subcategory) {
+    query = query.eq('subcategory', subcategory);
+  }
+
   if (productType) {
     query = query.eq('product_type', productType);
+  } else if (complementOf && complementOf.length > 0) {
+    // PostgREST in-list: quote each value, since type names contain spaces and '&'.
+    const list = complementOf.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // Chaining a fourth .not() past this point exceeds TypeScript's instantiation
+    // depth on the generated PostgREST builder types. The filter itself is ordinary.
+    query = (query as any).not('product_type', 'in', `(${list})`);
   }
 
   // `.order('id')` IS LOAD-BEARING. `.range()` without it is unordered
@@ -278,6 +338,7 @@ export async function getSubcategoryProducts(
     if (!rows) continue;
     const { retailerCount, prices: priceList } = summarisePriceRows(rows);
     if (retailerCount === 0 || priceList.length === 0) continue;
+    if (comparableOnly && retailerCount < 2) continue;
 
     const minPrice = Math.min(...priceList);
     const savingPct = nextBestSavingPct(priceList);

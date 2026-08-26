@@ -32015,10 +32015,23 @@ capitalise-the-slug derivation. The 125 strings I counted were **`Oral Care` wit
 `product_type` printed on 48 product cards.** The label, lowercase `Oral care`, appeared **six** times,
 all of them from the metadata I had just fixed.
 
-> **I verified the claim by grepping for a string, and the string was on the page for a different
-> reason.** A case-insensitive match over rendered HTML cannot tell a heading from a card field. **The
-> check confirmed the words were present, which was never the question** -- the question was which
-> element produced them, and only the `<h1>` answers that.
+> **A CHECK THAT CONFIRMS BY PRESENCE CANNOT TELL YOU WHY THE STRING IS THERE.**
+>
+> I verified the claim by grepping for "oral care" and counting 125 hits. The string was on the page
+> for a different reason entirely: `product_type` printed on 48 product cards. **Presence and origin
+> are different questions, and only one of them was the claim.** The heading was never checked, because
+> a match anywhere satisfied a test that was looking for agreement rather than for the element that
+> produces it.
+
+**This is the same shape as the bug it was verifying, one level up.** Item 406's finding is that a
+derivation which happens to agree cannot be diffed against what it agrees with. **My check then
+accepted agreement in the output as evidence about the code** -- the identical substitution, made
+while writing up the item that names it. Twice in one item: once in the defect, once in confirming
+the fix.
+
+**The instrument that would have answered it was one character different**: `grep -o '<h1[^>]*>[^<]*'`
+rather than `grep -oi 'oral care'`. Case mattered too -- the label is `Oral care` and the product type
+is `Oral Care`, and a case-insensitive match erased the only signal that distinguished them.
 
 **AND THE DRIFT `lib/queries.ts` CLAIMS TO HAVE FIXED IS LIVE.** That file's comment reads: *"the
 category page offers 'Browse by area > Supplements' inside Supplements, and the destination page is
@@ -32050,3 +32063,121 @@ was already correct, one was fixed in item 406 and four are annotated traps.
 > the thing it agrees with -- and I then made the same error one level up, checking my own claim by
 > looking for agreement in the output instead of at the code that produced it. **Twice in one item:
 > once in the bug, once in the verification of the fix.**
+
+---
+
+### 408. The category root becomes a browse surface. Hair first, and one decision held open
+
+**Raised:** 26 August 2026 · **BUILT, NOT SHIPPED. Held on the JUNK_TYPES question below.**
+
+**The premise the programme was written on is dead: there is no grid to unbury, because the root has
+no grid.** `/hair` renders 24 products from `fmb_featured_products` against 9,707 with a live price and
+11,025 in the category. No paging, no filter, no sort.
+
+**GENERALISED RATHER THAN COPIED.** `getSubcategoryProducts` now takes `subcategory: string | null`,
+and `getProductTypes` likewise. The root is the same query with one `.eq()` fewer. **Three items in a
+row -- 406, 407 and the third derivation copy -- were about a second copy of something drifting from
+the first**, so a `getCategoryProducts` beside it was the one shape to avoid.
+
+**Opt-in per route.** `CategoryPage` takes an optional `browse` prop; absent, every other category
+renders exactly as before. `app/hair/page.tsx` opts in. **Six pages did not change to ship one.**
+
+**BRAND IS NAVIGATION, NOT A FILTER PARAM.** No `?brand=`. The brand hubs already answer that query,
+they rank, and they carry four-branch metadata and OpenGraph. **A `?brand=` URL would be a second URL
+answering the same question while competing with the page that already answers it.** The grid links
+out to the hub from each card.
+
+**THE STOCKIST TOGGLE IS OFF BY DEFAULT AND LABELLED FOR WHAT IT DOES.**
+
+> "Only show products stocked by more than one retailer"
+
+Not "comparable", and not "filter". **It is a claim about the catalogue -- how many shops we found the
+product in -- rather than a property of the product**, and the label says so. On by default would
+reproduce the exact defect being fixed: a root stricter than the pages beneath it, hiding 79% of hair
+and 86% of skincare behind a control the visitor never set.
+
+**A KNOWN DEFECT INHERITED DELIBERATELY, WITH ITS MECHANISM.**
+
+`getSubcategoryProducts` fetches `pageSize * 4` candidate rows in `id` order, drops those without a
+live in-stock price, re-sorts the survivors by retailer count, and slices `pageSize`. **`totalCount`
+is `{ count: 'exact' }` taken BEFORE the price filter.**
+
+> **So `totalPages` is overstated, and a late page can come up short or empty.** The count describes
+> the rows the query matched; the grid shows the subset of them that had a live price. At hair's 88%
+> live-price rate the windows fill and nothing looks wrong -- **and the arithmetic is wrong at every
+> rate, including the one where it does not show.**
+
+**Preserved rather than silently fixed.** Matching the page beneath is the entire point of this phase,
+and a fix that corrected the root while leaving the subcategory pages overstated would recreate the
+disagreement this change exists to remove. **It belongs to whoever fixes it for both.**
+
+**HELD: the classifier's default is unreachable by any chip, and it is not a hair problem.**
+
+`getProductTypes` suppresses `JUNK_TYPES` -- the values the classifier emits when it has no better
+answer. Correct for browse chips, and it leaves a share of every grid unfilterable:
+
+| Category | Suppressed default | Rows | Share of renderable |
+|---|---|---|---|
+| **skincare** | `Skincare` | **16,377** | **36.3%** |
+| **hair** | `Hair Care` | **2,771** | **25.1%** |
+| bath_body | `Skincare` | 328 | 4.0% |
+| makeup | `Makeup` + `Skincare` | 718 | 3.4% |
+| fragrance | `Fragrance` | 271 | 2.3% |
+| supplements | `product_type` is **null** | 2,448 | **100%** |
+
+**Skincare is the worse case, not hair**, and supplements has no `product_type` at all, so its filter
+bar must be absent rather than empty.
+
+**The precise defect is narrower than "unreachable".** These products ARE in the grid -- the type
+filter only applies when `?type=` is set, so the unfiltered page shows them. **What a visitor cannot do
+is narrow TO them**, and the visible symptom is that the chip counts do not add up to the stated total:
+hair's six chips sum to 8,254 against "11,025 products".
+
+**DECIDED: the complement chip, with a guard that suppresses rather than mislabels.**
+
+A chip reading **"Everything else"** selects the negation of the named types.
+
+> **THE GUARD IS THE WHOLE DESIGN. "Everything else" is literally true whatever it contains, which is
+> exactly why it is dangerous.** While every real type is a chip it can only mean *the classifier's
+> default* -- the one honest reading. The moment a real type does not fit under the limit, the same
+> words silently start meaning "the default plus whatever was cut": **same claim, different meaning,
+> no signal.** So `getProductTypes` returns `complement: null` when `ranked.length > limit`, and the
+> chip disappears. **Degrading to named-types-only is honest; a false label is not.**
+
+Limit pinned at **24**, above the 14 real skincare types and 5 real hair types. Verified against live
+counts:
+
+| | Real types | Chips | Named total | Complement | Sum |
+|---|---|---|---|---|---|
+| hair, limit 24 | 5 | 5 | 8,254 | **2,771** | **11,025 ✓** |
+| skincare, limit 24 | 14 | 14 | 28,747 | **16,377** | **45,124 ✓** |
+| skincare, limit 10 *(guard test)* | 14 | 10 | 28,026 | **SUPPRESSED** | -- |
+
+**ITEM 152 SETTLES OPTION A, AND IT SETTLED IT BEFORE THIS DECISION WAS TAKEN.** A chip reading
+`"Hair Care 2753"` linking to `?type=Hair+Care` **rendered live on `/hair/treatment` and was removed as
+a defect**, on evidence, with the reasoning written down. **Choosing it now would reverse a decision
+rather than make one** -- and nothing has changed about the label since: "Hair Care" inside hair care
+tells the visitor nothing.
+
+**A CORRECTION TO MY OWN FRAMING, AND IT WOULD HAVE SENT THE FIX THE WRONG WAY.** I described the
+suppressed rows as *unreachable*, which reads as hidden. **They are not hidden.** The type filter only
+applies when a type is selected, so the unfiltered grid shows every one of them.
+
+> **They are UNNARROWABLE, not invisible, and the symptom is arithmetic.** What a visitor actually sees
+> is six chips summing to **8,254** against a stated **11,025 products**. "Hidden" would have pointed at
+> visibility -- surfacing rows already on the page -- when the defect was that the facets did not
+> account for the whole. **The fix follows from the symptom, and the symptom was in the sum.**
+
+**Skincare gets the label and stays large: 16,377 rows, 36.3%, the biggest chip on the page.** The
+biggest bucket telling you least is **a true fact about the classifier**, and suppressing it does not
+improve the classifier -- it only stops anyone noticing.
+
+**Supplements' filter bar is ABSENT rather than empty**, because `product_type` is null on all 2,448
+rows. **Not a special case: the same rule everywhere** -- no types, no bar.
+
+**A note on the CI runner, because the record should not imply a check disagreed.** Two integrity runs
+on PR #458 reported failure and **both were cancellations, never a check that ran and returned red.**
+The first was superseded when a second commit landed on the branch; the second sat queued 15:40 to
+15:56 and was killed by GitHub with no push involved. Both scripts passed locally on the exact branch
+HEAD throughout. **Nothing was ever failing** -- and the waiting logic reported "failure" for a run
+that never executed a step, which is worth knowing the next time it says so.
