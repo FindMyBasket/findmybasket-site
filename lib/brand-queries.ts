@@ -3,7 +3,17 @@ import { getActiveRetailerIds } from './retailers';
 import { summarisePriceRows, brandSlug, legacyBrandSlug, nextBestSavingPct, nextBestPrice, type FeaturedProduct, type TopCategory } from './queries';
 
 export interface BrandLookup {
+  /** The member whose spelling won the display; kept for callers needing one value. */
   normalised_brand: string;
+  /**
+   * EVERY normalised_brand sharing this slug, not just one (item 418).
+   *
+   * THE NAME UNIONED AND THE PRODUCTS DID NOT, and the asymmetry was built in rather
+   * than introduced: `matches` below has always accumulated display names across every
+   * matching member, while exactly one member was handed downstream. So the h1 showed
+   * the union's majority name above one member's products.
+   */
+  normalised_brands: string[];
   display_name: string;
   /** Set only when the incoming slug is this brand's PRE-26-AUG-2026 address.
    *  The caller must 301 to it rather than render. Never set for a slug that
@@ -39,6 +49,8 @@ export async function findBrandBySlug(slug: string): Promise<BrandLookup | null>
   // Every brand seen, so folded-slug ownership can be counted after the scan.
   // ~2,700 distinct values; the scan already reads every row.
   const allBrands = new Set<string>();
+  // Every member sharing the requested slug. Six slugs have more than one today.
+  const slugMembers = new Set<string>();
 
   while (true) {
     const { data, error } = await supabase
@@ -75,6 +87,7 @@ export async function findBrandBySlug(slug: string): Promise<BrandLookup | null>
       allBrands.add(row.normalised_brand);
       if (brandSlug(row.normalised_brand) === slug) {
         chosenNormalised = row.normalised_brand;
+        slugMembers.add(row.normalised_brand);
         const display = row.brand ?? row.normalised_brand;
         matches.set(display, (matches.get(display) ?? 0) + 1);
       } else if (
@@ -148,10 +161,11 @@ export async function findBrandBySlug(slug: string): Promise<BrandLookup | null>
       let best = 0;
       for (const [d, n] of legacyMatches.entries()) if (n > best) { legacyDisplay = d; best = n; }
       if (keepsLegacySlug(legacyNormalised)) {
-        return { normalised_brand: legacyNormalised, display_name: legacyDisplay };
+        return { normalised_brand: legacyNormalised, normalised_brands: [legacyNormalised],
+                 display_name: legacyDisplay };
       }
-      return { normalised_brand: legacyNormalised, display_name: legacyDisplay,
-               legacyRedirectTo: brandSlug(legacyNormalised) };
+      return { normalised_brand: legacyNormalised, normalised_brands: [legacyNormalised],
+               display_name: legacyDisplay, legacyRedirectTo: brandSlug(legacyNormalised) };
     }
     return null;
   }
@@ -165,17 +179,29 @@ export async function findBrandBySlug(slug: string): Promise<BrandLookup | null>
     }
   }
 
+  // UNION, NOT A BETTER CHOICE. `chosenNormalised` is the LAST matching row in id
+  // order -- arbitrary for every colliding slug, which is how /brands/im-from came to
+  // serve 1 product of 122. Unioning removes the arbitrariness rather than replacing it
+  // with a different rule, so there is no tiebreak to get wrong later. Item 418.
+  const members = slugMembers.size > 0 ? [...slugMembers] : [chosenNormalised];
   return {
     normalised_brand: chosenNormalised,
+    normalised_brands: members,
     display_name: bestDisplay,
   };
 }
 
-export async function getBrandStats(normalisedBrand: string): Promise<BrandStats> {
+/** Accepts one brand or a slug's whole member set. */
+function toBrandList(b: string | string[]): string[] {
+  return Array.isArray(b) ? b : [b];
+}
+
+export async function getBrandStats(normalisedBrand: string | string[]): Promise<BrandStats> {
+  const brands = toBrandList(normalisedBrand);
   const { data: catRows, count: totalProducts } = await supabase
     .from('products_active')
     .select('top_category', { count: 'exact' })
-    .eq('normalised_brand', normalisedBrand)
+    .in('normalised_brand', brands)
     .not('top_category', 'is', null)
     .not('tags', 'cs', '{cleanup_remove}');
 
@@ -196,7 +222,7 @@ export async function getBrandStats(normalisedBrand: string): Promise<BrandStats
   const { data: productRetailerRows } = await supabase
     .from('products')
     .select('retailer_prices(retailer_id)')
-    .eq('normalised_brand', normalisedBrand)
+    .in('normalised_brand', brands)
     .is('merged_into', null)
     .is('parent_product_id', null);
 
@@ -252,8 +278,9 @@ export function compareCategories(a: string, b: string): number {
 // generic top-level buckets) renders as a chip. Order is the only hardcoded
 // part — CATEGORY_ORDER above, unknowns alphabetical at the end. No cap.
 export async function getBrandProductTypes(
-  normalisedBrand: string
+  normalisedBrand: string | string[]
 ): Promise<BrandProductTypeChip[]> {
+  const brands = toBrandList(normalisedBrand);
   // FIX 2C: THE IMAGE FILTER IS LOAD-BEARING AND WAS MISSING HERE.
   //
   // getBrandProducts -- the query these chips LINK TO -- requires an image. This one did
@@ -268,7 +295,7 @@ export async function getBrandProductTypes(
   const { data } = await supabase
     .from('products_active')
     .select('product_type')
-    .eq('normalised_brand', normalisedBrand)
+    .in('normalised_brand', brands)
     .not('product_type', 'is', null)
     .not('image_url', 'is', null)
     .neq('image_url', '')
@@ -305,19 +332,20 @@ export async function getBrandProductTypes(
 }
 
 export async function getBrandProducts(
-  normalisedBrand: string,
+  normalisedBrand: string | string[],
   page = 1,
   pageSize = 48,
   productType?: string,
   topCategory?: string
 ): Promise<{ products: FeaturedProduct[]; totalCount: number }> {
+  const brands = toBrandList(normalisedBrand);
   const offset = (page - 1) * pageSize;
   const candidateLimit = pageSize * 4;
 
   let query = supabase
     .from('products_active')
     .select('id, name, brand, normalised_brand, product_type, subcategory, image_url', { count: 'exact' })
-    .eq('normalised_brand', normalisedBrand)
+    .in('normalised_brand', brands)
     .not('image_url', 'is', null)
     .neq('image_url', '')
     .not('tags', 'cs', '{cleanup_remove}');
@@ -518,10 +546,10 @@ export interface BrandMetadataFacts {
 }
 
 export async function getBrandMetadataFacts(
-  normalisedBrand: string,
+  normalisedBrand: string | string[],
 ): Promise<BrandMetadataFacts> {
   const { data } = await supabase.rpc('fmb_brand_metadata_facts', {
-    p_normalised_brand: normalisedBrand,
+    p_normalised_brands: toBrandList(normalisedBrand),
   });
   const row = Array.isArray(data) ? data[0] : data;
   // A missing row is treated as "nothing comparable", which selects the narrower claim.
