@@ -123,76 +123,8 @@ export async function CategoryPage({ category, displayName, intro, browse }: Pro
     },
   };
 
-  return (
-    <SiteLayout>
-      <script
-        type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
-      />
-      <section className="relative overflow-hidden">
-        {/* Hero photo — desktop crop */}
-        <div
-          className="absolute inset-0 z-0 hidden md:block bg-cover bg-[center_bottom]"
-          style={{
-            backgroundImage: `url('/images/category-hero/${category}-desktop.jpg')`,
-          }}
-        />
-        {/* Hero photo — mobile (portrait) crop */}
-        <div
-          className="absolute inset-0 z-0 md:hidden bg-cover bg-[center_bottom]"
-          style={{
-            backgroundImage: `url('/images/category-hero/${category}-mobile.jpg')`,
-          }}
-        />
-        {/* Cream-fade overlay painted on top of the photo — matches homepage hero */}
-        <div
-          className="absolute inset-0 z-0"
-          style={{
-            backgroundImage:
-              'linear-gradient(to bottom, rgb(250,248,244) 0%, rgba(250,248,244,0.85) 30%, rgba(250,248,244,0.4) 70%, rgba(250,248,244,0.2) 100%)',
-          }}
-        />
-        <div className="relative z-10 max-w-site mx-auto px-6 py-16 md:py-24 text-center">
-          <p className="text-xs uppercase tracking-widest text-gold font-medium mb-4">
-            Category
-          </p>
-          <h1 className="font-serif text-5xl md:text-7xl text-ink mb-6">
-            {displayName}
-          </h1>
-          <p className="text-base md:text-lg text-ink-light max-w-2xl mx-auto mb-10 leading-relaxed">
-            {intro}
-          </p>
-          <div className="inline-flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-ink-light">
-            <span>
-              <strong className="text-ink font-semibold">
-                {stats.total_products.toLocaleString()}
-              </strong>{' '}
-              products
-            </span>
-            <span className="text-ink-light/40">·</span>
-            <span>
-              <strong className="text-ink font-semibold">
-                {stats.total_brands.toLocaleString()}
-              </strong>{' '}
-              brands
-            </span>
-            <span className="text-ink-light/40">·</span>
-            <span>
-              <strong className="text-ink font-semibold">
-                {stats.total_retailers}
-              </strong>{' '}
-              retailers
-            </span>
-          </div>
-        </div>
-      </section>
-
+  const LinkBlocks = () => (
+    <>
       {crossBrands.length > 0 && (
         <section className="max-w-site mx-auto px-6 py-12">
           <h2 className="font-serif text-3xl text-ink mb-2">Brands also in other categories</h2>
@@ -282,7 +214,11 @@ export async function CategoryPage({ category, displayName, intro, browse }: Pro
           </div>
         </section>
       )}
+    </>
+  );
 
+  const GridBlock = () => (
+    <>
       {browse && browseResult ? (
         <section className="max-w-site mx-auto px-6 py-12">
           <h2 className="font-serif text-3xl text-ink mb-2">
@@ -450,6 +386,98 @@ export async function CategoryPage({ category, displayName, intro, browse }: Pro
           </div>
         )}
       </section>
+      )}
+    </>
+  );
+
+  return (
+    <SiteLayout>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
+      />
+      <section className="relative overflow-hidden">
+        {/* Hero photo — desktop crop */}
+        <div
+          className="absolute inset-0 z-0 hidden md:block bg-cover bg-[center_bottom]"
+          style={{
+            backgroundImage: `url('/images/category-hero/${category}-desktop.jpg')`,
+          }}
+        />
+        {/* Hero photo — mobile (portrait) crop */}
+        <div
+          className="absolute inset-0 z-0 md:hidden bg-cover bg-[center_bottom]"
+          style={{
+            backgroundImage: `url('/images/category-hero/${category}-mobile.jpg')`,
+          }}
+        />
+        {/* Cream-fade overlay painted on top of the photo — matches homepage hero */}
+        <div
+          className="absolute inset-0 z-0"
+          style={{
+            backgroundImage:
+              'linear-gradient(to bottom, rgb(250,248,244) 0%, rgba(250,248,244,0.85) 30%, rgba(250,248,244,0.4) 70%, rgba(250,248,244,0.2) 100%)',
+          }}
+        />
+        <div className="relative z-10 max-w-site mx-auto px-6 py-16 md:py-24 text-center">
+          <p className="text-xs uppercase tracking-widest text-gold font-medium mb-4">
+            Category
+          </p>
+          <h1 className="font-serif text-5xl md:text-7xl text-ink mb-6">
+            {displayName}
+          </h1>
+          <p className="text-base md:text-lg text-ink-light max-w-2xl mx-auto mb-10 leading-relaxed">
+            {intro}
+          </p>
+          <div className="inline-flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-ink-light">
+            <span>
+              <strong className="text-ink font-semibold">
+                {stats.total_products.toLocaleString()}
+              </strong>{' '}
+              products
+            </span>
+            <span className="text-ink-light/40">·</span>
+            <span>
+              <strong className="text-ink font-semibold">
+                {stats.total_brands.toLocaleString()}
+              </strong>{' '}
+              brands
+            </span>
+            <span className="text-ink-light/40">·</span>
+            <span>
+              <strong className="text-ink font-semibold">
+                {stats.total_retailers}
+              </strong>{' '}
+              retailers
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ORDER IS BROWSE-DEPENDENT (item 409).
+          Without `browse` the link blocks come first, exactly as they always have --
+          the five categories that have not opted in are untouched.
+          With `browse`, THE GRID GOES DIRECTLY UNDER THE HERO and the link blocks move
+          below it. Measured at 390px before the move: 3,103px and 3.68 screens to the
+          first product card, filter chips at 2,815px -- 2,560px of furniture in front of
+          the thing the page is for. THE HERO IS NOT THE COST: its photo is a background
+          on an absolutely-positioned div and occupies NO layout height at all. */}
+      {browse ? (
+        <>
+          <GridBlock />
+          <LinkBlocks />
+        </>
+      ) : (
+        <>
+          <LinkBlocks />
+          <GridBlock />
+        </>
       )}
     </SiteLayout>
   );
