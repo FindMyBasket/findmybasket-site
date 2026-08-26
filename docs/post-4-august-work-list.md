@@ -28702,6 +28702,15 @@ other to have happened first.** The only way out is a new pull request from the 
 The first is better where a stack is deliberate. The second is the one to reach for by default,
 because it requires knowing nothing about what else is open.
 
+**APPLIED THE SAME DAY.** The branch carrying this item, `worklist-348-349`, immediately became the
+base of the next one. **It will not be deleted on merge**, and the dependent was stacked onto it
+rather than onto `main` precisely because of what is written above.
+
+> **A finding that changes behaviour within a day of being recorded is rarer than one that gets
+> recorded**, and the difference is worth naming. Most of this list is reasoning banked against a
+> future reader who may or may not arrive. This one had its first reader immediately, and the thing
+> it changed was the very next action taken after writing it.
+
 ##### AND A THIRD STATE THE ITEM 300 DISTINCTION DID NOT COVER
 
 Item 300 separated **stale in its number** (a merge problem, fix the number) from **stale in its
@@ -28783,3 +28792,261 @@ was my report calling it a deviation**, and this item is where that is retracted
 
 **Open, unchanged:** MyProtein is the only recent logo carrying no `.webp` alongside its `.png`.
 That is a real gap and a separate one, blocked on an encoder rather than on a decision.
+
+---
+
+### 350. A defect awaiting an instance, and the condition that would create one
+
+**Raised:** 25 August 2026 · **Reported, deliberately not fixed. Nothing live is affected and the condition that would change that is nameable.**
+
+The price-drop email's panel reads **"Total drop since you saved them"** over
+`Σ max(0, baseline_price − (current_price ?? alerted_price))`.
+
+**The measurement is sound.** `baseline_price` is `fmb_family_best_price(product_id).best_price`
+captured when the user tracked the product; `fmb_generate_alerts` compares against **the same
+function**. Both sides are the same instrument, which is what the worst-case baseline never was.
+
+**And it is a different claim, not a stale one.** It is a time-series delta on one product since
+tracking, not a comparison across retailers. Correct for a price-drop email, and properly unrelated
+to the next-best anchor and to the per-product-maximum basket deleted today.
+
+**Where the copy and the schema part company:**
+
+| column | records |
+|---|---|
+| `tracked_products.added_at` | when the user saved it |
+| `tracked_products.baseline_captured_at` | when a price was first available to record |
+
+They are equal on **all 4 tracked rows today**, max gap 0 seconds. They are not equal by
+construction. `fmb_track_product` writes `baseline_captured_at` as `CASE WHEN v_bp IS NOT NULL THEN
+now() END`, so a product with no price at save time gets **NULL**, and the nightly
+`fmb_fill_missing_baselines` later sets both the price and `baseline_captured_at = now()`.
+
+> **THE CONDITION, STATED SO IT CAN BE RECOGNISED RATHER THAN REDISCOVERED:**
+>
+> **This copy becomes wrong the first time `fmb_fill_missing_baselines` touches a row that later
+> drops in price.** At that moment "since you saved them" measures from the backfill, not from the
+> save, and the gap is however long the product was unpriceable.
+>
+> **The schema distinguishes two moments and the copy does not.** That is not an oversight in the
+> schema; the two columns exist precisely because the moments differ. The copy collapsed them.
+
+**A defect awaiting an instance is not the same as a defect**, and recording it as one would be
+overstating it. It is also not nothing: the difference between the two is a single nightly run over
+a row that has never had a price. **`routine_alerts` currently holds zero rows, delivered or
+pending** — this email has never been sent to anyone — so the whole path is unshipped copy, which
+lowers the urgency and not the accuracy.
+
+---
+
+### 351. worstCaseTotal's sibling in the alerts path
+
+**Raised:** 25 August 2026 · **Named while the first one was being deleted, rather than found separately in three months.**
+
+`pct_below_baseline` is computed by `fmb_generate_alerts`, stored on every `routine_alerts` row,
+declared in the `AlertItem` interface at the top of `send-routine-email/index.ts`, and **read zero
+times**.
+
+The email recomputes the figure instead:
+
+```ts
+const saving = Math.max(0, was - now);
+const pct = was > 0 ? Math.round((saving / was) * 100) : 0;
+```
+
+**Recomputing is the right choice**, and this is the part that makes it a sibling rather than a
+duplicate. The stored value was computed from `alerted_price` at the moment the alert fired. The
+email renders `current_price ?? alerted_price`, so if the price has moved since, **the email shows
+the drop as it stands rather than as it stood** — which is what a reader opening the email is
+entitled to. The two figures can legitimately disagree, and the displayed one is the honest one.
+
+> **SAME CLASS AS ITEM 347: A FIGURE CARRIED FORWARD THAT NOTHING READS.** Where `worstCaseTotal`
+> was computed and returned in memory, this one is **computed, written to a table, and carried
+> through an interface** — three places asserting it matters, and no consumer anywhere.
+>
+> **The trap is identical.** The next person needing a percentage finds `pct_below_baseline`
+> already stored, already named, already plausible, and uses it — reintroducing the stale-at-send
+> figure the render deliberately avoids. Nothing marks it as superseded, and being *in the
+> database* makes it look more authoritative than the in-memory field just deleted, not less.
+
+**Not deleted here.** Unlike `worstCaseTotal` it is a stored column with a migration behind it, and
+removing it is a schema change rather than an edit. **`routine_alerts` holds zero rows**, so the
+cost of removing it will never be lower than it is now. Recorded so the decision is a decision.
+
+---
+
+### 352. A hold enforced only by the absence of a cron
+
+**Raised:** 26 August 2026 · **MyProtein's hold was recorded, guarded and gated, and none of the three was preventing anything.**
+
+Item 324 held MyProtein from re-importing: a second run creates **177 near-duplicate products**,
+because the 609 parents now exist and are UPDATED rather than created, so their URLs never re-enter
+`createdUrls` and Tier 5 stops suppressing the variants it suppressed on the first run. The hold is
+real and the measurement behind it is real.
+
+**What was actually enforcing it:**
+
+| layer | intended | actual |
+|---|---|---|
+| `standing_check_findings` hold record | states the reason | **enforces nothing.** It is a record. |
+| `guard_import_enable_while_held` | refuse the enable | **dormant.** See below. |
+| importer's `if (!config.enabled && !dryRun)` | refuse the run | **passed.** `enabled` was `true`. |
+| **absence of a cron job** | — | **the only thing preventing the import** |
+
+0 of the 22 cron jobs reference retailer 33. Nothing scheduled it, so nothing ran it. **But a
+manual dispatch of `import-awin-feed` against retailer 33 would have run, and produced the 177.**
+
+> **THIRD INSTANCE OF AN ABSENCE DOING LOAD-BEARING WORK, AND THE FIRST WHERE IT WAS THE SOLE
+> PROTECTION.** Items 324 and 325 each noted that the missing cron was doing work no setting did.
+> Both times something else was also in the path. Here there was nothing else: three layers that
+> read as enforcement, and the only working one was **the absence of a row in `cron.job`** — which
+> no diagnostic reports, no check asserts, and anyone could route around without touching a guard.
+>
+> **An absence cannot be reviewed.** A disabled flag shows up in a config dump; a missing cron entry
+> looks exactly like a cron entry nobody has written yet.
+
+##### THE GUARD WAS BUILT FOR THIS RETAILER AND HAD NEVER BEEN ABLE TO FIRE
+
+```sql
+BEFORE UPDATE ON retailer_import_config FOR EACH ROW
+WHEN (new.enabled AND NOT COALESCE(old.enabled, false))
+```
+
+It fires on **false → true** only. `enabled` was set `true` to run the onboarding import and never
+reverted, so the transition it watches for had **already happened before the guard existed**.
+
+> **A guard watching the doorway of a room the subject was already standing in.** It reads the
+> right finding, names the right retailer, and produces exactly the right refusal -- and in the
+> eleven days it has existed it could not have fired once. Item 348 said a guard that never had to
+> fire is not evidence it works; this is the sharper case. **This one never had the opportunity,
+> and nothing distinguished that from working.**
+
+**Fixed by setting `enabled = false`** for retailer 33, which is what "deliberately not importing"
+already means in this schema. That arms the guard and closes the importer's gate.
+
+**Checked before applying, not after:** `retailer_prices_live` and `products_active` both filter on
+**`r.active` only**, never `enabled`, so the storefront is untouched. Verified after: **609 offers
+still live.** The guard was then probed inside a block that could not commit, and refused the
+re-enable with the full finding text -- **the first time it has ever fired.**
+
+##### AND THE REASON COLUMN THAT WOULD HAVE BEEN A MISTAKE
+
+The proposal on the table was a `hold_reason` column on `retailer_import_config`, by analogy with
+`unlisted_reason` (item 335): a reason rather than a flag, so the state cannot be asserted without
+saying why.
+
+**The analogy does not hold, and the difference is worth keeping.** `unlisted_reason` was needed
+because **no record existed** and a bare flag would have asserted a state with no why. Here the
+record already exists, is machine-readable, and is already joined to by the guard:
+
+```
+finding_key: held:import:33:tier5-leak-would-duplicate
+detail:      {"retailer_id": 33, "would_create_on_reimport": 177,
+              "unblocks_when": "item 314 family-grouping-at-import lands, or
+                                createdUrls is DB-populated across runs"}
+```
+
+It carries the measurement **and** the unblock condition, which is more than a column would.
+
+> **THE GAP IS NOT THAT THE RECORD IS MISSING. IT IS THAT THE INSTRUMENTS DO NOT CONSULT IT.**
+> Adding a column would put one fact in two places and give them room to disagree -- **item 345's
+> class in a schema rather than a call graph**, and the same failure mode: the second copy drifts
+> and nothing notices, because nothing is comparing them.
+>
+> The correct move is to make the readers join to the record that is already there. That is item
+> 353.
+
+---
+
+### 353. Deliberate silence and silent failure read identically
+
+**Raised:** 26 August 2026 · **Built and verified the same day, ahead of the 27 August 09:00 run that would have misreported it.**
+
+With no cron by design, MyProtein's `retailer_prices.last_updated` is frozen at **2026-08-25
+17:56:42** across all 609 rows, and only ever recedes.
+
+| instrument | reads | verdict on MyProtein |
+|---|---|---|
+| `monitor-retailer-feeds`, 09:00 UTC | newest `retailer_prices.last_updated` vs 36h | **stale from 27 Aug 09:00**, then every day |
+| `fmb_detect_frozen_feeds` | consecutive identical days in `feed_size_history` | **never fires** |
+| `dq_snapshot.price_freshness` | `last_updated` vs now, on the bare table | 609 over 7d on **1 Sep**, over 14d on **8 Sep**, over 30d on **24 Sep** |
+| `fmb_quality_snapshot_write_denominators` | `last_updated` vs `last_imported_at - 3h` | **0 stale, permanently** |
+
+**The last two disagree completely and both are correct.** One asks *did the last run cover the
+catalogue* and gets a clean answer forever; the other asks *how long ago was that run* and watches
+it rot. Nothing reconciles them because they were never the same question.
+
+##### THE HEADING IS THE DEFECT
+
+> *"The following retailer feeds haven't refreshed in over 36 hours, **with no import error
+> recorded**."*
+
+**Precisely true and completely misleading.** That clause was written to describe a silent failure
+-- an importer that died without recording an error -- and it is the single most damning phrase
+available. Applied to a retailer that is deliberately not importing, it says the same words about
+the opposite situation. **The absence of an error is the evidence of a problem in one reading and
+the evidence of correctness in the other, and the sentence cannot tell them apart.**
+
+##### THE SHAPE, BEFORE BUILDING
+
+1. **`fmb_held_imports`** -- a view over `standing_check_findings` exposing `(retailer_id,
+   finding_key, summary, unblocks_when)` for open `held:import:%` findings. One derivation, no new
+   column, nothing to drift.
+
+2. **`monitor-retailer-feeds`: a section, not a suppression.** Held retailers leave the stale list
+   and get their own block naming the finding and its unblock condition. **Suppressing them would
+   be the worse bug:** a held retailer that is *also* genuinely broken would then be invisible, and
+   the hold would have bought silence rather than accuracy. The reasoning goes at the code.
+
+3. **`price_freshness`: a marker, not a filter.** Add `held` alongside the counts and change none
+   of them. **This section is deliberately on the bare table** so a departed retailer's rows stay
+   visible; filtering held rows out would defeat the exact property it was left there for. The
+   counts must keep climbing. The reader needs to know why, not to be spared the number.
+
+4. **`fmb_detect_frozen_feeds`: no change, and this is the part to record.** It measures **feed
+   content per run**; MyProtein's problem is **elapsed time between runs**. It cannot fire because
+   `feed_size_history` gains a day only when an import writes one, and a retailer that never
+   imports never gains a second day -- its streak is stuck at 1 against a threshold of 4, forever.
+
+> **Making it able to fire would be building a second staleness instrument, not fixing this one.**
+> There is already an instrument for elapsed time and it is the 09:00 monitor. Teaching the freeze
+> detector to also watch the clock would give two checks the same job, disagreeing at the edges,
+> and neither owning it. **A check that cannot see a problem is not always a check that needs
+> changing. Sometimes it is the wrong check, and the right one is next to it.**
+
+##### VERIFIED BY RUNNING IT, NOT BY READING IT
+
+**No dry mode existed.** The function computed and sent in one pass, so the only way to see this
+email was to receive it, which meant the only verification available was to wait for 09:00 and read
+the result. `?dry_run=1` was added as part of this change, with a **dry-run-only** staleness
+override so the email for a state that has not arrived yet can be rendered before it does. Guarded
+on `dryRun`, so a real 09:00 run can never be handed a different threshold by a query string.
+
+Invoked through the same `net.http_post` path the cron uses, at a simulated 10h threshold:
+
+```
+status: dry_run   sent: false   subject: "FindMyBasket: 3 stale, 12 check findings"
+held:  [ MyProtein · held:import:33:tier5-leak-would-duplicate · 13h · unblocks_when: ... ]
+stale: [ YesStyle, Perfume Click, Niche Beauty ]
+```
+
+**MyProtein is not in the stale count and not in the subject.** Asserted against the rendered HTML
+rather than the JSON: it appears **once** in the whole document, inside the held table, carrying its
+finding key, its unblock condition and its staleness figure, and **absent from the stale table**.
+
+##### THE VIEW IS BUILT FOR A POPULATION OF ONE, AND THAT IS WORTH STATING
+
+`fmb_held_imports` returns exactly **one row** today: MyProtein. There is no second held import and
+there may never be one.
+
+> **Same shape as the held-product write guard at item 290, which protected one product.** The
+> value is the class, not the count. A held import is a state the system can enter at any time --
+> item 314's leak is not specific to MyProtein, and the 17,848 ungrouped duplicates across four
+> other retailers are the same mechanism already having run -- and the alternative to naming the
+> state is that the next one is discovered the same way this one was: by someone noticing that a
+> stale-feed alert has been lying for a fortnight.
+>
+> **Stating the population size is the honest part.** A view over one row looks like
+> over-engineering unless the reason it exists is written down, and "we expect more" is a claim, not
+> evidence. What is evidence: the state was entered once, silently, and nothing in the schema could
+> say so.
