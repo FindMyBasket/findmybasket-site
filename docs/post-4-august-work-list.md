@@ -32181,3 +32181,64 @@ The first was superseded when a second commit landed on the branch; the second s
 15:56 and was killed by GitHub with no push involved. Both scripts passed locally on the exact branch
 HEAD throughout. **Nothing was ever failing** -- and the waiting logic reported "failure" for a run
 that never executed a step, which is worth knowing the next time it says so.
+
+---
+
+### 409. The hero was not the cost. The block that navigates out of the category was
+
+**Raised:** 26 August 2026 · **Grid moved directly under the hero on /hair. Link blocks demoted, none deleted.**
+
+**Measured at 390x844 in a same-origin iframe, because the window would not resize** -- Chrome reported
+`innerWidth` 1295 however the window was sized, so the page was loaded into a 390px-wide iframe and
+measured inside it. A real layout, not a scaled estimate.
+
+**BEFORE, /hair at 390px:**
+
+| Block | Top | Height | Share |
+|---|---|---|---|
+| Hero | 78 | 458 | 15% |
+| **Brands also in other categories** | 535 | **919** | **30%** |
+| Browse by area | 1,454 | 533 | 17% |
+| Top brands | 1,987 | 650 | 21% |
+| Filter chips | **2,815** | -- | -- |
+| **First product card** | **3,103** | -- | **3.68 screens** |
+
+**THE HERO'S PHOTOGRAPH COSTS ZERO SCROLL, AND THE NUMBER SETTLES THE QUESTION RATHER THAN TASTE.**
+The mobile crop is `absolute inset-0 z-0 md:hidden bg-cover` -- **an absolutely-positioned background
+div, which occupies no layout height whatsoever.** The hero's 458px is entirely its text: `py-16`
+padding (128), the "Category" label (16), the h1 (48), the intro paragraph (104) and the stat line (52).
+
+> **Deleting the photograph would save 0 pixels.** The question "does a category page need a
+> photograph" turns out not to be a scroll-depth question at all -- the photo is behind text that would
+> occupy the same space on a blank background. **If it goes, it goes for a reason other than this one.**
+
+**The largest block is the one whose every link leaves the category.** "Brands also in other
+categories" is **919px, 30% of the distance to the first product**, and its 13 links all navigate to
+brand hubs outside hair. **The single biggest thing between a visitor and the hair products is a list
+of places that are not hair.**
+
+**A NOTE ON THE BEFORE FIGURE THIS WAS COMPARED TO.** Tuesday's measurement was *3,309px, 2.07 screens*
+on /skincare at 390px. **2.07 screens of 3,309px implies a 1,598px-tall viewport, which is not a
+phone.** The pixel figures are comparable; the *screens* figures are not, and /hair's 3.68 is against a
+844px iPhone viewport rather than a taller one. **Saying so rather than quoting an improvement from
+2.07 to something smaller, which would be a comparison between two different instruments.**
+
+**"BROWSE BY AREA" IS KEPT AND DEMOTED, NOT DELETED -- and on /hair the chips genuinely do duplicate
+it.** Subcategory and `product_type` are the same partition:
+
+| Subcategory | Product type | Rows |
+|---|---|---|
+| cleanse | Shampoo | 3,754 |
+| condition | Conditioner | 2,163 |
+| style | Hair Styling | 771 |
+| colour | Hair Colour | 510 |
+| treatment | Hair Treatment + **the complement** | 1,056 + 2,771 |
+
+> **The chips answer the same question, and the block's destinations are real indexed pages.**
+> `/hair/cleanse` has its own metadata, its own canonical and its own place in the sitemap; the chips
+> are query parameters that canonicalise back to `/hair`. **Deleting the block would remove the only
+> internal links to five indexed pages to save 533px.** Demotion keeps the links and buys the same
+> space, so there is no reason to choose deletion.
+
+**Order is browse-dependent, in one place.** `CategoryPage` emits the same two groups in either order;
+the five categories that have not opted in render exactly as before.
