@@ -48,9 +48,13 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      # NODE 22, NOT 20. @supabase/supabase-js constructs a RealtimeClient at
+      # createClient() and needs a global WebSocket, which Node 20 does not provide:
+      # the first run died at scripts/match-key-parity.mts:44 before reading a row.
+      # Other workflows here pin 20 and are fine because they do not call createClient.
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - run: npm ci
 
       # PREFLIGHT. Asserts the pieces exist before anything can report agreement.
