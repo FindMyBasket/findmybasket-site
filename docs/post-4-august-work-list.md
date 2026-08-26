@@ -30207,3 +30207,101 @@ Read from the file rather than remembered:
 
 **Nothing applied. This is the scoping, and the merge decision should wait on it rather than the
 other way round.**
+
+> **THE INVERSION, STATED PLAINLY:** the seven split brands are not a catalogue question that happens
+> to need a re-key. They are **one of several symptoms of a rule that deletes characters it should
+> fold.** Item 368's merge decision waits on this gate; the gate does not wait on it.
+
+---
+
+### 371. Phases 1 and 2, measured against a recomputed set. Nothing applied.
+
+**Raised:** 26 August 2026 · **Both phases run off-line on scratch functions, patched mechanically from the live SQL source and dropped afterwards. Phase 3 stays unwritten.**
+
+The candidate change: fold accented letters to ASCII and map `&` to `and`, **before** the
+`[^a-z0-9]+` strip. Modelled by copying `fmb_build_match_key`'s own source and substituting only the
+two helper names, so the body is the live one rather than a retyped one.
+
+```
+Avène Thermal Spring Water 300ml   avene av ne thermal spring water 300ml
+                               ->  avene thermal spring water 300ml
+Boots Nail & Cuticle Oil 10Ml      boots nail cuticle oil 10ml
+Boots Nail And Cuticle Oil 10Ml    boots nail and cuticle oil 10ml
+                               ->  boots nail and cuticle oil 10ml   (BOTH)
+```
+
+**Item 294's two products produce one key.**
+
+##### PHASE 1 — RECOMPUTE
+
+| | |
+|---|---:|
+| products | 99,967 |
+| **keys that move** | **16,754 (16.76%)** |
+| distinct keys before | 99,595 |
+| distinct keys after | 99,470 |
+| **net key reduction** | **125** |
+| **merge groups** (a new key gathering >1 old key) | **128** |
+| products inside a merge | 257 |
+| groups spanning more than one brand | 13 |
+| largest group | 2 old keys |
+
+**My predicted floor was 138 and the measured figure is 128.** The approximation was rough and in the
+right region; the real number is what stands.
+
+##### PHASE 1 ALSO CORRECTS A NUMBER EVERYONE IS WORKING FROM
+
+**Stored keys differing from what the SQL function produces today: 5,344, not 2,709.**
+
+> Those may not be the same population -- 2,709 was measured as "inconsistent with **both**
+> implementations" and 5,344 is "differs from the SQL one" -- so this is **not** a claim that the
+> drift doubled. It is a claim that **the figure in circulation is not the figure this query returns,
+> and nobody should plan a backfill on the old one without re-deriving it.**
+
+##### PHASE 2 — COLLISIONS, READ RATHER THAN COUNTED
+
+**All 13 cross-brand groups read in full. All nine name-divergent groups read in full.** (They
+overlap; 18 distinct groups inspected.) The remaining 106 have identical names after folding and are
+safe by construction rather than by inspection -- **which is a weaker guarantee and is stated as
+such.**
+
+**Every merge read was correct.** Three shapes, no fourth:
+
+| shape | example |
+|---|---|
+| one brand, two spellings | `Kérastase` / `Kerastase` · `L'Oréal Professionnel` / `L'Oreal Professionnel` |
+| **`&` against the word `and`** | `Percy & Reed` / `Percy and Reed` · `Zadig & Voltaire` / `Zadig and Voltaire` |
+| brand repeated in the name, unfoldable until now | `Hermes **Hermès** 24 Faubourg` folding onto `Hermes 24 Faubourg` |
+
+> **ZERO FALSE MERGES IN THE POPULATION THAT COULD CONTAIN ONE.** The risk was that folding
+> characters makes previously-impossible collisions possible; 128 became possible and all 18
+> inspected are the same product. **That is the strongest evidence available before writing, and it
+> is not proof** -- 106 groups rest on name-identity rather than on someone reading them.
+>
+> **And it is a smaller change than the 16.76% suggests.** Most moved keys move alone: 16,754 rows
+> re-key and only 257 land beside anything. The rule is being corrected far more often than it is
+> being made to merge.
+
+##### THE MULTIPACK POPULATION, ASSERTED
+
+The standing instruction at `extractNameNumbers` requires re-checking the multipack population
+before any narrowing. **A transliteration fix should not touch numbers at all, so the assertion is
+that nothing changes** -- and it was run rather than assumed:
+
+**75,926 rows carry a number. On zero of them does the fold alter the extracted number set.**
+
+> `zz_fold` translates letters and maps `&`; digits are outside both. Verified across all 99,967
+> rows rather than argued from the character class -- **a surprise here would have been exactly the
+> kind the instruction exists to catch.**
+
+##### WHAT PHASE 3 WOULD STILL NEED
+
+1. The TypeScript twin changed to match, and **`scripts/match-key-harness.mts` passing** -- 50 cases,
+   none of which currently exercise an accent or an ampersand.
+2. **Byte-parity re-asserted between `buildMatchKey` and `fmb_build_match_key`** on the same corpus.
+3. A decision on **`&` -> `and` versus stripping the word `and`**. Both merge item 294's pair; the
+   first is modelled here, the second is more aggressive and was not measured.
+4. The 5,344 re-derived, since a re-key writes all of them anyway.
+
+**Scaffolding dropped. Nothing applied, and Phase 3 is deliberately unwritten until 1 and 2 are
+read.**
