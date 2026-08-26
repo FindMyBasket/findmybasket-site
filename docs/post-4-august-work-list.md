@@ -32859,6 +32859,81 @@ and sit behind the match-key gate. **The index does not create the problem and d
 > shows both rows, identical names, one with 7 products and one with 1,100 -- **which is the first time
 > the catalogue has had to state this out loud.**
 
+**THE INDEX'S FIRST RETURN, AND IT IS A REPORT ON THE CATALOGUE RATHER THAN ON ITSELF.**
+
+> **It is the first surface that puts two hubs for one brand side by side.** `/brands/m-a-c` and
+> `/brands/mac-cosmetics` have both been live for months, both headed **MAC Cosmetics**, one with 6
+> products and one with 1,243 -- verified by fetching both. **The catalogue has been in this state the
+> whole time and has been stating it since today.** Until the index existed a visitor met one hub or
+> the other and had no way to learn the other was there.
+
+**A FREE CONFIRMATION ON A DIFFERENT MECHANISM.** `Child's Farm` and `Nalas Baby` are **absent** from
+this list of eleven. Both were in item 418's six colliding slugs, and if the union had failed they
+would appear here as two rows apiece. **The check cost nothing and came from the same list**: it tests
+the union, which the list was not built to test, and it tests it by absence rather than by re-running
+the query that performed it.
+
 **Reported, not fixed.** The remedy is the gated merge, and shipping an index that quietly hid one of
 each pair would repeat the argument that rejected a product threshold: incomplete in a way the visitor
 cannot see.
+
+---
+
+### 421. An ad-hoc slugifier disagreeing with the operative one. Fifth this week
+
+**Raised:** 26 August 2026 · **My check was wrong and the page was right.**
+
+Verifying the index, I reported the `#` bucket as rendering 14 rows against a database figure of 12.
+**The page was correct.** My verification query slugified with a hand-written regex that **deletes**
+accented characters, where `brandSlug()` **folds** them -- `âme pure` became `me-pure` in my check and
+`ame-pure` on the site.
+
+> **A second implementation of a function, written to check the first, disagreeing with it.** Same
+> shape as items 406, 407 and 417 (three label derivations), item 412 (a rule scoped to one caller) and
+> item 420's near-neighbour pairs. **Fifth instance this week, and the only one where the duplicate was
+> written by the verification rather than by the code under test.**
+
+**That is the variant worth naming: a check that reimplements the thing it is checking can only agree
+by coincidence.** It found a discrepancy that did not exist, and had the page been wrong in the same
+direction it would have reported agreement.
+
+**The real finding underneath:** two brands, both `âme pure`, bucket into `#` rather than `A` because
+`bucketOf` reads the raw first character while `brandSlug` folds accents. **Two rows affected.**
+Recorded, not fixed.
+
+---
+
+### 422. The index count is a threshold I did not call one
+
+**Raised:** 26 August 2026 · **Found by clicking through from the index to a hub.**
+
+**The index says `e.l.f.` at `/brands/elf` has 1 product. The hub renders 7.**
+
+Measured: of `elf`'s 7 products, **one has a live in-stock price** and six are out of stock with a
+price row. My index counts in-stock products; `getBrandProducts` deliberately does not filter by stock,
+and says why in its own comment -- *"a fan wants the full range, so we DON'T filter by in_stock"*.
+
+> **ITEM 271'S RULE, IN THE SAME FILE, VIOLATED BY THE NEW CALLER.** *"A chip must count exactly what
+> its destination will show."* Written after `/brands/clean-clear?type=Cleanser` 404'd because a chip
+> counted rows the grid excluded. **I read that comment while working in this file and wrote a count
+> that disagrees with its destination in the other direction** -- undercounting rather than over.
+
+**AND THE FILTER IS A THRESHOLD.** Counting only in-stock products excludes brands whose products are
+all out of stock:
+
+| | |
+|---|---|
+| Brands under the destination's own rule | **2,624** |
+| Brands the index lists | 2,457 |
+| **Brands whose hub renders products and the index omits** | **167** |
+
+`moyou london` has **56 products** on a live hub and no row in the index.
+
+> **That is the exact failure the no-threshold decision was made to avoid**: incomplete in a way a
+> visitor cannot see. I argued against a five-product cutoff and then shipped a stock filter that
+> removes 167 brands, because it was expressed as what to *count* rather than as what to *exclude*.
+
+**Not fixed. Reported.** The correction is to count what the destination shows -- image present, not
+removed, at least one price at an active retailer, stock irrelevant -- which takes the index to ~2,617
+rows and changes the page's copy line from *"currently in stock"* to a plain product count. **It is a
+change to a page shipped an hour ago and it wants a decision rather than a quiet edit.**
