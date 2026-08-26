@@ -28960,7 +28960,7 @@ It carries the measurement **and** the unblock condition, which is more than a c
 
 ### 353. Deliberate silence and silent failure read identically
 
-**Raised:** 26 August 2026 · **Shape reported, not yet built. What MyProtein now looks like to four instruments that cannot tell why it stopped.**
+**Raised:** 26 August 2026 · **Built and verified the same day, ahead of the 27 August 09:00 run that would have misreported it.**
 
 With no cron by design, MyProtein's `retailer_prices.last_updated` is frozen at **2026-08-25
 17:56:42** across all 609 rows, and only ever recedes.
@@ -29013,3 +29013,40 @@ the evidence of correctness in the other, and the sentence cannot tell them apar
 > detector to also watch the clock would give two checks the same job, disagreeing at the edges,
 > and neither owning it. **A check that cannot see a problem is not always a check that needs
 > changing. Sometimes it is the wrong check, and the right one is next to it.**
+
+##### VERIFIED BY RUNNING IT, NOT BY READING IT
+
+**No dry mode existed.** The function computed and sent in one pass, so the only way to see this
+email was to receive it, which meant the only verification available was to wait for 09:00 and read
+the result. `?dry_run=1` was added as part of this change, with a **dry-run-only** staleness
+override so the email for a state that has not arrived yet can be rendered before it does. Guarded
+on `dryRun`, so a real 09:00 run can never be handed a different threshold by a query string.
+
+Invoked through the same `net.http_post` path the cron uses, at a simulated 10h threshold:
+
+```
+status: dry_run   sent: false   subject: "FindMyBasket: 3 stale, 12 check findings"
+held:  [ MyProtein · held:import:33:tier5-leak-would-duplicate · 13h · unblocks_when: ... ]
+stale: [ YesStyle, Perfume Click, Niche Beauty ]
+```
+
+**MyProtein is not in the stale count and not in the subject.** Asserted against the rendered HTML
+rather than the JSON: it appears **once** in the whole document, inside the held table, carrying its
+finding key, its unblock condition and its staleness figure, and **absent from the stale table**.
+
+##### THE VIEW IS BUILT FOR A POPULATION OF ONE, AND THAT IS WORTH STATING
+
+`fmb_held_imports` returns exactly **one row** today: MyProtein. There is no second held import and
+there may never be one.
+
+> **Same shape as the held-product write guard at item 290, which protected one product.** The
+> value is the class, not the count. A held import is a state the system can enter at any time --
+> item 314's leak is not specific to MyProtein, and the 17,848 ungrouped duplicates across four
+> other retailers are the same mechanism already having run -- and the alternative to naming the
+> state is that the next one is discovered the same way this one was: by someone noticing that a
+> stale-feed alert has been lying for a fortnight.
+>
+> **Stating the population size is the honest part.** A view over one row looks like
+> over-engineering unless the reason it exists is written down, and "we expect more" is a claim, not
+> evidence. What is evidence: the state was entered once, silently, and nothing in the schema could
+> say so.
