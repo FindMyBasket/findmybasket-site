@@ -30354,3 +30354,107 @@ every row anyway.
 >
 > **The framing decides whether this reads as worth doing, and only one of the two framings is
 > supported by the numbers.**
+
+##### ★ THE APPLY IS ONE ACT. DO NOT STAGE IT.
+
+**The migration, the backfill and all three importer deploys go together.**
+
+`import-awin-feed`, `import-rakuten-feed` and `import-shopify-feed` all import
+`_shared/match-key.ts`. **The SQL half alone leaves every import writing old-style keys** into a
+catalogue that has just been re-keyed -- so each nightly run would reintroduce the split the change
+exists to remove, on exactly the rows most likely to move.
+
+> **Staging this is not a slower version of applying it. It is a worse outcome than not applying it
+> at all**, because the catalogue would hold both conventions at once and the gap would widen every
+> night rather than sitting still.
+
+**Written before the apply rather than discovered after it.**
+
+##### BASELINE RUN, 26 AUGUST — 99,973 ROWS, ZERO DISAGREEMENTS
+
+```
+rows compared                     99,973
+TS vs SQL disagreements           0
+stored vs recomputed (re-derived) 5,344
+```
+
+The two implementations agree on every row of the corpus **before** either is touched, which is what
+makes a zero afterwards mean anything. **And 5,344 re-derives independently**, by a different route
+from the Phase 1 measurement that first produced it.
+
+---
+
+### 372. A platform that degrades silently, then reports a false fact about the file
+
+**Raised:** 26 August 2026 · **Three failures on the way to one honest green. The first is the one worth recording.**
+
+`.github/workflows/match-key-parity.yml` contained:
+
+```yaml
+run: echo "> Run reason: ${{ inputs.note }}" >> "$GITHUB_STEP_SUMMARY"
+```
+
+`Run reason: ` is a colon-space **inside a plain YAML scalar**, so the value parses as a nested
+mapping and the file is malformed.
+
+**GitHub reported no error.** It accepted the file, listed the workflow as `active`, **named it after
+its own path** rather than its `name:` field, registered **no triggers**, and answered
+`gh workflow run` with:
+
+> **"Workflow does not have 'workflow_dispatch' trigger"**
+
+for a file whose fifth line is `workflow_dispatch:`.
+
+> **THE MESSAGE IS THE DEFECT, NOT THE SILENCE.** Degrading quietly on malformed input is bad.
+> **Making a specific, confident, false assertion about what the file contains is worse** -- it
+> describes a symptom and points directly away from the cause. I spent three dispatch attempts and
+> an investigation into secret names believing it.
+>
+> **A platform that rejects malformed input teaches you something in one step. One that accepts it,
+> half-configures it, and then tells you what it contains teaches you something false.**
+
+`npx js-yaml <file>` found it in one call, with line and column.
+
+##### AND THE RIGHT RESPONSE TO FINDING ONE IS TO CHECK THEM ALL
+
+Every file in `.github/workflows/` was then run through `js-yaml`.
+
+**They all parse.** That is the result worth stating -- not because it is interesting, but because it
+was the question, and **"no others are broken" is only knowable by having looked.** One silently
+degraded file proves the class exists; it says nothing about how many members it has, and nothing in
+the Actions UI would distinguish a second one.
+
+---
+
+### 373. The check was inside the change it was built to verify
+
+**Raised:** 26 August 2026 · **A circular dependency, and why splitting it was legitimate rather than convenient.**
+
+The parity view lived in the folding migration:
+
+> parity must be verified **before** the folding change is applied ·
+> the check needs the view ·
+> the view is **inside** the folding change
+
+**Split into its own migration and applied alone.** What makes that a real separation:
+
+> **THE VIEW IS BEHAVIOUR-NEUTRAL.** It reads existing data through the existing functions and
+> changes no key, no row, no behaviour. Applying it commits to nothing and cannot itself be the thing
+> under test.
+>
+> **Had it altered anything, the split would have been a shortcut** -- applying half a change to make
+> the other half checkable -- and the baseline would have been measured against a database already
+> partly moved. The distinction is not that it was small. It is that it was *inert*.
+
+##### AND THE BASELINE HAD TO RUN FROM AN UNFOLDED REF
+
+The script and workflow were first written on the branch carrying the folding change. Running there
+would have compared a **folded TypeScript half against an unfolded SQL half** and reported
+**16,754 disagreements** -- the correct count of a difference that is not drift.
+
+> **IT WOULD HAVE LOOKED EXACTLY LIKE THE FAILURE THE CHECK EXISTS TO CATCH**: two implementations of
+> one rule disagreeing on 17% of the corpus. Nothing in the output distinguishes *"these have
+> drifted"* from *"you are half-way through changing both"*.
+>
+> **A baseline must be measured from the state it is a baseline FOR.** So the check lives on `main`,
+> unfolded, and the change is stacked separately.
