@@ -243,8 +243,18 @@ export async function CategoryPage({ category, displayName, intro, browse }: Pro
                 : `All ${displayName.toLowerCase()}`}
           </h2>
           <p className="text-ink-light mb-8">
-            {browseResult.totalCount.toLocaleString()} products
-            {browse.comparable ? ' stocked by more than one retailer' : ''}.
+            {/* THE COUNT IS DROPPED WHEN THE TOGGLE IS ON, AND THAT IS NOT TIDINESS.
+                `totalCount` is the query's count BEFORE the comparable filter, which is
+                applied in JS over the candidate window. With the toggle on, this line
+                rendered "11,025 products stocked by more than one retailer" on /hair
+                above 38 cards -- and only 2,361 hair products are comparable at all. It
+                was not a mismatched number, it was a FALSE ASSERTION about the
+                catalogue, in the one sentence on the page that makes a claim about it.
+                Shipped in item 408 and live until now. Item 429.
+                Stating no number is correct; stating that one was not. */}
+            {browse.comparable
+              ? 'Products stocked by more than one retailer.'
+              : `${browseResult.totalCount.toLocaleString()} products.`}
           </p>
 
           {/* FILTER BAR. Brand is deliberately NOT here: the brand hubs already answer

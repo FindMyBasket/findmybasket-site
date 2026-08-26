@@ -33181,3 +33181,83 @@ unattended, but that cap is a backstop and not a review.
 
 **A single retailer, deliberately.** The other fourteen keep their schedules; if the result is wrong,
 one feed is affected for one day and the previous build redeploys in two minutes.
+
+---
+
+### 428. Three routes opt in, and fragrance was the one worth checking
+
+**Raised:** 26 August 2026 · **No component change. Three route files.**
+
+`CategoryPage`'s `browse` prop, the facet RPCs and the complement guard were all built for hair and
+skincare, so supplements, makeup and fragrance are an opt-in rather than a build.
+
+**THE THREE CHECKS, MEASURED RATHER THAN ASSUMED.**
+
+**1. Supplements' filter bar is ABSENT, not empty.** `product_type` is null on all 2,448 rows, so
+`getProductTypes` returns no types and the bar does not render: `chips=0`, no `All types` control, no
+complement chip. The stockist toggle still renders, correctly — it is a separate control that does not
+depend on types existing.
+
+**2. The small complements survive the guard, and the counts sum exactly.**
+
+| | real types | chips | sum | stated total |
+|---|---|---|---|---|
+| makeup | 21 | **22** | **21,405** | **21,405** |
+| fragrance | 6 | **7** | **11,676** | **11,676** |
+
+The guard suppresses the complement when a real type did not fit under the limit of 24. **21 and 6 are
+both well under it**, so the chip is present and means what it says — the defaults, 718 rows in makeup
+and 271 in fragrance.
+
+**3. NONE of the three gets skincare's deletion, and fragrance is why the question was worth asking.**
+All three have **two or more subcategories**, so all three render "Browse by area" with **indexed
+destinations** rather than skincare's `/{cat}/{sub}?type=` parameters.
+
+> **Fragrance has two subcategories, not one.** From `/fragrance/scent` holding 11,519 of 11,676 rows
+> it looks single-subcategory, and item 411's reasoning would then have deleted its block. It is not,
+> so it is shaped like hair and the block stays. **The property that decides this is the destination
+> kind, and a category that looks single-subcategory by row share is not one.**
+
+**Before, production:**
+
+| | 390 x 844 | 1440 x 900 |
+|---|---|---|
+| /supplements | 2,647px · 3.14 screens | 1,798px · 2.00 |
+| /makeup | 2,923px · 3.46 screens | 1,966px · 2.18 |
+| /fragrance | 2,629px · 3.11 screens | 1,894px · 2.10 |
+
+---
+
+### 429. The one sentence on the page that makes a claim about the catalogue was making a false one
+
+**Raised:** 26 August 2026 · **Found by measuring the fragrance toggle. Shipped in item 408, live until now.**
+
+`/hair?comparable=1` rendered:
+
+> **"11,025 products stocked by more than one retailer."**
+
+above **38 product cards**. **2,361 hair products are comparable.** The number was wrong by 4.7x, and
+it was not merely wrong — **it asserted something about the catalogue that is false**, in the only
+sentence on the page that makes such a claim.
+
+**Mechanism:** `totalCount` is the query's `{ count: 'exact' }`, taken **before** the comparable filter,
+which is applied in JavaScript over the candidate window. The count describes the rows the query
+matched; the copy describes them as comparable.
+
+> **This is item 271's rule a second time in two days, and the second time it was mine.** Item 423: the
+> brand index counted in-stock products while its destination showed all. Here: the grid counts all
+> products while its own sentence calls them comparable. **Same defect class, opposite direction,
+> written by the same hand a day apart** — which is what a rule scoped to "chips" fails to prevent when
+> the thing making the claim is a paragraph.
+
+**Fixed by removing the number, not by computing it.** With the toggle on the line reads *"Products
+stocked by more than one retailer."*
+
+**Deliberately not a new count query.** Item 408 preserved the pre-existing `totalCount`-before-filter
+behaviour on purpose, to keep the root and the subcategory pages saying the same thing, and computing
+a correct comparable count here would fix one surface and reopen that divergence. **Stating no number
+is correct; stating that one was not.**
+
+**Found only because fragrance was measured with the toggle on**, which happened because fragrance has
+the highest median saving on the site and the toggle was expected to do more there. **The check that
+found it was aimed at something else.**
