@@ -31920,5 +31920,66 @@ before retrying.
 
 **Applied:** migration; 30 device exclusions (`device` now 41 total); 71 rows to
 `bath_body/mouth`/`Oral Care`; `SUBCATEGORY_DISPLAY.mouth = 'Oral care'` in `lib/queries.ts` with the
-slug-versus-label reasoning in a comment. **No route, no nav entry, no sitemap edit and no `catRoutes`
-change**, exactly as item 398 predicted for a shelf.
+slug-versus-label reasoning in a comment. No nav entry, no sitemap edit and no `catRoutes` change.
+
+**CORRECTION -- "no route change" was wrong, and verifying the render is what found it. See item 406.**
+
+---
+
+### 406. The label was in one place and derived in six. Verifying the render is what found it
+
+**Raised:** 26 August 2026 · **Live bug, fixed. Four more routes carry it latently and are UNCHANGED.**
+
+**The shelf shipped with its body copy reading "Oral care" and its `<title>` reading "Mouth".**
+
+```
+<title>Mouth bath &amp; body best prices | FindMyBasket</title>
+```
+
+`components/SubcategoryPage` reads `SUBCATEGORY_DISPLAY`, so every heading, chip and breadcrumb was
+correct -- 125 occurrences of "Oral care" on the page. **`generateMetadata` in the route derived its
+own name instead:**
+
+```ts
+const display = sub.charAt(0).toUpperCase() + sub.slice(1);   // "mouth" -> "Mouth"
+```
+
+The meta description was worse: *"Compare mouth bath and body prices... Find the best value on body
+wash, body lotion, hand cream, deodorant and more."*
+
+> **`lib/__tests__/category-labels.test.ts` exists to stop exactly this, and could not see it.** That
+> test consolidated six DUPLICATED label maps into one and guards the seventh. This was not a
+> duplicated map -- it was a label **derived** from the slug by a formula. **A duplicate can be
+> compared against the original; a derivation that happens to agree cannot.** It agreed for `body`,
+> `hand` and `foot` because those slugs are their own labels, and the first shelf where slug and label
+> differ is the first one it could break -- which is the shelf I chose the split for, deliberately, in
+> item 403.
+
+**Fixed** in `app/bath-and-body/[subcategory]/page.tsx`: `displayFor()` reading `subcategoryDisplay`,
+matching the supplements route, plus an `EXAMPLES` map so the description names toothpaste rather than
+deodorant. **Verified byte-identical for `body`, `hand` and `foot`** -- they resolve through the same
+function to the same strings, so no existing metadata moved.
+
+**FOUR MORE ROUTES CARRY THE SAME DERIVATION AND ARE DELIBERATELY UNTOUCHED.**
+
+| Route | State |
+|---|---|
+| `app/bath-and-body/[subcategory]` | **Fixed** |
+| `app/supplements/[subcategory]` | Already correct |
+| `app/skincare/[subcategory]` | `sub.charAt(0).toUpperCase() + ...` |
+| `app/makeup/[subcategory]` | same |
+| `app/hair/[subcategory]` | same |
+| `app/fragrance/[subcategory]` | same |
+
+**All four are no-ops today**, measured rather than assumed: their subcategories are `face`, `body`,
+`lips`, `eyes`, `nails`, `cleanse`, `condition`, `treatment`, `style`, `colour`, `scent` -- none
+appears in `SUBCATEGORY_DISPLAY`, so capitalising the slug gives the right answer for every one.
+**They are a trap, not a defect**, and the trap springs on whoever next adds a shelf whose label
+differs from its slug. Reported rather than fixed, because nothing is broken and the change is not
+what was asked for.
+
+> **This is item 401 turned on my own work.** The rule fixed the bucket it was aimed at -- the shelf
+> renders "Oral care" everywhere a human looks -- and the row that was most wrong sat outside it, in
+> the metadata, which is the surface no one looks at while checking that a page looks right. **I found
+> it because the verification fetched the page and read the title, rather than fetching the page and
+> confirming the products were on it.**
