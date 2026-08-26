@@ -7,7 +7,7 @@ export const revalidate = 3600;
 
 const title = 'All brands | FindMyBasket';
 const description =
-  'Every brand we compare prices for, A to Z, with the number of products stocked for each.';
+  'Every brand we compare prices for, A to Z, with the number of products on each brand page.';
 const canonical = 'https://www.findmybasket.co.uk/brands/all';
 
 export const metadata = {
@@ -63,8 +63,8 @@ export default async function AllBrandsPage() {
         </p>
         <h1 className="font-serif text-5xl md:text-7xl text-ink mb-6">All brands</h1>
         <p className="text-base md:text-lg text-ink-light max-w-2xl mb-10 leading-relaxed">
-          Every brand we compare prices for, with the number of products stocked. Counts
-          are products currently in stock at one of our retailers.
+          Every brand we compare prices for, with the number of products on each brand
+          page.
         </p>
 
         {/* Letter jump. Anchors rather than pages: one URL, one crawl, and every brand
