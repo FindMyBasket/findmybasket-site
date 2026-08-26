@@ -32245,47 +32245,138 @@ the five categories that have not opted in render exactly as before.
 
 ---
 
-### 410. After: 3,103 to 1,001 pixels. The filter bar clears the fold, the first row does not
+### 410. Two instruments producing the same unit are not two measurements of the same thing
 
-**Raised:** 26 August 2026 · **Measured on production after merge, same instrument as the before.**
+**Raised:** 26 August 2026 · **The correction is the item. The improvement is the second half.**
 
-**390 x 844:**
+**Tuesday's figure was *3,309px, 2.07 screens* on /skincare at 390px wide.** Those two numbers cannot
+both describe a phone:
 
-| | Before | After | Change |
-|---|---|---|---|
-| Filter chips | 2,815 | **713** | -2,102 |
-| First product card | 3,103 | **1,001** | **-2,102, -68%** |
-| Screens to first product | 3.68 | **1.19** | |
-| Chips above the fold | no | **yes** | |
-| First row above the fold | no | **no, by 157px** | |
+```
+3,309 / 2.07 = 1,598px of viewport height
+```
 
-**1440 x 900:**
+> **A 1,598-pixel-tall viewport is not a phone, so the "screens" figure was never comparable to
+> anything measured on one.** The width was 390 and the height was whatever the window happened to be.
+> **The pixel count survives the comparison; the screens count does not** -- and it is the screens
+> count that sounds like the meaningful one, because it is the one expressed in units of human effort.
 
-| | Before | After |
+**Reporting /hair's 3.68 screens as an increase over 2.07 would have been arithmetic on two different
+instruments.** The same unit, the same name, two different denominators.
+
+**AND THE INSTRUMENT ITSELF WAS SUSPECT, WHICH IS THE OTHER HALF.** Chrome refused to resize below
+`innerWidth` 1295 however the window was sized -- `outerWidth` reported 0 and the viewport never moved.
+**So an earlier figure taken by resizing a window may have been taken from a window that could not be
+what it claimed.** There is no way to audit that after the fact from the number alone.
+
+**Both measurements here were taken by loading the page into a same-origin iframe at the exact
+viewport** and reading `getBoundingClientRect` inside its `contentDocument`. **A real layout at
+390x844, not a scaled estimate and not a window asked nicely to be small.** The method is recorded
+because the figure is only worth as much as it.
+
+---
+
+**THE RESULT: the single largest thing between a visitor and hair products was a list of brand hubs
+outside hair.** "Brands also in other categories" measured **919px at 390 wide -- 30% of the 3,103px
+to the first product card**, and all 13 of its links navigate out of the category the visitor chose.
+
+**THE PHOTOGRAPH QUESTION IS CLOSED, AND THE ANSWER IS THAT IT WAS NEVER THE QUESTION.** The hero's
+mobile crop is `absolute inset-0 z-0 md:hidden bg-cover`: **absolutely positioned, zero layout height.**
+The hero's 458px is 458px of text -- 128 padding, 104 intro, 52 stats, 48 h1, 16 eyebrow.
+
+> **Removing the photograph saves nothing. Not "little" -- nothing.** If it goes, it goes for a reason
+> that is not scroll depth, and this measurement has no bearing on that reason.
+
+**THE NUMBERS.**
+
+| 390 x 844 | Before | After |
 |---|---|---|
-| Filter chips | 1,903 *(derived)* | **765** |
-| First product card | 2,038 *(derived)* | **901** |
+| Filter chips | 2,815 | **713** (above the fold) |
+| First product card | 3,103 | **1,001** |
+| Screens | 3.68 | **1.19** |
+
+| 1440 x 900 | Before *(derived)* | After |
+|---|---|---|
+| Filter chips | 1,903 | **765** |
+| First product card | 2,038 | **901** |
 | Screens | 2.26 | **1.00** |
-| First row above the fold | no | **no, by 1px** |
 
-**THE DESKTOP "BEFORE" IS DERIVED, NOT MEASURED, AND SAYING SO MATTERS.** The old layout is no longer
-deployed, so the 1440x900 before is the after (901) plus the three link blocks measured at that width
-in the same pass (410 + 413 + 314 = 1,137). **A direct measurement at 1295x725 before the change gave
-2,054**, which is consistent with the derived 2,038 at the wider viewport -- but it is a cross-check on
-a derivation, not a second measurement of the same thing.
+**The desktop before is DERIVED, not measured** -- the old layout is no longer deployed, so it is the
+after plus the three link blocks measured at that width (410 + 413 + 314). A direct 1295x725
+measurement before the change gave 2,054, which cross-checks it. **A cross-check on a derivation is
+not a second measurement**, which is the same distinction this item is about.
 
-**THE TARGET WAS "FILTER BAR AND FIRST ROW VISIBLE WITHOUT SCROLLING". HALF OF IT LANDED.**
+**THE LAST 157 PIXELS ARE LEFT.** The first product row misses the fold by 157px on mobile and 1px on
+desktop. Closing it means cutting the intro, the stats or the padding -- **a copy decision about what a
+category page says, not a layout one.** And the fold is a threshold rather than a cliff: a product row
+at 1,001 against an 844 fold is one short scroll, where 3,103 was three screens.
 
-> **The filter bar clears the fold at both sizes. The first product row does not -- by 157px on mobile
-> and by 1 pixel on desktop.** Reporting the miss rather than the 68% reduction, because the target
-> was stated as a pair and only one of the pair is met.
+**"Browse by area" demoted, not deleted.** Its five destinations are indexed pages with their own
+metadata and canonicals; the chips are query parameters that canonicalise back to `/hair`. **Deleting
+it would remove the only internal links to five indexed pages to save space that demotion already
+saves.** All 34 links survive below the grid.
 
-**What the remaining 157px would have to come from: the hero, which is 458px of pure text.** `py-16`
-padding is 128 of it, the intro paragraph 104, the stat line 52, the h1 48, the eyebrow label 16.
-**There is no photograph to remove -- it is a background on an absolutely-positioned div and always
-was.** Closing the last 157px means cutting the intro, the stats or the padding, which is a copy and
-spacing decision rather than a layout one, and is not made here.
+---
 
-**The furniture is not gone, it is behind the grid**: "Brands also in other categories" at 9,154,
-"Browse by area" at 10,072, "Top brands" at 10,605 on mobile. **All 34 links survive, including the
-five to indexed subcategory pages.**
+### 411. Skincare opts in. Its "Browse by type" block is redundant in a way hair's was not
+
+**Raised:** 26 August 2026 · **Same opt-in, same prop. Measurements below.**
+
+**45,124 renderable products, ONE subcategory, 14 real types and a complement of 16,377** -- 36.3% of
+the category, and **the largest chip anywhere on the site.** It gets the label and stays large: the
+biggest bucket telling you least is a true fact about the classifier, and hiding it would not improve
+the classifier, only stop anyone noticing.
+
+**THE ONE REAL DIFFERENCE FROM HAIR, AND IT POINTS THE OTHER WAY.** Because skincare has a single
+subcategory, `CategoryPage` renders the `singleSub` branch -- "Browse by type" rather than "Browse by
+area" -- and the two blocks link to different KINDS of destination:
+
+| Block | Category | Destination | Indexed? |
+|---|---|---|---|
+| Browse by area | hair | `/hair/cleanse` | **Yes, own metadata and canonical** |
+| Browse by type | skincare | `/skincare/face?type=Serum` | **No -- canonicalises to `/skincare/face`** |
+
+> **Hair's block was kept because deleting it would orphan five indexed pages. Skincare's block has no
+> such claim** -- its destinations are query parameters that already canonicalise away, and the filter
+> chips answer the identical question one URL closer. **The argument that saved the block on /hair does
+> not transfer**, and I have still only demoted it, because "it could go" is not the same as deciding
+> it should and that decision was not asked for.
+
+**Recorded so the next person does not read item 409's conclusion as general.** The reasoning there was
+about indexed destinations, not about browse blocks.
+
+---
+
+### 412. Item 238's lesson, arriving a second time in the function next door
+
+**Raised:** 26 August 2026 · **Found by opting skincare in and timing the page rather than reading it.**
+
+**`/skincare` took 15.8 seconds. `/hair` took 1.2.** Measured against the preview deployment, cold:
+
+```
+/hair       HTTP 200  ttfb=1.174s
+/skincare   HTTP 200  ttfb=15.827s
+```
+
+**`getProductTypes` used `fetchAllRows`**, paging every matching row 1,000 at a time and counting in
+JavaScript. Hair's 11,025 rows is 12 sequential round trips. **Skincare's 45,124 is 46.**
+
+> **THE FIX WAS ALREADY WRITTEN DOWN, ONE FUNCTION AWAY.** `getFeaturedProducts` carries item 238's
+> write-up in its own comment: *"the test that decides eligibility has to see every candidate. Hence
+> the RPC, following the getCrossCategoryBrands pattern: heavy aggregation in SQL, light mapping
+> here."* **That reasoning was written about eligibility and applied to one caller.** The facet counter
+> has the identical shape -- scan everything, aggregate in JS -- and never came under it.
+
+**Item 238's own recorded lesson was that a rule scoped to one caller does not reach the next.** It
+said so about the `.order()` rule, which existed in this file and did not cover the function seventy
+lines below it. **The same file has now done it twice, and the second time the rule being missed was
+the one written about the first.**
+
+**Fixed** by `fmb_product_type_facets(p_category, p_subcategory)`: a `GROUP BY` returning each type
+with its count, one round trip. **The `JUNK_TYPES` list stays in TypeScript** -- it carries the
+reasoning for every entry (item 152) and splitting it across two languages is how the duplicate label
+maps in items 406 and 407 began.
+
+**Only visible because skincare was opted in.** Hair's 1.2s never looked wrong, and the page is
+ISR-cached at `revalidate = 3600`, so a cold render is the only render that shows it. **The defect was
+present at every scale and legible at one.**

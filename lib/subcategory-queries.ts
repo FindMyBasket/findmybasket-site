@@ -134,17 +134,19 @@ export async function getProductTypes(
   subcategory: string | null,
   limit = 12
 ): Promise<ProductTypeFacets> {
-  const data = await fetchAllRows<{ product_type: string | null }>(offset => {
-    let q = supabase
-      .from('products_active')
-      .select('product_type')
-      .eq('top_category', category)
-      .not('product_type', 'is', null)
-      .not('tags', 'cs', '{cleanup_remove}');
-    // null subcategory means the whole category -- the root's browse facet.
-    if (subcategory) q = q.eq('subcategory', subcategory);
-    return q.order('id').range(offset, offset + PAGE_SIZE - 1);
+  // AGGREGATED IN SQL, NOT PAGED AND COUNTED HERE (item 412). The previous version
+  // used fetchAllRows: 12 round trips and a 1.2s page for hair's 11,025 rows, 46 round
+  // trips and a MEASURED 15.8s page for skincare's 45,124. Same shape as the RPC
+  // getFeaturedProducts already uses, and its comment already argued for it.
+  const { data: rows, error } = await supabase.rpc('fmb_product_type_facets', {
+    p_category: category,
+    p_subcategory: subcategory,
   });
+  if (error || !rows) return { types: [], complement: null };
+  const data = (rows as { product_type: string | null; n: number }[]).map(r => ({
+    product_type: r.product_type,
+    n: Number(r.n),
+  }));
 
   // CATEGORY-NAME DEFAULTS: the value the classifier emits when it has no better
   // answer. They are not product types and must never render as browse chips.
@@ -168,9 +170,9 @@ export async function getProductTypes(
   let totalRows = 0;
   for (const row of data) {
     if (!row.product_type) continue;
-    totalRows += 1;
+    totalRows += row.n;
     if (JUNK_TYPES.has(row.product_type)) continue;
-    counts.set(row.product_type, (counts.get(row.product_type) ?? 0) + 1);
+    counts.set(row.product_type, (counts.get(row.product_type) ?? 0) + row.n);
   }
 
   const ranked = Array.from(counts.entries())
