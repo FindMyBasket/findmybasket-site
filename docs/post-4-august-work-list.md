@@ -32242,3 +32242,50 @@ it.** Subcategory and `product_type` are the same partition:
 
 **Order is browse-dependent, in one place.** `CategoryPage` emits the same two groups in either order;
 the five categories that have not opted in render exactly as before.
+
+---
+
+### 410. After: 3,103 to 1,001 pixels. The filter bar clears the fold, the first row does not
+
+**Raised:** 26 August 2026 · **Measured on production after merge, same instrument as the before.**
+
+**390 x 844:**
+
+| | Before | After | Change |
+|---|---|---|---|
+| Filter chips | 2,815 | **713** | -2,102 |
+| First product card | 3,103 | **1,001** | **-2,102, -68%** |
+| Screens to first product | 3.68 | **1.19** | |
+| Chips above the fold | no | **yes** | |
+| First row above the fold | no | **no, by 157px** | |
+
+**1440 x 900:**
+
+| | Before | After |
+|---|---|---|
+| Filter chips | 1,903 *(derived)* | **765** |
+| First product card | 2,038 *(derived)* | **901** |
+| Screens | 2.26 | **1.00** |
+| First row above the fold | no | **no, by 1px** |
+
+**THE DESKTOP "BEFORE" IS DERIVED, NOT MEASURED, AND SAYING SO MATTERS.** The old layout is no longer
+deployed, so the 1440x900 before is the after (901) plus the three link blocks measured at that width
+in the same pass (410 + 413 + 314 = 1,137). **A direct measurement at 1295x725 before the change gave
+2,054**, which is consistent with the derived 2,038 at the wider viewport -- but it is a cross-check on
+a derivation, not a second measurement of the same thing.
+
+**THE TARGET WAS "FILTER BAR AND FIRST ROW VISIBLE WITHOUT SCROLLING". HALF OF IT LANDED.**
+
+> **The filter bar clears the fold at both sizes. The first product row does not -- by 157px on mobile
+> and by 1 pixel on desktop.** Reporting the miss rather than the 68% reduction, because the target
+> was stated as a pair and only one of the pair is met.
+
+**What the remaining 157px would have to come from: the hero, which is 458px of pure text.** `py-16`
+padding is 128 of it, the intro paragraph 104, the stat line 52, the h1 48, the eyebrow label 16.
+**There is no photograph to remove -- it is a background on an absolutely-positioned div and always
+was.** Closing the last 157px means cutting the intro, the stats or the padding, which is a copy and
+spacing decision rather than a layout one, and is not made here.
+
+**The furniture is not gone, it is behind the grid**: "Brands also in other categories" at 9,154,
+"Browse by area" at 10,072, "Top brands" at 10,605 on mobile. **All 34 links survive, including the
+five to indexed subcategory pages.**
