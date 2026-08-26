@@ -28872,3 +28872,144 @@ entitled to. The two figures can legitimately disagree, and the displayed one is
 **Not deleted here.** Unlike `worstCaseTotal` it is a stored column with a migration behind it, and
 removing it is a schema change rather than an edit. **`routine_alerts` holds zero rows**, so the
 cost of removing it will never be lower than it is now. Recorded so the decision is a decision.
+
+---
+
+### 352. A hold enforced only by the absence of a cron
+
+**Raised:** 26 August 2026 · **MyProtein's hold was recorded, guarded and gated, and none of the three was preventing anything.**
+
+Item 324 held MyProtein from re-importing: a second run creates **177 near-duplicate products**,
+because the 609 parents now exist and are UPDATED rather than created, so their URLs never re-enter
+`createdUrls` and Tier 5 stops suppressing the variants it suppressed on the first run. The hold is
+real and the measurement behind it is real.
+
+**What was actually enforcing it:**
+
+| layer | intended | actual |
+|---|---|---|
+| `standing_check_findings` hold record | states the reason | **enforces nothing.** It is a record. |
+| `guard_import_enable_while_held` | refuse the enable | **dormant.** See below. |
+| importer's `if (!config.enabled && !dryRun)` | refuse the run | **passed.** `enabled` was `true`. |
+| **absence of a cron job** | — | **the only thing preventing the import** |
+
+0 of the 22 cron jobs reference retailer 33. Nothing scheduled it, so nothing ran it. **But a
+manual dispatch of `import-awin-feed` against retailer 33 would have run, and produced the 177.**
+
+> **THIRD INSTANCE OF AN ABSENCE DOING LOAD-BEARING WORK, AND THE FIRST WHERE IT WAS THE SOLE
+> PROTECTION.** Items 324 and 325 each noted that the missing cron was doing work no setting did.
+> Both times something else was also in the path. Here there was nothing else: three layers that
+> read as enforcement, and the only working one was **the absence of a row in `cron.job`** — which
+> no diagnostic reports, no check asserts, and anyone could route around without touching a guard.
+>
+> **An absence cannot be reviewed.** A disabled flag shows up in a config dump; a missing cron entry
+> looks exactly like a cron entry nobody has written yet.
+
+##### THE GUARD WAS BUILT FOR THIS RETAILER AND HAD NEVER BEEN ABLE TO FIRE
+
+```sql
+BEFORE UPDATE ON retailer_import_config FOR EACH ROW
+WHEN (new.enabled AND NOT COALESCE(old.enabled, false))
+```
+
+It fires on **false → true** only. `enabled` was set `true` to run the onboarding import and never
+reverted, so the transition it watches for had **already happened before the guard existed**.
+
+> **A guard watching the doorway of a room the subject was already standing in.** It reads the
+> right finding, names the right retailer, and produces exactly the right refusal -- and in the
+> eleven days it has existed it could not have fired once. Item 348 said a guard that never had to
+> fire is not evidence it works; this is the sharper case. **This one never had the opportunity,
+> and nothing distinguished that from working.**
+
+**Fixed by setting `enabled = false`** for retailer 33, which is what "deliberately not importing"
+already means in this schema. That arms the guard and closes the importer's gate.
+
+**Checked before applying, not after:** `retailer_prices_live` and `products_active` both filter on
+**`r.active` only**, never `enabled`, so the storefront is untouched. Verified after: **609 offers
+still live.** The guard was then probed inside a block that could not commit, and refused the
+re-enable with the full finding text -- **the first time it has ever fired.**
+
+##### AND THE REASON COLUMN THAT WOULD HAVE BEEN A MISTAKE
+
+The proposal on the table was a `hold_reason` column on `retailer_import_config`, by analogy with
+`unlisted_reason` (item 335): a reason rather than a flag, so the state cannot be asserted without
+saying why.
+
+**The analogy does not hold, and the difference is worth keeping.** `unlisted_reason` was needed
+because **no record existed** and a bare flag would have asserted a state with no why. Here the
+record already exists, is machine-readable, and is already joined to by the guard:
+
+```
+finding_key: held:import:33:tier5-leak-would-duplicate
+detail:      {"retailer_id": 33, "would_create_on_reimport": 177,
+              "unblocks_when": "item 314 family-grouping-at-import lands, or
+                                createdUrls is DB-populated across runs"}
+```
+
+It carries the measurement **and** the unblock condition, which is more than a column would.
+
+> **THE GAP IS NOT THAT THE RECORD IS MISSING. IT IS THAT THE INSTRUMENTS DO NOT CONSULT IT.**
+> Adding a column would put one fact in two places and give them room to disagree -- **item 345's
+> class in a schema rather than a call graph**, and the same failure mode: the second copy drifts
+> and nothing notices, because nothing is comparing them.
+>
+> The correct move is to make the readers join to the record that is already there. That is item
+> 353.
+
+---
+
+### 353. Deliberate silence and silent failure read identically
+
+**Raised:** 26 August 2026 · **Shape reported, not yet built. What MyProtein now looks like to four instruments that cannot tell why it stopped.**
+
+With no cron by design, MyProtein's `retailer_prices.last_updated` is frozen at **2026-08-25
+17:56:42** across all 609 rows, and only ever recedes.
+
+| instrument | reads | verdict on MyProtein |
+|---|---|---|
+| `monitor-retailer-feeds`, 09:00 UTC | newest `retailer_prices.last_updated` vs 36h | **stale from 27 Aug 09:00**, then every day |
+| `fmb_detect_frozen_feeds` | consecutive identical days in `feed_size_history` | **never fires** |
+| `dq_snapshot.price_freshness` | `last_updated` vs now, on the bare table | 609 over 7d on **1 Sep**, over 14d on **8 Sep**, over 30d on **24 Sep** |
+| `fmb_quality_snapshot_write_denominators` | `last_updated` vs `last_imported_at - 3h` | **0 stale, permanently** |
+
+**The last two disagree completely and both are correct.** One asks *did the last run cover the
+catalogue* and gets a clean answer forever; the other asks *how long ago was that run* and watches
+it rot. Nothing reconciles them because they were never the same question.
+
+##### THE HEADING IS THE DEFECT
+
+> *"The following retailer feeds haven't refreshed in over 36 hours, **with no import error
+> recorded**."*
+
+**Precisely true and completely misleading.** That clause was written to describe a silent failure
+-- an importer that died without recording an error -- and it is the single most damning phrase
+available. Applied to a retailer that is deliberately not importing, it says the same words about
+the opposite situation. **The absence of an error is the evidence of a problem in one reading and
+the evidence of correctness in the other, and the sentence cannot tell them apart.**
+
+##### THE SHAPE, BEFORE BUILDING
+
+1. **`fmb_held_imports`** -- a view over `standing_check_findings` exposing `(retailer_id,
+   finding_key, summary, unblocks_when)` for open `held:import:%` findings. One derivation, no new
+   column, nothing to drift.
+
+2. **`monitor-retailer-feeds`: a section, not a suppression.** Held retailers leave the stale list
+   and get their own block naming the finding and its unblock condition. **Suppressing them would
+   be the worse bug:** a held retailer that is *also* genuinely broken would then be invisible, and
+   the hold would have bought silence rather than accuracy. The reasoning goes at the code.
+
+3. **`price_freshness`: a marker, not a filter.** Add `held` alongside the counts and change none
+   of them. **This section is deliberately on the bare table** so a departed retailer's rows stay
+   visible; filtering held rows out would defeat the exact property it was left there for. The
+   counts must keep climbing. The reader needs to know why, not to be spared the number.
+
+4. **`fmb_detect_frozen_feeds`: no change, and this is the part to record.** It measures **feed
+   content per run**; MyProtein's problem is **elapsed time between runs**. It cannot fire because
+   `feed_size_history` gains a day only when an import writes one, and a retailer that never
+   imports never gains a second day -- its streak is stuck at 1 against a threshold of 4, forever.
+
+> **Making it able to fire would be building a second staleness instrument, not fixing this one.**
+> There is already an instrument for elapsed time and it is the 09:00 monitor. Teaching the freeze
+> detector to also watch the clock would give two checks the same job, disagreeing at the edges,
+> and neither owning it. **A check that cannot see a problem is not always a check that needs
+> changing. Sometimes it is the wrong check, and the right one is next to it.**
