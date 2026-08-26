@@ -30482,9 +30482,19 @@ would have compared a **folded TypeScript half against an unfolded SQL half** an
 
 ---
 
-### 374. A comparison whose two sides answer different questions
+### 374. Diffing them measures time, not change
 
 **Raised:** 26 August 2026 · **I reported that the folding change corrupts a held product's key. It does not. The diagnostic did.**
+
+> **`stored` answers "what was written, whenever it was written". `recomputed` answers "what does the
+> rule produce now". DIFFING THEM MEASURES TIME, NOT CHANGE** -- and returns a number that looks
+> exactly like a finding.
+>
+> | baseline | rows whose key "moves" |
+> |---|---:|
+> | folded vs **stored** | **20,539** |
+> | folded vs **recomputed unfolded** | **16,755** |
+> | **difference — pre-existing drift, attributed to the change** | **3,784** |
 
 Checking what the fold does downstream, I compared each row's **folded key** against its **stored
 key** and flagged seven rows where a quantity token appeared. One was product 105424, held since 21
@@ -30571,3 +30581,47 @@ either row's data; they were keyed at different times, on either side of a chang
 >
 > **And it is self-concealing**: 94175 and 128052 do not match each other, which looks exactly like
 > two genuinely different products, which is what a stale key is indistinguishable from.
+
+
+---
+
+### 376. Skipping 105424 is deliberate, and it is not a fix
+
+**Raised:** 26 August 2026 · **Written down rather than assumed, because a skip that goes unrecorded reads as an oversight to whoever finds it.**
+
+The backfill excludes products with an open `held:` finding. Today that is **one row, 105424**, and
+the exclusion is expressed as a join against `standing_check_findings` rather than an id, so it
+reads the same source `guard_held_product_writes` consults and cannot drift from it.
+
+**Three options, and only one of them changes nothing:**
+
+| | consequence |
+|---|---|
+| **release the hold** | writes `sweed le lipstick 90 and 039pcs model` -- **a corruption we have now measured and named** |
+| **fix `COUNT_UNIT_RE` here** | makes one change prove two unrelated things, which is the argument for keeping it out and has not weakened |
+| **skip** | the row stays **exactly as wrong as it is today** |
+
+> **THE ROW IS ALREADY MISKEYED AND SKIPPING PRESERVES THAT.** `stored` says
+> `90 039 s model`; today's rule says `90 039pcs model`. Skipping does not protect a correct key --
+> it declines to replace a wrong one with a differently wrong one, and leaves the hold open.
+>
+> **Item 237's hold was WRONG ABOUT THE MECHANISM AND RIGHT ABOUT THE CONCLUSION.** It believed the
+> HTML entity was shielding the row from `COUNT_UNIT_RE`. The entity only ever shielded the STORED
+> key -- the rule was already reading `039's` as a pack count and nobody had recomputed the row to
+> see it. **The hold held for a reason that was not the stated one**, which is worth more than a
+> hold that held for the right reason: it means the instinct to stop was sounder than the analysis
+> behind it.
+
+##### AND THE SEQUENCING CONSEQUENCE, PLAINLY
+
+**`COUNT_UNIT_RE` is now the only thing standing between the backfill and a guard that is right to
+refuse it.**
+
+> It entered this work as *"a different bug that should not ride along"* -- correct then and correct
+> now as a statement about bundling. **What has changed is its position, not its separateness.**
+> Every future re-key hits the same wall: the guard refuses, the row is skipped, and the catalogue
+> carries one product whose key nothing will ever correct.
+>
+> **It moves from an open item to the next piece of work.** Not because it became urgent, but
+> because everything else in front of it has now been done, and it is the only remaining reason a
+> backfill cannot be complete.
