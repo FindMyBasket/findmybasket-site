@@ -72,60 +72,22 @@ async function fetchAllRows<T>(
 
 export async function getSubcategoryStats(
   category: TopCategory,
-  subcategory: string
+  subcategory: string,
 ): Promise<SubcategoryStats> {
-  // Total products — count-only, no row cap
-  const { count: totalProducts } = await supabase
-    .from('products_active')
-    .select('*', { count: 'exact', head: true })
-    .eq('top_category', category)
-    .eq('subcategory', subcategory)
-    .not('tags', 'cs', '{cleanup_remove}');
-
-  // Distinct brands — paginated row fetch
-  const brandRows = await fetchAllRows<{ normalised_brand: string | null }>(offset =>
-    supabase
-      .from('products_active')
-      .select('normalised_brand')
-      .eq('top_category', category)
-      .eq('subcategory', subcategory)
-      .not('normalised_brand', 'is', null)
-      .not('tags', 'cs', '{cleanup_remove}')
-      .order('id')
-      .range(offset, offset + PAGE_SIZE - 1),
-  );
-
-  const distinctBrands = new Set(brandRows.map(r => r.normalised_brand).filter(Boolean));
-
-  // Distinct retailers — inverted embed (perf): drive from the filtered products
-  // resource (indexed on (top_category, subcategory)) and embed retailer_prices,
-  // instead of driving from retailer_prices and filtering the embedded products
-  // (which forced a full retailer_prices scan). PR #38 canary 2.
-  const productRetailerRows = await fetchAllRows<{ retailer_prices: { retailer_id: number }[] | null }>(offset =>
-    supabase
-      .from('products')
-      .select('retailer_prices(retailer_id)')
-      .eq('top_category', category)
-      .eq('subcategory', subcategory)
-      .is('merged_into', null)
-      .is('parent_product_id', null)
-      .order('id')
-      .range(offset, offset + PAGE_SIZE - 1),
-  );
-
-  const activeRetailerIds = await getActiveRetailerIds();
-  const retailerIdSet = new Set<number>();
-  for (const p of productRetailerRows) {
-    for (const rp of p.retailer_prices ?? []) {
-      if (activeRetailerIds.has(rp.retailer_id)) retailerIdSet.add(rp.retailer_id);
-    }
-  }
-  const totalRetailers = retailerIdSet.size;
-
+  // ONE AGGREGATE (item 415). The two offset walks this replaces LOOKED bounded --
+  // one subcategory each -- and that bound was a property of the DATA, not of the
+  // query. Skincare's 45,124 products all sit in `face`, so the bound was 1.0x the
+  // category and nothing here said so. That is why the audit that caught the
+  // category-scoped walks did not catch these.
+  const { data } = await supabase.rpc('fmb_scope_stats', {
+    p_category: category,
+    p_subcategory: subcategory,
+  });
+  const r = (data as { total_products: number; total_brands: number; total_retailers: number }[] | null)?.[0];
   return {
-    total_products: totalProducts ?? 0,
-    total_brands: distinctBrands.size,
-    total_retailers: totalRetailers,
+    total_products: Number(r?.total_products ?? 0),
+    total_brands: Number(r?.total_brands ?? 0),
+    total_retailers: Number(r?.total_retailers ?? 0),
   };
 }
 
@@ -201,44 +163,18 @@ export async function getSubcategoryTopBrands(
   limit = 16,
   productType?: string
 ): Promise<TopBrand[]> {
-  const data = await fetchAllRows<{ normalised_brand: string | null; brand: string | null }>(
-    offset => {
-      let query = supabase
-        .from('products_active')
-        .select('normalised_brand, brand')
-        .eq('top_category', category)
-        .eq('subcategory', subcategory)
-        .not('normalised_brand', 'is', null)
-        .not('tags', 'cs', '{cleanup_remove}');
-
-      if (productType) query = query.eq('product_type', productType);
-
-      return query.order('id').range(offset, offset + PAGE_SIZE - 1);
-    },
-  );
-
-  const brandCounts = new Map<string, { display: string; count: number }>();
-  for (const row of data) {
-    if (!row.normalised_brand) continue;
-    const existing = brandCounts.get(row.normalised_brand);
-    if (existing) {
-      existing.count++;
-    } else {
-      brandCounts.set(row.normalised_brand, {
-        display: row.brand ?? row.normalised_brand,
-        count: 1,
-      });
-    }
-  }
-
-  return Array.from(brandCounts.entries())
-    .map(([slug, { display, count }]) => ({
-      name: display,
-      slug: brandSlug(slug),
-      product_count: count,
-    }))
-    .sort((a, b) => b.product_count - a.product_count)
-    .slice(0, limit);
+  // Aggregated in SQL (item 415), same RPC as getTopBrands with the subcategory bound.
+  const { data } = await supabase.rpc('fmb_top_brands', {
+    p_category: category,
+    p_subcategory: subcategory,
+    p_product_type: productType ?? null,
+    p_limit: limit,
+  });
+  return ((data ?? []) as { normalised_brand: string; display: string | null; n: number }[]).map(r => ({
+    name: r.display ?? r.normalised_brand,
+    slug: brandSlug(r.normalised_brand),
+    product_count: Number(r.n),
+  }));
 }
 
 /**
