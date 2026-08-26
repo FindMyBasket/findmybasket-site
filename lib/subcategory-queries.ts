@@ -30,44 +30,6 @@ export interface ProductTypeChip {
   count: number;
 }
 
-// ── PAGINATION HELPER ──────────────────────────────────────────────────
-//
-// Supabase silently caps `.select()` row returns at 1,000 unless you
-// either use `count: 'exact', head: true` (count-only, no rows) or
-// paginate via `.range()`. This helper paginates a select that we need
-// the actual rows for (e.g. to dedupe / aggregate in JS).
-
-const PAGE_SIZE = 1000;
-
-// EVERY CALLER MUST .order() A UNIQUE COLUMN BEFORE .range().
-//
-// `.range()` without `.order()` is unordered LIMIT/OFFSET, and Postgres gives NO
-// stability guarantee across pages: rows can be missed and others returned twice.
-//
-// MEASURED 16 August on supplements, running a real caller's two-page scan: it returned
-// 1,719 rows against an actual 1,719 -- the RIGHT TOTAL -- while containing only 102 of
-// the 117 rows carrying one subcategory value. 15 rows came back twice and 15 never came
-// back. Row count reconciled, page-size arithmetic reconciled, and `719 < PAGE_SIZE` is
-// this loop's own termination condition, so the read REPORTED ITSELF COMPLETE.
-//
-// A COUNT THAT RECONCILES IS NOT EVIDENCE THAT A PAGINATED READ IS COMPLETE. It is
-// evidence that the right NUMBER of rows came back, which is a different claim and the
-// easy one to check -- which is why it gets checked instead. Work-list items 146, 151.
-async function fetchAllRows<T>(
-  build: (offset: number) => PromiseLike<{ data: T[] | null; error: any }>,
-): Promise<T[]> {
-  const all: T[] = [];
-  let offset = 0;
-  while (true) {
-    const { data, error } = await build(offset);
-    if (error || !data || data.length === 0) break;
-    all.push(...data);
-    if (data.length < PAGE_SIZE) break;
-    offset += PAGE_SIZE;
-  }
-  return all;
-}
-
 // ── QUERIES ────────────────────────────────────────────────────────────
 
 export async function getSubcategoryStats(
@@ -230,8 +192,28 @@ export async function getSubcategoryProducts(
     query = (query as any).not('product_type', 'in', `(${list})`);
   }
 
-  // `.order('id')` IS LOAD-BEARING. `.range()` without it is unordered
-  // LIMIT/OFFSET, which returns the RIGHT TOTAL from the WRONG ROWS.
+  // ── THE .order() RULE LIVES HERE NOW, WITH THE ONLY PAGINATOR LEFT IN THIS FILE ──
+  //
+  // EVERY .range() MUST FOLLOW .order() ON A UNIQUE COLUMN.
+  //
+  // `.range()` without `.order()` is unordered LIMIT/OFFSET, and Postgres gives NO
+  // stability guarantee across pages: rows can be missed and others returned twice.
+  //
+  // MEASURED 16 August on supplements, running a real caller's two-page scan: it
+  // returned 1,719 rows against an actual 1,719 -- THE RIGHT TOTAL -- while containing
+  // only 102 of the 117 rows carrying one subcategory value. 15 rows came back twice
+  // and 15 never came back. Row count reconciled, page-size arithmetic reconciled, and
+  // `719 < PAGE_SIZE` was the loop's own termination condition, so THE READ REPORTED
+  // ITSELF COMPLETE.
+  //
+  // A COUNT THAT RECONCILES IS NOT EVIDENCE THAT A PAGINATED READ IS COMPLETE. It is
+  // evidence that the right NUMBER of rows came back, which is a different claim and
+  // the easy one to check -- which is why it gets checked instead. Items 146, 151.
+  //
+  // MOVED HERE FROM fetchAllRows, WHICH IS GONE (item 417). The rule used to sit on a
+  // shared helper 200 lines up; when the helper's callers became RPCs the helper died,
+  // and a rule living in dead code reads as guidance on a live mechanism while guarding
+  // nothing. It now sits on the code it protects.
   //
   // THIS FILE ALREADY CONTAINED THE PROOF, 70 LINES BELOW: getValidSubcategories
   // carries item 146's write-up, where exactly this defect returned 1,719 rows —

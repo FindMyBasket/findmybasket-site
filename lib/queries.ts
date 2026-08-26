@@ -172,27 +172,6 @@ export function summarisePriceRows(
   };
 }
 
-const PAGE_SIZE = 1000;
-
-// EVERY CALLER MUST .order() A UNIQUE COLUMN BEFORE .range() -- see the long note in
-// lib/subcategory-queries.ts. Unordered LIMIT/OFFSET has no stability guarantee across
-// pages, and the failure returns the RIGHT TOTAL from the WRONG ROWS, so no count-based
-// check detects it. Work-list items 146, 151.
-async function fetchAllRows<T>(
-  build: (offset: number) => PromiseLike<{ data: T[] | null; error: any }>,
-): Promise<T[]> {
-  const all: T[] = [];
-  let offset = 0;
-  while (true) {
-    const { data, error } = await build(offset);
-    if (error || !data || data.length === 0) break;
-    all.push(...data);
-    if (data.length < PAGE_SIZE) break;
-    offset += PAGE_SIZE;
-  }
-  return all;
-}
-
 export async function getCategoryStats(category: TopCategory): Promise<CategoryStats> {
   // ONE AGGREGATE, NOT TWO OFFSET WALKS (item 415). This paged every matching row
   // 1,000 at a time and counted in JS. EXPLAIN showed each request re-running the whole
@@ -312,9 +291,11 @@ export async function getFeaturedProducts(
   // eligibility has to see every candidate. Hence the RPC, following the
   // getCrossCategoryBrands pattern: heavy aggregation in SQL, light mapping here.
   //
-  // The rule against unordered LIMIT was already written 60 lines above
-  // fetchAllRows -- but it was scoped to the PAGING helper, and this function does
-  // not page, so it never came under a rule it needed. Work-list item 238.
+  // The rule against unordered LIMIT was already written on `fetchAllRows`, 60 lines
+  // above this in the file at the time -- but it was scoped to the PAGING helper, and
+  // this function does not page, so it never came under a rule it needed. Item 238.
+  // (fetchAllRows is gone as of item 417; the rule now lives on getSubcategoryProducts
+  // in lib/subcategory-queries.ts, the last paginator it applies to.)
   const { data, error } = await supabase.rpc('fmb_featured_products', {
     p_category: category,
     p_limit: limit,
