@@ -30815,7 +30815,98 @@ If the row's NAME were corrected, the hold could lift without touching `COUNT_UN
 > going to be insufficient** — item 237 believed otherwise, and the belief survived because nobody
 > recomputed the row.
 
-**Nothing chosen. Nothing applied.** Option 4 is the current state and costs one unmatched product.
+**OPTION 4 STANDS.** The current state, deliberately.
+
+> **THE COST IS ONE PRODUCT NOT MATCHING.** Smaller than any of the three fixes: option 3 removes a
+> live product stocked by three retailers, options 1 and 2 write a false pack count while looking
+> like repairs, and a context rule in `COUNT_UNIT_RE` defends **13 rows against 4,400** (item 379).
+> **One unmatched lipstick is the cheapest thing on the list.**
+
+##### AND THE LOOP'S OWN LESSON
+
+Two of the four options fail for the same reason, and **both looked like fixes**.
+
+> **A WRONG DIAGNOSIS DOES NOT MERELY FAIL TO FIX A THING. IT GENERATES PLAUSIBLE FIXES THAT CANNOT
+> WORK.** Item 237 concluded the HTML entity was shielding the row from `COUNT_UNIT_RE`. From that,
+> "decode the entity" and "correct the name" both follow as obvious repairs -- and both produce
+> `90pcs`, because `90's` hits the rule exactly as `90&#039;s` does.
+>
+> **The false diagnosis survived because nobody recomputed the row.** The hold, the
+> entity-preservation and the two obvious fixes were internally consistent and all pointed at the
+> wrong mechanism. **Consistency is not evidence when every piece derives from the same wrong
+> premise.**
+
+---
+
+### 382. Item 348, repeated by its author on the day it was written
+
+**Raised:** 26 August 2026 · **Recorded because the alternative is that it reads as bad luck twice.**
+
+Item 348 records that `--delete-branch` on a PR that is another PR's base **closes the dependent
+permanently**, and states the rule: *do not pass `--delete-branch` when the branch is another PR's
+base.*
+
+**Merging #449 I passed `--delete-branch`. #450 was stacked on it. #450 closed.** Recreated as #451,
+losing its number and thread.
+
+> **THE FINDING WAS WRITTEN, MERGED AND CITED BY ME EARLIER THE SAME DAY.** Knowing the rule was not
+> the difficulty; **noticing that this merge was an instance of it** was. `--delete-branch` is one
+> flag on a routine command, and nothing in the command, the confirmation or the output mentions
+> dependents.
+>
+> **A rule that must be remembered at the moment of acting will be broken by whoever is concentrating
+> on something else** -- which, on a stacked branch, is everyone. Item 348's own stronger option,
+> *"do not pass it at all; delete afterwards"*, is the version that survives inattention, and I did
+> not follow that either.
+
+**The durable fix is not vigilance.** Either stop using the flag, or run `gh pr list --base <branch>`
+before merging. Both are cheap; neither happened.
+
+---
+
+### 383. The fold fixed the matching half and left the URL question exactly where it was
+
+**Raised:** 26 August 2026 · **Phase 2's remainder, re-checked against today's change.**
+
+44 brands sit on mangled canonical URLs. Item 369 split them into **25 a slug fix alone repairs** and
+**7 blocked**, because their ASCII twin exists as a separate brand and transliterating would collide
+two brands onto one URL.
+
+**The fold changed `normaliseForMatch` and did not touch `brandSlug`.** So: are the seven now
+resolvable?
+
+| pair | accented | ASCII | **products sharing a match_key** |
+|---|---:|---:|---:|
+| kérastase / kerastase | 520 | 125 | **2** |
+| l'oréal professionnel | 401 | 83 | **1** |
+| avène / avene | 47 | 159 | 0 |
+| chloé / chloe | 11 | 88 | 0 |
+| bioré, l'oréal men expert, khloé kardashian | 4 | 64 | 0 |
+
+**Three products out of 1,502.** Before the fold it was zero, so the fold did remove the mechanism
+keeping the two sides apart -- **and that mechanism turns out not to have been what kept them
+apart.**
+
+> **THE TWO SIDES HOLD GENUINELY DIFFERENT PRODUCTS.** Item 368 measured zero identical names across
+> every pair, and I discounted it as one weak signal beside two vacuous ones. **It was the signal.**
+> Kérastase's 520 and Kerastase's 125 are mostly different SKUs from one brand, catalogued under two
+> spellings by the same retailers -- not two listings of one range.
+>
+> **So the seven are not resolvable by matching.** A merge must still decide which `normalised_brand`
+> survives, and the fold neither makes that easier nor supplies evidence for it. **Item 369's options
+> A to D stand unchanged.**
+
+##### AND THE TWO NORMALISATIONS HAVE NOW DIVERGED
+
+`normaliseForMatch` folds accents. `brandSlug` still deletes them. **Before today they were
+consistent -- both mangled, identically.**
+
+> Not a new blocker, but an argument. **The catalogue is now normalised two ways depending on which
+> surface asks**: the matcher says Bioré and Biore are one brand's products; the URL scheme says
+> `/brands/bior` and `/brands/biore` are two places. `brandSlug` is now the last ASCII-deleting
+> function in the codebase and it disagrees with the one that decides what matches.
+>
+> **That strengthens the case for the 25 and changes nothing about the 7.**
 
 ---
 
@@ -30837,6 +30928,14 @@ ALONE.**
 > **A test that only exercises the true-positive direction cannot fail on a false positive**, so its
 > greens are evidence about coverage and silence about precision.
 
-**Not added**, because the fix is declined and cases asserting current behaviour on the 13 would
-freeze a defect into the suite. Recorded so that whoever builds the context rule knows the harness
-will not tell them they have broken the 348.
+**Not added, and the reasoning is the point.** Cases asserting current behaviour on the 13 would
+**freeze the defect into the suite** -- `assert key(...) === "…42pcs 12ml"` makes the false positive
+a specification, and the next person attempting a context rule would have to delete tests to fix a
+bug, which reads as vandalising the suite rather than repairing the code.
+
+> **THE GAP STAYS OPEN DELIBERATELY RATHER THAN BEING PAPERED OVER WITH A TEST THAT LOCKS IT IN.** An
+> untested failure mode is a known absence. **A test encoding the failure mode is a false assurance
+> AND an obstacle to the fix** -- strictly worse than the absence it replaces.
+
+Recorded so whoever builds the context rule knows the harness will not tell them they have broken the
+348.
