@@ -63,7 +63,7 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
     notFound();
   }
 
-  const [stats, productTypes, brands, productResult] = await Promise.all([
+  const [stats, productFacets, brands, productResult] = await Promise.all([
     getSubcategoryStats(category, subcategory),
     getProductTypes(category, subcategory, 12),
     getSubcategoryTopBrands(category, subcategory, 16, productType),
@@ -174,7 +174,7 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
         </div>
       </section>
 
-      {productTypes.length > 0 && (
+      {productFacets.types.length > 0 && (
         <section className="max-w-site mx-auto px-6 py-12">
           <div className="flex items-baseline justify-between mb-8 flex-wrap gap-4">
             <h2 className="font-serif text-3xl text-ink">Browse by type</h2>
@@ -188,7 +188,7 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            {productTypes.map(pt => {
+            {productFacets.types.map(pt => {
               const isActive = pt.product_type === productType;
               return (
                 <Link
