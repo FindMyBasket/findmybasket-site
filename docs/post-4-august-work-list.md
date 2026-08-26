@@ -29475,6 +29475,107 @@ contradicts it.
 
 **Also on that line:** `1 products` and `1 retailers` are unpluralised.
 
+##### BUILT 26 AUGUST. FOUR STATES ON THE PAGE AGAINST THREE IN THE METADATA
+
+| state | condition | what the page now says |
+|---|---|---|
+| A | `comparable > 0` | Compare across N retailers, delivery included. **X of Y products are stocked by more than one retailer**, so you can see which works out cheapest delivered. |
+| B | one or more stockists, nothing comparable | **{Brand} is stocked by {retailer}** from the UK retailers we compare. Nothing to compare on price yet, so here's the range with their delivery included in every total. **We'll show a comparison as soon as a second retailer lists it.** |
+| C | no stockists, products exist | We track {Brand} across the UK retailers we compare. **Nothing from the range is in stock right now.** The products below are the ones we watch. |
+| D | no stockists, no products | We track {Brand} across the UK retailers we compare. **We don't have current pricing for the range**, so there's nothing to compare yet. |
+
+> **THE FOURTH STATE IS ONE THE PAGE CAN SEE AND THE METADATA CANNOT, AND THAT ASYMMETRY IS CORRECT
+> RATHER THAN A MISMATCH.** `brandMetadataCopy` branches on `stockists === 0` and stops there,
+> because that is all a title needs. **The page also knows whether any PRODUCTS exist, because it
+> has them in front of it** -- so it can separate "we carry the range and none of it is in stock
+> today" from "we have no pricing for this brand at all". Those are different facts about the same
+> zero. **A surface that can see more should say more**, and three branches upstream does not oblige
+> three branches downstream.
+>
+> **State A now bounds its own claim.** "2 of 430 products are stocked by more than one retailer" is
+> the sentence that stops TonyMoly's technicality being invisible -- the title says "compared across
+> 2 UK retailers" and is true; the page says how far that goes.
+>
+> **State B's forward promise is kept deliberately.** It is a true statement about a mechanism that
+> already works, and it turns a page with nothing to compare into a page worth returning to.
+
+**The stat line is left alone.** Under this wording `40 products · 1 retailer` corroborates the
+sentence above it instead of contradicting it, which is the whole repair. Both counts are now
+pluralised.
+
+---
+
+### 361. Six aliases fold to a smaller sibling, so it is a class
+
+**Raised:** 26 August 2026 · **Item 359 asked whether `mac` was an instance or a class. It is a class, and small enough to name in full.**
+
+Of **197** alias rows: **190 resolve to a live target**, 7 resolve to nothing, and **6 fold to a
+target smaller than a sibling slug for the same brand.**
+
+| alias | target slug | target products | larger sibling | sibling products |
+|---|---|---:|---|---:|
+| `mac` | `m-a-c` | **9** | **`mac-cosmetics`** | **1,243** |
+| `âme pure uk` / `ame pure` / `âme pure` | `me-pure` | 16 | `me-pure-uk` | 25 |
+| `biore` / `bioré` | `bior` | 2 | `biore` | 8 |
+
+**Three brands, six rows.** And two of the three share a cause that is not about aliases at all:
+
+> **`normalised_brand` STRIPS ACCENTED CHARACTERS RATHER THAN TRANSLITERATING THEM.** "Bioré"
+> becomes `bior` -- the é is deleted, not folded to `e`. "Âme Pure" becomes `me pure` -- the Â is
+> deleted, taking the word's first letter with it. **Each mangled form then becomes a slug, a page,
+> and finally an alias target**, because the alias was written to point at the brand string as
+> spelled.
+>
+> **The `biore` row is the sharpest of the six: it redirects AWAY from a working 8-product page.**
+> `/brands/biore` would have resolved on its own. The alias sends it to `/brands/bior` and two
+> products.
+
+**The 7 dead targets** are `superdrug` (the departed retailer, expected), `johnsons` x2,
+`pastel cosmetics` x2 and `makeup academy` x2 -- brands with no products left. Those 301 into a
+404, which is item 271's own failure mode surviving in seven rows.
+
+> **SAME TREATMENT AS THE 30 ALIAS 404s, AND FOR THE SAME REASON.** That fix asked "does this
+> target exist"; this one asks **"is this target the right one of several"**. Both are checks the
+> alias table cannot make about itself, and both are cheap to run and impossible to notice by
+> reading the table.
+
+**Not fixed here.** The repair differs per row -- retarget for `mac`, fix normalisation for the
+accented pair, delete for the dead seven -- and normalisation is upstream of `match_key`.
+
+---
+
+### 362. The fourth near-neighbour resolution in one session
+
+**Raised:** 26 August 2026 · **Recorded because the count is the finding. Four times in one day I reimplemented a resolution rule the page owns, and got a different answer each time.**
+
+| # | what I assumed | what the code does | consequence |
+|---|---|---|---|
+| 1 | one brand string per slug (`limit 1`) | `findBrandBySlug` folds **all** matching rows | TonyMoly reported at **2 products**; the page renders **430** |
+| 2 | slug derives from `products.brand` | it derives from **`normalised_brand`** | the whole 198-hub classification keyed on the wrong column |
+| 3 | `brand_aliases.canonical` is a slug | it is a **brand string**, slugified at read time | "190 of 197 aliases fold to nothing", the exact inverse of the truth |
+| 4 | `/brands/mac` resolves to nothing | it **308s to a live 9-product page** | "a hub with zero products", when the defect was a split brand |
+
+**Every one of them produced a confident, plausible, internally consistent number.** None errored.
+Two of them -- 1 and 4 -- were caught only because the live page was open in the next breath. **3
+was caught because its answer was absurd** (190 broken redirects would have been visible to anyone),
+which is luck, not method. **2 was caught by reading the resolver** after 3 forced me to.
+
+> **A RESOLUTION RULE REIMPLEMENTED IN A QUERY IS A NEAR-NEIGHBOUR OF THE ONE THE PAGE USES, AND
+> THE PAGE IS THE ONE THAT DECIDES.** Item 313 recorded this for a matching rule and called the
+> result "a confident wrong number". Four instances in a day says it is not an occasional slip: it
+> is what happens **by default** whenever the authority for a mapping lives in application code and
+> the analysis lives in SQL.
+>
+> **The corrected classification changed the numbers and not the conclusion** -- A1 moved from 32
+> hubs to 31, CTR from 0.11% to 0.12%, and the inversion held at every band. **That is the
+> uncomfortable part.** Three of the four errors did not change an answer I acted on, so nothing
+> would have told me they were there. The one that did -- TonyMoly -- would have reframed the whole
+> phase.
+
+**What follows from it is not "be careful".** It is: when a page owns a mapping, **read the page's
+output for at least one row before trusting a query that reproduces the mapping.** One `curl` would
+have caught 1, 3 and 4.
+
 ---
 
 ### 358. A query the site ranks for lands two screens above its own answer
