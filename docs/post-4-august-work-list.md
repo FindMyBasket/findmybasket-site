@@ -28662,3 +28662,124 @@ skincare price comparison"** (:452, :614), which is item 334's class and a one-w
 **Not fixed here** because removing it touches the `OptimisationResult` shape and the fallback
 return path on the evening of a verified deploy, for no behavioural gain. It goes with the four
 copy lines.
+
+---
+
+### 348. A branch deletion that closes a pull request rather than orphaning it
+
+**Raised:** 25 August 2026 · **Clearing four open PRs. `--delete-branch` on #432 closed #433, and closure turned out to be one-way.**
+
+#433 was stacked: its base was `email-deploy-verified`, the head branch of #432. Merging #432 with
+`--delete-branch` removed that base.
+
+**GitHub did not retarget #433 to `main`. It closed it.** And then:
+
+| attempted | result |
+|---|---|
+| `gh pr reopen 433` | `GraphQL: Could not open the pull request` |
+| `gh pr edit 433 --base main` | `GraphQL: Cannot change the base branch of a closed pull request` |
+
+Neither is a permissions problem or a race. **A closed PR whose base branch no longer exists
+cannot be reopened, and a closed PR cannot be retargeted, so the two recoveries each require the
+other to have happened first.** The only way out is a new pull request from the same head.
+
+> **THIS IS IRREVERSIBLE, NOT INCONVENIENT, AND THE DIFFERENCE IS WHAT MAKES IT WORTH A NOTE.**
+> Deleting a branch normally costs a `git push` to restore. Here the branch was restorable and the
+> **pull request was not**: #433 is closed permanently, and its number, its description, its
+> review history and its comment thread do not come back. The work was recreated as **#434** and
+> the continuity of the record was not.
+>
+> Nothing warned. `--delete-branch` is a flag on the merge of #432, and the damage lands on a
+> different pull request that the command does not mention.
+
+**The safe form**, either of:
+
+- **retarget every dependent PR before deleting the base** (`gh pr edit <dependent> --base main`
+  first, while it is still open and retargeting is still permitted), or
+- **do not pass `--delete-branch` when the branch is another PR's base.** Delete it afterwards,
+  once nothing points at it.
+
+The first is better where a stack is deliberate. The second is the one to reach for by default,
+because it requires knowing nothing about what else is open.
+
+##### AND A THIRD STATE THE ITEM 300 DISTINCTION DID NOT COVER
+
+Item 300 separated **stale in its number** (a merge problem, fix the number) from **stale in its
+content** (a reason to close). Clearing this queue produced neither.
+
+#390 and #391 were opened six minutes apart on 23 August and their work-list diffs are **byte
+identical** — same blob, `70af1f7..36b9e26` on both. #391 is #390 plus a 170-line report. So #390
+was **wholly contained** in #391.
+
+> **REDUNDANT IS A THIRD STATE: NEITHER NUMBER NOR CONTENT IS STALE, AND THE PR IS STILL NOT
+> CARRYING ANYTHING THE QUEUE WOULD MISS.** It does not want fixing and it does not want closing.
+>
+> **Merging the older one anyway was right.** It preserves its own record — #390 exists in the
+> history as the change it was, rather than being absorbed silently into a PR that happens to
+> contain it — and **git merges identical content without complaint**, so the second merge cost
+> nothing and contributed only the report. Closing #390 as "already in #391" would have been
+> tidier and would have deleted a record for no gain.
+
+**Neither #390 nor #391 allocated an item number at all.** Both amend item 245's *body*, adding
+`#####` sections under an item that predates the list reaching 290. **A change that never claims a
+number cannot collide with a week of merges**, which is why the expected blocker was not the one
+that appeared. The allocation risk was entirely in #433.
+
+##### AND THE CONTIGUITY CHECK NEVER FIRED, WHICH IS NOT EVIDENCE THAT IT WORKS
+
+#433 allocated 301-347 while `main` stood at 300, and 301-304 had already landed via #432. That is
+the duplicate shape exactly.
+
+**No duplicate occurred.** #432 was squash-merged, so `main` carried the *content* of 301-304
+while the stacked branch carried its own commits for the same items — and the text matched, so
+git's three-way merge resolved them as one change. The only conflict was the 305-347 tail against
+an empty side.
+
+> **SQUASH-MERGING IDENTICAL CONTENT PREVENTED THE DUPLICATE. THE CONTIGUITY CHECK CONFIRMED IT
+> AFTERWARDS.** Those are different jobs and the check did the second one.
+>
+> **A guard that never had to fire is not evidence the guard works.** It is evidence that this
+> particular path did not reach it. The check has fired for real before — item 265's dangling
+> citation, the 244 collision in item 245 — and that is where its evidence comes from, not here.
+> Reading a green run as a demonstration is the same error as reading item 342's consistency check
+> as a correctness check: **the instrument reported on the case it was given, not on its own
+> reach.**
+
+---
+
+### 349. A specification corrected by measurement, not a deviation
+
+**Raised:** 25 August 2026 · **I reported the MyProtein logo as off-spec. It is not, and the report was the thing that was wrong.**
+
+The instruction said `myprotein.webp` at **roughly 256 x 52**. What shipped is
+`public/logos/myprotein.png` at **352 x 52**, referenced from `public/index.html:349`.
+
+**The 256 was an estimate written before the source was measured.**
+
+| | ratio | |
+|---|---|---|
+| source as measured | **6.77:1** | 352 x 52 |
+| the estimate | 4.92:1 | 256 x 52 |
+
+Holding the height at 52 and forcing the width to 256 compresses it by **27.3%**. That is not a
+resize, it is a distortion of a wordmark. **352 x 52 is the figure that honours the instruction;
+256 x 52 is the figure that was written down.** The PNG was reported and approved at the time
+because the machine has no webp encoder.
+
+> **A SUPERSEDED SPECIFICATION LEFT STANDING IS A TRAP FOR WHOEVER RECONCILES IT NEXT.** A later
+> reader finds a stated spec and a file that disagree, and the natural move is to make the file
+> obey the spec — which here means distorting a correct asset to match a number that was only ever
+> a guess. **The disagreement is real and the resolution runs the other way**, and nothing in the
+> file or the instruction says so.
+>
+> This is item 347's shape in the specification rather than in the code. `worstCaseTotal` is a
+> retired baseline still computing, and a superseded estimate still reading as a requirement is
+> the same trap: **the artefact outlived the claim it came from, and looks authoritative because
+> nothing marks it as withdrawn.**
+
+**Recorded rather than corrected**, because there is nothing to correct: the file is right, the
+reference is right, and no work-list item ever asserted the estimate. **The only wrong statement
+was my report calling it a deviation**, and this item is where that is retracted.
+
+**Open, unchanged:** MyProtein is the only recent logo carrying no `.webp` alongside its `.png`.
+That is a real gap and a separate one, blocked on an encoder rather than on a decision.
