@@ -31171,3 +31171,131 @@ the evidence that they are two brands rather than one page twice.
 *"L'Oréal Paris"*. `bestDisplay` picks the most common `brand` string among matching rows and those
 rows carry the parent brand's name. **Pre-existing, not caused by this change**, and it is item 386's
 defect showing through: two `normalised_brand` values whose `brand` strings disagree.
+
+---
+
+### 389. A third normalisation, on the day the codebase reduced two to one
+
+**Raised:** 26 August 2026 · **Six of the 49 brand groups do not converge, and the reason is that two canonicalising functions disagree.**
+
+The merge rule was `fmb_match_brand(normalised_brand)` -- the form both sides already agree on in the
+match key, derivable rather than chosen. **It does not converge six groups**, found by a probe that
+reported `102 brands -> 55 canonical` where 49 was expected.
+
+**Two separate disagreements, and only one is about the 26 August fold:**
+
+| | `fmb_match_brand` | `brandSlug` | example |
+|---|---|---|---|
+| **`&` versus `+`** | `&` -> ` and `, `+` -> separator | both -> separator | `ancient & brave` -> **`ancient and brave`** · `ancient + brave` -> **`ancient brave`** |
+| **the apostrophe** | -> a **space** | **vanishes** | `child's farm` -> **`child s farm`** · `childs farm` -> **`childs farm`** |
+
+The first was **introduced by the fold**: mapping `&` to a word while leaving `+` a separator split
+two spellings that previously collapsed together. The second **predates it** and has always been
+there -- `brandSlug` strips `'` before the character class, `fmb_match_brand` does not.
+
+> **SO THERE ARE THREE NORMALISATIONS, NOT ONE, ON THE DAY THIS CODEBASE SPENT ITSELF REDUCING TWO
+> TO ONE.** Item 384 closed the gap between `brandSlug` and `normaliseForMatch` on accents. It did
+> not close it on apostrophes, and it opened a new one on `+`.
+>
+> The six affected: `ancient-brave`, `childs-farm`, `honey`, `im-from`, `nalas-baby`, `vitalitys`.
+
+##### AND THE THREE-SHARED-KEYS FIGURE WAS WRONG FOR THOSE SIX
+
+I reported "3 shared match keys across 49 groups" as evidence the two sides hold different products,
+having checked that the brand portion collapses identically for both spellings.
+
+**For these six it does not collapse.** `ancient and brave` and `ancient brave` are different brand
+prefixes, so their keys **could not have matched whatever the products were**.
+
+> **THEIR ZERO WAS GUARANTEED, NOT MEASURED** -- item 368's shape, in six of forty-nine, and found
+> only because the probe forced the question. The figure stands for the 43 and says nothing about
+> the six.
+
+**The migration claims 43 and says why.** A migration that overstates its own reach is the same class
+as a check reporting coverage it does not have.
+
+**Fixing the disagreement is a `match-key.ts` change and goes behind the gate**, where it now joins
+the seven and the 42's remainder.
+
+---
+
+### 390. A consequence stated as pending is a consequence stated as never
+
+**Raised:** 26 August 2026 · **The fourth thing this week held by an absence rather than a setting.**
+
+The brand merge widens the input to `fmb_regroup_shade_strays`, which matches un-parented products
+to shade families **where `normalised_brand` is in the family-brand set**. **15 strays become newly
+eligible** and could be reparented.
+
+I recorded that as a product-level consequence of the next run, and undertook to watch it.
+
+**Nothing schedules that function.** It is invoked by hand. There is no cron entry, no workflow, no
+trigger.
+
+> **SO "WATCH THE NEXT RUN" HAS NO TRIGGER TO WATCH.** The 15 strays are not pending until tomorrow;
+> **they are pending until somebody decides to run a job nobody has scheduled** -- which, on the
+> evidence of this list, may be never.
+>
+> **A consequence stated as pending reads as a thing that will happen and be observed. Stated
+> accurately it is a thing that will not happen at all** unless someone acts, and those are opposite
+> operational facts wearing the same words.
+
+##### FOURTH INSTANCE THIS WEEK
+
+| | held by |
+|---|---|
+| item 352 | MyProtein not re-importing -- **the absence of a cron**, the only working layer of three |
+| item 375 | 105424 not re-keyed -- a guard that **did** fire, the one that worked |
+| item 387 | the seven not colliding -- **a comment**, which held nothing |
+| **item 390** | 15 strays not reparented -- **the absence of a schedule** |
+
+> **Two of the four are absences doing load-bearing work.** An absence is not a decision and cannot
+> be reviewed: nothing in a config dump shows a job that is not scheduled, and nothing distinguishes
+> "deliberately unscheduled" from "nobody got round to it".
+
+---
+
+### 391. The merge did not fix the display defect, and I said it would
+
+**Raised:** 26 August 2026 · **A prediction of mine, checked afterwards and false.**
+
+`/brands/loreal-men-expert` renders the display name **"L'Oréal Paris"**. I kept it as visible
+evidence of item 386 and predicted the merge would repair it for free, because `bestDisplay` picks
+the commonest `brand` string and merging changes the pool.
+
+**The pool changed. The majority did not.** That record now carries **two** `brand` spellings and the
+commonest is still the parent's name.
+
+**And the same defect from the other side:** `/brands/about-tone` now heads with **`ABOUT_TONE.`** --
+the commonest of three spellings across the merged record is the one with a trailing full stop.
+
+> **`bestDisplay` PICKS BY FREQUENCY, AND FREQUENCY IS AN ARTEFACT OF WHICH RETAILER CARRIES MORE
+> SKUs.** It is not a judgement about which spelling is right; it is a count of which supplier is
+> larger. A hub heading now shows feed punctuation, and it does so *because* the merge worked --
+> three spellings that used to sit on three unreachable records now compete on one page.
+>
+> **This is item 386 in the display layer, surviving the merge that was supposed to resolve it.**
+
+**The fix is `brand` corrected at source, not a records merge.** Filed for tomorrow.
+
+---
+
+### 392. The probe's assertion held in production, not only in the transaction
+
+**Raised:** 26 August 2026 · **Worth stating plainly because it is the stronger claim.**
+
+The whole case for the merge rested on one number: that re-keying afterwards is a no-op. It was
+asserted in a rolled-back transaction and returned **0**.
+
+**After applying, `products_active` reports exactly one row whose stored key differs from its
+recomputed key — product 105424**, which was already the single outstanding row before the merge ran
+and is deliberately skipped (item 376).
+
+> **ZERO KEYS MOVED FROM THE MERGE.** The probe measured a hypothetical; production measured the
+> thing itself, and they agree. **A rolled-back measurement is evidence about a transaction; the same
+> number after the commit is evidence about the database.**
+
+**The hubs are ISR-cached and were reported as such.** `/brands/kerastase` still rendered the
+pre-merge retailer count when checked; the database shows the merged record at **645 products**
+(520 + 125). Verified in the database and reported as *not yet reflecting* rather than as verified --
+which is the distinction item 300 exists for.
