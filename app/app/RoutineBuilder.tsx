@@ -12,7 +12,6 @@ import {
   onRoutineChange,
   type RoutineItem,
 } from '@/lib/routine-store';
-import { displayProductTitle } from '@/lib/format/product-name';
 import {
   trackAffiliateClickOut,
   trackRetailerClick,

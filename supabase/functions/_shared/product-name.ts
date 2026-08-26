@@ -1,3 +1,9 @@
+// MIRROR of lib/format/product-name.ts for the Deno runtime, which cannot import a
+// Next module. Kept honest by lib/format/__tests__/product-name.test.ts, which imports
+// BOTH and asserts they AGREE on every case -- not merely that each works. See the note
+// there: agreement is the property, and item 345 is why it is asserted at extraction
+// rather than discovered later.
+//
 // Helpers for de-duplicating the brand prefix that most product names already
 // carry. Roughly 90% of catalogue names start with their own brand string
 // (e.g. name "Kiehl's Calendula Cleanser" + brand "Kiehl's"), so naively
