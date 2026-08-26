@@ -30582,6 +30582,11 @@ either row's data; they were keyed at different times, on either side of a chang
 > **And it is self-concealing**: 94175 and 128052 do not match each other, which looks exactly like
 > two genuinely different products, which is what a stale key is indistinguishable from.
 
+**THIS PAIR NO LONGER EXISTS AS A LIVE INSTANCE.** The 26 August re-key resolved it -- both rows now
+carry `1pcs`, and the split was drift rather than a rule change. **Kept because the shape is the
+point and the example was real**, but an item citing a disappeared example should say so rather than
+reading as current. Verified after the backfill.
+
 
 ---
 
@@ -30721,3 +30726,117 @@ group, two identical Kiehl's rows.
 **Not verified:** 362 of the 376 groups were not read. The seven fold-created ones sampled were all
 correct; that is a sample, and the population it is drawn from is the outcome rather than the
 forecast, which is the improvement.
+---
+
+### 379. A defect with a known population and no proportionate fix
+
+**Raised:** 26 August 2026 · **Measured and DECLINED. Not an open task — an open task implies someone should do it.**
+
+`COUNT_UNIT_RE` reads `<number><unit-word>` as a pack count, and `s` is one of the unit words. It
+fires on things that are not pack counts. **The premise I started from was that this is a defect
+needing a fix. Measuring it inverted that.**
+
+| | rows |
+|---|---:|
+| keys carrying a `pcs` token | **4,418** |
+| fired on an **explicit** unit word (`pcs`, `pieces`, `pads`, `sheets`, `ea`) | **3,989** |
+| fired on the **bare `s`** | **429** |
+| — of those, with a countable noun in the name | **348** |
+| — without | 81 |
+| **true false positives, read by name** | **~13** |
+
+**`NNs` IS STANDARD UK PACK NOTATION** and the alternative earns its place: `60S` capsules, `30S`
+tablets, `20S` wax strips, `24S` patches, `180S`. Read rather than counted — 98 rows of `60S` alone,
+almost all supplements.
+
+##### THE FALSE POSITIVES ARE HETEROGENEOUS, WHICH IS WHY THERE IS NO PATTERN FIX
+
+| shape | example | key |
+|---|---|---|
+| shade code | `Armani Luminous Silk Cheek Tint **42S** 12ml` | `…42pcs 12ml` |
+| model number | `Braun Series 3 Proskin Shaver **3010S**` | `…3010pcs` |
+| decade | `Bellapierre **90'S** Glam Palette` | `…90pcs` |
+| line name | `Milk Touch … Green Hyaluron **6s** Cream` · `Isntree Booster **2000s**` | `…6pcs` · `…2000pcs` |
+
+> **A SHADE CODE AND A PACK COUNT ARE THE SAME STRING.** `42S` on a cheek tint is a colour; `42S` on
+> a capsule bottle is a quantity. **Nothing in the token distinguishes them** — only the noun beside
+> it does.
+>
+> So a correct fix is a **context rule**, not a pattern edit, and any narrowing that catches the 13
+> breaks some of the 348. **13 rows against 4,400 does not justify building a different kind of rule
+> inside a matcher this load-bearing.**
+
+**Recorded as measured and declined.** The population is known, the shapes are named, and the
+reasoning is at the code as well as here. If someone later has cause to build the context rule, the
+measurement is done and the answer is not "nobody looked".
+
+**The stale comment is fixed**, which is the one thing here worth changing today: it claimed
+`90 039 s` "does not match" when it matches and always did, on the very row it is about.
+
+---
+
+### 380. Correcting 105424 at source is a loop, and the loop is worth stating
+
+**Raised:** 26 August 2026 · **The narrower question, since fixing the rule is declined.**
+
+If the row's NAME were corrected, the hold could lift without touching `COUNT_UNIT_RE`. Checked:
+
+| | |
+|---|---|
+| **would a re-import fix it?** | **No.** `import-awin-feed` writes products with `.from("products").insert(...)` and never UPDATEs them. **Names are creates-only.** |
+| is `decodeFeedName` running? | Yes, since item 284 — but only on the create path, so it protects new rows and cannot reach this one |
+| is the row live? | **Yes.** In stock at **Beauty Flash, Gorgeous Shop and Niche Beauty**, all refreshed 26 Aug |
+| what the retailers call it | their URLs read `sweed-le-lipstick-90-s-model` — the entity is the feed's encoding of an apostrophe |
+
+##### THE LOOP
+
+> **Correcting the name by hand is an UPDATE to `products.name` on a held row, and
+> `guard_held_product_writes` fires on exactly that** — `WHEN new.name IS DISTINCT FROM old.name OR
+> new.match_key IS DISTINCT FROM old.match_key`.
+>
+> So: the hold exists because the name is wrong; the name cannot be corrected because the row is
+> held; and the hold cannot lift until the name is corrected. **Each step is right on its own.**
+
+**The options, stated without picking one:**
+
+1. **Release the hold for one transaction** — `SET LOCAL "fmb.release_hold" = 'held:105424:…'`, which
+   the guard supports by design and which requires naming the finding, i.e. reading it. The write
+   would then produce `sweed le lipstick 90pcs model` — **still a false pack count**, because the
+   apostrophe form matches the rule just as the entity form does. **This does not solve it.**
+2. **Delete and let it re-create.** `decodeFeedName` runs on the create path, so the new row would
+   carry `Sweed Le Lipstick-90's Model` — which still keys as `90pcs`. **Also does not solve it.**
+3. **Exclude the product** via `product_exclusions`. Solves the key by removing the row, and costs a
+   live product stocked by three retailers.
+4. **Leave it.** The row is miskeyed, matches nothing, and is skipped by every re-key. Its cost is
+   that it cannot merge with another retailer's listing of the same lipstick.
+
+> **OPTIONS 1 AND 2 BOTH FAIL FOR THE SAME REASON, AND IT IS WORTH SEEING WHY**: the entity was never
+> the problem. `90's` and `90&#039;s` both hit `COUNT_UNIT_RE`. **Correcting the text was always
+> going to be insufficient** — item 237 believed otherwise, and the belief survived because nobody
+> recomputed the row.
+
+**Nothing chosen. Nothing applied.** Option 4 is the current state and costs one unmatched product.
+
+---
+
+### 381. The harness covers the class and not the failure mode
+
+**Raised:** 26 August 2026 · **Checked rather than assumed, after the accent gap.**
+
+`scripts/match-key-harness.mts` has **17 count-related cases** — 12 `count-unit`, 5 `pack-count`. So
+unlike the accent gap, the class is not missing.
+
+**Every one of them tests that a genuine count NORMALISES. None tests that a non-count is LEFT
+ALONE.**
+
+> **THE ACCENT GAP ONE LEVEL IN.** There the harness had never met the input class; here it meets it
+> constantly and only ever from the direction that passes. A suite of *"does `2 pieces` become
+> `2pcs`"* proves the rule fires. **It says nothing about whether it fires when it should not**,
+> which is the entire defect in item 379.
+>
+> **A test that only exercises the true-positive direction cannot fail on a false positive**, so its
+> greens are evidence about coverage and silence about precision.
+
+**Not added**, because the fix is declined and cases asserting current behaviour on the 13 would
+freeze a defect into the suite. Recorded so that whoever builds the context rule knows the harness
+will not tell them they have broken the 348.

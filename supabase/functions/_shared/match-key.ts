@@ -130,15 +130,41 @@ export function stripContainerNouns(normalised: string): string {
 //     "Sweed Le Lipstick-90's Model"  ->  key "sweed le lipstick 90pcs model"
 //
 // Ninety pieces, from a shade name. Product 105424 is the live instance and is
-// DELIBERATELY LEFT carrying an undecoded `&#039;` entity, because the entity is
-// what currently shields it: `90&#039;s` normalises to `90 039 s`, which does not
-// match. Every other HTML-entity row in the catalogue was decoded on 21 Aug 2026;
-// that one was held. See standing_check_findings, finding_key
-// 'held:105424:entity-shields-count-unit', and work-list item 237.
+// DELIBERATELY LEFT carrying an undecoded `&#039;` entity. See
+// standing_check_findings, finding_key 'held:105424:entity-shields-count-unit',
+// and work-list item 237.
 //
-// SO: IF YOU FIX THIS REGEX, THAT ROW BECOMES DECODABLE — and if you decode that
-// row without fixing this regex, you write a false pack count into the matcher's
-// key inside a change that looks like a text fix. The two are one piece of work.
+// ── CORRECTED 26 AUGUST 2026. THE CLAIM BELOW THIS LINE USED TO BE FALSE. ──────
+//
+// This comment previously said the entity shields the row because `90&#039;s`
+// normalises to `90 039 s`, "which does not match". IT MATCHES, AND ALWAYS DID:
+//
+//     normaliseCountUnits("90 039 s")  ->  "90 039pcs"
+//
+// `039` followed by a space and a bare `s` is exactly what the alternative below
+// catches. THE ENTITY NEVER SHIELDED THE RULE -- it shielded the STORED KEY, which
+// predates the rule reaching this row and was never recomputed. Verified by running
+// the function rather than by reading it. Work-list items 375 and 379.
+//
+// SO THE HOLD IS REAL AND ITS STATED MECHANISM WAS WRONG. The row is miskeyed by
+// today's rule with no decoding involved, and the 26 Aug re-key skipped it
+// deliberately (item 376) rather than writing `90 and 039pcs`.
+//
+// AND DO NOT "FIX" THIS REGEX ON THAT ROW'S ACCOUNT. Measured 26 Aug 2026 across
+// 99,973 products:
+//     4,418 keys carry a pcs token
+//     3,989 of them fired on an EXPLICIT unit word
+//       429 fired on this bare `s` alternative -- of which 348 have a countable
+//           noun in the name and are genuine: 60S capsules, 30S tablets, 20S wax
+//           strips, 24S patches. `NNs` is standard UK pack notation.
+//   roughly 13 rows are true false positives, and they are HETEROGENEOUS: Armani
+//           shade codes (42S, 68S), Braun model numbers (3010S), decades (90'S),
+//           product-line names (Hyaluron 6s, Booster 2000s).
+//
+// A shade code and a pack count ARE THE SAME STRING. Only the surrounding noun
+// separates them, so any narrowing of this pattern that catches the 13 breaks some
+// of the 348. That makes a correct fix a CONTEXT rule, not a pattern edit -- and
+// 13 against 4,400 does not justify one. Measured and declined, item 379.
 export const COUNT_UNIT_RE =
   /\b(\d+(?:\.\d+)?)\s*(?:pcs|pc|pieces|piece|pads|pad|patches|patch|sheets|sheet|ea|s)\b/g;
 export const PLURAL_NOUN_RE = /\b(pad|patch|piece|sheet)(?:e?s)\b/g;
