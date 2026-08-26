@@ -172,7 +172,15 @@ export async function CategoryPage({ category, displayName, intro, browse }: Pro
         </section>
       )}
 
-      {singleSub && productTypes.length > 0 && (
+      {/* DELETED WHEN THE GRID IS ON, AND ONLY THIS BLOCK (item 411).
+          "Browse by type" links to `/{cat}/{sub}?type=X` -- query parameters that
+          canonicalise back to the subcategory page. The filter chips answer the same
+          question one URL closer, so deleting it orphans NOTHING.
+          Hair's "Browse by area" below is NOT deleted, and the difference is not what
+          the block is called: its five destinations are real indexed pages with their
+          own metadata and canonicals. Same component, same shape, opposite answer,
+          decided by what the links point at. */}
+      {!browse && singleSub && productTypes.length > 0 && (
         <section className="max-w-site mx-auto px-6 py-12">
           <h2 className="font-serif text-3xl text-ink mb-8">Browse by type</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
