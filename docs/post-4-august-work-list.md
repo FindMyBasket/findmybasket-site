@@ -29572,12 +29572,40 @@ carry a non-ASCII character, and their hub URLs are the only ones the site serve
 | **44 brand hub URLs** | every currently-indexed accented URL needs a 301, which is what `brand_aliases` is for |
 | `brand_aliases` | 26 rows contain non-ASCII; some become redundant, some need retargeting |
 | sitemap, internal links, search | derive from `brandSlug` at render time, so they follow automatically |
-| GA4 `brand_slug` | historic rows keep the old value, so any brand-level series spans two spellings |
+| GA4 `brand_slug` | **splits permanently at the cutover — see below** |
+
+##### THE 301s, AND WHAT THEY LOOK LIKE
+
+`brand_aliases` is already the mechanism and `resolveBrandAliasSlug` already serves the 308. The
+change is 44 rows of the form `alias = <mangled>, canonical = <brand string>` -- and **26 of the 197
+existing rows contain non-ASCII**, so some are already pointing at the transliterated form and would
+become redundant rather than needing addition. The `notes` column is where "added by the
+transliteration fix" belongs, which item 364 argues is exactly what these rows have always lacked.
+
+##### AND THE GA4 SERIES SPLITS, PERMANENTLY
+
+`brand_slug` is sent as an event parameter on click-outs (`lib/analytics.ts`). Change the slugs and
+Lancôme reports as `lanc-me` before the cutover and `lancome` after, **in the same property, with no
+way to reconcile them.**
+
+> **GA4 HAS NO BACKFILL.** You cannot rewrite a parameter value on events already collected, and you
+> cannot alias two values into one dimension. **Any brand-level series that crosses the cutover is
+> two series that have to be added by hand**, forever, for the 44 brands -- including the three
+> largest by product count.
+>
+> **Item 338's hazard on a different axis.** There, a GA4 parameter could ship, fire correctly and
+> stay unreadable because the definition lives in an admin page the repo cannot see. Here the
+> parameter is readable and *its values* change underneath it. **Both are cases where the analytics
+> state is outside the repository's reach, so a change that is trivially reversible in code is
+> irreversible in the data it produced.**
+>
+> This is an argument for doing it **once, deliberately, with the date recorded**, not an argument
+> against doing it. The alternative is `/brands/lanc-me` forever.
 
 **Not proposed, and deliberately not applied.** Same treatment as `canonical_size` at item 282: the
-diff is reported and the change is a decision, not a consequence of noticing. The three-copy problem
-should be settled first, because fixing one and not the others is how the importers and the site
-would start disagreeing about what a brand's URL is.
+diff is reported and the change is a decision, not a consequence of noticing. **Item 363 settles the
+copy question first** -- and its answer, that all four copies are read paths, is what makes this
+stageable rather than all-at-once.
 
 **The 7 dead targets** are `superdrug` (the departed retailer, expected), `johnsons` x2,
 `pastel cosmetics` x2 and `makeup academy` x2 -- brands with no products left. Those 301 into a
@@ -29738,3 +29766,114 @@ beauty catalogue from a feed.
 **Recorded, not fixed.** The `product_exclusions` route exists and item 326 established the pattern.
 What is missing is the boundary -- the same work the food-and-drink decision needed -- and it should
 be decided once for the class rather than three times for three retailers.
+
+---
+
+### 363. Four copies of the slug rule, all on read paths, so the fix can be staged
+
+**Raised:** 26 August 2026 · **Settling the copy problem before the transliteration diff, because it decides the shape of everything after.**
+
+Item 361 reported three implementations. **There are four**, and the fourth is named in the third's
+own comment:
+
+| # | copy | input column | path | what a divergence costs |
+|---|---|---|---|---|
+| 1 | **`lib/brand-slug.ts` `brandSlug`** | `normalised_brand` | **read — the authority.** `findBrandBySlug` resolves every hub URL with it | **the wrong page, or a 404** |
+| 2 | `import-awin-feed` `brandSlugify` | `normalised_brand` | read — builds paths for `/api/revalidate` | a stale cache, self-healing in 1h |
+| 3 | `recategorise-products` `brandSlugify` | **`brand`** | read — builds `affectedBrands` for `fmb_revalidate_brand_slugs` | a stale cache |
+| 4 | `fmb_brand_slug()` in SQL | caller's | read — `fmb_revalidate_on_merge_log` | a stale cache |
+
+##### THE ANSWER: ALL FOUR ARE READ PATHS, SO THE FIX DOES NOT HAVE TO BE SIMULTANEOUS
+
+**No slug is ever written to the database.** `brand-slug.ts`'s own header says it: *"the slug is
+DERIVED from the brand string and nothing stores it."* Copies 2, 3 and 4 exist only to name a
+pathname to purge from a cache.
+
+> **THAT CHANGES THE SHAPE OF THE WORK ENTIRELY.** Had any copy been on a write path, a
+> transliteration fix would have had to land everywhere in one transaction or leave the catalogue
+> holding two spellings of the same key. **It does not.** Only copy 1 decides what a URL resolves
+> to. The other three, if they lag, cost at most one ISR window of staleness on the affected brand
+> pages -- and only for brands with an accent, which is 44 of 2,673.
+>
+> **So it stages: fix copy 1 with its 301s, then bring 2, 3 and 4 across at leisure.** The
+> comparison to `product-name.ts` yesterday holds for the destination -- one module, mirrored, with
+> a test asserting the copies agree -- but not for the urgency.
+
+##### AND COPY 3 IS ALREADY WRONG, INDEPENDENTLY OF ACCENTS
+
+`recategorise-products` calls `brandSlugify(p.brand)`. Every other copy, and the resolver, works
+from **`normalised_brand`**. Measured:
+
+**413 products across 18 brands have `fmb_brand_slug(brand) <> fmb_brand_slug(normalised_brand)`.**
+
+For those, recategorisation purges a path that is not the page. M.A.C is one: `brand` is
+"MAC Cosmetics" so it revalidates `/brands/mac-cosmetics`, while those nine products live at
+`/brands/m-a-c`.
+
+> **THE COMMENT SAYS "MUST MIRROR" AND THE CODE MIRRORS THE ALGORITHM WHILE FEEDING IT A DIFFERENT
+> COLUMN.** Three copies agreeing character-for-character on how to slugify, and one of them
+> slugifying the wrong thing. **A mirror check that compares implementations would pass this**, which
+> is worth knowing before writing one: agreement on the function is not agreement on the call.
+
+---
+
+### 364. An alias added to work around a defect nobody had identified
+
+**Raised:** 26 August 2026 · **The finding underneath item 361, and the reason the class stayed invisible for months.**
+
+Item 271 added `brand_aliases` rows so a renamed brand's URL would reach its canonical hub instead
+of 404ing. Among the L'Oréal rows its own comment lists: **`lor-al`** and
+**`lor-al-paris-dermo-expertise`**.
+
+**Those two are not renames. They are `brandSlug` output** -- "L'Oréal" run through a character
+class that treats é as a separator. The alias table was recording the site's own bug as though it
+were a supplier's naming variant.
+
+> **THE WORKAROUND MADE THE SYMPTOM DISAPPEAR AND LEFT THE CAUSE**, which is the ordinary shape of a
+> workaround. What makes this one worth recording is why nobody caught it: **an alias for a mangled
+> slug is indistinguishable from an alias for a renamed brand.** Both are a string that isn't the
+> canonical, pointing at one that is. Both belong in the table. Both make a 404 go away.
+>
+> **The table is FULL of legitimate rows of exactly that shape** -- `loreal`, `loreal-men`,
+> `loreal-paris` -- so `lor-al` sitting beside them reads as one more supplier spelling rather than
+> as evidence that our own slug function eats accents. **The workaround was camouflaged by the
+> ordinary case it resembled.**
+>
+> **And it worked.** The redirect resolves, the 404 is gone, the visitor lands correctly. Nothing
+> about the outcome invited a second look -- which is precisely why 44 brands and 3,452 products
+> sat on mangled canonical URLs for months without anyone noticing that `/brands/lanc-me` is
+> Lancôme.
+
+**The general form, and it is not "don't use workarounds":** a workaround entered in a table whose
+ordinary contents look identical to it **removes its own evidence**. `brand_aliases` has no column
+saying why a row exists. A `notes` column exists and these rows do not use it.
+
+---
+
+### 365. State A's bounding clause returned an answer on its first day
+
+**Raised:** 26 August 2026 · **The hub used as the worked example throughout Phase 2.**
+
+Item 357's State A was written to stop a technicality hiding: the title says "prices compared across
+N UK retailers", so the page now says how far that goes. It went live and the worked example
+answered back.
+
+```
+Compare Dove prices across 3 UK retailers, delivery included.
+4 of 323 products are stocked by more than one retailer.
+```
+
+**Dove is 4 of 323 — 1.2%.**
+
+Dove was the example for the chip work, the fold measurement and the brand-plus-type demand
+argument, chosen because it is a large, obviously-comparable household brand. **Neither of us
+checked whether its hub could actually compare anything**, because there was no reason to doubt it
+and nothing on the page said otherwise.
+
+> **THE CLAUSE WAS ADDED TO INFORM VISITORS AND ITS FIRST READER WAS US.** A page that states its
+> own bound is not only honest to the reader; **it is the cheapest possible audit of an assumption
+> nobody wrote down.** The measurement existed all along in `fmb_brand_metadata_facts` -- what
+> changed is that a surface now prints it where someone would trip over it.
+>
+> Under item 356's threshold Dove is **A2, a technicality**, not A1. It sat inside the phase's
+> reasoning as a comparison-capable brand for two days.
