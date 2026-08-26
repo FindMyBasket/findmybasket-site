@@ -29359,8 +29359,14 @@ by position, clicks over impressions:
 | 40+ | 0 / 993 = 0.00% | 1 / 1,040 = 0.10% | 4 / 3,334 = 0.12% | 0 / 165 |
 
 Median position is 26.0 for A1 and 23.6 for C. **At matched position bands the single-stockist hubs
-still convert three to seven times better.** The simplest confound is ruled out and the inversion is
-real.
+still convert three to seven times better.**
+
+> **THIS STRENGTHENS THE FINDING RATHER THAN MERELY PASSING A CHECK.** Before the banding, "position
+> is equal on average" left the obvious escape open: that the means coincided while the
+> distributions differed, and the inversion was a ranking artefact after all. **The escape is now
+> closed by measurement rather than closed by assumption.** The inversion is not an artefact of where
+> these pages rank; it holds inside every band with volume, and the largest -- 10 to 20, carrying
+> 7,899 impressions -- is where it is starkest: 0.00% against 0.76%.
 
 > **A PAGE THAT CANNOT DO THE THING EARNS MORE CLICKS THAN A PAGE THAT CAN, AT THE SAME RANK.**
 > Whatever is happening is upstream of the page: it is in the query, or in the result's competition,
@@ -29469,6 +29475,157 @@ contradicts it.
 
 **Also on that line:** `1 products` and `1 retailers` are unpluralised.
 
+##### BUILT 26 AUGUST. FOUR STATES ON THE PAGE AGAINST THREE IN THE METADATA
+
+| state | condition | what the page now says |
+|---|---|---|
+| A | `comparable > 0` | Compare across N retailers, delivery included. **X of Y products are stocked by more than one retailer**, so you can see which works out cheapest delivered. |
+| B | one or more stockists, nothing comparable | **{Brand} is stocked by {retailer}** from the UK retailers we compare. Nothing to compare on price yet, so here's the range with their delivery included in every total. **We'll show a comparison as soon as a second retailer lists it.** |
+| C | no stockists, products exist | We track {Brand} across the UK retailers we compare. **Nothing from the range is in stock right now.** The products below are the ones we watch. |
+| D | no stockists, no products | We track {Brand} across the UK retailers we compare. **We don't have current pricing for the range**, so there's nothing to compare yet. |
+
+> **THE FOURTH STATE IS ONE THE PAGE CAN SEE AND THE METADATA CANNOT, AND THAT ASYMMETRY IS CORRECT
+> RATHER THAN A MISMATCH.** `brandMetadataCopy` branches on `stockists === 0` and stops there,
+> because that is all a title needs. **The page also knows whether any PRODUCTS exist, because it
+> has them in front of it** -- so it can separate "we carry the range and none of it is in stock
+> today" from "we have no pricing for this brand at all". Those are different facts about the same
+> zero. **A surface that can see more should say more**, and three branches upstream does not oblige
+> three branches downstream.
+>
+> **State A now bounds its own claim.** "2 of 430 products are stocked by more than one retailer" is
+> the sentence that stops TonyMoly's technicality being invisible -- the title says "compared across
+> 2 UK retailers" and is true; the page says how far that goes.
+>
+> **State B's forward promise is kept deliberately.** It is a true statement about a mechanism that
+> already works, and it turns a page with nothing to compare into a page worth returning to.
+
+**The stat line is left alone.** Under this wording `40 products · 1 retailer` corroborates the
+sentence above it instead of contradicting it, which is the whole repair. Both counts are now
+pluralised.
+
+---
+
+### 361. Six aliases fold to a smaller sibling, so it is a class
+
+**Raised:** 26 August 2026 · **Item 359 asked whether `mac` was an instance or a class. It is a class, and small enough to name in full.**
+
+Of **197** alias rows: **190 resolve to a live target**, 7 resolve to nothing, and **6 fold to a
+target smaller than a sibling slug for the same brand.**
+
+| alias | target slug | target products | larger sibling | sibling products |
+|---|---|---:|---|---:|
+| `mac` | `m-a-c` | **9** | **`mac-cosmetics`** | **1,243** |
+| `âme pure uk` / `ame pure` / `âme pure` | `me-pure` | 16 | `me-pure-uk` | 25 |
+| `biore` / `bioré` | `bior` | 2 | `biore` | 8 |
+
+**Three brands, six rows.** And two of the three share a cause that is not about aliases at all:
+
+> **`brandSlug` TREATS EVERY ACCENTED LETTER AS A SEPARATOR RATHER THAN TRANSLITERATING IT.** Its
+> character class is `[^a-z0-9]+` -> `-`, so "bioré" becomes `bior` (the é is consumed and trimmed)
+> and "âme pure" becomes `me-pure` -- **the Â is consumed and the word loses its first letter.**
+> Each mangled form then becomes a slug, a page, and finally an alias target, because the alias was
+> written to point at the brand string as spelled. **The alias table is downstream of this; it is
+> not the cause.**
+>
+> **I first recorded this as `normalised_brand` stripping accents. That was wrong** and checking it
+> took one call: `normalised_brand` is `brand.toLowerCase().trim()` in all four importers and
+> preserves every character. The loss is entirely in slug derivation.
+>
+> **The `biore` row is the sharpest of the six: it redirects AWAY from a working 8-product page.**
+> `/brands/biore` resolves on its own. The alias sends it to `/brands/bior` and two products, so
+> **the alias makes the site worse than no alias would** -- the one outcome item 271's redirects
+> were added to prevent.
+
+##### AND THE SIX ALIASES ARE THE SMALL END OF IT
+
+Slugging accents away is not confined to the alias table. **44 distinct brands and 3,452 products**
+carry a non-ASCII character, and their hub URLs are the only ones the site serves:
+
+| brand | products | URL served today | if transliterated |
+|---|---:|---|---|
+| L'Oréal Paris | **1,110** | **`/brands/lor-al-paris`** | `/brands/loreal-paris` |
+| Lancôme | **933** | **`/brands/lanc-me`** | `/brands/lancome` |
+| Kérastase | **520** | **`/brands/k-rastase`** | `/brands/kerastase` |
+| L'Oréal Professionnel | 401 | `/brands/lor-al-professionnel` | `/brands/loreal-professionnel` |
+| Clé de Peau Beauté | 71 | `/brands/cl-de-peau-beaut` | `/brands/cle-de-peau-beaute` |
+| Avène | 47 | `/brands/av-ne` | `/brands/avene` |
+
+> **`/brands/lanc-me` IS LANCÔME, WITH 933 PRODUCTS.** Nobody types `lanc-me`. These are the
+> canonical URLs for some of the largest brands in the catalogue, and they are unsearchable strings.
+>
+> **Item 271 already met this and folded it without naming it.** Its own comment lists `lor-al` and
+> `lor-al-paris-dermo-expertise` among the L'Oréal aliases -- **those rows exist because of this
+> bug**, and were written as if they were supplier naming noise.
+>
+> **Same root as item 355**, twelve hours earlier: an ASCII-only character class meeting non-ASCII
+> supplier data. There it doubled a brand in a title; here it deletes a letter from a URL.
+
+##### WHAT FIXING IT WOULD TOUCH, MEASURED BEFORE PROPOSING
+
+**It is a URL change, not a catalogue change** -- which corrects the framing this was raised under.
+`normalised_brand`, `match_key` and product rows are all untouched; `brandSlug` appears nowhere in
+`match-key.ts` or any import write path.
+
+| touched | detail |
+|---|---|
+| **three implementations** | `lib/brand-slug.ts`, plus `brandSlugify` in `import-awin-feed` and in `recategorise-products`, both carrying comments saying they MUST mirror it. **Item 345's shape: three copies held together by comments.** |
+| **44 brand hub URLs** | every currently-indexed accented URL needs a 301, which is what `brand_aliases` is for |
+| `brand_aliases` | 26 rows contain non-ASCII; some become redundant, some need retargeting |
+| sitemap, internal links, search | derive from `brandSlug` at render time, so they follow automatically |
+| GA4 `brand_slug` | historic rows keep the old value, so any brand-level series spans two spellings |
+
+**Not proposed, and deliberately not applied.** Same treatment as `canonical_size` at item 282: the
+diff is reported and the change is a decision, not a consequence of noticing. The three-copy problem
+should be settled first, because fixing one and not the others is how the importers and the site
+would start disagreeing about what a brand's URL is.
+
+**The 7 dead targets** are `superdrug` (the departed retailer, expected), `johnsons` x2,
+`pastel cosmetics` x2 and `makeup academy` x2 -- brands with no products left. Those 301 into a
+404, which is item 271's own failure mode surviving in seven rows.
+
+> **SAME TREATMENT AS THE 30 ALIAS 404s, AND FOR THE SAME REASON.** That fix asked **"does this
+> target exist"**; this one asks **"is this target the right one of several"**. Both are checks the
+> alias table cannot make about itself, and both are cheap to run and impossible to notice by
+> reading the table. **A row that satisfies the first check and fails the second looks perfectly
+> healthy** -- `mac -> M.A.C` is a valid alias pointing at a page that serves 200.
+
+**Not fixed here.** The repair differs per row -- retarget for `mac`, fix normalisation for the
+accented pair, delete for the dead seven -- and normalisation is upstream of `match_key`.
+
+---
+
+### 362. The fourth near-neighbour resolution in one session
+
+**Raised:** 26 August 2026 · **Recorded because the count is the finding. Four times in one day I reimplemented a resolution rule the page owns, and got a different answer each time.**
+
+| # | what I assumed | what the code does | consequence |
+|---|---|---|---|
+| 1 | one brand string per slug (`limit 1`) | `findBrandBySlug` folds **all** matching rows | TonyMoly reported at **2 products**; the page renders **430** |
+| 2 | slug derives from `products.brand` | it derives from **`normalised_brand`** | the whole 198-hub classification keyed on the wrong column |
+| 3 | `brand_aliases.canonical` is a slug | it is a **brand string**, slugified at read time | "190 of 197 aliases fold to nothing", the exact inverse of the truth |
+| 4 | `/brands/mac` resolves to nothing | it **308s to a live 9-product page** | "a hub with zero products", when the defect was a split brand |
+
+**Every one of them produced a confident, plausible, internally consistent number.** None errored.
+Two of them -- 1 and 4 -- were caught only because the live page was open in the next breath. **3
+was caught because its answer was absurd** (190 broken redirects would have been visible to anyone),
+which is luck, not method. **2 was caught by reading the resolver** after 3 forced me to.
+
+> **A RESOLUTION RULE REIMPLEMENTED IN A QUERY IS A NEAR-NEIGHBOUR OF THE ONE THE PAGE USES, AND
+> THE PAGE IS THE ONE THAT DECIDES.** Item 313 recorded this for a matching rule and called the
+> result "a confident wrong number". Four instances in a day says it is not an occasional slip: it
+> is what happens **by default** whenever the authority for a mapping lives in application code and
+> the analysis lives in SQL.
+>
+> **The corrected classification changed the numbers and not the conclusion** -- A1 moved from 32
+> hubs to 31, CTR from 0.11% to 0.12%, and the inversion held at every band. **That is the
+> uncomfortable part.** Three of the four errors did not change an answer I acted on, so nothing
+> would have told me they were there. The one that did -- TonyMoly -- would have reframed the whole
+> phase.
+
+**What follows from it is not "be careful".** It is: when a page owns a mapping, **read the page's
+output for at least one row before trusting a query that reproduces the mapping.** One `curl` would
+have caught 1, 3 and 4.
+
 ---
 
 ### 358. A query the site ranks for lands two screens above its own answer
@@ -29514,3 +29671,70 @@ order leads with its smallest category, because routine order knows nothing abou
 > Routine order is the right default for a *category* page, where the visitor is browsing a stage
 > of a routine. It is the wrong default for a *brand* page reached by a brand-plus-type query,
 > where the type is already known and is the only thing the visitor came to narrow by.
+
+
+---
+
+### 359. One brand, two hubs, and Google indexed the smaller one
+
+**Raised:** 26 August 2026 · **I reported this as "201 impressions on a hub with zero products". That diagnosis was wrong and the truth is worse.**
+
+`/brands/mac` earns **201 impressions** and my classification returned "unresolved", which I read as
+a slug resolving to nothing. Following it instead of trusting it:
+
+```
+/brands/mac            308  ->  /brands/m-a-c        200
+```
+
+| URL | title | products |
+|---|---|---:|
+| **/brands/m-a-c** (where `mac` lands) | Where to buy MAC Cosmetics in the UK | **9** |
+| **/brands/mac-cosmetics** | MAC Cosmetics prices compared across 6 UK retailers | **1,243**, 6 stockists |
+
+**Two hubs for one brand, both titled "MAC Cosmetics", and the indexed one is the 9-product
+fragment.**
+
+The cause is the fragmentation item 356 recorded on TonyMoly: the brand string **"MAC Cosmetics"
+carries two `normalised_brand` values** -- `mac cosmetics` with 1,243 products and `m.a.c` with 9.
+`findBrandBySlug` resolves one brand per slug, and `brand_aliases` folds `mac` to **`m-a-c`**, the
+fragment's slug rather than the real one.
+
+> **THE ALIAS REDIRECT IS DOING ITS JOB AND POINTING AT THE WRONG PAGE.** Item 271 added those
+> redirects so a renamed brand's URL would reach the canonical hub instead of 404ing, and the
+> mechanism works exactly as designed. **What it cannot know is that the target it was given is a
+> 9-product remnant of the brand it names**, sitting beside a 1,243-product page with the same title.
+>
+> **A fold is only as good as the target it folds to**, and nothing checks that the canonical is the
+> larger of two candidates -- or that two candidates exist at all.
+
+**And the diagnosis mattered.** "A hub with zero products" would have been fixed by deleting a page.
+The actual defect is 201 impressions arriving at 9 products when 1,243 were available on a sibling
+URL, which is a different repair entirely. **Second time in two days that following the URL rather
+than trusting the query changed the answer** -- the first was TonyMoly at 2 products against a page
+rendering 430.
+
+**Not fixed here.** The repair is either an alias retarget or a `normalised_brand` merge, and which
+is right depends on whether `m.a.c`'s 9 products duplicate rows already in the 1,243 or are
+genuinely distinct. That is a catalogue question, not a Phase 2 one.
+
+---
+
+### 360. A shoe retailer in the beauty catalogue
+
+**Raised:** 26 August 2026 · **One line, recorded because it is a known class rather than a novelty.**
+
+`/brands/pavers` serves **200** and earns **228 impressions at position 43.0**, on a catalogue of
+**one makeup product** under brand "Pavers" -- a UK footwear retailer whose name has folded into the
+beauty catalogue from a feed.
+
+> **THE CLASS THE ALLOWLIST WORK HAS MET BEFORE.** Item 326's food-and-drink exclusions turned on
+> the same question in a different costume: a feed supplies what its merchant sells, our category
+> allowlists decide what we carry, and **a brand name is not evidence that a product belongs.**
+> `kitchenaid` (4 products) and `catwalk-collection-handbags` (4) are in the same 198.
+>
+> Different from item 359: that one is a real brand split across two pages. This is a page for
+> something that was never a beauty brand, ranking on a name collision.
+
+**Recorded, not fixed.** The `product_exclusions` route exists and item 326 established the pattern.
+What is missing is the boundary -- the same work the food-and-drink decision needed -- and it should
+be decided once for the class rather than three times for three retailers.

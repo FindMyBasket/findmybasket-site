@@ -8,6 +8,7 @@ import {
   getBrandStats,
   getBrandProductTypes,
   getBrandProducts,
+  getBrandMetadataFacts,
 } from '../lib/brand-queries';
 import { buildBreadcrumbJsonLd } from '../lib/breadcrumb';
 import { categoryToSlug, categoryDisplay } from '../lib/queries';
@@ -50,10 +51,13 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
     notFound();
   }
 
-  const [stats, productTypes, productResult] = await Promise.all([
+  const [stats, productTypes, productResult, facts] = await Promise.all([
     getBrandStats(brand.normalised_brand),
     getBrandProductTypes(brand.normalised_brand),
     getBrandProducts(brand.normalised_brand, page, PAGE_SIZE, productType, category),
+    // Same facts the search-result title branches on. Fetched here so the PAGE can
+    // branch on them too -- see the intro copy below. Item 357.
+    getBrandMetadataFacts(brand.normalised_brand),
   ]);
 
   // A filter is either a fine-grained product_type or a coarse top_category.
@@ -110,6 +114,68 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
   }
   const breadcrumbJsonLd = buildBreadcrumbJsonLd(breadcrumbItems);
 
+  // ── WHAT THE PAGE SAYS IT HAS, RATHER THAN WHAT THE SEARCH RESULT PROMISED ──────────
+  //
+  // Until 26 Aug 2026 this was ONE unconditional sentence -- "Compare {Brand} prices
+  // across UK retailers" -- on every hub. The metadata had already been split into
+  // branches precisely because asserting an absent comparison was judged wrong, so a
+  // visitor clicking "Where to buy Habi in the UK" landed on "Compare Habi prices across
+  // UK retailers", directly above a stat line reading "40 products · 1 retailers".
+  // Measured: 107 of 198 impression-earning hubs have a single stockist and could not
+  // compare anything. ITEM 346's SHAPE -- the distinction drawn in one place and never
+  // carried to the other. Item 357.
+  //
+  // FOUR STATES ON THE PAGE AGAINST THREE IN THE METADATA, AND THAT IS CORRECT RATHER
+  // THAN A MISMATCH. The search result knows only that `stockists` is 0; the page also
+  // knows whether any PRODUCTS exist, because it has them in front of it. So it can tell
+  // "we carry the range, nothing is in stock today" (C) from "we have no pricing for this
+  // brand at all" (D), which are different facts and deserve different sentences. A
+  // surface that can see more should say more.
+  //
+  // AND THE TEMPLATES ARE NOT REUSED HERE ON PURPOSE. brandMetadataCopy writes for a
+  // ~200-character search result and has to spend its budget on the claim. The page has
+  // room to give the reason as well, which is what turns "no comparison" from an apology
+  // into information.
+  // CHIP CAP. Uncapped, a broad brand renders 27 chips in one wrap -- Tonymoly does --
+  // and the tail is types with one or two products each. The first TYPE_CHIP_CAP by count
+  // carry the demand; the rest stay reachable behind a <details>, because CAPPING MUST NOT
+  // REMOVE A ROUTE. Every chip is a URL we already publish and Google already crawls;
+  // dropping one would turn a live filter into an orphan, which is item 271's defect in
+  // reverse. Item 358.
+  const TYPE_CHIP_CAP = 12;
+  const visibleTypes = productTypes.slice(0, TYPE_CHIP_CAP);
+  const overflowTypes = productTypes.slice(TYPE_CHIP_CAP);
+
+  const soleRetailer = facts.sole_retailer;
+  const introCopy =
+    facts.comparable > 0 ? (
+      <>
+        Compare {brand.display_name} prices across {facts.stockists} UK retailer
+        {facts.stockists === 1 ? '' : 's'}, delivery included.{' '}
+        {facts.comparable.toLocaleString()} of {stats.total_products.toLocaleString()} products{' '}
+        {facts.comparable === 1 ? 'is' : 'are'} stocked by more than one retailer, so you can see
+        which works out cheapest delivered.
+      </>
+    ) : facts.stockists > 0 ? (
+      <>
+        {brand.display_name} is stocked by {soleRetailer ?? 'one retailer'} from the UK retailers we
+        compare. There&rsquo;s nothing to compare on price yet, so here&rsquo;s the range with{' '}
+        {soleRetailer ?? 'their'} delivery included in every total. We&rsquo;ll show a comparison as
+        soon as a second retailer lists it.
+      </>
+    ) : stats.total_products > 0 ? (
+      <>
+        We track {brand.display_name} across the UK retailers we compare. Nothing from the range is
+        in stock right now. The products below are the ones we watch, and prices return here with
+        delivery included when they do.
+      </>
+    ) : (
+      <>
+        We track {brand.display_name} across the UK retailers we compare. We don&rsquo;t have current
+        pricing for the range, so there&rsquo;s nothing to compare yet.
+      </>
+    );
+
   return (
     <SiteLayout>
       <script
@@ -131,12 +197,7 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
               Compare {brand.display_name} {filterLabel!.toLowerCase()} prices across UK retailers. {productResult.totalCount.toLocaleString()} {filterLabel!.toLowerCase()} products.
             </>
           ) : (
-            <>
-              Compare {brand.display_name} prices across UK retailers.
-              {stats.total_products > 0 && (
-                <> {stats.total_products.toLocaleString()} products{catSummary ? ` across ${catSummary.toLowerCase()}` : ''}.</>
-              )}
-            </>
+            introCopy
           )}
         </p>
         <div className="inline-flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-ink-light">
@@ -144,7 +205,7 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
             <strong className="text-ink font-semibold">
               {(hasFilter ? productResult.totalCount : stats.total_products).toLocaleString()}
             </strong>{' '}
-            products
+            product{(hasFilter ? productResult.totalCount : stats.total_products) === 1 ? '' : 's'}
           </span>
           {!hasFilter && (
             <>
@@ -153,7 +214,7 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
                 <strong className="text-ink font-semibold">
                   {stats.total_retailers}
                 </strong>{' '}
-                retailers
+                retailer{stats.total_retailers === 1 ? '' : 's'}
               </span>
             </>
           )}
@@ -180,28 +241,6 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
         )}
       </section>
 
-      {!hasFilter && stats.category_breakdown.length > 1 && (
-        <section className="max-w-site mx-auto px-6 py-12">
-          <h2 className="font-serif text-3xl text-ink mb-8">Browse by category</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {stats.category_breakdown.map(({ category: cat, count }) => (
-              <Link
-                key={cat}
-                href={buildUrl(slug, { category: cat })}
-                className="group bg-warm-white border border-border rounded-2xl p-6 hover:border-gold transition-colors"
-              >
-                <div className="font-serif text-2xl text-ink capitalize mb-1 group-hover:text-gold transition-colors">
-                  {categoryDisplay(cat)}
-                </div>
-                <div className="text-sm text-ink-light">
-                  {count.toLocaleString()} products
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
       {productTypes.length > 0 && (
         <section className="max-w-site mx-auto px-6 py-12">
           <div className="flex items-baseline justify-between mb-8 flex-wrap gap-4">
@@ -216,7 +255,7 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            {productTypes.map(pt => {
+            {visibleTypes.map(pt => {
               const isActive = pt.product_type === productType;
               return (
                 <Link
@@ -235,6 +274,47 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
                 </Link>
               );
             })}
+          </div>
+          {overflowTypes.length > 0 && (
+            <details className="mt-4">
+              <summary className="cursor-pointer text-sm text-ink-light hover:text-ink transition-colors">
+                {overflowTypes.length} more type{overflowTypes.length === 1 ? '' : 's'}
+              </summary>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {overflowTypes.map(pt => (
+                  <Link
+                    key={pt.product_type}
+                    href={buildUrl(slug, { type: pt.product_type })}
+                    className="rounded-full px-5 py-2.5 text-sm transition-colors border bg-warm-white text-ink border-border hover:border-gold hover:bg-cream"
+                  >
+                    {pt.product_type}
+                    <span className="ml-1.5 text-xs text-ink-light">{pt.count}</span>
+                  </Link>
+                ))}
+              </div>
+            </details>
+          )}
+        </section>
+      )}
+
+      {!hasFilter && stats.category_breakdown.length > 1 && (
+        <section className="max-w-site mx-auto px-6 py-12">
+          <h2 className="font-serif text-3xl text-ink mb-8">Browse by category</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {stats.category_breakdown.map(({ category: cat, count }) => (
+              <Link
+                key={cat}
+                href={buildUrl(slug, { category: cat })}
+                className="group bg-warm-white border border-border rounded-2xl p-6 hover:border-gold transition-colors"
+              >
+                <div className="font-serif text-2xl text-ink capitalize mb-1 group-hover:text-gold transition-colors">
+                  {categoryDisplay(cat)}
+                </div>
+                <div className="text-sm text-ink-light">
+                  {count.toLocaleString()} products
+                </div>
+              </Link>
+            ))}
           </div>
         </section>
       )}
