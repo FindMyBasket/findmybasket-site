@@ -29359,8 +29359,14 @@ by position, clicks over impressions:
 | 40+ | 0 / 993 = 0.00% | 1 / 1,040 = 0.10% | 4 / 3,334 = 0.12% | 0 / 165 |
 
 Median position is 26.0 for A1 and 23.6 for C. **At matched position bands the single-stockist hubs
-still convert three to seven times better.** The simplest confound is ruled out and the inversion is
-real.
+still convert three to seven times better.**
+
+> **THIS STRENGTHENS THE FINDING RATHER THAN MERELY PASSING A CHECK.** Before the banding, "position
+> is equal on average" left the obvious escape open: that the means coincided while the
+> distributions differed, and the inversion was a ranking artefact after all. **The escape is now
+> closed by measurement rather than closed by assumption.** The inversion is not an artefact of where
+> these pages rank; it holds inside every band with volume, and the largest -- 10 to 20, carrying
+> 7,899 impressions -- is where it is starkest: 0.00% against 0.76%.
 
 > **A PAGE THAT CANNOT DO THE THING EARNS MORE CLICKS THAN A PAGE THAT CAN, AT THE SAME RANK.**
 > Whatever is happening is upstream of the page: it is in the query, or in the result's competition,
@@ -29514,3 +29520,70 @@ order leads with its smallest category, because routine order knows nothing abou
 > Routine order is the right default for a *category* page, where the visitor is browsing a stage
 > of a routine. It is the wrong default for a *brand* page reached by a brand-plus-type query,
 > where the type is already known and is the only thing the visitor came to narrow by.
+
+
+---
+
+### 359. One brand, two hubs, and Google indexed the smaller one
+
+**Raised:** 26 August 2026 · **I reported this as "201 impressions on a hub with zero products". That diagnosis was wrong and the truth is worse.**
+
+`/brands/mac` earns **201 impressions** and my classification returned "unresolved", which I read as
+a slug resolving to nothing. Following it instead of trusting it:
+
+```
+/brands/mac            308  ->  /brands/m-a-c        200
+```
+
+| URL | title | products |
+|---|---|---:|
+| **/brands/m-a-c** (where `mac` lands) | Where to buy MAC Cosmetics in the UK | **9** |
+| **/brands/mac-cosmetics** | MAC Cosmetics prices compared across 6 UK retailers | **1,243**, 6 stockists |
+
+**Two hubs for one brand, both titled "MAC Cosmetics", and the indexed one is the 9-product
+fragment.**
+
+The cause is the fragmentation item 356 recorded on TonyMoly: the brand string **"MAC Cosmetics"
+carries two `normalised_brand` values** -- `mac cosmetics` with 1,243 products and `m.a.c` with 9.
+`findBrandBySlug` resolves one brand per slug, and `brand_aliases` folds `mac` to **`m-a-c`**, the
+fragment's slug rather than the real one.
+
+> **THE ALIAS REDIRECT IS DOING ITS JOB AND POINTING AT THE WRONG PAGE.** Item 271 added those
+> redirects so a renamed brand's URL would reach the canonical hub instead of 404ing, and the
+> mechanism works exactly as designed. **What it cannot know is that the target it was given is a
+> 9-product remnant of the brand it names**, sitting beside a 1,243-product page with the same title.
+>
+> **A fold is only as good as the target it folds to**, and nothing checks that the canonical is the
+> larger of two candidates -- or that two candidates exist at all.
+
+**And the diagnosis mattered.** "A hub with zero products" would have been fixed by deleting a page.
+The actual defect is 201 impressions arriving at 9 products when 1,243 were available on a sibling
+URL, which is a different repair entirely. **Second time in two days that following the URL rather
+than trusting the query changed the answer** -- the first was TonyMoly at 2 products against a page
+rendering 430.
+
+**Not fixed here.** The repair is either an alias retarget or a `normalised_brand` merge, and which
+is right depends on whether `m.a.c`'s 9 products duplicate rows already in the 1,243 or are
+genuinely distinct. That is a catalogue question, not a Phase 2 one.
+
+---
+
+### 360. A shoe retailer in the beauty catalogue
+
+**Raised:** 26 August 2026 · **One line, recorded because it is a known class rather than a novelty.**
+
+`/brands/pavers` serves **200** and earns **228 impressions at position 43.0**, on a catalogue of
+**one makeup product** under brand "Pavers" -- a UK footwear retailer whose name has folded into the
+beauty catalogue from a feed.
+
+> **THE CLASS THE ALLOWLIST WORK HAS MET BEFORE.** Item 326's food-and-drink exclusions turned on
+> the same question in a different costume: a feed supplies what its merchant sells, our category
+> allowlists decide what we carry, and **a brand name is not evidence that a product belongs.**
+> `kitchenaid` (4 products) and `catwalk-collection-handbags` (4) are in the same 198.
+>
+> Different from item 359: that one is a real brand split across two pages. This is a page for
+> something that was never a beauty brand, ranking on a name collision.
+
+**Recorded, not fixed.** The `product_exclusions` route exists and item 326 established the pattern.
+What is missing is the boundary -- the same work the food-and-drink decision needed -- and it should
+be decided once for the class rather than three times for three retailers.
