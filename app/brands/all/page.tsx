@@ -30,6 +30,22 @@ function bucketOf(name: string): string {
 export default async function AllBrandsPage() {
   const brands = await getBrandIndex();
 
+  // A SHORT INDEX LOOKS EXACTLY LIKE A COMPLETE ONE (item 420). The first build of this
+  // page rendered 934 brands and ended at "I" because the RPC hit PostgREST's row cap,
+  // and nothing reported it: an alphabetical list that stops early still reads as an
+  // alphabetical list. The same failure shape as the sitemap's, which is why
+  // lib/sitemap-brands.ts throws rather than emitting a brandless sitemap.
+  //
+  // The floor is deliberately far below today's 2,451 -- it is a truncation detector,
+  // not a count assertion, and a count assertion would be the frozen-catalogue-state
+  // mistake.
+  if (brands.length < 1500) {
+    throw new Error(
+      `Brand index looks truncated: ${brands.length} brands. Expected thousands. ` +
+        'Check fmb_brand_index() and the PostgREST row cap.',
+    );
+  }
+
   const buckets = new Map<string, typeof brands>();
   for (const b of brands) {
     const k = bucketOf(b.name);

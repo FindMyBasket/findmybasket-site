@@ -32785,3 +32785,43 @@ in `public/index.html`. `nav-parity.test.ts` failed on the first attempt with ex
 was written to produce -- *"a link in the React nav and not the static one is invisible"* -- naming the
 desktop and mobile blocks separately. **The guard from item 68 did its job on the first new nav entry
 since it was written.**
+
+---
+
+### 420. I quoted the comment about the row cap, then reproduced the defect it describes
+
+**Raised:** 26 August 2026 · **Caught by reading the rendered page, not by any error.**
+
+**The first build of `/brands/all` rendered 934 brands and nine letter sections, ending at "I".**
+Expected 2,451 and twenty-seven. **Nothing reported it.** HTTP 200, no error, no warning, typecheck
+clean, integrity checks green.
+
+> **A SHORT ALPHABETICAL LIST LOOKS EXACTLY LIKE A COMPLETE ONE.** An A-Z that stops at I still reads
+> as an A-Z -- the sections present are correct, the counts inside them are correct, the letters are
+> in order. **There is no internal evidence of absence**, which is the same reason item 393's food
+> review could not see the row miscategorised out of its scope.
+
+**Cause: `fmb_active_brand_names_with_counts` returned `table (...)` -- 2,624 rows -- and PostgREST
+caps a response at 1,000.**
+
+**AND THE CAP IS THE EXACT THING THE FUNCTION I WAS EXTENDING EXISTS TO AVOID.**
+`app/sitemap-pages.xml/route.ts` says so in the comment I quoted while writing the replacement:
+
+> *"fmb_active_brand_names() returns the distinct set as ONE ROW containing an array, which sidesteps
+> the row cap entirely rather than reducing the number of pages."*
+
+**I extended the function's DATA and changed its SHAPE, when the shape was the entire point of it.**
+"Extend rather than write a sixth function" was the right instruction and I followed it into the one
+mistake it could not prevent: I kept the name and the intent and dropped the mechanism.
+
+**Fixed:** `fmb_brand_index()` returns `jsonb` -- one row, 2,457 entries, 80 kB payload.
+
+**A TRUNCATION GUARD ON THE PAGE, NOT A COUNT ASSERTION.** It throws below 1,500 brands. **The floor
+sits far below today's 2,451 deliberately**: it detects truncation, and a tighter number would be the
+frozen-catalogue-state mistake, going stale the next time the classifier runs. Same reasoning as
+`lib/sitemap-brands.ts`, which throws rather than emitting a brandless sitemap, and for the same reason
+-- **a quiet failure here is discovered in search console weeks later.**
+
+> **The verification that caught it was reading the rendered page and counting the links.** The query
+> was right, the RPC was right, the types were right, and the page was two-thirds empty. **Every check
+> that could run without a browser passed.**

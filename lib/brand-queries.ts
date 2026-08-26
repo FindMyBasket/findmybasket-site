@@ -593,13 +593,20 @@ export interface BrandIndexEntry {
  * and a cutoff makes the index incomplete in a way a visitor cannot see.
  */
 export async function getBrandIndex(): Promise<BrandIndexEntry[]> {
-  const { data } = await supabase.rpc('fmb_active_brand_names_with_counts');
-  const rows = (data ?? []) as {
-    normalised_brand: string;
-    display: string | null;
-    n_products: number;
-    n_live: number;
-  }[];
+  // ONE ROW CONTAINING AN ARRAY, NOT 2,457 ROWS (item 420).
+  //
+  // The first version returned `table (...)` and was SILENTLY TRUNCATED to PostgREST's
+  // 1,000-row cap: the page rendered 934 brands and 9 letter sections instead of 2,451
+  // and 27, with no error anywhere. Nothing about a short index looks wrong -- an A-Z
+  // ending at I reads as an A-Z.
+  //
+  // fmb_active_brand_names() exists precisely to sidestep that cap, and its comment in
+  // the sitemap route says so. Extending its DATA while changing its SHAPE dropped the
+  // only property that mattered.
+  const { data } = await supabase.rpc('fmb_brand_index');
+  const rows = ((data ?? []) as [string, string | null, number][]).map(
+    ([normalised_brand, display, n_live]) => ({ normalised_brand, display, n_live }),
+  );
 
   // slug -> best display (the member contributing most live products) and the sum.
   const bySlug = new Map<string, { name: string; count: number; best: number; members: number }>();
