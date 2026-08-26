@@ -32344,3 +32344,39 @@ area" -- and the two blocks link to different KINDS of destination:
 
 **Recorded so the next person does not read item 409's conclusion as general.** The reasoning there was
 about indexed destinations, not about browse blocks.
+
+---
+
+### 412. Item 238's lesson, arriving a second time in the function next door
+
+**Raised:** 26 August 2026 · **Found by opting skincare in and timing the page rather than reading it.**
+
+**`/skincare` took 15.8 seconds. `/hair` took 1.2.** Measured against the preview deployment, cold:
+
+```
+/hair       HTTP 200  ttfb=1.174s
+/skincare   HTTP 200  ttfb=15.827s
+```
+
+**`getProductTypes` used `fetchAllRows`**, paging every matching row 1,000 at a time and counting in
+JavaScript. Hair's 11,025 rows is 12 sequential round trips. **Skincare's 45,124 is 46.**
+
+> **THE FIX WAS ALREADY WRITTEN DOWN, ONE FUNCTION AWAY.** `getFeaturedProducts` carries item 238's
+> write-up in its own comment: *"the test that decides eligibility has to see every candidate. Hence
+> the RPC, following the getCrossCategoryBrands pattern: heavy aggregation in SQL, light mapping
+> here."* **That reasoning was written about eligibility and applied to one caller.** The facet counter
+> has the identical shape -- scan everything, aggregate in JS -- and never came under it.
+
+**Item 238's own recorded lesson was that a rule scoped to one caller does not reach the next.** It
+said so about the `.order()` rule, which existed in this file and did not cover the function seventy
+lines below it. **The same file has now done it twice, and the second time the rule being missed was
+the one written about the first.**
+
+**Fixed** by `fmb_product_type_facets(p_category, p_subcategory)`: a `GROUP BY` returning each type
+with its count, one round trip. **The `JUNK_TYPES` list stays in TypeScript** -- it carries the
+reasoning for every entry (item 152) and splitting it across two languages is how the duplicate label
+maps in items 406 and 407 began.
+
+**Only visible because skincare was opted in.** Hair's 1.2s never looked wrong, and the page is
+ISR-cached at `revalidate = 3600`, so a cold render is the only render that shows it. **The defect was
+present at every scale and legible at one.**
