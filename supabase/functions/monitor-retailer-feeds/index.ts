@@ -50,6 +50,13 @@ interface RetailerStatus {
   row_count: number;
 }
 
+interface HeldImport {
+  retailer_id: number;
+  finding_key: string;
+  summary: string | null;
+  unblocks_when: string | null;
+}
+
 interface ImportFailure {
   retailer_id: number;
   retailer_name: string;
@@ -74,6 +81,23 @@ Deno.serve(async (req: Request) => {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   };
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  // DRY RUN. Added 26 Aug 2026 because there was no way to see this email except to
+  // receive it: the function computed and sent in one pass, so the only verification
+  // available was to wait for 09:00 and read the result. Rendering the artefact is the
+  // standard applied to send-routine-email; the same standard needs the same affordance.
+  // ?dry_run=1 returns the subject, the sections that would render, and the full HTML,
+  // and sends nothing.
+  const _url = new URL(req.url);
+  const dryRun = _url.searchParams.get("dry_run") === "1";
+  // DRY-RUN ONLY threshold override, so the email for a state that has not arrived yet can
+  // be rendered before it does. Guarded on dryRun so a real 09:00 run can never be given a
+  // different threshold by a query string. Without this the held section below could only
+  // be verified by waiting for the retailer to cross 36h -- which is the thing the dry run
+  // exists to avoid.
+  const staleHours = dryRun
+    ? Number(_url.searchParams.get("staleness_hours") ?? STALENESS_HOURS)
+    : STALENESS_HOURS;
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -120,6 +144,17 @@ Deno.serve(async (req: Request) => {
 
     const nameById = new Map<number, string>();
     for (const r of retailers) nameById.set(r.id, r.name);
+
+    // 1b. HELD IMPORTS. Retailers deliberately not importing, for a recorded reason.
+    //     Read from fmb_held_imports, which derives from standing_check_findings; there
+    //     is no hold flag on retailer_import_config and there should not be one, because
+    //     the reason already lives in the findings and carries more than a flag could.
+    //     Item 352.
+    const { data: heldRows } = await supabase
+      .from("fmb_held_imports")
+      .select("retailer_id, finding_key, summary, unblocks_when");
+    const heldById = new Map<number, HeldImport>();
+    for (const h of (heldRows ?? []) as HeldImport[]) heldById.set(h.retailer_id, h);
 
     // 1a. ORPHAN GATE PROVENANCE.
     //
@@ -302,9 +337,28 @@ Deno.serve(async (req: Request) => {
 
     // 4. Determine which are stale. Exclude retailers already listed as a failure
     //    (the failure section gives the root cause — no need to double-report).
-    const stale = statuses.filter(
-      (s) => (s.hours_stale === null || s.hours_stale > STALENESS_HOURS) && !failedIds.has(s.retailer_id),
+    const staleAll = statuses.filter(
+      (s) => (s.hours_stale === null || s.hours_stale > staleHours) && !failedIds.has(s.retailer_id),
     );
+
+    // 4a. HELD RETAILERS GET THEIR OWN SECTION. THEY ARE NOT SUPPRESSED.
+    //
+    // THE HEADING IS THE DEFECT THIS FIXES. The stale section reads "haven't refreshed in
+    // over 36 hours, WITH NO IMPORT ERROR RECORDED". That clause was written to describe a
+    // SILENT FAILURE -- an importer that died without recording anything -- and it is the
+    // most damning phrase available. Applied to a retailer that is deliberately not
+    // importing it says the identical words about the opposite situation. THE ABSENCE OF AN
+    // ERROR IS EVIDENCE OF A PROBLEM IN ONE READING AND EVIDENCE OF CORRECTNESS IN THE
+    // OTHER, AND THE SENTENCE CANNOT TELL THEM APART. That is why this needs a second
+    // section rather than a longer threshold: no threshold distinguishes the two.
+    //
+    // AND WHY NOT JUST DROP THEM FROM THE EMAIL. Because a held retailer that is ALSO
+    // GENUINELY BROKEN would then be invisible, and the hold would have bought SILENCE
+    // RATHER THAN ACCURACY. The held section carries the same staleness figure the stale
+    // section would have shown, so the number stays readable next to the reason for it.
+    // Item 353.
+    const stale = staleAll.filter((s) => !heldById.has(s.retailer_id));
+    const heldStale = staleAll.filter((s) => heldById.has(s.retailer_id));
 
     // deliveryUnknown is part of the send condition, NOT just part of the body. A
     // retailer with unrecorded terms is invisible to the feed checks above -- its feed
@@ -317,6 +371,15 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({
           status: "all_healthy",
           checked: statuses.length,
+          // Asserted, not omitted, for the same reason as the line below it: a held
+          // retailer is stale on purpose and does NOT make the run unhealthy, so it must
+          // not enter the send condition -- but its absence from the response would read
+          // as "nothing is held", which is a different fact from "nothing is wrong".
+          held: heldStale.map((s) => ({
+            retailer: s.retailer_name,
+            finding_key: heldById.get(s.retailer_id)?.finding_key ?? null,
+            hours_stale: s.hours_stale === null ? null : Math.round(s.hours_stale),
+          })),
           delivery_unknown: 0,
           // Asserted, not omitted: absent would mean nobody asked.
           standing_check_findings: 0,
@@ -377,7 +440,7 @@ Deno.serve(async (req: Request) => {
       </tr>`).join("");
 
     const healthyRows = statuses
-      .filter((s) => !stale.includes(s) && !failedIds.has(s.retailer_id))
+      .filter((s) => !stale.includes(s) && !heldStale.includes(s) && !failedIds.has(s.retailer_id))
       .map((s) => `
         <tr>
           <td style="padding: 8px 10px; font-size: 13px; color: #6e6a64;">
@@ -412,7 +475,7 @@ The following retailer import${failures.length === 1 ? "" : "s"} failed on the m
 ${stale.length} feed${stale.length === 1 ? "" : "s"} stale
 </h1>
 <p style="margin: 0 0 20px; font-size: 14px; color: #4a4845;">
-The following retailer feed${stale.length === 1 ? " hasn't" : "s haven't"} refreshed in over ${STALENESS_HOURS} hours, with no import error recorded.
+The following retailer feed${stale.length === 1 ? " hasn't" : "s haven't"} refreshed in over ${staleHours} hours, with no import error recorded.
 Check GitHub Actions and Supabase Edge Function logs.
 </p>
 <table cellspacing="0" cellpadding="0" border="0" width="100%" style="border-top: 1px solid #e5e0d8; margin-bottom: 24px;">
@@ -422,6 +485,39 @@ Check GitHub Actions and Supabase Edge Function logs.
 <th style="padding: 10px; text-align: right; font-size: 11px; text-transform: uppercase; color: #8a8680; letter-spacing: 0.1em;">Rows</th>
 </tr></thead>
 <tbody>${staleRows}</tbody>
+</table>` : "";
+
+    const heldSection = heldStale.length > 0 ? `
+<h1 style="margin: 0 0 8px; font-family: Georgia, serif; font-size: 22px; color: #6e6a64;">
+${heldStale.length} feed${heldStale.length === 1 ? "" : "s"} held, not importing
+</h1>
+<p style="margin: 0 0 20px; font-size: 14px; color: #4a4845;">
+Deliberately not importing, for a recorded reason. ${heldStale.length === 1 ? "This is not a failure" : "These are not failures"} and ${heldStale.length === 1 ? "it needs" : "they need"} no action.
+The staleness figure is shown anyway: a held retailer can still develop a separate problem, and hiding the number would buy silence rather than accuracy.
+</p>
+<table cellspacing="0" cellpadding="0" border="0" width="100%" style="border-top: 1px solid #e5e0d8; margin-bottom: 24px;">
+<thead><tr>
+<th style="padding: 10px; text-align: left; font-size: 11px; text-transform: uppercase; color: #8a8680; letter-spacing: 0.1em;">Held retailer</th>
+<th style="padding: 10px; text-align: right; font-size: 11px; text-transform: uppercase; color: #8a8680; letter-spacing: 0.1em;">Last update</th>
+<th style="padding: 10px; text-align: right; font-size: 11px; text-transform: uppercase; color: #8a8680; letter-spacing: 0.1em;">Rows</th>
+</tr></thead>
+<tbody>${heldStale.map((s) => {
+  const h = heldById.get(s.retailer_id);
+  return `
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e0d8; font-size: 14px;">
+          <strong>${escapeHtml(s.retailer_name)}</strong>
+          <div style="font-size: 12px; color: #8a8680; margin-top: 3px; font-family: ui-monospace, monospace;">${escapeHtml(h?.finding_key ?? "")}</div>
+          ${h?.unblocks_when ? `<div style="font-size: 12px; color: #4a4845; margin-top: 4px;">Unblocks when: ${escapeHtml(h.unblocks_when)}</div>` : ""}
+        </td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e0d8; font-size: 14px; text-align: right; color: #6e6a64; vertical-align: top;">
+          ${s.hours_stale === null ? "Never" : Math.round(s.hours_stale) + "h ago"}
+        </td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e0d8; font-size: 14px; text-align: right; vertical-align: top;">
+          ${s.row_count} rows
+        </td>
+      </tr>`;
+}).join("")}</tbody>
 </table>` : "";
 
     const deliveryRows = deliveryUnknown.map((d) => `
@@ -530,6 +626,7 @@ ${deliverySection}
 ${gateSection}
 ${failureSection}
 ${staleSection}
+${heldSection}
 ${healthyRows ? `
 <div style="font-size: 11px; text-transform: uppercase; color: #8a8680; letter-spacing: 0.1em; margin-bottom: 8px;">Healthy</div>
 <table cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #faf8f4; border-radius: 8px;">
@@ -538,11 +635,36 @@ ${healthyRows ? `
 ` : ""}
 </td></tr>
 <tr><td style="padding: 16px 28px; background: #faf8f4; border-top: 1px solid #f0ece4; font-size: 11px; color: #8a8680;">
-Automated monitor. Runs daily at 09:00 UTC. Staleness threshold: ${STALENESS_HOURS}h.
+Automated monitor. Runs daily at 09:00 UTC. Staleness threshold: ${staleHours}h.${dryRun ? " DRY RUN — not sent." : ""}
 </td></tr>
 </table>
 </td></tr></table>
 </body></html>`;
+
+    if (dryRun) {
+      return new Response(
+        JSON.stringify({
+          status: "dry_run",
+          sent: false,
+          staleness_hours: staleHours,
+          subject,
+          sections: {
+            failures: failures.map((f) => f.retailer_name),
+            stale: stale.map((s) => s.retailer_name),
+            held: heldStale.map((s) => ({
+              retailer: s.retailer_name,
+              finding_key: heldById.get(s.retailer_id)?.finding_key ?? null,
+              unblocks_when: heldById.get(s.retailer_id)?.unblocks_when ?? null,
+              hours_stale: s.hours_stale === null ? null : Math.round(s.hours_stale),
+            })),
+            delivery_unknown: deliveryUnknown.map((d) => d.name),
+            check_findings: checkFindings.length,
+          },
+          html,
+        }, null, 2),
+        { headers: { "Content-Type": "application/json" } },
+      );
+    }
 
     const resendRes = await fetch(RESEND_API, {
       method: "POST",
@@ -578,6 +700,7 @@ Automated monitor. Runs daily at 09:00 UTC. Staleness threshold: ${STALENESS_HOU
         problem_count: problemCount,
         import_failures: failures.map((f) => ({ retailer: f.retailer_name, error: f.last_import_error })),
         stale_retailers: stale.map((s) => s.retailer_name),
+        held_retailers: heldStale.map((s) => s.retailer_name),
         statuses,
       }, null, 2),
       { headers: { "Content-Type": "application/json" } },
