@@ -33465,3 +33465,43 @@ layout.
 **bath_body opted in** — 4 subcategories, so "Browse by area" keeps its indexed destinations under item
 411's rule; 20 real product types, 328 default rows, no nulls, so it gets a full bar and a complement
 chip.
+
+---
+
+### 433. Six of six, one table, measured in one pass
+
+**Raised:** 26 August 2026 · **Supersedes the mixed table in item 431.**
+
+All six taken in a single pass, same instrument, same session — a same-origin iframe at the exact
+viewport, `getBoundingClientRect` on the first `a[href^="/product/"]`.
+
+| Root | 390 x 844 | screens | 1440 x 900 | screens | chips | chip sum | stated |
+|---|---|---|---|---|---|---|---|
+| **supplements** | **827** | **0.98** | **850** | **0.94** | 0 | — | 2,448 |
+| fragrance | 1,001 | 1.19 | 918 | 1.02 | 7 | **11,676** | 11,676 |
+| hair | 1,001 | 1.19 | 918 | 1.02 | 6 | **11,025** | 11,025 |
+| skincare | 1,133 | 1.34 | 962 | 1.07 | 15 | **45,124** | 45,124 |
+| bath_body | 1,291 | 1.53 | 1,006 | 1.12 | 21 | **8,121** | 8,121 |
+| makeup | 1,335 | 1.58 | 1,006 | 1.12 | 22 | **21,405** | 21,405 |
+
+**Every chip sum equals its stated total.** Supplements has no chips because `product_type` is null on
+all 2,448 rows.
+
+**THE ORDERING IS BY CHIP COUNT, NOT BY CATALOGUE SIZE, AND THAT IS THE WHOLE STORY OF THE TABLE.**
+Skincare has **five and a half times** bath_body's products and sits **158px higher**; hair and
+fragrance are identical to the pixel at both viewports with 6 and 7 chips. **Above the grid, the page's
+cost is the filter bar wrapping, and nothing else varies.**
+
+> **Supplements is first on both viewports because it has nothing to filter by.** The category with the
+> least to offer has the shortest path to it, and it is the only root whose first product row clears
+> the fold — at 390x844 by 17 pixels and at 1440x900 by 50.
+
+**One number in this table is not from this pass:** skincare's *before* figure of 3,309px was measured
+on Tuesday with an unrecoverable viewport height (item 410). It is excluded here rather than carried
+forward — **the after column is internally consistent and the before column was never a single
+measurement.**
+
+**Still open, and not closed by this:** `totalPages` is overstated on all six, inherited deliberately at
+item 408 and owed to whoever fixes it for the subcategory pages at the same time; bath_body's grid has
+had no separate verification beyond this measurement; and the 42.9% correction has not been sent to
+strategy.
