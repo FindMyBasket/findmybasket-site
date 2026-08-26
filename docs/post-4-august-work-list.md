@@ -30066,3 +30066,55 @@ them, so it cannot be attributed to a single source and cannot be fixed by corre
 **Held, and deliberately not proposed.** Point 2 puts this behind the `match-key.ts` gate, and point
 3 means the dedupe outcome cannot be predicted from the current data -- it has to be computed against
 a re-keyed set. That is a measurement to commission, not a call to make today.
+
+
+---
+
+### 369. The readable URL exists and redirects to the unreadable one
+
+**Raised:** 26 August 2026 · **Found while preparing step 2, and it stops step 2 as specified.**
+
+```
+/brands/loreal-paris   308 ->  /brands/lor-al-paris
+/brands/lancome        308 ->  /brands/lanc-me
+```
+
+**The clean URLs already exist and actively redirect to the mangled ones.** `brand_aliases` holds
+`loreal paris -> L'Oréal Paris` (noted *"accent + apostrophe dropped"*), a correct row about supplier
+spelling -- and because the redirect target is slugified at read time, the alias sends the readable
+address to the unreadable one. **The table is pointing the right URL at the wrong page**, which is
+the inverse of what an alias is for.
+
+##### AND STEP 2 IS NOT SEPARABLE FROM STEP 3
+
+Step 2 was scoped as "the 25 that no sibling collides with", on the assumption that the 7 could be
+left alone. **They cannot**, and the reason is structural:
+
+> **`brandSlug` IS A PURE FUNCTION OF ONE BRAND STRING. IT CANNOT KNOW ABOUT SIBLINGS.** Change it
+> to transliterate and it transliterates all 32 -- including the 7 whose ASCII twin already occupies
+> the destination. `/brands/kerastase` (125 products, live 200) and `/brands/k-rastase` (520, live
+> 200) would both resolve to `kerastase`, and `findBrandBySlug` takes the last match in id order, so
+> one brand's products become unreachable at any URL.
+>
+> **There is no version of "fix the 25 and hold the 7" that changes which URL is canonical**, because
+> the thing that decides the URL is a string function with no view of the catalogue.
+
+**The options, and none is free:**
+
+| | what it does | cost |
+|---|---|---|
+| **A. Transliterate everything** | 25 fixed, 7 collide | **makes the held merge happen by accident** -- the exact outcome item 368 was written to prevent |
+| **B. Resolve-only** -- accept both spellings in `findBrandBySlug`, exact match preferred | clean URLs start working; the 7 keep exact-match behaviour and are untouched | **the mangled URL stays canonical.** Two live URLs per brand, self-canonicalising, which adds a duplicate surface to a site with 54,056 pages already crawled-and-declined |
+| **C. Collision-aware emission** -- a slug generator that sees the whole brand set and declines to transliterate where it would collide | correct for all 32 | not a pure function; needs the brand list wherever a link is built, and **encodes the 7's unresolved state in the URL scheme** |
+| **D. Do step 3 first** | dissolves the problem | 1,502 products behind the match-key gate |
+
+> **THE SCOPING WAS WRONG AND THE MEASUREMENT THAT PRODUCED IT WAS RIGHT.** "25 clean, 7 colliding"
+> is accurate as a description of the data and false as a work breakdown. **Separability was assumed
+> from the shape of the numbers**, not derived from how the slug is computed -- and the numbers
+> genuinely do split 25/7, which is what made the assumption invisible.
+>
+> **Second time in this phase that a correct measurement supported an incorrect plan.** Item 356 was
+> the first: the group split was real and the causal reading drawn from it was not.
+
+**Not applied. Reported as a fork**, because every option above is a decision about the seven, and
+the seven were explicitly held.
