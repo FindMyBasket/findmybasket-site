@@ -32937,3 +32937,53 @@ all out of stock:
 removed, at least one price at an active retailer, stock irrelevant -- which takes the index to ~2,617
 rows and changes the page's copy line from *"currently in stock"* to a plain product count. **It is a
 change to a page shipped an hour ago and it wants a decision rather than a quiet edit.**
+
+---
+
+### 423. A threshold rejected and then shipped, because the second time it was a predicate
+
+**Raised:** 26 August 2026 · **Applied. 2,451 rows to 2,617.**
+
+**The same decision reached opposite answers an hour apart.**
+
+**First framing -- completeness.** *Should the index list every brand, or only those with five or more
+products?* Answered: **every brand.** A brand with two products is the right answer for someone
+searching it, and a cutoff makes the index incomplete in a way a visitor cannot see.
+
+**Second framing -- a predicate.** *Which products should the count count?* Answered: **the ones in
+stock.** Written as `n_live`, described in the page copy as *"products currently in stock"*, and never
+recognised as the first question again.
+
+> **ONLY ONE OF THE TWO FRAMINGS LOOKED LIKE A THRESHOLD.** "Five or more products" announces itself as
+> a cutoff. "Count the in-stock ones" announces itself as a definition. **They are the same act** --
+> both remove brands from the index -- and nothing connected them, because the argument was about
+> completeness and the implementation was about a predicate.
+
+**THE CONCRETE CASE AND THE POPULATION.**
+
+- **`moyou london`: 56 products on a live, reachable hub, and no row in an index claiming to be
+  complete.**
+- **167 brands** whose hubs render products had no index row.
+
+**AND `e.l.f.` IS ITEM 271'S OWN RULE, BROKEN IN THE FILE IT WAS WRITTEN IN.**
+
+The index said `/brands/elf` had **1** product. The hub renders **7** -- one in stock, six out of stock
+with a price row. `getBrandProducts` deliberately does not filter by stock and says so:
+*"a fan wants the full range, so we DON'T filter by in_stock."*
+
+> *"A chip must count exactly what its destination will show."* -- item 271, written after
+> `/brands/clean-clear?type=Cleanser` 404'd because a chip counted rows the grid excluded. **Same file,
+> same rule, new caller.**
+
+**That is item 238's shape, and the third time it has produced a defect in a file that documents it.**
+238: a rule scoped to the paging helper, missed by a function that did not page. 412: a rule scoped to
+one caller, missed by the function seventy lines away. **Here: a rule scoped to chips, missed by an
+index** -- and an index is a chip, at the scale of the whole catalogue.
+
+**Fixed:** `fmb_brand_index()` now uses `getBrandProducts`' predicate exactly -- image present, not
+`cleanup_remove`, at least one price at an **active** retailer, **stock irrelevant**. Copy changed from
+*"products currently in stock at one of our retailers"* to *"the number of products on each brand
+page"*, which is a claim about the destination rather than about the catalogue.
+
+**Verified:** `elf` 1 to **7**, `moyou london` absent to **56**, entries 2,457 to **2,624** before slug
+grouping.

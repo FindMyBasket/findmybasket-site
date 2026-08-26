@@ -589,8 +589,13 @@ export interface BrandIndexEntry {
  * rather than in SQL because brandSlug() is the same function that builds the links, and
  * a second implementation in SQL is the duplication items 406, 407 and 417 are about.
  *
- * NO THRESHOLD. A brand with two products is the right answer for someone searching it,
- * and a cutoff makes the index incomplete in a way a visitor cannot see.
+ * NO THRESHOLD, AND THE COUNT IS THE DESTINATION'S OWN (item 423).
+ *
+ * The first version counted IN-STOCK products, which was a threshold expressed as what
+ * to count rather than as what to exclude -- and it removed 167 brands whose hubs render
+ * products. The count now uses getBrandProducts' predicate exactly: image present, not
+ * removed, at least one price at an active retailer, stock irrelevant. Item 271's rule,
+ * from this same file: a chip must count exactly what its destination will show.
  */
 export async function getBrandIndex(): Promise<BrandIndexEntry[]> {
   // ONE ROW CONTAINING AN ARRAY, NOT 2,457 ROWS (item 420).
@@ -605,7 +610,7 @@ export async function getBrandIndex(): Promise<BrandIndexEntry[]> {
   // only property that mattered.
   const { data } = await supabase.rpc('fmb_brand_index');
   const rows = ((data ?? []) as [string, string | null, number][]).map(
-    ([normalised_brand, display, n_live]) => ({ normalised_brand, display, n_live }),
+    ([normalised_brand, display, n]) => ({ normalised_brand, display, n_live: n }),
   );
 
   // slug -> best display (the member contributing most live products) and the sum.
