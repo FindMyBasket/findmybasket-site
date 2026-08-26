@@ -28,6 +28,21 @@ import { requireServiceRole } from "../_shared/require-service-role.ts";
 
 // Brand -> URL slug. MUST mirror brandSlug() in lib/queries.ts, brandSlugify()
 // in import-awin-feed and fmb_brand_slug() in SQL.
+//
+// ── AGREEMENT ON THE FUNCTION IS NOT AGREEMENT ON THE CALL ──────────────────────────
+//
+// All four copies of this algorithm agree character for character. Until 26 Aug 2026 this
+// one was still wrong, because it was CALLED ON THE WRONG COLUMN: `p.brand`, where the
+// resolver (findBrandBySlug) and every other copy use `normalised_brand`.
+//
+// Measured before the fix: 413 products across 18 brands have
+// fmb_brand_slug(brand) <> fmb_brand_slug(normalised_brand). For those this purged a path
+// that is not their page -- M.A.C among them, whose `brand` is "MAC Cosmetics" so it
+// revalidated /brands/mac-cosmetics while those nine products live at /brands/m-a-c.
+//
+// A MIRROR CHECK COMPARING IMPLEMENTATIONS WOULD HAVE PASSED THIS, and that is the part
+// worth carrying: four identical functions, one fed a different argument, and the only
+// symptom a cache that does not clear. Work-list item 366.
 function brandSlugify(brand: string): string {
   return String(brand || "")
     .toLowerCase()
@@ -45,12 +60,15 @@ function sameTags(a: string[] | null | undefined, b: string[]): boolean {
 }
 
 const DELETE_CAP = 500; // refuse to mass-delete more than this in one invocation
-const SELECT_COLS = "id,name,brand,top_category,product_type,subcategory,tags";
+// normalised_brand added 26 Aug 2026: the revalidation slug must be derived from it, not
+// from `brand`. See the note on brandSlugify above. Item 366.
+const SELECT_COLS = "id,name,brand,normalised_brand,top_category,product_type,subcategory,tags";
 
 interface ProductRow {
   id: number;
   name: string | null;
   brand: string | null;
+  normalised_brand: string | null;
   top_category: string | null;
   product_type: string | null;
   subcategory: string | null;
@@ -165,7 +183,7 @@ Deno.serve(async (req: Request) => {
           }
           if (deleteExcluded) {
             toDelete.push(p.id);
-            const s = brandSlugify(p.brand ?? "");
+            const s = brandSlugify(p.normalised_brand ?? p.brand ?? "");
             if (s) affectedBrands.add(s);
           }
           continue; // excluded products are never re-tagged
@@ -223,7 +241,7 @@ Deno.serve(async (req: Request) => {
           refinementSubChanges[subK] = (refinementSubChanges[subK] ?? 0) + 1;
           if (sampleRefinements.length < 15) sampleRefinements.push(rec);
         }
-        const s = brandSlugify(p.brand ?? "");
+        const s = brandSlugify(p.normalised_brand ?? p.brand ?? "");
         if (s) affectedBrands.add(s);
 
         updates.push({ id: p.id, top_category: freshTop, product_type: freshType, subcategory: freshSub, tags: freshTags });

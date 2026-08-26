@@ -29877,3 +29877,106 @@ and nothing on the page said otherwise.
 >
 > Under item 356's threshold Dove is **A2, a technicality**, not A1. It sat inside the phase's
 > reasoning as a comparison-capable brand for two days.
+
+---
+
+### 366. Agreement on the function is not agreement on the call
+
+**Raised:** 26 August 2026 · **Copy 3 fixed on its own, before the change it was found while scoping. A defect found while scoping another one should not ship inside it.**
+
+`recategorise-products` derived its revalidation slug from **`p.brand`**. The resolver and every
+other copy of the rule derive it from **`normalised_brand`**.
+
+**413 products across 18 brands** have `fmb_brand_slug(brand) <> fmb_brand_slug(normalised_brand)`.
+For those, recategorisation purged a path that is not the page. M.A.C: `brand` is "MAC Cosmetics"
+so it revalidated `/brands/mac-cosmetics`, while those nine products live at `/brands/m-a-c`.
+
+**Fixed:** `normalised_brand` added to `SELECT_COLS` and to `ProductRow` (it was not being fetched),
+both call sites changed to `brandSlugify(p.normalised_brand ?? p.brand ?? "")`.
+
+> **AGREEMENT ON THE FUNCTION IS NOT AGREEMENT ON THE CALL, AND THE COMMENT SAYING "MUST MIRROR" IS
+> WHERE THIS BELONGS** -- recorded there, not only here, because that comment is what the next
+> person will trust.
+>
+> **A mirror check comparing implementations would have passed this.** Four functions agreeing
+> character for character, one of them fed a different argument. That is worth knowing *before*
+> writing such a check, because the check would have been evidence of a correctness this code did
+> not have.
+>
+> **And the symptom was a cache that does not clear** -- no error, no wrong page, just a brand hub
+> occasionally an hour stale. Nothing would ever have reported it.
+
+**Wrong independently of accents**, which is why it goes first and alone. The transliteration change
+does not depend on it and it does not depend on the transliteration change.
+
+---
+
+### 367. The alias table was doing its job, and item 364 was wrong about it
+
+**Raised:** 26 August 2026 · **Correcting item 364 the day it was written. Checking took two queries and it inverts the finding.**
+
+Item 364 claimed `lor-al` and `lor-al-paris-dermo-expertise` were alias rows added to work around
+the slug defect, and that the workaround "removed its own evidence".
+
+**Neither string exists in `brand_aliases`.** `select count(*) ... where alias ilike '%lor-al%'`
+returns **0**. They appear in a **code comment** in `BrandPage.tsx`, which lists the *slugs* that
+resolve to one brand. **I read a comment enumerating slugs and asserted they were table rows.**
+
+**What the table actually holds** is brand strings, and it is in good order:
+
+| | |
+|---|---|
+| rows | 197 |
+| **with notes** | **87 (44%), 44 distinct values** |
+| accent handling named in notes | `accent dropped`, `accent variant`, `no-accent variant`, `accent + apostrophe dropped`, `30Jun26 partnership split audit (accent)` |
+
+`l'oreal paris -> L'Oréal Paris` noted *"accent dropped"* is a supplier spelling variant, correctly
+recorded. **So the practical instruction in item 364 -- "the notes column exists and these rows do
+not use it" -- was also wrong.** The convention exists, it is used on nearly half the table, and it
+already names this exact class.
+
+##### THE REAL DEFECT IS DIRECTIONAL, AND IT IS SMALLER AND SHARPER
+
+The table is **inconsistent about which spelling is canonical**:
+
+| direction | rows | resulting slug |
+|---|---|---|
+| accent **kept** as canonical | `Bioré`, `Lancôme`, `L'Oréal Paris`, `L'Oréal Professionnel`, `âme pure` | **mangled** -- `bior`, `lanc-me`, `lor-al-paris` |
+| accent **dropped** in canonical | `Avene`, `Chloe`, `Estee Lauder`, `Khloe Kardashian` | **clean** -- `avene`, `chloe`, `estee-lauder` |
+
+**The 30 June "partnership split audit" chose the unaccented canonical and got clean URLs. The other
+rows chose the accented one and got broken URLs.** Same table, same purpose, opposite convention,
+and nothing recorded that the choice had a consequence.
+
+> **THE CORRECTION IS MORE USEFUL THAN THE ORIGINAL FINDING.** "A workaround camouflaged by the
+> ordinary case" was a satisfying shape and it was fiction. What is actually there is an
+> **undocumented convention applied in both directions**, where one direction silently produces an
+> unreachable URL -- and the people applying it had no way to know, because *nothing on the page or
+> in the table shows the slug the choice produces.*
+>
+> **Fifth near-neighbour reading in one session** (item 362 counted four): a code comment describing
+> derived values, read as a description of stored ones.
+
+##### AND THE CHEAP FIX DOES NOT EXIST FOR EVERYONE
+
+Flipping `canonical` to the unaccented spelling would fix the URL with no code change -- **but only
+where the unaccented brand string does not already exist as a separate brand.**
+
+**32 accented brands carry letter accents. 7 are ALREADY SPLIT in the catalogue**, holding both
+spellings as different `normalised_brand` values with products on each side: **983 products on the
+accented side, 519 on the ASCII side.**
+
+| brand | accented | ASCII sibling |
+|---|---:|---:|
+| Kérastase | 520 | **125** |
+| L'Oréal Professionnel | 401 | **83** |
+| Avène | 47 | **159** |
+
+`/brands/av-ne` (47 products) and `/brands/avene` (159) are both live, both Avène.
+
+> **TRANSLITERATING THE SLUG WOULD COLLIDE THESE TWO ONTO ONE URL**, and `findBrandBySlug` would
+> resolve it to whichever normalised_brand it happened to match first -- **a catalogue merge
+> performed by accident, as a side effect of a URL change.**
+>
+> So the 44 split into **25 that a slug fix alone repairs** and **7 that need a brand merge decided
+> first**. That is the difference between a rename and a merge, and it is not visible from the URL.
