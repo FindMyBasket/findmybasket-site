@@ -29817,9 +29817,26 @@ For those, recategorisation purges a path that is not the page. M.A.C is one: `b
 
 ---
 
-### 364. An alias added to work around a defect nobody had identified
+### 364. ~~An alias added to work around a defect nobody had identified~~ — WITHDRAWN
 
-**Raised:** 26 August 2026 · **The finding underneath item 361, and the reason the class stayed invisible for months.**
+**Raised:** 26 August 2026 · **REPLACED BY ITEM 367 THE SAME DAY. Not qualified, not amended: the premise is false and the finding built on it does not stand.**
+
+> **`lor-al` IS NOT AN ALIAS ROW.** `select count(*) from brand_aliases where alias ilike '%lor-al%'`
+> returns **0**. It is a slug, named in a `BrandPage.tsx` comment that enumerates the slugs which
+> resolve to one brand. **I read a comment listing derived values and built a general form on them
+> being stored ones.**
+>
+> The general form -- *"a workaround entered in a table whose ordinary contents look identical to it
+> removes its own evidence"* -- is a satisfying shape and there is no instance of it here. The
+> practical instruction attached to it was wrong too: the `notes` column is used on **87 of 197
+> rows** with 44 distinct values, and it already names the accent class.
+>
+> **Item 367 is the replacement, and it is a better finding because it does not need a general form
+> to be true.** Same table, opposite conventions, one of which silently produces an unreachable URL.
+
+The text below is kept unedited, struck through, so the correction is legible rather than tidy.
+
+~~The original claim followed.~~
 
 Item 271 added `brand_aliases` rows so a renamed brand's URL would reach its canonical hub instead
 of 404ing. Among the L'Oréal rows its own comment lists: **`lor-al`** and
@@ -29980,3 +29997,72 @@ accented side, 519 on the ASCII side.**
 >
 > So the 44 split into **25 that a slug fix alone repairs** and **7 that need a brand merge decided
 > first**. That is the difference between a rename and a merge, and it is not visible from the URL.
+
+
+---
+
+### 368. What merging the seven would involve, measured and not done
+
+**Raised:** 26 August 2026 · **Step 3 held. 1,502 products, and it is a catalogue merge dressed as a URL change.**
+
+Seven accented brands have an ASCII sibling that already exists as a separate brand, so
+transliterating their slug would land two `normalised_brand` values on one URL and
+`findBrandBySlug` would resolve it to whichever it matched first. **That is a merge performed as a
+side effect.**
+
+| accented | products | ASCII sibling | products |
+|---|---:|---|---:|
+| kérastase | 520 | kerastase | 125 |
+| l'oréal professionnel | 401 | l'oreal professionnel | 83 |
+| avène | 47 | avene | **159** |
+| chloé | 11 | chloe | **88** |
+| bioré | 2 | biore | 8 |
+| l'oréal men expert | 1 | l'oreal men expert | **52** |
+| khloé kardashian | 1 | khloe kardashian | 4 |
+| **total** | **983** | | **519** |
+
+**On three of the seven the ASCII side is the larger one**, so "the accented spelling is the brand's
+and the ASCII is noise" does not decide which page survives on product count.
+
+##### TWO IDENTIFIER TESTS RUN, BOTH VACUOUS, AND SAYING SO IS THE POINT
+
+| test | result | worth |
+|---|---|---|
+| shared `match_key` between sides | **0 across all seven** | **NONE. The brand is IN the match key** -- `buildMatchKey` re-prepends it -- so two spellings can never share one. The test could only ever return zero. |
+| shared `ean` between sides | **0 across all seven** | **NONE. `products.ean` is empty for all 1,502 rows** on both sides. Zero overlap of nothing. |
+| identical normalised product name | **0 across all seven** | **Real.** Names are always populated, and no product on one side shares a name with any on the other. |
+
+> **TWO OF THE THREE CHECKS I REACHED FOR FIRST WERE CIRCULAR OR EMPTY, AND BOTH RETURNED A CLEAN
+> ZERO THAT LOOKED LIKE EVIDENCE.** "No shared EANs" reads as *these are different products*. It
+> actually reads as *nobody recorded an EAN*. Item 342's shape again: a check comparing a column to
+> its own source, or to an absence, reports agreement rather than truth.
+
+##### AND THE RETAILER SPLIT REFUTES THE OBVIOUS READ
+
+The working hypothesis was that one retailer spells it with the accent and another without, making
+the ASCII side supplier noise. **It is not that.**
+
+| brand | accented side supplied by | ASCII side supplied by |
+|---|---|---|
+| Kérastase | Beauty Flash, Boots, Gorgeous Shop, Perfume Click, Stylevana, YesStyle | **Beauty Flash, Boots, Gorgeous Shop** |
+| L'Oréal Professionnel | Beauty Flash, Boots, Debenhams, Gorgeous Shop, Perfume Click | **Beauty Flash, Boots, Debenhams, Gorgeous Shop** |
+
+**The same retailers supply both spellings.** The split runs *through* individual feeds, not between
+them, so it cannot be attributed to a single source and cannot be fixed by correcting one.
+
+##### WHAT A MERGE WOULD ACTUALLY HAVE TO DECIDE
+
+1. **Which `normalised_brand` survives** -- and it cannot be settled by size, because the larger side
+   differs per brand, nor by provenance, because the sources are the same.
+2. **What happens to `match_key` on the losing side.** Every one of those products' keys contains the
+   losing spelling. Rewriting them is a `match_key` change, which is under its own gate, and it would
+   move keys for up to 983 products.
+3. **Whether the two sides then collide.** With names disjoint today, a merge produces one brand with
+   1,502 distinct products and no dedupe -- **but only because the keys differed by brand spelling.**
+   Re-key both sides to one spelling and the previously-impossible collisions become possible, which
+   is the merge's real work and is invisible until it is attempted.
+4. **The barcode question stays open**, because there are no barcodes to answer it with.
+
+**Held, and deliberately not proposed.** Point 2 puts this behind the `match-key.ts` gate, and point
+3 means the dedupe outcome cannot be predicted from the current data -- it has to be computed against
+a re-keyed set. That is a measurement to commission, not a call to make today.
