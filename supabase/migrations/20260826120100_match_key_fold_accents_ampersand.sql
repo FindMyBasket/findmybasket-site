@@ -105,26 +105,53 @@ $$;
 -- same source the guard consults and cannot drift from it.
 -- ============================================================================
 
+-- ── BATCHED. A SINGLE STATEMENT FOR THIS DOES NOT RUN. ──────────────────────────
+--
+-- The first version re-keyed all ~16,755 rows in one UPDATE. Each row calls
+-- fmb_build_match_key() twice (once in the predicate, once in SET) and fires a
+-- BEFORE UPDATE trigger, and the statement exceeded the statement timeout. It
+-- succeeded server-side after the client had already given up, which is a separate
+-- hazard recorded at item 377 -- but as COMMITTED the file described an operation
+-- that cannot complete.
+--
+-- A migration that times out for anyone replaying it is worse than one that is
+-- merely stale: item 235's population is files that do not describe the database,
+-- and a file describing an IMPOSSIBILITY is a different and worse thing. Batched so
+-- the committed file matches something that actually runs.
 DO $backfill$
 DECLARE
-  v_held   integer;
-  v_moved  integer;
+  v_held  integer;
+  v_batch integer;
+  v_total integer := 0;
 BEGIN
   SELECT count(*) INTO v_held
   FROM public.standing_check_findings
   WHERE status = 'open' AND finding_key LIKE 'held:%' AND detail ? 'product_id';
 
-  WITH held AS (
-    SELECT (detail->>'product_id')::int AS product_id
-    FROM public.standing_check_findings
-    WHERE status = 'open' AND finding_key LIKE 'held:%' AND detail ? 'product_id'
-  )
-  UPDATE public.products p
-     SET match_key = public.fmb_build_match_key(p.brand, p.name)
-   WHERE p.match_key IS DISTINCT FROM public.fmb_build_match_key(p.brand, p.name)
-     AND p.id NOT IN (SELECT product_id FROM held);
-  GET DIAGNOSTICS v_moved = ROW_COUNT;
+  LOOP
+    WITH held AS (
+      SELECT (detail->>'product_id')::int AS product_id
+      FROM public.standing_check_findings
+      WHERE status = 'open' AND finding_key LIKE 'held:%' AND detail ? 'product_id'
+    ),
+    batch AS (
+      SELECT p.id
+      FROM public.products p
+      WHERE p.match_key IS DISTINCT FROM public.fmb_build_match_key(p.brand, p.name)
+        AND p.id NOT IN (SELECT product_id FROM held)
+      LIMIT 2000
+    )
+    UPDATE public.products p
+       SET match_key = public.fmb_build_match_key(p.brand, p.name)
+      FROM batch b
+     WHERE p.id = b.id;
 
-  RAISE NOTICE 'match_key backfill: % rows re-keyed, % held product(s) skipped', v_moved, v_held;
+    GET DIAGNOSTICS v_batch = ROW_COUNT;
+    EXIT WHEN v_batch = 0;
+    v_total := v_total + v_batch;
+    RAISE NOTICE 'match_key backfill: % rows so far', v_total;
+  END LOOP;
+
+  RAISE NOTICE 'match_key backfill complete: % rows re-keyed, % held product(s) skipped', v_total, v_held;
 END
 $backfill$;
