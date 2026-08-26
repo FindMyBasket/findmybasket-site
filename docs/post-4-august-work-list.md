@@ -31043,3 +31043,131 @@ slug?"* For âme pure the answer is **no**: `ame-pure` and `ame-pure-uk` are dif
 
 **Filed with the seven** as a catalogue merge decision: which `normalised_brand` survives, and what
 happens to the losing side's keys.
+
+
+---
+
+### 386. One brand catalogued twice, 49 times
+
+**Raised:** 26 August 2026 · **Found by causing a regression and then measuring it. The regression is item 387; this is what the measurement showed.**
+
+**49 folded brand slugs are shared by more than one brand — 102 brands, 4,530 products.**
+
+| | |
+|---|---|
+| `dr. jart+` · `dr jart` | -> `dr-jart` |
+| `st ives` · `st. ives` | -> `st-ives` |
+| `about tone` · `about_tone` · `about_tone.` | -> `about-tone` |
+| `la roche posay` · `la roche-posay` | -> `la-roche-posay` |
+| `oral b` · `oral-b` · `tiffany & co` · `tiffany & co.` · `nails inc` · `nails.inc` | … |
+
+**42 of the 49 collided long before accents were folded.** `findBrandBySlug` has resolved each to a
+single brand since it was written, so one side's products have never had a hub.
+
+> **THE SLUG COLLAPSING THEM IS ARGUABLY CORRECT.** `dr. jart+` and `dr jart` ARE one brand. The
+> defect is not that they share an address -- **it is that two `normalised_brand` values exist for
+> one brand**, and every consumer that groups by it sees two.
+>
+> That makes this a **catalogue-merge population of 49 groups and 4,530 products**, of which item
+> 368's seven accented pairs are a subset -- **the subset that happens to have a distinguishable old
+> URL**, which is the only reason anyone noticed them.
+>
+> **The seven were never a special class. They were the visible part of one.**
+
+##### AND THE SPECIFICATION I WAS GIVEN COULD NOT HAVE WORKED
+
+The instruction was: *where a folded slug would collide, both brands keep their legacy slugs.* For
+the seven that works -- `k-rastase` and `kerastase` are different addresses.
+
+**For the 42 it does nothing**, because their legacy slugs are identical too: `dr. jart+` and
+`dr jart` both legacy to `dr-jart`. **There is no pair of distinct addresses to fall back to.**
+
+> **A GUARD NAMED FOR A CLASS IT HANDLES A SEVENTH OF READS AS COVERAGE.** Called `collisionGuard`
+> it would have been cited in six months as the reason collisions are handled, by someone who never
+> counted. It is called **`keepsLegacySlug`** and its comment states the seven-of-49 explicitly.
+>
+> This was not a bad specification. **It was written against the seven, which were the only part
+> visible at the time** -- and generalising from the visible part is how a seventh gets mistaken for
+> the whole.
+
+---
+
+### 387. Two readings overturned by measurement, on one change
+
+**Raised:** 26 August 2026 · **Both mine. Recorded together because the pattern is one thing, not two.**
+
+##### FIRST: "THE SEVEN ARE UNAFFECTED"
+
+Item 369, which I wrote, says: *"`brandSlug` is a pure function of one brand string. It cannot know
+about siblings. Change it to transliterate and it transliterates all 32 — including the 7."*
+
+I then built the transliteration and reported the seven as unchanged, **because the migration comment
+said they were held.**
+
+> **A COMMENT SAYING SOMETHING IS HELD IS NOT A MECHANISM THAT HOLDS IT.** The SQL carried a
+> paragraph explaining that the seven were deliberately not special-cased and why. Nothing in any
+> code path excluded them. The comment described an intention and the function did what it does.
+>
+> Result: seven brand hubs collapsed onto seven slugs, and up to **1,502 products lost their brand
+> page** -- the accidental merge item 369 exists to name, performed as a side effect of a URL change,
+> by the person who named it.
+
+##### SECOND, AND SHARPER: THE VERIFICATION LOOKED THE WRONG WAY
+
+I verified the 25 moved correctly, the old URLs 301'd, and unaccented brands did not loop. **All
+three passed. I did not check the seven**, and the warning naming exactly where to look was in an
+item I had written two hours earlier.
+
+> **A VERIFICATION SCOPED TO THE INTENDED CHANGE CANNOT SEE THE UNINTENDED ONE.** Every check I ran
+> was a check that the change worked. None was a check that nothing else moved -- and the difference
+> between those two questions is the whole of this failure.
+>
+> The seven appeared in the verification only because I ran an extra command out of caution, and
+> then misread the 308 as "unchanged" for a further step.
+
+##### THIRD INSTANCE THIS WEEK OF A HOLD RECORDED AND NOT ENFORCED
+
+| | the hold | what actually enforced it |
+|---|---|---|
+| item 375 | product 105424 must not be re-keyed | the guard **was** armed, and fired — the only one of the three that worked |
+| item 352 | MyProtein must not re-import | **the absence of a cron.** The record enforced nothing, the guard was dormant, the importer's gate passed |
+| **item 387** | the seven must not collide | **nothing.** A paragraph in a migration comment |
+
+> **The pattern is not carelessness about holds -- all three were written down carefully.** It is
+> that **writing a hold down and enforcing it are separate acts**, and the first feels like the
+> second. A recorded hold reads as a decision taken; only a mechanism makes it one.
+
+---
+
+### 388. keepsLegacySlug: the seven restored, verified both ways
+
+**Raised:** 26 August 2026 · **The fix for item 387, and the verification item 387 says I should have run.**
+
+A brand whose folded slug is contested **and** whose legacy slug differs keeps the legacy slug. It
+renders there rather than redirecting; the uncontested sibling keeps the folded slug. Roughly ten
+lines inside the scan that already runs.
+
+**All seven, both sides, on production:**
+
+```
+/brands/k-rastase             200  Kérastase · 6 retailers      /brands/kerastase             200  Kérastase · 3 retailers
+/brands/lor-al-professionnel  200  L'Oréal Professionnel · 5    /brands/loreal-professionnel  200  L'Oréal Professionnel · 4
+/brands/av-ne                 200  Avene · 3                    /brands/avene                 200  Avene · 6
+/brands/chlo                  200  Chloe · 4                    /brands/chloe                 200  Chloe · 5
+/brands/bior                  200  Bioré                        /brands/biore                 200  Bioré
+/brands/lor-al-men-expert     200  L'Oréal Men Expert           /brands/loreal-men-expert     200  L'Oréal Paris · 2
+/brands/khlo-kardashian       200  Khloe Kardashian · 2         /brands/khloe-kardashian      200  Khloe Kardashian
+```
+
+**Fourteen URLs, fourteen 200s, each serving a distinct brand** — the differing retailer counts are
+the evidence that they are two brands rather than one page twice.
+
+**And the 25 have not moved.** `lancome`, `loreal-paris`, `cle-de-peau-beaute`, `bjork-and-berries`,
+`ame-pure-uk`, `decorte` all 200; their legacy addresses all 308 to them. **Loop check clean**:
+`nivea`, `kiehls`, `boots`, `the-ordinary`, `mac-cosmetics` unchanged, and `la-roche-posay`,
+`dr-jart`, `st-ives` — three of the 42 — serve 200 exactly as before.
+
+**One thing noticed and not fixed:** `/brands/loreal-men-expert` renders the display name
+*"L'Oréal Paris"*. `bestDisplay` picks the most common `brand` string among matching rows and those
+rows carry the parent brand's name. **Pre-existing, not caused by this change**, and it is item 386's
+defect showing through: two `normalised_brand` values whose `brand` strings disagree.
