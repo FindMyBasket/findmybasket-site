@@ -10,7 +10,7 @@ import {
   getValidSubcategories,
 } from '../lib/subcategory-queries';
 import { buildBreadcrumbJsonLd } from '../lib/breadcrumb';
-import { categoryToSlug, type TopCategory } from '../lib/queries';
+import { categoryToSlug, subcategoryDisplay, type TopCategory } from '../lib/queries';
 
 interface Props {
   category: TopCategory;
@@ -22,9 +22,27 @@ interface Props {
 
 const PAGE_SIZE = 48;
 
+// THE LABEL COMES FROM lib/queries, NOT FROM CAPITALISING THE SLUG.
+//
+// This function used to capitalise the slug, which made it the THIRD copy of the
+// same derivation and left the drift that SUBCATEGORY_DISPLAY's own comment claims
+// to have fixed still live: /supplements offered "Browse by area > Beauty
+// supplements" and the destination page was headed "Supplements". The chip and the
+// page it links to HAVE been named two ways one click apart this whole time --
+// CategoryPage reads the map, this component did not.
+//
+// Found on 26 August while checking a DIFFERENT claim: item 406 asserted that the
+// page body rendered the label correctly and only the metadata was wrong. It did
+// not. /bath-and-body/mouth shipped with <h1>Mouth</h1>, and the 125 "Oral Care"
+// strings that made the body look right were the product_type on the CARDS, not the
+// heading. Item 407.
+//
+// The h1 no longer carries `capitalize`: labels arrive correctly cased from the map
+// ("Sports nutrition", not "Sports Nutrition"), and the fallback capitalises here.
 function displaySub(sub: string): string {
   if (!sub) return '';
-  return sub.charAt(0).toUpperCase() + sub.slice(1);
+  const mapped = subcategoryDisplay(sub);
+  return mapped === sub ? sub.charAt(0).toUpperCase() + sub.slice(1) : mapped;
 }
 
 function buildUrl(
@@ -114,7 +132,7 @@ export async function SubcategoryPage({ category, categoryDisplay, subcategory, 
             {categoryDisplay}
           </Link>
         </p>
-        <h1 className="font-serif text-5xl md:text-7xl text-ink mb-6 capitalize">
+        <h1 className="font-serif text-5xl md:text-7xl text-ink mb-6">
           {productType ? `${productType} - ${subDisplay}` : subDisplay}
         </h1>
         <p className="text-base md:text-lg text-ink-light max-w-2xl mx-auto mb-10 leading-relaxed">

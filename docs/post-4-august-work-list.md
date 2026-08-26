@@ -31926,9 +31926,9 @@ slug-versus-label reasoning in a comment. No nav entry, no sitemap edit and no `
 
 ---
 
-### 406. The label was in one place and derived in six. Verifying the render is what found it
+### 406. A duplicate can be compared against the original. A derivation that agrees cannot
 
-**Raised:** 26 August 2026 · **Live bug, fixed. Four more routes carry it latently and are UNCHANGED.**
+**Raised:** 26 August 2026 · **Live bug, fixed and verified. Four routes annotated at the derivation.**
 
 **The shelf shipped with its body copy reading "Oral care" and its `<title>` reading "Mouth".**
 
@@ -31937,49 +31937,116 @@ slug-versus-label reasoning in a comment. No nav entry, no sitemap edit and no `
 ```
 
 `components/SubcategoryPage` reads `SUBCATEGORY_DISPLAY`, so every heading, chip and breadcrumb was
-correct -- 125 occurrences of "Oral care" on the page. **`generateMetadata` in the route derived its
-own name instead:**
+right -- 125 occurrences of "Oral care" on the page. `generateMetadata` in the route derived its own
+name instead: `sub.charAt(0).toUpperCase() + sub.slice(1)`. The meta description was worse:
+*"Compare mouth bath and body prices... Find the best value on body wash, body lotion, hand cream,
+deodorant and more."*
 
-```ts
-const display = sub.charAt(0).toUpperCase() + sub.slice(1);   // "mouth" -> "Mouth"
-```
+> **THE INVERSION OF ITEM 401. A DUPLICATE CAN BE COMPARED AGAINST THE ORIGINAL; A DERIVATION THAT
+> HAPPENS TO AGREE CANNOT.** `lib/__tests__/category-labels.test.ts` exists to stop precisely this
+> failure. It consolidated **six duplicated label maps** into one and guards the seventh, and it could
+> not see this one -- because this was not a copy of the map. **It was a formula that produced the same
+> answers.** A copy is a second artefact, so it can be diffed against the first. A derivation has no
+> artefact to diff; it has only outputs, and outputs that match tell you nothing about whether they
+> match for a reason.
 
-The meta description was worse: *"Compare mouth bath and body prices... Find the best value on body
-wash, body lotion, hand cream, deodorant and more."*
+**WHY IT HELD FOR SO LONG: `body`, `hand` and `foot` ARE THEIR OWN LABELS.** The derivation agreed with
+the map **by coincidence of the data, not by construction.** Every subcategory that existed before
+today capitalises to exactly the string `SUBCATEGORY_DISPLAY` would have returned, so the formula was
+indistinguishable from correctness for as long as no counterexample existed.
 
-> **`lib/__tests__/category-labels.test.ts` exists to stop exactly this, and could not see it.** That
-> test consolidated six DUPLICATED label maps into one and guards the seventh. This was not a
-> duplicated map -- it was a label **derived** from the slug by a formula. **A duplicate can be
-> compared against the original; a derivation that happens to agree cannot.** It agreed for `body`,
-> `hand` and `foot` because those slugs are their own labels, and the first shelf where slug and label
-> differ is the first one it could break -- which is the shelf I chose the split for, deliberately, in
-> item 403.
+**The first shelf where slug and label differ was the first that could break it -- and that split was
+chosen deliberately in item 403**, for good reasons that still stand: the sibling shelves are
+body-part nouns, so `mouth` belongs in the URL and "Oral care" belongs on the page.
+
+> **The decision and the defect arrived in the same change.** Choosing to differentiate slug from
+> label is what created the first case the derivation could not handle. Nothing was broken until the
+> thing that would expose it was deliberately introduced, in the same commit, by the same reasoning
+> that made the choice correct.
 
 **Fixed** in `app/bath-and-body/[subcategory]/page.tsx`: `displayFor()` reading `subcategoryDisplay`,
 matching the supplements route, plus an `EXAMPLES` map so the description names toothpaste rather than
-deodorant. **Verified byte-identical for `body`, `hand` and `foot`** -- they resolve through the same
-function to the same strings, so no existing metadata moved.
+deodorant. **Verified live**: title now `Oral care bath & body best prices`, description names
+toothpaste, and `body`/`hand`/`foot` titles are **unchanged** -- same function, same strings.
 
-**FOUR MORE ROUTES CARRY THE SAME DERIVATION AND ARE DELIBERATELY UNTOUCHED.**
+**THE FOUR REMAINING ROUTES ARE A TRAP, NOT A DEFECT, AND THE DISTINCTION IS MEASURED.**
 
-| Route | State |
+| Route | Derivation | Subcategories | In `SUBCATEGORY_DISPLAY`? |
+|---|---|---|---|
+| `skincare/[subcategory]` | slug-capitalised | face, body, lips, eyes | **None** |
+| `makeup/[subcategory]` | slug-capitalised | face, lips, eyes, nails | **None** |
+| `hair/[subcategory]` | slug-capitalised | cleanse, condition, treatment, style, colour | **None** |
+| `fragrance/[subcategory]` | slug-capitalised | scent | **None** |
+| `bath-and-body/[subcategory]` | reads `lib/queries` | body, hand, foot, **mouth** | mouth |
+| `supplements/[subcategory]` | reads `lib/queries` | supplements, sports | both |
+
+**All four are no-ops today and become defects the moment one subcategory's label differs from its
+slug.** Not fixed, because nothing is broken and the change was not what was asked for.
+
+**THE WARNING NOW SITS AT THE DERIVATION, NOT ONLY IN THIS ITEM.** All four routes carry a comment on
+the line itself, because **the person who adds the next differing label is the one who needs it**, and
+they will be looking at `generateMetadata`, not at a 400-item work list. The comment states that the
+agreement is coincidental, names the failure it already caused, and points at `displayFor`.
+
+> **This is item 401 turned on my own work.** The change fixed the bucket it was aimed at -- the shelf
+> reads "Oral care" everywhere a human looks -- and the row that was most wrong sat outside it, in the
+> metadata, which is the surface nobody checks while confirming a page looks right. **It was found
+> because the verification read the title, rather than fetching the page and confirming the products
+> were on it.**
+
+---
+
+### 407. Item 406 was wrong about which surface was broken, and the drift it blamed a test for missing has been live all along
+
+**Raised:** 26 August 2026 · **Corrects item 406's central description. Third copy of the derivation, now fixed.**
+
+**What item 406 said:** *"`components/SubcategoryPage` reads `SUBCATEGORY_DISPLAY`, so every heading,
+chip and breadcrumb was correct -- 125 occurrences of 'Oral care' on the page."*
+
+**What is actually on the page:**
+
+```
+<h1 class="... capitalize">Mouth</h1>
+breadcrumb: Home > Bath & Body > Mouth
+```
+
+**`SubcategoryPage` never read the map.** It carried `displaySub()`, a third copy of the same
+capitalise-the-slug derivation. The 125 strings I counted were **`Oral Care` with a capital C -- the
+`product_type` printed on 48 product cards.** The label, lowercase `Oral care`, appeared **six** times,
+all of them from the metadata I had just fixed.
+
+> **I verified the claim by grepping for a string, and the string was on the page for a different
+> reason.** A case-insensitive match over rendered HTML cannot tell a heading from a card field. **The
+> check confirmed the words were present, which was never the question** -- the question was which
+> element produced them, and only the `<h1>` answers that.
+
+**AND THE DRIFT `lib/queries.ts` CLAIMS TO HAVE FIXED IS LIVE.** That file's comment reads: *"the
+category page offers 'Browse by area > Supplements' inside Supplements, and the destination page is
+headed 'Beauty supplements' -- the same thing named two ways one click apart... so the label lives here
+and both surfaces read it rather than each carrying its own copy."*
+
+**Only one surface reads it.** Measured on production, before this fix:
+
+| Surface | Renders |
 |---|---|
-| `app/bath-and-body/[subcategory]` | **Fixed** |
-| `app/supplements/[subcategory]` | Already correct |
-| `app/skincare/[subcategory]` | `sub.charAt(0).toUpperCase() + ...` |
-| `app/makeup/[subcategory]` | same |
-| `app/hair/[subcategory]` | same |
-| `app/fragrance/[subcategory]` | same |
+| `/supplements` browse chip | **Beauty supplements** |
+| `/supplements/supplements` `<h1>` | **Supplements** |
+| `/supplements` browse chip | **Sports nutrition** |
+| `/supplements/sports` `<h1>` | **Sports** |
 
-**All four are no-ops today**, measured rather than assumed: their subcategories are `face`, `body`,
-`lips`, `eyes`, `nails`, `cleanse`, `condition`, `treatment`, `style`, `colour`, `scent` -- none
-appears in `SUBCATEGORY_DISPLAY`, so capitalising the slug gives the right answer for every one.
-**They are a trap, not a defect**, and the trap springs on whoever next adds a shelf whose label
-differs from its slug. Reported rather than fixed, because nothing is broken and the change is not
-what was asked for.
+**The exact failure the comment describes, in the exact place it says it was prevented, shipped and
+stayed shipped.** `CategoryPage` reads the map; `SubcategoryPage` did not. The comment documented an
+intention as though it were a state.
 
-> **This is item 401 turned on my own work.** The rule fixed the bucket it was aimed at -- the shelf
-> renders "Oral care" everywhere a human looks -- and the row that was most wrong sat outside it, in
-> the metadata, which is the surface no one looks at while checking that a page looks right. **I found
-> it because the verification fetched the page and read the title, rather than fetching the page and
-> confirming the products were on it.**
+**Fixed:** `displaySub` now reads `subcategoryDisplay`, and the `<h1>` loses its `capitalize` class --
+labels arrive correctly cased from the map, and `capitalize` would render "Sports Nutrition" for
+"Sports nutrition". The fallback still capitalises a bare slug.
+
+**The derivation count for the record:** three copies, not two. `CategoryPage` (correct),
+`SubcategoryPage` (**was wrong, now fixed**), and six route `generateMetadata` functions of which one
+was already correct, one was fixed in item 406 and four are annotated traps.
+
+> **Item 406's centre survives and gets sharper.** A derivation that agrees cannot be diffed against
+> the thing it agrees with -- and I then made the same error one level up, checking my own claim by
+> looking for agreement in the output instead of at the code that produced it. **Twice in one item:
+> once in the bug, once in the verification of the fix.**
