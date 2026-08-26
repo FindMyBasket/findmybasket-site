@@ -43,6 +43,13 @@ export default async function BrandSpotlightIndexPage() {
             <p className="bi-lede">
               A considered selection of brands we partner with, presented in their own words.
             </p>
+            {/* THE INDEX LIVES AT /brands/all, NOT HERE, AND THAT IS THE FIREWALL'S DOING.
+                This page's copy says partnered content sits alongside and separate from
+                the independent comparison; an A-Z of every compared brand at this URL
+                would break the statement rather than the layout. Item 419. */}
+            <p className="bi-lede">
+              Looking for a specific brand? <a href="/brands/all">Browse all brands we compare</a>.
+            </p>
           </div>
 
           {/* Trust firewall: makes clear this is partnered content, kept distinct

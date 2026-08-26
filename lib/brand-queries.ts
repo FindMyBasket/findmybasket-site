@@ -561,3 +561,76 @@ export async function getBrandMetadataFacts(
     sole_retailer: row?.sole_retailer ?? null,
   };
 }
+
+export interface BrandIndexEntry {
+  slug: string;
+  name: string;
+  count: number;
+  /** More than one normalised_brand shares this slug (item 418). */
+  merged: boolean;
+}
+
+/**
+ * Every brand with at least one live product, grouped by the slug its hub answers at.
+ *
+ * 416'S QUESTION, ASKED BEFORE THIS WAS WRITTEN: what is the largest value it can
+ * return, and is that a fact about the query or about today's data?
+ *
+ *   A BRAND INDEX IS UNBOUNDED BY CONSTRUCTION. Nothing filters it -- one row per
+ *   distinct brand, growing with every retailer onboarded. 2,458 is TODAY'S DATA, not a
+ *   property of the query. So it aggregates in SQL from the first line and never
+ *   pages-and-counts -- the shape items 238, 412 and 415 each reached separately, after
+ *   shipping the previous one.
+ *
+ * GROUPED BY SLUG, NOT BY BRAND, and that is the whole reason this is not a `select
+ * distinct`. Six slugs are shared by two brands each; the hub unions them (item 418), so
+ * the index must show ONE row or it would advertise a distinction the site cannot
+ * honour -- two entries, different names, one destination. Slugification happens here
+ * rather than in SQL because brandSlug() is the same function that builds the links, and
+ * a second implementation in SQL is the duplication items 406, 407 and 417 are about.
+ *
+ * NO THRESHOLD. A brand with two products is the right answer for someone searching it,
+ * and a cutoff makes the index incomplete in a way a visitor cannot see.
+ */
+export async function getBrandIndex(): Promise<BrandIndexEntry[]> {
+  // ONE ROW CONTAINING AN ARRAY, NOT 2,457 ROWS (item 420).
+  //
+  // The first version returned `table (...)` and was SILENTLY TRUNCATED to PostgREST's
+  // 1,000-row cap: the page rendered 934 brands and 9 letter sections instead of 2,451
+  // and 27, with no error anywhere. Nothing about a short index looks wrong -- an A-Z
+  // ending at I reads as an A-Z.
+  //
+  // fmb_active_brand_names() exists precisely to sidestep that cap, and its comment in
+  // the sitemap route says so. Extending its DATA while changing its SHAPE dropped the
+  // only property that mattered.
+  const { data } = await supabase.rpc('fmb_brand_index');
+  const rows = ((data ?? []) as [string, string | null, number][]).map(
+    ([normalised_brand, display, n_live]) => ({ normalised_brand, display, n_live }),
+  );
+
+  // slug -> best display (the member contributing most live products) and the sum.
+  const bySlug = new Map<string, { name: string; count: number; best: number; members: number }>();
+  for (const r of rows) {
+    const live = Number(r.n_live);
+    if (live === 0) continue;
+    const slug = brandSlug(r.normalised_brand);
+    if (!slug) continue;
+    const name = r.display ?? r.normalised_brand;
+    const cur = bySlug.get(slug);
+    if (!cur) {
+      bySlug.set(slug, { name, count: live, best: live, members: 1 });
+    } else {
+      cur.count += live;
+      cur.members += 1;
+      // Majority member supplies the name, matching what the hub's h1 already shows.
+      if (live > cur.best) {
+        cur.best = live;
+        cur.name = name;
+      }
+    }
+  }
+
+  return [...bySlug.entries()]
+    .map(([slug, v]) => ({ slug, name: v.name, count: v.count, merged: v.members > 1 }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
+}
