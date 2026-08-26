@@ -85,6 +85,13 @@ jobs:
           set -euo pipefail
           npx --yes tsx scripts/match-key-parity.mts
 
+      # Block scalar, not a plain one. `run: echo "> Run reason: ..."` contains a
+      # colon-space inside the value, so YAML read it as a nested mapping and the
+      # whole file failed to parse -- and GITHUB DID NOT REPORT AN ERROR. It fell
+      # back to naming the workflow after its own path and registered NO triggers,
+      # so `gh workflow run` answered "does not have 'workflow_dispatch' trigger"
+      # for a file that plainly has one. `npx js-yaml <file>` found it in one call.
       - name: Note
         if: always()
-        run: echo "> Run reason: ${{ inputs.note }}" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "> Run reason: ${{ inputs.note }}" >> "$GITHUB_STEP_SUMMARY"
