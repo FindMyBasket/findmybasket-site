@@ -29520,24 +29520,74 @@ target smaller than a sibling slug for the same brand.**
 
 **Three brands, six rows.** And two of the three share a cause that is not about aliases at all:
 
-> **`normalised_brand` STRIPS ACCENTED CHARACTERS RATHER THAN TRANSLITERATING THEM.** "Bioré"
-> becomes `bior` -- the é is deleted, not folded to `e`. "Âme Pure" becomes `me pure` -- the Â is
-> deleted, taking the word's first letter with it. **Each mangled form then becomes a slug, a page,
-> and finally an alias target**, because the alias was written to point at the brand string as
-> spelled.
+> **`brandSlug` TREATS EVERY ACCENTED LETTER AS A SEPARATOR RATHER THAN TRANSLITERATING IT.** Its
+> character class is `[^a-z0-9]+` -> `-`, so "bioré" becomes `bior` (the é is consumed and trimmed)
+> and "âme pure" becomes `me-pure` -- **the Â is consumed and the word loses its first letter.**
+> Each mangled form then becomes a slug, a page, and finally an alias target, because the alias was
+> written to point at the brand string as spelled. **The alias table is downstream of this; it is
+> not the cause.**
+>
+> **I first recorded this as `normalised_brand` stripping accents. That was wrong** and checking it
+> took one call: `normalised_brand` is `brand.toLowerCase().trim()` in all four importers and
+> preserves every character. The loss is entirely in slug derivation.
 >
 > **The `biore` row is the sharpest of the six: it redirects AWAY from a working 8-product page.**
-> `/brands/biore` would have resolved on its own. The alias sends it to `/brands/bior` and two
-> products.
+> `/brands/biore` resolves on its own. The alias sends it to `/brands/bior` and two products, so
+> **the alias makes the site worse than no alias would** -- the one outcome item 271's redirects
+> were added to prevent.
+
+##### AND THE SIX ALIASES ARE THE SMALL END OF IT
+
+Slugging accents away is not confined to the alias table. **44 distinct brands and 3,452 products**
+carry a non-ASCII character, and their hub URLs are the only ones the site serves:
+
+| brand | products | URL served today | if transliterated |
+|---|---:|---|---|
+| L'Oréal Paris | **1,110** | **`/brands/lor-al-paris`** | `/brands/loreal-paris` |
+| Lancôme | **933** | **`/brands/lanc-me`** | `/brands/lancome` |
+| Kérastase | **520** | **`/brands/k-rastase`** | `/brands/kerastase` |
+| L'Oréal Professionnel | 401 | `/brands/lor-al-professionnel` | `/brands/loreal-professionnel` |
+| Clé de Peau Beauté | 71 | `/brands/cl-de-peau-beaut` | `/brands/cle-de-peau-beaute` |
+| Avène | 47 | `/brands/av-ne` | `/brands/avene` |
+
+> **`/brands/lanc-me` IS LANCÔME, WITH 933 PRODUCTS.** Nobody types `lanc-me`. These are the
+> canonical URLs for some of the largest brands in the catalogue, and they are unsearchable strings.
+>
+> **Item 271 already met this and folded it without naming it.** Its own comment lists `lor-al` and
+> `lor-al-paris-dermo-expertise` among the L'Oréal aliases -- **those rows exist because of this
+> bug**, and were written as if they were supplier naming noise.
+>
+> **Same root as item 355**, twelve hours earlier: an ASCII-only character class meeting non-ASCII
+> supplier data. There it doubled a brand in a title; here it deletes a letter from a URL.
+
+##### WHAT FIXING IT WOULD TOUCH, MEASURED BEFORE PROPOSING
+
+**It is a URL change, not a catalogue change** -- which corrects the framing this was raised under.
+`normalised_brand`, `match_key` and product rows are all untouched; `brandSlug` appears nowhere in
+`match-key.ts` or any import write path.
+
+| touched | detail |
+|---|---|
+| **three implementations** | `lib/brand-slug.ts`, plus `brandSlugify` in `import-awin-feed` and in `recategorise-products`, both carrying comments saying they MUST mirror it. **Item 345's shape: three copies held together by comments.** |
+| **44 brand hub URLs** | every currently-indexed accented URL needs a 301, which is what `brand_aliases` is for |
+| `brand_aliases` | 26 rows contain non-ASCII; some become redundant, some need retargeting |
+| sitemap, internal links, search | derive from `brandSlug` at render time, so they follow automatically |
+| GA4 `brand_slug` | historic rows keep the old value, so any brand-level series spans two spellings |
+
+**Not proposed, and deliberately not applied.** Same treatment as `canonical_size` at item 282: the
+diff is reported and the change is a decision, not a consequence of noticing. The three-copy problem
+should be settled first, because fixing one and not the others is how the importers and the site
+would start disagreeing about what a brand's URL is.
 
 **The 7 dead targets** are `superdrug` (the departed retailer, expected), `johnsons` x2,
 `pastel cosmetics` x2 and `makeup academy` x2 -- brands with no products left. Those 301 into a
 404, which is item 271's own failure mode surviving in seven rows.
 
-> **SAME TREATMENT AS THE 30 ALIAS 404s, AND FOR THE SAME REASON.** That fix asked "does this
-> target exist"; this one asks **"is this target the right one of several"**. Both are checks the
+> **SAME TREATMENT AS THE 30 ALIAS 404s, AND FOR THE SAME REASON.** That fix asked **"does this
+> target exist"**; this one asks **"is this target the right one of several"**. Both are checks the
 > alias table cannot make about itself, and both are cheap to run and impossible to notice by
-> reading the table.
+> reading the table. **A row that satisfies the first check and fails the second looks perfectly
+> healthy** -- `mac -> M.A.C` is a valid alias pointing at a page that serves 200.
 
 **Not fixed here.** The repair differs per row -- retarget for `mac`, fix normalisation for the
 accented pair, delete for the dead seven -- and normalisation is upstream of `match_key`.
