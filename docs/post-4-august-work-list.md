@@ -29022,6 +29022,19 @@ the result. `?dry_run=1` was added as part of this change, with a **dry-run-only
 override so the email for a state that has not arrived yet can be rendered before it does. Guarded
 on `dryRun`, so a real 09:00 run can never be handed a different threshold by a query string.
 
+> **THE STANDARD WAS ALREADY SET AND THIS IS IT ONE STEP FURTHER BACK.** The email work established
+> *render the artefact rather than check the version* -- reading a deployed function's version number
+> tells you a deploy happened, not what it produces. Here there was no artefact to render: the
+> function computed and sent in one pass, so **the only way to see the output was to receive it.**
+> Verifying by rendering required building the render first.
+>
+> **AND THE GUARD ON THE OVERRIDE IS WHAT MAKES IT AN INSTRUMENT RATHER THAN A ONE-OFF.** A dry mode
+> that can alter a real run's behaviour is a hazard: the threshold is the thing the 09:00 run is
+> judged by, and a query string that could move it would put the monitor's verdict in the caller's
+> hands. Gated on `dryRun`, the override can simulate any future state and can never reach the
+> scheduled run. **That is the difference between a debug hook and a test fixture**, and it is why
+> this one can be used again for the next state that has not arrived yet.
+
 Invoked through the same `net.http_post` path the cron uses, at a simulated 10h threshold:
 
 ```
@@ -29050,3 +29063,66 @@ there may never be one.
 > over-engineering unless the reason it exists is written down, and "we expect more" is a claim, not
 > evidence. What is evidence: the state was entered once, silently, and nothing in the schema could
 > say so.
+
+
+---
+
+### 354. One function someone will read and act on
+
+**Raised:** 26 August 2026 · **Item 235 is a statistic about 117 unregistered files. This is the single instance of it that cost time today.**
+
+Building item 353 required editing `price_freshness`. The repo says it lives in `dq_snapshot()`,
+in `supabase/migrations/20260727120000_retailer_prices_live_and_dq_snapshot.sql`. **It does not.**
+
+| | repo | live |
+|---|---|---|
+| `dq_snapshot()` | ~10 KB, holds every metric including `price_freshness` | **3,806 chars**, a wrapper that joins metric rows to population labels |
+| `dq_snapshot_raw()` | **does not appear in any file** | **7,489 chars, holds every metric including `price_freshness`** |
+
+`grep -rln dq_snapshot_raw supabase/migrations/` returns nothing. **The function that actually
+computes the site's data-quality metrics is described by no file in the repository.**
+
+##### IT IS THE RENAME, AND THE DATE IS KNOWN
+
+Asked and answered rather than assumed: two registered migrations touch `dq_snapshot` and neither
+has a file.
+
+| version | name | creates `dq_snapshot_raw` |
+|---|---|---|
+| 20260823171825 | `dq_snapshot_use_canonical_size_status` | no |
+| **20260824095556** | **`dq_snapshot_population_labels`** | **yes** |
+
+**So the shape difference is fully explained by the labelling work of 24 August**, two days ago --
+the population-reference work of items 259 and 270, which split the metrics into `_raw` and wrapped
+them with the four named populations. **Nothing older is involved**, and there is no second,
+unexplained divergence hiding underneath it.
+
+> **That the cause is benign is the point, not a reprieve.** A rename is the most ordinary change
+> there is, it was applied through `apply_migration` and is properly registered in
+> `supabase_migrations.schema_migrations` -- and it still left the repository asserting that a
+> function contains code that moved out of it. **Nothing was done wrong; the file simply was not
+> written, and no check compares a file to a function.**
+
+##### AND A COMMENT THAT WAS TRUE WHEN WRITTEN
+
+`supabase/migrations/20260814190000_quality_metrics_definitions.sql:48` says:
+
+> *"`dq_snapshot` is the only executable data-quality SQL in the repo"*
+
+**True on 14 August. False since 24 August**, in a way no one would notice: `dq_snapshot` is still
+in the repo and still executable, so the sentence reads fine. What changed is that **it no longer
+contains the metrics** -- they are in a function the repo has never seen.
+
+> **Item 235's statistic does not convey this.** "117 of 120 migrations unregistered" describes a
+> bookkeeping gap and invites the response that the files are still the source of truth. **They are
+> not.** Here the file is not merely unregistered, it is *wrong about what the database does*, and
+> a reader following it to `dq_snapshot` would patch a wrapper and change no metric.
+>
+> **The rule this confirms rather than establishes:** read the live definition, never the migration
+> file. It is already the standing practice for applying changes. **Today is the first time it
+> mattered for READING one** -- and reading is the far more common act, done by more people, with
+> no tool to catch a mistake.
+
+**Not fixed here.** Writing the two missing migration files would record today's shape and nothing
+would keep them current tomorrow, which is the same trap one level along. What is worth doing is
+narrower: the false comment at `20260814190000:48` should say where the metrics actually live.
