@@ -29,6 +29,7 @@
 import { deliveryFor } from "../_shared/delivery.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireServiceRole } from "../_shared/require-service-role.ts";
+import { displayProductTitle } from "../_shared/product-name.ts";
 
 const RESEND_API = "https://api.resend.com/emails";
 const FROM_ADDRESS = "FindMyBasket <hello@findmybasket.co.uk>";
@@ -651,7 +652,7 @@ function buildEmptyRoutineEmailHTML(params: {
 
   const rows = products.map((p) => `
     <tr><td style="padding:12px 0;border-bottom:1px solid #f0ece4;">
-      <div style="font-size:15px;color:#1C1A18;font-weight:500;">${escapeHtml(p.brand ? p.brand + " " + p.name : p.name)}</div>
+      <div style="font-size:15px;color:#1C1A18;font-weight:500;">${escapeHtml(displayProductTitle(p.name, p.brand))}</div>
       <div style="font-size:13px;color:#8a8680;margin-top:3px;">Not currently in stock at any retailer we compare.</div>
     </td></tr>`).join("");
 
@@ -708,7 +709,10 @@ function buildAlertsEmailHTML(params: {
     const pct = was > 0 ? Math.round((saving / was) * 100) : 0;
     const productUrl = `${appBaseUrl}${it.url}`;
     const retailer = it.retailer ? escapeHtml(it.retailer) : "an online retailer";
-    const title = `${it.brand ? escapeHtml(it.brand) + " - " : ""}${escapeHtml(it.name)}`;
+    // Was `brand + " - " + name`, which doubled the brand on ~90% of rows because the
+    // name already carries it: "La Roche-Posay - La Roche Posay La Roche-Posay Cicaplast".
+    // displayProductTitle is the site's rule, now mirrored into _shared. Item 355.
+    const title = escapeHtml(displayProductTitle(it.name, it.brand));
     const img = it.image_url
       ? `<img src="${escapeHtml(it.image_url)}" alt="" width="56" height="56" style="width:56px;height:56px;border-radius:8px;object-fit:cover;display:block;"/>`
       : `<div style="width:56px;height:56px;border-radius:8px;background:#f0ece4;"></div>`;

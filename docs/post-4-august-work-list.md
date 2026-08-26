@@ -29022,6 +29022,19 @@ the result. `?dry_run=1` was added as part of this change, with a **dry-run-only
 override so the email for a state that has not arrived yet can be rendered before it does. Guarded
 on `dryRun`, so a real 09:00 run can never be handed a different threshold by a query string.
 
+> **THE STANDARD WAS ALREADY SET AND THIS IS IT ONE STEP FURTHER BACK.** The email work established
+> *render the artefact rather than check the version* -- reading a deployed function's version number
+> tells you a deploy happened, not what it produces. Here there was no artefact to render: the
+> function computed and sent in one pass, so **the only way to see the output was to receive it.**
+> Verifying by rendering required building the render first.
+>
+> **AND THE GUARD ON THE OVERRIDE IS WHAT MAKES IT AN INSTRUMENT RATHER THAN A ONE-OFF.** A dry mode
+> that can alter a real run's behaviour is a hazard: the threshold is the thing the 09:00 run is
+> judged by, and a query string that could move it would put the monitor's verdict in the caller's
+> hands. Gated on `dryRun`, the override can simulate any future state and can never reach the
+> scheduled run. **That is the difference between a debug hook and a test fixture**, and it is why
+> this one can be used again for the next state that has not arrived yet.
+
 Invoked through the same `net.http_post` path the cron uses, at a simulated 10h threshold:
 
 ```
@@ -29050,3 +29063,206 @@ there may never be one.
 > over-engineering unless the reason it exists is written down, and "we expect more" is a claim, not
 > evidence. What is evidence: the state was entered once, silently, and nothing in the schema could
 > say so.
+
+
+---
+
+### 354. One function someone will read and act on
+
+**Raised:** 26 August 2026 · **Item 235 is a statistic about 117 unregistered files. This is the single instance of it that cost time today.**
+
+Building item 353 required editing `price_freshness`. The repo says it lives in `dq_snapshot()`,
+in `supabase/migrations/20260727120000_retailer_prices_live_and_dq_snapshot.sql`. **It does not.**
+
+| | repo | live |
+|---|---|---|
+| `dq_snapshot()` | ~10 KB, holds every metric including `price_freshness` | **3,806 chars**, a wrapper that joins metric rows to population labels |
+| `dq_snapshot_raw()` | **does not appear in any file** | **7,489 chars, holds every metric including `price_freshness`** |
+
+`grep -rln dq_snapshot_raw supabase/migrations/` returns nothing. **The function that actually
+computes the site's data-quality metrics is described by no file in the repository.**
+
+##### IT IS THE RENAME, AND THE DATE IS KNOWN
+
+Asked and answered rather than assumed: two registered migrations touch `dq_snapshot` and neither
+has a file.
+
+| version | name | creates `dq_snapshot_raw` |
+|---|---|---|
+| 20260823171825 | `dq_snapshot_use_canonical_size_status` | no |
+| **20260824095556** | **`dq_snapshot_population_labels`** | **yes** |
+
+**So the shape difference is fully explained by the labelling work of 24 August**, two days ago --
+the population-reference work of items 259 and 270, which split the metrics into `_raw` and wrapped
+them with the four named populations. **Nothing older is involved**, and there is no second,
+unexplained divergence hiding underneath it.
+
+> **That the cause is benign is the point, not a reprieve.** A rename is the most ordinary change
+> there is, it was applied through `apply_migration` and is properly registered in
+> `supabase_migrations.schema_migrations` -- and it still left the repository asserting that a
+> function contains code that moved out of it. **Nothing was done wrong; the file simply was not
+> written, and no check compares a file to a function.**
+
+##### AND A COMMENT THAT WAS TRUE WHEN WRITTEN
+
+`supabase/migrations/20260814190000_quality_metrics_definitions.sql:48` says:
+
+> *"`dq_snapshot` is the only executable data-quality SQL in the repo"*
+
+**True on 14 August. False since 24 August**, in a way no one would notice: `dq_snapshot` is still
+in the repo and still executable, so the sentence reads fine. What changed is that **it no longer
+contains the metrics** -- they are in a function the repo has never seen.
+
+> **Item 235's statistic does not convey this.** "117 of 120 migrations unregistered" describes a
+> bookkeeping gap and invites the response that the files are still the source of truth. **They are
+> not.** Here the file is not merely unregistered, it is *wrong about what the database does*, and
+> a reader following it to `dq_snapshot` would patch a wrapper and change no metric.
+>
+> **The rule this confirms rather than establishes:** read the live definition, never the migration
+> file. It is already the standing practice for applying changes. **Today is the first time it
+> mattered for READING one** -- and reading is the far more common act, done by more people, with
+> no tool to catch a mistake.
+
+**Not fixed here.** Writing the two missing migration files would record today's shape and nothing
+would keep them current tomorrow, which is the same trap one level along. What is worth doing is
+narrower: the false comment at `20260814190000:48` should say where the metrics actually live.
+
+---
+
+### 355. The render-versus-data question is decided by whose data it is
+
+**Raised:** 26 August 2026 · **A correction to the premise I was given, not an answer to it. The largest render change the site has had: 4,388 titles, 3.21% of the branded catalogue.**
+
+`displayProductTitle` was described to me as already solving the doubled-brand problem, with the
+email as the outstanding case. **It was not solving it. It was causing it**, on 2,890 of 136,584
+branded products, live on product pages, titles and JSON-LD:
+
+```
+brand "e.l.f."       ->  "e.l.f. e. l.f. Cosmetics 16hr Camo Concealer"
+brand "L.A. COLORS"  ->  "L.A. COLORS L. A. Colors 28 Color Eyeshadow"
+brand "Nails Inc"    ->  "Nails Inc Nails. Inc 2-in-1 Base Coat"
+brand "Dr. Jart+"    ->  "Dr. Jart+ Dr Jart Brightamin Serum"
+```
+
+The old match was a literal regex, `^<brand>[\s\-:]*`. **Any difference in punctuation or spacing
+missed, and missing meant PREPENDING** -- so the helper written to prevent a doubled brand produced
+one every time it failed. **The email sites were the smaller half and were only how it was found.**
+
+#### THE QUESTION IT SETTLES
+
+The obvious alternative was to strip brand prefixes out of `products.name` -- the same
+render-versus-data choice item 282 faced with `canonical_size`, which was resolved **in the data**:
+the column was corrected and the render-side guard then stopped firing on its own, with no code
+change.
+
+**That answer does not transfer, and the reason is the durable part.**
+
+> **THE RENDER-VERSUS-DATA QUESTION IS DECIDED BY WHOSE DATA IT IS AND WHETHER IT IS WRONG, NOT BY
+> WHICH IS MORE CONVENIENT.**
+>
+> `canonical_size` is **our derived column and it was wrong** -- it held a unit size where a pack
+> total belonged. Fixing the data was right because the data was ours and false.
+>
+> `products.name` is **supplier text and it is correct**. "e. l.f. Cosmetics 16hr Camo Concealer"
+> is what the supplier calls the product. Stripping 122,199 brand prefixes would be editing correct
+> third-party data to suit our own render.
+
+The same test explains `strip-html.ts`'s handling of the identical bug from the other end (item
+284): `Pestle &amp; Mortar` could not match `^Pestle & Mortar`, so the brand was prepended again.
+**That one was fixed in the data, correctly** -- `&amp;` in a stored name is corrupt, not a
+supplier's spelling. **A punctuation variant is not corrupt.** Two cases, one rule, opposite
+answers, and the rule tells you which is which.
+
+#### THE ARCHITECTURE HAD ALREADY ANSWERED THIS ONCE
+
+`supabase/functions/_shared/match-key.ts` solved this on the **matching** side long ago: strip
+leading brand repetition, then re-prepend the canonical brand, with the whole-brand-repeat case,
+the multi-word partial-brand case, the name-IS-the-brand case and the possessive-stem risk all
+reasoned out in its header.
+
+> **Step 1 is entirely a matter of following that shape rather than inventing a second one.** The
+> catalogue already has a canonical "brand exactly once" representation and it is `match_key`, not
+> `name`. Writing a different rule beside it would have been item 345 again, chosen deliberately.
+
+**The caveat was measured before the change, not after.** `stripBrandPrefix` and
+`displayProductTitle` have **four callers on the product page, one in ProductCard, and one unused
+import in RoutineBuilder** -- and **nothing in `supabase/functions/`**. No code that writes
+`match_key` calls either. A display change cannot move a derived key, and `match-key.ts` stays
+untouched under its gate.
+
+#### THE DIFF, AND THE ONE THE SAMPLE CAUGHT
+
+| | count |
+|---|---:|
+| branded products | 136,584 |
+| **titles that change** | **4,388 (3.21%)** |
+| spelling-variant doubles fixed | 2,865 of 2,890 |
+| brand-twice-in-name fixed by repeated-copy consumption | **906 of 1,086** |
+| separator-only (brand followed by `.` or `,`, left stranded by the old regex) | 759 |
+
+**Reading the sample found a defect that reasoning about it did not.** The first draft used an
+enumerated separator class, `[\s\-:.,]`. A real row broke it:
+
+```
+brand "So...?"  name "So...? So…? Unique Truffle Cream Body Mist 150ml"
+   ->  "So...? …? Unique Truffle Cream Body Mist 150ml"
+```
+
+`?` was not in the list, so consumption stopped inside the punctuation, the rule then matched the
+**second** "So", and it chewed into the product name.
+
+> **An enumerated separator list is a guess about which punctuation exists in supplier data.** The
+> comparison was already alphanumeric-only; the boundary had to be too. Fixed to *any
+> non-alphanumeric*, which also moved the count from 4,312 to 4,388.
+>
+> **This is the argument for reading a large diff rather than trusting it.** The rule was validated
+> against nine hand-chosen cases and a full-catalogue count, and both passed. It took a random
+> sample of real rows to produce the one input nobody had thought of.
+
+#### THE 180 RESIDUAL, HONESTLY
+
+The `brand+brand` detector **over-counts**. Of the 180 rows it flags as still doubled:
+
+| row | verdict |
+|---|---|
+| `Phyto` + "Phyto Phytophanere Ultra Serum" | **not a double.** "Phytophanere" is the product line |
+| `o_p_i` + "o_p_i OPIcons" | **not a double.** Same shape |
+| `Little Soap Co.` + "Little Soap Co. Little Soap Company" | **a genuine double that survives** |
+
+The mid-word guard is what refuses all three, and it is right to. **The true residual is smaller
+than 180** and the survivors are the price of the guard.
+
+> **match-key.ts's judgement, unchanged:** the rule **can at worst miss**, and **missing is safe
+> where over-stripping is not**. Stripping "Phyto" out of "Phytophanere" would be worse than
+> leaving a genuine double alone. The same 25 unfixed spelling-variant rows are held back by the
+> same guard for the same reason.
+
+#### A TEST OVERTURNED, NOT CORRECTED
+
+`lib/format/__tests__/product-name.test.ts` already specified the old behaviour as correct, under
+the name **`does not strip when spacing/punctuation differs (out of scope)`** -- a deliberate scope
+decision, written down and labelled.
+
+> **A SCOPE DECISION MADE WITHOUT THE NUMBER IS A DIFFERENT ACT FROM ONE MADE WITH IT.** The
+> original was not wrong to draw a boundary. It was drawn on an unmeasured guess about what lay
+> beyond it -- and beyond it were 2,890 products whose titles the helper was actively breaking.
+> **The case the test names, "L. A. Colors" against "L.A. COLORS", is now the third worst offender
+> at 190 products.**
+>
+> The reasoning is recorded **at the test**, not only here, because a test flipped without a note
+> reads as a bug to whoever finds it next.
+
+#### AND THE MIRROR IS ASSERTED TO AGREE
+
+The rule is mirrored into `supabase/functions/_shared/product-name.ts` for the Deno runtime, with
+a test that imports **both** and asserts they produce the same output on every case -- **not that
+each works separately.**
+
+> **Item 345 applied at the moment of extraction rather than discovered later.** That item exists
+> because the delivery rule was extracted into `_shared`, the extraction worked, and the layer
+> above it was left holding two implementations of one rule that disagreed in production until
+> somebody measured a saving that had been GBP 0.00 for every recipient. `delivery.test.ts` is the
+> worked example this follows. **Agreement is the property that rots; correctness is the one that
+> gets tested.**
+
+**Also:** `RoutineBuilder.tsx` imported `displayProductTitle` and never used it. Removed.
