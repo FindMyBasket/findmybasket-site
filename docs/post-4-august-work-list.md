@@ -33412,9 +33412,9 @@ measured (item 429).
 **WHAT IS NOT CLOSED, AND SHOULD NOT READ AS CLOSED:**
 
 - **`bath_body` is not opted in.** Five of six, not six of six.
-- **The furniture demotion ran on `/hair` only** (item 409). The other four still carry "Brands also in
-  other categories", "Browse by area" and "Top brands" above their grid — which is most of the distance
-  in the after column above.
+- ~~**The furniture demotion ran on `/hair` only.**~~ **WRONG, corrected at item 432.** The reorder was
+  written as browse-dependent inside `CategoryPage`, so it applied to every category the moment that
+  category opted in. All five opted-in roots already render hero → grid → link blocks.
 - **`totalPages` is still overstated** on every grid: `totalCount` counts before the live-price filter,
   so a late page can come up short. Inherited deliberately at item 408 and still owed to whoever fixes
   it for the subcategory pages too.
@@ -33424,3 +33424,44 @@ measured (item 429).
 
 > **"All six are opted in" was the closing line I was reaching for and it is not true — bath_body is
 > not.** Recorded because a thread closes on what was done, not on the shape the summary wants.
+
+---
+
+### 432. The demotion had already run everywhere, and I recorded that it had not
+
+**Raised:** 26 August 2026 · **Corrects item 431. bath_body opted in — six of six.**
+
+**Item 431 said "the furniture demotion ran on `/hair` only, the other four still carry three blocks
+above their grid". That was false when written.** Checked on production:
+
+```
+/makeup       Makeup      > All makeup      > Brands also in… > Browse by area > Top brands
+/fragrance    Fragrance   > All fragrance   > Brands also in… > Browse by area > Top brands
+/supplements  Supplements > All supplements > Brands also in… > Browse by area > Top brands
+/skincare     Skincare    > All skincare    > Brands also in… > Top brands
+/hair         Hair        > All hair        > Brands also in… > Browse by area > Top brands
+```
+
+**The grid is directly under the hero on all five.** Item 409 implemented the reorder as
+*browse-dependent inside the component* — `{browse ? <Grid/><Links/> : <Links/><Grid/>}` — so **it
+applied to every category the moment that category opted in.** There was never a per-page demotion to
+run.
+
+> **I described a change by the page I made it on rather than by the code I wrote.** The commit
+> message, the item and the PR all said "/hair", because that is where it was measured. **The
+> implementation was general and the record was specific**, and nothing reconciled them until someone
+> asked for the work to be repeated on pages that already had it.
+
+**AND THE SAME ERROR INVALIDATED A CAVEAT I THEN ACCEPTED.** The follow-up concern was that makeup's
+1,335px and fragrance's 1,001px were measured on pages still carrying three blocks, and so were not
+comparable with hair's post-demotion 1,001. **They were all measured post-demotion. The table was
+consistent.** The gap between hair and makeup is **chip-row wrapping — 22 chips against 6** — not
+layout.
+
+> **A wrong record produced a plausible objection to a correct table, and I was ready to act on it.**
+> The check that settled it was reading the rendered `<h1>`/`<h2>` order on five pages, which cost one
+> command.
+
+**bath_body opted in** — 4 subcategories, so "Browse by area" keeps its indexed destinations under item
+411's rule; 20 real product types, 328 default rows, no nulls, so it gets a full bar and a complement
+chip.
