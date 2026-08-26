@@ -110,6 +110,15 @@ export async function getEditProductTypes(edit: Edit): Promise<BrandProductTypeC
       .in('normalised_brand', edit.brand_slugs)
       .not('product_type', 'is', null)
       .not('tags', 'cs', '{cleanup_remove}')
+
+  // .order('id') BEFORE .range() IS LOAD-BEARING, NOT COSMETIC. Unordered LIMIT/OFFSET
+  // has no stability guarantee across pages: rows get missed and others returned twice,
+  // and the total still reconciles, so no count-based check catches it. Measured
+  // evidence and the full write-up live on getSubcategoryProducts in
+  // lib/subcategory-queries.ts. Work-list items 146, 151.
+  //
+  // THIS FILE HAD NEVER STATED THE RULE. It pages in two places and carried no note in
+  // either; the gap was surfaced by the item 417 audit rather than by a failure here.
       .order('id', { ascending: true })
       .range(from, from + SUPABASE_PAGE - 1);
     if (error || !data || data.length === 0) break;

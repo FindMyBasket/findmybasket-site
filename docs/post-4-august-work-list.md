@@ -32594,3 +32594,75 @@ lost their bound.**
 **Items 238 and 412 were both found by a rule failing to travel.** This one was found by opting in a
 larger category -- **not by review, and not by any rule, because the code was correct-looking at every
 scale it had previously run at.**
+
+---
+
+### 417. A rule living in dead code guards nothing, and the tie hazard it did not cover
+
+**Raised:** 26 August 2026 · **Both `fetchAllRows` copies deleted. Rule relocated. Tiebreak added.**
+
+Item 415 replaced all seven callers with SQL aggregates, leaving **two identical copies of
+`fetchAllRows` with no callers, each carrying items 146 and 151's rule** -- and three live comments
+citing it by name. **A rule in dead code reads as guidance on a live mechanism while guarding
+nothing**, and the citations would have pointed at a function nothing calls.
+
+**THE RULE IS NOT DEAD. IT GUARDS FOUR LIVE PAGINATORS, AND NONE OF THEM IS AN RPC:**
+
+| File | Live `.range()` | Before |
+|---|---|---|
+| `lib/subcategory-queries.ts` | `getSubcategoryProducts`, the grid query | Cited the rule 200 lines away |
+| `lib/brand-queries.ts` | two loops | Carried its own statements |
+| `lib/edit-queries.ts` | two loops | **Stated the rule nowhere** |
+| `lib/queries.ts` | **none** | Every `.range()` was in the deleted callers |
+
+**The full text moved to `getSubcategoryProducts`**, merged with the note already there. The write-up
+and the code it protects now sit together instead of 200 lines apart, and **item 146's measured detail
+is what makes it persuasive**: 1,719 rows against an actual 1,719, the right total, containing 102 of
+117, fifteen rows twice and fifteen never, with `719 < PAGE_SIZE` as the loop's own termination
+condition -- so the read reported itself complete.
+
+**`lib/queries.ts`'s copy was deleted outright, not relocated.** That file now has no paginator at all.
+**Duplicating the rule into a file that no longer pages would recreate the problem one level down**,
+which is the thing being removed.
+
+**`lib/edit-queries.ts` gained a pointer, and that is a gap rather than a relocation.** It pages twice
+and had never stated the rule in either place. **Surfaced by this audit, not by a failure there.**
+
+---
+
+**THE TIE HAZARD: SAME FAMILY, DIFFERENT MECHANISM, NOT COVERED BY THE OLD RULE.**
+
+```sql
+order by count(*) desc
+limit p_limit
+```
+
+Items 146 and 151 are about unordered LIMIT/OFFSET **across pages**. `fmb_top_brands` has one page and
+no offset, so that rule does not reach it. But **`count(*)` is not unique**: brands tied on count come
+back in arbitrary order, so **which brand occupies position 16 varies between identical calls.**
+
+> **The count is right, the length is right, and the membership at the boundary is not.** The shared
+> root is a non-unique sort key under a row limit; the visible failure differs. There, a paginated read
+> that reports itself complete. Here, a stable-looking list whose last entries swap.
+
+**Live today, measured at the boundary of the sixteenth brand:**
+
+| Category | 16th brand's count | Brands tied there |
+|---|---|---|
+| makeup | 283 | **2** |
+| supplements | 22 | **3** |
+| skincare, hair, fragrance, bath_body | 292 / 140 / 138 / 69 | 1 |
+
+**Two of six category pages have an unstable sixteenth brand right now.**
+
+**Fixed:** `order by count(*) desc, p.normalised_brand`.
+
+**AND IT IS NOT A RESTORATION, WHICH IS THE PART WORTH SAYING.** The JavaScript this replaced had the
+same instability. It sorted a `Map` by count, and ties fell in **insertion order** -- which happened to
+be id order, because the offset walk was ordered by id. **That was stability by accident of an
+implementation detail, never a guarantee anyone chose.** The tiebreak is therefore a small behaviour
+change at the boundary, not a return to prior behaviour.
+
+> **The difference between fixing a defect and claiming to restore something that never existed.** The
+> old code was not correct here and made stable by the rewrite; it was incorrect in a way that happened
+> not to show.
