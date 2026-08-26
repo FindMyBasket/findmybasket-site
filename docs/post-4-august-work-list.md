@@ -32987,3 +32987,140 @@ page"*, which is a claim about the destination rather than about the catalogue.
 
 **Verified:** `elf` 1 to **7**, `moyou london` absent to **56**, entries 2,457 to **2,624** before slug
 grouping.
+
+---
+
+### 424. A guard written, counted, persisted, and consulted nowhere
+
+**Raised:** 26 August 2026 · **Four changes deployed. Nothing applied to the catalogue.**
+
+**THE LEARNING PATH IS THE FINDING.** `tier1Skips` was written at map-build time, counted into the
+result payload, and persisted to `tier1_ean_skips`. **It was read nowhere.** At the link site:
+
+```ts
+if (normEan && !eanToProductId.has(normEan)) { eanToProductId.set(normEan, matchedProductId); … }
+```
+
+> **A barcode withheld from the map is ABSENT from it — which is exactly the condition this line
+> tests.** So the first row carrying an ambiguous barcode was skipped, and the next row, matched by
+> name, wrote that barcode straight back in pointing at whatever it had matched. From there it linked
+> via Tier 1 for the rest of the run and, through `seenEanToProductId`, every later chunk.
+
+**The guard skipped the first row and adopted the second. It has been ineffective since it was
+written**, and a faithful Tier-2 copy would have inherited the leak. **The guard's own design left the
+slot empty for the thing it excluded.**
+
+**Third guard this week that could not fire:** the held-product guard dormant on the wrong transition,
+the seven held by a comment, and this one skipping into an open door.
+
+**Built:** Tier-2 ambiguity guard grouping `mpns` exactly as Tier 1 groups `eans`; `tier2_mpn_skips`
+with candidate ids and a `reason` of `'ambiguous'` or `'placeholder'`; placeholder rejection; and both
+skip sets consulted at the learning path.
+
+**THE PLACEHOLDER CHECK IS NOT IN `normaliseMpn`, DELIBERATELY.** That function is byte-paired with the
+`mpn_normalised` generated column, and changing one without the other decouples what the importer
+matches on from what the database stores. **"Is this an identifier at all" is matching policy**, so it
+sits beside the tier logic.
+
+> **The precedent is already in the schema.** `ean_normalised` is generated as
+> `NULLIF(CASE WHEN length(digits, leading zeros stripped) >= 8 THEN … ELSE '' END, '')` — **a barcode
+> too short to be a barcode becomes NULL and can never match.** MPN received no equivalent, so `"0"`
+> survived as a key. The asymmetry was between the two columns, and this restores it at the point of
+> use.
+
+**Verified, seen rather than inferred:** `tier2_mpn_skips` holds `"0"` for retailers 27 and 30 with
+**561 candidate products** each, reason `placeholder`. The Organic Pharmacy proved the mechanism in
+isolation — 3 skips, 3 candidate arrays, persistence working, at a size where nothing else was moving.
+
+---
+
+### 425. Three wrong diagnoses of one failure, each offered before measuring
+
+**Raised:** 26 August 2026 · **The dry-run blocker is still not explained.**
+
+`dry_run:true` returns `WORKER_RESOURCE_LIMIT` on Gorgeous Shop and Beauty Flash. **I diagnosed it
+three times and was wrong three times, in sequence, each diagnosis built on the last.**
+
+**One — "the knob landed a layer below the constraint."** I added `max_rows` to bound what the matcher
+consumes, it did not help, and I concluded the worker was dying in the inflate. Stated as cause.
+
+**Two — "the download is unbounded."** I found `streaming_enabled` is read from
+`retailer_import_config`, not the request body, so my earlier `streaming_enabled: true` had done
+nothing; Beauty Bay is the only one of the three configured for it, which is why it was the only one
+that ran. I forced streaming for dry runs. **Still failed.**
+
+**Three — "the ambiguity makes itself uninspectable."** `loadChunkMaps` prefetches every candidate for
+every MPN in a chunk, and `"0"` alone pulls 561 products with their names. Sharp, testable, and it
+predicted that refusing `"0"` *before* the prefetch would let the feed survive. **I moved the check to
+the collection site and both feeds still died at 3,000 rows.**
+
+> **What actually distinguishes the cases was available the whole time and I never asked for it:
+> Gorgeous Shop completes at `max_rows: 50` in ten seconds.** The failure is row-dependent. The
+> download was never the problem, and diagnosis two was reasoning built on diagnosis one without
+> either being measured.
+
+**A PARAMETER ADDED AT THE WRONG LAYER LOOKS LIKE THE FIX AND REACHES NOTHING.** `max_rows` made Beauty
+Bay's run cheaper and left the two feeds it was added for exactly as unreachable.
+
+**The knob is still worth keeping, for a reason unrelated to the bug:** a dry run that cannot complete
+on large feeds **is a dry run only for small retailers**, and the feeds most worth inspecting before a
+change are the large ones. The Organic Pharmacy at 110 rows dry-runs fine and tells you almost nothing.
+**A capability that cannot reach the cases it exists for is not a partial capability.**
+
+**Stride, not head.** `sample_stride` keeps every Nth row: deterministic, no buffering, spans the file.
+The first N rows of an alphabetical feed measure one letter — one brand block, one price band, one
+barcode prefix. The result reports `rows_seen`, `rows_kept` and `tail_unsampled`, **so a sampled run
+cannot be read as a whole-feed run by accident.**
+
+**MARGINALITY, STATED PLAINLY.** At 1,500 rows both feeds sit on the memory boundary and the outcome
+flips between runs: Gorgeous Shop succeeded, then failed on retry with the same body; Beauty Flash
+succeeded guarded and failed on the baseline build. **Numbers from these runs are worth less than
+their precision suggests**, and the pair of them is not a controlled comparison.
+
+---
+
+### 426. Forty-one MPN links were forty-one claims on fewer products
+
+**Raised:** 26 August 2026 · **The measured A/B. Nothing applied.**
+
+**Beauty Bay, identical 1,924-row sample, guards off then on:**
+
+| | Baseline | Guarded | Δ |
+|---|---|---|---|
+| via EAN | 8 | 8 | **0** |
+| via MPN | 41 | **11** | −30 |
+| name_exact | 2 | 5 | +3 |
+| link to existing | 51 | 24 | −27 |
+| **create new product** | **0** | **27** | +27 |
+
+**On its face, 27 rows stop linking. That reading is wrong, and the baseline's own sample shows why.**
+Of 19 MPN links sampled, two product ids were each claimed by two different rows:
+
+```
+86414 ← Colorfix Foils 24-Hour Cream Colour - JEWELZ
+      ← Colorfix Foils 24-Hour Cream Colour - Twinkle
+86384 ← Colorfix Metallics ... Enchantment
+      ← Colorfix Metallics ... Wanderlust
+```
+
+> **The unique index on `(product_id, retailer_id)` allows one row per product per retailer, so the
+> baseline's 41 MPN links are not 41 attachments — they are 41 claims on fewer products, and the losers
+> are discarded silently.** Creating a product for `JEWELZ` is the correct answer, not a lost link.
+
+**The split, in the terms that survive the framing:**
+
+> **3 rows fall through to a tier that verifies size and number signature. 27 rows stop being merged
+> into a product they are not. 0 rows link nowhere.**
+
+**Gorgeous Shop, 1,500-row sample** — same shape, larger: MPN **145 → 70**, name_exact 1 → 9,
+name_stripped 4 → 17, link 83 → 29, create **0 → 44**. Twenty-one recovered by name tiers.
+*(Both runs marginal; see item 425.)*
+
+**MY PREDICTION WAS WRONG AND I ASKED FOR IT ON THE RECORD BEFOREHAND.** I predicted EAN links would
+fall, because 8,675 of 80,950 barcodes are ambiguous and the second row through adopted each one.
+**EAN links did not move on either retailer — 8 to 8 on Beauty Bay, 34 to 34 on Gorgeous Shop.**
+
+Hunk 4 only bites when a name-matched row re-seeds an ambiguous barcode **within the same run**, and
+that did not happen in 1,924 or 1,500 sampled rows. **The 462 Tier-1 skips are real; the adoption path
+they leak through is rarer than either of us implied.** Unproven on a full feed rather than disproven —
+a sample that never exercised the path is not evidence the path is cold.

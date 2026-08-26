@@ -767,6 +767,33 @@ serve(async (req) => {
   const reqMode: string = typeof body.mode === "string" ? body.mode : "";
   const SLICE_ROWS: number = (typeof body.slice_rows === "number" && body.slice_rows > 0)
     ? Math.floor(body.slice_rows) : 9000;            // knob: pass slice_rows (e.g. 6000) to shrink
+
+  // max_rows: SAMPLE THE FEED ON A DRY RUN SO LARGE FEEDS CAN BE INSPECTED AT ALL.
+  //
+  // A dry run is never sliced -- cross-slice state relies on each slice committing --
+  // so dry_run:true pushes the whole feed through one worker. Niche Beauty at 14,636
+  // rows returned WORKER_RESOURCE_LIMIT, and so does Gorgeous Shop at ~8k, with or
+  // without streaming.
+  //
+  // THE CONSEQUENCE IS NOT "SOME DRY RUNS FAIL". It is that dry_run only works for
+  // SMALL retailers, and the feeds most worth inspecting before a change are the large
+  // ones. The Organic Pharmacy at 110 rows dry-runs fine and tells you almost nothing.
+  // A capability that cannot reach the cases it exists for is not a partial capability.
+  //
+  // STRIDE, NOT HEAD. Taking the first N rows of an alphabetically-ordered feed measures
+  // one letter -- one brand block, one price band, one barcode prefix. This keeps every
+  // Nth row instead, which is deterministic, needs no buffering, and spans the whole
+  // feed. Item 425.
+  const MAX_ROWS: number = (typeof body.max_rows === "number" && body.max_rows > 0)
+    ? Math.floor(body.max_rows) : 0;                 // 0 = no cap
+  // A streaming source cannot report its length before it is consumed, so the stride is
+  // GIVEN rather than derived. Default 4: an ~8k feed yields ~2k rows spanning all of
+  // it. If the ceiling is reached before the feed ends the tail is unsampled, and
+  // `rows_seen` versus the feed's real size makes that visible in the result.
+  const SAMPLE_STRIDE: number = (typeof body.sample_stride === "number" && body.sample_stride >= 1)
+    ? Math.floor(body.sample_stride) : 4;
+  let sampleSeen = 0;
+  let sampleKept = 0;
   const runId: string = typeof body.run_id === "string" && body.run_id
     ? body.run_id : crypto.randomUUID();
   const sliceIndex: number = (typeof body.slice_index === "number" && body.slice_index >= 0)
@@ -890,6 +917,27 @@ serve(async (req) => {
   // this makes the ambiguity a queryable list with both product ids, so it becomes merge
   // queue input or a barcode denylist rather than a decision nobody sees.
   const tier1Skips = new Map<string, number[]>();  // ean → candidate product ids
+  const tier2Skips = new Map<string, number[]>();  // mpn → candidate product ids
+
+  // PLACEHOLDER MPNs ARE NOT IDENTIFIERS, AND THIS IS NOT NORMALISATION.
+  //
+  // Deliberately NOT in normaliseMpn(): that function is byte-paired with the
+  // `mpn_normalised` generated column, and changing one without the other silently
+  // decouples what the importer matches on from what the database stores. "Is this an
+  // identifier at all" is a MATCHING POLICY, so it lives beside the tier logic.
+  //
+  // THE PRECEDENT IS IN THE SCHEMA ALREADY. `ean_normalised` is generated as
+  // NULLIF(CASE WHEN length(digits stripped of leading zeros) >= 8 THEN ... ELSE '' END)
+  // -- a barcode too short to be a barcode becomes NULL and never matches. `mpn`
+  // received no equivalent, so "0" survives as a key. This restores the symmetry at the
+  // point of use rather than in the shared normaliser. Work-list item 424.
+  const MPN_PLACEHOLDERS = new Set([
+    "0", "00", "000", "0000", "00000", "000000",
+    "N/A", "NA", "N.A.", "NONE", "NULL", "NIL", "-", "--", ".", "X", "XX",
+    "TBC", "TBA", "UNKNOWN", "NOMPN", "NO MPN", "DEFAULT", "TEST",
+  ]);
+  const isPlaceholderMpn = (m: string): boolean =>
+    MPN_PLACEHOLDERS.has(m) || /^0+$/.test(m);
 
   // existing_brands_only needs just the distinct set of match_brand keys. The
   // big feeds that actually OOM have existing_brands_only=false, so they SKIP this
@@ -983,7 +1031,30 @@ serve(async (req) => {
       // the one function; do not inline either of them again.
       const e = normaliseEan(extractFeedEan(f, idx.ean, idx.ean_alt, coalesceOn).value);
       if (e) eans.add(e);
-      if (idx.mpn >= 0) { const m = normaliseMpn((f[idx.mpn] || "").trim()); if (m) mpns.add(m); }
+      // PLACEHOLDERS ARE REFUSED HERE, BEFORE THE PREFETCH, NOT AFTER IT (item 425).
+      //
+      // The Tier-2 guard originally filtered the RESULT of this lookup, which is too
+      // late to matter: "0" was still sent to the database and still came back as 561
+      // products with their names, all materialised into the chunk map. That is the
+      // suspected reason Gorgeous Shop and Beauty Flash cannot dry-run at 3,000 rows
+      // while Beauty Bay can -- one placeholder value dragging a 561-row candidate set
+      // into memory on every chunk.
+      //
+      // Refusing it at collection means the query is never asked. The ambiguity guard
+      // still runs on what does come back, for the values that are genuine but shared.
+      if (idx.mpn >= 0) {
+        const m = normaliseMpn((f[idx.mpn] || "").trim());
+        if (m) {
+          if (isPlaceholderMpn(m)) {
+            // STILL RECORDED, though never queried. Refusing it at collection means the
+            // candidate set is never fetched, so `candidate_product_ids` is empty here --
+            // an empty array on a 'placeholder' row means "not asked", not "no matches".
+            if (!tier2Skips.has(m)) tier2Skips.set(m, []);
+          } else {
+            mpns.add(m);
+          }
+        }
+      }
       const mv = f[matchColumnIdx]; if (mv) extIds.add(mv);
     }
 
@@ -1060,10 +1131,32 @@ serve(async (req) => {
         tier1Skips.set(k, [...ids].sort((a, b) => a - b));
       }
     }
+    // TIER 2 AMBIGUITY GUARD, MIRRORING TIER 1 (item 424).
+    //
+    // This was first-wins over a query ordered by mpn with no tiebreak, so an MPN
+    // carried by many products resolved to whichever the database returned first.
+    // Measured: 1,514 MPN values map to more than one product, 323 of them span
+    // retailers, and "0" alone maps to 561 products across 1,046 rows.
+    const mpnCandidates = new Map<string, Set<number>>();
     for (const r of (sets?.mpns ?? [])) {
       const k = String(r.mpn || "").trim();
-      if (k && r.product_id != null && !mpnToProductId.has(k)) mpnToProductId.set(k, r.product_id);
+      if (k && r.product_id != null) {
+        let set = mpnCandidates.get(k);
+        if (!set) { set = new Set<number>(); mpnCandidates.set(k, set); }
+        set.add(Number(r.product_id));
+      }
       rememberName(r.product_id, r.name);
+    }
+    for (const [k, ids] of mpnCandidates) {
+      if (isPlaceholderMpn(k)) {
+        if (!tier2Skips.has(k)) tier2Skips.set(k, [...ids].sort((a, b) => a - b));
+        continue;
+      }
+      if (ids.size === 1) {
+        if (!mpnToProductId.has(k)) mpnToProductId.set(k, [...ids][0]);
+      } else if (!tier2Skips.has(k)) {
+        tier2Skips.set(k, [...ids].sort((a, b) => a - b));
+      }
     }
     for (const r of (sets?.extids ?? [])) {
       if (r.external_product_id) existingByExtId.set(r.external_product_id, r);
@@ -1113,7 +1206,24 @@ serve(async (req) => {
   // legacy buffered path even when the flag is on. The flag therefore only
   // changes behaviour for direct-HTTP feeds (the ones big enough to need it,
   // e.g. Debenhams once switched off its storage:// pre-filter).
-  const streamingActive = effectiveMode !== "process" && streamingEnabled && !feedUrl.startsWith("storage://");
+  // A DRY RUN STREAMS WHETHER OR NOT THE RETAILER IS CONFIGURED TO (item 425).
+  //
+  // The legacy path inflates the whole gzip into memory before a single row is parsed.
+  // That is why dry_run:true returned WORKER_RESOURCE_LIMIT on Gorgeous Shop (~8k rows)
+  // and Beauty Flash, while Beauty Bay -- the only one of the three with
+  // config.streaming_enabled = true -- completed in three seconds.
+  //
+  // MAX_ROWS DID NOT FIX THIS AND COULD NOT. It bounds what the MATCHER consumes, and
+  // the worker was dying in the INFLATE, one layer below. A parameter added at the wrong
+  // layer looks like the fix and reaches nothing: it made Beauty Bay's run cheaper and
+  // left the two feeds it was added for exactly as unreachable as before.
+  //
+  // Forced for dry runs only, so no real import's I/O path changes. `config.streaming_enabled`
+  // still governs applies, and body.force_legacy_stream:true restores the old path for
+  // parity testing.
+  const streamingActive = effectiveMode !== "process"
+    && (streamingEnabled || (dryRun && body.force_legacy_stream !== true))
+    && !feedUrl.startsWith("storage://");
 
   // ── Phase 4b — STORAGE-PASSTHROUGH STAGE (Phase A): ungzip ONCE → one blob ──
   // Very large gzipped feeds (Boots) 546 in the inline stage because inflate +
@@ -2339,7 +2449,7 @@ serve(async (req) => {
     }
 
     // Tier 2: MPN match
-    if (!matchedProductId && normMpn && mpnToProductId.has(normMpn)) {
+    if (!matchedProductId && normMpn && !isPlaceholderMpn(normMpn) && mpnToProductId.has(normMpn)) {
       matchedProductId = mpnToProductId.get(normMpn);
       matchedVia = "mpn";
       countLinkViaMpn++; if (isOrdinary) ordinaryDiagnostic.linked_via_mpn++;
@@ -2446,8 +2556,25 @@ serve(async (req) => {
       if (description) { descBuffer.push({ product_id: matchedProductId, description }); if (descBuffer.length >= DESC_FLUSH) await flushDescriptions(); }
       // In-feed learning: write to BOTH the chunk map (for later rows in this
       // chunk) and the persistent seen-map (for later chunks).
-      if (normEan && !eanToProductId.has(normEan)) { eanToProductId.set(normEan, matchedProductId); seenEanToProductId.set(normEan, matchedProductId); }
-      if (normMpn && !mpnToProductId.has(normMpn)) { mpnToProductId.set(normMpn, matchedProductId); seenMpnToProductId.set(normMpn, matchedProductId); }
+      //
+      // THE SKIP SETS ARE CONSULTED HERE, AND UNTIL NOW THEY WERE NOT (item 424).
+      //
+      // `tier1Skips` was written, counted and persisted, and read nowhere. A barcode
+      // withheld from the map is ABSENT from it -- which is exactly the condition this
+      // line tests. So the first row carrying an ambiguous barcode was skipped and the
+      // NEXT row, matched by name, wrote that barcode straight back in, pointing at
+      // whatever it had matched. From there it linked via Tier 1 for the rest of the run
+      // and, through seenEanToProductId, every later chunk.
+      //
+      // The guard skipped the first row and adopted the second. It has been ineffective
+      // since it was written: THE GUARD'S OWN DESIGN LEFT THE SLOT EMPTY FOR THE THING IT
+      // EXCLUDED.
+      if (normEan && !tier1Skips.has(normEan) && !eanToProductId.has(normEan)) {
+        eanToProductId.set(normEan, matchedProductId); seenEanToProductId.set(normEan, matchedProductId);
+      }
+      if (normMpn && !tier2Skips.has(normMpn) && !isPlaceholderMpn(normMpn) && !mpnToProductId.has(normMpn)) {
+        mpnToProductId.set(normMpn, matchedProductId); seenMpnToProductId.set(normMpn, matchedProductId);
+      }
       if (sampleLinkExisting.length < 25) {
         sampleLinkExisting.push({ name, brand, matched_product_id: matchedProductId, price, matched_via: matchedVia });
       }
@@ -2722,11 +2849,24 @@ serve(async (req) => {
   }
 
   try {
+    // Stride sampling (item 425). `seenForSample` counts EVERY row the feed yields;
+    // `stride` keeps one in N so the sample spans the file rather than its opening.
+    // The stride is derived from feed_total_rows when the source reports it and falls
+    // back to a fixed guess otherwise -- a slightly-wrong stride still samples across
+    // the feed, which is the property that matters.
+    const sampling = MAX_ROWS > 0 && dryRun;
     for await (const batch of batchSource()) {
       for (const rawFields of batch) {
+        if (sampling) {
+          const keep = (sampleSeen % SAMPLE_STRIDE) === 0 && sampleKept < MAX_ROWS;
+          sampleSeen++;
+          if (!keep) continue;
+          sampleKept++;
+        }
         chunkRows.push(rawFields);
         if (chunkRows.length >= CHUNK_SIZE) await runChunk();
       }
+      if (sampling && sampleKept >= MAX_ROWS) break;
     }
     await runChunk(); // process the final partial block (auto-flushes only if it crosses FLUSH_THRESHOLD)
   } catch (streamErr) {
@@ -2812,6 +2952,12 @@ serve(async (req) => {
     sample_reassignment_suspect: sampleReassignmentSuspect,
     dry_run: dryRun,
     feed_total_rows: feedRows,
+    // Present only when max_rows sampled the feed, so a sampled run can never be read
+    // as a whole-feed run by accident. Item 425.
+    ...(MAX_ROWS > 0 && dryRun
+      ? { sampled: { max_rows: MAX_ROWS, stride: SAMPLE_STRIDE, rows_seen: sampleSeen, rows_kept: sampleKept,
+                     tail_unsampled: sampleKept >= MAX_ROWS } }
+      : {}),
     feed_fetch_ms: fetchMs,
     // BEFORE ADDING A COUNTER HERE, APPLY THIS TEST:
     //
@@ -2897,6 +3043,7 @@ serve(async (req) => {
       // item 44 is what happens to structured diagnostics stored here, and a skip list
       // that has to be parsed out of a log blob is not a merge queue.
       tier1_ambiguous_skipped: tier1Skips.size,
+      tier2_ambiguous_skipped: tier2Skips.size,
       beauty_flash_names_rebuilt: countBeautyFlashRebuilt,
       debenhams_names_cleaned: countDebenhamsCleaned,
       debenhams_shades_routed: countDebenhamsShadeRouted,
@@ -2936,6 +3083,28 @@ serve(async (req) => {
       }
     } catch (e) {
       console.error("tier1_ean_skips write threw:", e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  // Same contract as tier1_ean_skips above: written on dry runs too, and a failure here
+  // never fails the import. `reason` separates the two refusals -- 'ambiguous' wants a
+  // merge or better feed data, 'placeholder' wants nothing, because the value was never
+  // an identifier. Item 424.
+  if (tier2Skips.size > 0) {
+    try {
+      const mpnSkipRows = [...tier2Skips.entries()].map(([mpn, ids]) => ({
+        retailer_id: retailerId,
+        dry_run: dryRun,
+        mpn,
+        reason: isPlaceholderMpn(mpn) ? "placeholder" : "ambiguous",
+        candidate_product_ids: ids,
+      }));
+      for (let i = 0; i < mpnSkipRows.length; i += 500) {
+        const { error: skipErr } = await supa.from("tier2_mpn_skips").insert(mpnSkipRows.slice(i, i + 500));
+        if (skipErr) { console.error("tier2_mpn_skips insert failed:", skipErr.message); break; }
+      }
+    } catch (e) {
+      console.error("tier2_mpn_skips write threw:", e instanceof Error ? e.message : String(e));
     }
   }
 
