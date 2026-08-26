@@ -29341,9 +29341,64 @@ stops TonyMoly (2 of 430) counting as a comparison page.
 > worse, at the same average position. The hypothesis predicted the reverse.
 
 **So the layout reading survives and the catalogue reading does not.** Phase 2 stays a question
-about the page. **Why the comparison-capable hubs convert worse is unexplained** and I am not going
-to explain it from this data: position is equal, so it is not a SERP-placement story, and anything
-past that needs the query-level export rather than the page-level one.
+about the page.
+
+##### ★ AND THE INVERSION IS THE OPEN QUESTION, NOT A FOOTNOTE TO THE ABOVE
+
+**0.49% on hubs that cannot compare against 0.11% on hubs that can.** That is not a weaker version
+of the hypothesis, it is the hypothesis backwards, and it is recorded here as **UNEXPLAINED** rather
+than folded into the layout reading -- **because it may not be a layout fact at all.**
+
+The obvious confound is that mean position hides different distributions. **It does not.** Banding
+by position, clicks over impressions:
+
+| position band | A1 meaningful | A2 technicality | C single-stockist | B nothing in stock |
+|---|---|---|---|---|
+| 10-20 | **0 / 864 = 0.00%** | 2 / 1,751 = 0.11% | **36 / 4,709 = 0.76%** | 6 / 575 = 1.04% |
+| 20-40 | 4 / 2,538 = 0.16% | 1 / 922 = 0.11% | **10 / 3,733 = 0.27%** | 0 / 640 |
+| 40+ | 0 / 993 = 0.00% | 1 / 1,040 = 0.10% | 4 / 3,334 = 0.12% | 0 / 165 |
+
+Median position is 26.0 for A1 and 23.6 for C. **At matched position bands the single-stockist hubs
+still convert three to seven times better.** The simplest confound is ruled out and the inversion is
+real.
+
+> **A PAGE THAT CANNOT DO THE THING EARNS MORE CLICKS THAN A PAGE THAT CAN, AT THE SAME RANK.**
+> Whatever is happening is upstream of the page: it is in the query, or in the result's competition,
+> or in what the visitor already intends before they see us. **Folding it into "the layout is wrong"
+> would be assuming the answer** -- the layout is identical across all four groups, so the layout
+> cannot be what differs between them.
+
+##### WHAT WOULD ANSWER IT, AND WHETHER IT IS WORTH DOING
+
+**The current exports cannot answer it, confirmed rather than assumed.** `Queries.csv` has five
+columns -- query, clicks, impressions, CTR, position -- and **no page column**. Both files are
+separate 1,000-row lists with no key between them, so no join exists to construct.
+
+The answer needs **Search Console filtered by page, one hub at a time** -- a manual read, not a
+query. The question per hub is narrow: **are the impressions brand-only ("urban decay") or
+brand-plus-type ("urban decay setting spray")?**
+
+**Recommendation: yes, but seven hubs rather than sixteen, and only from A1 and C.** B and
+unresolved are 33 hubs and 2,633 impressions between them and are not the puzzle. The contrast that
+matters is A1 against C, and it wants the highest-impression hubs so the query lists are worth
+reading:
+
+| A1 | C |
+|---|---|
+| medicube (290), urban-decay (239), tom-ford (232) | proactiv (652), badedas (467), habi (465), tatti-lashes (379) |
+
+**It is worth doing because it forks what Phase 2 builds**, and the two forks want different work:
+
+- **If A1's impressions are brand-only head queries** -- sitting at position 26 behind the brand's
+  own site and every major retailer -- **those impressions were never winnable**, and Phase 2 should
+  optimise for the brand-plus-type demand the C hubs are already catching. That is exactly where the
+  chip fix lands, and it would make item 358 the centre of the phase.
+- **If A1's queries ARE brand-plus-type and still do not convert**, the chip fix is not the answer
+  and something on the page is repelling a visitor who arrived wanting precisely what we have. That
+  is a different phase.
+
+**Neither layout finding is blocked by it.** Items 357 and 358 are actionable now and their value
+does not depend on which fork is true.
 
 ##### THRESHOLD SENSITIVITY, REPORTED BECAUSE THE THRESHOLD WAS A CHOICE
 
