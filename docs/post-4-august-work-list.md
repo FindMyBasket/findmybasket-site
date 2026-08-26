@@ -30118,3 +30118,92 @@ left alone. **They cannot**, and the reason is structural:
 
 **Not applied. Reported as a fork**, because every option above is a decision about the seven, and
 the seven were explicitly held.
+
+---
+
+### 370. The match-key gate has stopped being a caution and become a queue
+
+**Raised:** 26 August 2026 · **Scoping what it would take to open it. Not the merge — the gate.**
+
+Four separate pieces of work now wait behind `_shared/match-key.ts`:
+
+| | waiting item | what it needs |
+|---|---|---|
+| 1 | **item 294** — `Boots Nail **&** Cuticle Oil` and `Boots Nail **And** Cuticle Oil` are two products, and the dead twin outranks the live one on 281 impressions | a rule change |
+| 2 | **item 368** — the seven split brands, 1,502 products | a re-keying collision measurement |
+| 3 | **2,709 stale keys** inconsistent with both implementations | a backfill |
+| 4 | **`COUNT_UNIT_RE`** — product 105424 held since 21 Aug because `90's` reads as a pack count | a different function, a different bug |
+
+##### ★ THREE OF THE FOUR ARE ONE BUG
+
+`normaliseForMatch` is the core of `buildMatchKey`, and its character class is `[^a-z0-9]+ -> " "`.
+**Every character outside a-z0-9 is deleted, not folded.** Measured against the live function:
+
+```
+"L'Oréal Paris Revitalift"  ->  "l or al paris revitalift"
+"L'Oreal Paris Revitalift"  ->  "l oreal paris revitalift"
+"Avène Thermal Water"       ->  "av ne thermal water"
+"Avene Thermal Water"       ->  "avene thermal water"
+```
+
+> **TWO SPELLINGS OF THE SAME PRODUCT PRODUCE DIFFERENT KEYS, SO THEY CANNOT MATCH.** This is not a
+> cosmetic defect. Matching is what the site does; a product listed by Boots as "Avène Thermal Water"
+> and by Escentual as "Avene Thermal Water" is two products with two prices and no comparison.
+>
+> **Item 294 is the same bug wearing a different character.** `&` is outside `a-z0-9`, so it is
+> deleted, while the word "and" survives -- `nail & cuticle` and `nail and cuticle` never meet.
+>
+> **And item 368's seven split brands are a CONSEQUENCE of it, not an independent problem.** They are
+> split because their products never matched. I recorded "zero shared match_key" as structurally
+> guaranteed by the brand being in the key, which is true and was not the whole reason.
+
+**Same root as items 355 and 361: an ASCII-only character class meeting non-ASCII supplier data.**
+Third instance in two days, and this is the one that costs comparisons rather than titles or URLs.
+
+##### CAN THE BACKFILL AND THE COLLISION MEASUREMENT SHARE ONE CHANGE? YES, AND THEY MUST
+
+**15,030 products — 14.9% of the catalogue — carry a `&` or an accent in their name**, so a rule
+change moves their keys. That subsumes the 2,709: once every key is recomputed, "inconsistent with
+both implementations" stops being a category.
+
+> **THEY CANNOT BE SEQUENCED AS TWO CHANGES.** Backfilling 2,709 to today's rule, then changing the
+> rule, means re-keying twice and measuring collisions against a set that is about to move. **The
+> collision measurement is not a step before the backfill; it is the backfill, inspected before it
+> is written.**
+>
+> This contradicts the standing note that *derived keys stale only on kept characters, so punctuation
+> fixes move no key*. **That note is right about fixes which change only already-stripped
+> characters, and this is not one** -- transliteration changes what SURVIVES normalisation, so keys
+> move by construction. The note should not be read as covering this.
+
+**`COUNT_UNIT_RE` does not belong in the same change.** Different function, different defect, and its
+hold is one product. Riding it along would mean one change proving two unrelated things.
+
+##### WHAT THE STANDING INSTRUCTION ACTUALLY REQUIRES
+
+Read from the file rather than remembered:
+
+| requirement | source |
+|---|---|
+| **`buildMatchKey` byte-identical to `fmb_build_match_key()`** in `20260703120000_match_key_deal_paren.sql`; any change mirrored in both | module header |
+| **`scripts/match-key-harness.mts` must pass** — ~50 regression cases, one per false-positive class learned from real catalogue data (pack counts, hidden sizes, shades, concentration, versions, sets, truncation) | module header |
+| **Any narrowing of `extractNameNumbers` must cite its comment and re-check the multipack population first** | line 313 |
+| **Report the diff before making it** | item 253 |
+
+##### WHAT A CHANGE WOULD HAVE TO PROVE
+
+1. **That it merges what should merge.** 138 transliterated names currently span more than one key
+   — a floor, since the approximation ignores the brand prefix.
+2. **That it merges nothing that should stay apart.** The harness's 50 cases are the floor, not the
+   ceiling; the new risk is that folding characters makes previously-impossible collisions possible,
+   and **that population does not exist until the keys are recomputed.**
+3. **That the SQL twin agrees**, byte for byte, on the same corpus.
+4. **That the multipack population is unchanged**, if `extractNameNumbers` is touched at all — and a
+   transliteration fix should not need to touch it, which is worth asserting rather than assuming.
+
+> **The honest shape is one gated change with three phases: recompute off-line, measure the collisions
+> against the recomputed set, then write.** Point 2 is the whole risk and it cannot be assessed from
+> the current data — which is the same wall item 368 hit, arrived at from the other side.
+
+**Nothing applied. This is the scoping, and the merge decision should wait on it rather than the
+other way round.**
