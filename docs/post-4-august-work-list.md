@@ -33458,9 +33458,23 @@ comparable with hair's post-demotion 1,001. **They were all measured post-demoti
 consistent.** The gap between hair and makeup is **chip-row wrapping — 22 chips against 6** — not
 layout.
 
-> **A wrong record produced a plausible objection to a correct table, and I was ready to act on it.**
-> The check that settled it was reading the rendered `<h1>`/`<h2>` order on five pages, which cost one
-> command.
+> **A wrong record produced a plausible objection to a correct table, the objection was accepted, and
+> five pages were queued for work they already had.** The record is mine, the objection followed from
+> it, and I was ready to act on both.
+
+**WHAT MADE THE FALSE RECORD PLAUSIBLE: I described a change by the page it was MEASURED on rather than
+by the code that IMPLEMENTS it.**
+
+> The measurement is necessarily per-page — you measure a fold on one URL. The change was not: the
+> reorder is a conditional in a shared component. **An item written from the measurement inherits the
+> measurement's scope**, so "demoted the blocks on /hair" is a true sentence about the afternoon and a
+> false one about the codebase. Nothing in the commit, the item or the PR was wrong about what
+> happened; all three were wrong about what it applied to.
+
+**One command settled it** — reading the rendered `<h1>`/`<h2>` order on five pages. **Same shape as
+`max_rows: 50` yesterday**, where one request refuted two confident diagnoses that three
+investigations had been built on. **Twice in two days the cheapest available check was the one not
+run**, and both times what stood in its place was reasoning from a record rather than from the thing.
 
 **bath_body opted in** — 4 subcategories, so "Browse by area" keeps its indexed destinations under item
 411's rule; 20 real product types, 328 default rows, no nulls, so it gets a full bar and a complement
@@ -33492,9 +33506,14 @@ Skincare has **five and a half times** bath_body's products and sits **158px hig
 fragrance are identical to the pixel at both viewports with 6 and 7 chips. **Above the grid, the page's
 cost is the filter bar wrapping, and nothing else varies.**
 
-> **Supplements is first on both viewports because it has nothing to filter by.** The category with the
-> least to offer has the shortest path to it, and it is the only root whose first product row clears
-> the fold — at 390x844 by 17 pixels and at 1440x900 by 50.
+> **CATALOGUE SIZE STOPPED MATTERING THE MOMENT THE GRID ARRIVED.** Skincare carries **5.5x**
+> bath_body's products and sits **158 pixels higher**. Hair and fragrance are **identical to the pixel**
+> at both viewports. Above the grid the only variable is how far the filter bar wraps — the hero is
+> fixed, the blocks are below, and the number of chips is the page.
+
+**Supplements is first on both viewports because it has nothing to filter by.** The category with the
+least to offer has the shortest path to it, and it is the only root whose first product row clears the
+fold — at 390x844 by 17 pixels and at 1440x900 by 50.
 
 **One number in this table is not from this pass:** skincare's *before* figure of 3,309px was measured
 on Tuesday with an unrecoverable viewport height (item 410). It is excluded here rather than carried
@@ -33505,3 +33524,37 @@ measurement.**
 item 408 and owed to whoever fixes it for the subcategory pages at the same time; bath_body's grid has
 had no separate verification beyond this measurement; and the 42.9% correction has not been sent to
 strategy.
+
+---
+
+### 434. Category pages, closed on what was done
+
+**Raised:** 26 August 2026 · **Closes the thread opened at item 408. Nothing here is a summary of intent.**
+
+**DONE, AND VERIFIED ON PRODUCTION:**
+
+- **Six category roots opted into the browse grid.** Each previously rendered 24 products from
+  `fmb_featured_products` with no paging, filter or sort; each now pages its full catalogue at 48 a
+  page with type chips, a complement chip and a stockist toggle.
+- **One fold table, one instrument, one pass** (item 433). First product card between **827px**
+  (supplements) and **1,335px** (makeup) at 390x844.
+- **Chip sums equal stated totals on all six** — 45,124 / 21,405 / 11,676 / 11,025 / 8,121, and
+  supplements correctly showing no bar at all.
+- **The link blocks sit below the grid on all six**, by a conditional in the shared component rather
+  than six edits (item 432).
+- **The false `?comparable=1` assertion is removed** (item 429).
+- **Six RPCs** replacing seven `fetchAllRows` offset walks (items 412, 415), and both dead copies of
+  that helper deleted with the `.order()` rule relocated to the paginator it still guards (item 417).
+
+**OPEN, AND CARRIED RATHER THAN CLOSED:**
+
+| | |
+|---|---|
+| **`totalPages` overstated on all six grids** | `totalCount` counts before the live-price filter, so a late page can come up short. Inherited deliberately at item 408 and owed to whoever fixes the subcategory pages at the same time — fixing one surface reopens the divergence the inheritance exists to prevent |
+| **The 42.9% correction is unsent** | Fragrance is 1.20x skincare on next-best median and 1.78x on lowest-vs-highest, not "more than double on both". Sent to strategy Tuesday and being planned against; an item does not reach the person holding the number (item 430) |
+| **Tomorrow's 06:00 Gorgeous Shop run** | First real run of the Tier-2 guard, against `_pre_guard_baseline_20260826` (item 427). Watch the created count |
+
+> **The closing line I first reached for was "all six are opted in", written when five were.** It is
+> recorded at item 431 and corrected at item 432, and it is the reason this item lists what was done
+> rather than what the thread was about. **A thread closes on what was done, not on the shape the
+> summary wants.**
