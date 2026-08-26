@@ -136,6 +136,16 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
   // ~200-character search result and has to spend its budget on the claim. The page has
   // room to give the reason as well, which is what turns "no comparison" from an apology
   // into information.
+  // CHIP CAP. Uncapped, a broad brand renders 27 chips in one wrap -- Tonymoly does --
+  // and the tail is types with one or two products each. The first TYPE_CHIP_CAP by count
+  // carry the demand; the rest stay reachable behind a <details>, because CAPPING MUST NOT
+  // REMOVE A ROUTE. Every chip is a URL we already publish and Google already crawls;
+  // dropping one would turn a live filter into an orphan, which is item 271's defect in
+  // reverse. Item 358.
+  const TYPE_CHIP_CAP = 12;
+  const visibleTypes = productTypes.slice(0, TYPE_CHIP_CAP);
+  const overflowTypes = productTypes.slice(TYPE_CHIP_CAP);
+
   const soleRetailer = facts.sole_retailer;
   const introCopy =
     facts.comparable > 0 ? (
@@ -231,28 +241,6 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
         )}
       </section>
 
-      {!hasFilter && stats.category_breakdown.length > 1 && (
-        <section className="max-w-site mx-auto px-6 py-12">
-          <h2 className="font-serif text-3xl text-ink mb-8">Browse by category</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {stats.category_breakdown.map(({ category: cat, count }) => (
-              <Link
-                key={cat}
-                href={buildUrl(slug, { category: cat })}
-                className="group bg-warm-white border border-border rounded-2xl p-6 hover:border-gold transition-colors"
-              >
-                <div className="font-serif text-2xl text-ink capitalize mb-1 group-hover:text-gold transition-colors">
-                  {categoryDisplay(cat)}
-                </div>
-                <div className="text-sm text-ink-light">
-                  {count.toLocaleString()} products
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
       {productTypes.length > 0 && (
         <section className="max-w-site mx-auto px-6 py-12">
           <div className="flex items-baseline justify-between mb-8 flex-wrap gap-4">
@@ -267,7 +255,7 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            {productTypes.map(pt => {
+            {visibleTypes.map(pt => {
               const isActive = pt.product_type === productType;
               return (
                 <Link
@@ -286,6 +274,47 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
                 </Link>
               );
             })}
+          </div>
+          {overflowTypes.length > 0 && (
+            <details className="mt-4">
+              <summary className="cursor-pointer text-sm text-ink-light hover:text-ink transition-colors">
+                {overflowTypes.length} more type{overflowTypes.length === 1 ? '' : 's'}
+              </summary>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {overflowTypes.map(pt => (
+                  <Link
+                    key={pt.product_type}
+                    href={buildUrl(slug, { type: pt.product_type })}
+                    className="rounded-full px-5 py-2.5 text-sm transition-colors border bg-warm-white text-ink border-border hover:border-gold hover:bg-cream"
+                  >
+                    {pt.product_type}
+                    <span className="ml-1.5 text-xs text-ink-light">{pt.count}</span>
+                  </Link>
+                ))}
+              </div>
+            </details>
+          )}
+        </section>
+      )}
+
+      {!hasFilter && stats.category_breakdown.length > 1 && (
+        <section className="max-w-site mx-auto px-6 py-12">
+          <h2 className="font-serif text-3xl text-ink mb-8">Browse by category</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {stats.category_breakdown.map(({ category: cat, count }) => (
+              <Link
+                key={cat}
+                href={buildUrl(slug, { category: cat })}
+                className="group bg-warm-white border border-border rounded-2xl p-6 hover:border-gold transition-colors"
+              >
+                <div className="font-serif text-2xl text-ink capitalize mb-1 group-hover:text-gold transition-colors">
+                  {categoryDisplay(cat)}
+                </div>
+                <div className="text-sm text-ink-light">
+                  {count.toLocaleString()} products
+                </div>
+              </Link>
+            ))}
           </div>
         </section>
       )}

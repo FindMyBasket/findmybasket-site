@@ -201,9 +201,23 @@ export async function getBrandProductTypes(
     counts.set(row.product_type, (counts.get(row.product_type) ?? 0) + 1);
   }
 
+  // ORDERED BY COUNT, NOT BY ROUTINE ORDER. Until 26 Aug 2026 this sorted by
+  // CATEGORY_ORDER -- cleanser, exfoliator, toner, serum ... -- which is the order a
+  // skincare routine is APPLIED in. That is the right default for a category page, where
+  // the visitor is browsing a stage. IT IS THE WRONG DEFAULT FOR A BRAND PAGE, which is
+  // reached by a brand-plus-type query ("dove shampoo") where the type is already known
+  // and is the only thing the visitor came to narrow by.
+  //
+  // Measured on /brands/dove: 17 chips, ZERO above the fold at 390x844, and Shampoo
+  // eighth in the list at y=1242 behind seven skincare chips -- on a brand that is 182
+  // bath & body, 70 hair and 70 skincare. Routine order led with its smallest category
+  // because routine order knows nothing about the brand. Item 358.
+  //
+  // CATEGORY_ORDER is kept as the TIE-BREAK so equal counts stay deterministic rather
+  // than falling back on Map insertion order, which is row order and therefore arbitrary.
   return Array.from(counts.entries())
     .map(([product_type, count]) => ({ product_type, count }))
-    .sort((a, b) => compareCategories(a.product_type, b.product_type));
+    .sort((a, b) => b.count - a.count || compareCategories(a.product_type, b.product_type));
 }
 
 export async function getBrandProducts(
