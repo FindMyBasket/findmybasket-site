@@ -32342,8 +32342,17 @@ area" -- and the two blocks link to different KINDS of destination:
 > not transfer**, and I have still only demoted it, because "it could go" is not the same as deciding
 > it should and that decision was not asked for.
 
-**Recorded so the next person does not read item 409's conclusion as general.** The reasoning there was
-about indexed destinations, not about browse blocks.
+**DECIDED: skincare's block is DELETED, hair's is KEPT, and this is why item 409 is not general.**
+
+> **The same block, on two pages, with different destinations, and the answer depends on what the links
+> ARE rather than what the block is CALLED.** Deleting hair's orphans five indexed pages; deleting
+> skincare's orphans nothing, because its destinations already canonicalise away and the chips answer
+> the same question one URL closer.
+
+Item 409 concluded "demote, do not delete". **That conclusion was about indexed destinations and
+travels only as far as they do.** Read as a rule about browse blocks it produces the wrong answer here,
+one page over, in the same component. The deletion is conditioned on `!browse` -- a category without
+the grid keeps its block, because then nothing else answers the question.
 
 ---
 
@@ -32422,3 +32431,66 @@ Left alone for the same reason: closing it means cutting the intro, the stats or
 a decision about what a category page says.
 
 **Reduction: 3,309 to 1,133, or 66%.** Three screens became one short scroll.
+
+---
+
+### 414. Twice in one file is a population. The audit, and a 14.4-second page still live
+
+**Raised:** 26 August 2026 · **Answers "does anything else page the same way". It does, and the worst case is worse than the one fixed.**
+
+**THE MECHANISM, MEASURED RATHER THAN ASSUMED.** `EXPLAIN ANALYZE` on one page of the offset walk that
+item 412 removed -- `order by id offset 44000 limit 1000` over `products_active` for skincare:
+
+```
+Execution Time: 673.610 ms      for ONE page of 1,000 rows
+Sort ... rows=45042             the whole result set, sorted, every time
+Hash Semi Join ... rows=45182   the whole join, every time
+```
+
+> **It is not deep-offset degradation. Every one of the 46 requests re-runs the entire 45,000-row join
+> and sort, then discards all but 1,000 rows.** The work is O(n) per page, so O(n²/page) for the walk.
+> That is why 46 round trips cost 13 seconds and hair's 12 cost barely anything -- **the per-request
+> cost scales with the category too, not just the number of requests.**
+
+**THE AUDIT. `fetchAllRows` is itself duplicated across two files**, and has seven callers:
+
+| File | Caller | Scope | Exposure |
+|---|---|---|---|
+| `lib/queries.ts` | `getCategoryStats` brand rows | **whole category** | 45,124 on skincare |
+| `lib/queries.ts` | `getCategoryStats` retailer rows | **whole category** | same, plus an embed |
+| `lib/queries.ts` | `getTopBrands` | **whole category** | 45,124 |
+| `lib/queries.ts` | `getSubcategories` | whole category | 45,124 |
+| `lib/subcategory-queries.ts` | `getSubcategoryStats` brand rows | subcategory | **45,124 on `skincare/face`** |
+| `lib/subcategory-queries.ts` | `getSubcategoryStats` retailer rows | subcategory | same |
+| `lib/subcategory-queries.ts` | `getSubcategoryTopBrands` | subcategory | 45,124 |
+
+**"Subcategory-scoped" is not a bound when a category has one subcategory.** Skincare's 45,124 products
+are all in `face`, so every subcategory-scoped caller has the full category's exposure on that page.
+
+**MEASURED, LIVE, TODAY:**
+
+```
+/skincare/face            regenerating = 14.409s
+/hair/cleanse             regenerating =  1.919s
+/supplements/supplements  regenerating =  0.649s
+```
+
+**`/skincare/face` takes 14.4 seconds to regenerate** -- the same defect at the same magnitude as the
+one item 412 fixed, on the page next door, still live. **Not fixed here: reported, because the ask was
+whether anything else pages the same way and the answer wanted stating before more code moved.**
+
+`getCategoryStats` even carries its own warning: *"top categories are always large, so this is the
+weakest beneficiary of the inversion and the prime candidate for the parked caching follow-up."*
+**The file has been describing this defect for months.**
+
+**AND THE DEFECT ONLY APPEARED AT SCALE, WHICH IS WHY IT SURVIVED SHIPPING.** Hair's 12 round trips
+were slow and tolerable; skincare's 46 were not. **The same code was correct-looking on the first page
+it shipped to** -- 1.2 seconds is not a number anyone investigates. Nothing changed about the code
+between hair and skincare; the only thing that changed was the size of the category pointed at it.
+**Opting in a bigger category is what surfaced it, and no amount of review of the hair page would
+have.**
+
+> **Item 238's rule was in a comment one function away, in the file being edited, and the edit
+> reproduced exactly what the comment described.** A rule scoped to one caller does not reach the next.
+> **This file has now demonstrated that twice, and the second time it did so in sight of the written
+> record of the first.**
