@@ -30928,14 +30928,118 @@ ALONE.**
 > **A test that only exercises the true-positive direction cannot fail on a false positive**, so its
 > greens are evidence about coverage and silence about precision.
 
-**Not added, and the reasoning is the point.** Cases asserting current behaviour on the 13 would
-**freeze the defect into the suite** -- `assert key(...) === "…42pcs 12ml"` makes the false positive
-a specification, and the next person attempting a context rule would have to delete tests to fix a
-bug, which reads as vandalising the suite rather than repairing the code.
+**Not added**, because the fix is declined and cases asserting current behaviour on the 13 would
+freeze a defect into the suite. Recorded so that whoever builds the context rule knows the harness
+will not tell them they have broken the 348.
 
-> **THE GAP STAYS OPEN DELIBERATELY RATHER THAN BEING PAPERED OVER WITH A TEST THAT LOCKS IT IN.** An
-> untested failure mode is a known absence. **A test encoding the failure mode is a false assurance
-> AND an obstacle to the fix** -- strictly worse than the absence it replaces.
 
-Recorded so whoever builds the context rule knows the harness will not tell them they have broken the
-348.
+---
+
+### 384. The last ASCII-only character class, and a redirect that belongs in code
+
+**Raised:** 26 August 2026 · **CUTOVER: 26 August 2026. Brand hub URLs changed for 25 brands on this date.**
+
+`brandSlug` deleted accented characters rather than folding them. **25 brands and 2,372 products**
+moved to readable canonical URLs:
+
+| products | from | to |
+|---:|---|---|
+| 1,110 | `/brands/lor-al-paris` | `/brands/loreal-paris` |
+| 933 | `/brands/lanc-me` | `/brands/lancome` |
+| 71 | `/brands/cl-de-peau-beaut` | `/brands/cle-de-peau-beaute` |
+| 44 | `/brands/bj-rk-and-berries` | `/brands/bjork-and-berries` |
+| 34 | `/brands/beaut-focus` | `/brands/beaute-focus` |
+| 25 · 20 · 19 · 16 · 16 · 14 · 14 · 12 · 9 · 8 · 7 · 6 · 3 · 3 · 3 · 1 · 1 · 1 · 1 · 1 | 20 more | |
+
+**The 25 were re-verified positively**, not by subtraction: each returns `collisions = 0` from the
+same existence check that identified the seven, re-run after the catalogue moved.
+
+**THE DIVERGENCE IS THE ARGUMENT.** Until the 26 August fold, `brandSlug` and `normaliseForMatch`
+mangled accents *identically*. The fold changed the matcher and left this behind, so the catalogue
+was normalised two ways depending on which surface asked: the matcher said Bioré and Biore were one
+brand's products while the URL scheme said `/brands/bior` and `/brands/biore` were two places.
+**This was the last of the three** -- after `stripBrandPrefix` (item 355) and `normaliseForMatch`
+(item 371).
+
+##### THE 301 IS CODE, NOT 25 ALIAS ROWS, AND THE CORRECTION MATTERS
+
+I planned this as `brand_aliases` rows and that plan was wrong. **`resolveBrandAliasSlug` matches
+`brandSlug(alias) === incoming`, computed with the CURRENT function**, so after the change
+`brandSlug('lancôme')` returns `lancome` and nothing catches `/brands/lanc-me`.
+
+> Making rows work would mean storing an alias string like **`'lanc me'`** purely to encode an old
+> slug -- **data shaped to work around code**, meaningless to anyone reading the table, and one row
+> per brand forever.
+>
+> **The code version also covers brands onboarded later**, which a row-per-brand approach cannot:
+> every future accented brand would need someone to remember to add its row.
+
+##### THE PATH IS PERMANENT, AND THAT IS ACCEPTED RATHER THAN TOLERATED
+
+> **Old URLs exist indefinitely in Google's index and in inbound links, so anything that resolves
+> them is permanent wherever it lives.** The choice was never permanent-versus-temporary. It was
+> where the permanence is visible.
+>
+> **In code it reads as what it is.** In a table of 25 rows it would have looked like a migration
+> that finishes, and someone would eventually have deleted them.
+
+##### THE LOOP GUARD
+
+```ts
+legacyBrandSlug(nb) === slug && brandSlug(nb) !== slug
+```
+
+**The inequality is load-bearing.** For an unaccented brand the two functions return the same
+string, so `legacy === slug` is true for *every* hub and each would 301 to its own URL. Requiring
+them to **differ** confines the legacy branch to brands where a character was actually deleted.
+An exact match is also checked first, so a brand can never be redirected away from its own live page.
+
+##### GA4: THE SERIES SPLIT AT THIS DATE
+
+`brand_slug` is a click-out event parameter. From **26 August 2026** these 25 brands report under a
+new value, and **GA4 has no backfill and no value aliasing** -- you cannot rewrite a parameter on
+collected events or merge two values into one dimension.
+
+> **Any brand-level series for these 25 that crosses this date is TWO SERIES, added by hand,
+> permanently.** L'Oréal Paris, Lancôme and Clé de Peau Beauté are the ones most likely to be looked
+> at. **Item 338's hazard on a different axis**: there a parameter could ship and stay unreadable
+> because its definition lives outside the repo; here the parameter is readable and *its values*
+> changed underneath it. Both are cases where a change trivially reversible in code is irreversible
+> in the data it produced.
+
+**All four slug implementations changed together** -- `lib/brand-slug.ts`, `brandSlugify` in
+`import-awin-feed` and `recategorise-products`, and `fmb_brand_slug()` in SQL. Item 363 established
+all four are read paths, so a lag would have cost one ISR window rather than correctness; they moved
+together because leaving three behind would have them purging pre-change addresses for 44 brands.
+
+---
+
+### 385. âme pure escaped the collision test, and the test was not wrong
+
+**Raised:** 26 August 2026 · **Repointed, recorded as less-wrong, and filed with the seven.**
+
+Three `brand_aliases` rows folded into `normalised_brand` **`âme pure` (16 products)** while
+**`âme pure uk` holds 25**. The fold sent the larger into the smaller, so 25 products sat behind a
+308 pointing at 16.
+
+**Repointed at the 25-product brand.** This is **less wrong, not fixed**: it is the same split-brand
+shape as the seven -- two `normalised_brand` values for one brand -- and whichever way the alias
+points, one side is unreachable. **Folding into the larger is strictly better than folding into the
+smaller, and that is the whole claim.**
+
+##### WHY THE COLLISION TEST COULD NOT SEE IT
+
+The 25/7 split was decided by asking *"does this brand's folded slug collide with another brand's
+slug?"* For âme pure the answer is **no**: `ame-pure` and `ame-pure-uk` are different strings.
+
+> **THAT IS A BOUND ON THE TEST, NOT A MISS.** The test asks about SLUG COLLISION and answers it
+> correctly. The defect here is a **brand split** -- two normalised_brand values for one brand --
+> which produces a collision only when the two spellings slugify identically. **A country suffix
+> keeps them apart at the slug level while leaving them the same brand.**
+>
+> Worth stating because **the same test will be reached for again** the next time a slug scheme
+> changes, and it will be equally correct and equally blind to this. The question it answers is
+> narrower than the question it looks like it answers.
+
+**Filed with the seven** as a catalogue merge decision: which `normalised_brand` survives, and what
+happens to the losing side's keys.
