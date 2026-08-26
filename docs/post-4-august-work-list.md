@@ -29298,3 +29298,219 @@ each works separately.**
 > gets tested.**
 
 **Also:** `RoutineBuilder.tsx` imported `displayProductTitle` and never used it. Removed.
+
+---
+
+### 356. Comparability does not predict ranking, and the reframe I proposed is wrong
+
+**Raised:** 26 August 2026 · **Phase 2 discovery. The test was stated before it was run and it refuted the hypothesis it was built to test.**
+
+After reading six top-ranking zero-click hubs I proposed a reframe: that these are **not
+underperforming comparison pages but pages with nothing to compare**, and that Phase 2 is therefore
+a catalogue question rather than a layout one. The test was named in advance: **if the hubs that
+rank are disproportionately single-stockist the reframe holds; if ranking is independent of
+comparability the layout reading survives.**
+
+**The threshold was fixed before the measurement**, so it could not be chosen to fit the answer:
+*meaningful = comparable >= 3 AND comparable share >= 10%*. Two halves, because either alone fails
+-- the absolute floor stops Proactiv (1 product, 1 comparable) scoring 100%, and the share floor
+stops TonyMoly (2 of 430) counting as a comparison page.
+
+**198 hub URLs**, from the 15 May - 14 Aug GSC page export, 22,761 impressions, 87 clicks, 0.38%.
+
+| group | hubs | impressions | clicks | avg position | CTR |
+|---|---:|---:|---:|---:|---:|
+| **C single-stockist, no comparison possible** | **107** | 11,896 | 58 | 28.2 | **0.49%** |
+| A1 meaningful comparison | 32 | 4,398 | 5 | 28.6 | **0.11%** |
+| A2 Group A on a technicality | 26 | 3,834 | 5 | 27.3 | 0.13% |
+| B nothing in stock | 13 | 1,382 | 7 | 21.1 | 0.51% |
+| unresolved slug (alias or departed) | 20 | 1,251 | 12 | 27.5 | 0.96% |
+
+**The scale half of the reframe is right.** 87 of 178 resolved hubs have exactly one stockist and
+**45.3% of hub impressions land on a page that cannot show a comparison.**
+
+**The causal half is wrong, and not marginally.**
+
+> **AVERAGE POSITION IS FLAT ACROSS EVERY GROUP: 28.2, 28.6, 27.3.** Correlations over the 178
+> resolved hubs are indistinguishable from zero -- comparable share against position **0.058**,
+> against impressions **0.028**; stockist count against position **0.092**; range size against
+> impressions **0.119**. **Google is not ranking these pages on anything we can compare.**
+>
+> **AND CLICKTHROUGH RUNS THE OPPOSITE WAY TO THE PREDICTION.** Single-stockist hubs convert at
+> **0.49%**. The hubs that CAN show a comparison convert at **0.11%** -- four and a half times
+> worse, at the same average position. The hypothesis predicted the reverse.
+
+**So the layout reading survives and the catalogue reading does not.** Phase 2 stays a question
+about the page.
+
+##### ★ AND THE INVERSION IS THE OPEN QUESTION, NOT A FOOTNOTE TO THE ABOVE
+
+**0.49% on hubs that cannot compare against 0.11% on hubs that can.** That is not a weaker version
+of the hypothesis, it is the hypothesis backwards, and it is recorded here as **UNEXPLAINED** rather
+than folded into the layout reading -- **because it may not be a layout fact at all.**
+
+The obvious confound is that mean position hides different distributions. **It does not.** Banding
+by position, clicks over impressions:
+
+| position band | A1 meaningful | A2 technicality | C single-stockist | B nothing in stock |
+|---|---|---|---|---|
+| 10-20 | **0 / 864 = 0.00%** | 2 / 1,751 = 0.11% | **36 / 4,709 = 0.76%** | 6 / 575 = 1.04% |
+| 20-40 | 4 / 2,538 = 0.16% | 1 / 922 = 0.11% | **10 / 3,733 = 0.27%** | 0 / 640 |
+| 40+ | 0 / 993 = 0.00% | 1 / 1,040 = 0.10% | 4 / 3,334 = 0.12% | 0 / 165 |
+
+Median position is 26.0 for A1 and 23.6 for C. **At matched position bands the single-stockist hubs
+still convert three to seven times better.** The simplest confound is ruled out and the inversion is
+real.
+
+> **A PAGE THAT CANNOT DO THE THING EARNS MORE CLICKS THAN A PAGE THAT CAN, AT THE SAME RANK.**
+> Whatever is happening is upstream of the page: it is in the query, or in the result's competition,
+> or in what the visitor already intends before they see us. **Folding it into "the layout is wrong"
+> would be assuming the answer** -- the layout is identical across all four groups, so the layout
+> cannot be what differs between them.
+
+##### WHAT WOULD ANSWER IT, AND WHETHER IT IS WORTH DOING
+
+**The current exports cannot answer it, confirmed rather than assumed.** `Queries.csv` has five
+columns -- query, clicks, impressions, CTR, position -- and **no page column**. Both files are
+separate 1,000-row lists with no key between them, so no join exists to construct.
+
+The answer needs **Search Console filtered by page, one hub at a time** -- a manual read, not a
+query. The question per hub is narrow: **are the impressions brand-only ("urban decay") or
+brand-plus-type ("urban decay setting spray")?**
+
+**Recommendation: yes, but seven hubs rather than sixteen, and only from A1 and C.** B and
+unresolved are 33 hubs and 2,633 impressions between them and are not the puzzle. The contrast that
+matters is A1 against C, and it wants the highest-impression hubs so the query lists are worth
+reading:
+
+| A1 | C |
+|---|---|
+| medicube (290), urban-decay (239), tom-ford (232) | proactiv (652), badedas (467), habi (465), tatti-lashes (379) |
+
+**It is worth doing because it forks what Phase 2 builds**, and the two forks want different work:
+
+- **If A1's impressions are brand-only head queries** -- sitting at position 26 behind the brand's
+  own site and every major retailer -- **those impressions were never winnable**, and Phase 2 should
+  optimise for the brand-plus-type demand the C hubs are already catching. That is exactly where the
+  chip fix lands, and it would make item 358 the centre of the phase.
+- **If A1's queries ARE brand-plus-type and still do not convert**, the chip fix is not the answer
+  and something on the page is repelling a visitor who arrived wanting precisely what we have. That
+  is a different phase.
+
+**Neither layout finding is blocked by it.** Items 357 and 358 are actionable now and their value
+does not depend on which fork is true.
+
+##### THRESHOLD SENSITIVITY, REPORTED BECAUSE THE THRESHOLD WAS A CHOICE
+
+| share threshold | A1 meaningful | A2 technicality |
+|---|---:|---:|
+| 5% | 38 | 20 |
+| **10%** | **32** | **26** |
+| 20% | 17 | 41 |
+
+The A1/A2 boundary moves a lot; **the finding does not depend on it**, because the result is driven
+by group C (107 hubs, unaffected by any share threshold) and by correlations computed on the raw
+share rather than the buckets.
+
+##### AND THE COUNT IS A FLOOR
+
+The GSC page export is capped at 1,000 rows and its ordering is undocumented. 198 clean
+`/brands/<slug>` URLs is **what is visible inside that cap**, not the number of hubs that earned an
+impression. Same class as item 331: a count measured through an instrument's reach, reported as the
+instrument's reach.
+
+##### A MEASUREMENT ERROR CAUGHT BY THE RENDERED PAGE, NOT BY THE QUERY
+
+My first pass resolved slugs with `select ... limit 1` against a brand-to-slug derivation. It
+reported **TonyMoly at 2 products and 1 stockist**. The live page renders **430 products and 2
+retailers.**
+
+`findBrandBySlug` **folds every brand string that slugifies to the same slug**; `limit 1` took one
+of them, and it happened to be a near-empty variant. The number was wrong by a factor of 215 and
+looked perfectly plausible in a table.
+
+> **CAUGHT ONLY BY COMPARING AGAINST WHAT THE RENDERER SHOWS.** Nothing in the query was malformed,
+> nothing errored, and the six-row table it produced was internally consistent. **The same shape as
+> reading a derived value instead of the artefact** -- item 287's HTML-escaping false alarm, item
+> 313's near-neighbour of the operative rule. **A resolution rule reimplemented in SQL is a
+> near-neighbour of the one the page uses, and near-neighbours produce confident wrong numbers.**
+>
+> The reframe was built on that table. Had the live page not been open in the next breath, the
+> phase would have turned on a figure that was wrong.
+
+---
+
+### 357. The metadata's four branches never reached the page
+
+**Raised:** 26 August 2026 · **Stands regardless of how Phase 2 resolves.**
+
+The brand metadata work gave the search result four branches: a comparison claim when one exists,
+"Where to buy" when there is a single stockist, and a separate branch for nothing in stock. **The
+page body has one sentence and it is unconditional.**
+
+| hub | `<title>` in the search result | first line of the page |
+|---|---|---|
+| Habi | **Where to buy Habi in the UK** | **Compare Habi prices across UK retailers.** 40 products… |
+| Proactiv | **Where to buy Proactiv in the UK** | **Compare Proactiv prices across UK retailers.** 1 products across skincare (1). |
+| Badedas | **Where to buy Badedas in the UK** | **Compare Badedas prices across UK retailers.** 3 products… |
+
+A visitor clicks a result that deliberately avoids claiming a comparison, and lands on a page
+promising one -- directly above a stat line reading **"40 products · 1 retailers"**, which quietly
+contradicts it.
+
+> **ITEM 346's SHAPE ON A NEW SURFACE. The distinction was drawn carefully in one place and never
+> carried to the other.** The metadata branches exist *because* asserting an absent comparison was
+> judged wrong. The page makes exactly that assertion, on 107 of 198 hubs, and nothing connects the
+> two decisions.
+>
+> **The four templates are not the fix.** They were written for a 200-character search result; the
+> page has room to say what it actually has -- one stockist, what it costs delivered, and when a
+> second one appears. That is a different sentence, not a shorter one.
+
+**Also on that line:** `1 products` and `1 retailers` are unpluralised.
+
+---
+
+### 358. A query the site ranks for lands two screens above its own answer
+
+**Raised:** 26 August 2026 · **Measured on production at a real 390 x 844 viewport, not computed from the classes.**
+
+The demand is brand-plus-type -- "dove shampoo", "espa cleanser", "jvn shampoo". The page that
+answers it is a brand hub filtered by type, and **the chip is the entire route to that answer.**
+
+`/brands/dove`, 390 x 844:
+
+| | y |
+|---|---:|
+| H1 | 202 |
+| "Compare Dove prices across UK retailers" | 274 |
+| Browse by category | 608 |
+| **fold** | **844** |
+| Product types heading | 1053 |
+| first chip (Cleanser) | 1146 |
+| **Shampoo chip** | **1242** |
+| Products heading | 1643 |
+| **first product** | **1748 (2.07 screens)** |
+
+**Zero of the 17 chips are above the fold.** Desktop is no better: first product at 1510 of a
+711px viewport, **2.12 screens**.
+
+**And the ordering is the part to fix.** Chips are sorted by `CATEGORY_ORDER` in
+`lib/brand-queries.ts` -- a hardcoded skincare-routine sequence, then makeup, then hair, then
+nails. Not by count, not by relevance, no cap. For Dove:
+
+```
+Cleanser · Exfoliator · Serum · Moisturiser · Mask · SPF · Lip Care · Shampoo · Conditioner · …
+```
+
+**Seven skincare chips ahead of Shampoo.** Dove is **182 bath & body, 70 hair, 70 skincare** -- the
+order leads with its smallest category, because routine order knows nothing about the brand.
+
+> **THE ROUTE EXISTS, IS CORRECT, AND IS INVISIBLE.** Nothing is broken: the chip works, the filter
+> works, the destination is right. The page ranks for the query and then puts the answer 1.47
+> screens below where the visitor lands. **A correct affordance nobody reaches is indistinguishable
+> from an absent one**, and it costs the same.
+>
+> Routine order is the right default for a *category* page, where the visitor is browsing a stage
+> of a routine. It is the wrong default for a *brand* page reached by a brand-plus-type query,
+> where the type is already known and is the only thing the visitor came to narrow by.
