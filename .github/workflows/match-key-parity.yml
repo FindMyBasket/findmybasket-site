@@ -1,0 +1,90 @@
+name: match-key parity (TS vs SQL, over the corpus)
+
+# WHY THIS EXISTS. buildMatchKey() in supabase/functions/_shared/match-key.ts and
+# fmb_build_match_key() in Postgres are two implementations of one rule, kept
+# byte-identical BY CONTRACT and by nothing else. The module header says so; the
+# only enforcement was a person remembering.
+#
+# scripts/match-key-harness.mts proves the rule is CORRECT on 61 inputs someone
+# thought of. It cannot prove the two halves AGREE, and agreement is the property
+# that rots -- item 345, where the delivery rule was unified and the layer above it
+# was left holding two copies that disagreed in production for weeks.
+#
+# So this compares them ROW BY ROW over the whole catalogue.
+#
+# ── RUN IT AFTER EVERY MATCH-KEY CHANGE, NOT JUST THE ONE IT WAS BUILT FOR ───────
+#
+# It was written for the accent/ampersand folding (item 371), and that is the wrong
+# reason to keep it. Any edit to either half can drift them, and the symptom -- rows
+# that stop matching -- is invisible until someone measures depth or notices a
+# duplicate. Dispatch it whenever either half changes.
+#
+# ── AND IT MUST FAIL LOUDLY WHEN IT CANNOT READ ─────────────────────────────────
+#
+# A parity check that reports zero disagreements because it read zero rows is the
+# failure mode, not an edge case. gone-ids-drift spent two runs green while unable
+# to load its own script, printing "No drift" from empty variables (item 255).
+#
+# The script therefore exits 2 for cannot_run -- missing credentials, a missing or
+# ungranted view, an empty first page, or fewer than 50,000 rows compared -- which
+# is DISTINCT from exit 1, meaning it looked and found disagreements. Both fail the
+# workflow. Neither can be mistaken for success. Item 194's contract.
+
+"on":
+  workflow_dispatch:
+    inputs:
+      note:
+        description: 'Why you are running it (appears in the run summary)'
+        required: false
+        default: 'manual parity check'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+
+      # PREFLIGHT. Asserts the pieces exist before anything can report agreement.
+      # A rename of either file must break this loudly rather than producing a
+      # green run over nothing. Item 255.
+      - name: Preflight -- can this check actually look?
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f scripts/match-key-parity.mts || { echo "::error::scripts/match-key-parity.mts missing"; exit 1; }
+          test -f supabase/functions/_shared/match-key.ts || { echo "::error::_shared/match-key.ts missing"; exit 1; }
+          if [ -z "${{ secrets.SUPABASE_SERVICE_KEY }}" ]; then
+            echo "::error::SUPABASE_SERVICE_KEY not set -- cannot_run"; exit 1
+          fi
+
+      # The harness first: if the rule itself is broken, a parity result is noise.
+      - name: Harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes tsx scripts/match-key-harness.mts
+
+      - name: Parity over the corpus
+        shell: bash
+        env:
+          SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          # pipefail is load-bearing: without it a piped step takes the LAST command's
+          # exit code and a dead script is green. That is exactly how gone-ids-drift
+          # reported "no drift" twice while broken.
+          set -euo pipefail
+          npx --yes tsx scripts/match-key-parity.mts
+
+      - name: Note
+        if: always()
+        run: echo "> Run reason: ${{ inputs.note }}" >> "$GITHUB_STEP_SUMMARY"
