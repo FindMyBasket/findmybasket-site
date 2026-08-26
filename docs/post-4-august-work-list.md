@@ -33264,9 +33264,21 @@ matched; the copy describes them as comparable.
 
 > **A rule about counting what the destination shows fails symmetrically, and knowing the rule
 > prevented neither.** One undercounted, one overcounted, and the second was written the day after the
-> first was recorded. The rule is stated as a constraint on chips; both breaches were in something that
-> is not a chip — an index page and a paragraph. **A rule attached to a component name does not reach
-> the next thing that makes the same claim.**
+> first was recorded. The rule is stated as a constraint on chips; **neither breach was in a chip** —
+> one was an index page, one was a paragraph.
+
+**A RULE SCOPED TO A SURFACE DOES NOT REACH THE NEXT SURFACE THAT DOES THE SAME THING. FIFTH INSTANCE.**
+
+| | The rule | What it did not reach |
+|---|---|---|
+| 238 | `.order()` before `.range()`, on the paging helper | a function that did not page |
+| 412 | aggregate in SQL, on one caller | the facet counter next door |
+| 415 | bounded by `.eq('subcategory')` | a category with one subcategory |
+| 417 | unordered LIMIT/OFFSET across pages | a non-unique sort key in a top-N |
+| **429** | **count what the destination shows, on chips** | **an index and a paragraph** |
+
+**Every one names a mechanism or a component, and every one was breached by the next thing with the
+same shape and a different name.**
 
 **Fixed by removing the number, not by computing it.** With the toggle on the line reads *"Products
 stocked by more than one retailer."*
@@ -33322,3 +33334,93 @@ sample-read-as-whole, in the third form this week.
 which is the 10.1% comparable rate biting harder than anywhere else on the site. **The toggle does more
 work in fragrance than elsewhere** — that part of the strategy note is true, and it is true because of
 the comparable rate rather than the saving depth.
+
+---
+
+**THE PRECISE CLAIM THAT IS WRONG. The strategy brief says fragrance is MORE THAN DOUBLE SKINCARE on
+both measures. It is not double on either.**
+
+| | fragrance | skincare | ratio |
+|---|---|---|---|
+| next-best median | 24.0 | 20.0 | **1.20x** |
+| lowest-vs-highest median | 30.0 | 16.9 | **1.78x** |
+
+**The shape survives and the magnitude does not.** Fragrance is genuinely the best category to compare
+in, on every measure computed. It is not twice anything.
+
+**THE TWO VARIANTS SIDE BY SIDE, BECAUSE THE BASELINE MOVES THE ANSWER'S CHARACTER.**
+
+| Category | next-best median | lowest-vs-highest median |
+|---|---|---|
+| **fragrance** | **24.0** *(joint-highest)* | **30.0** *(clearly highest)* |
+| bath_body | 24.0 *(joint-highest)* | 19.8 |
+| supplements | 21.0 | 16.7 |
+| hair | 20.0 | 20.0 |
+| makeup | 20.0 | 20.0 |
+| skincare | 20.0 | 16.9 |
+
+> **The same category is "tied for first" under one baseline and "ahead of the field" under the other,
+> and neither figure is wrong.** Next-best asks what you save against the runner-up; lowest-vs-highest
+> asks what you save against the worst offer you could have taken. Fragrance has a long tail of
+> outliers, so it gains far more from the second framing than a category with tight pricing does.
+
+**THIS IS THE `worstCaseTotal` QUESTION AGAIN** (items 350-355), where a saving computed against the
+most expensive combination was deleted for overstating what a shopper would plausibly have paid. **The
+lesson then was that a saving figure is meaningless without its baseline named; the same figure here
+changes fragrance's competitive position depending which is used.** Any number quoted outside this
+document must say which.
+
+**THE CORRECTION HAS TO TRAVEL.** The 42.9% figure was sent to strategy on Tuesday and is being planned
+against. **An item recording that it is wrong does not reach the person holding the wrong number** —
+this needs sending back with the two variants and the ratios, not filing.
+
+**THE NINE BADGES, AND WHY THEY WERE WORSE THAN A SAMPLE.** My first read took savings off the rendered
+page: 9 badges of 48 cards. That window is `pageSize * 4` rows in `id` order, filtered to those with
+live prices, **then sorted by retailer count descending** before slicing.
+
+> **It is not a random sample of fragrance, it is the most-stocked end of one id window** — selected
+> for the property most correlated with having a saving to show. Third form this week of a sample read
+> as a population, after item 402's detector-defined population and item 418's two-hub extrapolation,
+> and the only one of the three that was actively sorted toward the answer it produced.
+
+---
+
+### 431. All six category roots are browse surfaces. What closed and what did not
+
+**Raised:** 26 August 2026 · **Closes the category-page thread opened at item 408.**
+
+**Every category root now pages its full catalogue.** Before, each rendered 24 products from
+`fmb_featured_products` with no paging, filter or sort.
+
+| | First product card, 390x844 | | Desktop 1440x900 | |
+|---|---|---|---|---|
+| | before | after | before | after |
+| **supplements** | 2,647 · 3.14 | **827 · 0.98** | 1,798 · 2.00 | **850 · 0.94** |
+| **fragrance** | 2,629 · 3.11 | **1,001 · 1.19** | 1,894 · 2.10 | **918 · 1.02** |
+| **hair** | 3,103 · 3.68 | **1,001 · 1.19** | 2,038 · 2.26 | **901 · 1.00** |
+| **skincare** | 3,309 · — | **1,133 · 1.34** | — | **945 · 1.05** |
+| **makeup** | 2,923 · 3.46 | **1,335 · 1.58** | 1,966 · 2.18 | **1,006 · 1.12** |
+| bath_body | not opted in | | | |
+
+**The chip counts sum to the stated total on every category that has chips:** hair 11,025, skincare
+45,124, makeup 21,405, fragrance 11,676. **Supplements has no bar at all** — `product_type` is null on
+all 2,448 rows — and it is the only root whose first product clears the fold, for exactly that reason.
+
+**The one false assertion is gone.** `?comparable=1` no longer claims a product count it has not
+measured (item 429).
+
+**WHAT IS NOT CLOSED, AND SHOULD NOT READ AS CLOSED:**
+
+- **`bath_body` is not opted in.** Five of six, not six of six.
+- **The furniture demotion ran on `/hair` only** (item 409). The other four still carry "Brands also in
+  other categories", "Browse by area" and "Top brands" above their grid — which is most of the distance
+  in the after column above.
+- **`totalPages` is still overstated** on every grid: `totalCount` counts before the live-price filter,
+  so a late page can come up short. Inherited deliberately at item 408 and still owed to whoever fixes
+  it for the subcategory pages too.
+- **The 42.9% correction has not been sent to strategy** (item 430).
+- **Two `âme pure` rows bucket to `#`** in the brand index rather than `A`.
+- **The eleven duplicate-name brand pairs** and **the 42 pre-fold collisions** behind the match-key gate.
+
+> **"All six are opted in" was the closing line I was reaching for and it is not true — bath_body is
+> not.** Recorded because a thread closes on what was done, not on the shape the summary wants.
