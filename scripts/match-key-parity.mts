@@ -47,8 +47,13 @@ const db = createClient(url, key);
  *  of magnitude below that means we are reading a slice, not the corpus. */
 const MIN_ROWS = 50_000;
 
+// KEYSET PAGINATION, NOT OFFSET. The view computes fmb_build_match_key() per row,
+// so `.range(offset, offset+n)` makes Postgres evaluate the function across every
+// row it skips: page 60 re-derives 60,000 keys to return 1,000. The first run died
+// on `canceling statement due to statement timeout` for exactly that reason.
+// `id > last` is an index scan and costs the same on page 60 as on page 1.
 const PAGE = 1000;
-let offset = 0;
+let lastId = 0;
 let rows = 0;
 let tsVsSql = 0;
 let storedVsTs = 0;
@@ -58,8 +63,9 @@ for (;;) {
   const { data, error } = await db
     .from('products_active_match_parity')
     .select('id, brand, name, stored, sql_key')
+    .gt('id', lastId)
     .order('id')
-    .range(offset, offset + PAGE - 1);
+    .limit(PAGE);
 
   // cannot_run, not "no disagreements". A missing view, a revoked grant and a
   // network failure all land here, and all of them would otherwise finish the loop
@@ -68,7 +74,7 @@ for (;;) {
     console.error(`cannot_run: ${error.message}`);
     process.exit(2);
   }
-  if (offset === 0 && (!data || data.length === 0)) {
+  if (lastId === 0 && (!data || data.length === 0)) {
     console.error('cannot_run: the view returned no rows on the first page — reading a slice or nothing at all');
     process.exit(2);
   }
@@ -85,8 +91,8 @@ for (;;) {
     }
     if (r.stored !== ts) storedVsTs++;
   }
+  lastId = (data[data.length - 1] as { id: number }).id;
   if (data.length < PAGE) break;
-  offset += PAGE;
 }
 
 // ASSERTED BEFORE ANY CONCLUSION IS PRINTED. Reaching this line with too few rows
