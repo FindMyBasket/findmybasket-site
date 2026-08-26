@@ -29131,7 +29131,55 @@ narrower: the false comment at `20260814190000:48` should say where the metrics 
 
 ### 355. The render-versus-data question is decided by whose data it is
 
-**Raised:** 26 August 2026 · **A correction to the premise I was given, not an answer to it. The largest render change the site has had: 4,388 titles, 3.21% of the branded catalogue.**
+**Raised:** 26 August 2026 · **The centre is the defect a random real row found after every deliberate test had passed. The largest render change the site has had: 4,388 titles, 3.21% of the branded catalogue.**
+
+#### ★ TWO HALVES OF ONE RULE, DISAGREEING ABOUT WHAT A SEPARATOR IS
+
+The new rule has two halves and they were written to different definitions.
+
+| half | boundary it used |
+|---|---|
+| **comparison** -- does the brand open the name? | **alphanumeric only.** Every non-alphanumeric skipped, which is the entire point |
+| **consumption** -- how much of the name does one copy eat? | **an enumerated class**, `[\s\-:.,]` |
+
+A real row put the difference on screen:
+
+```
+brand "So...?"   name "So...? So…? Unique Truffle Cream Body Mist 150ml"
+          was ->  "So...? So…? Unique Truffle Cream Body Mist 150ml"   (doubled)
+          new ->  "So...? …? Unique Truffle Cream Body Mist 150ml"     (BROKEN)
+```
+
+`?` was not in the enumerated class. Consumption **stopped inside the punctuation**, leaving
+`"? So…? Unique…"`. The alphanumeric comparison then skipped the stranded `?` exactly as designed,
+matched the **second** "So", and **the rule chewed into the product name.**
+
+> **THE COMPARISON WAS PERMISSIVE AND THE BOUNDARY WAS RESTRICTIVE, SO THE RULE COULD MATCH TEXT IT
+> COULD NOT FINISH CONSUMING.** Neither half is wrong alone. The defect is entirely in their
+> disagreement, and it can only produce damage where the two definitions differ -- which is why no
+> ordinary input reaches it.
+>
+> **An enumerated separator list is a guess about which punctuation exists in supplier data.** The
+> fix was not to add `?`; it was to make the boundary *any non-alphanumeric*, so both halves read
+> the same definition. Adding `?` would have left the next character to be discovered the same way.
+
+#### ★ AND WHAT FOUND IT, WHICH IS THE TRANSFERABLE HALF
+
+| check | result |
+|---|---|
+| nine hand-chosen cases, chosen to cover the known shapes | **all passed** |
+| a full-catalogue old-versus-new count, 136,584 rows | **passed** -- it counts differences, and this row differed correctly |
+| **a random sample of 15 real rows, read one by one** | **found it** |
+
+> **A SAMPLE FROM THE POPULATION BEATS A SAMPLE FROM THE IMAGINATION.** The hand-chosen cases were
+> drawn from failures I already understood, so they could only confirm the understanding. "So...?"
+> as a brand is not something anyone would invent; it exists because a company is called that.
+>
+> **This is item 268's finding arriving on a different instrument.** There, a negative test passed
+> because it was written in a shape the guard could already see -- a test sharing a blind spot with
+> the thing it tests proves only that the blind spot is consistent. Here the same thing happened to
+> a *test suite* and a *full-population count*: both were built from the same understanding as the
+> code, and neither could see past it. **The random row owed nothing to that understanding.**
 
 `displayProductTitle` was described to me as already solving the doubled-brand problem, with the
 email as the outstanding case. **It was not solving it. It was causing it**, on 2,890 of 136,584
@@ -29190,7 +29238,7 @@ import in RoutineBuilder** -- and **nothing in `supabase/functions/`**. No code 
 `match_key` calls either. A display change cannot move a derived key, and `match-key.ts` stays
 untouched under its gate.
 
-#### THE DIFF, AND THE ONE THE SAMPLE CAUGHT
+#### THE DIFF
 
 | | count |
 |---|---:|
@@ -29200,24 +29248,8 @@ untouched under its gate.
 | brand-twice-in-name fixed by repeated-copy consumption | **906 of 1,086** |
 | separator-only (brand followed by `.` or `,`, left stranded by the old regex) | 759 |
 
-**Reading the sample found a defect that reasoning about it did not.** The first draft used an
-enumerated separator class, `[\s\-:.,]`. A real row broke it:
-
-```
-brand "So...?"  name "So...? So…? Unique Truffle Cream Body Mist 150ml"
-   ->  "So...? …? Unique Truffle Cream Body Mist 150ml"
-```
-
-`?` was not in the list, so consumption stopped inside the punctuation, the rule then matched the
-**second** "So", and it chewed into the product name.
-
-> **An enumerated separator list is a guess about which punctuation exists in supplier data.** The
-> comparison was already alphanumeric-only; the boundary had to be too. Fixed to *any
-> non-alphanumeric*, which also moved the count from 4,312 to 4,388.
->
-> **This is the argument for reading a large diff rather than trusting it.** The rule was validated
-> against nine hand-chosen cases and a full-catalogue count, and both passed. It took a random
-> sample of real rows to produce the one input nobody had thought of.
+The separator fix above moved this count from 4,312 to 4,388: the extra 76 are rows whose
+punctuation the enumerated class had also been leaving stranded, found by the same change.
 
 #### THE 180 RESIDUAL, HONESTLY
 
