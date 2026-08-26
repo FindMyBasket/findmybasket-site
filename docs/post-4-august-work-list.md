@@ -30370,6 +30370,27 @@ exists to remove, on exactly the rows most likely to move.
 
 **Written before the apply rather than discovered after it.**
 
+##### PHASE 2 RE-RUN, 26 AUGUST, CORRECT BASELINE THROUGHOUT
+
+Re-derived rather than inherited, after item 374. **The change has not moved; the question was
+whether the earlier numbers were derived against `stored` anywhere. They were not.**
+
+| | Phase 1 | re-run |
+|---|---:|---:|
+| keys that move (vs recomputed) | 16,754 | **16,755** |
+| distinct keys before / after | 99,595 / 99,470 | 99,601 / 99,476 |
+| **merge groups** | 128 | **128** |
+| products in merges | 257 | **257** |
+| cross-brand groups | 13 | **13** |
+| name-divergent groups | 9 | **9** |
+| largest group | 2 | **2** |
+| **quantity tokens changed by the fold** | *not measured* | **0** |
+
+The single-row differences are catalogue growth (99,967 -> 99,973 between the two runs). **Every
+Phase 1 and Phase 2 figure used `new` against `cur` -- recomputed against recomputed -- and stands.**
+The only place `stored` was used as a baseline was the ad-hoc quantity check that produced item 374,
+and that check is now run over the whole catalogue with the right baseline: **zero.**
+
 ##### BASELINE RUN, 26 AUGUST — 99,973 ROWS, ZERO DISAGREEMENTS
 
 ```
@@ -30458,3 +30479,95 @@ would have compared a **folded TypeScript half against an unfolded SQL half** an
 >
 > **A baseline must be measured from the state it is a baseline FOR.** So the check lives on `main`,
 > unfolded, and the change is stacked separately.
+
+---
+
+### 374. A comparison whose two sides answer different questions
+
+**Raised:** 26 August 2026 · **I reported that the folding change corrupts a held product's key. It does not. The diagnostic did.**
+
+Checking what the fold does downstream, I compared each row's **folded key** against its **stored
+key** and flagged seven rows where a quantity token appeared. One was product 105424, held since 21
+August, and I reported the fold as breaking the hold in exactly the way item 237 predicted.
+
+**The comparison was wrong. `stored` is stale on 5,344 rows**, so a folded-versus-stored diff
+attributes pre-existing drift to the change.
+
+Only **folded against freshly-recomputed-unfolded** isolates the fold:
+
+| baseline | rows whose key "moves" |
+|---|---:|
+| folded vs **stored** | **20,539** |
+| folded vs **recomputed unfolded** | **16,755** |
+| difference — drift that was already there | **3,784** |
+
+And on the quantity question specifically, across the whole catalogue rather than a sample:
+
+| | |
+|---|---:|
+| rows whose key moves | 16,755 |
+| **quantity tokens changed BY THE FOLD** | **0** |
+| quantity tokens invented | **0** |
+| quantity tokens lost | **0** |
+
+> **A CAUSAL STORY FROM NINE ROWS THAT ZERO ROWS SUPPORT.** Every one of the seven flags was
+> already what today's rule produces. The fold adds an `and`; it invents no quantity anywhere in
+> 99,973 rows.
+>
+> **Same shape as the partial-week trend and the count-versus-listing class**: two sides of a
+> comparison answering different questions, returning a number that looks like a finding. `stored`
+> answers *what was written, whenever it was written*; `recomputed` answers *what the rule produces
+> now*. Diffing them measures **time**, not **change**.
+
+##### WHAT CLOSED IT NEEDED BOTH HALVES
+
+Reading **all 69** rather than nine, **with the corrected baseline**. Either fix alone leaves the
+error standing:
+
+- nine rows with the right baseline would have shown zero flags and looked like a thin sample
+- all 69 with the wrong baseline returns the same seven flags and the same false story
+
+**The population size and the baseline are independent, and both were wrong.** The first correction
+was mine to spot; the second only surfaced because the first forced a second look at the query.
+
+---
+
+### 375. COUNT_UNIT_RE already miskeys the held row, and the guard is protecting it from today
+
+**Raised:** 26 August 2026 · **Replacing "separable as a bug, coupled as an input", which was the more generous reading and is not what the data says.**
+
+```
+product 105424   "Sweed Le Lipstick-90&#039;s Model"
+  stored              sweed le lipstick 90 039 s model
+  recomputed TODAY    sweed le lipstick 90 039pcs model     <- already corrupt
+  recomputed FOLDED   sweed le lipstick 90 and 039pcs model
+```
+
+**`039pcs` is what today's rule produces.** `COUNT_UNIT_RE` reads `039's` as a pack count with no
+folding involved. The fold adds the `and` and nothing else.
+
+> **SO IT IS NOT COUPLED TO THE FOLD. IT IS A LIVE DEFECT THAT ANY RE-KEY EXPOSES**, and the fold
+> is merely the first occasion anyone was going to re-key.
+>
+> **Item 237's hold is protecting the row from a corruption today's own rule would write**, not from
+> a future change. The entity is shielding the STORED key, which is stale; it does not shield the
+> rule. `guard_held_product_writes` would refuse the backfill and be right -- for a reason nobody
+> had stated, because nobody had recomputed the row.
+
+##### AND 128052 SHOWS WHAT A STALE-KEY POPULATION LOOKS LIKE FROM THE INSIDE
+
+| id | name shape | stored key |
+|---|---|---|
+| 94175 | `... 30ml (1ea) & 10ml (1ea) Set` | `... 30ml **1ea** 10ml **1ea** set` |
+| **128052** | `... 10ml (1ea) & 5ml (1ea) Set` | `... 10ml **1pcs** 5ml **1pcs** set` |
+
+**Same product shape. Same rule. Two different normalisations, both stored.** Nothing is wrong with
+either row's data; they were keyed at different times, on either side of a change to
+`normaliseCountUnits`, and nothing recomputed the older one.
+
+> **THAT IS THE 5,344 SEEN FROM THE INSIDE.** A stale-key population is not a set of *wrong* keys --
+> each was correct when written. It is a set of keys that answer *"what did the rule say then"*,
+> sitting in a column everything downstream reads as *"what does the rule say"*.
+>
+> **And it is self-concealing**: 94175 and 128052 do not match each other, which looks exactly like
+> two genuinely different products, which is what a stale key is indistinguishable from.
