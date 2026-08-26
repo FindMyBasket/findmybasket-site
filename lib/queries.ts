@@ -194,53 +194,16 @@ async function fetchAllRows<T>(
 }
 
 export async function getCategoryStats(category: TopCategory): Promise<CategoryStats> {
-  const { count: totalProducts } = await supabase
-    .from('products_active')
-    .select('*', { count: 'exact', head: true })
-    .eq('top_category', category)
-    .not('tags', 'cs', '{cleanup_remove}');
+  // ONE AGGREGATE, NOT TWO OFFSET WALKS (item 415). This paged every matching row
+  // 1,000 at a time and counted in JS. EXPLAIN showed each request re-running the whole
+  // 45,042-row sort to return 1,000 of them -- O(n) per page, so the request count was
+  // the symptom and the per-request cost was the defect.
+  const { data: statsRows } = await supabase.rpc('fmb_scope_stats', {
+    p_category: category,
+    p_subcategory: null,
+  });
+  const stats = (statsRows as { total_products: number; total_brands: number; total_retailers: number }[] | null)?.[0];
 
-  const brandRows = await fetchAllRows<{ normalised_brand: string | null }>(offset =>
-    supabase
-      .from('products_active')
-      .select('normalised_brand')
-      .eq('top_category', category)
-      .not('normalised_brand', 'is', null)
-      .not('tags', 'cs', '{cleanup_remove}')
-      .order('id')
-      .range(offset, offset + PAGE_SIZE - 1),
-  );
-
-  const distinctBrands = new Set(brandRows.map(r => r.normalised_brand).filter(Boolean));
-
-  // Inverted embed (perf): drive from the filtered products resource and embed
-  // retailer_prices, instead of driving from retailer_prices and filtering the
-  // embedded products (which forced a full retailer_prices scan). PR #38 canary
-  // 2. Note: top categories are always large, so this is the weakest beneficiary
-  // of the inversion and the prime candidate for the parked caching follow-up.
-  const productRetailerRows = await fetchAllRows<{ retailer_prices: { retailer_id: number }[] | null }>(offset =>
-    supabase
-      .from('products')
-      .select('retailer_prices(retailer_id)')
-      .eq('top_category', category)
-      .is('merged_into', null)
-      .is('parent_product_id', null)
-      .order('id')
-      .range(offset, offset + PAGE_SIZE - 1),
-  );
-
-  const activeRetailerIds = await getActiveRetailerIds();
-  const retailerIdSet = new Set<number>();
-  for (const p of productRetailerRows) {
-    for (const rp of p.retailer_prices ?? []) {
-      if (activeRetailerIds.has(rp.retailer_id)) retailerIdSet.add(rp.retailer_id);
-    }
-  }
-  const totalRetailers = retailerIdSet.size;
-
-  // Catalogue-wide next-best average saving, precomputed and stored by
-  // fmb_refresh_category_savings (weekly via pg_cron). Falls back to null if the
-  // row or table is absent, so category pages never break on a missing aggregate.
   const { data: savingRow } = await supabase
     .from('category_savings')
     .select('avg_saving_pct')
@@ -248,49 +211,28 @@ export async function getCategoryStats(category: TopCategory): Promise<CategoryS
     .maybeSingle();
 
   return {
-    total_products: totalProducts ?? 0,
-    total_brands: distinctBrands.size,
-    total_retailers: totalRetailers,
+    total_products: Number(stats?.total_products ?? 0),
+    total_brands: Number(stats?.total_brands ?? 0),
+    total_retailers: Number(stats?.total_retailers ?? 0),
     avg_saving_pct:
       savingRow?.avg_saving_pct != null ? Number(savingRow.avg_saving_pct) : null,
   };
 }
 
 export async function getTopBrands(category: TopCategory, limit = 16): Promise<TopBrand[]> {
-  const data = await fetchAllRows<{ normalised_brand: string | null; brand: string | null }>(
-    offset =>
-      supabase
-        .from('products_active')
-        .select('normalised_brand, brand')
-        .eq('top_category', category)
-        .not('normalised_brand', 'is', null)
-        .not('tags', 'cs', '{cleanup_remove}')
-        .order('id')
-      .range(offset, offset + PAGE_SIZE - 1),
-  );
-
-  const brandCounts = new Map<string, { display: string; count: number }>();
-  for (const row of data) {
-    if (!row.normalised_brand) continue;
-    const existing = brandCounts.get(row.normalised_brand);
-    if (existing) {
-      existing.count++;
-    } else {
-      brandCounts.set(row.normalised_brand, {
-        display: row.brand ?? row.normalised_brand,
-        count: 1,
-      });
-    }
-  }
-
-  return Array.from(brandCounts.entries())
-    .map(([slug, { display, count }]) => ({
-      name: display,
-      slug: brandSlug(slug),
-      product_count: count,
-    }))
-    .sort((a, b) => b.product_count - a.product_count)
-    .slice(0, limit);
+  // Aggregated in SQL (item 415). Display name is the first `brand` spelling in id
+  // order, which is what the JS walk produced by setting it on first sight.
+  const { data } = await supabase.rpc('fmb_top_brands', {
+    p_category: category,
+    p_subcategory: null,
+    p_product_type: null,
+    p_limit: limit,
+  });
+  return ((data ?? []) as { normalised_brand: string; display: string | null; n: number }[]).map(r => ({
+    name: r.display ?? r.normalised_brand,
+    slug: brandSlug(r.normalised_brand),
+    product_count: Number(r.n),
+  }));
 }
 
 export interface CrossCategoryBrand {
@@ -408,24 +350,18 @@ export async function getFeaturedProducts(
 }
 
 export async function getSubcategories(category: TopCategory): Promise<{ name: string; count: number }[]> {
-  const data = await fetchAllRows<{ subcategory: string | null }>(offset =>
-    supabase
-      .from('products_active')
-      .select('subcategory')
-      .eq('top_category', category)
-      .not('subcategory', 'is', null)
-      .not('tags', 'cs', '{cleanup_remove}')
-      .order('id')
-      .range(offset, offset + PAGE_SIZE - 1),
-  );
+  // READS THE VIEW, WHICH NOW CARRIES THE COUNT (item 415). This paged all 45,124
+  // skincare rows to count subcategories while active_category_subcategories -- already
+  // used by getValidSubcategories in the sibling file -- held the answer's shape. The
+  // count was added to the view rather than written as a fifth function beside it.
+  const { data } = await supabase
+    .from('active_category_subcategories')
+    .select('subcategory, n')
+    .eq('top_category', category)
+    .not('subcategory', 'is', null);
 
-  const counts = new Map<string, number>();
-  for (const row of data) {
-    if (!row.subcategory) continue;
-    counts.set(row.subcategory, (counts.get(row.subcategory) ?? 0) + 1);
-  }
-
-  return Array.from(counts.entries())
-    .map(([name, count]) => ({ name, count }))
+  return ((data ?? []) as { subcategory: string | null; n: number }[])
+    .filter(r => r.subcategory && Number(r.n) > 0)
+    .map(r => ({ name: r.subcategory as string, count: Number(r.n) }))
     .sort((a, b) => b.count - a.count);
 }

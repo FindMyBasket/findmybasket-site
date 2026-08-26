@@ -32494,3 +32494,103 @@ have.**
 > reproduced exactly what the comment described.** A rule scoped to one caller does not reach the next.
 > **This file has now demonstrated that twice, and the second time it did so in sight of the written
 > record of the first.**
+
+---
+
+### 415. I reported a cold-buffer render as the page's cost, and the urgency was mine
+
+**Raised:** 26 August 2026 · **Six offset walks replaced. The correction is the centre.**
+
+**I reported `/skincare/face` as a 14.4-second page. It is not one.** Repeated fresh renders:
+
+| Page | First fresh hit | Steady state |
+|---|---|---|
+| `/skincare/face` | **14.409s** | **1.49 - 1.74s** |
+| `/fragrance/scent` | **8.659s** | **0.64 - 0.79s** |
+| `/hair/cleanse` | 1.919s | ~0.45s |
+
+> **A single fresh render measures the cache and the page together, and reports the total as the page.**
+> The first measurement of any page here came in at **3 to 10 times its steady state**, because the
+> database's shared buffers, the connection pool and the ISR entry are all cold at once and only the
+> page has a name. **One sample cannot separate them.**
+
+**This applies to every timing taken this session**, including the 15.8s that justified item 412. That
+one survives -- the fix took it to 2.7s and then 1.8s warm, and the round-trip count is independently
+verifiable -- **but I quoted it, like this one, from a single cold hit.**
+
+**The real gap is 1.5s against hair's 0.5s**: proportional to category size, worth fixing, and **not a
+fourteen-second page.** "Worse than a missing page" was my framing and it rested on one sample.
+
+**THE MECHANISM HOLDS REGARDLESS, AND IT IS THE PART THAT WAS NEVER IN DOUBT.** `EXPLAIN ANALYZE` on
+one page of the walk:
+
+```
+Execution Time: 673.610 ms     for ONE page of 1,000 rows
+Sort ... rows=45042            the whole result set, sorted, every request
+Hash Semi Join ... rows=45182  the whole join, every request
+```
+
+> **Not deep-offset degradation. Every request re-runs the entire join and sort and discards all but
+> 1,000 rows.** Cost is O(n) per page and scales with the CATEGORY, not with the offset. **So the 46
+> requests are the symptom and the per-request cost is the defect** -- raising `PAGE_SIZE` would have
+> cut the request count and barely touched the total, which is exactly the fix a request-count
+> diagnosis would have suggested.
+
+**Applied: `fmb_scope_stats`, `fmb_top_brands`, and a count column on
+`active_category_subcategories`.** Seven offset walks became three aggregates and one view read; all
+seven `fetchAllRows` callers are gone.
+
+**BEHAVIOUR MATCHED, NOT IMPROVED, AND TWO THINGS LOOK WRONG.** The retailer count drives from
+`products` rather than `products_active` with no `cleanup_remove` filter, so it counts retailers of
+excluded products; and "active retailer" means `r.active` alone, **not `r.enabled`**, matching
+`lib/retailers.ts`. Both preserved deliberately: **changing either inside a performance fix would be a
+silent behaviour change**, and they are worth their own decision.
+
+**THE VIEW GAINED A COLUMN RATHER THAN A FIFTH FUNCTION APPEARING BESIDE IT.**
+`getSubcategories` paged 45,124 rows to count subcategories while
+`active_category_subcategories` -- read by `getValidSubcategories` in the sibling file -- already had
+the shape of the answer. **That is the fourth time in this file's history that the replacement existed
+one function away and went unused**, and the answer to a fourth instance should not be a fifth
+function.
+
+**Left in place and reported:** both copies of `fetchAllRows` are now dead, in two files, with no
+callers. They carry items 146 and 151's rule text, which other comments cite by name. **Deleting them
+is a decision about where that rule lives, not a tidy-up**, so they stay until it is made.
+
+---
+
+### 416. One defect, three times, three different disguises
+
+**Raised:** 26 August 2026 · **The population question, answered.**
+
+The same defect -- scan an unbounded set through a paging helper and aggregate in JavaScript -- has now
+been found three times in the same two files. **What differs is only what hid it.**
+
+| | Where | What disguised it |
+|---|---|---|
+| **Item 238** | `getFeaturedProducts` | The rule was **scoped to the paging helper**, and this function did not page. It used one unordered `.limit(500)`, so a rule about `.range()` never reached it |
+| **Item 412** | `getProductTypes` | The rule was **scoped to one caller**. `getFeaturedProducts`' comment argues for exactly this RPC, seventy lines away, in the file being edited |
+| **Item 415** | `getSubcategoryStats`, `getSubcategoryTopBrands` | The bound was **a property of the data, not of the query** |
+
+**THE THIRD IS THE ONLY ONE THAT CANNOT BE FOUND BY READING THE CODE, AND IT DESERVES STATING
+CAREFULLY.**
+
+```ts
+.eq('top_category', category)
+.eq('subcategory', subcategory)     // <- looks like a bound
+```
+
+That line reads as a restriction, and it is one. **But skincare's 45,124 products all sit in `face`, so
+the restriction removes nothing: the bound is 1.0x the category.** The query is identical in shape to
+the unbounded ones and differs only in a fact about today's rows. Nothing in the file says how big a
+subcategory can get, and **the day skincare's single subcategory was created, six functions silently
+lost their bound.**
+
+> **A reviewer checking whether a query is bounded will read `.eq('subcategory', ...)` and stop.** The
+> question that finds this one is not "is it filtered" but **"what is the largest value that filter can
+> return, and is that a fact about the query or about today's data".** The first has an answer in the
+> code; the second does not.
+
+**Items 238 and 412 were both found by a rule failing to travel.** This one was found by opting in a
+larger category -- **not by review, and not by any rule, because the code was correct-looking at every
+scale it had previously run at.**
