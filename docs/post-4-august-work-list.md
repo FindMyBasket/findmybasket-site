@@ -31993,3 +31993,60 @@ agreement is coincidental, names the failure it already caused, and points at `d
 > metadata, which is the surface nobody checks while confirming a page looks right. **It was found
 > because the verification read the title, rather than fetching the page and confirming the products
 > were on it.**
+
+---
+
+### 407. Item 406 was wrong about which surface was broken, and the drift it blamed a test for missing has been live all along
+
+**Raised:** 26 August 2026 · **Corrects item 406's central description. Third copy of the derivation, now fixed.**
+
+**What item 406 said:** *"`components/SubcategoryPage` reads `SUBCATEGORY_DISPLAY`, so every heading,
+chip and breadcrumb was correct -- 125 occurrences of 'Oral care' on the page."*
+
+**What is actually on the page:**
+
+```
+<h1 class="... capitalize">Mouth</h1>
+breadcrumb: Home > Bath & Body > Mouth
+```
+
+**`SubcategoryPage` never read the map.** It carried `displaySub()`, a third copy of the same
+capitalise-the-slug derivation. The 125 strings I counted were **`Oral Care` with a capital C -- the
+`product_type` printed on 48 product cards.** The label, lowercase `Oral care`, appeared **six** times,
+all of them from the metadata I had just fixed.
+
+> **I verified the claim by grepping for a string, and the string was on the page for a different
+> reason.** A case-insensitive match over rendered HTML cannot tell a heading from a card field. **The
+> check confirmed the words were present, which was never the question** -- the question was which
+> element produced them, and only the `<h1>` answers that.
+
+**AND THE DRIFT `lib/queries.ts` CLAIMS TO HAVE FIXED IS LIVE.** That file's comment reads: *"the
+category page offers 'Browse by area > Supplements' inside Supplements, and the destination page is
+headed 'Beauty supplements' -- the same thing named two ways one click apart... so the label lives here
+and both surfaces read it rather than each carrying its own copy."*
+
+**Only one surface reads it.** Measured on production, before this fix:
+
+| Surface | Renders |
+|---|---|
+| `/supplements` browse chip | **Beauty supplements** |
+| `/supplements/supplements` `<h1>` | **Supplements** |
+| `/supplements` browse chip | **Sports nutrition** |
+| `/supplements/sports` `<h1>` | **Sports** |
+
+**The exact failure the comment describes, in the exact place it says it was prevented, shipped and
+stayed shipped.** `CategoryPage` reads the map; `SubcategoryPage` did not. The comment documented an
+intention as though it were a state.
+
+**Fixed:** `displaySub` now reads `subcategoryDisplay`, and the `<h1>` loses its `capitalize` class --
+labels arrive correctly cased from the map, and `capitalize` would render "Sports Nutrition" for
+"Sports nutrition". The fallback still capitalises a bare slug.
+
+**The derivation count for the record:** three copies, not two. `CategoryPage` (correct),
+`SubcategoryPage` (**was wrong, now fixed**), and six route `generateMetadata` functions of which one
+was already correct, one was fixed in item 406 and four are annotated traps.
+
+> **Item 406's centre survives and gets sharper.** A derivation that agrees cannot be diffed against
+> the thing it agrees with -- and I then made the same error one level up, checking my own claim by
+> looking for agreement in the output instead of at the code that produced it. **Twice in one item:
+> once in the bug, once in the verification of the fix.**
