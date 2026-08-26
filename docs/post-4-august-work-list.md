@@ -32666,3 +32666,59 @@ change at the boundary, not a return to prior behaviour.
 > **The difference between fixing a defect and claiming to restore something that never existed.** The
 > old code was not correct here and made stable by the rewrite; it was incorrect in a way that happened
 > not to show.
+
+---
+
+### 418. The name unions, the products don't. And 143 recovered, not the 23 I reported
+
+**Raised:** 26 August 2026 · **Union applied to six slugs. The correction leads because it was mine.**
+
+**I reported 23 products recovered. It is 143.** I had fetched two colliding hubs, taken the shortfall
+on those, and reported it as the total. **Both happened to be small ones.**
+
+> **Wrong by sixfold, and the method is the same one that was wrong on Monday.** Item 402: a
+> detector's yield read as a population's size. Here: a sample read as the whole. **Twice in one week a
+> number came from the rows to hand rather than from the population**, and both times it was quoted
+> without saying which it was.
+
+**`/brands/im-from` serves 1 product of 122, and leads this item.**
+
+| Slug | Serving | Now | After | Recovered |
+|---|---|---|---|---|
+| **`im-from`** | `im from` | **1** | **122** | **+121** |
+| `nalas-baby` | `nalas baby` | 58 | 65 | +7 |
+| `honey` | `honey` | 11 | 17 | +6 |
+| `ancient-brave` | `ancient + brave` | 26 | 31 | +5 |
+| `childs-farm` | `child's farm` | 44 | 46 | +2 |
+| `vitalitys` | `vitalitys` | 50 | 52 | +2 |
+
+**The h1 changes on none of them, checked rather than assumed.**
+
+> **It is not an incomplete page. It is a brand page for a 121-product brand showing one item, headed
+> with the name of the brand whose products are absent.** `/brands/im-from` renders `<h1>I'm from</h1>`
+> above a single product belonging to `im from`.
+
+**THE DEFECT IN ONE LINE: THE NAME UNIONS, THE PRODUCTS DON'T.**
+
+The mechanism was **built in rather than introduced**. `findBrandBySlug` has always accumulated
+`matches` -- the display-name counts -- across *every* member whose slug matches, then computed
+`bestDisplay` as the majority of that union. And it has always handed exactly one member downstream to
+`.eq('normalised_brand', ...)`. **Two halves of one lookup, one unioned and one not, from the
+beginning.** That is why the display name needed no fixing here: it was already correct for a union
+that the products never performed.
+
+**THE ARBITRARINESS IS WIDER THAN THE SIX.** `chosenNormalised` is assigned on every matching row, so
+it ends as **the last matching row in id order** -- for every colliding slug, not just these. That is
+not a rule, it is a leftover. **`/brands/im-from` degraded to 1 of 122 by accident of which spelling
+happened to hold the highest id**, and nothing records how long it has been that way or would have
+reported it changing.
+
+> **Unioning removes the arbitrariness rather than choosing better.** A fix that picked the
+> largest member would replace one arbitrary rule with a defensible one and still be a rule -- another
+> tiebreak to get wrong later, and still wrong for `ancient + brave` against `ancient & brave`, which
+> are one brand. **There is no correct single member, so the correct answer is not to choose.**
+
+**NOT GATED, AND ALREADY HALF-BUILT.** Nothing here touches match keys; the merge stays behind its
+gate. `findBrandBySlug` already scanned every member. The change is `normalised_brand: string` to a
+list, five `.eq()` becoming `.in()`, and an array overload of `fmb_brand_metadata_facts`. **The display
+half of the union existed; only the product half was missing.**

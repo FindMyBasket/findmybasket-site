@@ -64,12 +64,12 @@ export async function BrandPage({ slug, page = 1, productType, category }: Props
   }
 
   const [stats, productTypes, productResult, facts] = await Promise.all([
-    getBrandStats(brand.normalised_brand),
-    getBrandProductTypes(brand.normalised_brand),
-    getBrandProducts(brand.normalised_brand, page, PAGE_SIZE, productType, category),
+    getBrandStats(brand.normalised_brands),
+    getBrandProductTypes(brand.normalised_brands),
+    getBrandProducts(brand.normalised_brands, page, PAGE_SIZE, productType, category),
     // Same facts the search-result title branches on. Fetched here so the PAGE can
     // branch on them too -- see the intro copy below. Item 357.
-    getBrandMetadataFacts(brand.normalised_brand),
+    getBrandMetadataFacts(brand.normalised_brands),
   ]);
 
   // A filter is either a fine-grained product_type or a coarse top_category.

@@ -92,7 +92,7 @@ export async function generateMetadata({
   // The third template exists because the second was covering two states: 167 hubs with
   // NOTHING in stock were being told "delivery included in every price" when there was no
   // price at all. Item 282.
-  const facts = await getBrandMetadataFacts(brand.normalised_brand);
+  const facts = await getBrandMetadataFacts(brand.normalised_brands);
 
   const { title, fallbackDescription } = brandMetadataCopy({
     displayName: brand.display_name,
