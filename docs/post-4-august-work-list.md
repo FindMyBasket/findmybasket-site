@@ -30303,5 +30303,325 @@ that nothing changes** -- and it was run rather than assumed:
    first is modelled here, the second is more aggressive and was not measured.
 4. The 5,344 re-derived, since a re-key writes all of them anyway.
 
-**Scaffolding dropped. Nothing applied, and Phase 3 is deliberately unwritten until 1 and 2 are
-read.**
+**Scaffolding dropped. Nothing applied.**
+
+##### PHASE 3 WRITTEN, NOT APPLIED
+
+Four files. No migration run, no deploy, no merge:
+
+| file | what |
+|---|---|
+| `_shared/match-key.ts` | `foldForMatch()` added; `normaliseForMatch` folds **before** the strip |
+| `20260826120000_..._fold_accents_ampersand.sql` | `fmb_fold_for_match()`, both normalisers rewritten to use it, and the parity view |
+| `scripts/match-key-harness.mts` | **50 cases -> 61** |
+| `scripts/match-key-parity.mts` | byte-parity over the corpus, re-deriving the drift in the same pass |
+
+**`&` -> `and`, as modelled.** Stripping the word is more aggressive, unmeasured, and the modelled
+option already resolves item 294. **Choosing the unmeasured option because it might do more is the
+shape this list keeps recording** -- written at the code, not only here.
+
+**THE HARNESS IS THE PART TO LOOK AT.** It carried 50 cases and **not one exercised an accented
+character or an ampersand** -- the two input classes this change is entirely about.
+
+> **A HARNESS THAT HAS NEVER MET THE INPUT CLASS A CHANGE IS ABOUT IS NOT A HARNESS THAT GUARDS THAT
+> CHANGE.** It would have passed before the fix and after it and reported nothing either way. Its 50
+> greens were evidence about pack counts, shades and truncation, and silence about this.
+
+Eleven cases added: one per merge shape actually read in Phase 2 -- **one brand two spellings**,
+**`&` against the word `and`**, **brand repeated in the name** -- plus four controls that must NOT
+merge, including the multipack assertion promoted from a one-off query to a permanent test.
+
+**Parity is asserted over the corpus, not the fixtures.** `match-key-parity.mts` pages all 99,967
+rows through both implementations and requires **zero** disagreements. The harness proves the rule is
+right on inputs someone thought of; this proves the two halves agree on the inputs that exist.
+**Different properties, and agreement is the one that rots.**
+
+**The 5,344 is re-derived inside that same pass**, not measured separately, because a re-key writes
+every row anyway.
+
+##### AND THE PROPORTION IS THE CLOSE
+
+**16,754 keys re-key. 257 products land beside anything. 128 groups merge.**
+
+> **THE RULE IS BEING CORRECTED FAR MORE OFTEN THAN IT IS BEING MADE TO MERGE** -- 65 keys change for
+> every one product that gains a neighbour.
+>
+> **This is a correctness fix that merges 128 groups, not a merge exercise that costs a 16.76%
+> re-key.** Framed the second way, 128 looks like a thin return on a sixth of the catalogue and the
+> change looks not worth its risk. Framed the first way -- which is what the measurement says -- the
+> merges are a **by-product** of making two spellings of one product produce one key, and the return
+> is every future row that matches instead of splitting.
+>
+> **The framing decides whether this reads as worth doing, and only one of the two framings is
+> supported by the numbers.**
+
+##### ★ THE APPLY IS ONE ACT. DO NOT STAGE IT.
+
+**The migration, the backfill and all three importer deploys go together.**
+
+`import-awin-feed`, `import-rakuten-feed` and `import-shopify-feed` all import
+`_shared/match-key.ts`. **The SQL half alone leaves every import writing old-style keys** into a
+catalogue that has just been re-keyed -- so each nightly run would reintroduce the split the change
+exists to remove, on exactly the rows most likely to move.
+
+> **Staging this is not a slower version of applying it. It is a worse outcome than not applying it
+> at all**, because the catalogue would hold both conventions at once and the gap would widen every
+> night rather than sitting still.
+
+**Written before the apply rather than discovered after it.**
+
+##### PHASE 2 RE-RUN, 26 AUGUST, CORRECT BASELINE THROUGHOUT
+
+Re-derived rather than inherited, after item 374. **The change has not moved; the question was
+whether the earlier numbers were derived against `stored` anywhere. They were not.**
+
+| | Phase 1 | re-run |
+|---|---:|---:|
+| keys that move (vs recomputed) | 16,754 | **16,755** |
+| distinct keys before / after | 99,595 / 99,470 | 99,601 / 99,476 |
+| **merge groups** | 128 | **128** |
+| products in merges | 257 | **257** |
+| cross-brand groups | 13 | **13** |
+| name-divergent groups | 9 | **9** |
+| largest group | 2 | **2** |
+| **quantity tokens changed by the fold** | *not measured* | **0** |
+
+The single-row differences are catalogue growth (99,967 -> 99,973 between the two runs). **Every
+Phase 1 and Phase 2 figure used `new` against `cur` -- recomputed against recomputed -- and stands.**
+The only place `stored` was used as a baseline was the ad-hoc quantity check that produced item 374,
+and that check is now run over the whole catalogue with the right baseline: **zero.**
+
+##### BASELINE RUN, 26 AUGUST — 99,973 ROWS, ZERO DISAGREEMENTS
+
+```
+rows compared                     99,973
+TS vs SQL disagreements           0
+stored vs recomputed (re-derived) 5,344
+```
+
+The two implementations agree on every row of the corpus **before** either is touched, which is what
+makes a zero afterwards mean anything. **And 5,344 re-derives independently**, by a different route
+from the Phase 1 measurement that first produced it.
+
+---
+
+### 372. A platform that degrades silently, then reports a false fact about the file
+
+**Raised:** 26 August 2026 · **Three failures on the way to one honest green. The first is the one worth recording.**
+
+`.github/workflows/match-key-parity.yml` contained:
+
+```yaml
+run: echo "> Run reason: ${{ inputs.note }}" >> "$GITHUB_STEP_SUMMARY"
+```
+
+`Run reason: ` is a colon-space **inside a plain YAML scalar**, so the value parses as a nested
+mapping and the file is malformed.
+
+**GitHub reported no error.** It accepted the file, listed the workflow as `active`, **named it after
+its own path** rather than its `name:` field, registered **no triggers**, and answered
+`gh workflow run` with:
+
+> **"Workflow does not have 'workflow_dispatch' trigger"**
+
+for a file whose fifth line is `workflow_dispatch:`.
+
+> **THE MESSAGE IS THE DEFECT, NOT THE SILENCE.** Degrading quietly on malformed input is bad.
+> **Making a specific, confident, false assertion about what the file contains is worse** -- it
+> describes a symptom and points directly away from the cause. I spent three dispatch attempts and
+> an investigation into secret names believing it.
+>
+> **A platform that rejects malformed input teaches you something in one step. One that accepts it,
+> half-configures it, and then tells you what it contains teaches you something false.**
+
+`npx js-yaml <file>` found it in one call, with line and column.
+
+##### AND THE RIGHT RESPONSE TO FINDING ONE IS TO CHECK THEM ALL
+
+Every file in `.github/workflows/` was then run through `js-yaml`.
+
+**They all parse.** That is the result worth stating -- not because it is interesting, but because it
+was the question, and **"no others are broken" is only knowable by having looked.** One silently
+degraded file proves the class exists; it says nothing about how many members it has, and nothing in
+the Actions UI would distinguish a second one.
+
+---
+
+### 373. The check was inside the change it was built to verify
+
+**Raised:** 26 August 2026 · **A circular dependency, and why splitting it was legitimate rather than convenient.**
+
+The parity view lived in the folding migration:
+
+> parity must be verified **before** the folding change is applied ·
+> the check needs the view ·
+> the view is **inside** the folding change
+
+**Split into its own migration and applied alone.** What makes that a real separation:
+
+> **THE VIEW IS BEHAVIOUR-NEUTRAL.** It reads existing data through the existing functions and
+> changes no key, no row, no behaviour. Applying it commits to nothing and cannot itself be the thing
+> under test.
+>
+> **Had it altered anything, the split would have been a shortcut** -- applying half a change to make
+> the other half checkable -- and the baseline would have been measured against a database already
+> partly moved. The distinction is not that it was small. It is that it was *inert*.
+
+##### AND THE BASELINE HAD TO RUN FROM AN UNFOLDED REF
+
+The script and workflow were first written on the branch carrying the folding change. Running there
+would have compared a **folded TypeScript half against an unfolded SQL half** and reported
+**16,754 disagreements** -- the correct count of a difference that is not drift.
+
+> **IT WOULD HAVE LOOKED EXACTLY LIKE THE FAILURE THE CHECK EXISTS TO CATCH**: two implementations of
+> one rule disagreeing on 17% of the corpus. Nothing in the output distinguishes *"these have
+> drifted"* from *"you are half-way through changing both"*.
+>
+> **A baseline must be measured from the state it is a baseline FOR.** So the check lives on `main`,
+> unfolded, and the change is stacked separately.
+
+---
+
+### 374. Diffing them measures time, not change
+
+**Raised:** 26 August 2026 · **I reported that the folding change corrupts a held product's key. It does not. The diagnostic did.**
+
+> **`stored` answers "what was written, whenever it was written". `recomputed` answers "what does the
+> rule produce now". DIFFING THEM MEASURES TIME, NOT CHANGE** -- and returns a number that looks
+> exactly like a finding.
+>
+> | baseline | rows whose key "moves" |
+> |---|---:|
+> | folded vs **stored** | **20,539** |
+> | folded vs **recomputed unfolded** | **16,755** |
+> | **difference — pre-existing drift, attributed to the change** | **3,784** |
+
+Checking what the fold does downstream, I compared each row's **folded key** against its **stored
+key** and flagged seven rows where a quantity token appeared. One was product 105424, held since 21
+August, and I reported the fold as breaking the hold in exactly the way item 237 predicted.
+
+**The comparison was wrong. `stored` is stale on 5,344 rows**, so a folded-versus-stored diff
+attributes pre-existing drift to the change.
+
+Only **folded against freshly-recomputed-unfolded** isolates the fold:
+
+| baseline | rows whose key "moves" |
+|---|---:|
+| folded vs **stored** | **20,539** |
+| folded vs **recomputed unfolded** | **16,755** |
+| difference — drift that was already there | **3,784** |
+
+And on the quantity question specifically, across the whole catalogue rather than a sample:
+
+| | |
+|---|---:|
+| rows whose key moves | 16,755 |
+| **quantity tokens changed BY THE FOLD** | **0** |
+| quantity tokens invented | **0** |
+| quantity tokens lost | **0** |
+
+> **A CAUSAL STORY FROM NINE ROWS THAT ZERO ROWS SUPPORT.** Every one of the seven flags was
+> already what today's rule produces. The fold adds an `and`; it invents no quantity anywhere in
+> 99,973 rows.
+>
+> **Same shape as the partial-week trend and the count-versus-listing class**: two sides of a
+> comparison answering different questions, returning a number that looks like a finding. `stored`
+> answers *what was written, whenever it was written*; `recomputed` answers *what the rule produces
+> now*. Diffing them measures **time**, not **change**.
+
+##### WHAT CLOSED IT NEEDED BOTH HALVES
+
+Reading **all 69** rather than nine, **with the corrected baseline**. Either fix alone leaves the
+error standing:
+
+- nine rows with the right baseline would have shown zero flags and looked like a thin sample
+- all 69 with the wrong baseline returns the same seven flags and the same false story
+
+**The population size and the baseline are independent, and both were wrong.** The first correction
+was mine to spot; the second only surfaced because the first forced a second look at the query.
+
+---
+
+### 375. COUNT_UNIT_RE already miskeys the held row, and the guard is protecting it from today
+
+**Raised:** 26 August 2026 · **Replacing "separable as a bug, coupled as an input", which was the more generous reading and is not what the data says.**
+
+```
+product 105424   "Sweed Le Lipstick-90&#039;s Model"
+  stored              sweed le lipstick 90 039 s model
+  recomputed TODAY    sweed le lipstick 90 039pcs model     <- already corrupt
+  recomputed FOLDED   sweed le lipstick 90 and 039pcs model
+```
+
+**`039pcs` is what today's rule produces.** `COUNT_UNIT_RE` reads `039's` as a pack count with no
+folding involved. The fold adds the `and` and nothing else.
+
+> **SO IT IS NOT COUPLED TO THE FOLD. IT IS A LIVE DEFECT THAT ANY RE-KEY EXPOSES**, and the fold
+> is merely the first occasion anyone was going to re-key.
+>
+> **Item 237's hold is protecting the row from a corruption today's own rule would write**, not from
+> a future change. The entity is shielding the STORED key, which is stale; it does not shield the
+> rule. `guard_held_product_writes` would refuse the backfill and be right -- for a reason nobody
+> had stated, because nobody had recomputed the row.
+
+##### AND 128052 SHOWS WHAT A STALE-KEY POPULATION LOOKS LIKE FROM THE INSIDE
+
+| id | name shape | stored key |
+|---|---|---|
+| 94175 | `... 30ml (1ea) & 10ml (1ea) Set` | `... 30ml **1ea** 10ml **1ea** set` |
+| **128052** | `... 10ml (1ea) & 5ml (1ea) Set` | `... 10ml **1pcs** 5ml **1pcs** set` |
+
+**Same product shape. Same rule. Two different normalisations, both stored.** Nothing is wrong with
+either row's data; they were keyed at different times, on either side of a change to
+`normaliseCountUnits`, and nothing recomputed the older one.
+
+> **THAT IS THE 5,344 SEEN FROM THE INSIDE.** A stale-key population is not a set of *wrong* keys --
+> each was correct when written. It is a set of keys that answer *"what did the rule say then"*,
+> sitting in a column everything downstream reads as *"what does the rule say"*.
+>
+> **And it is self-concealing**: 94175 and 128052 do not match each other, which looks exactly like
+> two genuinely different products, which is what a stale key is indistinguishable from.
+
+
+---
+
+### 376. Skipping 105424 is deliberate, and it is not a fix
+
+**Raised:** 26 August 2026 · **Written down rather than assumed, because a skip that goes unrecorded reads as an oversight to whoever finds it.**
+
+The backfill excludes products with an open `held:` finding. Today that is **one row, 105424**, and
+the exclusion is expressed as a join against `standing_check_findings` rather than an id, so it
+reads the same source `guard_held_product_writes` consults and cannot drift from it.
+
+**Three options, and only one of them changes nothing:**
+
+| | consequence |
+|---|---|
+| **release the hold** | writes `sweed le lipstick 90 and 039pcs model` -- **a corruption we have now measured and named** |
+| **fix `COUNT_UNIT_RE` here** | makes one change prove two unrelated things, which is the argument for keeping it out and has not weakened |
+| **skip** | the row stays **exactly as wrong as it is today** |
+
+> **THE ROW IS ALREADY MISKEYED AND SKIPPING PRESERVES THAT.** `stored` says
+> `90 039 s model`; today's rule says `90 039pcs model`. Skipping does not protect a correct key --
+> it declines to replace a wrong one with a differently wrong one, and leaves the hold open.
+>
+> **Item 237's hold was WRONG ABOUT THE MECHANISM AND RIGHT ABOUT THE CONCLUSION.** It believed the
+> HTML entity was shielding the row from `COUNT_UNIT_RE`. The entity only ever shielded the STORED
+> key -- the rule was already reading `039's` as a pack count and nobody had recomputed the row to
+> see it. **The hold held for a reason that was not the stated one**, which is worth more than a
+> hold that held for the right reason: it means the instinct to stop was sounder than the analysis
+> behind it.
+
+##### AND THE SEQUENCING CONSEQUENCE, PLAINLY
+
+**`COUNT_UNIT_RE` is now the only thing standing between the backfill and a guard that is right to
+refuse it.**
+
+> It entered this work as *"a different bug that should not ride along"* -- correct then and correct
+> now as a statement about bundling. **What has changed is its position, not its separateness.**
+> Every future re-key hits the same wall: the guard refuses, the row is skipped, and the catalogue
+> carries one product whose key nothing will ever correct.
+>
+> **It moves from an open item to the next piece of work.** Not because it became urgent, but
+> because everything else in front of it has now been done, and it is the only remaining reason a
+> backfill cannot be complete.

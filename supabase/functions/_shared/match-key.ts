@@ -27,11 +27,56 @@
 
 // ─── Core normalisation ─────────────────────────────────────────────────────
 
+// ─── Character folding, applied BEFORE the alphanumeric strip ────────────────
+//
+// WHY THIS EXISTS. `[^a-z0-9]+ -> " "` DELETES every character outside a-z0-9
+// rather than folding it, so until 26 Aug 2026:
+//
+//     "Avène Thermal Water"  ->  "av ne thermal water"
+//     "Avene Thermal Water"  ->  "avene thermal water"
+//
+// Two spellings of ONE product produced two keys and could not match. That is not
+// cosmetic: matching is what the site does, so the same product from two retailers
+// was two products with two prices and no comparison between them.
+//
+// The ampersand is the same defect wearing a different character. `&` is outside
+// a-z0-9 so it was deleted, while the word "and" survived:
+//
+//     "Boots Nail & Cuticle Oil"    ->  "boots nail cuticle oil"
+//     "Boots Nail And Cuticle Oil"  ->  "boots nail and cuticle oil"
+//
+// Two live Boots products, the dead twin outranking the live one on 281
+// impressions. Work-list item 294.
+//
+// THIRD INSTANCE OF THIS CHARACTER CLASS IN TWO DAYS, after stripBrandPrefix
+// (item 355) and brandSlug (item 361), and the first that costs comparisons
+// rather than titles or URLs.
+//
+// `&` -> " and " RATHER THAN STRIPPING THE WORD "and". Both merge item 294's pair.
+// Mapping was modelled and measured; stripping was not, and is more aggressive.
+// Choosing the unmeasured option because it might do more is the shape this
+// codebase keeps recording. Item 371.
+//
+// MIRRORED IN SQL as fmb_fold_for_match(). Any change here changes there.
+const FOLD_FROM = "àáâãäåçèéêëìíîïñòóôõöùúûüýÿÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝŸšŠžŽøØåÅßñÑ";
+const FOLD_TO   = "aaaaaaceeeeiiiinooooouuuuyyAAAAAACEEEEIIIINOOOOOUUUUYYsSzZoOaAsnN";
+
+export function foldForMatch(s: string): string {
+  let out = "";
+  for (const ch of String(s || "")) {
+    const i = FOLD_FROM.indexOf(ch);
+    out += i === -1 ? ch : FOLD_TO[i];
+  }
+  return out.replace(/&/g, " and ");
+}
+
 // Normalised name for fuzzy matching (lowercase, alphanumeric only, single
 // spaces). Curly quotes are folded to a straight apostrophe first so "L'Oréal"
-// and "L’Oréal" collapse identically before the non-alphanumeric strip.
+// and "L’Oréal" collapse identically before the non-alphanumeric strip, and
+// foldForMatch then folds accents and the ampersand so they SURVIVE that strip
+// as letters instead of being deleted by it.
 export function normaliseForMatch(s: string): string {
-  return String(s || "")
+  return foldForMatch(String(s || ""))
     .toLowerCase()
     .replace(/[‘’“”]/g, "'")
     .replace(/[^a-z0-9]+/g, " ")
