@@ -30625,3 +30625,99 @@ refuse it.**
 > **It moves from an open item to the next piece of work.** Not because it became urgent, but
 > because everything else in front of it has now been done, and it is the only remaining reason a
 > backfill cannot be complete.
+
+---
+
+### 377. A client timeout tells you the call ended, not what the server did
+
+**Raised:** 26 August 2026 · **The apply timed out, I reported "nothing applied", and it had applied. What stopped me re-running it was not the check.**
+
+`apply_migration` returned **The operation timed out**. I checked immediately:
+
+```
+fmb_fold_for_match exists?              0
+fmb_build_match_key('Avène …')          avene av ne thermal spring water 300ml   (old)
+fmb_normalise_for_match('Bioré')        bior                                     (old)
+```
+
+and reported that the migration had rolled back atomically and the database was unchanged. **It had
+not. All three functions and the 16,754-row backfill were committing while I was looking.**
+
+> **THE CHECK WAS RUN INSIDE THE WINDOW WHERE ITS ANSWER COULD NOT BE TRUE.** A pre-commit snapshot
+> and a post-rollback state are **identical from outside the transaction** -- both show the function
+> absent and the old output. The query was correct, the connection was fine, the result was
+> unambiguous, and it meant nothing, because the question "did this apply" has no answer while the
+> answer is being written.
+>
+> **An absence observed during a commit is not an absence.**
+
+##### AND WHAT PREVENTED THE DOUBLE-APPLY WAS POSTGRES, NOT ME
+
+Acting on the false reading, I re-ran the migration. It failed:
+
+```
+ERROR: 23505: duplicate key value violates unique constraint "pg_proc_proname_args_nsp_index"
+DETAIL: Key (proname, proargtypes, pronamespace)=(fmb_fold_for_match, 25, 2200) already exists.
+```
+
+**A `CREATE OR REPLACE FUNCTION` does not normally fail on existence.** It failed here only because
+the first transaction was still settling -- which is to say **the same condition that made my check
+wrong is what made the second attempt fail.**
+
+> **THE CHECK WAS WRONG AND SOMETHING ELSE WAS RIGHT, AND ONLY READING WHY THE SECOND ATTEMPT FAILED
+> DISTINGUISHES THEM.** "The re-apply was rejected" reads as a guard working. It was a race
+> resolving. Had the timing differed by a second the second migration would have succeeded, re-run
+> the backfill, and I would have concluded the whole thing was fine -- with no evidence that my
+> check had ever been wrong.
+>
+> **The backfill is idempotent, so nothing was damaged. That is luck, not design**, and recording it
+> as a near miss rather than a save is the point.
+
+##### THE RULE
+
+> **On a timed-out write: wait, then check, and treat "not applied" as UNCONFIRMED rather than
+> CONCLUDED.**
+
+A timeout is a statement about the client's patience. The server has its own opinion and has not
+been asked. The cheap discriminator is `pg_stat_activity` -- an in-flight transaction is visible
+there while its effects are not visible anywhere else -- and it is the query I ran **third**, after
+the wrong conclusion and the re-apply attempt.
+
+---
+
+### 378. The outcome read, not the counts
+
+**Raised:** 26 August 2026 · **Phase 2 read 18 predicted merge groups. This reads the groups that actually exist.**
+
+After the apply the catalogue holds **376 duplicate-key groups covering 873 products, 20 of them
+spanning more than one brand.**
+
+**A correction to my own report:** I said "376 duplicate-key groups now exist — products that can
+match each other and previously could not." **That is wrong. 376 is the TOTAL**, and most of it
+pre-dates this change. Phase 2 predicted **128 new** groups; the remainder are promo-tag pairs,
+whitespace variants and identical names that were already merging.
+
+Fourteen groups read at random. **Seven are fold-created and all seven are correct:**
+
+| | |
+|---|---|
+| `L'Oréal Professionnel` / `L'Oreal Professionnel` | Serie Expert Pro Longer Cream 150ml |
+| `Lancome Idôle Peach'N Roses` / `Lancome Idole Peach 'N Roses` | EDP 25ml |
+| `Lancome - Absolue` / `Lancôme Absolue` | The Eye Cream 20ml |
+| `Issey Miyake Lumière D'issey` / `Lumiere d'Issey` | EDP 100ml |
+| `Urban Decay … Brow Café Kitty` / `Brow-Cafe Kitty` | |
+| `Percy and Reed` / `Percy & Reed` | Turn Up The Volume Conditioner 50ml |
+| `CIROA Raspberry And Vanilla` / `Ciroa Raspberry & Vanilla` | Body Butter 265g |
+
+The other seven pre-date the change: MISSHA `[Deal]` promo pairs, a Rohto Mentholatum whitespace
+group, two identical Kiehl's rows.
+
+> **THIS IS THE CHECK PHASE 2 RAN ON THE PREDICTION, APPLIED TO THE RESULT.** The prediction said 128
+> groups in three shapes; the outcome shows those shapes and no fourth. **Reading the outcome is not
+> redundant with reading the prediction** -- the prediction was computed from the same rule that
+> produced the result, so it could only ever agree with itself. The names are the first evidence that
+> owes nothing to the rule.
+
+**Not verified:** 362 of the 376 groups were not read. The seven fold-created ones sampled were all
+correct; that is a sample, and the population it is drawn from is the outcome rather than the
+forecast, which is the improvement.
