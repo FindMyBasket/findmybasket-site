@@ -1,5 +1,5 @@
 import { brandSlug } from './brand-slug';
-export { brandSlug };
+export { brandSlug, legacyBrandSlug } from './brand-slug';
 import { supabase } from './supabase';
 import { getActiveRetailerIds } from './retailers';
 

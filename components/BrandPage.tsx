@@ -36,6 +36,18 @@ function buildUrl(
 
 export async function BrandPage({ slug, page = 1, productType, category }: Props) {
   const brand = await findBrandBySlug(slug);
+
+  // OLD ACCENTED URL -> its folded address. Before 26 Aug 2026 brandSlug DELETED
+  // accented characters, so Lancôme lived at /brands/lanc-me and Kérastase at
+  // /brands/k-rastase. Those URLs are in Google's index and in inbound links, so
+  // they resolve permanently -- see the note on legacyBrandSlug for why that is
+  // accepted rather than tolerated, and why this is code rather than 25 rows.
+  //
+  // 301 rather than render: two addresses serving one brand is the duplicate-surface
+  // problem item 271 was written to avoid, on a site with 54,056 pages already
+  // crawled-and-declined. Item 384.
+  if (brand?.legacyRedirectTo) permanentRedirect(`/brands/${brand.legacyRedirectTo}`);
+
   if (!brand) {
     // FIX 1: a slug nobody serves may be a RENAMED brand whose fold is already recorded in
     // brand_aliases. 301 to the canonical rather than render there: brand_aliases is a FOLD,

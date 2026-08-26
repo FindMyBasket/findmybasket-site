@@ -1,10 +1,14 @@
 import { supabase } from './supabase';
 import { getActiveRetailerIds } from './retailers';
-import { summarisePriceRows, brandSlug, nextBestSavingPct, nextBestPrice, type FeaturedProduct, type TopCategory } from './queries';
+import { summarisePriceRows, brandSlug, legacyBrandSlug, nextBestSavingPct, nextBestPrice, type FeaturedProduct, type TopCategory } from './queries';
 
 export interface BrandLookup {
   normalised_brand: string;
   display_name: string;
+  /** Set only when the incoming slug is this brand's PRE-26-AUG-2026 address.
+   *  The caller must 301 to it rather than render. Never set for a slug that
+   *  resolves today. */
+  legacyRedirectTo?: string;
 }
 
 export interface BrandStats {
@@ -26,6 +30,8 @@ export async function findBrandBySlug(slug: string): Promise<BrandLookup | null>
   let offset = 0;
   const matches = new Map<string, number>();
   let chosenNormalised: string | null = null;
+  // LEGACY SLUG MATCH, collected in the same scan. See the redirect note below.
+  let legacyNormalised: string | null = null;
 
   while (true) {
     const { data, error } = await supabase
@@ -63,6 +69,21 @@ export async function findBrandBySlug(slug: string): Promise<BrandLookup | null>
         chosenNormalised = row.normalised_brand;
         const display = row.brand ?? row.normalised_brand;
         matches.set(display, (matches.get(display) ?? 0) + 1);
+      } else if (
+        // ── LEGACY SLUG: this brand's PRE-26-AUG-2026 address ────────────────────
+        //
+        // One extra comparison inside a scan that already runs. No second query.
+        //
+        // THE INEQUALITY IS THE LOOP GUARD AND IT IS LOAD-BEARING. For a brand with
+        // no accented characters the two functions return the same string, so
+        // `legacy === slug` would be true for EVERY unaccented brand and every hub
+        // would 301 to its own URL. Requiring the two to DIFFER means the legacy path
+        // can only fire where a character was actually deleted -- which is exactly
+        // the 44 brands this exists for. Item 384.
+        legacyBrandSlug(row.normalised_brand) === slug &&
+        brandSlug(row.normalised_brand) !== slug
+      ) {
+        legacyNormalised = row.normalised_brand;
       }
     }
 
@@ -70,7 +91,15 @@ export async function findBrandBySlug(slug: string): Promise<BrandLookup | null>
     offset += PAGE_SIZE;
   }
 
-  if (!chosenNormalised) return null;
+  // An exact match always wins. The legacy match is only consulted when nothing
+  // resolves today, so a brand cannot be redirected away from its own live page.
+  if (!chosenNormalised) {
+    if (legacyNormalised) {
+      return { normalised_brand: legacyNormalised, display_name: legacyNormalised,
+               legacyRedirectTo: brandSlug(legacyNormalised) };
+    }
+    return null;
+  }
 
   let bestDisplay = chosenNormalised;
   let bestCount = 0;
