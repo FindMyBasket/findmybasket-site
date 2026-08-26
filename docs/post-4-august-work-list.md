@@ -30303,5 +30303,54 @@ that nothing changes** -- and it was run rather than assumed:
    first is modelled here, the second is more aggressive and was not measured.
 4. The 5,344 re-derived, since a re-key writes all of them anyway.
 
-**Scaffolding dropped. Nothing applied, and Phase 3 is deliberately unwritten until 1 and 2 are
-read.**
+**Scaffolding dropped. Nothing applied.**
+
+##### PHASE 3 WRITTEN, NOT APPLIED
+
+Four files. No migration run, no deploy, no merge:
+
+| file | what |
+|---|---|
+| `_shared/match-key.ts` | `foldForMatch()` added; `normaliseForMatch` folds **before** the strip |
+| `20260826120000_..._fold_accents_ampersand.sql` | `fmb_fold_for_match()`, both normalisers rewritten to use it, and the parity view |
+| `scripts/match-key-harness.mts` | **50 cases -> 61** |
+| `scripts/match-key-parity.mts` | byte-parity over the corpus, re-deriving the drift in the same pass |
+
+**`&` -> `and`, as modelled.** Stripping the word is more aggressive, unmeasured, and the modelled
+option already resolves item 294. **Choosing the unmeasured option because it might do more is the
+shape this list keeps recording** -- written at the code, not only here.
+
+**THE HARNESS IS THE PART TO LOOK AT.** It carried 50 cases and **not one exercised an accented
+character or an ampersand** -- the two input classes this change is entirely about.
+
+> **A HARNESS THAT HAS NEVER MET THE INPUT CLASS A CHANGE IS ABOUT IS NOT A HARNESS THAT GUARDS THAT
+> CHANGE.** It would have passed before the fix and after it and reported nothing either way. Its 50
+> greens were evidence about pack counts, shades and truncation, and silence about this.
+
+Eleven cases added: one per merge shape actually read in Phase 2 -- **one brand two spellings**,
+**`&` against the word `and`**, **brand repeated in the name** -- plus four controls that must NOT
+merge, including the multipack assertion promoted from a one-off query to a permanent test.
+
+**Parity is asserted over the corpus, not the fixtures.** `match-key-parity.mts` pages all 99,967
+rows through both implementations and requires **zero** disagreements. The harness proves the rule is
+right on inputs someone thought of; this proves the two halves agree on the inputs that exist.
+**Different properties, and agreement is the one that rots.**
+
+**The 5,344 is re-derived inside that same pass**, not measured separately, because a re-key writes
+every row anyway.
+
+##### AND THE PROPORTION IS THE CLOSE
+
+**16,754 keys re-key. 257 products land beside anything. 128 groups merge.**
+
+> **THE RULE IS BEING CORRECTED FAR MORE OFTEN THAN IT IS BEING MADE TO MERGE** -- 65 keys change for
+> every one product that gains a neighbour.
+>
+> **This is a correctness fix that merges 128 groups, not a merge exercise that costs a 16.76%
+> re-key.** Framed the second way, 128 looks like a thin return on a sixth of the catalogue and the
+> change looks not worth its risk. Framed the first way -- which is what the measurement says -- the
+> merges are a **by-product** of making two spellings of one product produce one key, and the return
+> is every future row that matches instead of splitting.
+>
+> **The framing decides whether this reads as worth doing, and only one of the two framings is
+> supported by the numbers.**

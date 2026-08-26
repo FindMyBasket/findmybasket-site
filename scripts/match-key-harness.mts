@@ -19,6 +19,7 @@
 
 import {
   buildMatchKey,
+  normaliseForMatch,
   extractNameNumbers,
   extractCanonicalSize,
   extractSize,
@@ -377,6 +378,84 @@ const CASES: Case[] = [
     cls: "truncation",
     desc: "clean name is NOT flagged (control)",
     ok: () => hasUncertainTail("Clarins Double Serum 50ml") === false,
+  },
+
+  // ── CHARACTER FOLDING — accents and the ampersand ───────────────────────────
+  //
+  // ADDED 26 AUGUST 2026, AND THE ABSENCE IS THE POINT. Before this block the
+  // harness carried 50 cases and NOT ONE exercised an accented character or an
+  // ampersand -- the two input classes the folding change is entirely about.
+  //
+  // A HARNESS THAT HAS NEVER MET THE INPUT CLASS A CHANGE IS ABOUT IS NOT A
+  // HARNESS THAT GUARDS THAT CHANGE. It would have passed before the fix and
+  // after it, and reported nothing either way. The three shapes below are the
+  // three that a full read of every at-risk merge group actually produced
+  // (13 cross-brand groups, 9 name-divergent groups, 18 distinct). Item 371.
+
+  {
+    cls: "fold-accent",
+    desc: "SHAPE 1 — one brand, two spellings: Avène and Avene are one product",
+    ok: () => key("Avene", "Avène Thermal Spring Water 300ml") ===
+              key("Avene", "Avene Thermal Spring Water 300ml"),
+  },
+  {
+    cls: "fold-accent",
+    desc: "accent is FOLDED not deleted (regression: 'av ne' was the old key)",
+    ok: () => normaliseForMatch("Avène") === "avene",
+  },
+  {
+    cls: "fold-accent",
+    desc: "Kérastase / Kerastase — the split that made two live hubs  [item 368]",
+    ok: () => key("Kerastase", "Kérastase Elixir Ultime L'Huile Originale Hair Oil 30ml") ===
+              key("Kerastase", "Kerastase Elixir Ultime L'Huile Originale Hair Oil 30ml"),
+  },
+  {
+    cls: "fold-ampersand",
+    desc: "SHAPE 2 — & against the word 'and': the two live Boots oils  [item 294]",
+    ok: () => key("Boots", "Boots Nail & Cuticle Oil 10Ml") ===
+              key("Boots", "Boots Nail And Cuticle Oil 10Ml"),
+  },
+  {
+    cls: "fold-ampersand",
+    desc: "& maps to 'and' rather than being stripped (the modelled option)",
+    ok: () => normaliseForMatch("Nail & Cuticle") === "nail and cuticle",
+  },
+  {
+    cls: "fold-ampersand",
+    desc: "brand ampersand folds too: Percy & Reed / Percy and Reed",
+    ok: () => key("Percy & Reed", "Percy & Reed Give Me Strength Strengthening Shampoo 50ml") ===
+              key("Percy and Reed", "Percy and Reed Give Me Strength Strengthening Shampoo 50ml"),
+  },
+  {
+    cls: "fold-brand-repeat",
+    desc: "SHAPE 3 — brand repeated in the name, unfoldable until the accent folded",
+    ok: () => key("Hermes", "Hermes Hermès 24 Faubourg Eau De Parfum 50ml") ===
+              key("Hermes", "Hermes 24 Faubourg Eau De Parfum 50ml"),
+  },
+
+  // ── CONTROLS: the fold must NOT merge these ────────────────────────────────
+  {
+    cls: "fold-control",
+    desc: "different sizes stay distinct despite identical folded text",
+    ok: () => key("Avene", "Avène Thermal Spring Water 300ml") !==
+              key("Avene", "Avène Thermal Spring Water 150ml"),
+  },
+  {
+    cls: "fold-control",
+    desc: "an unaccented near-word is NOT pulled onto an accented one",
+    ok: () => key("Chloe", "Chloé Nomade Eau de Parfum 50ml") !==
+              key("Chloe", "Chloé Atelier des Fleurs Eau de Parfum 50ml"),
+  },
+  {
+    cls: "fold-control",
+    desc: "folding does not disturb a plain ASCII key (control)",
+    ok: () => key("Kiehl's", "Kiehl's Calendula Cleanser") === "kiehl s calendula cleanser",
+  },
+  {
+    cls: "fold-control",
+    desc: "MULTIPACK POPULATION UNCHANGED — numbers survive the fold untouched",
+    ok: () => extractNameNumbers("Bioré UV Aqua Rich 2 x 50ml") ===
+              extractNameNumbers("Biore UV Aqua Rich 2 x 50ml"),
   },
 ];
 
