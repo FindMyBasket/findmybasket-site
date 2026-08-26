@@ -33218,6 +33218,17 @@ destinations** rather than skincare's `/{cat}/{sub}?type=` parameters.
 > so it is shaped like hair and the block stays. **The property that decides this is the destination
 > kind, and a category that looks single-subcategory by row share is not one.**
 
+> **A property of the DATA reading as a property of the STRUCTURE — which is item 416's question in a
+> different column.** There the test was "is that filter's bound a fact about the query or about
+> today's rows". Here: "is that category single-subcategory by construction, or does one subcategory
+> merely hold 98.7% of it today". **Both mistake a distribution for a shape**, and both are invisible
+> until something is decided on the strength of it.
+
+**SUPPLEMENTS CLEARS THE FOLD, AND IT IS THE ONLY ONE THAT DOES — because it has no filter bar.**
+`product_type` is null on all 2,448 rows, so nothing sits between the hero and the grid. **The category
+with the least to offer has the shortest path to it**, and the shortest path is a consequence of the
+poverty rather than a design win.
+
 **Before, production:**
 
 | | 390 x 844 | 1440 x 900 |
@@ -33244,11 +33255,18 @@ sentence on the page that makes such a claim.
 which is applied in JavaScript over the candidate window. The count describes the rows the query
 matched; the copy describes them as comparable.
 
-> **This is item 271's rule a second time in two days, and the second time it was mine.** Item 423: the
-> brand index counted in-stock products while its destination showed all. Here: the grid counts all
-> products while its own sentence calls them comparable. **Same defect class, opposite direction,
-> written by the same hand a day apart** — which is what a rule scoped to "chips" fails to prevent when
-> the thing making the claim is a paragraph.
+**ITEM 271'S RULE, BROKEN TWICE IN TWO DAYS, IN OPPOSITE DIRECTIONS, BOTH TIMES BY ME.**
+
+| | What it counted | What the destination showed |
+|---|---|---|
+| Item 423, brand index | in-stock only | **all** products |
+| Item 429, category grid | **all** products | comparable only |
+
+> **A rule about counting what the destination shows fails symmetrically, and knowing the rule
+> prevented neither.** One undercounted, one overcounted, and the second was written the day after the
+> first was recorded. The rule is stated as a constraint on chips; both breaches were in something that
+> is not a chip — an index page and a paragraph. **A rule attached to a component name does not reach
+> the next thing that makes the same claim.**
 
 **Fixed by removing the number, not by computing it.** With the toggle on the line reads *"Products
 stocked by more than one retailer."*
@@ -33261,3 +33279,46 @@ is correct; stating that one was not.**
 **Found only because fragrance was measured with the toggle on**, which happened because fragrance has
 the highest median saving on the site and the toggle was expected to do more there. **The check that
 found it was aimed at something else.**
+
+---
+
+### 430. Fragrance's 42.9% median saving is not reproducible by either method
+
+**Raised:** 26 August 2026 · **Computed over every comparable product, not read off a page.**
+
+The strategy chat carries *"fragrance: 10% comparable but the highest median saving on the site at
+42.9%"*. **Computed with the site's own formula it is 24.0%.**
+
+`nextBestSavingPct` is `(nextBest − lowest) / nextBest × 100`, over one price per active retailer with
+`in_stock`, on products with at least two:
+
+| Category | Comparable with a saving | **Median** | Mean | p90 |
+|---|---|---|---|---|
+| bath_body | 657 | **24.0** | 25.7 | 48.0 |
+| **fragrance** | **1,021** | **24.0** | **26.7** | **50.0** |
+| supplements | 62 | 21.0 | 19.2 | 33.0 |
+| hair | 1,855 | 20.0 | 18.1 | 30.0 |
+| makeup | 1,874 | 20.0 | 21.5 | 31.0 |
+| skincare | 4,807 | 20.0 | 20.6 | 41.0 |
+
+**Fragrance is JOINT-highest on median, not far ahead**, and it is clearly highest on the tail — p90 of
+50.0 and the highest mean. So the shape of the claim survives and the number does not.
+
+**The lowest-versus-highest variant does not produce it either**, though it separates fragrance more
+cleanly: **fragrance 30.0**, hair and makeup 20.0, bath_body 19.8, skincare 16.9, supplements 16.7.
+
+> **Neither method returns 42.9, so I cannot say where the figure came from** — only that it is not the
+> site's own formula on today's catalogue, and not the obvious alternative either. **Recorded as
+> unreproduced rather than as an arithmetic error**, because I have not found the calculation that
+> yields it and "wrong" and "computed differently" are different claims.
+
+**AND THE NINE BADGES WERE MEASURING THE WINDOW.** My first attempt read savings off the rendered
+`/fragrance` page: 9 badges of 48 cards, median 25%. That is a property of one 192-row candidate window
+sorted by retailer count, not of the category — **the page shows savings for the products it happened
+to load**, which is the same error as item 402's detector-defined population and item 418's
+sample-read-as-whole, in the third form this week.
+
+**What the toggle actually yields on fragrance:** the grid drops from 48 cards to 10 on the first page,
+which is the 10.1% comparable rate biting harder than anywhere else on the site. **The toggle does more
+work in fragrance than elsewhere** — that part of the strategy note is true, and it is true because of
+the comparable rate rather than the saving depth.
