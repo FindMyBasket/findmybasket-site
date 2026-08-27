@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { SiteLayout } from '../../../components/SiteLayout';
 import { UnitPriceList } from '../../../components/UnitPriceList';
 import { getTypeByUnitPrice } from '../../../lib/brand-queries';
+import { COMMON_NOT_FUNGIBLE } from '../../../lib/unit-price';
 import { socialTags } from '../../../lib/format/social-tags';
 
 export const revalidate = 3600;
@@ -27,11 +28,7 @@ export const metadata = {
 // a protein ranking, reachable only because a word in a recipe title is also a protein
 // source. A regex over names is a search, not a classification.
 const NOT_FUNGIBLE = [
-  {
-    test: /\b(recipe book|magazine|subscription|ebook)\b/i,
-    reason: 'not a protein powder — matched because a word in its title is also a protein source',
-  },
-  { test: /\b(bars?|cookie|brownie|snack)\b/i, reason: 'a bar rather than powder — not comparable by weight' },
+  ...COMMON_NOT_FUNGIBLE,
   {
     test: /\bprotein plus\b/i,
     reason: 'a fortified blend rather than plain plant protein — some of the weight is added vitamins',
