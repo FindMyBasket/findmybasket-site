@@ -33703,3 +33703,64 @@ retailer, and whether it moved is unanswerable for the run that would have shown
 > inference.** `tier1_ean_skips` and `tier2_mpn_skips` persist because someone decided each of them
 > individually was worth keeping. The counters were never given that decision -- **they are not
 > considered and discarded, they are simply not considered.**
+
+---
+
+### 439. The 1,350 broken down, and the bucket that matters is the one with no members
+
+**Raised:** 27 August 2026 · **Measured before shipping. `extractCanonicalSize` still unmerged.**
+
+**Why this was measured rather than shipped on green checks.** The harness passed 66/66 and corpus
+parity returned 0 disagreements — and item 437, written this morning, records the DQ metric masking
+pre-existing key defects rather than reporting them. **"Outside the bucket" is not evidence of correct,
+it is evidence of unexamined**, and shipping on harness and parity alone would have been trusting
+exactly the instrument 437 records as untrustworthy.
+
+**FIRST JUDGE, DISCARDED.** My first classifier asked whether the new value appears as a string in the
+product name. It returned "18 corroborated" — and the 18 included
+`Tisserand Sleep Routine Duo - 1 x 9ml 1 x 10ml → 9ml`, where 9ml is in the name because it is one of
+two different bottles. **A presence test cannot tell why a string is there** (items 421, 429). Rebuilt
+structurally: what shape is the name, not what substrings does it contain.
+
+**THE SPLIT, 1,357 rows:**
+
+| Shape | Rows | Reading |
+|---|---|---|
+| **`simple_multipack`** — one multiplier, no other size tokens | **1,293 (95.3%)** | **New value correct** |
+| `multiple_multipliers` — mixed bundle | 36 | read in full |
+| `multiplier_plus_other_sizes` | 28 | read in full |
+
+`5 x 3ml → 15ml`, `2 x 65G → 130g`, `25ml x 10 → 250ml`, `250ml x 3 → 750ml`, `90 x 3g → 270g`.
+**Sampled across all six categories rather than the head**, since skincare is 54% of the population and
+a head sample would have been one retailer's naming.
+
+**ALL 64 "NEITHER" ROWS READ IN FULL. About 18 are fixed by the change:** the four `Swiish` sachet
+powders whose names state the total (`30g - 10 X 3G`), `Zooki 14X18.5Ml → 259ml`,
+`ROC 30x0.35ml → 10.5ml`, `KAYALI (4x1.5ml) → 6ml`, four `No7 Multi-Stick 2X5.3g → 10.6g`, two
+`MATIERE PREMIERE 10X1.5ML → 15ml`, `Made By Mitchell 15X4.5g → 67.5g`.
+
+**The other ~46 are genuine mixed bundles where no single canonical size is correct at all:**
+
+```
+Tisserand Sleep Routine Duo - 1 x 9ml 1 x 10ml        old 10ml   new 9ml     true: neither
+Givenchy Miniatures Gift Set 2 x 10ml + 2 x 8ml EDP   old 8ml    new 20ml    true: 36ml
+peripera All Take Mood Palette - 0.8g x 6, 1g x 2     old 1g     new 4.8g    true: 6.8g
+Filorga Meso Mask 2 x 50ml + 23g Hydra Filler         old 23g    new 100ml   true: mixed units
+```
+
+**THE DECISIVE PROPERTY IS THE BUCKET WITH NO MEMBERS.**
+
+> **Not one of the 1,357 rows moves a CORRECT old value to a wrong new one.** In every case the old
+> value was already wrong — it was a component size, never a pack total. The change either fixes the
+> row or replaces one wrong component subtotal with a different one. **There is no regression class**,
+> which is a stronger statement than "95.3% are right".
+
+**What the ~46 argue for, and it is not this change.** For a mixed bundle the honest `canonical_size`
+is **null** — `1 x 9ml 1 x 100ml` has no single size, and both the old and new answers assert one.
+Returning null when a name carries more than one multiplier expression would be more correct than
+either. **Not built here**: it widens the diff from "compute the pack" to "decide when a pack has a
+size", and that deserves its own decision rather than riding along inside a fix measured for something
+else.
+
+**Still unmerged.** The comment in `extractCanonicalSize` stays uncited until it ships — the citation
+check refused a forward reference to this item while it did not yet exist, which is the check working.
