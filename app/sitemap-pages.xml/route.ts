@@ -28,6 +28,19 @@ const STATIC_PAGES: UrlEntry[] = [
   // The brand index. Its 2,451 destinations are already listed individually below;
   // this is the page a visitor browses them from. Item 419.
   { loc: '/brands/all', changefreq: 'weekly', priority: 0.7 },
+  // ── THE /compare TYPE PAGES ARE LISTED BY HAND, AND A NEW ONE NEEDS A LINE HERE ──
+  //
+  // Enumerating them would mean a registry for three entries, so they are written out.
+  // WHAT HAPPENS IF THIS IS FORGOTTEN: the new page is live, correct, linked from
+  // /compare and /supplements, and invisible to search. Nothing fails, nothing 404s, no
+  // check goes red -- the page simply never enters the index, and the absence is only
+  // findable by someone comparing this array against app/compare/. That is exactly how
+  // /compare/whey-protein and /compare/creatine spent two days orphaned in BOTH senses
+  // at once, which the brand hubs never were: those had the sitemap, so Google could
+  // reach them while a visitor could not. Item 445.
+  { loc: '/compare', changefreq: 'weekly', priority: 0.7 },
+  { loc: '/compare/whey-protein', changefreq: 'weekly', priority: 0.7 },
+  { loc: '/compare/creatine', changefreq: 'weekly', priority: 0.7 },
   { loc: '/savings-hub.html', changefreq: 'daily', priority: 0.9 },
   { loc: '/app.html', changefreq: 'weekly', priority: 0.9 },
   { loc: '/product-finder.html', changefreq: 'weekly', priority: 0.7 },

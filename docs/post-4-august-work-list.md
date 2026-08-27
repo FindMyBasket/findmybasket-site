@@ -34057,3 +34057,104 @@ honestly recorded rather than engineered around. What has changed is that its si
 be idleness.
 
 **Full suite: 255 tests, 255 pass.**
+
+---
+
+### 445. Orphaned in both senses at once, which the brand hubs never were
+
+**Raised:** 27 August 2026 · **Sitemap, a link from /supplements, an index at /compare. No nav entry.**
+
+`/compare/whey-protein` and `/compare/creatine` shipped live, carrying **6.4× and 7.2× spreads against
+a 20–24% median saving everywhere else on the site**, and:
+
+- **zero inbound links.** Not the nav, not either static block, not `/supplements`, not a category or
+  product page. The only repo references were a comment and two unrelated test assertions.
+- **absent from the sitemap.** `STATIC_PAGES` is a hand-maintained array and `/compare` is neither in
+  it, nor in `ALL_CATEGORIES`, nor in `active_category_subcategories`.
+
+> **ORPHANED IN BOTH SENSES AT ONCE, WHICH THE BRAND HUBS NEVER WERE.** Those had the sitemap: Google
+> could reach them while a visitor could not, which is one failure. **These could be reached by
+> neither.** The two orphanings look identical in a repo grep and are completely different conditions.
+
+**Metadata was checked rather than assumed and is complete** — title, description, `og:title`,
+`og:image`, canonical and `twitter:card` on both. Built after the four-branch work, calling
+`socialTags`, inheriting nothing.
+
+**THE INDEX IS JUSTIFIED BY THE PIPELINE, NOT BY THE COUNT.** Two pages with no parent would normally
+be worse served by an index than by two links. Measured:
+
+| Type | Sized & priced | Brands | Status |
+|---|---|---|---|
+| collagen | **96** | 25 | source question open |
+| whey | 67 | 7 | **live** |
+| **electrolytes** | **57** | 14 | **8 → 57 after the sachet backfill** |
+| creatine | 44 | 16 | **live** |
+| plant protein | 23 | 4 | buildable, separate from whey |
+
+**Five types with two shipped.** And electrolytes moving from 8 usable to 57 is **a fix paying for work
+it was not built for** — item 440's backfill was scoped to correct a column, and it turned an
+86%-defective type into a measurable one as a side effect.
+
+**The index lists the pages that EXIST, not the pipeline.** A promise of a page is not a page, and an
+index naming things that are not there is the incompleteness argument inverted.
+
+**NO NAV ENTRY, AND THAT IS A DECISION.** The nav is nine items across two systems. `/compare` is
+supplements-only today, and a tenth top-level entry claims a scope it does not have. **Revisit when it
+covers more than one category.** The parity guard applies and works if it is ever added — item 419
+proved it, failing the moment `/brands/all` went into `SiteNav` and not the static blocks — but nothing
+here touches the nav, so the guard is not exercised by this change.
+
+**The `STATIC_PAGES` comment says what happens when it is forgotten**, not that it must be remembered:
+the new page is live, correct, linked from two places and **invisible to search**; nothing fails,
+nothing 404s, no check goes red, and the absence is findable only by someone comparing the array
+against `app/compare/`.
+
+---
+
+### 446. Electrolytes' 221.5× is sachets again, in three forms the fix does not reach
+
+**Raised:** 27 August 2026 · **Read before building. Nothing built on it.**
+
+Item 445 measured electrolytes at 57 sized products with a **221.5× spread** — three times collagen's
+and thirty times whey's. Read by name, top and bottom ten:
+
+**The cheapest end is real.** `Optimum Nutrition Electrolyte Powder 264g` at £3.79/100g against
+`Gatorade Hydration Booster 270g` at £9.81 is a genuine 2.6× on comparable tubs.
+
+**The dearest end is entirely one defect.** Every one of the ten is a sachet product whose
+`canonical_size` holds the per-sachet weight:
+
+```
+Humantra Black Cherry Electrolyte Powder 3.9g - 15 Sachets   stored 3.9g   pack 58.5g
+Impact Hydrate | Electrolyte Sachets - 3.4g x 30servings     stored 3.4g   pack 102g
+Fourfive Immune Support Hydration Power 7 Sachets, 2g        stored 2g     pack 14g
+```
+
+**THE FIX COVERS TWO NAMING FORMS AND THE SPACE HAS AT LEAST FIVE.** Item 439 taught
+`extractCanonicalSize` the `N x M<unit>` and `M<unit> x N` orderings. Catalogue-wide, among small-size
+rows whose name mentions sachets, servings or sticks:
+
+| Form | Rows | |
+|---|---|---|
+| `3.9g - 15 Sachets` | **10** | dash or comma between size and count |
+| `7 Sachets, 2g` | **6** | count first |
+| **`3.4g x 30servings`** | **3** | **a bug in my own regex** |
+| count present, other shape | 22 | |
+| no count in the name at all | 683 | mostly genuinely small products |
+
+**THE THREE-ROW BUCKET IS MINE.** `PACK_REVERSE` ends `[x×]\s*(\d+)\b` — and in `30servings` the digit
+and the letter are both word characters, so **`\b` does not match and the pattern fails.** `3.4g x 30`
+would have worked; `3.4g x 30servings` does not. The fix handles the form it was tested on and drops
+the same form when a word is glued to the count.
+
+> **The harness proved the two orderings and could not prove the absence of a third.** Item 439's
+> "no regression class" holds — nothing was made worse — but "the multiplier forms are covered" was
+> never the claim the split tested, and I read it as though it were.
+
+**Nothing built on electrolytes.** Its spread is a defect class, not the best page on the site, and it
+becomes a candidate only after these forms are handled. **Plant protein is next instead** — 23
+products, 4 brands, 9.9×, no sachet forms in its names.
+
+**Recorded and not fixed here**, because the fix is a change to a gated file and wants its own harness
+cases, its own measurement of what it moves, and the `\b` bug fixed at the same time rather than a
+third pass.
