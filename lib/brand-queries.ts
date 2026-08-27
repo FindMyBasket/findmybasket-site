@@ -1,5 +1,7 @@
 import { supabase } from './supabase';
 import { getActiveRetailerIds } from './retailers';
+import { rankByUnitPrice, type PerUnitProduct } from './unit-price';
+export { rankByUnitPrice, type PerUnitProduct };
 import { summarisePriceRows, brandSlug, legacyBrandSlug, nextBestSavingPct, nextBestPrice, type FeaturedProduct, type TopCategory } from './queries';
 
 export interface BrandLookup {
@@ -640,19 +642,7 @@ export async function getBrandIndex(): Promise<BrandIndexEntry[]> {
     .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 }
 
-export interface PerUnitProduct {
-  id: number;
-  name: string;
-  brand: string | null;
-  brand_slug: string | null;
-  image_url: string | null;
-  price: number;
-  grams: number | null;
-  per100g: number | null;
-  retailer_count: number;
-  /** Excluded from the ranking by the sanity bound, with the reason. */
-  excluded?: string;
-}
+
 
 /**
  * Products of one supplement type, ranked by price per 100g.
@@ -744,27 +734,7 @@ export async function getTypeByUnitPrice(
     });
   }
 
-  // Median over the FUNGIBLE priced set only. Including blends and gummies would move
-  // the median that the sanity bound is a ratio of, so a non-comparable row would
-  // widen the tolerance for a genuinely wrong one.
-  const priced = all.filter(p => p.per100g !== null && !NOT_FUNGIBLE.some(r => r.test.test(p.name)));
-  if (priced.length === 0) return { ranked: [], unranked: all, median: null, bound: null };
-  const sorted = [...priced].map(p => p.per100g as number).sort((a, b) => a - b);
-  const median = sorted[Math.floor(sorted.length / 2)];
-  const bound = median * RATIO;
-
-  const ranked: PerUnitProduct[] = [];
-  const unranked: PerUnitProduct[] = [];
-  for (const p of all) {
-    const nf = NOT_FUNGIBLE.find(r => r.test.test(p.name));
-    if (nf) { unranked.push({ ...p, excluded: nf.reason }); continue; }
-    if (p.per100g === null) { unranked.push({ ...p, excluded: 'no pack size on this listing' }); continue; }
-    if (p.per100g > bound) {
-      unranked.push({ ...p, excluded: `priced at £${p.per100g.toFixed(2)}/100g, over ${RATIO}x the £${median.toFixed(2)} median for this type — likely a pack-size error, so it is not ranked` });
-      continue;
-    }
-    ranked.push(p);
-  }
-  ranked.sort((a, b) => (a.per100g as number) - (b.per100g as number));
-  return { ranked, unranked, median, bound };
+  return rankByUnitPrice(all, { medianRatioBound: RATIO, notFungible: NOT_FUNGIBLE });
 }
+
+

@@ -34005,3 +34005,55 @@ that does not belong on the page.
 any non-fungible pattern. `Puori CP2 Whey Collagen` is a blend and was already unranked for having no
 pack size — **excluded correctly by accident**, which is worth knowing before the next whey product
 arrives with a size.
+
+---
+
+### 444. "Never fired" and "cannot fire" now look different
+
+**Raised:** 27 August 2026 · **7 tests, both directions. The bound still fires zero times in production.**
+
+Item 443 recorded the bound as unexercised on both live pages and declined to stage a demonstration.
+**That leaves a real question unanswered: is it idle, or is it broken?** From outside the two pages
+nothing distinguishes them, and both production routes to an answer are bad — wait for a genuine bad
+row, in which case **the guard's first observation is its first failure**; or loosen the fungibility
+filter until the excluded row returns, which is arranging the demonstration on a product that does not
+belong on the page.
+
+**SO IT IS EXERCISED AGAINST SYNTHETIC ROWS INSTEAD, IN BOTH DIRECTIONS.** Same shape as the
+held-product guard: try to make it refuse something it should keep as hard as trying to make it keep
+something it should refuse.
+
+| Test | Direction |
+|---|---|
+| fires on a row above the bound | should refuse — **it does** |
+| does not fire at £49.99 against a £50 bound | should keep — **it does** |
+| boundary is strict: £50.00 ranks, £50.01 does not | both |
+| a non-comparable row cannot widen the tolerance | the median's own soundness |
+| **absorption: a row matching both is excluded as a blend, and the bound never sees it** | records item 443's finding as a test |
+| every input row returns ranked or unranked, each with a reason | nothing is dropped |
+| an all-unpriced type yields no median rather than dividing by nothing | degenerate input |
+
+**The numbers sit ON the boundary rather than far from it.** A bound tested only against a 100×
+outlier proves it rejects absurdities and says nothing about where it actually cuts; £49.99 against £50
+is the case that distinguishes a working threshold from one that would refuse half the page.
+
+**WHAT HAD TO CHANGE TO MAKE THIS TESTABLE AT ALL.** `lib/brand-queries.ts` imports `lib/supabase`,
+which **throws at module load** when `SUPABASE_URL` is unset — so nothing living there can be exercised
+without a live database, which is why the earlier attempt failed against React's `cache`. The ranking
+decision moved to `lib/unit-price.ts`: **no I/O, no import that reaches a network.** Everything above
+the split fetches, everything below is arithmetic.
+
+> **The obstacle was never the guard, it was where the guard lived.** A rule that can only run inside a
+> request cannot be interrogated, and that is a property of the file rather than of the logic. The same
+> constraint is recorded in `category-labels.test.ts`, which reads source as text for exactly this
+> reason — **the codebase had already met this wall and worked around it rather than moving the thing.**
+
+**The absorption is now a test rather than only a note.** A row that is both a blend and priced like a
+pack-size error is asserted to come back marked *blend* — the true reason — and asserted **not** to
+carry the bound's message. If someone later reorders those two checks, the test fails and says why.
+
+**Production is unchanged: the bound still fires zero times on both live pages**, and that remains
+honestly recorded rather than engineered around. What has changed is that its silence is now known to
+be idleness.
+
+**Full suite: 255 tests, 255 pass.**
