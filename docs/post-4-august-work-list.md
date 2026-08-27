@@ -33458,9 +33458,23 @@ comparable with hair's post-demotion 1,001. **They were all measured post-demoti
 consistent.** The gap between hair and makeup is **chip-row wrapping — 22 chips against 6** — not
 layout.
 
-> **A wrong record produced a plausible objection to a correct table, and I was ready to act on it.**
-> The check that settled it was reading the rendered `<h1>`/`<h2>` order on five pages, which cost one
-> command.
+> **A wrong record produced a plausible objection to a correct table, the objection was accepted, and
+> five pages were queued for work they already had.** The record is mine, the objection followed from
+> it, and I was ready to act on both.
+
+**WHAT MADE THE FALSE RECORD PLAUSIBLE: I described a change by the page it was MEASURED on rather than
+by the code that IMPLEMENTS it.**
+
+> The measurement is necessarily per-page — you measure a fold on one URL. The change was not: the
+> reorder is a conditional in a shared component. **An item written from the measurement inherits the
+> measurement's scope**, so "demoted the blocks on /hair" is a true sentence about the afternoon and a
+> false one about the codebase. Nothing in the commit, the item or the PR was wrong about what
+> happened; all three were wrong about what it applied to.
+
+**One command settled it** — reading the rendered `<h1>`/`<h2>` order on five pages. **Same shape as
+`max_rows: 50` yesterday**, where one request refuted two confident diagnoses that three
+investigations had been built on. **Twice in two days the cheapest available check was the one not
+run**, and both times what stood in its place was reasoning from a record rather than from the thing.
 
 **bath_body opted in** — 4 subcategories, so "Browse by area" keeps its indexed destinations under item
 411's rule; 20 real product types, 328 default rows, no nulls, so it gets a full bar and a complement
@@ -33492,9 +33506,14 @@ Skincare has **five and a half times** bath_body's products and sits **158px hig
 fragrance are identical to the pixel at both viewports with 6 and 7 chips. **Above the grid, the page's
 cost is the filter bar wrapping, and nothing else varies.**
 
-> **Supplements is first on both viewports because it has nothing to filter by.** The category with the
-> least to offer has the shortest path to it, and it is the only root whose first product row clears
-> the fold — at 390x844 by 17 pixels and at 1440x900 by 50.
+> **CATALOGUE SIZE STOPPED MATTERING THE MOMENT THE GRID ARRIVED.** Skincare carries **5.5x**
+> bath_body's products and sits **158 pixels higher**. Hair and fragrance are **identical to the pixel**
+> at both viewports. Above the grid the only variable is how far the filter bar wraps — the hero is
+> fixed, the blocks are below, and the number of chips is the page.
+
+**Supplements is first on both viewports because it has nothing to filter by.** The category with the
+least to offer has the shortest path to it, and it is the only root whose first product row clears the
+fold — at 390x844 by 17 pixels and at 1440x900 by 50.
 
 **One number in this table is not from this pass:** skincare's *before* figure of 3,309px was measured
 on Tuesday with an unrecoverable viewport height (item 410). It is excluded here rather than carried
@@ -33505,3 +33524,182 @@ measurement.**
 item 408 and owed to whoever fixes it for the subcategory pages at the same time; bath_body's grid has
 had no separate verification beyond this measurement; and the 42.9% correction has not been sent to
 strategy.
+
+---
+
+### 434. Category pages, closed on what was done
+
+**Raised:** 26 August 2026 · **Closes the thread opened at item 408. Nothing here is a summary of intent.**
+
+**DONE, AND VERIFIED ON PRODUCTION:**
+
+- **Six category roots opted into the browse grid.** Each previously rendered 24 products from
+  `fmb_featured_products` with no paging, filter or sort; each now pages its full catalogue at 48 a
+  page with type chips, a complement chip and a stockist toggle.
+- **One fold table, one instrument, one pass** (item 433). First product card between **827px**
+  (supplements) and **1,335px** (makeup) at 390x844.
+- **Chip sums equal stated totals on all six** — 45,124 / 21,405 / 11,676 / 11,025 / 8,121, and
+  supplements correctly showing no bar at all.
+- **The link blocks sit below the grid on all six**, by a conditional in the shared component rather
+  than six edits (item 432).
+- **The false `?comparable=1` assertion is removed** (item 429).
+- **Six RPCs** replacing seven `fetchAllRows` offset walks (items 412, 415), and both dead copies of
+  that helper deleted with the `.order()` rule relocated to the paginator it still guards (item 417).
+
+**OPEN, AND CARRIED RATHER THAN CLOSED:**
+
+| | |
+|---|---|
+| **`totalPages` overstated on all six grids** | `totalCount` counts before the live-price filter, so a late page can come up short. Inherited deliberately at item 408 and owed to whoever fixes the subcategory pages at the same time — fixing one surface reopens the divergence the inheritance exists to prevent |
+| **The 42.9% correction is unsent** | Fragrance is 1.20x skincare on next-best median and 1.78x on lowest-vs-highest, not "more than double on both". Sent to strategy Tuesday and being planned against; an item does not reach the person holding the number (item 430) |
+| **Tomorrow's 06:00 Gorgeous Shop run** | First real run of the Tier-2 guard, against `_pre_guard_baseline_20260826` (item 427). Watch the created count |
+
+> **The closing line I first reached for was "all six are opted in", written when five were.** It is
+> recorded at item 431 and corrected at item 432, and it is the reason this item lists what was done
+> rather than what the thread was about. **A thread closes on what was done, not on the shape the
+> summary wants.**
+
+---
+
+### 435. The guard working, and the bundles were the half nobody predicted
+
+**Raised:** 27 August 2026 · **First real run. Seven retailers, 837 products created, nothing reverted.**
+
+**`mpn = "0"` alone produced 455 creates in one morning.** That is the measure of what the old
+behaviour was doing daily: 455 feed rows that previously resolved to whichever product the database
+returned first for `"0"`, every day, silently.
+
+**THE BUNDLES ARE THE FINDING. THE SHADES WERE THE VISIBLE HALF.**
+
+The prediction was that creates would be the guard refusing to collapse distinct shades -- `JEWELZ`
+onto `Twinkle`. That happened, on Beauty Bay, exactly as described. **But 461 of the 837 are multipacks
+and bundles**, named `Double`, `Triple`, `Duo`, `Kit`, or joined with `&`:
+
+```
+CeraVe Moisturising Cream 177ml Double
+Garnier Pure Charcoal - Black Algae Triple
+Redken All Soft Shampoo 300ml & Acidic Bonding Conditioner 300ml
+Dermalogica Phyto Nature Lifting Eye Cream 15ml & Firming Serum
+```
+
+**Every one of these previously linked to the single-unit product through `mpn "0"`.**
+
+> **A double pack's price on a single product's page is worse than a shade collapse.** A shade
+> collision shows the wrong variant of the right thing at roughly the right price. A multipack
+> collision shows **the right product at twice or three times its price**, on the page whose entire
+> purpose is the price. It is the £2 Ground Rice defect (item 424) in the other direction and at
+> 455-a-day scale.
+
+**Sampled blocks, every one correct:** `Smushy Matte Lip Balm - She's Serving` would have matched
+`- Soft Smile`; `Colorfix Mattes - Chestnut` had **seven** candidates; the Dermalogica bundle would
+have matched the standalone eye cream.
+
+**Attribution:** 606 of 837 caused by the guard (455 from `"0"`, 151 from genuine ambiguity), 226 with
+an unskipped MPN that would have been created anyway, 12 with no MPN. **370 of the 837 already carry
+two retailers** -- Gorgeous Shop and Beauty Flash being one merchant on two AWIN programmes, so the
+06:15 create was matched by the 07:00 run.
+
+**THE GUARD SHIPPED TO SEVEN RETAILERS, NOT THREE.** It was reasoned about, dry-run and argued over on
+the three that could complete a dry run. **It shipped to every AWIN importer at once, because they
+share one module.** Escentual, Boots, Debenhams and The Organic Pharmacy all ran it this morning
+without having been discussed. Nothing went wrong -- and the set that was reviewed was chosen by which
+feeds the *inspection tooling* could reach, not by which feeds the change would touch.
+
+---
+
+### 436. A guard's yield estimated from the one retailer without the defect it was built for
+
+**Raised:** 27 August 2026 · **Third instance this week, and the sharpest.**
+
+**Predicted ~230 creates. Actual 837.**
+
+The ~230 came from extrapolating Beauty Bay's 1,924-row dry-run sample: 44 creates at 1,500 rows,
+scaled to a full feed. **Beauty Bay has zero `mpn = "0"` rows.** Its ambiguity is 22-character internal
+IDs shared across shade variants. **455 of the 837 creates come from `"0"`, and the sample could not
+contain a single one of them.**
+
+> **The yield of a guard, estimated from the one retailer that does not have the defect the guard was
+> built for.** Not a sampling error in the ordinary sense -- the sample was not unrepresentative, it
+> was **structurally incapable of containing the measured quantity.**
+
+**Third instance this week, and they get worse in the same direction:**
+
+| | The sample | What it could not contain |
+|---|---|---|
+| Item 402 | one detector's matches | rows the detector's pattern does not reach |
+| Item 418 | two colliding hubs, both small | the 121-product hub |
+| **Item 436** | **Beauty Bay's feed** | **every `"0"` row, of which it has none** |
+
+**And I had written the disqualifying fact down before using the sample.** Item 424 records Beauty
+Bay's ambiguity as "22-character internal IDs, single-retailer, consequence rather than cause" --
+which is the same sentence as "this retailer does not have the defect", read the other way round.
+**The reason the sample was wrong was already in the record when the extrapolation was made.**
+
+---
+
+### 437. The guard did not create four duplicates. It stopped concealing them
+
+**Raised:** 27 August 2026 · **The quiet finding.**
+
+Zero duplicate match keys within the run and **zero against existing products**. Four created products
+are alphanumerically identical to a product that already existed:
+
+| Created | Existed | Why the keys differ |
+|---|---|---|
+| `Calvin Klein Ck One … Spray 200 ml` | `… Spray 200ml` | **a space before the unit** |
+| `JOICO … Blowout Cr√®me 177ml Pack` | `… Blowout Crème 177ml Pack` | **mojibake** |
+| `Redken … Hair Bandage` | same | the same two causes |
+| `Redken … Leave In Treatment` | same | |
+
+> **MPN matching was masking pre-existing key defects.** The row linked on `mpn "0"` and never reached
+> the name tier, so the broken key was never consulted and never observed. The guard blocked the bad
+> match, the row fell to name matching, and **the name key was already wrong.**
+
+**The guard did not create these. It stopped concealing them** -- and a defect that only becomes
+visible when a different defect is fixed is one nothing was ever going to report.
+
+**Sized, and the larger one is not the interesting-looking one:**
+
+| | Live | Created today |
+|---|---|---|
+| Mojibake in the name (`√`, `â€`, `Ã©`) | **6** | 3 |
+| **Match key carrying a space before its unit** | **617** | 12 |
+
+**617 against 6.** The mojibake is vivid and nearly absent; the spacing gap is invisible and a hundred
+times larger.
+
+**THE 617 IS A `normaliseForMatch` GAP AND IT SITS BEHIND THE MATCH-KEY GATE.** `200 ml` and `200ml`
+are the same size written two ways, and the normaliser collapses neither into the other. **Reported as
+a fourth item behind that gate rather than as a task**, alongside the six non-converging groups, the
+42's remainder, and the seven's merge decision. Any change to it needs byte-parity with the SQL twin,
+the 66-case harness, and a corpus parity run.
+
+---
+
+### 438. A run that reports numbers nobody keeps
+
+**Raised:** 27 August 2026 · **Named as a gap, not fixed.**
+
+**Every counter in item 435 was reconstructed.** `import_run_state` holds nothing for 27 August; the
+importer returns `would_link_via_ean / mpn / name_exact / name_stripped`, `tier1_ambiguous_skipped`,
+`tier2_ambiguous_skipped` and `would_create_new_product` **in its HTTP response**, and a cron
+invocation has no reader. The response is written to nothing.
+
+So today's figures come from `tier2_mpn_skips` -- which persists because it was built to -- and from
+counting `products.created_at` and joining `retailer_prices`. **Everything else is inference from the
+catalogue's end state.**
+
+> **The tier counts for the first real run of the Tier-2 guard do not exist and cannot be recovered.**
+> Not "are hard to find". The numbers were computed, returned, and discarded.
+
+**What that costs, concretely:** item 426 predicted EAN links would fall and name-tier links would
+rise. **That prediction cannot be checked against this run**, because the per-tier counters are gone.
+The one measurement that would have settled a recorded prediction was produced and thrown away.
+
+**`tier1_ambiguous_skipped` is the same:** the learning-path fix (item 424) changed Tier 1 for every
+retailer, and whether it moved is unanswerable for the run that would have shown it.
+
+> **A run that reports numbers nobody keeps means the next question about a run is answered by
+> inference.** `tier1_ean_skips` and `tier2_mpn_skips` persist because someone decided each of them
+> individually was worth keeping. The counters were never given that decision -- **they are not
+> considered and discarded, they are simply not considered.**
