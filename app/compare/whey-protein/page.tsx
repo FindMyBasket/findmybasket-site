@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { SiteLayout } from '../../../components/SiteLayout';
+import { UnitPriceList } from '../../../components/UnitPriceList';
 import { getTypeByUnitPrice } from '../../../lib/brand-queries';
 import { socialTags } from '../../../lib/format/social-tags';
 
@@ -17,77 +18,105 @@ export const metadata = {
   ...socialTags({ title, description, url: canonical }),
 };
 
-export default async function WheyProteinPage() {
-  const { ranked, unranked, median } = await getTypeByUnitPrice('whey');
+// A — THE FUNGIBILITY EXCLUSIONS WHEY NEVER RECEIVED (item 455).
+// Creatine got these at item 443 and whey did not, so nine rows that are not plain whey
+// powder were ranked against it on weight.
+//
+// B — MASS GAINERS, AND THEY WERE RANKS 1 AND 2. Carbohydrate is most of a gainer's
+// weight, so its price per 100g falls while its price per 100g OF PROTEIN does not.
+// The page's own unit misreads them, and it misread them at the very top of the list.
+const NOT_FUNGIBLE = [
+  {
+    test: /\b(mass gainer|weight gainer|gainer)\b/i,
+    reason: 'a mass gainer rather than a protein powder — most of the weight is carbohydrate, so price per 100g flatters it',
+  },
+  { test: /\bcollagen\b/i, reason: 'a whey and collagen blend — some of the weight is collagen' },
+  { test: /\b(bars?|cookie|brownie)\b/i, reason: 'a powder and bar bundle — the bars are not weighed in the same way' },
+  { test: /\bsample\b/i, reason: 'a single-serving sample, priced per gram far above the tub it samples' },
+];
 
-  // A TYPE PAGE IS ONLY HONEST WHERE THE TYPE IS FUNGIBLE. Whey qualifies: 100g of whey
-  // is 100g of whey whoever sells it, and the source is stated in the name when it is
-  // not whey. Collagen deliberately has no page -- 144 of 190 rows state no source, so
-  // ranking marine against unspecified would compare on price alone (item 441).
+// C — FACETS, AND THE ARGUMENT IS THE SPREAD RATHER THAN THE LABELLING.
+// Isolate spans 1.3x (£4.90–£6.60) and source-not-stated spans 4.7x (£1.88–£8.90). On
+// one combined list the isolate buyer cannot see that their real choice is narrow.
+// Filtering here is not tidying, it is the only way either spread is visible.
+//
+// "Source not stated" rather than "Concentrate": ZERO products say concentrate, so
+// calling them that would assert something no label supports.
+const FACETS = [
+  { slug: 'isolate', label: 'Isolate', test: (n: string) => /\bisolate\b/i.test(n) && !/\bclear whey\b/i.test(n) },
+  { slug: 'clear', label: 'Clear whey', test: (n: string) => /\bclear whey\b/i.test(n) },
+  { slug: 'unstated', label: 'Source not stated', test: (n: string) => !/\bisolate\b/i.test(n) && !/\bclear whey\b/i.test(n) },
+];
+
+export default async function WheyProteinPage({
+  searchParams,
+}: {
+  searchParams: { type?: string };
+}) {
+  const { ranked, unranked, median } = await getTypeByUnitPrice('whey', { notFungible: NOT_FUNGIBLE });
+
+  const active = FACETS.find(f => f.slug === searchParams.type) ?? null;
+  // ITEM 271: THE CHIP COUNTS WHAT ITS DESTINATION RENDERS, and this rule has broken
+  // three times (items 423, 429, 441). Both the chip count and the list come from the
+  // SAME filter applied to the SAME array, so they cannot disagree.
+  const shown = active ? ranked.filter(p => active.test(p.name)) : ranked;
+
   return (
     <SiteLayout>
       <section className="max-w-site mx-auto px-6 py-12">
         <p className="text-xs uppercase tracking-widest text-gold font-medium mb-4">
-          <Link href="/supplements" className="hover:text-ink transition-colors">Supplements</Link>
+          <Link href="/compare" className="hover:text-ink transition-colors">Compare by unit price</Link>
         </p>
         <h1 className="font-serif text-5xl md:text-7xl text-ink mb-6">Whey protein by price per 100g</h1>
         <p className="text-base md:text-lg text-ink-light max-w-2xl mb-4 leading-relaxed">
-          Protein powder is sold in tubs of different sizes, so the shelf price says little
-          about value. This ranks every whey protein we track by what 100g actually costs.
+          Protein powder is sold in tubs from 250g to 5kg, so the shelf price says little about
+          value. This ranks every whey we track by what 100g actually costs.{' '}
+          <Link href="/compare/plant-protein" className="text-gold underline hover:no-underline">
+            Plant protein is ranked separately
+          </Link>.
         </p>
-        {median !== null && (
-          <p className="text-ink-light mb-10">
-            {ranked.length} products from {new Set(ranked.map(p => p.brand_slug)).size} brands.
-            Median £{median.toFixed(2)} per 100g.
+
+        <div className="flex flex-wrap gap-2 mb-6">
+          <Link
+            href="/compare/whey-protein"
+            className={`px-4 py-2 rounded-full text-sm border transition-colors ${
+              active ? 'border-border text-ink-light hover:border-gold hover:text-ink' : 'border-gold bg-gold text-white'
+            }`}
+          >
+            All <span className="opacity-60">{ranked.length}</span>
+          </Link>
+          {FACETS.map(f => {
+            const n = ranked.filter(p => f.test(p.name)).length;
+            if (n === 0) return null;
+            return (
+              <Link
+                key={f.slug}
+                href={`/compare/whey-protein?type=${f.slug}`}
+                className={`px-4 py-2 rounded-full text-sm border transition-colors ${
+                  active?.slug === f.slug
+                    ? 'border-gold bg-gold text-white'
+                    : 'border-border text-ink-light hover:border-gold hover:text-ink'
+                }`}
+              >
+                {f.label} <span className="opacity-60">{n}</span>
+              </Link>
+            );
+          })}
+        </div>
+
+        {median !== null && shown.length > 0 && (
+          <p className="text-ink-light mb-8">
+            {shown.length} products from {new Set(shown.map(p => p.brand_slug)).size} brands ·
+            £{(shown[0].per100g as number).toFixed(2)} to
+            £{(shown[shown.length - 1].per100g as number).toFixed(2)} per 100g
           </p>
         )}
 
-        <ol className="space-y-2 mb-16">
-          {ranked.map((p, i) => (
-            <li key={p.id}>
-              <Link
-                href={`/product/${p.id}`}
-                className="group flex items-baseline gap-4 py-3 border-b border-border/60 hover:border-gold transition-colors"
-              >
-                <span className="text-sm text-ink-light tabular-nums w-8 shrink-0">{i + 1}</span>
-                <span className="flex-1 min-w-0">
-                  <span className="text-ink group-hover:text-gold transition-colors">{p.name}</span>
-                  {p.brand && <span className="text-sm text-ink-light"> · {p.brand}</span>}
-                </span>
-                <span className="text-sm text-ink-light tabular-nums shrink-0">
-                  {p.grams ? `${p.grams >= 1000 ? `${p.grams / 1000}kg` : `${p.grams}g`}` : ''}
-                </span>
-                <span className="text-sm text-ink-light tabular-nums shrink-0">£{p.price.toFixed(2)}</span>
-                <span className="font-medium text-ink tabular-nums shrink-0 w-24 text-right">
-                  £{(p.per100g as number).toFixed(2)}<span className="text-ink-light text-xs">/100g</span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ol>
-
-        {/* NOT DROPPED. A page that silently omits what it cannot price is incomplete in a
-            way the visitor cannot see -- the argument that rejected a product threshold on
-            the brand index. Each carries its own reason. Item 441. */}
-        {unranked.length > 0 && (
-          <div className="border-t border-border pt-8">
-            <h2 className="font-serif text-2xl text-ink mb-2">Not ranked</h2>
-            <p className="text-ink-light mb-6 text-sm max-w-2xl">
-              These are whey proteins we track but cannot place in the ranking. They are listed
-              rather than hidden, with the reason.
-            </p>
-            <ul className="space-y-2">
-              {unranked.map(p => (
-                <li key={p.id} className="py-2 border-b border-border/40">
-                  <Link href={`/product/${p.id}`} className="text-ink hover:text-gold transition-colors">
-                    {p.name}
-                  </Link>
-                  <span className="block text-sm text-ink-light">{p.excluded}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        <UnitPriceList
+          ranked={shown}
+          unranked={active ? [] : unranked}
+          unrankedIntro="These are whey products we track but cannot rank against plain whey powder by weight. They are listed rather than hidden, with the reason."
+        />
       </section>
     </SiteLayout>
   );

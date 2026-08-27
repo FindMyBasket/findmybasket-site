@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { SiteLayout } from '../../../components/SiteLayout';
+import { UnitPriceList } from '../../../components/UnitPriceList';
 import { getTypeByUnitPrice } from '../../../lib/brand-queries';
 import { socialTags } from '../../../lib/format/social-tags';
 
@@ -70,49 +71,12 @@ export default async function CreatinePage() {
           </p>
         )}
 
-        <ol className="space-y-2 mb-16">
-          {ranked.map((p, i) => (
-            <li key={p.id}>
-              <Link
-                href={`/product/${p.id}`}
-                className="group flex items-baseline gap-4 py-3 border-b border-border/60 hover:border-gold transition-colors"
-              >
-                <span className="text-sm text-ink-light tabular-nums w-8 shrink-0">{i + 1}</span>
-                <span className="flex-1 min-w-0">
-                  <span className="text-ink group-hover:text-gold transition-colors">{p.name}</span>
-                  {p.brand && <span className="text-sm text-ink-light"> · {p.brand}</span>}
-                </span>
-                <span className="text-sm text-ink-light tabular-nums shrink-0">
-                  {p.grams ? `${p.grams >= 1000 ? `${p.grams / 1000}kg` : `${p.grams}g`}` : ''}
-                </span>
-                <span className="text-sm text-ink-light tabular-nums shrink-0">£{p.price.toFixed(2)}</span>
-                <span className="font-medium text-ink tabular-nums shrink-0 w-24 text-right">
-                  £{(p.per100g as number).toFixed(2)}<span className="text-ink-light text-xs">/100g</span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ol>
+        <UnitPriceList
+          ranked={ranked}
+          unranked={unranked}
+          unrankedIntro="These carry the word creatine but do not belong in a price-per-100g ranking against monohydrate powder. They are listed rather than hidden, with the reason."
+        />
 
-        {unranked.length > 0 && (
-          <div className="border-t border-border pt-8">
-            <h2 className="font-serif text-2xl text-ink mb-2">Not ranked</h2>
-            <p className="text-ink-light mb-6 text-sm max-w-2xl">
-              These carry the word creatine but do not belong in a price-per-100g ranking against
-              monohydrate powder. They are listed rather than hidden, with the reason.
-            </p>
-            <ul className="space-y-2">
-              {unranked.map(p => (
-                <li key={p.id} className="py-2 border-b border-border/40">
-                  <Link href={`/product/${p.id}`} className="text-ink hover:text-gold transition-colors">
-                    {p.name}
-                  </Link>
-                  <span className="block text-sm text-ink-light">{p.excluded}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </section>
     </SiteLayout>
   );
