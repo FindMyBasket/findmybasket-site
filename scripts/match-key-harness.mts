@@ -491,6 +491,61 @@ const CASES: Case[] = [
     desc: "CONTROL — an x with no unit attached is not a pack multiplier",
     ok: () => extractCanonicalSize("Palette 12 x Eyeshadow 30g") === "30g",
   },
+
+  // ── SACHET FORMS THE FIRST PASS DID NOT REACH (item 449) ────────────────────────
+  //
+  // The reversed form's ONLY case was "Carton (5g x 30)", where a closing bracket
+  // supplies the word boundary the pattern asserted. These are the forms that boundary
+  // hid. Each is written from a REAL catalogue name rather than from the pattern.
+  {
+    cls: "multipack",
+    desc: "REGRESSION — count glued to a word: the \\b bug",
+    ok: () => extractCanonicalSize("Impact Hydrate | Electrolyte Sachets - 3.4g x 30servings - Lemon") === "102g" &&
+              extractCanonicalSize("Mixsoon Bean Cream Stick Pouch Set 1.5ml x 10ea") === "15ml",
+  },
+  {
+    cls: "multipack",
+    desc: "size then count: \"3.9g - 15 Sachets\"",
+    ok: () => extractCanonicalSize("Humantra Black Cherry Electrolyte Powder 3.9g - 15 Sachets") === "58.5g" &&
+              extractCanonicalSize("Nutriburst Gut Electrolyte Powder - 4.5g, 20 sachets") === "90g",
+  },
+  {
+    cls: "multipack",
+    desc: "★ A SERVING IS A PORTION, NOT A CONTAINER — servings must never multiply",
+    ok: () => extractCanonicalSize("Micronised Creatine Powder - 500g - 87servings - Unflavoured") === "500g" &&
+              extractCanonicalSize("Essential Whey Protein Shake - 2.5KG - 70servings - Strawberry") === "2.5kg" &&
+              extractCanonicalSize("Marine Collagen - 330G, 30servings - Orange and Mango") === "330g" &&
+              extractCanonicalSize("Impact Pre-Workout - 400G - 40servings - Vimto") === "400g",
+  },
+  {
+    cls: "multipack",
+    desc: "count then size: \"7 Sachets, 2g\"",
+    ok: () => extractCanonicalSize("Fourfive Immune Support Hydration Power 7 Sachets, 2g") === "14g" &&
+              extractCanonicalSize("Fourfive Energy & Focus Hydration Power 7 Sachets, 25g") === "175g",
+  },
+  {
+    cls: "multipack",
+    desc: "★ a digit inside a word is not a count — B5 Ampoule",
+    ok: () => extractCanonicalSize("Isntree Onion Newpair B5 Ampoule 50ml") === "50ml" &&
+              extractCanonicalSize("Vitamin B12 Sachets 30g") === "30g",
+  },
+  {
+    cls: "multipack",
+    desc: "CONTROL — the bracketed form the first pass was written from still works",
+    ok: () => extractCanonicalSize("Cadence Sachets Core Orange - Carton (5g x 30)") === "150g",
+  },
+  {
+    cls: "multipack",
+    desc: "CONTROL — a plain size with a sachet word nearby is NOT multiplied",
+    ok: () => extractCanonicalSize("Vida Glow Marine Collagen Sachet Original 3g") === "3g" &&
+              extractCanonicalSize("SKIN1004 Poremising Clay Stick 27g") === "27g" &&
+              extractCanonicalSize("ISNTREE Airy Sun Stick SPF50 22g") === "22g",
+  },
+  {
+    cls: "multipack",
+    desc: "CONTROL — a count with no unit after it does not invent a size",
+    ok: () => extractCanonicalSize("Some Brand 30 Sachets") === null,
+  },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────

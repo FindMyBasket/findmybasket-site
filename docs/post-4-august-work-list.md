@@ -34177,8 +34177,8 @@ move, and a naming form the pattern never matches is exactly such a row.** `Huma
 Sachets` was not in the measured population, was not in the harness, and was not wrong in a way any
 green check could show — **it was simply never a candidate.**
 
-> **A harness proves the cases it is given.** Its silence on a case it was never given is not evidence
-> and reads exactly like evidence, because the output is the same word: PASS.
+> **A HARNESS PROVES THE CASES IT IS GIVEN. Its silence on a case it was never given is not evidence,
+> and reads exactly like evidence, because the output is the same word: PASS.**
 
 **THE `\b` BUG IS THE CONCRETE FORM, AND IT IS A BUG IN THE CHECK AS MUCH AS IN THE PATTERN.**
 
@@ -34193,11 +34193,25 @@ PACK_REVERSE = /(\d+(?:\.\d+)?)\s*(ml|l|g|kg)\s*[x×]\s*(\d+)\b/i
 relies on cannot exist there.** `\b` asserts a transition between word and non-word; between `0` and
 `s` there is none.
 
-> **The harness case was `Cadence Sachets Core Orange - Carton (5g x 30)`** — the form with the count
-> at the end of a group, where `\b` is satisfied by the closing bracket. **I wrote the test using the
-> example that motivated the pattern**, so the test and the pattern share the assumption that the
-> count is terminated by something non-word. Neither could see the other's blind spot because it is
-> the same blind spot.
+**THE HARNESS CASE WAS `Cadence Sachets Core Orange - Carton (5g x 30)`.**
+
+The count sits at the end of a bracketed group, so **the closing bracket satisfies `\b`.** The one
+input the reversed form was ever tested against is the one input where the boundary is guaranteed to
+exist — and it is guaranteed by the punctuation, not by anything the pattern arranged.
+
+> **I wrote the test from the example that motivated the pattern, so the test inherited the pattern's
+> assumption: that a count is terminated by something non-word.** The test and the pattern shared a
+> blind spot, and neither could see the other's because there was only one.
+
+**THIS IS ITEM 274 IN A DIFFERENT FILE.** There, the citation checker's negative test was written in
+the lowercase form by the person who wrote the lowercase-only scanner, so it proved the guard refuses
+a citation it can parse and said nothing about citations it cannot. **Here the harness was written in
+the bracketed form by the person who wrote the bracket-dependent pattern.**
+
+> **A test written by the author of the thing it tests is shaped by the same understanding, so it can
+> catch a slip and not a misunderstanding.** A slip is a divergence between what the author meant and
+> what they wrote, and the test sees it because the test encodes what they meant. A misunderstanding
+> is agreement between the two, and there is nothing left to disagree.
 
 **THE SCOPED POPULATION FOR THE GATED CHANGE:**
 
@@ -34263,3 +34277,93 @@ nobody is making. The pages cross-link and say why.
 **Shipped with its sitemap entry, its index card and its `/supplements` callout in the same change** —
 item 445's orphaning was two days of a live page nothing pointed at, and the remedy is to add the four
 things together rather than to remember the other three later.
+
+**A CORRECTION TO MY OWN REPORT: 4 BRANDS, NOT 6.** I measured the brand count in SQL **before** the
+fungibility exclusions; the page counts it **after**. Nuzest's three `Protein Plus` rows and the
+recipe book are the difference, and **the page is right.**
+
+> **A figure derived from a different population than the one rendered** — items 423 and 429's class
+> again, third instance. There a count was taken over rows the destination would not show; here a
+> brand count was taken over rows the page would not rank. **The same error keeps arriving through
+> whichever step is done outside the code that renders**, because that step is where the population
+> silently differs.
+
+---
+
+### 449. A serving is a portion, a sachet is a container, and they multiply in opposite directions
+
+**Raised:** 27 August 2026 · **APPLIED. Four naming forms, the `\b` fix, 467 rows written. 74/74 harness, parity 0.**
+
+**THE CATCH THAT MATTERS CAME FROM COMPUTING THE WRITE BEFORE WRITING, AND FROM NOTHING ELSE.**
+
+The first draft of this change put `serving` in the list of nouns that mark a multipack, alongside
+`sachet` and `stick`. Simulated against the catalogue before any write:
+
+```
+Micronised Creatine Powder - 500g - 87servings     500g  ->  43,500g
+Essential Whey Protein Shake - 2.5KG - 70servings  2.5kg ->  175kg
+Marine Collagen - 330G, 30servings                 330g  ->  9,900g
+```
+
+**40 MyProtein tubs, every one destroyed.**
+
+> **A SACHET IS A CONTAINER WITH A WEIGHT. A SERVING IS A PORTION OF THE PACK.** "3.9g - 15 Sachets" is
+> fifteen things of 3.9g and multiplies to 58.5g. "500g - 87servings" is one tub divided 87 ways and
+> multiplies to nonsense. **The two nouns sit in the same grammatical slot, read alike, and mean
+> opposite things about the arithmetic.**
+
+**The harness passed. Parity passed. Neither could have caught it**, because neither knew the noun was
+wrong — the harness tested the cases I wrote, and I wrote them believing `serving` belonged. **The only
+step in the sequence that could see it was computing the proposed value for every row and reading the
+result**, which is item 252's own lesson arriving on the third pass through this column.
+
+**THE B5 CASE IS THE RECIPE BOOK'S SHAPE INSIDE A PATTERN.**
+
+```
+Isntree Onion Newpair B5 Ampoule 50ml    ->  250ml
+```
+
+The `5` of the vitamin name **B5** read as a count. **No amount of pattern tuning distinguishes a count
+from a digit inside a word without knowing what the token means** — a lookbehind fixes this instance by
+requiring the digit not to follow a letter, and the general problem is the one item 448 recorded when
+`rice` in a recipe title ranked a book as a protein.
+
+---
+
+**SCOPE: 19 SCOPED, 467 MOVED.** Item 446 scoped three forms totalling 19 rows. Adding `pack` to the
+noun list reaches genuine multipacks across four other categories. **Item 440's rule is why a sample
+was required rather than optional: a backfill writing rows the measurement never saw is a different
+change under the same name, and 45 read against 467 moved is not the claim.**
+
+**Narrowing to 19 was rejected** — it would leave ~450 known-wrong rows unfixed to make one page's
+scope tidier, and the rows are wrong regardless of which page needed them.
+
+**THE THREE-WAY SPLIT, STRATIFIED ACROSS ALL FIVE CATEGORIES:**
+
+| Shape | Rows | |
+|---|---|---|
+| **one size, multiplied** — `500ml - 6 Pack`, `15g*2`, `1.5ml x 10ea` | **445** | **new correct** |
+| two sizes | 20 | read in full |
+| three or more sizes | 2 | read in full |
+
+**"Neither" is 22 rows and it CLUSTERS rather than spreads**, which is the answer to what shape it
+takes. Every one is a mixed bundle:
+
+```
+BEAUTY OF JOSEON - Skincare Essential Kit - 50ml+30ml+40ml+10ml*2      new 20ml, true 140ml
+VT - Vita-Light All In One 3Step Mask - 1.5g*2 + 25g                   new 3g,   true 28g
+LANEIGE Neo Cushion 15g*2 X Neo Essential Blurring Finish Powder 7g    new 30g,  true 37g
+Lynx Black Shower Gel 500ml, 6 Pack with Body Spray 250ml, 6 Pack      new 3000ml, true 4500ml
+```
+
+> **A cluster points at an exclusion; a spread would have pointed at an unhandled case.** These need
+> the null-for-mixed-bundles decision already held from item 439, not another pattern. **And in none of
+> the 22 was the old value correct either** — it was a different component. The empty bucket from item
+> 439 holds again: **no row moves a correct value to a wrong one.**
+
+**Applied:** 467 rows, computed and inspected first, scoped by the new function's output as item 440's
+was. **105424 confirmed absent** rather than assumed. Importer redeployed, so the writer and the column
+agree.
+
+**ELECTROLYTES IMPROVED AND IS STILL NOT A PAGE: 221.5× → 62.4×**, median £31.67 → £18.50. Better and
+not finished. **Reported rather than built on**, which is where item 446 left it and where it stays.
