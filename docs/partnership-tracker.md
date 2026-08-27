@@ -22,6 +22,7 @@ belongs in `platform_changes`. This holds the gap between signature and go-live.
 | `approved-pending-integration` | Network application accepted. No retailer row, no import config, no feed. |
 | `parked` | Approved, and deliberately queued behind other work. **The reason must be stated.** |
 | `live` | Has a `retailers` row with `active = true`. Leaves this file. |
+| `links-only` | Approved on a network and **cannot ever be a feed retailer**, because no product feed exists. Never gets a `retailers` row. Stays in this file permanently — it is a placement record, not a queue entry. |
 
 ---
 
@@ -219,3 +220,72 @@ Three steps, all of which exist because a previous onboarding skipped one:
 | ~25 ingestible supplements filed as `skincare/face` | Item 322. They arrive on `Health and Beauty` paths the supplements override does not reach, and those paths are mixed at source — `Body Care` holds collagen capsules and a toothbrush. **No config fix exists.** A shelving error, not a false claim. |
 | Depth at 3.49% | Below the predicted 3.5–5.1% floor. Item 327. |
 | Re-import would create 177 duplicates | Item 314's leak. Guarded at the `enabled` flag, item 324. |
+
+---
+
+## Optimum Nutrition — `links-only`
+
+**Approved 27 August 2026 via AWIN. No product feed.**
+
+**THIS IS THE FIRST ENTRY THAT IS NOT WAITING FOR ANYTHING.** Every other row in this file holds the
+gap between signature and go-live. **This one has no go-live to wait for**: without a feed there is no
+refresh path, and `docs/strategy.md` — *"no retailer enters the catalogue without a refresh path"* —
+settles that permanently rather than temporarily. Filing it as `approved-pending-integration` would
+create a queue entry that can never clear, which is how a register starts lying.
+
+| Field | Value |
+|---|---|
+| Network | **AWIN** |
+| Status | **`links-only`** — strategy's *Two tier retailer model*, second tier |
+| Product feed | **None supplied.** Not "not yet"; not offered |
+| `retailers` row | **None, and none is expected.** Do not create one |
+| Import config | N/A |
+| Commission | **Not recorded** — fill from the source agreement, not from memory |
+| Delivery terms | **Not recorded.** Only needed if they ever become a comparison source, which requires a feed |
+| Work-list | item 458 |
+
+### They are a brand, not a retailer, and this file is the wrong register — deliberately
+
+The heading of this document says *"retailer relationships that are agreed but not live."* **Optimum
+Nutrition is a brand.** There is no brand register, and inventing one for a single entry is the defect
+this file was created to correct in the other direction. **Recorded here with the mismatch named**, so
+that the first brand-side relationship does not read as a retailer that failed onboarding — which is
+exactly the misreading this entry exists to prevent.
+
+### They are already in the catalogue, through Boots alone
+
+**30 live products in `products_active`, measured 27 August 2026.** All 30 carry exactly one retailer
+row and it is **Boots** (30 of 30 in stock). Superdrug holds 16 of the same products, is
+`active = false`, and has zero in-stock rows. **MyProtein supplies none** — it is an own-brand range.
+
+**20 of the 30 appear on a type page:** 13 ranked and 2 listed on `/compare/whey-protein`, 4 ranked and
+1 listed on `/compare/creatine`. Full positions and the derivation are in item 458.
+
+### The placement that exists, and the decision it needs
+
+A ranked row for one of these products **could** link direct to the brand rather than to Boots. It is a
+real placement on a page that already ships, not a hypothetical.
+
+> **AND IT IS NOT DECIDED.** The row's price per 100g is computed from **Boots'** price; the brand's own
+> price is unknown and unknowable **for the same reason this entry exists — no feed.** A direct link
+> would put a measured number and an unmeasured destination on the same row.
+
+**`docs/strategy.md` places this tier's links "inside articles and hubs" and requires "visible
+separation from the neutral comparison surfaces."** The type pages are that surface.
+
+### DECIDED 27 August 2026: no. Item 459
+
+**No brand-direct links on `/compare/*`.** Robbie's call, and **the reason recorded is not the
+firewall clause**:
+
+> **The row's price per 100g is computed from BOOTS' price. The brand's own price is not held and
+> cannot be held — that requires the feed this entry exists because they do not supply.** A direct
+> link would put a measured number and an unmeasured destination on the same row, describing two
+> different sellers with no mechanism that could reconcile them.
+
+**The firewall clause is about ranking and nothing here moves a ranking**, so citing it would have
+attached a wrong reason to a right decision. **What would change this is a refresh path for their own
+price — which is a feed.** There is no version of this that a link unblocks and a feed does not.
+
+**Nothing is built.** The mechanism was never the constraint: `ClickOutLink` already carries
+`brandSlug` with no `retailerId`, which is how the brand hub cards work today (item 461).

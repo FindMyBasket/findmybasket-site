@@ -137,6 +137,76 @@ Deno.serve(async (req: Request) => {
     }
     const supabase = createClient(supabaseUrl, serviceKey);
 
+    // ── PREFLIGHT: REFUSE TO RUN AT ALL WHILE THE CLASSIFIER PREDATES THE CATALOGUE
+    //
+    // inferCategorisation() is STAGE 1. It can return skincare | makeup | hair and
+    // NOTHING ELSE. Fragrance, bath & body and supplements are STAGE 2 concepts,
+    // routed by inferCategorisationForImport() — which the three importers call and
+    // this function does not.
+    //
+    // THE IMPORTER WAS TOLD ABOUT FRAGRANCE ON 29 JUNE 2026 (EXTENDED_CATEGORIES_
+    // ENABLED = true, b0f67a1). This file was last touched for categorisation logic
+    // on 21 June, eight days EARLIER, and has not been told since. Nothing about the
+    // Step-1 denylist changed and it became wrong anyway: a denylist entry is a claim
+    // about SCOPE, and a go-live is a change of scope.
+    //
+    // MEASURED 27 Aug 2026 by running the classifier over systematic samples of live
+    // rows — not by reading it:
+    //   fragrance    978 of 991 sampled -> excluded  (98.7%);  0 unchanged
+    //   bath_body    673 of 1,023       -> re-tagged INTO skincare;  0 unchanged
+    //   supplements  146 of 820         -> excluded;  0 unchanged
+    // Not one row of the three survives a run. With delete_excluded:true that is
+    // ~11,740 fragrance rows queued for DELETION; with the flag at its default it is
+    // still ~5,390 bath & body rows moved into skincare.
+    //
+    // AND THE CATCHALL GUARD BELOW DOES NOT COVER THIS. It refuses the BARE
+    // skincare/Skincare verdict — the classifier admitting it does not know. It has
+    // no view on a CONFIDENT wrong answer, and "Versace Bright Crystal Perfumed Body
+    // Lotion -> skincare/Moisturiser" is confident. The guard protects against
+    // uncertainty, not against being out of date.
+    //
+    // SO THE CORRECT STATE IS NOT-RUNNABLE, NOT RUNNABLE-WITH-A-GUARD. A scope guard
+    // on the most destructive path in the repository is the wrong thing to write in a
+    // hurry. This refuses instead, and it is DELIBERATELY UNFILTERED: a scope-limited
+    // preflight would pass for brand_filter:"clinique" while the gap is wide open,
+    // which is the one property this must not have. It cannot pass while the gap
+    // exists, and it deletes itself the day the classifier learns Stage 2.
+    //
+    // dry_run is refused too: the dry run's OUTPUT is what a human acts on, and today
+    // it reports ~11,740 exclusions as a finding rather than as a bug. Previewing is
+    // what scripts/recategorise-preview.mts is for. Work-list items 476, 477.
+    const UNREACHABLE_TOP_CATEGORIES = ["fragrance", "bath_body", "supplements"] as const;
+    const blocking: Array<[string, number]> = [];
+    for (const tc of UNREACHABLE_TOP_CATEGORIES) {
+      const { count, error: pfErr } = await supabase
+        .from("products")
+        .select("id", { count: "exact", head: true })
+        .eq("top_category", tc);
+      // A preflight that cannot look must fail, not pass. Item 255.
+      if (pfErr) {
+        return new Response(
+          JSON.stringify({ ok: false, error: "preflight_could_not_read", detail: pfErr.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      if ((count ?? 0) > 0) blocking.push([tc, count ?? 0]);
+    }
+    if (blocking.length > 0) {
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: "refusing_to_run_stage1_classifier",
+          detail:
+            "inferCategorisation() cannot return these top categories. Every row in them would be " +
+            "excluded (deleted, if delete_excluded) or re-tagged out to skincare. Fix the classifier " +
+            "— or point this function at inferCategorisationForImport — then remove this preflight.",
+          blocking: Object.fromEntries(blocking),
+          rows_at_risk: blocking.reduce((n, [, c]) => n + c, 0),
+        }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     // ── Counters / accumulators ───────────────────────────────────────────
     let scanned = 0;
     let staleFound = 0;
