@@ -33,6 +33,8 @@ const TYPES = [
     blurb: 'Sold in tubs from 250g to 2.5kg. The same protein at very different unit prices.' },
   { slug: 'creatine', pattern: 'creatine', label: 'Creatine',
     blurb: 'Monohydrate is the same substance whoever sells it, so only the price per gram differs.' },
+  { slug: 'plant-protein', pattern: 'pea protein', label: 'Plant protein',
+    blurb: 'Pea, soy and vegan blends. Ranked apart from whey because the two are not interchangeable.' },
 ];
 
 export default async function ComparePage() {

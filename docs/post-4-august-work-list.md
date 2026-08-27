@@ -34158,3 +34158,108 @@ products, 4 brands, 9.9×, no sachet forms in its names.
 **Recorded and not fixed here**, because the fix is a change to a gated file and wants its own harness
 cases, its own measurement of what it moves, and the `\b` bug fixed at the same time rather than a
 third pass.
+
+---
+
+### 447. The harness proved what it was given and could not prove the absence of a third form
+
+**Raised:** 27 August 2026 · **The centre of item 446, stated as the general claim.**
+
+**Two claims were in play and only one was established:**
+
+| Claim | Status |
+|---|---|
+| **No row moves a correct value to a wrong one** | **Established** — item 439's three-way split was built to find that bucket and it is empty |
+| **The multiplier forms are covered** | **Never tested** — and I read it off the first |
+
+The split examined the 1,357 rows the change moves. **It could not examine rows the change does not
+move, and a naming form the pattern never matches is exactly such a row.** `Humantra … 3.9g - 15
+Sachets` was not in the measured population, was not in the harness, and was not wrong in a way any
+green check could show — **it was simply never a candidate.**
+
+> **A harness proves the cases it is given.** Its silence on a case it was never given is not evidence
+> and reads exactly like evidence, because the output is the same word: PASS.
+
+**THE `\b` BUG IS THE CONCRETE FORM, AND IT IS A BUG IN THE CHECK AS MUCH AS IN THE PATTERN.**
+
+```
+PACK_REVERSE = /(\d+(?:\.\d+)?)\s*(ml|l|g|kg)\s*[x×]\s*(\d+)\b/i
+
+"3.4g x 30"           matches      -> 102g
+"3.4g x 30servings"   does not     -> falls through to the last-token rule, stores 3.4g
+```
+
+**In `30servings` the digit and the letter are both word characters, so the boundary the pattern
+relies on cannot exist there.** `\b` asserts a transition between word and non-word; between `0` and
+`s` there is none.
+
+> **The harness case was `Cadence Sachets Core Orange - Carton (5g x 30)`** — the form with the count
+> at the end of a group, where `\b` is satisfied by the closing bracket. **I wrote the test using the
+> example that motivated the pattern**, so the test and the pattern share the assumption that the
+> count is terminated by something non-word. Neither could see the other's blind spot because it is
+> the same blind spot.
+
+**THE SCOPED POPULATION FOR THE GATED CHANGE:**
+
+| Form | Rows |
+|---|---|
+| `3.9g - 15 Sachets` — dash or comma between size and count | **10** |
+| `7 Sachets, 2g` — count first | **6** |
+| `3.4g x 30servings` — count glued to a word | **3** |
+
+**That change goes behind the match-key gate with its own harness cases and its own measurement of
+what it moves, and the `\b` fix rides in the same pass rather than becoming a fourth.**
+
+**And the electrolytes page is buildable after it, not unbuildable.** The cheap end is already real —
+`Optimum Nutrition Electrolyte Powder 264g` at £3.79/100g against `Gatorade Hydration Booster 270g` at
+£9.81, a genuine 2.6× on comparable tubs. **The 221.5× is a defect ceiling, not the absence of a
+comparison.**
+
+**On the orphaning (item 445): the two conditions look identical in a repo grep because both are
+absences, and absences do not appear in a search.** That is why it went unnoticed rather than why it
+happened. A missing inbound link and a missing sitemap entry each show up as nothing, in a tool whose
+output for "no such thing" and "nothing to find" is the same empty result.
+
+---
+
+### 448. Plant protein, and my "no sachet forms" claim was wrong
+
+**Raised:** 27 August 2026 · **`/compare/plant-protein`. 20 ranked, 6 brands, £1.42–£12.44 per 100g.**
+
+**I said plant protein had no sachet forms in its names. Reading them showed three:**
+
+```
+Nuzest Clean Lean Protein … Smooth Vanilla 5 X 25g     stored 125g   CORRECT
+Nuzest … Salted Caramel 5 X 25g                        stored 125g   CORRECT
+Nuzest … Rich Chocolate 5 X 25g                        stored 125g   CORRECT
+```
+
+**The form is present and item 439's fix already handles it.** The true claim is not "no multipack
+forms" but "the one multipack form present is one the fix covers, and all three rows are stored
+correctly" — **which is a stronger statement and a different one.** Asserting the absence of a thing is
+not the same as asserting that the thing is handled, and only the second survives reading.
+
+> **Confirmed by reading rather than by the absence of a regex match, which is what had just failed on
+> electrolytes.** The regex would have returned no match for the forms it does not know, and no match
+> for a type that genuinely has none, and those are the same output.
+
+**AND READING FOUND A ROW NO PATTERN WOULD HAVE FLAGGED:**
+
+```
+Myprotein Digital Recipe Book: Not Just Chicken & Rice + Digital Magazine Subscription
+```
+
+**A book, in a protein ranking, reachable because `rice` is a protein source and also a word in a
+recipe title.** `\m(pea|soy|rice|hemp|vegan|plant)\M` + `protein` is a search, not a classification,
+and it was never going to be one.
+
+**Excluded, each with a reason on the page:** the recipe book, one protein bar, and three
+`Nuzest Protein Plus` fortified blends where some of the weight is added vitamins.
+
+**Separate from whey, deliberately.** Pea and whey have different amino profiles and different buyers,
+and the choice between them is not a price decision. Ranking them together would invite a comparison
+nobody is making. The pages cross-link and say why.
+
+**Shipped with its sitemap entry, its index card and its `/supplements` callout in the same change** —
+item 445's orphaning was two days of a live page nothing pointed at, and the remedy is to add the four
+things together rather than to remember the other three later.
