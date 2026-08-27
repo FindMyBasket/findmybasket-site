@@ -33841,6 +33841,10 @@ assumed.
 **And unlike item 252's, this one is not expected to regenerate**: the writer was fixed first
 (item 439), so the column and the function that fills it now agree.
 
+**ITEM 470 WAITS BEHIND THIS CHECK.** The supplements classifier successor does not start until this
+reading is taken — recorded here so the dependency is visible from the check rather than only from the
+thing depending on it.
+
 ---
 
 ### 441. The whey page, and a bound that catches nothing here on purpose
@@ -35406,3 +35410,929 @@ check.**
 **Both were caught by looking, and both are inside a window the checks are documented as unable to
 reach.** Believing otherwise is the more expensive error, because it would retire the habit that
 actually caught them.
+---
+
+### 467. Scoping the pair: what a meal replacement is by name, and casein having no population at all
+
+**Raised:** 27 August 2026 · **Robbie's decision on item 462's conclusion. SCOPED, NOT BUILT.**
+
+**THE TWO CHANGES LAND TOGETHER OR NEITHER DOES.** Widening the `%protein%` fetch and adding a
+meal-replacement exclusion are **one change**. Item 462 measured the trade: widening alone adds two
+right rows (£4.00 and £4.09, ranking 5th and 6th of 19) and two wrong ones (USN Vegan Meal Replacement
+×2 at £3.07). **An invisible absence traded for a visible wrong row is the worse trade, and it is
+measured rather than argued.**
+
+#### A — WHAT COUNTS AS A MEAL REPLACEMENT, READ BY NAME ACROSS ALL THREE PAGES
+
+**The candidate rule is `meal replacement | slim ?fast`: 18 rows, every one a supplement, none in any
+other top category.**
+
+| Shape | n | On a page today |
+|---|---:|---|
+| SlimFast — powders, RTDs, one porridge | **13** | **no fetch returns them** |
+| USN Diet Fuel Ultralean **Meal Replacement** — 1 chocolate 1kg, 2 vegan 880g | 3 | no |
+| Almased Meal Replacement Shake 500g | 1 | no |
+| MyProtein `Protein Meal Replacement Blend - 765g` — **£1.70/100g** | 1 | no |
+
+> **ZERO OF THE EIGHTEEN RANK ON ANY OF THE THREE PAGES TODAY.** So the exclusion is **inert until the
+> fetch widens** — it has no observable effect on its own. **That is a second and independent reason
+> for pairing them**, separate from the trade: shipped alone it could not be seen to work, and item
+> 443's standard is a guard seen to refuse.
+
+**★ THE OBVIOUS RULE IS `\bdiet\b`, AND IT MUST BE REJECTED ON THE COMPLEMENT.** Ten supplements rows
+carry the word and **at most four are meal replacements.** Two of the six false positives are fatal:
+
+```
+Impact Diet Whey - 1kg               £3.05   RANKED ON THE WHEY PAGE TODAY
+PHD Diet Plant Powder - 500g         £4.00   ONE OF THE TWO ROWS THE WIDENING EXISTS TO ADD
+```
+
+> **A rule that excludes the row the change was made to include.** Item 463's finding arriving in a
+> different file on the same day: *the obvious rule fails on the case that motivated it, and failing
+> the motivating case is structural rather than tunable.* **Tested against the complement (item 445's
+> rule) rather than against its target**, which is the only reason it was caught before it was written.
+
+**THE RESIDUAL IS NAMED RATHER THAN PATCHED.** `USN Diet Fuel Ultralean Chocolate - 770g` (£2.92) is
+the same product line as the 1kg row that says *Meal Replacement Shake*, with the words absent from its
+name; `USN Diet Fuel Ultralean Protein Powder` ×2 are a meal-replacement line named "Protein Powder".
+
+> **THE EXCLUSION INHERITS EXACTLY THE NAME-DEPENDENCY OF THE FETCH IT REPAIRS.** A rule reading names
+> cannot separate a product from its own marketing, and no further pattern reaches it. **Recorded as
+> the ceiling, not queued as a fix** — item 447's supplements-type ceiling in a second place.
+
+#### B — CASEIN EARNS NEITHER, AND THE REASON IS THAT IT HAS NO POPULATION
+
+**One casein product exists in the entire catalogue:** `Impact Micellar Casein Powder - 2.5kg`,
+MyProtein, one retailer, **£2.74/100g**.
+
+- **Not a page.** One product, one brand, one retailer is below anything item 460 would call a
+  comparison — it would be a single row with a heading.
+- **Not an exclusion either, and this is the part that is easy to get wrong.** **An exclusion only
+  fires on rows a fetch returns**, and no fetch returns this one: not `%whey%`, not `%creatine%`, not
+  `%protein%`. Adding `casein` to `COMMON_NOT_FUNGIBLE` would be **a rule with zero members** —
+  item 444's distinction, on the wrong side of it.
+- **The plant page already carries a casein exclusion**, in its own list, and it has **never fired and
+  cannot fire**: it runs only on rows the `%protein%` fetch returns, and this name has no "protein".
+
+**★ AND THE COMPLEMENT TEST KILLS THE DISTINCTIVE WORD.** The token a person reaches for from this
+product's own name is `micellar`:
+
+```
+micellar, excluding casein:  220 products  —  bath_body, hair, makeup, skincare
+casein:                        1 product
+```
+
+> **Micellar water outnumbers micellar casein 220 to 1.** A rule written from the one product's name
+> would file a fifth of the cleanser shelf as a protein exclusion. **The most specific-looking word in
+> the name belongs to a different category entirely**, which is item 463's specificity finding again
+> and the third instance today.
+
+**CASEIN IS A COVERAGE GAP WITH ONE MEMBER AND THE CORRECT ACTION IS NONE.** Revisit if a second brand
+arrives; a page for one row and an exclusion with no rows are both worse than the gap.
+
+**THE MEAL-REPLACEMENT RULE IS ANSWERED AT ITEM 468** — the literal phrase, `meal replacement |
+slim ?fast`, which survives its complement. **And 468 revises this item's framing: measured against the
+widened fetch rather than the probe, the pair is not a pair.**
+
+#### C — THE AUDIT'S LIMIT IS NOW MECHANISM RATHER THAN INFERENCE
+
+Item 462 recorded the zeros as **floors** because `product_type` is name-derived, evidenced by 71 of 71
+`Creatine` rows carrying the word. **Item 463, from the other session the same day, supplies the
+mechanism directly:** `product_type` is **null on all 2,461 rows** and the browse type is **derived
+from the name at read time inside the `products_active` view.**
+
+> **The second detector is not merely correlated with the first — it IS the first, computed in a
+> view.** Two detectors, one blind spot, the second built from the first. **A zero from that probe can
+> never mean "there are none"**, and the row that raised the whole question falls in the residue
+> bucket, which is where a name-blind product must land by construction.
+
+---
+
+### 468. The rule that survives its complement, and the pair turning out not to be a pair
+
+**Raised:** 27 August 2026 · **Answering item 467's open question. MEASURED AGAINST THE WIDENED FETCH
+RATHER THAN AGAINST THE PROBE, WHICH CHANGES THE ANSWER.**
+
+## ★ DECIDED: DO NOT WIDEN THE FETCH. Robbie's call, 27 August
+
+> **THE PLANT TOKEN IS A DIETARY CLAIM, NOT A PRODUCT CLASS.** `vegan` on a multivitamin gummy says
+> what is **absent** from the product, not what the product **is**.
+
+**A fetch on it returns 149 rows to find 2**, and each of the four wrong arrivals is a different
+failure needing a rule of its own. **That is why this is at least four changes rather than a pair, and
+why the first move is WRONG rather than INCOMPLETE** — an incomplete move is finished by adding to it,
+and this one is finished by not making it.
+
+**The two absent rows stay absent.** They are still genuinely absent for item 462's reason, and the
+successor is item 470.
+
+#### THE RULE IS THE LITERAL PHRASE, AND IT SURVIVES ITS COMPLEMENT
+
+```
+\m(meal replacement|slim ?fast)\M
+```
+
+**18 rows, every one a supplement, none in any other top category, and no false positive among them.**
+`\mdiet\M` is rejected on the complement (item 467): 10 rows, at most 4 of them meal replacements, and
+two of the six false positives break the change in both directions at once — it would exclude
+`Impact Diet Whey`, **ranked today**, and `PHD Diet Plant Powder`, **one of the two rows the widening
+exists to add.**
+
+#### THE 770g RESIDUE IS UNREACHABLE, SO CLOSING IT WOULD BE A ZERO-MEMBER RULE
+
+`USN Diet Fuel Ultralean Chocolate - 770g` (£2.92) is the same product line as the 1kg row that says
+*Meal Replacement Shake*, with the words missing from its name. **Measured rather than assumed: it
+carries no plant token, no "protein", no "whey", no "creatine" — so no page fetches it today and no
+page fetches it after the widening.**
+
+> **Adding `diet fuel` to close it would be a rule with no members it can ever fire on** — precisely
+> the argument that rejected a `casein` exclusion one item ago. **The consistency is the point: the
+> same test, applied to the residue of the rule I am proposing, refuses the tidier version of it.**
+
+#### ★ AND THE CORRECTION: THE WIDENING ADMITS SIX, NOT FOUR, AND TWO BELONG
+
+Item 462 measured **"two right rows and two wrong ones"** — and that was measured on **the probe I
+ran**, not on the fetch the change would actually perform. Run against the widened fetch, six ranked
+rows arrive:
+
+| Arriving row | per 100g | Stopped by | |
+|---|---:|---|---|
+| USN Diet Fuel Ultralean Vegan Meal Replacement ×2 | £3.07 | **the new rule** | correct |
+| `PHD Diet Plant Powder - 500g` | £4.00 | — | **belongs** |
+| `Optimum Nutrition Gold Standard 100% Plant-Based 684g` | £4.09 | — | **belongs** |
+| `Organix Summer Fruits Rice Cakes Organic Toddler Snacks 40g` | £4.00 | **nothing** | **toddler rice cakes** |
+| `The Vegan Wellness Co . Greens Complex, Berry Boost 180g` | £9.44 | **nothing** | **a greens powder** |
+
+**The meal-replacement rule stops two of the four wrong rows. The other two need different rules, and
+neither is the rule this item was scoping.**
+
+**THE RICE CAKES ARE A PLURAL THE EXCLUSION LIST DOES NOT HANDLE.** `\m(bars?|cookie|brownie|snack|
+wafer)\M` spells the plural for **`bar` alone**; "Snacks" is not `snack` at a word boundary. **Six
+supplements rows carry a plural form the singular misses.**
+
+> **AND THE OBVIOUS FIX FAILS ITS OWN COMPLEMENT, WHICH IS THE THIRD TIME IN THIS REPORT.** Pluralising
+> the list to `cookies?` catches `Myprotein Protein Cookies`, which is right, **and three rows where
+> "Cookies & Cream" is a FLAVOUR**: two Paediasure shakes and `Forest Feast Cookies & Cream Almonds`.
+> **A noun that is also a flavour cannot be excluded on the noun**, which is item 449's `serving` /
+> `sachet` pair in a different grammatical slot.
+
+**AND THE GREENS POWDER MATCHES ON THE BRAND, NOT THE PRODUCT.** `The Vegan Wellness Co` puts the plant
+token in the company name. **Item 463 solved exactly this for the browse types — `stripBrandPrefix`
+first, because unstripped `Vital Proteins Marine Collagen` is a protein — and the type pages have no
+brand strip at all.** Third instance today of one finding in three files. **Measured and recorded
+separately at item 469: 59 of 239 rows reach the plant page's fetch on a brand token alone, and an
+`isPlant` filter downstream is the only reason it has never shown.**
+
+#### ★ THE UNRANKED LIST IS THE PART NOBODY COSTED
+
+| | today | widened |
+|---|---:|---:|
+| rows fetched | 31 | **149** |
+| ranked | 17 | 21 |
+| **not ranked** | **14** | **128** |
+
+**117 of the 128 are priced with no parseable size** — vegan capsules and gummies, counted in units
+rather than grams.
+
+> **Item 441 chose to LIST what it cannot price rather than hide it**, and that choice was made when
+> the unranked set was fourteen rows of genuine protein powders. **At 128 rows against a 21-row
+> ranking, the "Not ranked" section is six times the page's own subject and is mostly vitamin
+> gummies.** The decision was correct for the object it was made about and this is a different object
+> — item 460's shape again, one page down.
+
+#### THE CONCLUSION IS THAT THE PAIR IS NOT A PAIR
+
+**Item 467 scoped this as two changes landing together. Measured, it is at least four**, and the
+mechanism underneath is the one to reconsider first:
+
+> **THE PLANT TOKEN IS A DIETARY CLAIM, NOT A PRODUCT CLASS.** `vegan` on a multivitamin gummy says
+> what is absent from it, not what it is. **Fetching on it returns 149 rows to find 2**, and every one
+> of the four wrong arrivals is a different failure needing a different rule.
+
+**Nothing is proposed and nothing lands.** The two rows are still genuinely absent and the reason is
+still item 462's; **what has changed is that "widen the fetch" is now known to be the wrong first
+move**, and the next step is to decide what identifies a protein powder when the name does not say
+"protein" — which is a classification question, not a pattern.
+
+---
+
+### 469. `stripBrandPrefix` is absent from the type pages: a PREREQUISITE, not an improvement
+
+**Raised:** 27 August 2026 · **The third file in one day. Measured, not built. Robbie: record it as a
+prerequisite rather than an improvement.**
+
+> **THIS IS NOT A TIDYING ITEM AND IT MUST NOT BE FILED AS ONE.** Anything that widens a type page's
+> fetch has to carry the strip **first**, or **all 59 rows arrive at once** — the `isPlant` filter is
+> the only thing absorbing them today, and widening is precisely the change that removes its cover.
+
+**`components/UnitPriceList` and all three `/compare` pages match patterns against `p.name` with the
+brand still on the front of it.** Item 463 built the machinery for exactly this **this morning**, one
+category up: the browse-type function strips the brand first, *"because unstripped
+`Vital Proteins Marine Collagen` is a **protein**."*
+
+#### THE MEASUREMENT, AND IT IS A QUARTER OF ONE PAGE'S FETCH
+
+| | rows |
+|---|---:|
+| supplements matching the plant page's `%protein%` fetch | 239 |
+| **…matching ONLY because "protein" sits inside a larger word** | **59** |
+
+The brands are `MyProtein` and `MP`, plus the licensed-flavour rows filed under `Bounty`, `M&Ms®`,
+`Mars`, `Snickers®`, and `WelleCo`. **`Myprotein Clear Whey Protein` is fetched twice over; `Myprotein
+Digital Recipe Book` is fetched at all.**
+
+#### ★ AND IT HAS NEVER SHOWN, BECAUSE A SECOND FILTER RUNS AFTER IT
+
+**58 of the 59 are absorbed by the `isPlant` token filter** that runs on the fetch's output. Only one
+survives both:
+
+```
+Myprotein Digital Recipe Book: Not Just Chicken & Rice + Digital Magazine Subscription
+        "protein" from the BRAND        "Rice" from the BOOK'S TITLE
+```
+
+> **TWO FALSE SIGNALS STACKED, NEITHER ABOUT THE PRODUCT**, and it reaches the page — landing in *Not
+> ranked* under item 448's `recipe book|magazine|subscription` exclusion, which exists because of this
+> exact row. **The exclusion is doing the work the fetch should have done**, one layer too late.
+
+**THE DIAGNOSIS IS THE EXCLUSION DOING THE WORK THE FETCH SHOULD HAVE DONE, ONE LAYER TOO LATE.** That
+is item 437's shape — the defect is not created by looking, it stops being concealed — and it is what
+makes this a prerequisite rather than an improvement. **A brand strip on its own removes 59 rows from a
+fetch nobody has complained about; without it, the first widening delivers all 59 in one step.**
+
+**Scope, stated so it is not assumed:** item 463's strip is a **third** copy of `stripBrandPrefix` and
+it justified itself on blast radius — output never displayed, changing only which of two matched types
+wins. **A fourth copy on the type pages has a different blast radius again: it changes which products
+are FETCHED**, so it is a decision rather than a repetition, and it needs the same argument written
+before it is made.
+
+---
+
+### 470. SUCCESSOR: what identifies a protein powder when the name does not say "protein"
+
+**Raised:** 27 August 2026 · **RECORDED AS THE SUCCESSOR TO ITEMS 462/467/468. NOT STARTED. Robbie's
+instruction: it waits.**
+
+**Item 468 closed "widen the fetch" as the wrong first move rather than an incomplete one.** What
+remains is the question underneath it, and it is a different kind of question:
+
+> **CLASSIFICATION, NOT A PATTERN.** `Optimum Nutrition Gold Standard 100% Plant-Based Chocolate 684g`
+> and `PHD Diet Plant Powder Belgian Chocolate 500g` are protein powders. **No token in either name
+> says so**, and every pattern proposed for them so far has admitted toddler rice cakes, a greens
+> complex, two meal replacements, or a recipe book.
+
+**WHY IT WAITS RATHER THAN STARTS.** Item 463 built a read-time classifier, a 258-row fixture table and
+a CI check that is verified able to fail — **this morning, for the category one level up.** Starting a
+second classifier before that one has been observed through a full week would produce two vocabularies
+with nothing forcing them to agree, **which is the match-key twin shape this codebase keeps paying
+for** and which 463 itself cites as its reason for living in the view.
+
+#### BLOCKED UNTIL AFTER SUNDAY 30 AUGUST 2026, BEHIND ITEM 440'S CHECK
+
+**It is neither GitHub workflow.** It is a query:
+
+```sql
+select fmb_canonical_size_status(name, canonical_size), count(*)
+from products_active group by 1;          -- read multipack_unit_not_pack
+```
+
+| | |
+|---|---|
+| Before item 449's backfill | **192** |
+| After | **0**, bucket empty |
+| **Predicted 30 August** | **at or near zero** |
+| A figure **in the tens** | the fix is **incomplete** |
+| A figure **near 192** | it **did not hold at all** |
+
+**THE CHECK IS FALSIFYING A DIFFERENCE, NOT CONFIRMING A STATE.** Item 252 cleared the column and left
+the writer, so the defect **regenerated at ~13 rows a day and was back to 192 in three days**. Item
+439 fixed the writer **first**. **The prediction is that this one does not climb**, and Sunday is when
+that becomes evidence rather than reasoning. Item 440 holds the full statement; it is referenced here
+rather than copied.
+
+**Read today, 27 August, three days early: the bucket has no members** — `multipack_unit_not_pack`
+does not appear in the status counts at all. **That is a datapoint between the backfill and the check,
+not a substitute for it.** A clean reading is dated the moment it is taken, and the claim under test is
+about a rate, which one reading cannot see.
+
+#### AND A PROCESS NOTE, RECORDED AT ROBBIE'S INSTRUCTION
+
+**He wrote "Sunday's check" without saying which, and I asked instead of choosing.** Two standing
+workflows happen to run that morning — `gone-ids-drift` 06:00 UTC and `re-derive-asins` 07:00 UTC —
+and **the check meant was neither of them.**
+
+> **A plausible guess between two real candidates would have been wrong and would have read as
+> correct**, because both are genuine Sunday checks and either would have made the item look complete.
+> **That is the defect at the top of this file** — a record believed to exist because discussing it
+> produces the same familiarity as having written it — and it is the failure mode a guess produces
+> rather than a gap.
+
+**What it must be able to say, from item 468's own arrivals** — these are the test set, and they were
+read rather than counted:
+
+| Row | Verdict |
+|---|---|
+| `ON Gold Standard 100% Plant-Based 684g` | **in** |
+| `PHD Diet Plant Powder 500g` | **in** |
+| `USN Diet Fuel Ultralean Vegan Meal Replacement` ×2 | out — meal replacement |
+| `Organix ... Rice Cakes ... Toddler Snacks 40g` | out — a food |
+| `The Vegan Wellness Co . Greens Complex 180g` | out — brand token, greens powder |
+| `Myprotein Digital Recipe Book ... Chicken & Rice` | out — not a product of this kind at all |
+
+**Nothing is proposed and nothing is scoped beyond that list.** Item 469 is its prerequisite; item 468
+is why it exists.
+
+---
+
+### 471. Fifty-nine fragrances under makeup, and the top category came from a retailer default rather than from the product
+
+**Raised:** 27 August 2026, Robbie on the makeup chips · **A CATEGORISATION DEFECT, NOT A CHIP ONE.
+Reported, nothing changed.**
+
+`/makeup` renders **`Eau de Parfum 43`** and **`Eau de Toilette 16`** as browse chips. They are designer
+fragrances — Tom Ford Black Orchid, Paco Rabanne Fame, YSL Libre, Mugler Alien, Versace Eros.
+
+#### THE ROW DISAGREES WITH ITSELF, AND ONLY ONE COLUMN IS WRONG
+
+| column | value |
+|---|---|
+| `product_type` | **Eau de Parfum / Eau de Toilette** — correct |
+| `subcategory` | **scent** — correct |
+| `category` *(feed's own string)* | **Eau de Parfum / Eau de Toilette** — correct |
+| **`top_category`** | **makeup** — **the only wrong one** |
+
+> **11,678 rows with `subcategory = 'scent'` carry `top_category = 'fragrance'`. Exactly 59 carry
+> makeup.** The classifier identified them correctly as scent and something else overwrote where they
+> live. **This is not a mis-typing; it is one column disagreeing with three.**
+
+#### THEY ARE ONLY IN MAKEUP — THERE IS NO FRAGRANCE COPY
+
+**Zero of the 59 have a `match_key` twin under `fragrance`.** They are not duplicated across two pages;
+**the fragrance page does not carry them at all**, so a shopper browsing fragrance cannot reach a Tom
+Ford EDP that we hold and price.
+
+#### ★ NEITHER THE RETAILER'S PATH NOR A NAME TOKEN DID IT. A CONFIGURED DEFAULT DID
+
+**`retailer_import_config.top_category_default` is set on exactly one retailer in the fleet:**
+
+```
+Branded Beauty (id 6)  →  top_category_default = 'makeup'
+```
+
+**Branded Beauty is on all 59 rows** — 43 EDP and 16 EDT, the whole population. The feed's own path said
+*Eau de Parfum*, which is where `product_type`, `subcategory` and `category` came from. **`top_category`
+did not come from the product at all; it came from the retailer's configured fallback**, and the
+fallback is a whole-catalogue answer applied per row.
+
+**AND TODAY'S CODE COULD NOT PRODUCE THIS ROW.** `frag()` in `_shared/categorisation.ts` returns
+`top_category: "fragrance"` unconditionally — the combination *makeup + scent + Eau de Parfum* is
+**structurally unreachable** through the current classifier. It is a stored artefact of an earlier
+routing, which is why re-running the classifier is the shape of the fix rather than editing a rule.
+
+#### IT IS A ONE-DAY COHORT, WHICH IS WHY IT LOOKS LIKE A BATCH
+
+**All 59 created 30 June 2026**, in one contiguous id block, `115608`–`115680`. Every other Branded
+Beauty product type spans May to July; **the EDP/EDT rows exist on one day and no other.** The feed
+carried fragrance once.
+
+> **A default is invisible until the feed sends something the default is wrong about.** It had been
+> right, or harmless, on 257 makeup rows for two months.
+
+#### THE SAME MECHANISM, TWO MORE PLACES — READ, NOT ASSUMED
+
+- **16 rows typed `Skincare` sit under `top_category = makeup`**, spread May–July, same retailer.
+- **329 rows under `bath_body` carry `product_type = 'Skincare'`** — the skincare catchall's name
+  surviving in another category's rows (item 472).
+- **7 of the 59 carry `brand = 'Default'`** — Tom Ford rows filed under a placeholder brand. A second
+  fallback, on a different column, in the same population.
+
+**Nothing proposed.** The scope is 59 rows plus 16, one retailer, one config value, and a decision about
+whether `top_category_default` should exist at all when the feed's own path is more specific than it is.
+
+---
+
+### 472. Every "Everything else" chip is a different bucket, and only three could be named
+
+**Raised:** 27 August 2026, Robbie · **Read by name across all six categories.**
+
+## ★ THE LARGER FINDING IS SKINCARE, AND THE CHIP ONLY DISPLAYS IT
+
+**The skincare path is the categoriser's global default**, so its residue is **the whole catalogue's
+unclassified pile wearing skincare's name** — 16,503 rows, with a car blind among them.
+
+> **THAT IS A CATEGORISATION DEFECT, NOT A CHIP DEFECT.** The chip is reporting it accurately.
+> **Naming that chip better would make it READ as a skincare bucket, which is the opposite of true** —
+> the improvement would be the thing that hides it.
+
+**Everything below is the per-category reading. This is the part that matters.**
+
+**THE CHIP IS NOT AN ARBITRARY REMAINDER — IT IS EXACTLY THE CLASSIFIER'S DEFAULT.**
+`getProductTypes` suppresses six category-name defaults from the chip row (`JUNK_TYPES`: Skincare,
+Makeup, Hair, Hair Care, Fragrance, Supplements) and the complement is what they cover. **So "Everything
+else" means, precisely, "rows the classifier could not name"** — which is true, and is the reason it
+reads as incoherent to a shopper.
+
+**Live, measured against the rendered chips rather than the raw view** *(the RPC excludes
+`cleanup_remove`, which is why 16,503 and not 16,638 — the chip and its destination agree)*:
+
+| Category | residue | largest shape found | share | **fits no shape** |
+|---|---:|---|---:|---:|
+| **fragrance** | 274 | **perfume oils, mists, rollerballs** — 147 | **54%** | **29%** |
+| **bath_body** | 329 | **candles and home fragrance** — 140 | **43%** | **42%** |
+| **makeup** | 703 | **bags, cases, organisers, brushes, files** — 212 | **30%** | **51%** |
+| hair | 2,819 | styling 395 · oils/mists 274 · sets 318 · accessories 314 | ~14% each | 57% |
+| **skincare** | **16,503** | sets and bundles — 3,051 | 18% | **72%** |
+| supplements | 868 | *(none of these — see below)* | — | 87% |
+
+> **★ THE "LARGEST SHAPE" COLUMN CARRIES AN AMBIGUITY THE METHOD CANNOT RESOLVE — see item 474.**
+> Reading the residue cannot distinguish **a vocabulary gap** (no such type exists) from **a classifier
+> reach failure** (the type exists and did not reach these rows). Fragrance and makeup turned out to be
+> gaps; **bath & body turned out to be a reach failure — `Home Fragrance` already held 389 rows** — and
+> **the measurement was identical in all three.** A limit on the method, not an error in the numbers:
+> every figure below stands, and none of them names its own defect until it is checked against its
+> category's existing vocabulary. **Hair's 395 styling rows sit beside an existing `Hair Styling` type
+> of 777 and are unchecked.**
+
+#### THREE HAVE A SHAPE AND IT IS A MISSING TYPE, NOT A RESIDUE
+
+**Fragrance, bath & body and makeup each have a name sitting in plain sight**: *Perfume oils & mists*,
+*Candles & home fragrance*, *Tools & accessories*. In each case the vocabulary is missing a type the
+catalogue obviously has, and the residue is mostly that one thing. **Those three are fixable by naming,
+not by reclassifying.**
+
+**Hair is four shapes at roughly a seventh each** — styling, oils and mists, sets, accessories. *Styling*
+is a genuine missing type; the rest is not one bucket and would not become one.
+
+#### ★ SKINCARE'S RESIDUE IS NOT A SKINCARE RESIDUE
+
+**16,503 rows — 36% of the category — and reading a spread of them is the whole finding:**
+
+```
+Nuby Baby Retractable Car Roller Blinds Printed 2 Pack
+Revolution Loose Baking Powder Banana Deep 30g
+Josh Wood Colour Dark Brown Precision Wand 5ml
+Kiss Salon Acrylic Nude - Cashmere
+Silver Cloud Satin Large Scrunchies Double Pack
+Intercosmo Voilà 3C Intense 60ml - Copper Mahogany Blonde
+```
+
+> **The skincare path is the categoriser's global catchall** — its own comment says so: *"it returns
+> skincare/Skincare when it can't recognise the product from the name."* **So this bucket is not
+> skincare's leftovers. It is the whole catalogue's unclassified pile, wearing skincare's name**, and it
+> contains a car blind.
+
+**3,051 are sets and bundles (18%)**, which is a real shape — a multi-item listing has no single product
+type by definition — and **1,013 are accessories.** The remaining 72% matches nothing tested.
+
+#### THE PROBE'S LIMIT, AND SUPPLEMENTS IS THE CONTROL THAT PROVES IT
+
+**"Fits no shape" means "none of the six token families I tested", not "unclassifiable".** Supplements
+is the check on that: **87.2% fits no shape here, and its shape is already known** — item 465, the
+vocabulary is ingredients and much of that catalogue is sold on outcomes. **A form-token probe cannot
+see an outcome-named product**, so the highest figure in the table belongs to the one residue whose
+shape is understood.
+
+> **The table measures how much of each residue is nameable IN FORM VOCABULARY. It does not measure how
+> much is nameable.** Item 462's rule, one category over: a population defined by a detector measures
+> the detector.
+
+**THE CAVEAT IS WHAT MAKES THE TABLE READABLE RATHER THAN A DISCLAIMER ON IT.** Without it the column
+reads as "how classifiable is this residue" and supplements looks like the worst case at 87%. **With
+it, the highest number in the table belongs to the best-understood residue**, and the column is
+correctly read as one probe's reach.
+
+#### WHAT THIS DECIDES, STATED AND NOT ACTED ON
+
+**The question was whether the chip is fixable or should not exist, and the answer is different per
+category** — which is itself the finding, because there is one chip and one implementation:
+
+- **fragrance, bath_body, makeup** — a residue with a shape, **nameable**, chip becomes a real type
+- **hair** — one nameable type inside it, the rest not
+- **supplements** — a known shape that needs a second vocabulary, not a name (item 465, and **not to be
+  touched inside item 470's week of watching**)
+- **skincare** — **no shape at 16,503 rows**, and the honest label is *"we could not classify these"*,
+  which is true and useless to a shopper
+
+**Nothing proposed.** A single decision cannot be right for all six, and the smallest residue is the
+most nameable while the largest is the least.
+
+---
+
+### 473. The 59 moved to fragrance, and the 16 beside them are the same mechanism inverted
+
+**Raised and applied:** 27 August 2026 · **Robbie's call. 75 rows written, every figure predicted
+before the write and matched after.**
+
+```sql
+update products
+set top_category = 'fragrance', tags = array['fragrance','scent']
+where top_category = 'makeup' and subcategory = 'scent'
+  and product_type in ('Eau de Parfum','Eau de Toilette');
+```
+
+| | before | after | predicted |
+|---|---:|---:|---|
+| `products_active` fragrance | 11,836 | **11,895** | +59 ✔ |
+| makeup | 21,602 | **21,543** | −59 ✔ |
+| fragrance · Eau de Parfum | 7,278 | **7,321** | +43 ✔ |
+| fragrance · Eau de Toilette | 3,124 | **3,140** | +16 ✔ |
+| scent rows outside fragrance | 59 | **0** | ✔ |
+
+**75 ROWS, NOT 59, AND THE EXTRA 16 ARE THE POINT OF WRITING THEM.** The dormant rows are not merged,
+not excluded and carry images; they sit outside `products_active` only because Branded Beauty's import
+is disabled and no other retailer stocks them. **Leaving them correct-in-three-columns-and-wrong-in-one
+would reintroduce the defect the day anything stocks them.** `tags` moved too — all 75 carried
+`['makeup','scent']`, the same disagreement in a second column.
+
+**NOTHING DISAPPEARED FROM BOTH, WHICH WAS THE RISK.** `top_category` is not in the `products_active`
+predicate, so membership could not change; verified rather than reasoned — `/product/115627` (Armani My
+Way Intense EDP) now renders `/fragrance` and `/fragrance/scent`. **The category roots still serve
+pre-write HTML** at `revalidate = 3600` and refresh within the hour or on the next importer revalidate
+call; `REVALIDATE_SECRET` was not available to force it.
+
+#### ★ THE 16 ARE THE SAME RETAILER AND THE OPPOSITE DEFECT, WHICH IS WHY READING THEM MATTERED
+
+Robbie asked for these to be read rather than moved by rule. **The reading is what shows a rule would
+have been wrong 15 times out of 16.**
+
+| | the 59 | the 16 |
+|---|---|---|
+| `top_category` | **wrong** (makeup) | **right** (makeup) |
+| `product_type` | right (EDP/EDT) | **wrong** (`Skincare`) |
+
+```
+Maybelline Tattoo Liner Sharpenable Gel Pencil   -> Eyeliner        (5 rows)
+Maybelline Super Stay 24H Skin Tint              -> Foundation      (4 rows)
+Maybelline Lifter Gloss / NYX Butter Gloss       -> Lip Gloss       (3 rows)
+Maybelline Super Stay Teddy Tint                 -> Lip Colour      (1 row)
+Benefit They're Real Set / LETS GET READY…SET:   -> a set           (2 rows)
+Pixi Botanical Collagen Tonic 250ml              -> ACTUALLY SKINCARE, wrong top_category
+```
+
+> **Fifteen are makeup products wearing the skincare catchall's NAME; one is a skincare product in the
+> wrong CATEGORY.** A rule that moved `makeup + Skincare` to skincare — the obvious inverse of the fix
+> just applied — would have sent four foundations, five eyeliners and three lip glosses out of makeup
+> to correct one toner.
+
+**Both populations trace to `retailer_import_config.top_category_default = 'makeup'` on Branded Beauty
+(item 471), and the fallback lands on a different column each time.** **Nothing was written for the
+16.** They need a per-row product_type, which is a different job from a category move.
+
+---
+
+### 474. The residue is what the classifier could not name, and I read it as what has no name
+
+**Raised and applied:** 27 August 2026 · **Robbie's call. Applied, then corrected in the same pass.
+THE CORRECTION IS THE ITEM.**
+
+## ★ `Home Fragrance` ALREADY EXISTED, WITH 389 ROWS
+
+The bath & body write created **`Candles & Home Fragrance`** beside an existing **`Home Fragrance`**
+holding **287 candles, 35 diffusers and 69 sprays and melts** — the same thing. **Acqua di Parma sat on
+both sides of the split**, its candles in one chip and its candles in the other.
+
+> **THE RESIDUE IS WHAT THE CLASSIFIER COULD NOT NAME. I TREATED IT AS WHAT HAS NO NAME.** Those are
+> different sets and I substituted the second for the first. A residue is evidence about the
+> **classifier's reach**; it is only evidence about the **vocabulary** if you also read the vocabulary,
+> and I read one and not the other.
+
+**Caught by reading the facet list after the write, not by any check** — the same instrument that has
+caught most of today, applied one step too late.
+
+**Corrected:** the 153 written rows folded into `Home Fragrance`, now **529**; residue 329 → **189**.
+**No new type in bath & body**, real types unchanged at 20.
+
+#### AND IT CHANGES ITEM 472's TABLE — AS A LIMIT ON THE METHOD, NOT AN ERROR IN THE NUMBERS
+
+**The table looked only at the residue.** Every count in it is correct and every count is ambiguous
+between two different defects:
+
+| | what it was | what it needs |
+|---|---|---|
+| fragrance, 147 | **a vocabulary GAP** — no type existed | a new type |
+| makeup, 212 | **a vocabulary GAP** — no type existed | a new type |
+| **bath & body, 140** | **a classifier REACH failure** — the type existed and did not reach them | a rule, not a name |
+
+> **THE MEASUREMENT WAS IDENTICAL IN ALL THREE.** Reading the residue cannot tell a gap from a reach
+> failure, because both produce rows the classifier did not name. **The distinguishing evidence sits
+> outside the residue — in the category's existing vocabulary — and the method never looked there.**
+
+**SO THE OTHER CATEGORIES' "LARGEST SHAPE" FIGURES CARRY THE SAME AMBIGUITY UNTIL EACH IS CHECKED
+AGAINST ITS OWN VOCABULARY.** Hair's 395 styling rows sit beside an existing **`Hair Styling` type with
+777 rows** — on the face of it the same shape as bath & body, and unverified either way. Skincare's
+3,051 sets have no set type to reach them. **Neither has been checked properly and neither should be
+quoted as a gap.**
+
+#### WHAT WAS APPLIED, AND IT SURVIVES THE CORRECTION
+
+| Category | new type | rows | complement before → after |
+|---|---|---:|---:|
+| fragrance | **Perfume Oils & Mists** | **148** | 274 → **127** |
+| makeup | **Tools & Accessories** | **212** | 703 → **491** |
+| bath_body | *(none — see above)* | 140 | 329 → **189** |
+
+**Every row read, not counted.** Fragrance is perfume oils, rollerballs and mists throughout; makeup is
+162 bags/cases/organisers, 31 brush sets, 19 nail files, and **every row also carrying a cosmetic noun
+was checked individually** — `Vanity Case … Cream`, `Pro Powder Brush`, `Peaches & Cream` — all six are
+still accessories. **The complement survives the guard in both**: root limit 24, real types 6→7 and
+19→20.
+
+**One row folded in as well:** fragrance carried a **1-row `Mist` type** (`Skybottle Perfumed Hair &
+Body Mist`) rendering as a chip reading "Mist 1". It belongs in Perfume Oils & Mists, which is why that
+type reads 148 rather than 147.
+
+#### THE VOCABULARY EXPOSURE, NAMED AT THE MOMENT OF CREATION
+
+**Two types now exist in the column and not in the classifier.** This is item 252's shape — the column
+changed, the writer did not — **and it is being written down as it is made rather than found later.**
+**Closed at item 475**, which is what makes the difference between this and 252.
+
+---
+
+### 475. Closing the vocabulary exposure, and the classifier reaches one of the two sets
+
+**Raised and measured:** 27 August 2026 · **Robbie: close it. The classifier was RUN over both
+populations rather than read. Nothing built.**
+
+`scripts` were not needed — `_shared/categorisation.ts` has **zero imports**, so
+`inferCategorisation()` was executed directly against all **573** written rows.
+
+| written type | what `inferCategorisation` returns today | rows |
+|---|---|---:|
+| **Tools & Accessories** | `makeup/Makeup` | **369 of 369** |
+| **Perfume Oils & Mists** | `excluded: fragrance` | 203 of 204 |
+| | `skincare/Mist` | **1** |
+
+#### ★ THE REVERT RISK IS THE SHAPE IN MINIATURE: RIGHT FOR MAKEUP, WRONG FOR FRAGRANCE
+
+**One write, two halves, opposite exposures — for the same reason.** `recategorise-products` skips
+excluded rows, so the half the classifier has an opinion about is the half at risk, and the half it
+refuses to classify is safe from reverting **and queued for deletion under a different flag** (item
+476). **The same mechanism protects one half and endangers the other**, which is why a single sentence
+about "the exposure" was wrong in both directions at once.
+
+`recategorise-products` calls `inferCategorisation`, and its excluded branch reads
+`if (cat.excluded) { … continue; } // excluded products are never re-tagged`.
+
+- **Makeup: 369 rows WOULD be reverted.** They return `makeup/Makeup`, which is stale against the new
+  value, and **the catchall guard does not protect them** — `freshIsCatchall` is scoped to `skincare`,
+  so a makeup catchall clobbers freely.
+- **Fragrance: 203 rows would NOT be reverted.** They are excluded, so the run skips them entirely.
+  **The exposure I wrote down was wrong in this direction and the run is what showed it.**
+- **One row would move to skincare** — the stray `Mist` I folded in, which is the only one of the 204
+  the classifier has an opinion about.
+
+> **AND THE FRAGRANCE FINDING IS BIGGER THAN THE ITEM THAT FOUND IT.** `inferCategorisation` returns
+> `excluded: fragrance` for **every fragrance product** — Paco Rabanne Fame EDP, Tom Ford Noir Extreme,
+> Versace Bright Crystal, tested directly. **A `recategorise-products` run with `delete_excluded: true`
+> queues all 11,895 fragrance rows for deletion.** That is pre-existing, it is not what this item
+> created, and it is the larger thing standing behind it.
+
+#### WHAT ADDING EACH TYPE INVOLVES — AND THEY ARE NOT THE SAME JOB
+
+**MAKEUP — one branch, and containment is provable.** All 369 rows land in the final `else` of the
+makeup chain today. **A branch inserted immediately before that `else` can only ever move rows OUT OF
+THE RESIDUE and never out of a named type.** Reach equals the pattern's match within the residue —
+exactly the 212 visible rows.
+
+**FRAGRANCE — not in `inferCategorisation` at all.** Fragrance is a Stage-1 denylist there; the type
+ladder lives in `frag()` inside the Stage-2 extended detector, which only
+`inferCategorisationForImport` calls. **A vocabulary entry added to the wrong function would match
+nothing and look like it worked.**
+
+#### ★ AND THE SECOND DEFECT ROBBIE ANTICIPATED IS REAL, IN BOTH, MEASURED
+
+**Fragrance — 44 rows decide the branch's position.** Rows carrying BOTH an oil/mist token and an
+EDP/EDT/parfum token, all correctly typed today:
+
+```
+Carolina Herrera Good Girl Légère Eau de Parfum 10ml Rollerball     Eau de Parfum   (31 rows)
+Blood Concept +MA Parfum Oil 40ml Dropper                           Parfum          ( 8 rows)
+Dolce & Gabbana The One Eau de Toilette 7.4ml Rollerball             Eau de Toilette ( 5 rows)
+```
+
+**Placed last, the rule leaves all 44 alone and reaches exactly the residue. Placed earlier, it takes
+them.** One line's position, 44 rows.
+
+**MAKEUP — the opposite problem, and it is larger.** At least **544 rows outside the residue already
+carry an accessory token**, and most of them ARE accessories mis-typed as the cosmetic they apply:
+
+| currently typed | n | e.g. |
+|---|---:|---|
+| Blush/Bronzer | 145 | `bareMinerals Blooming Blush Brush` |
+| Foundation | 127 | `Bobbi Brown Soft Focus Foundation Brush` |
+| Eyeshadow | 86 | `Boots Dual End Eyeshadow Brush` |
+| Concealer | 49 | `bareMinerals Maximum Coverage Concealer Brush` |
+| Brow · Eyeliner · Lipstick · Mascara · … | 137 | `Anastasia Beverly Hills Angled Cut Brow Brush` |
+
+> **A LAST-PLACED RULE IS SAFE AND INCOMPLETE AT THE SAME TIME.** It reaches the 212 and leaves ~544
+> brushes filed as foundations and eyeshadows, so **`Tools & Accessories` in the column would mean
+> "accessories the classifier happened to fail at", not "accessories"** — a vocabulary entry matching a
+> different set from the one its name claims, which is the second defect stated as a rule.
+
+**AND MOVING THE 544 FAILS ITS OWN COMPLEMENT**, so it is not the obvious next step either:
+
+```
+W7 Nail Polish Pillar Box Red 15ml            "Pillar Box Red" is a SHADE
+KIKO Luxurious Lashes Maxi Volume Brush Mascara   a mascara
+L'Oreal Paradise … Soft Mascara Brush Included    a mascara
+Barry M Liquid Eyeliner Waterproof Brush Tip Pen  an eyeliner
+DHC - Lip Cream Yellow Box                        packaging, not a box
+```
+
+**Third complement save of the day**, after `\mdiet\M` and `Cookies & Cream`.
+
+#### THE STATE THIS LEAVES
+
+**The exposure is closed as a description, not as a change.** What must land, in this order and not
+otherwise: **the makeup branch last in the chain** (safe, provable, incomplete); **the fragrance branch
+last in `frag()`** (44 rows decide it); and **the brush question is a separate piece of work** with its
+own complement problem. **Nothing is built**, and the fragrance deletion landmine belongs to
+`recategorise-products` rather than to any of this.
+
+---
+
+### 476. The repair path predates half the catalogue, and `delete_excluded` is only its sharpest edge
+
+**Raised:** 27 August 2026 · **REPORTED, NOT FIXED, at Robbie's instruction: a guard written in a hurry
+on a deletion path is worse than the exposure. Nothing touched.**
+
+## ★ THE CENTRE: EIGHT DAYS, AND NOTHING IN THE FILE CHANGED
+
+```
+21 June 2026   recategorise-products last touched for categorisation logic   (ca56fcd)
+29 June 2026   fragrance go-live: EXTENDED_CATEGORIES_ENABLED = true         (b0f67a1, #58)
+```
+
+**The importer was told about fragrance and the repair path was not — by eight days, and it has not
+been told since.**
+
+> **NOTHING ABOUT THE DENYLIST ENTRY CHANGED AND IT BECAME WRONG ANYWAY.** The `fragrance` entry is
+> careful work: its comment distinguishes `parfum` the product from `parfumed` the descriptor and
+> handles Debenhams moving size into a separate field. **It is the same code it was on 28 June.**
+>
+> **A DENYLIST ENTRY IS A CLAIM ABOUT SCOPE, AND A GO-LIVE IS A CHANGE OF SCOPE.** That is the whole
+> mechanism. The entry did not rot; the catalogue moved out from under it, and an entry that says
+> "we do not sell this" has no way to notice that we started.
+
+**FIVE OF THE FIFTEEN REASONS NOW NAME THINGS WE SELL** — `fragrance`, `supplement`, `deodorant`,
+`shaving`, `bath_set` — **which is the measure of how far the claim has drifted from the catalogue.**
+A third of the denylist is describing a shop that no longer exists.
+
+**`inferCategorisation` only ever returns `skincare`, `makeup` or `hair`.** Fragrance, bath & body and
+supplements are **Stage-2 concepts**, routed by a different function (`inferCategorisationForImport`)
+— which all three importers call and this one does not.
+
+#### ★ MEASURED BY RUNNING THE CLASSIFIER, NOT BY READING IT
+
+Systematic samples of live rows, each put through `inferCategorisation()` directly:
+
+| top category | sampled | **excluded** *(deleted if the flag is set)* | catchall-protected | **re-tagged OUT to skincare** | **unchanged** |
+|---|---:|---:|---:|---:|---:|
+| **fragrance** | 991 (1-in-12) | **978 — 98.7%** | 4 | 9 | **0** |
+| **bath_body** | 1,023 (1-in-8) | 76 — 7.4% | 274 | **673 — 65.8%** | **0** |
+| **supplements** | 820 (1-in-3) | 146 — 17.8% | 648 | 26 | **0** |
+| makeup · hair · skincare | 417 | 3 | — | — | the rest |
+
+> **NOT ONE ROW OF THE THREE STAGE-2 CATEGORIES SURVIVES A RUN UNCHANGED.** Extrapolated: **~11,740 of
+> 11,895 fragrance rows queued for deletion**, and — **with the flag OFF, at its default** — **~5,390
+> bath & body rows re-tagged into skincare.**
+>
+> **`delete_excluded` is the sharpest edge and not the whole exposure. The DEFAULT run is already
+> destructive.**
+
+#### 1 — HAS THE FLAG EVER BEEN SET ON A REAL RUN? NO, AND THE PROOF IS THE CATALOGUE
+
+- **No workflow invokes the function** — it is absent from all 26 files in `.github/workflows/`.
+- **No `platform_changes` entry** references a recategorise run.
+- **`product_exclusions` holds 127 rows** across `device, food_or_drink, medicine, not_a_supplement,
+  veterinary` — **not one with reason `fragrance`.**
+> **★ NEVER-FIRED IS ESTABLISHED BY THE ROWS STILL EXISTING, NOT BY THE ABSENCE OF A LOG.** The
+> **11,895 fragrance rows are the evidence.** A run with `delete_excluded: true` on any of the last 59
+> days would have removed them, so their presence proves the run did not happen — **which is stronger
+> than any record of runs could be**, because an absent log is equally consistent with "it never ran"
+> and "nobody logged it". **The catalogue is the audit trail here.**
+
+**The function's callable state is unchanged, so "never fired" is not "cannot fire"** — item 444's
+distinction, and this one is on the never-fired side by luck of nobody having called it.
+
+#### 2 — WHAT THE EXCLUSION IS FOR, AND WHETHER FRAGRANCE BELONGED IN IT
+
+Step 1 of `inferCategorisation` is a **15-reason denylist** — `fragrance, supplement, oral_care,
+period_care, intimate_health, deodorant, shaving, appliance, eyewear, apparel, hair_tool, makeup_tool,
+bath_set, baby, accessory` — whose job is keeping **out-of-scope** products out of a
+skincare/makeup/hair catalogue.
+
+> **FRAGRANCE BELONGED IN IT WHEN IT WAS WRITTEN, AND THAT IS THE POINT.** The entry is careful work —
+> its comment distinguishes `parfum` the product from `parfumed` the descriptor, and handles Debenhams
+> moving size into a separate field. **It was correct until 29 June 2026 and has been wrong since**,
+> and nothing about the entry itself changed.
+>
+> **A denylist entry is a claim about SCOPE, and scope is exactly the thing a go-live changes.** Four
+> of the fifteen reasons — `fragrance`, `supplement`, `deodorant`, `shaving`, plus `bath_set` — now
+> name things the catalogue sells.
+
+#### 3 — WHAT WOULD HAVE HAPPENED, ON ANY DAY SINCE 29 JUNE
+
+**By 1 July fragrance already held 9,386 rows.** A run with the flag on, on any day of the 59 since,
+deletes the category. A run with the flag off re-tags most of bath & body into skincare and moves the
+1.3% of fragrance that escapes exclusion — `Versace Bright Crystal Perfumed Body Lotion` becomes
+`skincare/Moisturiser`, extraits become `skincare/Skincare`.
+
+#### ★ AND THE CATCHALL GUARD IS NO HELP, FOR A REASON WORTH ITS OWN LINE
+
+`protectedFromCatchall` refuses the **bare** `skincare/Skincare` verdict — the classifier admitting it
+does not recognise the product. **It has no view on a CONFIDENT wrong one.**
+`Versace Bright Crystal Perfumed Body Lotion → skincare/Moisturiser` is confident, specific, and
+written without hesitation.
+
+> **THE GUARD PROTECTS AGAINST THE CLASSIFIER'S UNCERTAINTY AND NOT AGAINST ITS BEING OUT OF DATE.**
+> Those are different failures and only one of them looks like doubt.
+
+#### 4 — ★ ONE CATEGORY OR SEVERAL? THREE, AND FOR ONE REASON
+
+**Three of the six top categories are exposed** — fragrance, bath & body, supplements — **and it is a
+single cause, not three:** every one of them is a Stage-2 concept, and the repair path only speaks
+Stage 1. **Makeup, hair and skincare are safe because they are the three the function was written to
+return.**
+
+> **The exposure is not "a dangerous flag". It is a repair path that predates half the catalogue and
+> has no way of knowing it.**
+
+**NOT FIXED, DELIBERATELY.** The obvious move — a scope guard on the deletion path — is a guard written
+in a hurry on the most destructive code in the repository, and today has already produced three
+complement failures on rules that looked obviously right. **What this needs is a decision about which
+function the repair path should call, which is the same question item 475 leaves open for the
+vocabulary entries.**
+
+---
+
+### 477. Not-runnable rather than runnable-with-a-guard
+
+**Raised and written:** 27 August 2026 · **Robbie's call. WRITTEN, NOT DEPLOYED — the change is in the
+working tree and the function in production is unchanged.**
+
+**The classifier is not being fixed today.** `recategorise-products` refuses to run instead.
+
+> **THE CORRECT STATE IS NOT-RUNNABLE, NOT RUNNABLE-WITH-A-GUARD.** The repair path predates half the
+> catalogue and cannot know it (item 476). **A scope guard on the most destructive code in the
+> repository, written on a day that produced three complement failures on rules that looked obviously
+> right, is the wrong thing to write today** — `\mdiet\M`, `Cookies & Cream` and `Pillar Box Red` are
+> all cases where the obvious rule was wrong and only the complement showed it.
+
+#### THE REFUSAL
+
+A preflight before any read of `products`: three `count` queries, and a **409** naming the categories
+and the rows at risk.
+
+```json
+{ "ok": false, "error": "refusing_to_run_stage1_classifier",
+  "blocking": { "fragrance": 15039, "bath_body": 8187, "supplements": 2461 },
+  "rows_at_risk": 25687 }
+```
+
+**THREE PROPERTIES, AND EACH IS THE REASON FOR A CHOICE:**
+
+1. **It cannot pass while the gap exists.** That is the whole point, and it is why the preflight is
+   **UNFILTERED rather than scope-limited.** A scope-limited version — Robbie's first read — passes
+   for `brand_filter: "clinique"` while the gap is wide open, which is the one property it must not
+   have. *(Also: one query shape rather than a second copy of the two paging paths, which is the
+   duplication this repo has been bitten by repeatedly — items 345, 363, 421.)*
+2. **It closes itself.** The day `inferCategorisation` learns Stage 2 — or this function is pointed at
+   `inferCategorisationForImport` — the counts go to zero and the preflight stops blocking. **Delete
+   it then; it is not load-bearing after that.**
+3. **It fails when it cannot look.** A read error returns 500 rather than falling through to a run.
+   Item 255: `gone-ids-drift` printed "No drift" twice from empty variables.
+
+**`dry_run` IS REFUSED TOO, AND THAT IS DELIBERATE.** The dry run's **output** is what a human acts on,
+and today it would report ~11,740 exclusions as a finding rather than as a bug. **A preview that
+misleads is not safer than a write that fails.** `scripts/recategorise-preview.mts` exists for
+previewing and is read-only.
+
+#### WHAT ELSE CALLS `inferCategorisation` — ASKED BECAUSE ONE BLIND CALLER SUGGESTS OTHERS
+
+| caller | writes to the database? |
+|---|---|
+| **`recategorise-products`** | **YES — the only one** |
+| `import-awin-feed` · `import-rakuten-feed` · `import-shopify-feed` | they call **`inferCategorisationForImport`** — Stage-2 aware, unaffected |
+| `scripts/recategorise-preview.mts` | no — read-only mirror of the dry-run path |
+| `scripts/categorisation-backfill.mts` | no — *"DRY RUN — no database writes performed"* |
+| `scripts/subcategory-backfill-preview.mts` | no — same |
+| `scripts/skincare-colour-backfill.mts` | no — **but it EMITS SQL for a human to apply** |
+| `categorisation-harness` · `extended-categorisation-harness` · `skincare-newvsstored` | no — harnesses |
+
+**Zero write calls across all five scripts, verified rather than assumed.** The importers were the real
+question and they are clean — **the mentions of `inferCategorisation` in all three are historical
+comments about a function they no longer call.**
+
+> **ONE CAVEAT KEPT RATHER THAN DROPPED:** `skincare-colour-backfill.mts` writes nothing and
+> **generates a `.sql` artefact "review before apply"**, so it carries the same Stage-1 blind spot into
+> a hand-applied file. **A script that cannot write can still produce a write**, and the preflight does
+> not reach it.
+
+#### NOT DEPLOYED, AND THE ROUTE IS THE ONE WORKFLOW
+
+`deploy-edge-function.yml` deploys **from the repository** and its header is explicit: *"THIS IS THE
+ONLY ROUTE. DO NOT DEPLOY AN EDGE FUNCTION BY PASTING ITS CONTENT"* (items 217, 218). So the change
+must be committed and on the default branch first, then dispatched by hand. **Until that happens the
+refusal is written and not in force**, and the function in production will still run.
