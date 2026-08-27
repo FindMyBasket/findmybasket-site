@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { SiteLayout } from '../../../components/SiteLayout';
 import { UnitPriceList } from '../../../components/UnitPriceList';
 import { getTypeByUnitPrice } from '../../../lib/brand-queries';
+import { COMMON_NOT_FUNGIBLE } from '../../../lib/unit-price';
 import { socialTags } from '../../../lib/format/social-tags';
 
 export const revalidate = 3600;
@@ -25,15 +26,7 @@ export const metadata = {
 // B — MASS GAINERS, AND THEY WERE RANKS 1 AND 2. Carbohydrate is most of a gainer's
 // weight, so its price per 100g falls while its price per 100g OF PROTEIN does not.
 // The page's own unit misreads them, and it misread them at the very top of the list.
-const NOT_FUNGIBLE = [
-  {
-    test: /\b(mass gainer|weight gainer|gainer)\b/i,
-    reason: 'a mass gainer rather than a protein powder — most of the weight is carbohydrate, so price per 100g flatters it',
-  },
-  { test: /\bcollagen\b/i, reason: 'a whey and collagen blend — some of the weight is collagen' },
-  { test: /\b(bars?|cookie|brownie)\b/i, reason: 'a powder and bar bundle — the bars are not weighed in the same way' },
-  { test: /\bsample\b/i, reason: 'a single-serving sample, priced per gram far above the tub it samples' },
-];
+const NOT_FUNGIBLE = COMMON_NOT_FUNGIBLE;
 
 // C — FACETS, AND THE ARGUMENT IS THE SPREAD RATHER THAN THE LABELLING.
 // Isolate spans 1.3x (£4.90–£6.60) and source-not-stated spans 4.7x (£1.88–£8.90). On

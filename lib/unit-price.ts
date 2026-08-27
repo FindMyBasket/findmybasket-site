@@ -67,3 +67,41 @@ export function rankByUnitPrice(
   ranked.sort((a, b) => (a.per100g as number) - (b.per100g as number));
   return { ranked, unranked, median, bound };
 }
+/**
+ * Exclusions every per-unit type page needs, in one place.
+ *
+ * WHY SHARED. Three pages wrote three exclusion lists and all three were incomplete, in
+ * three different ways: whey ranked collagen blends, bar bundles and a sample (item
+ * 455); creatine ranked a collagen blend; plant protein ranked three samples. Each list
+ * was written from the names its author happened to read, and each missed a class the
+ * others had already found. **The gap was never the same gap, which is why finding it
+ * once did not fix it anywhere else.** Item 456.
+ *
+ * A page adds only what is specific to its own type.
+ */
+export const COMMON_NOT_FUNGIBLE: { test: RegExp; reason: string }[] = [
+  {
+    test: /\bsamples?\b/i,
+    reason: 'a single-serving sample, priced per gram far above the tub it samples',
+  },
+  {
+    test: /\b(bars?|cookie|brownie|snack|wafer)\b/i,
+    reason: 'a bar or snack rather than powder — not comparable by weight',
+  },
+  {
+    test: /\b(mass gainer|weight gainer|gainer)\b/i,
+    reason: 'a mass gainer rather than a protein powder — most of the weight is carbohydrate, so price per 100g flatters it',
+  },
+  {
+    test: /\b(recipe book|magazine|subscription|ebook)\b/i,
+    reason: 'not a powder at all — matched because a word in its title is also an ingredient',
+  },
+  {
+    // COLLAGEN IS TESTED ANYWHERE IN THE NAME, NOT AFTER THE TYPE WORD. The creatine
+    // page's blend pattern required "creatine &" and so ranked "Jude Collagen &
+    // Creatine Pelvic Floor Supplements" -- a word-order assumption in a rule about
+    // ingredients, where order carries no meaning.
+    test: /\bcollagen\b/i,
+    reason: 'a collagen blend — some of the weight is collagen rather than the ingredient being compared',
+  },
+];

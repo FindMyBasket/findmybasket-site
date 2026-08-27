@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { SiteLayout } from '../../../components/SiteLayout';
 import { UnitPriceList } from '../../../components/UnitPriceList';
 import { getTypeByUnitPrice } from '../../../lib/brand-queries';
+import { COMMON_NOT_FUNGIBLE } from '../../../lib/unit-price';
 import { socialTags } from '../../../lib/format/social-tags';
 
 export const revalidate = 3600;
@@ -34,6 +35,7 @@ export const metadata = {
 //   - Gummies. 100g of gummy is mostly sugar and gelatin. Two rows.
 // Item 443.
 const NOT_FUNGIBLE = [
+  ...COMMON_NOT_FUNGIBLE,
   {
     test: /\b(hcl|hydrochloride|ethyl ester|kre-?alkalyn|nitrate|magnapower|gluconate)\b/i,
     reason: 'a different creatine salt, dosed differently from monohydrate — price per 100g is not a like-for-like comparison',
@@ -43,7 +45,7 @@ const NOT_FUNGIBLE = [
     reason: 'gummies rather than powder — most of the weight is not creatine',
   },
   {
-    test: /(\bcreatine\s*\+|\+\s*creatine|\bcreatine and\b|\bplatinum creatine plus\b|\bcreatine\s*&)/i,
+    test: /(\bcreatine\s*\+|\+\s*creatine|\bcreatine and\b|\bplatinum creatine plus\b|\bcreatine\s*&|&\s*creatine)/i,
     reason: 'a blend rather than pure creatine — most of the weight is other ingredients',
   },
 ];

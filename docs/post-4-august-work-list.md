@@ -34697,9 +34697,18 @@ pre-exclusion and this one is post.
 **"Source not stated" rather than "Concentrate": zero products say concentrate.** Calling them that
 would assert what no label supports.
 
-**ITEM 271'S RULE, WHICH HAS BROKEN THREE TIMES (items 423, 429, 441).** The chip count and the list
-come from **the same filter applied to the same array**, so they cannot disagree. Verified on the
-preview at every facet:
+**ITEM 271'S RULE IS STRUCTURALLY UNBREAKABLE HERE, AND THAT IS WORTH MORE THAN THE VERIFICATION.**
+
+The chip count and the list come from **one filter over one array**. There is no second derivation, so
+there is nothing to drift.
+
+> **Three of the rule's four breaks were two derivations of one quantity** -- item 423 counted in-stock
+> while the destination showed all; item 429 counted all while the sentence said comparable; item 441's
+> nine badges came from a differently-ordered window. **Each was fixed by correcting the second
+> derivation. This removes the condition instead of checking the result**, which is why the
+> verification below is confirmation rather than the guarantee.
+
+Verified on the preview at every facet:
 
 | | chip says | destination renders |
 |---|---|---|
@@ -34711,6 +34720,19 @@ preview at every facet:
 10 + 13 + 33 = 56.
 
 ---
+
+#### ★ THE CONSTRAINT WAS RIGHT AND THE ARITHMETIC WAS WRONG
+
+**Only measuring the rendered row produced the correction.** The reasoning identified the binding
+constraint correctly -- at 390px the name column is what everything else takes from -- and then got
+the sum wrong by assuming the per-100g column would be as wide as its label.
+
+> **The column is as wide as `£12.34`, not as wide as "per 100g", because the label wraps beneath the
+> figure.** Thirty-one pixels that a specification would have spent on a label, and the measurement
+> gave to the name.
+
+**A specification cannot know how its own text wraps.** The width of that column is a fact about the
+rendered box, not about the design, and the only way to learn it was to render the box and ask.
 
 **THE MOBILE ROW, MEASURED. The prediction was close on one field and wrong on another.**
 
@@ -34741,7 +34763,54 @@ and desktop is the same grid with the spare width given to the one field that ca
 present in code and unexercised, which is worth saying rather than claiming it works; **26 rows under
 Not ranked**, the nine plus two plus fifteen with no pack size, each carrying its reason.
 
+**TWO PROCESS NOTES.**
+
+**A forward citation was refused before its item existed.** The build cited item 455 in three files
+while the work list ended at 454, and `check-worklist-citations.sh` failed the PR. **The check working
+on the person who built it**, for the second time this week (item 439's was the first) -- and both
+times the fix was to write the item rather than to renumber the citation.
+
+**Backticks in a PR body executed as shell commands, for the second time.** `gh pr create --body "..."`
+inside a double-quoted string runs backticked spans; the body arrived with `UnitPriceList` and
+`list-none` replaced by *"command not found"*. **The fix is a quoted heredoc every time**, and the
+reason it recurs is that the failure is invisible until the rendered PR is read.
+
 **One shared `UnitPriceList` for all three pages** rather than three copies of a row. Items 406, 407
 and 417 were each a second copy of one idea drifting from the first, and three type pages each
 rendering their own row is that setup exactly. **`list-none` is set locally rather than in a global
 reset**, since prose lists elsewhere want their markers.
+
+---
+
+### 456. Three pages, three exclusion lists, three different gaps
+
+**Raised:** 27 August 2026 · **Checked rather than assumed twice. Both other pages had holes.**
+
+Item 455 gave whey the fungibility exclusions it never received. **The obvious next question was
+whether item 443's filter had been tested against the right names on its own page. It had not, and
+neither had plant protein's.**
+
+| Page | Its own list missed |
+|---|---|
+| whey (item 455) | 6 collagen blends, 2 bar bundles, 1 sample |
+| **creatine** | **1 collagen blend** — `Jude Collagen & Creatine Pelvic Floor Supplements`, ranked at £13.33/100g |
+| **plant protein** | **3 samples** — at £4.97, £6.63 and **£12.44, the dearest ranked row on the page** |
+
+> **The gap was never the same gap.** Each list was written from the names its author happened to read,
+> and each missed a class the others had already found. **Finding it once did not fix it anywhere
+> else**, because there was nothing shared to fix.
+
+**THE CREATINE MISS IS A WORD-ORDER ASSUMPTION IN A RULE ABOUT INGREDIENTS.** The blend pattern was
+`\bcreatine\s*&` — creatine, then the ampersand. The product is **`Collagen & Creatine`**.
+
+> **Ingredient order carries no meaning, and the pattern encoded it as though it did.** Written from
+> `Creatine+ Collagen`, which is how the examples in front of me happened to be worded.
+
+**Fixed by structure rather than by three edits:** `COMMON_NOT_FUNGIBLE` in `lib/unit-price.ts` holds
+samples, bars, gainers, non-products and **collagen tested anywhere in the name**; each page adds only
+what is specific to its type — alternative salts and gummies for creatine, fortified blends for plant
+protein. **The same argument as the shared row in item 455**: three copies of one idea is the setup
+items 406, 407 and 417 each recorded.
+
+**And the shared list is where the next class gets added once**, which is the property the three
+separate lists did not have.
