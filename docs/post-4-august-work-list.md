@@ -33864,6 +33864,16 @@ it caught.
 > **The code path could not be exercised from a script** — `getActiveRetailerIds` uses React's `cache`,
 > which throws outside a server context. So the rule is verified and the branch is not.
 
+**AND MY FIRST READ OF THE RENDERED PAGE SAID IT HAD ZERO RANKED ROWS.** It has 67. I searched the
+tag-stripped text for `£([\d.]+)/100g`, and React emits `<!-- -->` separators between adjacent text
+nodes, so stripping tags turned `£5.20</span>/100g` into `£5.20 /100g` with a space the pattern did not
+allow.
+
+> **Third time today a check of mine was wrong about a thing that was right** — the presence-test judge
+> in item 439, the `#`-bucket count in item 421, and this. **All three were regex reads of rendered
+> HTML, and all three failed on how the markup is assembled rather than on what it says.** The
+> instrument is the recurring weakness, not the pages.
+
 **EXCLUDED ROWS RENDER, THEY ARE NOT DROPPED.** Each carries its own reason — *"over 10× the median for
 this type, likely a pack-size error"* or *"no pack size on this listing"*. A page that silently omits
 what it cannot price is incomplete in a way the visitor cannot see, which is the argument that
