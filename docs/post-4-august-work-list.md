@@ -34772,8 +34772,13 @@ times the fix was to write the item rather than to renumber the citation.
 
 **Backticks in a PR body executed as shell commands, for the second time.** `gh pr create --body "..."`
 inside a double-quoted string runs backticked spans; the body arrived with `UnitPriceList` and
-`list-none` replaced by *"command not found"*. **The fix is a quoted heredoc every time**, and the
-reason it recurs is that the failure is invisible until the rendered PR is read.
+`list-none` replaced by *"command not found"*.
+
+> **It recurs because the failure is invisible until the rendered PR is read** — the command succeeds,
+> the PR is created, and the damage is inside prose nobody re-reads. **So the quoted heredoc has to be
+> unconditional rather than remembered**: a rule applied only when the body "looks like it has
+> backticks" fails exactly when the author does not notice one, which is the same moment the check
+> would have been needed.
 
 **One shared `UnitPriceList` for all three pages** rather than three copies of a row. Items 406, 407
 and 417 were each a second copy of one idea drifting from the first, and three type pages each
@@ -34796,21 +34801,45 @@ neither had plant protein's.**
 | **creatine** | **1 collagen blend** — `Jude Collagen & Creatine Pelvic Floor Supplements`, ranked at £13.33/100g |
 | **plant protein** | **3 samples** — at £4.97, £6.63 and **£12.44, the dearest ranked row on the page** |
 
-> **The gap was never the same gap.** Each list was written from the names its author happened to read,
-> and each missed a class the others had already found. **Finding it once did not fix it anywhere
-> else**, because there was nothing shared to fix.
+> **THE GAP WAS NEVER THE SAME GAP.** Each list was written from the names its author happened to
+> read, and each missed a class the others had already found — whey missed samples that creatine
+> excluded, creatine missed collagen that whey excluded, plant protein missed both.
+>
+> **Finding the class once fixed nothing elsewhere, because there was nothing shared to fix.** Three
+> discoveries, three local corrections, and the fourth page would have started from the same blank
+> page as the first.
 
-**THE CREATINE MISS IS A WORD-ORDER ASSUMPTION IN A RULE ABOUT INGREDIENTS.** The blend pattern was
-`\bcreatine\s*&` — creatine, then the ampersand. The product is **`Collagen & Creatine`**.
+#### ★ A PATTERN INHERITING AN ACCIDENT OF ITS EXAMPLES
 
-> **Ingredient order carries no meaning, and the pattern encoded it as though it did.** Written from
-> `Creatine+ Collagen`, which is how the examples in front of me happened to be worded.
+The creatine blend rule was `\bcreatine\s*&` — creatine, **then** the ampersand. The product it missed
+is **`Jude Collagen & Creatine Pelvic Floor Supplements`**: the same product with the words the other
+way round.
 
-**Fixed by structure rather than by three edits:** `COMMON_NOT_FUNGIBLE` in `lib/unit-price.ts` holds
-samples, bars, gainers, non-products and **collagen tested anywhere in the name**; each page adds only
-what is specific to its type — alternative salts and gummies for creatine, fortified blends for plant
-protein. **The same argument as the shared row in item 455**: three copies of one idea is the setup
-items 406, 407 and 417 each recorded.
+> **Ingredient order carries no meaning, and the pattern encoded it as though it did.** It was written
+> from `Creatine+ Collagen` and `Creatine And Magnesium` — the blends that happened to be in front of
+> me — and every one of them put creatine first. **The pattern did not learn that blends name creatine
+> first; it learned that these blends did, and there is no difference visible from inside the
+> examples.**
 
-**And the shared list is where the next class gets added once**, which is the property the three
-separate lists did not have.
+A rule derived from instances carries whatever those instances share, including the parts that are
+coincidence. **Nothing in the four examples distinguished "creatine appears before the conjunction"
+from "creatine appears" — so the pattern encoded the stronger claim for free**, and the weaker one was
+the true one.
+
+#### THE FIX IS STRUCTURAL, AND THAT IS THE POINT RATHER THAN THE FOUR ROWS IT CORRECTED
+
+`COMMON_NOT_FUNGIBLE` in `lib/unit-price.ts` holds samples, bars, gainers, non-products and **collagen
+tested anywhere in the name**; each page adds only what is specific to its type — alternative salts and
+gummies for creatine, fortified blends for plant protein.
+
+> **It removes the condition under which three lists can diverge, rather than checking that they agree
+> today.** Exactly the move as one filter over one array in item 455: there, two derivations of one
+> quantity were replaced by one derivation, so the quantities cannot disagree. Here, three definitions
+> of one class are replaced by one definition, so the definitions cannot drift.
+>
+> **Checking agreement finds the divergence that exists. Removing the second copy prevents the one
+> that does not exist yet** — and the four rows fixed here were all of the second kind until this
+> afternoon.
+
+**The shared list is where the next class gets added once**, which is the property the three separate
+lists did not have and could not be given by correcting them.
