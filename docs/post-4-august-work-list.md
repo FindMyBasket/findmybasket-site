@@ -35327,6 +35327,8 @@ real one. The strip removes a **false signal**, and item 463 argues for it on ex
 This is not a bad strip that a better strip would fix. Both rows are `<brand containing a type
 word> + <product name>`; the difference is entirely in whether the brand's claim about itself
 happens to be the product's type, which is a fact about the world and not about the string.
+**The information needed to separate them is not present in the input, so no strip reaches it** —
+this is a limit on the class of rule, not a gap in this instance of one.
 
 **RESOLUTION BY ORDER RATHER THAN BY RULE.** Since no single pass can tell the two apart, the two
 passes are ranked instead: **strip first, and fall back to the full name only when the stripped name
@@ -35378,6 +35380,8 @@ A fixture with a deliberately wrong `expected` was inserted, reported as a disag
 cheapest verification available anywhere in this repository and it should be the default for every new
 check**, alongside the `cannot_run` contract (items 194, 255) it complements: `cannot_run` proves the
 check notices when it cannot look, the canary proves it notices when it looks and finds something.
+**Neither alone establishes that the check works** — a check can be blind in exactly one of those two
+ways and pass the test for the other.
 
 ## And the second numbering collision this week was not caught by a check either
 
@@ -35385,8 +35389,11 @@ Three objects shipped today with comments citing **"work-list item 460"**. The i
 463; **460 is unrelated work about tier rules.** Corrected in the database comments before the item
 was written.
 
-**MY FIRST FRAMING OF THIS WAS WRONG AND THE CORRECTION IS THE POINT.** I described both of this
-week's collisions as caught by the checks. **Neither was.**
+**THE INSTRUCTION FOR THIS ITEM SAID BOTH WERE CAUGHT BY THE CHECKS RATHER THAN BY CARE, AND THAT IS
+THE ONE CLAIM HERE THAT IS FALSE.** It is recorded as a correction rather than absorbed into the
+prose, because **the mistaken version is the more comfortable one** — it says the process is working —
+and absorbed silently it would have been indistinguishable from a finding. **Neither was caught by a
+check.**
 
 - **Item 454** records the first explicitly: *"IT WAS CAUGHT BECAUSE IT WAS UNCOMMITTED, NOT BY ANY
   CHECK."* A `git checkout` refused over an unstaged file. Contiguity guards the shared state, and the
