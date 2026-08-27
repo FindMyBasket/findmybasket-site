@@ -313,9 +313,63 @@ export function stripSize(normalised: string): string {
 // false positives like shade numbers, SPF values, model numbers. Litre ("1L",
 // "1.5 litre") is recognised so "1L" does not silently become a null size and
 // collide with a smaller ml pack.
+// Multiplied pack totals can land on binary-float noise (2.4 * 3 = 7.199999...).
+// Round to three decimals and strip trailing zeros, so "3 x 2.4g" is "7.2g" and an
+// integer result is "188g" rather than "188.000g". Item 252's 0.0012oz row is the
+// reason this rounds rather than truncates.
+function trimNum(n: number): string {
+  return String(Math.round(n * 1000) / 1000);
+}
+
 export function extractCanonicalSize(rawName: string): string | null {
   if (!rawName) return null;
   const s = String(rawName);
+
+  // ── MULTIPLIER FORMS FIRST: THE PACK, NOT THE SACHET ────────────────────────
+  //
+  // Without this, the loop below takes the LAST size token in the name, which for
+  // a multipack is the UNIT size. "Vida Glow ... 90 x 3g Sachets" stored "3g"
+  // against a 270g pack; "THE Electro | Electrolyte Sachets - 20 x 9.4g" stored
+  // "9.4g" against 188g.
+  //
+  // ITEM 252 BACKFILLED THIS COLUMN TO ZERO ON 23 AUGUST AND THIS FUNCTION WAS
+  // NEVER CHANGED, so the importer refilled it: 654 -> 0 -> 192, with 40 of those
+  // created in the three days after the backfill. A one-time correction of a
+  // column whose writer still produces the defect is a symptom cleared, and the
+  // rate of return is the measure of that. Item 435.
+  //
+  // MEASURED BEFORE SHIPPING (item 439). This moves 1,357 stored rows -- far more than
+  // the 192 the DQ metric flags -- and the split that justified it is not the 95.3%
+  // that are simple multipacks. It is that NOT ONE ROW moves a correct old value to a
+  // wrong new one: the old value was always a component size and never a pack total, so
+  // this can only fix a row or swap one wrong subtotal for another.
+  //
+  // KNOWN RESIDUE, DELIBERATELY NOT ADDRESSED HERE. ~46 rows are mixed bundles --
+  // "1 x 9ml 1 x 100ml" -- where no single canonical size is correct and the honest
+  // value is null. Both the old answer and this one assert a size that does not exist.
+  // Returning null there is a decision about WHEN A PACK HAS A SIZE rather than how to
+  // compute one, and it is held for its own decision (item 439).
+  //
+  // The pattern is the one already proven in lib/format/pack-size.ts, whose header
+  // named this exact boundary five days before the work that needed it arrived:
+  // "it buys correctness on the page, not in the column ... canonical_size is
+  // still wrong in the database and is still unsafe for any per-unit arithmetic."
+  //
+  // BOTH ORDERINGS. "20 x 9.4g" and "5g x 30" are the same pack written two ways;
+  // the second appears in Cadence's carton names and was outside item 252's scope.
+  const PACK_FORWARD = /(\d+)\s*[x\u00d7]\s*(\d+(?:\.\d+)?)\s*(ml|l|g|kg)\b/i;   // N x Mg
+  const PACK_REVERSE = /(\d+(?:\.\d+)?)\s*(ml|l|g|kg)\s*[x\u00d7]\s*(\d+)\b/i;   // Mg x N
+  const fwd = s.match(PACK_FORWARD);
+  if (fwd) {
+    const total = Number(fwd[1]) * Number(fwd[2]);
+    if (Number.isFinite(total) && total > 0) return `${trimNum(total)}${fwd[3].toLowerCase()}`;
+  }
+  const rev = s.match(PACK_REVERSE);
+  if (rev) {
+    const total = Number(rev[1]) * Number(rev[3]);
+    if (Number.isFinite(total) && total > 0) return `${trimNum(total)}${rev[2].toLowerCase()}`;
+  }
+
   const SIZE_REGEX =
     /(?<!\w)(\d+(?:\.\d+)?)\s*(ml|l|litres?|liters?|g|kg|oz|fl\.?\s*oz)\b/gi;
   const matches = [...s.matchAll(SIZE_REGEX)];

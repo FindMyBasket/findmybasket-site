@@ -33716,11 +33716,30 @@ pre-existing key defects rather than reporting them. **"Outside the bucket" is n
 it is evidence of unexamined**, and shipping on harness and parity alone would have been trusting
 exactly the instrument 437 records as untrustworthy.
 
-**FIRST JUDGE, DISCARDED.** My first classifier asked whether the new value appears as a string in the
-product name. It returned "18 corroborated" — and the 18 included
-`Tisserand Sleep Routine Duo - 1 x 9ml 1 x 10ml → 9ml`, where 9ml is in the name because it is one of
-two different bottles. **A presence test cannot tell why a string is there** (items 421, 429). Rebuilt
-structurally: what shape is the name, not what substrings does it contain.
+#### THE CHECK FAILED THE SAME WAY AS THE THING IT WAS CHECKING
+
+**My first classifier was a presence test.** It asked whether the new value appears as a string in the
+product name, and reported 18 rows "corroborated". Among them:
+
+```
+Tisserand Sleep Routine Duo - 1 x 9ml 1 x 10ml    old 10ml   new 9ml   -> "corroborated"
+```
+
+**9ml is in that name because it is one of two different bottles.** The judge saw the string, called it
+agreement, and would have reported the same agreement had the value been arrived at by any means at
+all.
+
+> **This is item 421's shape — a presence test cannot tell you WHY a string is there — made inside the
+> check that existed specifically to avoid trusting a weak instrument.** The whole reason for measuring
+> rather than shipping was that harness-green and parity-green are evidence about coverage rather than
+> correctness (item 437). **I then built a verifier with exactly that property and nearly reported its
+> output.**
+>
+> **The check and the thing it was checking failed the same way.** Not analogously: identically. Both
+> confirmed by looking for a value's presence in a place where its presence proves nothing about its
+> origin.
+
+Rebuilt structurally — what shape is the name, not what substrings does it contain.
 
 **THE SPLIT, 1,357 rows:**
 
@@ -33750,10 +33769,16 @@ Filorga Meso Mask 2 x 50ml + 23g Hydra Filler         old 23g    new 100ml   tru
 
 **THE DECISIVE PROPERTY IS THE BUCKET WITH NO MEMBERS.**
 
-> **Not one of the 1,357 rows moves a CORRECT old value to a wrong new one.** In every case the old
-> value was already wrong — it was a component size, never a pack total. The change either fixes the
-> row or replaces one wrong component subtotal with a different one. **There is no regression class**,
-> which is a stronger statement than "95.3% are right".
+> **Not one of the 1,357 rows moves a CORRECT old value to a wrong new one.**
+>
+> The old value was always a component size and never a pack total, so the change can only fix a row or
+> swap one wrong subtotal for another. **It cannot break a correct row, because there were no correct
+> rows among the ones it touches.**
+
+**THAT IS THE CLAIM THE SPLIT EXISTED TO TEST, AND IT IS NOT "95.3% CORRECT".** A percentage leaves a
+regression class open and merely asserts it is small — 4.7% of 1,357 is 64 rows that might each be a
+correct value made wrong. **The three-way split was built to find that bucket, and it is empty.** A
+proportion describes how often the change helps; the empty bucket describes what the change cannot do.
 
 **What the ~46 argue for, and it is not this change.** For a mixed bundle the honest `canonical_size`
 is **null** — `1 x 9ml 1 x 100ml` has no single size, and both the old and new answers assert one.
