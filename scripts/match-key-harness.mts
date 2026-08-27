@@ -457,6 +457,40 @@ const CASES: Case[] = [
     ok: () => extractNameNumbers("Bioré UV Aqua Rich 2 x 50ml") ===
               extractNameNumbers("Biore UV Aqua Rich 2 x 50ml"),
   },
+
+  // ── MULTIPACK: canonical_size must describe the PACK, not the sachet (item 435) ──
+  {
+    cls: "multipack",
+    desc: "N x Mg returns the PACK total, not the sachet",
+    ok: () => extractCanonicalSize("Vida Glow Natural Marine Collagen 90 x 3g Sachets") === "270g" &&
+              extractCanonicalSize("THE Electro | Electrolyte Sachets - 20 x 9.4g") === "188g" &&
+              extractCanonicalSize("Kerastase Densifique Treatment Homme 30 x 6ml") === "180ml",
+  },
+  {
+    cls: "multipack",
+    desc: "reversed Mg x N returns the pack total (outside item 252's scope)",
+    ok: () => extractCanonicalSize("Cadence Sachets Core Orange - Carton (5g x 30)") === "150g" &&
+              extractCanonicalSize("Vital Proteins Collagen Peptides Sachets 10g x 10") === "100g",
+  },
+  {
+    cls: "multipack",
+    desc: "decimal multipliers do not produce float noise",
+    ok: () => extractCanonicalSize("Sachet Pack 3 x 2.4g") === "7.2g" &&
+              extractCanonicalSize("Trial 4 x 1.5ml") === "6ml",
+  },
+  {
+    cls: "multipack",
+    desc: "CONTROL — single-size names unchanged by the multiplier branch",
+    ok: () => extractCanonicalSize("SVR Sebiaclear Gel Moussant 1L") === "1l" &&
+              extractCanonicalSize("SVR Sebiaclear Gel Moussant 400ml") === "400ml" &&
+              extractCanonicalSize("Myprotein Impact Whey Isolate 1kg") === "1kg" &&
+              extractCanonicalSize("Clarins Double Serum") === null,
+  },
+  {
+    cls: "multipack",
+    desc: "CONTROL — an x with no unit attached is not a pack multiplier",
+    ok: () => extractCanonicalSize("Palette 12 x Eyeshadow 30g") === "30g",
+  },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
