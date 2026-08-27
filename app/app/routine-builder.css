@@ -145,9 +145,24 @@
   margin: 0 auto;
 }
 
+/* SIX CARDS, MEASURED AT 342px RATHER THAN REASONED ABOUT (item 479).
+   The single-column rule was written for three cards. At six it runs 432px, and
+   with the nav (94) + builder header (120) + empty-state copy (301) the grid
+   starts at ~515px, so cards 4-6 -- fragrance, bath & body, supplements -- land
+   below the fold on a 390x844 phone. Four variants were built at a 342px content
+   width and measured:
+
+     1 col, row cards   432px   0 labels wrap   <- was
+     2 col, row cards   256px   6 labels wrap
+     2 col, column card 290px   0 labels wrap   <- is
+     3 col, column card 226px   6 labels wrap
+
+   Two columns keeps the DESKTOP card shape (icon above label, centred) rather
+   than the row shape, because at 165px wide the row shape wraps every label and
+   the column shape wraps none -- including "Browse bath & body", the longest. */
 @media (max-width: 600px) {
   .rb-browse-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 }
 
@@ -165,13 +180,12 @@
   transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
 }
 
+/* Deliberately NOT switching to a row layout at mobile any more: see the grid
+   note above. The column shape is what fits two-up without wrapping. */
 @media (max-width: 600px) {
   .rb-browse-card {
-    flex-direction: row;
-    justify-content: flex-start;
-    text-align: left;
-    gap: 14px;
-    padding: 16px 20px;
+    padding: 16px 10px;
+    gap: 8px;
   }
 }
 
@@ -189,19 +203,12 @@
 .rb-browse-label {
   font-size: 14px;
   font-weight: 500;
-  flex: 1;
+  text-align: center;
 }
 
-.rb-browse-arrow {
-  font-size: 16px;
-  color: #8A6A30;
-}
-
-@media (min-width: 601px) {
-  .rb-browse-arrow {
-    display: none;
-  }
-}
+/* .rb-browse-arrow removed with the row layout it belonged to. It was a
+   mobile-only affordance (hidden above 600px) on a card that no longer has a
+   row to point along. Item 479. */
 
 /* ── ROUTINE LIST ─────────────────────────────────────────────────── */
 

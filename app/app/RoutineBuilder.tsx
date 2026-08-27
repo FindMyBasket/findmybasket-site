@@ -77,6 +77,31 @@ function parseRoutineParam(): number[] {
     .filter(n => !isNaN(n));
 }
 
+// ── BROWSE CATEGORIES ──────────────────────────────────────────────────────
+//
+// ONE LIST, THREE CALL SITES. This was three hand-written copies of the same
+// three <Link>s — two grids and the "Add more from" row — and all three said
+// skincare | makeup | hair.
+//
+// THAT IS `inferCategorisation`'s STAGE-1 RETURN SET, NOT A CHOICE ABOUT BROWSE.
+// The builder's browse list was written against a catalogue with three top
+// categories and was never told the shape changed on 29 June 2026, when
+// EXTENDED_CATEGORIES_ENABLED brought fragrance, bath & body and supplements in.
+// Third surface today frozen at that boundary, and the same three categories
+// every time (items 476, 479).
+//
+// 22,543 live products — 22.3% of the catalogue — were unreachable from here.
+//
+// NB `/bath-and-body`, not `/bath-body`, which 404s.
+const BROWSE_CATEGORIES: ReadonlyArray<{ href: string; icon: string; label: string }> = [
+  { href: '/skincare', icon: '🧴', label: 'skincare' },
+  { href: '/makeup', icon: '💄', label: 'makeup' },
+  { href: '/hair', icon: '💇', label: 'hair' },
+  { href: '/fragrance', icon: '🌸', label: 'fragrance' },
+  { href: '/bath-and-body', icon: '🛁', label: 'bath & body' },
+  { href: '/supplements', icon: '💊', label: 'supplements' },
+];
+
 // ── TYPES ──────────────────────────────────────────────────────────────────
 
 interface PriceRow {
@@ -1055,21 +1080,12 @@ export default function RoutineBuilder() {
               build a routine, and we&apos;ll find the best value way to buy it.
             </p>
             <div className="rb-browse-grid">
-              <Link href="/skincare" className="rb-browse-card">
-                <span className="rb-browse-icon">🧴</span>
-                <span className="rb-browse-label">Browse skincare</span>
-                <span className="rb-browse-arrow">→</span>
-              </Link>
-              <Link href="/makeup" className="rb-browse-card">
-                <span className="rb-browse-icon">💄</span>
-                <span className="rb-browse-label">Browse makeup</span>
-                <span className="rb-browse-arrow">→</span>
-              </Link>
-              <Link href="/hair" className="rb-browse-card">
-                <span className="rb-browse-icon">💇</span>
-                <span className="rb-browse-label">Browse hair</span>
-                <span className="rb-browse-arrow">→</span>
-              </Link>
+              {BROWSE_CATEGORIES.map(c => (
+                <Link key={c.href} href={c.href} className="rb-browse-card">
+                  <span className="rb-browse-icon">{c.icon}</span>
+                  <span className="rb-browse-label">Browse {c.label}</span>
+                </Link>
+              ))}
             </div>
           </div>
         ) : routine.length === 0 ? (
@@ -1081,21 +1097,12 @@ export default function RoutineBuilder() {
               way to buy them across UK retailers.
             </p>
             <div className="rb-browse-grid">
-              <Link href="/skincare" className="rb-browse-card">
-                <span className="rb-browse-icon">🧴</span>
-                <span className="rb-browse-label">Browse skincare</span>
-                <span className="rb-browse-arrow">→</span>
-              </Link>
-              <Link href="/makeup" className="rb-browse-card">
-                <span className="rb-browse-icon">💄</span>
-                <span className="rb-browse-label">Browse makeup</span>
-                <span className="rb-browse-arrow">→</span>
-              </Link>
-              <Link href="/hair" className="rb-browse-card">
-                <span className="rb-browse-icon">💇</span>
-                <span className="rb-browse-label">Browse hair</span>
-                <span className="rb-browse-arrow">→</span>
-              </Link>
+              {BROWSE_CATEGORIES.map(c => (
+                <Link key={c.href} href={c.href} className="rb-browse-card">
+                  <span className="rb-browse-icon">{c.icon}</span>
+                  <span className="rb-browse-label">Browse {c.label}</span>
+                </Link>
+              ))}
             </div>
           </div>
         ) : (
@@ -1191,9 +1198,12 @@ export default function RoutineBuilder() {
 
               <div className="rb-add-more">
                 Add more from{' '}
-                <Link href="/skincare">skincare</Link> ·{' '}
-                <Link href="/makeup">makeup</Link> ·{' '}
-                <Link href="/hair">hair</Link>
+                {BROWSE_CATEGORIES.map((c, i) => (
+                  <span key={c.href}>
+                    {i > 0 && ' · '}
+                    <Link href={c.href}>{c.label}</Link>
+                  </span>
+                ))}
               </div>
             </div>
             </div>
@@ -1250,7 +1260,14 @@ export default function RoutineBuilder() {
             {!showSavings && winningRetailerCount > 0 && (
               <div className="rb-savings-summary rb-savings-qualitative">
                 <div className="rb-savings-desc">
-                  {results && results.length === 1
+                  {results && results[0]?.partial
+                    ? (winningRetailerCount > 1
+                        // DELIVERY IS NOT INCLUDED HERE AND THE OLD COPY SAID IT WAS.
+                        // The fallback sets `deliveryCost: 0` and never computes
+                        // delivery — there is no basket to compute it for. Item 479.
+                        ? `The cheapest each product can be bought for, across ${winningRetailerCount} retailers — delivery not included.`
+                        : 'The cheapest each product can be bought for — delivery not included.')
+                    : results && results.length === 1
                     ? (winningRetailerCount > 1
                         ? `One way to buy this basket, split across ${winningRetailerCount} retailers, delivery included.`
                         : 'One retailer stocks everything in this basket, delivery included.')
@@ -1283,8 +1300,18 @@ export default function RoutineBuilder() {
                       .filter(b => b.retailerName && b.retailerName !== 'Not tracked yet')
                       .map(b => b.retailerName),
                   ).size;
-                  const descText =
-                    opt.type === 'single' || distinctRetailerCount === 1
+                  // THE PARTIAL FALLBACK DID NOT OPTIMISE, AND MUST NOT SAY IT DID.
+                  // `partial` is set when no single retailer and no PAIR covers the
+                  // basket (the optimiser tops out at two, item 17). It then takes
+                  // the cheapest price for each product INDEPENDENTLY — a per-product
+                  // minimum, not a basket. "for best price" claimed a basket-level
+                  // optimisation that was skipped, and `partial` was set at the
+                  // fallback and read NOWHERE. Item 479.
+                  const descText = opt.partial
+                    ? distinctRetailerCount === 1
+                      ? 'Best available price for each product'
+                      : `Best available price for each product, across ${distinctRetailerCount} retailers`
+                    : opt.type === 'single' || distinctRetailerCount === 1
                       ? 'Shop everything from one retailer'
                       : `Split across ${distinctRetailerCount} retailers for best price`;
 

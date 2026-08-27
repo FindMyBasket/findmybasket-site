@@ -36463,3 +36463,118 @@ means is set at call time by a caller who has no reason to know the difference.
 
 **Item 477's preflight is what makes that boolean unreachable.** Not a fix for the exclusion — a refusal
 to run the function that reads it.
+
+---
+
+### 479. The builder's browse list is the Stage-1 return set — third surface today, same three categories
+
+**Raised and applied:** 27 August 2026, Robbie on `/app` · **Three categories added, one list, fallback
+copy fixed, mobile grid measured. A, B and C together.**
+
+## ★ THE CENTRE: SKINCARE, MAKEUP, HAIR — AND THAT IS NOT A LIST OF CATEGORIES
+
+The routine builder offered **three** browse entry points, hand-written three times over:
+`RoutineBuilder.tsx:1058` (failed-preload state), `:1084` (empty-routine state), `:1193` ("Add more
+from"). **No query anywhere produced them** — three JSX literals.
+
+> **`skincare | makeup | hair` IS EXACTLY WHAT `inferCategorisation` CAN RETURN.** Not a list of the
+> categories that launched first: **the Stage-1 return set, appearing as a browse menu.**
+
+**THIRD SURFACE TODAY FROZEN AT THE 29 JUNE BOUNDARY, AND THE SAME THREE CATEGORIES EVERY TIME:**
+
+| item | surface | what it knows |
+|---|---|---|
+| **476** | `recategorise-products` — the repair path | skincare, makeup, hair |
+| **477** | `skincare-colour-backfill.mts` — the artefact generator | skincare, makeup, hair |
+| **479** | `/app` — the browse menu a visitor sees | skincare, makeup, hair |
+
+> **EVERY ONE OF THESE WAS BUILT AGAINST A CATALOGUE WITH THREE TOP CATEGORIES AND NONE OF THEM WAS
+> TOLD THE SHAPE CHANGED.** The go-live changed the importers and the category pages. It did not go
+> looking for everything that had quietly encoded "three".
+>
+> **A repair path, a backfill and a menu are not related to each other.** What relates them is the
+> date, and the only way to find the next one is to ask what else was written before 29 June.
+
+**22,543 live products — 22.3% of the catalogue — were unreachable from the builder.** Bath & body was
+missing too, which is what identifies the boundary: **three missing, not two.**
+
+#### ★ AND THE CONCENTRATION CORRECTION IS MINE
+
+I reported that fragrance at **11.5%** comparable and supplements at **3.4%** would mostly resolve to a
+single retailer, and offered that as the risk to check. **Comparability is not what decides that.**
+
+| category | comparable | **top two retailers cover** |
+|---|---:|---:|
+| **supplements** | 3.4% | Boots 71.9 + MyProtein 20.3 = **92.2%** |
+| **fragrance** | 11.5% | Perfume Click 52.3 + Escentual 20.2 = **72.5%** |
+| hair | 25.4% | 53.4% |
+| bath_body | 13.2% | 50.9% |
+| makeup | 12.9% | 48.1% |
+| **skincare** | 16.6% | YesStyle 24.1 + Boots 20.4 = **44.5%** |
+
+> **THE TWO CATEGORIES BEING ADDED ARE THE BEST FITS FOR A TWO-RETAILER OPTIMISER IN THE CATALOGUE, AND
+> SKINCARE — THE CATEGORY IT WAS WRITTEN FOR — IS THE WORST.**
+>
+> **Comparability decides whether a SAVING EXISTS. Concentration decides whether the BASKET RESOLVES.**
+> I conflated them, and the measurement inverts the conclusion I had drawn from them. **Fragrance at
+> 11.5% is also mid-pack — above makeup — so it is not the outlier I presented it as. Supplements is.**
+
+**The four copy branches (item 245) were checked and are category-neutral.** No skincare-specific
+wording exists anywhere in the builder's copy; nothing falls through.
+
+#### THE DEFECT THAT WAS THERE INSTEAD: `partial` SET AND READ NOWHERE
+
+`partial: true` is set at the fallback (`:718`) — the state where **no single retailer and no PAIR**
+covers the basket (the optimiser tops out at two, item 17) — and the only other mention in the file was
+a comment. **Two strings were wrong there, not one:**
+
+```
+card description
+  was   Split across 3 retailers for best price
+  now   Best available price for each product, across 3 retailers
+
+qualitative summary
+  was   One way to buy this basket, split across 3 retailers, delivery included.
+  now   The cheapest each product can be bought for, across 3 retailers — delivery not included.
+```
+
+> **The first claimed a basket-level optimisation that was SKIPPED** — the fallback takes each
+> product's cheapest price independently. **The second stated the opposite of `deliveryCost: 0`**: the
+> fallback never computes delivery, because there is no basket to compute it for.
+>
+> **This went first in the change, and the ordering is the argument:** adding the two categories that
+> most raise the fallback's frequency, while it misdescribes itself, would have made a known-wrong
+> string more visible.
+
+#### THE MOBILE GRID WAS MEASURED, NOT REASONED ABOUT
+
+The way the type-page row was (item 455). Four variants built at a **342px content width** — a 390px
+viewport less the page padding — with the `@media (max-width: 600px)` declarations applied:
+
+| variant | grid height | card width | labels wrapping |
+|---|---:|---:|---:|
+| 1 col, row cards *(was)* | **432px** | 342 | 0 |
+| 2 col, row cards | 256px | 160 | **6 of 6** |
+| **2 col, column cards *(is)*** | **290px** | 165 | **0** |
+| 3 col, column cards | 226px | 105 | 6 of 6 |
+
+**The single-column rule was written for three cards.** At six it runs 432px, and with the nav (94) +
+builder header (120) + empty-state copy (301) the grid starts at ~515px — **so cards 4, 5 and 6 land
+below the fold on a 390×844 phone, which is precisely fragrance, bath & body and supplements.** The
+categories being added would have been the ones you could not see.
+
+**Two columns keeps the DESKTOP card shape rather than the row shape**, because at 165px the row shape
+wraps every label and the column shape wraps none — including `Browse bath & body`, the longest.
+`.rb-browse-arrow` went with the row layout it belonged to.
+
+#### D NOTED AND LEFT
+
+`category: p.product_type` (`:358`) is never rendered to a visitor and is passed as `p_slot` to
+`fmb_track_product` on save (`:885`). **The residue names would land in it the moment a supplements
+product is saved** — `Supplements`, `Skincare`, `Tools & Accessories`. **Not touched:**
+`tracked_products` holds **four rows and every slot is null**, so the path has effectively never run
+and there is nothing to migrate. Recorded so the first non-null slot is not a surprise.
+
+**And one premise corrected:** `mouth` is **bath & body's** subcategory (71 rows, oral care), not
+supplements'. Supplements has `sports` (627) and `supplements` (1,834). The consideration attaches to
+the third missing category rather than the two named.
