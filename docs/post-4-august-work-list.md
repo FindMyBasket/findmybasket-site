@@ -34843,3 +34843,56 @@ gummies for creatine, fortified blends for plant protein.
 
 **The shared list is where the next class gets added once**, which is the property the three separate
 lists did not have and could not be given by correcting them.
+
+---
+
+### 457. Naming a residue after what it lacks describes the catalogue
+
+**Raised:** 27 August 2026 · **One label changed. The reasoning is the record, since the label it replaces was chosen deliberately two hours ago.**
+
+The whey page's third facet was **"Source not stated"**, chosen at item 455 to avoid calling those 33
+products *concentrate* — a word **zero products in the catalogue use.** That avoidance was correct and
+remains correct. **The label was still wrong, for a reason the first decision did not consider.**
+
+> **"Source not stated" describes our metadata. It does not describe the product.** It reports an
+> absence in what we hold, and it implies something is missing — when for most of the 33, nothing is.
+> A tub of whey that does not say "isolate" is not an incomplete record. It is whey.
+
+**On a page titled Whey Protein, a product that is not isolate and not clear whey is whey.** The new
+label claims nothing the old one avoided: it still does not say concentrate, because it does not name
+a process at all. It names the page's own subject.
+
+#### ★ THE DISTINCTION WORTH KEEPING
+
+> **Naming a residue after what it LACKS describes the catalogue. Naming it after what it IS describes
+> the product.** Both can be honest, and only one is useful to a shopper.
+
+**A shopper filtering to "Whey" knows what they will get. A shopper filtering to "Source not stated" is
+being told about our ingestion.** The first label was honest about the wrong subject — it answered
+"what do we know?" on a control whose question is "what am I buying?"
+
+**REVERSING A DELIBERATE CHOICE, AND WHY IT IS NOT DRIFT.** Item 455 recorded the reasoning for
+"Source not stated" explicitly, so changing it two hours later without stating the argument would read
+as a preference replacing a decision. **The original decision solved a real constraint and solved it
+correctly; it simply optimised against the only failure mode in view at the time** — asserting an
+unsupported claim — and did not weigh a second one, describing the catalogue instead of the product.
+**Both labels are honest. The change is between two honest labels, not from a wrong one to a right
+one.**
+
+#### DOES THE ARGUMENT TRANSFER? CHECKED, AND THERE IS NOTHING TO TRANSFER TO
+
+**Only the whey page renders facets.** Creatine and plant protein have none — `FACETS` appears four
+times in `whey-protein/page.tsx` and **zero times in the other two.**
+
+The comparable language on those pages is in **code comments, not user-facing labels**:
+
+- `creatine/page.tsx:25` — *"the unstated remainder is monohydrate by default"*
+- `plant-protein/page.tsx:43` — *"neither of which names its source"*
+
+**And the creatine page's rendered copy already does the right thing**: its intro reads *"Creatine
+monohydrate is the same substance whoever sells it"* — **naming the residue after what it is**, in the
+page's own first sentence, without ever having framed it as a labelling decision.
+
+> **The argument transfers and finds nothing to fix, which is worth recording rather than skipping.**
+> "Checked and there is nothing there" and "did not check" produce the same silence, and item 442 is
+> about exactly that pair.
