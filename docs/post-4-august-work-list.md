@@ -36578,3 +36578,122 @@ and there is nothing to migrate. Recorded so the first non-null slot is not a su
 **And one premise corrected:** `mouth` is **bath & body's** subcategory (71 rows, oral care), not
 supplements'. Supplements has `sports` (627) and `supplements` (1,834). The consideration attaches to
 the third missing category rather than the two named.
+
+---
+
+### 480. The 29 June sweep: five instances, one live defect, and the class closed rather than left on suspicion
+
+**Raised:** 27 August 2026, Robbie · **A DATE IS SEARCHABLE WHERE A SYMPTOM IS NOT. Reported, nothing
+fixed.**
+
+Three surfaces found today were unrelated except by date (items 476, 477, 479). **The signature they
+shared is grep-able in a way "assumes three categories" is not:** `skincare`, `makeup` and `hair` as a
+literal set, with no Stage-2 category anywhere in the file.
+
+#### THE SWEEP, AND ITS RESULT
+
+Every `.ts/.tsx/.mts/.sql/.css` file carrying all three tokens was listed and sorted by how many times
+it mentions `fragrance | bath_body | supplements`. **Twenty-eight files carry the triple. Five mention
+no Stage-2 category at all:**
+
+| file | last touched | what the triple is | reach |
+|---|---|---|---|
+| **`app/test/page.tsx`** | **7 May** | three category links | **a live route — `/test` returns 200, no `noindex`, not in the sitemap** |
+| `lib/edits.ts` | 11 June | comments calling `top_category` *"skincare/makeup/hair"* | a stale description, no behaviour |
+| `scripts/categorisation-backfill.mts` | 6 June | scope comments | dry-run, no writes |
+| `scripts/subcategory-backfill-preview.mts` | 19 June | scope comments | dry-run, no writes |
+| `20260701170000_skincare_colour_decontam_backfill.sql` | migration | the 1 July apply | historical, item 477 |
+
+**AND THE DATABASE IS CLEAN.** No function carries the triple; **no CHECK constraint restricts
+`top_category`** (the only match is a primary key on `category_savings`); no view mentions it. **The
+signature does not exist in the schema**, which is worth knowing rather than assuming.
+
+#### ★ THE ONE THE DATE SEARCH WOULD HAVE MISSED
+
+`supabase/functions/import-awin-feed/index.ts` is among the most-edited files in the repo and its
+mtime is recent — **but it carries a construct written before the boundary and never revisited:**
+
+```ts
+let createSkincare = 0, createMakeup = 0, createHair = 0;                  // :1893
+if (finalTopCategory === "skincare") createSkincare++;
+else if (finalTopCategory === "makeup") createMakeup++;
+else if (finalTopCategory === "hair") createHair++;                        // :2760  — NO else
+const v6TopCategoryBreakdown = { skincare: createSkincare, … };            // :2905
+```
+
+> **A THREE-BRANCH CHAIN WITH NO `else`.** A fragrance, bath & body or supplements create is counted
+> **nowhere** and falls off the end silently. The object always has exactly three keys, and they always
+> sum to less than the create total — **the omission is invisible in its own output.**
+
+**REACH, BOUNDED RATHER THAN ASSERTED:** `v6_top_category_breakdown` sits in the **HTTP response
+payload** — the run report an operator reads after invoking an import by hand. **It is not persisted:**
+recent `scrape_log.details` rows carry only `counts, duration_ms, excluded_total`. **So it misreports
+what a person sees, and corrupts no stored series.** It would be consulted precisely when checking
+whether a new category imported correctly.
+
+#### ★ AND THE SAME LITERAL IS CORRECT IN TWO OTHER FILES
+
+`import-rakuten-feed:245` and `import-shopify-feed:430` seed **the identical three keys**:
+
+```ts
+{ skincare: 0, makeup: 0, hair: 0 }
+```
+
+…and then increment with `(breakdown[cat.top_category] || 0) + 1`, **which creates a key for whatever
+arrives.** All six are counted. **The literal is a display default there, not a ceiling.**
+
+> **THREE FILES, ONE LITERAL, AND ONLY ONE OF THEM IS WRONG.** The signature is grep-able and **not
+> self-interpreting** — what makes AWIN's a defect is the `else if` chain twenty lines away, not the
+> object. **A search on the signature finds candidates; only reading decides.** Item 442's shape in a
+> new place: the instrument locates, it does not judge.
+
+**A SURFACE THAT WAS TOLD, FOR CONTRAST:** `send-routine-email/index.ts:404` carries the comment *"the
+catalogue is six categories"*. **Someone updated it.** Which is the answer to whether the go-live
+propagated at all — it propagated where a person happened to be working, and nowhere else.
+
+#### THE CLASS IS CLOSED
+
+**Five instances, one live reporting defect, one live-but-trivial route, three inert.** Nothing else in
+the repository or the schema carries the signature. **That closes the class rather than leaving it open
+on suspicion**, which is the point of searching a date instead of waiting for a symptom.
+
+**Nothing fixed.** The AWIN counter is the only one that needs a decision; the rest are comments, dry
+runs and a test page.
+
+---
+
+### 481. Two agreeing checks reading the same stale artefact is not two measurements
+
+**Raised:** 27 August 2026 · **Caught in the verification of item 479, one step before it would have
+been reported as fact.**
+
+After merging #499 I checked the deployed builder twice and both checks said the change had not shipped:
+
+```
+1st   /app          -> "Add more from skincare · makeup · hair"
+2nd   /app?v=2      -> "Add more from skincare · makeup · hair"
+```
+
+**The change HAD shipped.** The served client bundle already contained `bath-and-body`; the browser was
+running a JS chunk cached earlier in the session. Clearing the cache and reloading showed all six.
+
+> **★ A QUERY-STRING CHANGE DOES NOT TOUCH A SEPARATELY-CACHED JS CHUNK.** `?v=2` busts the cache for
+> the **document** and nothing else. The chunk has its own URL, its own cache entry and its own hash —
+> and the page it renders is the thing being examined. **The cache-buster was applied to the one
+> artefact whose staleness did not matter.**
+
+**THE CHECK LIED IN THE REASSURING DIRECTION**, which is the worse one: it reported *unchanged* while
+the platform had changed. **A false "nothing happened" is acted on** — I was one sentence from
+reporting the deploy incomplete and going to look for a failed build that did not exist.
+
+> **AND TWO CHECKS AGREED, WHICH IS WHAT MADE IT CONVINCING.** They agreed because **they read the same
+> stale artefact.** Repeating a measurement through the same cache is not repeating the measurement —
+> **it is asking the same cached answer twice and counting it as corroboration.**
+
+**WHAT ACTUALLY SETTLED IT WAS A DIFFERENT INSTRUMENT**: `curl` of the chunk URL, which shares no cache
+with the browser. **Independence is a property of the path, not of the number of attempts** — the same
+lesson as item 462's two detectors, where the second was the first computed in SQL, arriving here in a
+cache rather than a column.
+
+**Recorded because the next verification will look the same.** A deploy check that reads a page the
+browser has already loaded is not a deploy check.
