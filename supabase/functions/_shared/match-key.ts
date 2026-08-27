@@ -357,8 +357,52 @@ export function extractCanonicalSize(rawName: string): string | null {
   //
   // BOTH ORDERINGS. "20 x 9.4g" and "5g x 30" are the same pack written two ways;
   // the second appears in Cadence's carton names and was outside item 252's scope.
-  const PACK_FORWARD = /(\d+)\s*[x\u00d7]\s*(\d+(?:\.\d+)?)\s*(ml|l|g|kg)\b/i;   // N x Mg
-  const PACK_REVERSE = /(\d+(?:\.\d+)?)\s*(ml|l|g|kg)\s*[x\u00d7]\s*(\d+)\b/i;   // Mg x N
+  const PACK_FORWARD = /(\d+)\s*[x\u00d7]\s*(\d+(?:\.\d+)?)\s*(ml|l|g|kg)\b/i;   // "20 x 9.4g"
+
+  // "3.4g x 30", and CRITICALLY "3.4g x 30servings".
+  //
+  // THE ORIGINAL ENDED `[x]\s*(\d+)\b` AND THAT WAS A BUG. In "30servings" the digit
+  // and the letter are both word characters, so the word boundary `\b` asserts cannot
+  // exist between them -- the match failed and the row fell through to the last-token
+  // rule, storing the sachet size. "3.4g x 30" worked; "3.4g x 30servings" did not.
+  //
+  // The single harness case for this form was "Carton (5g x 30)", where the closing
+  // bracket supplies the boundary. THE TEST WAS WRITTEN FROM THE EXAMPLE THAT MOTIVATED
+  // THE PATTERN and inherited its assumption that a count is terminated by something
+  // non-word, so the test and the pattern shared one blind spot. Item 447.
+  //
+  // `(?!\d)` instead: stop at the end of the number, whatever follows it.
+  const PACK_REVERSE = /(\d+(?:\.\d+)?)\s*(ml|l|g|kg)\s*[x\u00d7*]\s*(\d+)(?!\d)/i;
+
+  // ── "SERVING" IS NOT A CONTAINER AND MUST NOT MULTIPLY ──────────────────────────
+  //
+  // A SACHET is a physical unit with a weight, so "3.9g - 15 Sachets" is 15 things of
+  // 3.9g and multiplies to 58.5g. A SERVING is a PORTION OF the pack, so
+  // "500g - 87servings" is one 500g tub divided 87 ways -- multiplying gives 43,500g,
+  // which is what the first draft of this produced. "2.5KG - 70servings" gave 175kg.
+  //
+  // Measured before writing (item 449): including `serving` in these noun lists moved
+  // 46 rows and 40 of them were catastrophically wrong, all MyProtein tubs whose names
+  // state their serving count. The separator form is therefore restricted to nouns that
+  // name a THING, and `serving` is deliberately absent.
+  //
+  // The "3.4g x 30servings" case does not need it: an explicit multiplication sign is
+  // already unambiguous, so PACK_REVERSE handles that row via (?!\d) above.
+  const PACK_NOUN = "sachet|stick|pod|pouch|tube|bottle|vial|ampoule|pack";
+
+  // "3.9g - 15 Sachets", "4.5g, 20 sachets"
+  const PACK_SIZE_THEN_COUNT =
+    new RegExp(`(\\d+(?:\\.\\d+)?)\\s*(ml|l|g|kg)\\s*[-,\\u2013]\\s*(\\d+)\\s*(?:x\\s*)?(?:${PACK_NOUN})`, "i");
+
+  // "7 Sachets, 2g"
+  //
+  // THE COUNT MUST NOT BE THE TAIL OF A WORD. Without the lookbehind, "B5 Ampoule 50ml"
+  // reads the 5 of the vitamin name B5 as a count and returns 250ml. Same class as the
+  // recipe book that ranked as a protein because `rice` is in its title (item 448): a
+  // pattern over names matches text, and text does not know what its numbers mean.
+  const PACK_COUNT_THEN_SIZE =
+    new RegExp(`(?<![A-Za-z0-9])(\\d+)\\s*(?:${PACK_NOUN})s?\\b[^0-9]{0,12}?(\\d+(?:\\.\\d+)?)\\s*(ml|l|g|kg)\\b`, "i");
+
   const fwd = s.match(PACK_FORWARD);
   if (fwd) {
     const total = Number(fwd[1]) * Number(fwd[2]);
@@ -368,6 +412,16 @@ export function extractCanonicalSize(rawName: string): string | null {
   if (rev) {
     const total = Number(rev[1]) * Number(rev[3]);
     if (Number.isFinite(total) && total > 0) return `${trimNum(total)}${rev[2].toLowerCase()}`;
+  }
+  const stc = s.match(PACK_SIZE_THEN_COUNT);
+  if (stc) {
+    const total = Number(stc[1]) * Number(stc[3]);
+    if (Number.isFinite(total) && total > 0) return `${trimNum(total)}${stc[2].toLowerCase()}`;
+  }
+  const cts = s.match(PACK_COUNT_THEN_SIZE);
+  if (cts) {
+    const total = Number(cts[1]) * Number(cts[2]);
+    if (Number.isFinite(total) && total > 0) return `${trimNum(total)}${cts[3].toLowerCase()}`;
   }
 
   const SIZE_REGEX =
