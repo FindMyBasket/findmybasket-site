@@ -36362,9 +36362,48 @@ the denylist excludes produces **no destination at all**. **The blind spot silen
 misrouting it** — which is the same mechanism that makes the fragrance half of item 475 safe from
 reverting, arriving in a third place today.
 
-#### NOT DEPLOYED, AND THE ROUTE IS THE ONE WORKFLOW
+#### DEPLOYED, AND VERIFIED FROM THE DEPLOYED SOURCE RATHER THAN THE MERGE STATE
 
-`deploy-edge-function.yml` deploys **from the repository** and its header is explicit: *"THIS IS THE
-ONLY ROUTE. DO NOT DEPLOY AN EDGE FUNCTION BY PASTING ITS CONTENT"* (items 217, 218). So the change
-must be committed and on the default branch first, then dispatched by hand. **Until that happens the
-refusal is written and not in force**, and the function in production will still run.
+**An undeployed refusal is a note about a hazard rather than a guard against it.** Merged as **#496**
+(`d24720a`) and dispatched through `deploy-edge-function.yml` — run **33073612344**, success. That
+workflow deploys **from the repository**; its header is explicit that it is the only route (items 217,
+218).
+
+**Verified by pulling the function back out of the platform, not by trusting the merge:**
+
+```
+get_edge_function(recategorise-products)  ->  21,991 bytes
+preflight present in the DEPLOYED source  ->  yes
+sha256(deployed) == sha256(repo file)     ->  IDENTICAL
+```
+
+#### ★ AND THE REFUSAL WAS SEEN TO REFUSE
+
+**A preflight that has never been seen to refuse is not known to be capable of it** — item 444's
+standard, and the reason this was not left at "the code is there".
+
+The preflight block was **extracted from the deployed source** (1,464 characters, verbatim) and
+executed against the **live database**:
+
+```
+HTTP 409
+{ "ok": false,
+  "error": "refusing_to_run_stage1_classifier",
+  "blocking": { "fragrance": 15039, "bath_body": 10516, "supplements": 2530 },
+  "rows_at_risk": 28085 }
+```
+
+**WHAT THIS PROVES AND WHAT IT DOES NOT, STATED RATHER THAN BLURRED.** It is the deployed code, on the
+live data, producing its refusal. **It is not an HTTP call to the deployed endpoint**, because
+`requireServiceRole` sits at line 99 — *before* the preflight — and compares the bearer token to
+`SUPABASE_SERVICE_ROLE_KEY`, which was not held and was not sought. **The one command that closes that
+last step needs the key and belongs to a human:**
+
+```
+curl -sS -X POST https://crtrjoescntlcjiwdtrt.supabase.co/functions/v1/recategorise-products \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+  -H "Content-Type: application/json" -d '{"dry_run":true}' -w '\n%{http_code}\n'
+```
+
+**Expected: 409 with the same body, on a `dry_run: true` request** — which is the second departure
+working, since the preview is refused too.
