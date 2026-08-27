@@ -36267,10 +36267,46 @@ vocabulary entries.**
 
 ---
 
-### 477. Not-runnable rather than runnable-with-a-guard
+### 477. A hand-applied file leaves no trace, except this one did
 
-**Raised and written:** 27 August 2026 · **Robbie's call. WRITTEN, NOT DEPLOYED — the change is in the
-working tree and the function in production is unchanged.**
+**Raised, written, deployed and verified:** 27 August 2026 · **Robbie's call. The refusal is in force.**
+
+## ★ THE CENTRE: THE TRACE EXISTED BECAUSE SOMEONE CARED ABOUT REVERSIBILITY
+
+`scripts/skincare-colour-backfill.mts` emits `.skincare-colour-backfill.gen.sql`, marked *"review
+before apply"*. **The file is gone** — gitignored at line 25, never committed, absent from the working
+tree. **A hand-applied SQL file is exactly the shape that leaves nothing behind.**
+
+**It left something behind.**
+
+| | |
+|---|---|
+| `fmb_skincare_colour_snapshot_20260701` | **1,856 rows, `snapshot_at` 1 July 2026** |
+| still moved today | **1,856 of 1,856** |
+| sibling, same day | `fmb_bathbody_phase1_snapshot_20260701`, 11 rows |
+
+> **THE DURABLE RECORD WAS A SIDE EFFECT OF CARING ABOUT REVERSIBILITY, NOT OF LOGGING.** The script
+> builds the snapshot **so the change can be undone** — *"A snapshot table of the current values is
+> created first so the change is reversible."* Nobody built it to answer "was this ever applied?", and
+> it is the only thing that can. **The artefact vanished; the evidence of its application did not.**
+
+**SAME SHAPE AS "THE CATALOGUE IS THE AUDIT TRAIL" (item 476), IN A DIFFERENT MECHANISM ON THE SAME
+DAY.** There, 11,895 surviving rows prove a deletion run never happened, because an absent log is
+equally consistent with *never ran* and *nobody logged it*. Here, a snapshot table proves an apply did
+happen. **Neither is a log. Both are load-bearing state that had to be right for another reason**, and
+that is why they can be trusted.
+
+**AND THE GAP IS STILL A GAP.** The `.sql` artefact has **nothing in front of it** — no preflight, no
+dry-run default, no service-role gate. **A script that cannot write can still produce a write**, and
+the refusal added below does not reach it and cannot be made to.
+
+**The blind spot did not fire in that run** — all 1,856 transitions are `skincare → makeup`, zero carry
+a fragrance or home-fragrance token, and none of item 471's 59 rows are in the snapshot. **Why it did
+not is item 478.**
+
+---
+
+## THE CHANGE: NOT-RUNNABLE RATHER THAN RUNNABLE-WITH-A-GUARD
 
 **The classifier is not being fixed today.** `recategorise-products` refuses to run instead.
 
@@ -36334,33 +36370,9 @@ comments about a function they no longer call.**
 > into a file with **nothing in front of it** — no preflight, no dry-run default, no service-role gate.
 > The refusal added to `recategorise-products` does not reach it and cannot be made to.
 
-**HAS IT EVER BEEN GENERATED, AND WAS ANY OF IT APPLIED? YES TO BOTH — AND THE TRACE EXISTS.**
-
-| | |
-|---|---|
-| the `.gen.sql` file | **absent from the working tree and never committed** — `.gitignore` line 25 |
-| `fmb_skincare_colour_snapshot_20260701` | **EXISTS. 1,856 rows, `snapshot_at` 1 July 2026** |
-| still moved today | **1,856 of 1,856** — the change stands |
-| a sibling from the same day | `fmb_bathbody_phase1_snapshot_20260701`, **11 rows** |
-
-**So it ran, and it was applied, two days after the fragrance go-live.**
-
-> **AND THE PREMISE THAT A HAND-APPLIED FILE LEAVES NO TRACE IS WRONG HERE, FOR A REASON WORTH
-> KEEPING.** The script creates a snapshot table **so the change is reversible**, and that design — made
-> for a different purpose — is what makes a hand-applied file auditable months later. **The artefact
-> vanished; the evidence of its application did not.** Same shape as "the catalogue is the audit trail"
-> in item 476: the durable record is a side effect of caring about reversibility, not of logging.
-
-**AND THE BLIND SPOT DID NOT FIRE IN THAT RUN — CHECKED RATHER THAN ASSUMED.** All 1,856 transitions are
-`skincare → makeup` (`skincare/Skincare → makeup/Lip Colour` 638, `skincare/SPF → makeup/Foundation`
-280, …). **Zero carry a fragrance or home-fragrance token**, and **none of item 471's 59 EDP/EDT rows
-are in the snapshot** — so the retailer-default explanation there stands unchallenged by this.
-
-**The reason it did no harm is structural rather than lucky:** the script's input is
-`top_category = 'skincare'` rows and it acts on the **delta** between two classifier versions, so a row
-the denylist excludes produces **no destination at all**. **The blind spot silenced it rather than
-misrouting it** — which is the same mechanism that makes the fragrance half of item 475 safe from
-reverting, arriving in a third place today.
+**It ran, and it was applied, two days after the fragrance go-live** — the detail is at the top of this
+item, and **why it did no harm is item 478.** All 1,856 transitions are `skincare → makeup`
+(`skincare/Skincare → makeup/Lip Colour` 638, `skincare/SPF → makeup/Foundation` 280, …).
 
 #### DEPLOYED, AND VERIFIED FROM THE DEPLOYED SOURCE RATHER THAN THE MERGE STATE
 
@@ -36406,4 +36418,48 @@ curl -sS -X POST https://crtrjoescntlcjiwdtrt.supabase.co/functions/v1/recategor
 ```
 
 **Expected: 409 with the same body, on a `dry_run: true` request** — which is the second departure
-working, since the preview is refused too.
+working, since the preview is refused too. **Robbie is running it**; the step is with a human because
+the key is, and that is the correct place for it.
+
+---
+
+### 478. A wrong exclusion protects the rows it is wrong about, until a flag turns protection into deletion
+
+**Raised:** 27 August 2026 · **Three instances in one day, in three mechanisms. Recorded together
+because the shape is only visible across all three.**
+
+**A row the denylist excludes produces NO DESTINATION.** The classifier does not answer "what is this?"
+with a wrong answer — it answers "not ours" and stops. **So every path that acts on the classifier's
+output has nothing to act on, and the row is left exactly where it is.**
+
+> **AN EXCLUSION THAT IS WRONG ABOUT SCOPE PROTECTS THE ROWS IT IS WRONG ABOUT.** The `fragrance` entry
+> has been wrong since 29 June (item 476) and its wrongness is the only reason 11,895 fragrance rows
+> are still correctly filed. **The defect is the guard.**
+
+#### THE THREE, AND EACH WAS FOUND LOOKING FOR SOMETHING ELSE
+
+| | mechanism | what the exclusion did |
+|---|---|---|
+| **item 475** | `recategorise-products` re-tagging | **203 `Perfume Oils & Mists` rows are SAFE FROM REVERTING** — `if (cat.excluded) { continue; }`, never re-tagged. The half of one write the classifier has an opinion about is the half at risk |
+| **item 476** | the same function's delete path | **11,895 fragrance rows QUEUED RATHER THAN MOVED** — they cannot be re-tagged into skincare, so they sit in an exclusion bucket instead |
+| **item 477** | `skincare-colour-backfill.mts` emitting SQL | **1,856 rows moved and NOT ONE OF THEM A FRAGRANCE** — the script acts on the delta between two classifier versions, and an excluded row contributes no delta |
+
+**THE SAME PROPERTY IS PROTECTIVE IN TWO AND LETHAL IN THE THIRD, AND THE DIFFERENCE IS ONE BOOLEAN.**
+`delete_excluded` turns "left alone" into "queued for deletion". **Nothing about the exclusion changes
+between those two runs** — the rows are identically unclassifiable either way, and the flag decides
+whether that means *skip* or *delete*.
+
+> **THE MOST DANGEROUS STATE IS THE ONE THAT LOOKS LIKE SAFETY.** For 59 days the wrong denylist entry
+> has been silently doing the right thing three separate ways, which is precisely why nobody found it:
+> **a defect that protects leaves no symptom.** It surfaced today only because someone asked what a
+> chip contained.
+
+#### AND IT IS WHY "NEVER FIRED" IS NOT REASSURING HERE
+
+Item 476 establishes the run has never happened, and the evidence is the surviving rows. **But the
+mechanism that makes them survivable is the same one that makes them deletable** — they are in the
+exclusion bucket either way. **The rows are not safe; they are unprocessed**, and which of those it
+means is set at call time by a caller who has no reason to know the difference.
+
+**Item 477's preflight is what makes that boolean unreachable.** Not a fix for the exclusion — a refusal
+to run the function that reads it.
