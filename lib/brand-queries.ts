@@ -639,3 +639,116 @@ export async function getBrandIndex(): Promise<BrandIndexEntry[]> {
     .map(([slug, v]) => ({ slug, name: v.name, count: v.count, merged: v.members > 1 }))
     .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 }
+
+export interface PerUnitProduct {
+  id: number;
+  name: string;
+  brand: string | null;
+  brand_slug: string | null;
+  image_url: string | null;
+  price: number;
+  grams: number | null;
+  per100g: number | null;
+  retailer_count: number;
+  /** Excluded from the ranking by the sanity bound, with the reason. */
+  excluded?: string;
+}
+
+/**
+ * Products of one supplement type, ranked by price per 100g.
+ *
+ * WHY A SANITY BOUND RATHER THAN A DQ-STATUS FILTER (item 441). `canonical_size` is
+ * now correct for multipacks (item 439), but item 437 records the DQ metric MASKING
+ * defects rather than reporting them: `Zooki Creatine+ Sachets` stores 6.78g against a
+ * £39.99 pack price and scores `agrees`, because its name carries no pack count so the
+ * checker structurally cannot see the error. It renders at £589.82/100g.
+ *
+ * So the page cannot trust `agrees`. It carries its own bound, and the bound is a
+ * RATIO AGAINST THE TYPE'S OWN MEDIAN rather than an absolute ceiling: an absolute
+ * limit goes stale as prices move and needs a number chosen per type, where a ratio
+ * adapts and produces a readable list of what it caught.
+ *
+ * EXCLUDED ROWS ARE RETURNED, NOT DROPPED. They render unranked with a note. A page
+ * that silently omits what it cannot price is incomplete in a way the visitor cannot
+ * see -- the argument that rejected a product threshold on the brand index (item 423).
+ */
+export async function getTypeByUnitPrice(
+  namePattern: string,
+  opts: { medianRatioBound?: number } = {},
+): Promise<{ ranked: PerUnitProduct[]; unranked: PerUnitProduct[]; median: number | null; bound: number | null }> {
+  const RATIO = opts.medianRatioBound ?? 10;
+
+  const { data } = await supabase
+    .from('products_active')
+    .select('id, name, brand, normalised_brand, canonical_size, image_url')
+    .eq('top_category', 'supplements')
+    .not('image_url', 'is', null)
+    .neq('image_url', '')
+    .not('tags', 'cs', '{cleanup_remove}')
+    .ilike('name', `%${namePattern}%`)
+    .order('id');
+
+  const rows = (data ?? []) as {
+    id: number; name: string; brand: string | null; normalised_brand: string | null;
+    canonical_size: string | null; image_url: string | null;
+  }[];
+  if (rows.length === 0) return { ranked: [], unranked: [], median: null, bound: null };
+
+  const activeRetailerIds = await getActiveRetailerIds();
+  const { data: prices } = await supabase
+    .from('retailer_prices')
+    .select('product_id, retailer_id, price, in_stock')
+    .in('product_id', rows.map(r => r.id))
+    .in('retailer_id', [...activeRetailerIds])
+    .eq('in_stock', true);
+
+  const byProduct = new Map<number, { retailer_id: number; price: number }[]>();
+  for (const p of prices ?? []) {
+    if (!p.product_id || !p.price) continue;
+    const arr = byProduct.get(p.product_id) ?? [];
+    arr.push({ retailer_id: p.retailer_id, price: Number(p.price) });
+    byProduct.set(p.product_id, arr);
+  }
+
+  const grams = (cs: string | null): number | null => {
+    if (!cs) return null;
+    const m = cs.match(/^([0-9.]+)(g|kg)$/i);
+    if (!m) return null;
+    const v = Number(m[1]);
+    return m[2].toLowerCase() === 'kg' ? v * 1000 : v;
+  };
+
+  const all: PerUnitProduct[] = [];
+  for (const r of rows) {
+    const pr = byProduct.get(r.id);
+    if (!pr || pr.length === 0) continue;
+    const price = Math.min(...pr.map(x => x.price));
+    const g = grams(r.canonical_size);
+    all.push({
+      id: r.id, name: r.name, brand: r.brand,
+      brand_slug: r.normalised_brand ? brandSlug(r.normalised_brand) : null,
+      image_url: r.image_url, price, grams: g,
+      per100g: g && g > 0 ? (price / g) * 100 : null,
+      retailer_count: new Set(pr.map(x => x.retailer_id)).size,
+    });
+  }
+
+  const priced = all.filter(p => p.per100g !== null);
+  if (priced.length === 0) return { ranked: [], unranked: all, median: null, bound: null };
+  const sorted = [...priced].map(p => p.per100g as number).sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  const bound = median * RATIO;
+
+  const ranked: PerUnitProduct[] = [];
+  const unranked: PerUnitProduct[] = [];
+  for (const p of all) {
+    if (p.per100g === null) { unranked.push({ ...p, excluded: 'no pack size on this listing' }); continue; }
+    if (p.per100g > bound) {
+      unranked.push({ ...p, excluded: `priced at £${p.per100g.toFixed(2)}/100g, over ${RATIO}x the £${median.toFixed(2)} median for this type — likely a pack-size error, so it is not ranked` });
+      continue;
+    }
+    ranked.push(p);
+  }
+  ranked.sort((a, b) => (a.per100g as number) - (b.per100g as number));
+  return { ranked, unranked, median, bound };
+}

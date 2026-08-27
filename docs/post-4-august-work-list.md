@@ -33789,3 +33789,86 @@ else.
 
 **Still unmerged.** The comment in `extractCanonicalSize` stays uncited until it ships — the citation
 check refused a forward reference to this item while it did not yet exist, which is the check working.
+
+---
+
+### 440. The second backfill, scoped by output rather than by status
+
+**Raised:** 27 August 2026 · **APPLIED. 689 rows. `multipack_unit_not_pack` 192 → 0.**
+
+**Item 252's backfill was scoped by DQ status, and a status-scoped re-run would have missed the
+reversed form.** `Cadence Sachets Core Orange - Carton (5g x 30)` scores **`agrees`**, not
+`multipack_unit_not_pack`, because the checker was only ever taught `N x M`. Scoping the second
+backfill the same way would have repeated the first one's blind spot exactly.
+
+**Scoped instead by what the new function returns**, and narrowed twice:
+
+| Scope | Rows | |
+|---|---|---|
+| stored value ≠ new function | 1,500 | **too wide** |
+| ...and this change moves it (old fn ≠ new fn) | 689 | **applied** |
+
+> **The 1,500 included ~143 rows of older drift** — `La Roche-Posay Cicaplast Lips 7.5ml` stored as
+> `5ml`, wrong for reasons predating multipacks. Real, and **outside what item 439 measured.** Writing
+> them under evidence gathered for a different population is the item 423 mistake, so the backfill was
+> cut to exactly the measured set.
+
+**Product 105424 excluded by id**, per item 376, and confirmed absent from the write set rather than
+assumed.
+
+**Result, DQ metric:**
+
+| Status | Before | After |
+|---|---|---|
+| `multipack_unit_not_pack` | 192 | **0** *(bucket empty)* |
+| `multipack_format` *(correctly sized)* | 665 | **1,021** |
+| `agrees` | 63,720 | 64,195 |
+
+**And unlike item 252's, this one is not expected to regenerate**: the writer was fixed first
+(item 439), so the column and the function that fills it now agree.
+
+---
+
+### 441. The whey page, and a bound that catches nothing here on purpose
+
+**Raised:** 27 August 2026 · **`/compare/whey-protein`. 67 products, 7 brands, £1.40–£8.90 per 100g.**
+
+Protein is sold in tubs of different sizes, so the shelf price says little about value. The page ranks
+by **price per 100g** — the arithmetic the column was unsafe for until item 439.
+
+**Whey qualifies as a type page because it is fungible and labelled.** 100g of whey is 100g of whey
+whoever sells it, and where a protein is not whey the name says so — 81 whey against 30 plant.
+**Collagen deliberately has no page**: 144 of 190 rows state no source, zero say bovine, and ranking
+marine against unspecified would compare on price alone.
+
+**THE BOUND IS A RATIO AGAINST THE TYPE'S OWN MEDIAN, NOT AN ABSOLUTE CEILING.** The page cannot trust
+`agrees` — item 437 records `Zooki Creatine+ Sachets` scoring `agrees` at **£589.82/100g** because its
+name carries no pack count and the checker structurally cannot see the error. An absolute limit goes
+stale as prices move and needs a number per type; a ratio adapts and produces a readable list of what
+it caught.
+
+**Verified in SQL — the arithmetic, not the code path:**
+
+| Type | Priced | Median | Bound (10×) | Excluded |
+|---|---|---|---|---|
+| **whey** | 67 | £5.20 | £52.00 | **0** |
+| creatine | 44 | £6.76 | £67.62 | **1 — Zooki at £590** |
+| collagen | 76 | £15.51 | £155.07 | 5 |
+
+> **On whey the bound excludes nothing, and that is worth stating rather than presenting as a clean
+> result.** Whey's dearest ranked row is £8.90 against a £5.20 median — 1.7×, nowhere near 10×. **A
+> bound that never fires is untested in the place it ships**, and its first real exercise will be
+> whenever a bad row appears. It is verified on creatine, where Zooki is caught at 90× the median, and
+> on collagen where five sachet rows are.
+>
+> **The code path could not be exercised from a script** — `getActiveRetailerIds` uses React's `cache`,
+> which throws outside a server context. So the rule is verified and the branch is not.
+
+**EXCLUDED ROWS RENDER, THEY ARE NOT DROPPED.** Each carries its own reason — *"over 10× the median for
+this type, likely a pack-size error"* or *"no pack size on this listing"*. A page that silently omits
+what it cannot price is incomplete in a way the visitor cannot see, which is the argument that
+rejected a product threshold on the brand index.
+
+**Creatine has no page yet** — its data is now clean but the page was scoped to whey. **The parser and
+dose work is unchanged and still blocked**: 47% of vitamins and minerals carry a count, 53% do not, and
+per-capsule price without dose ranks 100 tablets of 300mcg above 50 of 5000mcg.
