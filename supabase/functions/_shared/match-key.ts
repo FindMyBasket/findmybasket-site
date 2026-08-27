@@ -357,7 +357,10 @@ export function extractCanonicalSize(rawName: string): string | null {
   //
   // BOTH ORDERINGS. "20 x 9.4g" and "5g x 30" are the same pack written two ways;
   // the second appears in Cadence's carton names and was outside item 252's scope.
-  const PACK_FORWARD = /(\d+)\s*[x\u00d7]\s*(\d+(?:\.\d+)?)\s*(ml|l|g|kg)\b/i;   // "20 x 9.4g"
+  // Comma decimals are accepted here too: "8 x 1,5ml" is a 12ml discovery set, and a
+  // half-applied comma fix that corrects the plain form and not the multiplied one
+  // would store 1.5ml for it -- the sachet defect wearing a decimal. Item 450.
+  const PACK_FORWARD = /(\d+)\s*[x\u00d7*]\s*(\d+(?:[.,]\d+)?)\s*(ml|l|g|kg)\b/i;   // "20 x 9.4g"
 
   // "3.4g x 30", and CRITICALLY "3.4g x 30servings".
   //
@@ -372,7 +375,7 @@ export function extractCanonicalSize(rawName: string): string | null {
   // non-word, so the test and the pattern shared one blind spot. Item 447.
   //
   // `(?!\d)` instead: stop at the end of the number, whatever follows it.
-  const PACK_REVERSE = /(\d+(?:\.\d+)?)\s*(ml|l|g|kg)\s*[x\u00d7*]\s*(\d+)(?!\d)/i;
+  const PACK_REVERSE = /(\d+(?:[.,]\d+)?)\s*(ml|l|g|kg)\s*[x\u00d7*]\s*(\d+)(?!\d)/i;
 
   // ── "SERVING" IS NOT A CONTAINER AND MUST NOT MULTIPLY ──────────────────────────
   //
@@ -403,14 +406,15 @@ export function extractCanonicalSize(rawName: string): string | null {
   const PACK_COUNT_THEN_SIZE =
     new RegExp(`(?<![A-Za-z0-9])(\\d+)\\s*(?:${PACK_NOUN})s?\\b[^0-9]{0,12}?(\\d+(?:\\.\\d+)?)\\s*(ml|l|g|kg)\\b`, "i");
 
+  const num = (v: string) => Number(v.replace(",", "."));
   const fwd = s.match(PACK_FORWARD);
   if (fwd) {
-    const total = Number(fwd[1]) * Number(fwd[2]);
+    const total = num(fwd[1]) * num(fwd[2]);
     if (Number.isFinite(total) && total > 0) return `${trimNum(total)}${fwd[3].toLowerCase()}`;
   }
   const rev = s.match(PACK_REVERSE);
   if (rev) {
-    const total = Number(rev[1]) * Number(rev[3]);
+    const total = num(rev[1]) * num(rev[3]);
     if (Number.isFinite(total) && total > 0) return `${trimNum(total)}${rev[2].toLowerCase()}`;
   }
   const stc = s.match(PACK_SIZE_THEN_COUNT);
@@ -424,12 +428,46 @@ export function extractCanonicalSize(rawName: string): string | null {
     if (Number.isFinite(total) && total > 0) return `${trimNum(total)}${cts[3].toLowerCase()}`;
   }
 
+  // ── A COMMA IS A DECIMAL POINT, EXCEPT WHEN IT IS A THOUSANDS SEPARATOR ─────────
+  //
+  // European feeds write "32,5ml". The old pattern allowed only a full stop, so it
+  // matched the "5ml" inside it and the trailing "325ml" won as the last token:
+  //   Catrice Soft Glam Foam Primer ... 32,5ml, 325ml   stored 325ml, true 32.5ml
+  // Every instance is a 10x error.
+  //
+  // THE GUARD MATTERS MORE THAN THE FIX. "1,000ml" is one thousand millilitres, and
+  // reading its comma as a decimal gives 1ml -- a 1000x error introduced by fixing a
+  // 10x one. A thousands group is always exactly three digits, so: comma-as-decimal
+  // only when ONE OR TWO digits follow and no digit follows those.
+  //
+  // The `(?<!\w)` at the front is untouched and load-bearing: it is what makes
+  // "Spf15200 ml" and "Mask200 ml" resolve correctly today. A change to this regex is
+  // most likely to break the guard that already works, so the harness controls are the
+  // cases that currently PASS. Item 450.
   const SIZE_REGEX =
-    /(?<!\w)(\d+(?:\.\d+)?)\s*(ml|l|litres?|liters?|g|kg|oz|fl\.?\s*oz)\b/gi;
+    /(?<!\w)((?:\d{1,3}(?:,\d{3})+|\d+)(?:[.,]\d+)?)\s*(ml|l|litres?|liters?|g|kg|oz|fl\.?\s*oz)\b/gi;
   const matches = [...s.matchAll(SIZE_REGEX)];
   if (matches.length === 0) return null;
+  // Normalise a captured number: a comma group of exactly three digits is a thousands
+  // separator and is stripped; any other comma is a decimal point.
+  const normNum = (raw: string): string =>
+    /^\d{1,3}(?:,\d{3})+$/.test(raw) ? raw.replace(/,/g, "") : raw.replace(",", ".");
+
+  // THE MANGLED TWIN. These feeds write the size twice -- once correctly and once with
+  // the comma stripped: "32,5ml, 325ml" is one 32.5ml primer, not a 32.5ml and a 325ml.
+  // The last-token rule would take the mangled one, so a comma reading is preferred
+  // over a later token that is exactly its comma-stripped duplicate. Item 450.
+  const commaMatch = matches.find((m) => /^\d+,\d{1,2}$/.test(m[1]));
+  if (commaMatch) {
+    const stripped = commaMatch[1].replace(",", "");
+    if (matches.some((m) => m !== commaMatch && m[1] === stripped)) {
+      const u = commaMatch[2].toLowerCase().replace(/\s+/g, "").replace("floz", "fl oz");
+      return `${normNum(commaMatch[1])}${["litre","litres","liter","liters"].includes(u) ? "l" : u}`;
+    }
+  }
+
   const last = matches[matches.length - 1];
-  const value = last[1];
+  const value = normNum(last[1]);
   let unitRaw = last[2].toLowerCase().replace(/\s+/g, "").replace("floz", "fl oz");
   if (unitRaw === "litre" || unitRaw === "litres" || unitRaw === "liter" || unitRaw === "liters") {
     unitRaw = "l";

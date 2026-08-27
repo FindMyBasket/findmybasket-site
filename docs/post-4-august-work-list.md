@@ -34367,3 +34367,137 @@ agree.
 
 **ELECTROLYTES IMPROVED AND IS STILL NOT A PAGE: 221.5× → 62.4×**, median £31.67 → £18.50. Better and
 not finished. **Reported rather than built on**, which is where item 446 left it and where it stays.
+
+---
+
+### 450. 74 was an overcount by twenty-five, 3 an undercount by twenty-six
+
+**Raised:** 27 August 2026 · **APPLIED. 79 rows. 77/77 harness, parity 0.**
+
+**THE INVERSION.** I proposed a tokeniser fix for 74 rows and called it a floor. **71 were phantom.**
+`extractCanonicalSize` already carries `(?<!\w)`, verified against the exact names:
+
+```
+Piz Buin ... Spf15200 ml, 200ml       -> 200ml   correct
+Lee Stafford ... Mask200 ml, 250ml    -> 250ml   correct
+No7 L&l ... Foundation 30Ml Honey     -> 30ml    correct
+```
+
+> **`Mask200 ml` — the case my detector missed, and which was offered as evidence that 74 was a floor —
+> is handled correctly in production. The example offered as proof of undercounting was proof of the
+> opposite.**
+
+I wrote a tokeniser by hand, ran it over the catalogue, and **reported its failures as the
+catalogue's.** Item 442's class in a fourth form, and the first where the instrument was written for
+the measurement rather than reused from it.
+
+**THE SEQUENCE IS THE FINDING, AND BOTH ERRORS WERE CONFIDENT:**
+
+| Estimate | Actual | |
+|---|---|---|
+| 74, called a floor | **3 real** | overcount by 25 |
+| 3, from reading the real ones | **79** | undercount by 26 |
+
+**Every estimate in this thread has been wrong in a direction nobody predicted, and only the computed
+write has been right.** Not one of the three numbers came from computing the proposed value for every
+row; the one that did was correct.
+
+**WHAT IT ACTUALLY MOVES: 79 rows, all European decimal commas**, each losing everything before the
+comma:
+
+```
+Catrice Hyper Liner Eyeliner Waterproof 0,52ml    stored 52ml   -> 0.52ml   a 100x error
+Essence 8H Matte Comfort Lipliner 0,3G            stored 3g     -> 0.3g
+Korres Natural colour Multi-stick Balm 4,5g       stored 5g     -> 4.5g
+```
+
+**52ml for an eyeliner brush.** The true size is 0.52ml, and it was stored that way because the pattern
+matched only the fragment after the comma.
+
+**TWO CATCHES, AND THEY ARE THE ARGUMENT FOR MEASURING RATHER THAN CLAIMING.**
+
+**1. `1,000ml` produced `000ml`.** My first pattern matched the wrong part and stranded the leading
+digit. **The thousands guard caught a defect created by the fix for the defect it guards against** — a
+1000× error introduced while removing a 10× one. Comma-as-decimal now applies only when one or two
+digits follow with no digit after; a three-digit group is a thousands separator and is stripped whole.
+
+**2. THE FIX WAS HALF-APPLIED, AND THAT IS THE MORE SERIOUS ONE.** The multiplier patterns did not
+accept comma decimals, so `Maison Crivelli Discovery Set - 8 x 1,5ml` returned **1.5ml for a 12ml set**.
+
+> **The sachet defect in a new disguise, produced by the fix written to remove it — and it would have
+> passed a harness that tested only the plain form.** A partial comma fix is worse than none: it
+> corrects the visible half and leaves the half that now *looks* correct, because 1.5ml is a plausible
+> size in a way that 5ml-from-`1,5ml` never was.
+
+**Completing it was right and it is recorded as ADDED SCOPE**, not folded into the original.
+
+**Controls in the harness are the cases that currently pass** — `Spf15200 ml`, `Mask200 ml`, `No7 L`,
+`1,000ml` — because a change to `SIZE_REGEX` is likeliest to break the guard that already works.
+
+**Applied:** 79 rows, computed and inspected first, scoped by output, 105424 confirmed absent. All
+three importers redeployed.
+
+---
+
+### 451. The stated-multiplier test does not survive either, and the distinction is worth 9 rows
+
+**Raised:** 27 August 2026 · **Re-sized on a clean tokeniser. Proposal at the end.**
+
+**With the tokeniser fixed, 1,854 products carry two or more distinct sizes.** The arithmetic test —
+"the numbers divide" — was already rejected: `Versace Dylan Turquoise EDT 10ml, 100ml` satisfies it by
+coincidence, and 78 of the 103 it caught were fragrance, where 10/100 pairs make the coincidence
+routine.
+
+**The stated-multiplier test — a count, a multiplication sign, a unit size, in that order — caught 75.
+It is also wrong**, because a bundle can *contain* a multipack:
+
+```
+Filorga Meso Mask Gift Set 2 x 50ml Meso Mask + 23g Hydra Filler
+Givenchy Miniatures Gift Set 2 x 10ml + 2 x 8ml EDP
+LANEIGE Neo Cushion 15g*2 ... Blurring Finish Powder 7g
+```
+
+**Each states arithmetic for part of itself.** Requiring the multiplier to be *stated* is not enough;
+it must **account for every distinct size in the name.**
+
+**Refined — one multiplier, count ≥ 2, operand and product covering all sizes — the population is 11.
+And 2 of the 11 are still wrong:**
+
+```
+Cacharel Anaïs Anaïs Gift Set 100ml EDT + 2 x 50ml Body Lotion
+```
+
+2 × 50 = 100, which is exactly the EDT's size. **The Versace coincidence again, one refinement later.**
+
+> **Every purely syntactic test on names has a coincidence rate, because the arithmetic of a multipack
+> and the arithmetic of a coincidence are the same arithmetic.** Each refinement shrinks the false
+> positives and none removes them, and there is no version of this rule that reads intent.
+
+**THE PROPOSAL, AND IT IS THAT THE DISTINCTION IS NOT WORTH MAKING.**
+
+| | Rows |
+|---|---|
+| Multi-size products | **1,854** |
+| Genuine bundles, no single size correct | **1,843** |
+| Stated multiplier accounting for everything | 11 |
+| ...of which actually correct | **9** |
+
+**Null `canonical_size` for all 1,854, and accept losing 9 correct values.** Building the refinement
+buys 9 rows out of 1,854 — 0.5% — at the cost of a rule with a known coincidence rate that will misfire
+silently on names nobody has seen. **A rule that is wrong 2 times in 11 to save 9 rows is a worse
+instrument than no rule.**
+
+**Downstream, checked rather than assumed:** `displaySizeChip` returns null for a null and renders
+nothing; the per-unit type pages list the row unranked with *"no pack size on this listing"*; the
+`/compare` index takes its ranges from ranked rows only; `idx_products_match` indexes nulls and
+**nothing filters or joins on the column** — it is read-only everywhere. Tier 4 does not read it
+(item 252), so matching is untouched.
+
+**Not applied.** This is a decision about when a product has a size, and it deletes 1,854 stored values.
+
+---
+
+**THE TWO EMPTY BUCKETS, TOGETHER.** Item 439 moved 1,357 rows and item 449 moved 467. **Neither
+measurement was designed to test the other, and in both, zero rows moved a correct value to a wrong
+one.** That is a stronger claim about `extractCanonicalSize` than either alone: one empty bucket is a
+property of a change, two independent empty buckets are a property of the function.
