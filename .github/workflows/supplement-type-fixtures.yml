@@ -1,0 +1,96 @@
+name: supplement type fixtures
+
+# THE BROWSE TYPE FOR SUPPLEMENTS IS DERIVED IN SQL, SO lib/__tests__ CANNOT REACH IT.
+#
+# fmb_supplement_type(name, brand) sits inside the products_active view. It was put
+# there rather than written into products.product_type because categorisation in the
+# importer is creates-only (items 105, 125): a backfill would be durable for the rows
+# it touched, and every new row would arrive NULL. Measured 27 Aug 2026, 533 of 2,461
+# live supplements rows were under 7 days old, so a written column would have been
+# roughly a fifth of the page stale within a week -- and the durable version puts the
+# rule in Deno AND in SQL with nothing forcing them to agree, which is the match-key
+# twin shape this codebase keeps paying for.
+#
+# The cost of choosing the view was that the rule leaves the TypeScript test suite.
+# This is the replacement, not an apology for the absence of one.
+#
+# ── IT RUNS ON PULL REQUESTS, LIKE worklist-integrity ───────────────────────────
+#
+# The rule is a vocabulary that will be edited as the catalogue grows, and a
+# vocabulary edit is exactly what silently re-files rows that were already right.
+# 233 of 2,461 rows match more than one pattern, so the ordering decides a tenth of
+# the page; the fixtures are those rows, frozen.
+#
+# ── AND IT FAILS WHEN IT CANNOT LOOK ───────────────────────────────────────────
+#
+# An empty failure list means "all passed" OR "nothing was read". gone-ids-drift spent
+# two runs green printing "No drift" from empty variables (item 255). The script reads
+# the fixture COUNT first and exits 2 -- cannot_run, item 194's contract -- if it is
+# below the floor, distinct from exit 1, which means it looked and found disagreements.
+#
+# VERIFIED ABLE TO FAIL. A canary fixture with a deliberately wrong expected value was
+# inserted, reported as a disagreement, and removed. A check that has only ever passed
+# is not yet known to be capable of failing.
+
+"on":
+  pull_request:
+    paths:
+      - 'scripts/check-supplement-types.mts'
+      - '.github/workflows/supplement-type-fixtures.yml'
+      - 'lib/subcategory-queries.ts'
+      - 'app/supplements/**'
+  workflow_dispatch:
+    inputs:
+      note:
+        description: 'Why you are running it (appears in the run summary)'
+        required: false
+        default: 'manual fixture check'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  fixtures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      # NODE 22, NOT 20. @supabase/supabase-js constructs a RealtimeClient at
+      # createClient() and needs a global WebSocket, which Node 20 does not provide.
+      # Same reason match-key-parity pins 22.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+
+      # PREFLIGHT. A rename must break this loudly rather than produce a green run
+      # over nothing. Item 255.
+      - name: Preflight -- can this check actually look?
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f scripts/check-supplement-types.mts || { echo "::error::scripts/check-supplement-types.mts missing"; exit 1; }
+          if [ -z "${{ secrets.SUPABASE_SERVICE_KEY }}" ]; then
+            echo "::error::SUPABASE_SERVICE_KEY not set -- cannot_run"; exit 1
+          fi
+
+      - name: Fixtures agree with fmb_supplement_type
+        shell: bash
+        env:
+          SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          # pipefail is load-bearing: without it a piped step takes the LAST command's
+          # exit code and a dead script is green. That is how gone-ids-drift reported
+          # "no drift" twice while broken.
+          set -euo pipefail
+          npx --yes tsx scripts/check-supplement-types.mts
+
+      # Block scalar, not a plain one: a colon-space inside the value makes YAML read
+      # it as a nested mapping, and GitHub does NOT report the parse error -- it falls
+      # back to naming the workflow after its path and registers no triggers.
+      - name: Note
+        if: always()
+        run: |
+          echo "> Run reason: ${{ inputs.note }}" >> "$GITHUB_STEP_SUMMARY"
