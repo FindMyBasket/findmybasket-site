@@ -29,16 +29,25 @@ export const metadata = {
 const NOT_FUNGIBLE = COMMON_NOT_FUNGIBLE;
 
 // C — FACETS, AND THE ARGUMENT IS THE SPREAD RATHER THAN THE LABELLING.
-// Isolate spans 1.3x (£4.90–£6.60) and source-not-stated spans 4.7x (£1.88–£8.90). On
-// one combined list the isolate buyer cannot see that their real choice is narrow.
+// Isolate spans 1.3x (£4.90–£6.60) and the plain whey bucket spans 4.7x (£1.88–£8.90).
+// On one combined list the isolate buyer cannot see that their real choice is narrow.
 // Filtering here is not tidying, it is the only way either spread is visible.
 //
-// "Source not stated" rather than "Concentrate": ZERO products say concentrate, so
-// calling them that would assert something no label supports.
+// THE RESIDUE IS CALLED "WHEY", NOT "SOURCE NOT STATED" (item 457). The first label was
+// chosen to avoid claiming "concentrate", which no product says — and it avoided that
+// correctly while introducing a different problem: it named the bucket after what our
+// metadata lacks rather than after what the product is, and implied something is
+// missing when for most of the 33 nothing is.
+//
+// On a page titled Whey Protein, a product that is not isolate and not clear whey is
+// whey. That is still not a claim of concentrate; it is the page's own subject.
+//
+// > Naming a residue after what it LACKS describes the catalogue. Naming it after what
+// > it IS describes the product. Both can be honest and only one is useful to a shopper.
 const FACETS = [
   { slug: 'isolate', label: 'Isolate', test: (n: string) => /\bisolate\b/i.test(n) && !/\bclear whey\b/i.test(n) },
   { slug: 'clear', label: 'Clear whey', test: (n: string) => /\bclear whey\b/i.test(n) },
-  { slug: 'unstated', label: 'Source not stated', test: (n: string) => !/\bisolate\b/i.test(n) && !/\bclear whey\b/i.test(n) },
+  { slug: 'unstated', label: 'Whey', test: (n: string) => !/\bisolate\b/i.test(n) && !/\bclear whey\b/i.test(n) },
 ];
 
 export default async function WheyProteinPage({
