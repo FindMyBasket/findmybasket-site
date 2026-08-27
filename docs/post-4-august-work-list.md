@@ -33808,10 +33808,24 @@ backfill the same way would have repeated the first one's blind spot exactly.
 | stored value ≠ new function | 1,500 | **too wide** |
 | ...and this change moves it (old fn ≠ new fn) | 689 | **applied** |
 
-> **The 1,500 included ~143 rows of older drift** — `La Roche-Posay Cicaplast Lips 7.5ml` stored as
-> `5ml`, wrong for reasons predating multipacks. Real, and **outside what item 439 measured.** Writing
-> them under evidence gathered for a different population is the item 423 mistake, so the backfill was
-> cut to exactly the measured set.
+> **A BACKFILL WRITING ROWS THE MEASUREMENT NEVER SAW IS A DIFFERENT CHANGE UNDER THE SAME NAME.**
+>
+> The 1,500 included **~143 rows of older drift** — `La Roche-Posay Cicaplast Lips 7.5ml` stored as
+> `5ml`, `TIRTIR My Glow Lip Oil (5.7ml)` stored as `7ml` — wrong for reasons that predate multipacks
+> entirely. Every one of them looks like an improvement, and **not one was examined by the split that
+> justified the write.** Item 439's "no regression class" finding is a statement about 1,357 specific
+> rows; it does not extend to 143 others merely because they are adjacent in the same column.
+
+**The ~143 stay recorded as a separate population**, not absorbed. Real drift between what the
+extractor returns today and what was stored by some earlier version, spread across categories, and
+**wanting its own read rather than a ride on this one's evidence.** Nobody has looked at whether the
+stored or the derived value is right in those rows; this backfill deliberately did not decide.
+
+**THE SENTENCE THAT MAKES THIS DIFFERENT FROM ITEM 252 IS ALSO THE ONE THAT MAKES IT CHECKABLE.** Item
+252 cleared the column and left the writer, so the defect regenerated at ~13 rows a day and was back to
+192 in three days. **Here the writer was fixed first (item 439), so `multipack_unit_not_pack` should
+still be at or near zero when next measured** — not climbing. **Check it on or after 30 August 2026: a
+figure in the tens means the fix is incomplete, and a figure near 192 means it did not hold at all.**
 
 **Product 105424 excluded by id**, per item 376, and confirmed absent from the write set rather than
 assumed.
@@ -33864,15 +33878,9 @@ it caught.
 > **The code path could not be exercised from a script** — `getActiveRetailerIds` uses React's `cache`,
 > which throws outside a server context. So the rule is verified and the branch is not.
 
-**AND MY FIRST READ OF THE RENDERED PAGE SAID IT HAD ZERO RANKED ROWS.** It has 67. I searched the
-tag-stripped text for `£([\d.]+)/100g`, and React emits `<!-- -->` separators between adjacent text
-nodes, so stripping tags turned `£5.20</span>/100g` into `£5.20 /100g` with a space the pattern did not
-allow.
-
-> **Third time today a check of mine was wrong about a thing that was right** — the presence-test judge
-> in item 439, the `#`-bucket count in item 421, and this. **All three were regex reads of rendered
-> HTML, and all three failed on how the markup is assembled rather than on what it says.** The
-> instrument is the recurring weakness, not the pages.
+**AND MY FIRST READ OF THE RENDERED PAGE SAID IT HAD ZERO RANKED ROWS.** It has 67, median £5.20,
+cheapest £1.40. The page was right and the check was wrong — **see item 442, which retires the
+instrument rather than filing the incident.**
 
 **EXCLUDED ROWS RENDER, THEY ARE NOT DROPPED.** Each carries its own reason — *"over 10× the median for
 this type, likely a pack-size error"* or *"no pack size on this listing"*. A page that silently omits
@@ -33882,3 +33890,49 @@ rejected a product threshold on the brand index.
 **Creatine has no page yet** — its data is now clean but the page was scoped to whey. **The parser and
 dose work is unchanged and still blocked**: 47% of vitamins and minerals carry a count, 53% do not, and
 per-capsule price without dose ranks 100 tablets of 300mcg above 50 of 5000mcg.
+
+---
+
+### 442. Retire the instrument: regex over tag-stripped rendered HTML
+
+**Raised:** 27 August 2026 · **Three failures in one day, all false negatives about correct pages.**
+
+| | What I searched | What was true | Why it failed |
+|---|---|---|---|
+| Item 421 | `#` bucket count in the brand index | page correct, my SQL slugifier wrong | a second implementation, not the operative one |
+| Item 439 | new value present as a string in the name | judge unsound | presence proves nothing about origin |
+| Item 441 | `£([\d.]+)/100g` in the whey page | **67 ranked rows** | React's `<!-- -->` separators |
+
+**THE THIRD ONE IS NOT A REGEX BUG AND CANNOT BE FIXED BY A BETTER REGEX.**
+
+React emits comment separators between adjacent text nodes, so
+`£{value}</span>/100g` reaches the wire as `£5.20<!-- --></span>/100g`. Strip the tags and it becomes
+`£5.20 /100g`, with a space that was never in the content.
+
+> **A stripped-text search cannot be made robust against how a renderer assembles a string, because
+> the assembly is exactly what stripping discards.** Tightening the pattern to allow optional
+> whitespace fixes this instance and not the class: the next failure is a different splice at a
+> different boundary, and it will also read as a page defect rather than a tool defect.
+
+**Every one of the three was a FALSE NEGATIVE** — the tool reported a problem that did not exist, on a
+page that was correct. That is the worse direction: a false positive gets investigated and dies, while
+a false negative gets *acted on*. In item 432 a false record produced an objection that queued five
+pages for work they already had; the same shape, one layer up.
+
+**WHAT REPLACES IT, IN PREFERENCE ORDER:**
+
+1. **Read the data before it renders.** SQL against the same query the page runs. No markup involved,
+   and it separates "the query is wrong" from "the rendering is wrong" — two failures the HTML read
+   conflates into one.
+2. **Query the DOM by selector**, via `javascript_tool` in the browser session:
+   `document.querySelectorAll('a[href^="/product/"]').length`, `getBoundingClientRect()`, reading
+   `textContent` of a *specific element*. This is what the fold measurements (items 409, 433) already
+   used, and none of those was wrong — **the tool that has never failed was available the whole time.**
+3. **Count structural markers in raw HTML** (`h.count('<li>')`, distinct `href` matches) rather than
+   matching prose. Assembly-independent, because it does not depend on how text is spliced.
+
+**Regex over `re.sub(r'<[^>]+>', ' ', html)` is retired.** Not tightened.
+
+> **THREE FAILURES IN ONE DAY IS AN INSTRUMENT TO RETIRE RATHER THAN TIGHTEN.** Each was individually
+> explicable and each had a plausible local fix; the pattern is only visible across all three, and it
+> is that the instrument discards precisely the information it is being asked about.
