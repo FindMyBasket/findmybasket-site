@@ -34501,3 +34501,138 @@ nothing; the per-unit type pages list the row unranked with *"no pack size on th
 measurement was designed to test the other, and in both, zero rows moved a correct value to a wrong
 one.** That is a stronger claim about `extractCanonicalSize` than either alone: one empty bucket is a
 property of a change, two independent empty buckets are a property of the function.
+
+---
+
+### 452. The guard stops the next bad match and owns none of the ones already made
+
+**Raised:** 27 August 2026 · **RECORDED, NOT STARTED. Robbie's, at his instruction.**
+
+**Product 100's two wrong rows are still attached and were refreshed on 27 August.** Item 424's Tier-2
+ambiguity guard prevents a *new* bad match; it does nothing about an attachment already stored.
+
+> **AN ATTACHED ROW IS UPDATED BY `product_id` AND NEVER RE-ENTERS THE TIER LADDER.** Tier 0 finds the
+> existing row and writes the new price into it. The tiers below — the ones carrying the guard — are
+> never consulted, because the row was matched before the question could be asked. **The guard sits
+> downstream of every row it would need to reach.**
+
+**SCOPE AS MEASURED, WHICH IS 14 AND NOT 1,614.** The 14 high-precision rows have been read and
+confirmed wrong one at a time — an EAN conflict, plus a URL slug sharing no words with the product
+name. **1,614 is what the detector measured, not what anyone has read.** Item 440's rule applies before
+the work starts rather than after: a pass that touches rows nobody inspected is a different change
+under the same name, and the number that may be claimed is the number that was read.
+
+**THE OPEN QUESTION IS WHETHER DETACHING HOLDS, AND IT IS OPEN BECAUSE IT HAS BEEN ANSWERED ONCE, THE
+WRONG WAY.** The record is **item 113**, not 253: 6174's detached row **returned within one cycle** as
+new row id `522597`, `external_product_id` 68593, no barcode, £5.90, best price on the product again —
+matched by name or URL, since neither tier 0 nor tier 1 had anything to find. *(Item 253 is the
+out-of-stock-only page decision and holds nothing about detachment; and 113 records a new **price-row**
+id against the same product, which is the shape to expect here rather than a new product id.)*
+
+> **So a detach is not known to be a repair.** For a row carrying the product's own barcode, item 107
+> already reasoned tier 1 rematches it by the rules at 03:30. For a row matched on name or URL, item
+> 113 demonstrated the return. **Whatever is proposed has to say what stops the row coming back**, and
+> "detach and see" has already been run.
+
+#### ★ THE FINDING
+
+**A GUARD AGAINST BAD MATCHES LEAVES EVERY BAD MATCH ALREADY MADE.** It is a rule about arrivals
+applied to a population defined by history, and the two sets do not intersect.
+
+> **`tier2_mpn_skips` grows daily and reads like progress on a population it cannot touch.** 956 rows
+> at last count (item 427). Every one of them is a row that was *stopped*, and not one of them is a row
+> that was *fixed*. The counter is honest about what it counts and silent about what it does not, and a
+> number that goes up next to a defect that does not go down is the shape item 253 named — **a measure
+> reporting membership rather than health.**
+
+**Nothing is proposed here.** The scope is 14 read rows, the mechanism is understood, and the repair is
+unspecified until the return question has an answer.
+
+---
+
+### 453. A rule whose true positives are one supplier's house style is not a rule about the data
+
+**Raised:** 27 August 2026 · **APPLIED. 1,842 rows nulled. Nine correct values lost deliberately.**
+
+`canonical_size` is now null on every product whose name carries two or more distinct sizes.
+**105424 excluded** (item 376), confirmed absent from the write set rather than assumed.
+`other_mismatch` fell **2,140 → 1,138**.
+
+**THE CLOSING ARGUMENT IS NOT THE 0.5%, IT IS WHERE THE 0.5% COMES FROM.**
+
+The refinement that would have saved these rows has eleven true candidates. Nine are genuinely
+correct — and **four of the nine are Swiish**, all one naming convention:
+
+```
+Swiish Daily Fibre Powder 30g - 10 X 3G Sachets
+Swiish Glow Collagen Peptide Powder Sachets 25G - 10 X 2.5g
+Swiish Recharge Cellular Hydration + Electrolyte 100g - 5G X 20 Sachets
+Swiish Twilight Tonic Chai Blend 30G - 10 X 3G Sachets
+```
+
+> **A rule whose true positives cluster in one brand's naming is not a rule about the data.** Its yield
+> is a copy convention, and **it stops working silently the day that supplier changes its product
+> titles** — no error, no failing check, just a rule that quietly matches nothing.
+
+**That is a better reason than the coverage number, because it says why the coverage would not hold.**
+0.5% argues the prize is small; this argues the prize is not durable. The other five true positives are
+one each from five different brands, which is not a pattern — it is five coincidences that happen to
+be correct.
+
+**THE NINE, NAMED, BECAUSE LOSING THEM IS THE ACCEPTED COST AND SHOULD BE VISIBLE:**
+
+`Sun Bum Lip Balm SPF30 3 x 4.25g Set` (12.75g) · `My Mood Glow With The Flow 2 X 10ml` (20ml) ·
+`My Mood Living My Dream 2 X 10ml` (20ml) · `d'Alba Waterfull Vegan Sleeping Pack (4ml x 12packs)`
+(48ml) · `Lord & Berry Set Of 3: Concealer Sponge 1g x 3pcs` (3g) · and the four Swiish.
+
+**THE COST OF THE ALTERNATIVE, IN THE RIGHT TERMS:**
+
+```
+Cacharel Anaïs Anaïs Gift Set 100ml EDT + 2 x 50ml Body Lotion    kept as 100ml
+Cacharel Noa Gift Set 100ml EDT + 2 x 50ml Body Lotion            kept as 100ml
+```
+
+2 × 50 equals the 100ml beside it. **A 150ml bundle asserting 100ml** — and the assertion lands on a
+price-per-unit page, which exists to divide price by exactly that number. **The wrong value is wrong
+exactly where it is used.**
+
+> **Nulling a correct value costs less than asserting a wrong one.** A null renders no chip and lists
+> the row unranked with a reason; a wrong size renders a confident number that is 50% out.
+
+**And there is no third refinement.** Versace defeated the divides test — 100/10 is an integer by
+coincidence. Cacharel defeats the stated-multiplier test — 2 × 50 equals a neighbouring size by
+coincidence. **The arithmetic of a multipack and the arithmetic of a coincidence are the same
+arithmetic**, so every refinement fails one level down, on a name nobody has seen yet.
+
+---
+
+### 454. Two sessions, one work list, two item 450s
+
+**Raised:** 27 August 2026 · **Process finding. Caught by accident.**
+
+Item 452 arrived from a different session while the tokeniser work was in flight, and was written to
+`docs/post-4-august-work-list.md` as **item 450** — the number this session had just used.
+
+**IT WAS CAUGHT BECAUSE IT WAS UNCOMMITTED, NOT BY ANY CHECK.** A `git checkout` refused to switch
+branches over an unstaged file, which is the only reason it was looked at.
+
+> **`check-worklist-contiguity.sh` sees duplicates at merge, and neither of these had merged.** One was
+> committed on a branch; the other was loose in the working tree. **The check guards the shared state
+> and the collision happened before either write reached it** — the window in which two sessions can
+> both be right about the next item number is exactly the window the check cannot see.
+
+**Had the branch been merged first and the loose file committed after, the duplicate would have merged
+cleanly** — contiguity runs on a pull request, and a second 450 appended later is a second PR with its
+own green check against a file that by then contains only one.
+
+**THE HAZARD WAS NAMED WHEN THE SECOND WINDOW OPENED, AND NAMED IN THE WRONG DIRECTION.** The stated
+risk was the read-only window writing. **The write came from this one** — this session took the number,
+committed it, and the other session's legitimate work is what looked foreign.
+
+> **A concurrency hazard was anticipated and its direction assumed, and the assumption was the part
+> that failed.** Recording the hazard did not help, because what was recorded was the hazard plus a
+> guess about who would cause it, and the guess is what got acted on.
+
+**No fix proposed.** The item was preserved, renumbered to 452 and committed; contiguity passes at 452.
+**Naming the number-allocation window as unguarded is the finding**, and whether it needs a mechanism
+depends on how often two sessions run at once.
