@@ -35299,6 +35299,103 @@ again** (items 57, 79), on rows the earlier passes never reached. Reported as a 
 sample, not extrapolated to a total.
 
 **It already cost a defect today.** `aloe` was dropped from the botanical vocabulary because it
-matched four rows and **all four were wrong** — a lube, Peppa Pig bubble bath, Sudocrem. The
-non-ingestibles are exactly where a cosmetic botanical word lands, so **a word can be correct for
-the category and wrong for the rows the category actually contains.**
+matched four rows and all four were wrong. Recorded at item 466, with the strip's inverse failure,
+because the lesson is about the vocabulary rather than about this population.
+
+### 466. The same operation is right in one direction and wrong in the other
+
+**Raised:** 27 August 2026 · **The strip's inverse failure, found by reading output rather than the rule. Shipped in the first build and caught before merge.**
+
+Stripping the brand prefix before classifying is what makes the leftmost rule work at all. Unstripped,
+`Vital Proteins Marine Collagen` is a **protein**, because the brand puts a type token in front of the
+real one. The strip removes a **false signal**, and item 463 argues for it on exactly that basis.
+
+**THE INVERSE CASE EXISTS AND THE ARGUMENT FOR THE STRIP DOES NOT SEE IT.**
+
+```
+  "Gold Collagen Forte Plus 50Ml"      -> stripped "Forte Plus 50Ml"      -> NO MATCH
+  "Absolute Collagen Variety Powder"   -> stripped "Variety Powder"       -> NO MATCH
+```
+
+**18 collagen products, from the two brands most obviously *about* collagen, fell into the residue.**
+
+> In the Vital Proteins case the brand token is a **false** type signal.
+> In the Gold Collagen case it is the **only** signal, and it is **true**.
+> **The same operation is right in one direction and wrong in the other, and nothing in the name
+> distinguishes them.**
+
+This is not a bad strip that a better strip would fix. Both rows are `<brand containing a type
+word> + <product name>`; the difference is entirely in whether the brand's claim about itself
+happens to be the product's type, which is a fact about the world and not about the string.
+
+**RESOLUTION BY ORDER RATHER THAN BY RULE.** Since no single pass can tell the two apart, the two
+passes are ranked instead: **strip first, and fall back to the full name only when the stripped name
+matches nothing at all.** The fallback cannot overrule the strip, only rescue rows the strip emptied.
+
+**`Gold Collagen Hair Lift` is the proof the ordering is correct rather than merely convenient.**
+Stripped it reads `Hair Lift`, which **does** match — so the fallback never runs, and it files under
+Hair, skin & nails, which is what it is. **An ordering that only ever produced the answer we wanted
+would be indistinguishable from one that was right**; this is the row where the two come apart, and
+the order gives the right answer without being asked to.
+
+## The transferable half: the seed did not cover it
+
+The fixture table was seeded from rows where **more than one type pattern matches**, because that is
+the population the **ordering** policy decides — 233 of 2,461, the tenth of the page item 463 is about.
+
+**The eighteen rows that motivated the fallback match exactly one pattern.**
+
+> **A harness seeded from the population one rule decides does not cover the population an adjacent
+> rule decides.**
+
+The seed's own criterion excluded them. Two rules ship in one function, they govern different sets,
+and the harness was written against the first while the day's actual defect lived in the second. **It
+would have passed, over 233 real rows, while the regression sat in a set it was constructed not to
+look at.** Item 447's shape — a harness proves the cases it is given — with the sharper edge that here
+the exclusion was *principled*: the criterion was correct for the rule it was written for.
+
+The fallback rows are now a second seed, selected by a different criterion — *stripped name classifies
+as the default, raw name does not* — and marked `correct`.
+
+## A word correct for the category, wrong for the rows the category contains
+
+`aloe` was in the botanical vocabulary because aloe is a botanical. It matched **four rows and all
+four were wrong**: a lube, Peppa Pig bubble bath, Sudocrem.
+
+**The non-ingestibles are exactly where a cosmetic botanical word lands.** Aloe is a supplement
+ingredient and a skincare ingredient, and this category contains both kinds of row (item 465). So the
+token was **correct about the category and wrong about the catalogue** — and the only way to tell was
+to read what it matched. Dropped.
+
+## The canary is the standard
+
+The fixture check passed the moment it was written, over 258 cases, and that is not evidence it works.
+
+> **A check that has only ever passed is not known to be capable of failing.**
+
+A fixture with a deliberately wrong `expected` was inserted, reported as a disagreement, and removed —
+**before** the CI workflow was written around it. Two minutes, no branch, no deploy. **This is the
+cheapest verification available anywhere in this repository and it should be the default for every new
+check**, alongside the `cannot_run` contract (items 194, 255) it complements: `cannot_run` proves the
+check notices when it cannot look, the canary proves it notices when it looks and finds something.
+
+## And the second numbering collision this week was not caught by a check either
+
+Three objects shipped today with comments citing **"work-list item 460"**. The item for this work is
+463; **460 is unrelated work about tier rules.** Corrected in the database comments before the item
+was written.
+
+**MY FIRST FRAMING OF THIS WAS WRONG AND THE CORRECTION IS THE POINT.** I described both of this
+week's collisions as caught by the checks. **Neither was.**
+
+- **Item 454** records the first explicitly: *"IT WAS CAUGHT BECAUSE IT WAS UNCOMMITTED, NOT BY ANY
+  CHECK."* A `git checkout` refused over an unstaged file. Contiguity guards the shared state, and the
+  collision happened before either write reached it.
+- **Today's is the case the citation check documents that it cannot see.** Its own header: *"A CITATION
+  CAN RESOLVE AND STILL BE WRONG ABOUT WHAT IT RESOLVES TO… the number is valid, the content behind it
+  is somebody else's. Only a person reading both can catch that."* A citation to item 460 **resolves**,
+  because 460 exists. Both checks would have passed.
+
+**Both were caught by looking, and both are inside a window the checks are documented as unable to
+reach.** Believing otherwise is the more expensive error, because it would retire the habit that
+actually caught them.
