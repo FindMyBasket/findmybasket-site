@@ -546,6 +546,32 @@ const CASES: Case[] = [
     desc: "CONTROL — a count with no unit after it does not invent a size",
     ok: () => extractCanonicalSize("Some Brand 30 Sachets") === null,
   },
+
+  // ── DECIMAL COMMA, AND THE THOUSANDS SEPARATOR IT MUST NOT EAT (item 450) ───────
+  {
+    cls: "size",
+    desc: "a European decimal comma is a decimal point, in multipliers too",
+    ok: () => extractCanonicalSize("Catrice Soft Glam Foam Primer 010 Beyond The Cloud 32,5ml, 325ml") === "32.5ml" &&
+              extractCanonicalSize("Catrice Stronger Than Ever Nail Hardener 010 10,5ml, 105ml") === "10.5ml" &&
+              extractCanonicalSize("Essence Fix It Like A Pro Transparent Brow Fixing Gel 8,5ml, 85ml") === "8.5ml" &&
+              extractCanonicalSize("Maison Crivelli - Discovery Set - 8 x 1,5ml EDP") === "12ml",
+  },
+  {
+    cls: "size",
+    desc: "★ a THOUSANDS separator is not a decimal — 1,000ml is not 1ml",
+    ok: () => extractCanonicalSize("Bulk Shampoo 1,000ml") === "1000ml" &&
+              extractCanonicalSize("Refill 2,500g Tub") === "2500g",
+  },
+  {
+    cls: "size",
+    desc: "★ CONTROL — the (?<!\\w) guard that already works must keep working",
+    // These PASS today. A change to SIZE_REGEX is likeliest to break the guard rather
+    // than the new behaviour, so the at-risk cases are the ones currently correct.
+    ok: () => extractCanonicalSize("Piz Buin Allergy Lotion Spf15200 ml, 200ml") === "200ml" &&
+              extractCanonicalSize("Nivea Sun Protect Spray Spf30200 ml, 200ml") === "200ml" &&
+              extractCanonicalSize("Lee Stafford Hydration Treatment Mask200 ml, 250ml") === "250ml" &&
+              extractCanonicalSize("No7 L&l Triple Action Serum Foundation 30Ml Honey") === "30ml",
+  },
 ];
 
 // ── Run ──────────────────────────────────────────────────────────────────────
