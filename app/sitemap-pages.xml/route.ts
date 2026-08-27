@@ -41,6 +41,7 @@ const STATIC_PAGES: UrlEntry[] = [
   { loc: '/compare', changefreq: 'weekly', priority: 0.7 },
   { loc: '/compare/whey-protein', changefreq: 'weekly', priority: 0.7 },
   { loc: '/compare/creatine', changefreq: 'weekly', priority: 0.7 },
+  { loc: '/compare/plant-protein', changefreq: 'weekly', priority: 0.7 },
   { loc: '/savings-hub.html', changefreq: 'daily', priority: 0.9 },
   { loc: '/app.html', changefreq: 'weekly', priority: 0.9 },
   { loc: '/product-finder.html', changefreq: 'weekly', priority: 0.7 },

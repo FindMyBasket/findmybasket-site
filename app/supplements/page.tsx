@@ -57,6 +57,11 @@ export default async function SupplementsPage({
           note: 'Tubs vary from 250g to 2.5kg, so the shelf price says little. 67 products ranked by unit price.',
         },
         {
+          href: '/compare/plant-protein',
+          label: 'Plant protein by price per 100g',
+          note: 'Pea, soy and vegan blends, ranked apart from whey. 20 products by unit price.',
+        },
+        {
           href: '/compare/creatine',
           label: 'Creatine by price per 100g',
           note: 'Monohydrate is the same substance whoever sells it. 35 products ranked by unit price.',
