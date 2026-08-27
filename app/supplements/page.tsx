@@ -50,6 +50,18 @@ export default async function SupplementsPage({
       // Copy that quotes a count is copy that goes stale the next time the
       // classifier runs; see docs/standing-rule-frozen-catalogue-state.md.
       intro="Compare prices across multiple UK retailers on ingestible beauty supplements, delivery included. Collagen, hair-skin-nails complexes and biotin, from the same brands you already buy skincare from."
+      callouts={[
+        {
+          href: '/compare/whey-protein',
+          label: 'Whey protein by price per 100g',
+          note: 'Tubs vary from 250g to 2.5kg, so the shelf price says little. 67 products ranked by unit price.',
+        },
+        {
+          href: '/compare/creatine',
+          label: 'Creatine by price per 100g',
+          note: 'Monohydrate is the same substance whoever sells it. 35 products ranked by unit price.',
+        },
+      ]}
       browse={{
         page,
         productType: searchParams.type,

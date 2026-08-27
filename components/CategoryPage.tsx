@@ -36,6 +36,12 @@ interface Props {
   displayName: string;
   intro: string;
   browse?: CategoryBrowse;
+  /**
+   * Cross-links to the per-unit comparison pages, where a category has them.
+   * Supplements-only today (item 445) -- these are the /compare type pages, which
+   * are not in the nav and would otherwise be reachable from nowhere.
+   */
+  callouts?: { href: string; label: string; note: string }[];
 }
 
 const BROWSE_PAGE_SIZE = 48;
@@ -55,7 +61,7 @@ function browseUrl(
   return `/${slug}${qs ? `?${qs}` : ''}`;
 }
 
-export async function CategoryPage({ category, displayName, intro, browse }: Props) {
+export async function CategoryPage({ category, displayName, intro, browse, callouts }: Props) {
   // Route slug (identity except bath_body -> bath-and-body). Queries use the raw
   // `category` DB value; links/canonicals use `slug`. The hero-image filenames are
   // keyed by the raw `category` value (e.g. bath_body-desktop.jpg), so the hero
@@ -483,6 +489,25 @@ export async function CategoryPage({ category, displayName, intro, browse }: Pro
           </div>
         </div>
       </section>
+
+      {callouts && callouts.length > 0 && (
+        <section className="max-w-site mx-auto px-6 pt-10">
+          <div className="flex flex-wrap gap-3">
+            {callouts.map(c => (
+              <Link
+                key={c.href}
+                href={c.href}
+                className="group flex-1 min-w-[240px] bg-warm-white border border-border rounded-2xl p-5 hover:border-gold transition-colors"
+              >
+                <div className="font-serif text-xl text-ink group-hover:text-gold transition-colors mb-1">
+                  {c.label}
+                </div>
+                <div className="text-sm text-ink-light">{c.note}</div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ORDER IS BROWSE-DEPENDENT (item 409).
           Without `browse` the link blocks come first, exactly as they always have --
