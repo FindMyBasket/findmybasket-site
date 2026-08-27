@@ -88,7 +88,19 @@ export async function getProductTypes(
   // 'Hair' is kept only so a future classifier emitting it is covered; it suppresses
   // nothing today. Verified 16 Aug: Skincare 16,539 · Hair Care 2,753 · Makeup 682 ·
   // Fragrance 266 · Hair 0. Work-list item 152.
-  const JUNK_TYPES = new Set(['Skincare', 'Makeup', 'Hair', 'Hair Care', 'Fragrance']);
+  //
+  // 'Supplements' IS THE FIFTH, AND IT IS DERIVED RATHER THAN WRITTEN. Supplements is
+  // the only category whose rows carry no product_type -- the categoriser sets NULL
+  // deliberately -- so products_active now COALESCEs in fmb_supplement_type(name, brand),
+  // a read-time derivation from the name. Rows that match no type vocabulary get
+  // 'Supplements', exactly as the other four defaults are emitted by their classifiers.
+  //
+  // IT MUST BE A STRING RATHER THAN NULL, AND THAT IS THE WHOLE REASON THE DEFAULT
+  // EXISTS. `totalRows` below counts only non-null product_type, so a NULL residue makes
+  // complementCount zero and SUPPRESSES the "Everything else" chip -- stranding 868
+  // products behind "All" with no affordance reaching them. The suppression guard is
+  // right; it just cannot distinguish "no residue" from "residue we declined to name".
+  const JUNK_TYPES = new Set(['Skincare', 'Makeup', 'Hair', 'Hair Care', 'Fragrance', 'Supplements']);
 
   const counts = new Map<string, number>();
   let totalRows = 0;

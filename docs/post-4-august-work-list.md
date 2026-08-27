@@ -34896,3 +34896,409 @@ page's own first sentence, without ever having framed it as a labelling decision
 > **The argument transfers and finds nothing to fix, which is worth recording rather than skipping.**
 > "Checked and there is nothing there" and "did not check" produce the same silence, and item 442 is
 > about exactly that pair.
+
+---
+
+### 458. Approved with no feed is a placement question, and the placement is already occupied
+
+**Raised:** 27 August 2026 · **Robbie's, recorded at his instruction. NOTE AND MEASUREMENT. Nothing
+proposed, nothing built.**
+
+**Optimum Nutrition approved on AWIN, and they do not supply a product feed.** That places them in the
+**links-only tier** — `docs/strategy.md`, *Two tier retailer model* — rather than as a failed
+onboarding. **The standing rule is untouched and nothing about it changes:** *"No retailer enters the
+catalogue without a refresh path… If the answer is that refresh will be figured out later, the answer
+is no."* No feed, no refresh path, no catalogue entry. That is settled and is not what this item is
+about.
+
+#### THEY ARE ALREADY IN THE CATALOGUE, AND THE ROUTE IN IS NARROWER THAN STATED
+
+**30 live products in `products_active`**, one brand spelling, no slug divergence.
+
+> **THROUGH BOOTS ONLY — NOT BOOTS AND MYPROTEIN.** All 30 carry exactly **one** retailer row and it
+> is Boots (30 of 30 in stock). Superdrug holds 16 of the same products and is `active = false` with
+> **zero** in-stock rows, so it contributes nothing. **MyProtein supplies none of them**, which is item
+> 305's own prediction arriving as a fact: MyProtein is an own-brand range and carrying a competitor's
+> tubs was never what it was onboarded for.
+
+#### WHERE THEY LAND ON THE TWO PAGES — SQL AND THE RENDERED DOM AGREE
+
+| Page | Ranked total | Optimum Nutrition ranked | Positions | Also in *Not ranked* |
+|---|---:|---:|---|---|
+| `/compare/whey-protein` | 56 | **13** | 18, 20, 37–39, 47–49, 51–55 | **2** — Clear Whey And Collagen ×2, collagen blend |
+| `/compare/creatine` | 34 | **4** | 17, 18, 19, 23 | **1** — Platinum Creatine Plus, blend |
+
+**17 ranked rows and 3 listed-with-a-reason rows: 20 of the 30 products appear on a type page.** Of the
+remaining ten — collagen peptides, two electrolytes, a pre-workout, three RTD shakes, two shakers and
+one plant-based tub — **one misses a page it qualifies for**: `Optimum Nutrition Gold Standard 100%
+Plant-Based Chocolate 684g` never reaches `/compare/plant-protein`, because that page fetches
+`name ilike '%protein%'` and **this product's name does not carry the word "protein"**. Recorded, not
+fixed; it is item 448's shape, a fetch pattern standing in for a classification.
+
+#### ★ THE ROW'S LINK TARGET IS NOT A RETAILER TODAY, AND NOT A CHOICE EITHER
+
+`UnitPriceList` links every ranked row to **`/product/{id}`** — our own page, never a retailer. The
+product page then renders one offer row per retailer with *"Buy at {retailer}"*.
+
+> **For all 17 Optimum Nutrition rows that is exactly one offer row: Boots.** So the row's target is
+> not a single retailer *instead of* a choice; it is a comparison page that has **nothing to compare**.
+> A brand-direct link would not be displacing a choice, because there is not one.
+
+**AND THAT IS NOT AN OPTIMUM NUTRITION PROPERTY. IT IS THE PAGES':**
+
+| Page | Ranked | Single retailer | Two or more |
+|---|---:|---:|---:|
+| whey | 56 | **51** | 5 |
+| creatine | 34 | **33** | 1 |
+
+**Six of ninety ranked rows have a second retailer.** The comparison these pages make is **between
+products, not between retailers** — which is the honest description of the surface any placement
+decision is being made on, and it was not the description anyone was working from.
+
+#### WHAT A BRAND-DIRECT LINK WOULD DISPLACE
+
+**Nothing in the ranking.** Position, order and the per-100g figure are computed before any link is
+rendered and a destination change cannot reach them. **What changes hands is the Boots click-out** —
+the only CPA on that row, at our largest retailer.
+
+#### ★ AND THE CONSTRAINT, WHICH IS SHARPER THAN "ADJACENT TO THE LINE"
+
+The firewall is *"money never buys a better comparison result"* (`docs/strategy.md`, *Why this holds*).
+**A brand-direct link buys no better result — it routes past the result to a price the page never
+measured.**
+
+```
+row says   £4.62/100g   because BOOTS charges £43.00
+link goes  to Optimum Nutrition, whose price we do not hold
+```
+
+> **We cannot hold it, and the reason is the same fact this item opens with: knowing their price
+> requires the feed they do not supply.** So the number on the row and the seller at the end of the row
+> would be about **two different sellers**, with no mechanism that could ever reconcile them. That is
+> not the firewall clause being bent; **it is a page making a price claim and routing to a price it did
+> not check** — a different failure, and one the firewall clause does not name.
+
+**THE STRATEGY ALREADY PLACES THIS TIER'S LINKS SOMEWHERE ELSE.** Links-only retailers *"power
+editorial recommendations and carry affiliate links **inside articles and hubs**"*, and the paragraph
+immediately after requires *"visible separation from the neutral comparison surfaces."* **The type
+pages are the neutral comparison surface.** So this is an **amendment to the tier's definition, not an
+application of it** — which is exactly why it needs deciding rather than assuming.
+
+#### THE PRECEDENT IS ALREADY IMPLEMENTED, ONE SURFACE OVER
+
+`components/BrandHubRange.tsx` already decides this per card, and decides it against the direct link:
+
+- internal `/compare` destination → plain `<a>`, *"Compare prices →"*, **never** sponsored/nofollow
+- external destination → `ClickOutLink`, *"Buy direct →"*, `sponsored nofollow noopener`
+
+…*"depending on whether we carry the brand for comparison."* **A rule that the comparison wins wherever
+one exists is already shipped.** The Optimum Nutrition rows are the case that rule was never asked
+about: a comparison that exists in structure and holds one retailer.
+
+**The mechanism needs nothing built.** `ClickOutLink` already takes `brandSlug` with no `retailerId`
+and already logs a brand click-out; that is how the hub cards work today.
+
+**Decision owed, nothing proposed.** Recorded in `docs/partnership-tracker.md` under a status the
+vocabulary did not have. **DECIDED the same day — item 459, and on the price claim rather than the
+firewall clause this item reached for.**
+
+---
+
+### 459. DECIDED: no brand-direct links on the type pages, and the reason is not the firewall
+
+**Raised and decided:** 27 August 2026 · **Robbie's call. Item 458 asked; this answers.**
+
+**NO BRAND-DIRECT LINKS ON `/compare/*`.** Not for Optimum Nutrition, not as a links-only placement.
+
+**THE REASON IS THE DEFECT, NOT THE CLAUSE.** Item 458 offered the firewall — *"money never buys a
+better comparison result"* — as the frame and that frame is wrong here, so it is not the reason
+recorded.
+
+```
+the row says   £4.62 per 100g   BECAUSE BOOTS CHARGES £43.00
+the link goes  to Optimum Nutrition, whose price we do not hold
+```
+
+> **A PAGE MAKING A PRICE CLAIM AND ROUTING TO A PRICE IT DID NOT CHECK.** The number and the
+> destination would describe **two different sellers**, and there is no mechanism that could reconcile
+> them — **holding the brand's price requires the feed they do not supply, which is the whole reason
+> the links-only entry exists in the first place.** The constraint is not a policy that could be
+> revisited; it is the same missing fact, arriving on a second surface.
+
+**WHY THE FIREWALL CLAUSE DOES NOT COVER IT.** The clause is about **ranking** — about whether money
+can move a product up a list. **Nothing here moves anything.** Position, order and the per-100g figure
+are all computed before a link is rendered, and a destination cannot reach back into them.
+
+> **This is the destination contradicting the figure, and the clause does not name that.** Reaching for
+> it would have been an argument from the nearest available rule rather than from what is actually
+> wrong, and it would have made the decision look like a judgement about commerce when it is a
+> judgement about arithmetic. **A wrong reason attached to a right decision survives longer than a
+> wrong decision**, because nothing later contradicts it.
+
+**WHAT WOULD CHANGE THIS, STATED SO IT IS NOT REDISCOVERED:** a refresh path for the brand's own price.
+That is a feed. **There is no version of this that is unblocked by a link and not by a feed.**
+
+---
+
+### 460. Six of ninety, and the object the tier rule was written for is not the object we have
+
+**Raised:** 27 August 2026 · **Structural finding, separated from the decision it came out of.**
+
+| Page | Ranked rows | One retailer | Two or more |
+|---|---:|---:|---:|
+| `/compare/whey-protein` | 56 | **51** | 5 |
+| `/compare/creatine` | 34 | **33** | 1 |
+| **Both** | **90** | **84** | **6** |
+
+**SIX OF NINETY RANKED ROWS HAVE A SECOND RETAILER.** Every other row's "compare prices" resolves to
+one price at one seller.
+
+> **THESE PAGES COMPARE PRODUCTS, NOT RETAILERS.** That is not a defect — ranking sixty whey tubs by
+> price per 100g is a real and useful thing to do, and it is the thing item 441 built. **It is simply
+> not the thing the word "comparison" means everywhere else on this site**, where it means the same
+> product at several sellers.
+
+**AND THAT WAS NOT THE DESCRIPTION ANYONE WAS WORKING FROM — ROBBIE'S INCLUDED — WHEN THE PLACEMENT
+QUESTION WAS FRAMED.** The question was posed as *would a brand-direct link route past the price
+comparison the page is making*, which presumes a retailer comparison sitting under each row. **For
+eighty-four of ninety rows there is nothing to route past.**
+
+> **A COMPARISON PAGE WHOSE ROWS MOSTLY CANNOT COMPARE IS A DIFFERENT OBJECT FROM THE ONE THE
+> STRATEGY'S FIREWALL WAS WRITTEN ABOUT.** The two-tier retailer model, the firewall, the separation of
+> editorial links from *"the neutral comparison surfaces"* — all of it was written when the comparison
+> surfaces were product pages carrying several retailers. **The tier rule was written for the object
+> nobody had.**
+
+**This changes no decision on its own and is why item 459 stands on the arithmetic instead.** Recorded
+because the next placement, pricing or firewall question will be framed against the same assumption
+unless the measurement is written down. **It also bears on `docs/supplements-brand-comparison-
+proposition.md`**, which exists because supplements have one retailer wearing a category's name — this
+is that same fact, measured at the row rather than at the category.
+
+---
+
+### 461. The rule already exists in `BrandHubRange`, and this is the case it was never asked
+
+**Raised:** 27 August 2026 · **Recording an implemented rule as a rule. Nothing built.**
+
+`components/BrandHubRange.tsx` already decides per card where a product's link should go, and the
+comment states the principle: *"A card can point either at the brand (outbound, affiliate) or at our
+own comparison page for that product, depending on whether we carry the brand for comparison."*
+
+| Destination | Markup | Label | rel |
+|---|---|---|---|
+| internal `/compare` or `/product` | plain `<a>` | *"Compare prices →"* | **none** — *"internal destinations must never get sponsored/nofollow"* |
+| external, brand's own site | `ClickOutLink` + `brandSlug` | *"Buy direct →"* | `sponsored nofollow noopener` |
+
+> **THE RULE IS: THE INTERNAL DESTINATION WINS WHEREVER A COMPARISON EXISTS.** It is not stated as a
+> policy anywhere — it lives as a ternary and a comment in one component — and it has been correct
+> since it was written.
+
+**AND THIS IS THE CASE IT WAS NEVER ASKED: a comparison that exists in structure and holds one
+retailer.** Every ranked type-page row *has* a `/product/{id}` destination, so by the letter of the
+rule the internal link wins every time. **For eighty-four of ninety rows (item 460) that internal
+destination resolves to exactly one seller.** The rule's test — *"whether we carry the brand for
+comparison"* — was written where the answer was yes or no, and the type pages supply a third answer:
+**structurally yes, substantively one row.**
+
+**Item 459 decides it the same way the rule would have**, and for a different reason — the price claim,
+not the destination hierarchy. **Two independent arguments reaching the same answer is worth recording
+as such**, because if one is later overturned the other does not automatically fall with it.
+
+**The mechanism is not the obstacle and never was.** `ClickOutLink` already accepts `brandSlug` with no
+`retailerId` and already logs a brand click-out; the hub cards do it today. **Nothing about this
+decision was constrained by what was buildable**, which is the part worth writing down.
+
+---
+
+### 462. A name-based fetch is absent for how a product is named rather than what it is
+
+**Raised:** 27 August 2026 · **Audited across all three type pages. Two real absences found. Nothing built.**
+
+`Optimum Nutrition Gold Standard 100% Plant-Based Chocolate 684g` is a plant protein powder, priced,
+with a parseable size, and it is **not on `/compare/plant-protein`**. The page fetches
+`name ilike '%protein%'` and **the name does not carry the word.**
+
+> **A QUALIFYING PRODUCT IS ABSENT BECAUSE OF HOW IT IS NAMED RATHER THAN WHAT IT IS.** All three type
+> pages fetch on a literal token — `'%whey%'`, `'%creatine%'`, `'%protein%'` — so the blind spot is not
+> one page's, it is the pattern's, everywhere it is used.
+
+#### ★ THE AUDIT'S OWN LIMIT, WHICH HAS TO COME FIRST
+
+**The only other signals available are `product_type` and further name tokens, and both are themselves
+name-derived.** Two readings establish it rather than assume it:
+
+- **71 of 71** products typed `Creatine` carry "creatine" in the name. **A 100% agreement is not a
+  check passing; it is the same filter under another name** — item 252's shape, a consistency check
+  reported as a correctness check.
+- **The product that motivated the question is typed `Supplements`**, the catch-all — not `Protein`.
+  **The type column is blind to exactly the product the name fetch missed.**
+
+> **TWO DETECTORS, ONE BLIND SPOT, AND THE SECOND WAS BUILT FROM THE FIRST.** So every number below is
+> a **floor**. A negative result here means "no probe I have found one", never "there are none".
+
+#### WHAT THE PROBES RETURNED, READ BY NAME RATHER THAN COUNTED
+
+| Page | Fetch token | Probe run | Real absences |
+|---|---|---|---:|
+| whey | `%whey%` | `casein\|isolate\|gainer` without "whey" | **0** |
+| creatine | `%creatine%` | `creapure` without "creatine"; typed `Creatine` without the word | **0** |
+| plant protein | `%protein%` + plant token | plant token without "protein" | **2** |
+
+**Whey's three hits are all correctly absent for other reasons:** `Impact Micellar Casein Powder` is
+casein, not whey — **and there is no casein page, so it belongs nowhere today**, which is a coverage
+gap rather than a fetch defect; the two gainers are excluded by `COMMON_NOT_FUNGIBLE` even if fetched.
+
+**The plant probe returned ~120 rows and almost all are "Vegan" as a dietary claim on capsules and
+gummies.** Reading them rather than counting them — item 223's rule — leaves **two**:
+
+| | per 100g | Would rank |
+|---|---:|---|
+| `PHD Diet Plant Powder Belgian Chocolate 500g` | **£4.00** | **5th of 19** |
+| `Optimum Nutrition Gold Standard 100% Plant-Based Chocolate 684g` | **£4.09** | **6th of 19** |
+
+> **THE PAGE'S PRINTED MEDIAN MOVES £7.20 → £5.90 — 18% — ON TWO ROWS.** Both sit in the cheaper half
+> of a seventeen-row list, so this is not a completeness footnote: **the page is quoting a central
+> figure that two absent rows would move.**
+
+#### ★ AND THE FETCH IS CURRENTLY CONCEALING A SECOND DEFECT
+
+The same probe returned `USN Diet Fuel Ultralean Vegan Meal Replacement` ×2 at **£3.07/100g**.
+**"Meal replacement" appears in no exclusion list on any of the three pages.**
+
+> **WIDEN THE FETCH TO CATCH THE TWO GENUINE ABSENCES AND THESE TWO ARRIVE WITH THEM — AND RANK.** A
+> meal replacement in a protein ranking is the mass-gainer error of item 455 under a different name:
+> most of the weight is not the thing being priced.
+>
+> **The narrow fetch is the only reason the missing exclusion has never shown.** Item 437 exactly: the
+> defect was not created by looking, it stopped being concealed. **Fixing the fetch alone trades a
+> false absence for a false presence**, which is a worse trade — an absent row is invisible, a wrong
+> row is on the page.
+
+**Nothing proposed.** The fix is two changes that must land together, and the second one has not been
+scoped: what else is a meal replacement, and whether `casein` deserves a page or an exclusion.
+
+### 463. Specificity is not a weaker rule than position, it is the rule that produces the defect
+
+**Raised:** 27 August 2026 · **Supplements gets a browse filter bar. The ordering policy is the record, because it decides a tenth of the page and the obvious rule is the wrong one.**
+
+Supplements was the only category with no chips, because `product_type` is null on all
+**2,461** rows — the categoriser sets it null deliberately, having rejected the retailers' own
+column as *"BOOTS' SHELF, 57% bare parents, per-retailer"*. That decision stands. The type is now
+**derived from the name at read time**, inside the `products_active` view.
+
+**THE CENTRE OF THIS ITEM IS THE ORDERING POLICY, NOT THE FEATURE.**
+
+**233 of 2,461 rows match more than one type pattern**, so the rule that picks between them decides
+a tenth of the page. The obvious rule is ingredient specificity — prefer the more specific token.
+
+> **Specificity is not a weaker rule than position. It is the rule that produces the defect.**
+> Omega-3 is more specific than "multivitamin", so specificity is *precisely* what sends
+> **"Bassetts Kids Multivitamins 3-6 Years Omega-3 Gummies"** to Omega oils.
+
+**A rule can fail on the case that motivated it, and that is a stronger reason to reject it than a
+lower success rate.** A lower score invites tuning. Failing the motivating case is structural.
+
+**Position is not a heuristic that happens to score well.** It works because of a property of how
+names are written: **brands lead with what a product is and append what has been added to it.**
+"Multivitamins … Omega-3" and "Whey Protein + Collagen" are the same shape — head first, addition
+second. Measured over the 83 disagreements between the two rules, **all read by name: leftmost
+right on ~55, precedence on ~15**, the rest genuinely arguable.
+
+**The brand prefix must come off first, and this is a third `stripBrandPrefix`.** Unstripped,
+`Vital Proteins Marine Collagen` is a **protein**. That is a decision rather than a repetition
+because the **blast radius differs**: this copy handles only the leading-prefix case, its output is
+**never displayed**, and a divergence changes which of two already-matched types wins. The other
+two copies change a product title.
+
+**And the strip has an inverse failure that the first build shipped straight into.** Reading the
+output, not the rule, found it: `Gold Collagen Forte Plus` strips to `Forte Plus` and matches
+nothing. **18 collagen products, from the two brands most obviously about collagen, fell into the
+residue.** In the Vital Proteins case the brand token is a *false* signal; here it is the *only*
+signal and it is *true*. One strip cannot tell them apart, so the resolution is order:
+**strip first, fall back to the full name only when the stripped name matches nothing at all.**
+`Gold Collagen Hair Lift` proves the ordering is right rather than convenient — stripped it reads
+"Hair Lift", which matches, so no fallback runs and it files under what it is.
+
+**Ties break on a fixed rank list.** Two patterns can match at the same offset, and **an ordering
+without a unique tie-break is not an ordering** — the same class as the `.order()`-before-`.range()`
+rule (items 146, 151, 238).
+
+**Seven failures ship named rather than counted**, pinned in the fixture table so a change fails CI
+and must be argued: 4 matcha-collagen powders, 2 JSHealth magnesium, 1 Bassetts Pregnancy+.
+**The four matcha rows are the honest limit of a positional rule** — the head noun is genuinely
+last, and no ordering policy reaches that.
+
+**Read-time, not written.** Categorisation in the importer is creates-only (items 105, 125), and
+**533 of 2,461 live rows were under 7 days old**: a written column would be roughly a fifth of the
+page stale within a week, and the durable version puts the rule in Deno *and* in SQL with nothing
+forcing them to agree. **The match-key twin shape, which is the thing this codebase keeps paying
+for.** The measured cost of the view is recorded rather than elided: skincare's browse count goes
+**56 ms → 104 ms**, because a COALESCE is not an indexed column. An expression index would restore
+it and would also mean **editing the function silently corrupts the index** — `IMMUTABLE` is
+asserted by the author, never verified by Postgres — so it was deliberately not added.
+
+Chips verified through PostgREST before deploy, every one equal to its destination: Vitamins 229 ·
+Protein 204 · Botanicals & greens 185 · Electrolytes 170 · Collagen 166 · Minerals 152 · Omega oils
+97 · Multivitamins 95 · Gut & fibre 82 · Sports & amino 77 · Creatine 71 · Hair, skin & nails 65 ·
+**Everything else 868**. `Hair, skin & nails` is the first type name carrying a **comma**, so the
+complement's `not.in` list was tested through the real API rather than reasoned about.
+
+### 464. The August coverage figures measured the instrument, not the catalogue
+
+**Raised:** 27 August 2026 · **52.5 → 55.5 → 59 was never a trend. Third instance this week and the sharpest.**
+
+The supplements coverage figure was carried across **three sessions** as a measure of the catalogue.
+It was a measure of the regex.
+
+> **`\mvitamin\M` cannot match a plural.** `\M` asserts end-of-word, so **"Vitamins" and
+> "Multivitamins" never matched** and fell into the residue that the same number was reporting.
+
+Fixing that one boundary moved **Multivitamins from 45 to 86** on unchanged data. The three figures
+are not comparable with each other or with today's, and **they never described a catalogue that was
+getting better classified** — they described a classifier that was always missing the same words.
+
+**What makes this the sharpest of the three.** The tokeniser inversion (item 450) and the mojibake
+population were each caught inside the session that produced them. **This number survived being
+quoted, compared against itself, and used to argue a trend** — the comparison across sessions is
+exactly what made it look like evidence. A single measurement invites scrutiny; three in sequence
+invite interpretation.
+
+**The transferable half:** a number repeated across sessions acquires the authority of a
+measurement without ever being re-measured. **The instrument is the thing that stayed constant, and
+that is what the trend was describing.**
+
+### 465. Our vocabulary is ingredients, and a large part of this catalogue is sold on outcomes
+
+**Raised:** 27 August 2026 · **Closes the supplements coverage question. Adding words does not reach it.**
+
+**35.3% of supplements match no type vocabulary**, and the instinct is to extend the word list. It
+does not work, and reading the residue says why rather than guessing.
+
+> **Our vocabulary is ingredients. A large part of this catalogue is sold on outcomes.**
+> That is a property of the shelf, not of the classifier.
+
+`Avea Booster`, `PUR4 Cleanse`, `WelleCo The Super Elixir`, `Nourished MJB Nutrient Stacks`,
+`Onegevity Derma One` — real supplements whose names carry a **benefit or a brand line and no
+ingredient at all**. No token list reaches them, because there is no token.
+
+**A second pass proved it by succeeding narrowly.** Adding benefit words recovered 268 rows and
+**every candidate was thin**: energy/focus/mood 53, meal replacement 41, immune 40, joint 28,
+menopause 23, sleep 21, superfood 19, pregnancy 18, CBD 11, eye 7, ACV 7.
+
+**They are also a second axis, which is the reason not to append them.** A magnesium sleep gummy is
+both a mineral and a sleep supplement. **Eleven ingredient chips plus eleven benefit chips is not
+twenty-two chips, it is two dimensions** — and a product belonging to one of each is not an edge
+case, it is the normal shape.
+
+**And the residue is not one population.** Of **120 read**, **37 are not ingestible supplements at
+all**: Wild deodorant, No7 gel polish, Bala fitness weights, a Hyperice recovery boot, a Pivotell
+pill dispenser, an Opti-Lock shaker, a serving scoop, a blood test kit, oats, almond butter,
+brownies, CLIF bars, Organix puffcorn, a Lucozade gel. **That is the food-and-device exclusion class
+again** (items 57, 79), on rows the earlier passes never reached. Reported as a rate on a read
+sample, not extrapolated to a total.
+
+**It already cost a defect today.** `aloe` was dropped from the botanical vocabulary because it
+matched four rows and **all four were wrong** — a lube, Peppa Pig bubble bath, Sudocrem. The
+non-ingestibles are exactly where a cosmetic botanical word lands, so **a word can be correct for
+the category and wrong for the rows the category actually contains.**
