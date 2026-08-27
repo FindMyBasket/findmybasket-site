@@ -33936,3 +33936,72 @@ pages for work they already had; the same shape, one layer up.
 > **THREE FAILURES IN ONE DAY IS AN INSTRUMENT TO RETIRE RATHER THAN TIGHTEN.** Each was individually
 > explicable and each had a plausible local fix; the pattern is only visible across all three, and it
 > is that the instrument discards precisely the information it is being asked about.
+
+---
+
+### 443. The creatine page, and the second guard swallowed the first guard's test case
+
+**Raised:** 27 August 2026 · **`/compare/creatine`. 35 ranked, 13 brands, £2.80–£20.05 per 100g.**
+
+**Against yesterday, before the sachet fix:**
+
+| | Yesterday | Today |
+|---|---|---|
+| Products with a parseable size | 41 | **44** |
+| Ranked | — | **35** |
+| Brands | 16 | 13 |
+| Spread | **3.6×** | **7.2×** |
+
+**The spread widened because the backfill made an expensive row correct rather than absurd.**
+`Myprotein Impact Creatine Sachets, 7 x 5.7g` stored `5.7g` and priced at £140/100g — over any
+sensible bound, and excluded as an error. It now stores `39.9g` and prices at **£20.05/100g**: still
+the dearest ranked row, and now a real one. **The fix did not remove the outlier, it made it true.**
+
+**FUNGIBILITY APPLIED, AND IT IS NOT A SMALL FILTER: 26 of 75 rows carry the word and are not the
+thing.**
+
+| Excluded | n | Why |
+|---|---|---|
+| Blends | most of the 26 | `Creatine+ Collagen+ Electrolytes`, `Creatine And Magnesium`, `Platinum Creatine Plus` — most of the 100g is not creatine |
+| Gummies | 2 | 100g of gummy is mostly sugar and gelatin |
+| **Alternative salt** | **1** | `Creatine HCL - 100G` |
+| No pack size | 14 | listed, not hidden |
+
+**THE HCL ANSWER, ASKED DIRECTLY.** It was on the page and it should not be. Creatine HCl is dosed at
+roughly 1–2g against monohydrate's 3–5g, so **price per gram says the opposite of price per dose** — it
+would have ranked mid-table at £11.49/100g and told a shopper something false in both directions. One
+row, excluded by name, listed with the reason.
+
+**Monohydrate is the commodity and the unstated rows are it:** 14 say monohydrate, 4 say Creapure, 18
+say neither and are monohydrate by default because that is what the category means. **Those 36 are
+genuinely interchangeable.**
+
+---
+
+**AND THE FUNGIBILITY FILTER ABSORBED THE ROW THE BOUND WAS PROVEN ON.**
+
+Item 441 verified the median-ratio bound by showing it caught `Zooki Creatine+ Powder Sachets` at
+£589.82/100g against a £67.62 threshold. **`Creatine+` matches the blend pattern, so Zooki is now
+excluded one step earlier, as a blend.**
+
+> **Both exclusions are correct and they are correct for different reasons.** Zooki *is* a blend — that
+> is a fact about the product. Its £589.82 *is* a pack-size error — `6.78g` stored against a £39.99
+> multi-sachet box, still wrong, still scoring `agrees`. **The row was excluded for the true reason
+> that was not the reason it was interesting.**
+
+**The bound now fires zero times on both shipped pages.** Whey: nothing within 1.7× of the median.
+Creatine: the one row it would have caught is gone before it runs.
+
+> **"A guard seen to refuse" was the standard, and neither shipped page meets it.** The bound is
+> verified in SQL — five sachet rows on collagen, which has no page — and it has never refused
+> anything a visitor could have seen. **A guard that is correct and never exercised is a guard whose
+> next failure is its first observation**, and that is the state both pages are in.
+
+**Recorded rather than engineered around.** Loosening the fungibility filter to let Zooki through so
+the bound can catch it would be arranging a demonstration, and the demonstration would be of a row
+that does not belong on the page.
+
+**The whey page needed no fungibility filter and was checked, not assumed:** zero of its 82 rows match
+any non-fungible pattern. `Puori CP2 Whey Collagen` is a blend and was already unranked for having no
+pack size — **excluded correctly by accident**, which is worth knowing before the next whey product
+arrives with a size.

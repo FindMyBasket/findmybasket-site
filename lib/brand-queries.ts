@@ -674,9 +674,20 @@ export interface PerUnitProduct {
  */
 export async function getTypeByUnitPrice(
   namePattern: string,
-  opts: { medianRatioBound?: number } = {},
+  opts: {
+    medianRatioBound?: number;
+    /**
+     * Rows matched by the type pattern that are NOT the fungible thing being ranked.
+     * A price per 100g is only a comparison where 100g is the same substance -- a
+     * creatine HCl at 1-2g a dose is not a kilogram of monohydrate, a creatine blend
+     * is mostly other ingredients, and 100g of gummies is mostly sugar. Each is
+     * listed with its reason rather than dropped. Item 443.
+     */
+    notFungible?: { test: RegExp; reason: string }[];
+  } = {},
 ): Promise<{ ranked: PerUnitProduct[]; unranked: PerUnitProduct[]; median: number | null; bound: number | null }> {
   const RATIO = opts.medianRatioBound ?? 10;
+  const NOT_FUNGIBLE = opts.notFungible ?? [];
 
   const { data } = await supabase
     .from('products_active')
@@ -733,7 +744,10 @@ export async function getTypeByUnitPrice(
     });
   }
 
-  const priced = all.filter(p => p.per100g !== null);
+  // Median over the FUNGIBLE priced set only. Including blends and gummies would move
+  // the median that the sanity bound is a ratio of, so a non-comparable row would
+  // widen the tolerance for a genuinely wrong one.
+  const priced = all.filter(p => p.per100g !== null && !NOT_FUNGIBLE.some(r => r.test.test(p.name)));
   if (priced.length === 0) return { ranked: [], unranked: all, median: null, bound: null };
   const sorted = [...priced].map(p => p.per100g as number).sort((a, b) => a - b);
   const median = sorted[Math.floor(sorted.length / 2)];
@@ -742,6 +756,8 @@ export async function getTypeByUnitPrice(
   const ranked: PerUnitProduct[] = [];
   const unranked: PerUnitProduct[] = [];
   for (const p of all) {
+    const nf = NOT_FUNGIBLE.find(r => r.test.test(p.name));
+    if (nf) { unranked.push({ ...p, excluded: nf.reason }); continue; }
     if (p.per100g === null) { unranked.push({ ...p, excluded: 'no pack size on this listing' }); continue; }
     if (p.per100g > bound) {
       unranked.push({ ...p, excluded: `priced at £${p.per100g.toFixed(2)}/100g, over ${RATIO}x the £${median.toFixed(2)} median for this type — likely a pack-size error, so it is not ranked` });
