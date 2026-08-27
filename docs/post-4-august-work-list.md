@@ -36325,10 +36325,42 @@ previewing and is read-only.
 question and they are clean — **the mentions of `inferCategorisation` in all three are historical
 comments about a function they no longer call.**
 
-> **ONE CAVEAT KEPT RATHER THAN DROPPED:** `skincare-colour-backfill.mts` writes nothing and
-> **generates a `.sql` artefact "review before apply"**, so it carries the same Stage-1 blind spot into
-> a hand-applied file. **A script that cannot write can still produce a write**, and the preflight does
-> not reach it.
+#### ★ THE GAP THE PREFLIGHT CANNOT REACH
+
+`scripts/skincare-colour-backfill.mts` writes nothing and **emits
+`scripts/.skincare-colour-backfill.gen.sql`, marked "review before apply".**
+
+> **A SCRIPT THAT CANNOT WRITE CAN STILL PRODUCE A WRITE.** The artefact carries the Stage-1 blind spot
+> into a file with **nothing in front of it** — no preflight, no dry-run default, no service-role gate.
+> The refusal added to `recategorise-products` does not reach it and cannot be made to.
+
+**HAS IT EVER BEEN GENERATED, AND WAS ANY OF IT APPLIED? YES TO BOTH — AND THE TRACE EXISTS.**
+
+| | |
+|---|---|
+| the `.gen.sql` file | **absent from the working tree and never committed** — `.gitignore` line 25 |
+| `fmb_skincare_colour_snapshot_20260701` | **EXISTS. 1,856 rows, `snapshot_at` 1 July 2026** |
+| still moved today | **1,856 of 1,856** — the change stands |
+| a sibling from the same day | `fmb_bathbody_phase1_snapshot_20260701`, **11 rows** |
+
+**So it ran, and it was applied, two days after the fragrance go-live.**
+
+> **AND THE PREMISE THAT A HAND-APPLIED FILE LEAVES NO TRACE IS WRONG HERE, FOR A REASON WORTH
+> KEEPING.** The script creates a snapshot table **so the change is reversible**, and that design — made
+> for a different purpose — is what makes a hand-applied file auditable months later. **The artefact
+> vanished; the evidence of its application did not.** Same shape as "the catalogue is the audit trail"
+> in item 476: the durable record is a side effect of caring about reversibility, not of logging.
+
+**AND THE BLIND SPOT DID NOT FIRE IN THAT RUN — CHECKED RATHER THAN ASSUMED.** All 1,856 transitions are
+`skincare → makeup` (`skincare/Skincare → makeup/Lip Colour` 638, `skincare/SPF → makeup/Foundation`
+280, …). **Zero carry a fragrance or home-fragrance token**, and **none of item 471's 59 EDP/EDT rows
+are in the snapshot** — so the retailer-default explanation there stands unchallenged by this.
+
+**The reason it did no harm is structural rather than lucky:** the script's input is
+`top_category = 'skincare'` rows and it acts on the **delta** between two classifier versions, so a row
+the denylist excludes produces **no destination at all**. **The blind spot silenced it rather than
+misrouting it** — which is the same mechanism that makes the fragrance half of item 475 safe from
+reverting, arriving in a third place today.
 
 #### NOT DEPLOYED, AND THE ROUTE IS THE ONE WORKFLOW
 
