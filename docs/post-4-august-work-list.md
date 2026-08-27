@@ -34636,3 +34636,112 @@ committed it, and the other session's legitimate work is what looked foreign.
 **No fix proposed.** The item was preserved, renumbered to 452 and committed; contiguity passes at 452.
 **Naming the number-allocation window as unguarded is the finding**, and whether it needs a mechanism
 depends on how often two sessions run at once.
+
+---
+
+### 455. Whey A, B and C, and a mobile row measured rather than reasoned
+
+**Raised:** 27 August 2026 · **56 ranked, 26 not ranked. One shared row for all three type pages.**
+
+**FIRST, WHAT THE NULL DID TO THE THREE LIVE PAGES: NOTHING, AND THE REASON IS STRUCTURAL RATHER THAN
+LUCKY.**
+
+| Page | Matched | With a size, before | after |
+|---|---|---|---|
+| whey | 82 | 67 | **67** |
+| creatine | 75 | 44 | **44** |
+| plant protein | 31 | 23 | **23** |
+
+Item 453 nulled 1,842 rows and **not one of them was on a type page.**
+
+> **A bundle's name states two products and a whey's states one, so a row with a size to lose was never
+> a bundle.** The null took `canonical_size` from exactly the rows whose names carry two distinct
+> sizes; a type page ranks rows whose names carry one. **The two act on sets that cannot overlap.**
+
+**"Nothing changed" reads as a weak result and this is a strong claim about why** — the pages were not
+spared, they were never eligible.
+
+---
+
+**A — THE FUNGIBILITY EXCLUSIONS WHEY NEVER RECEIVED.** Creatine got these at item 443; whey did not,
+so nine rows that are not plain whey powder were ranked against it on weight: **6 collagen blends, 2
+bar-plus-powder bundles, 1 sample.** Each now sits under Not ranked with its reason, through the
+mechanism already shipped.
+
+**B — TWO MASS GAINERS, AND THEY WERE RANKS 1 AND 2.**
+
+```
+Advanced Whey Mass Gainer - 2.5kg    £1.40/100g    rank 1
+Impact Whey Mass Gainer - 2.5kg      £1.76/100g    rank 2
+```
+
+**Carbohydrate is most of a gainer's weight, so its price per 100g falls while its price per 100g OF
+PROTEIN does not.** The page's own unit misread them, and it misread them at the top of the list where
+it is read first. **The floor becomes £1.88 rather than £1.40.**
+
+**C — FACETS, AND THE ARGUMENT IS THE SPREAD RATHER THAN THE LABELLING.**
+
+| Facet | n | Range | Spread |
+|---|---|---|---|
+| Source not stated | **33** | £1.88 – £8.90 | **4.7x** |
+| Clear whey | 13 | £4.47 – £8.75 | 2.0x |
+| Isolate | **10** | £4.90 – £6.60 | **1.3x** |
+
+> **On one combined list the isolate buyer cannot see that their real choice is 1.3x, not 4.7x.**
+> Filtering here is not tidying — it is the only way either spread is visible. A single ranking shows
+> one range and implies it belongs to every row in it.
+
+**33 and not 31**, because A and B removed rows from that bucket too: the earlier figure was
+pre-exclusion and this one is post.
+
+**"Source not stated" rather than "Concentrate": zero products say concentrate.** Calling them that
+would assert what no label supports.
+
+**ITEM 271'S RULE, WHICH HAS BROKEN THREE TIMES (items 423, 429, 441).** The chip count and the list
+come from **the same filter applied to the same array**, so they cannot disagree. Verified on the
+preview at every facet:
+
+| | chip says | destination renders |
+|---|---|---|
+| All | 56 | **56** |
+| Isolate | 10 | **10** |
+| Clear whey | 13 | **13** |
+| Source not stated | 33 | **33** |
+
+10 + 13 + 33 = 56.
+
+---
+
+**THE MOBILE ROW, MEASURED. The prediction was close on one field and wrong on another.**
+
+| At 390px | predicted | measured |
+|---|---|---|
+| Row width | 342 | **342** |
+| Rank | 20 | **20** |
+| Thumbnail | 56 | **56 x 56** |
+| Name column | ~178 | **185** |
+| Per-100g column | ~76 | **45** |
+
+**The price column is 31px narrower than reasoned**, because "per 100g" wraps beneath the figure
+rather than sitting beside it — so the column is as wide as `£12.34`, not as wide as the label. **That
+spare width went to the name**, which is why 178 became 185. Reasoning got the constraint right and the
+arithmetic wrong.
+
+**Row height 86px at mobile, 80px at desktop; the name wraps to 2 lines at 390 and 1 at 1440. No
+horizontal overflow at either.**
+
+**WHAT DESKTOP INHERITED: everything except the name.** Rank 20, thumbnail 56, price column 45 — all
+identical at 1440px. **Only the name column changes, 185px to 1,043px.** The row was laid out at 390
+and desktop is the same grid with the spare width given to the one field that can use it.
+
+---
+
+**VERIFIED ON THE PREVIEW:** three `ol` and two `ul` report `list-style-type: none`; **56 thumbnails,
+0 broken images, 0 fallback tiles** — every ranked whey product has an image today, so the fallback is
+present in code and unexercised, which is worth saying rather than claiming it works; **26 rows under
+Not ranked**, the nine plus two plus fifteen with no pack size, each carrying its reason.
+
+**One shared `UnitPriceList` for all three pages** rather than three copies of a row. Items 406, 407
+and 417 were each a second copy of one idea drifting from the first, and three type pages each
+rendering their own row is that setup exactly. **`list-none` is set locally rather than in a global
+reset**, since prose lists elsewhere want their markers.
