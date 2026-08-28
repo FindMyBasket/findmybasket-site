@@ -24,9 +24,9 @@ const dmSans = DM_Sans({
 // like /product/[id] and /brands/[slug] override these via generateMetadata.
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.findmybasket.co.uk'),
-  title: 'Compare Beauty Prices Across UK Retailers | FindMyBasket',
+  title: 'Health & Beauty Price Comparison UK | FindMyBasket',
   description:
-    'Build your beauty routine and compare prices across multiple UK retailers. Delivery thresholds included. Free to use.',
+    'Build your health and beauty routine and compare prices across multiple UK retailers. Delivery thresholds included. Free to use.',
 };
 
 export default function RootLayout({

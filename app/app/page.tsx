@@ -7,14 +7,14 @@ import './routine-builder.css';
 export const metadata: Metadata = {
   title: 'Your routine | FindMyBasket',
   description:
-    'Review your beauty routine and find the best value way to buy everything across UK retailers. Compare prices, optimise your basket, save money.',
+    'Review your health and beauty routine and find the best value way to buy everything across UK retailers. Compare prices, optimise your basket, save money.',
   alternates: {
     canonical: 'https://www.findmybasket.co.uk/app',
   },
   openGraph: {
     title: 'Your routine | FindMyBasket',
     description:
-      'Review your beauty routine and find the best value way to buy everything across UK retailers.',
+      'Review your health and beauty routine and find the best value way to buy everything across UK retailers.',
     url: 'https://www.findmybasket.co.uk/app',
     type: 'website',
   },
@@ -28,7 +28,7 @@ const jsonLd = {
   applicationCategory: 'ShoppingApplication',
   operatingSystem: 'Web',
   description:
-    'Build your beauty routine and find the best value way to buy everything across UK retailers.',
+    'Build your health and beauty routine and find the best value way to buy everything across UK retailers.',
   offers: {
     '@type': 'Offer',
     price: '0',

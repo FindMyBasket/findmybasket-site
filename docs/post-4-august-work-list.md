@@ -38209,3 +38209,237 @@ recorded against 493 survives into how it ships, not just how it was written.
 call; **a refusal nobody has read is a refusal nobody has verified.** Confirmed from the DEPLOYED
 SOURCE rather than the merge state -- item 300's method, not just its finding -- and seen to name
 **supplements alone**.
+
+---
+
+### 495. The tagline becomes health and beauty, and the sweep that authorised it could not be re-measured
+
+**Raised, applied and recorded:** 28 August 2026 · **Robbie's call. Held 25 August, reversed on measurement rather than preference.**
+
+**"Your beauty routine. Optimised." -> "Your health and beauty routine. Optimised."**, and the word
+swept across every surface that carries FindMyBasket's own self-description.
+
+#### ★ THE FIRST FINDING: ITEM 331's SWEEP CANNOT BE RE-MEASURED, ONLY RE-TAKEN
+
+Item 331 recorded **35 occurrences across 28 lines**. **Seven different file sets produce that exact
+pair**, among them:
+
+```
+social-tags.ts + app/page.tsx + about.html + index.html
+social-tags.ts + layout.tsx + index.html + work-with-us.html
+social-tags.ts + orphan-gate.ts + queries.ts + index.html
+```
+
+**It recorded its RESULT and not its METHOD**, so there is no way to know which files it counted.
+
+> **A MEASUREMENT WITHOUT ITS METHOD CAN ONLY BE RE-TAKEN, NEVER RE-MEASURED.** Item 331's own lesson
+> was that *"a sweep with a date is a measurement, not a state"* -- **this is that one level down.**
+> It knew its number would go stale and did not notice that its number could not be reproduced even
+> on the day it was written.
+
+**THE DEFINITION USED HERE, STATED SO THE NEXT SWEEP IS A COMPARISON RATHER THAN A NEW READING:**
+
+```
+/beauty/i across  public/*.html, app/**, components/**, lib/**   (excluding __tests__)
+minus             retailer and brand names (Beauty Bay, Beauty Flash, Niche Beauty,
+                  Branded Beauty incl. BRANDED_BEAUTY identifiers, Beauty of Joseon)
+minus             K-Beauty and Korean beauty
+minus             URLs and filenames -- matched against the WHOLE LINE, see below
+minus             comments (HTML and //)
+=>                49 occurrences across 42 lines
+```
+
+**AND 49 RATHER THAN 50 IS THE CORRECTION THAT MAKES THE DEFINITION REPRODUCIBLE RATHER THAN MERELY
+STATED.** The first run reported 50: `app/sitemap-pages.xml/route.ts:56` is
+`{ loc: '/articles/beauty-delivery-threshold-savings.html', ... }` -- a sitemap URL, caught by the
+filename rule only when the window widened from **24 characters to the whole line**, because
+`beauty-delivery-threshold-savings.html` is 38 characters long and the `.html` fell outside the window.
+
+> **A METHOD THAT REPORTS ITS OWN EDGE CASES IS ONE THE NEXT SWEEP CAN ACTUALLY MATCH.**
+>
+> **24 CHARACTERS AGAINST A 38-CHARACTER FILENAME.** The window width was never a decision -- it was a
+> default nobody chose, sitting inside a rule that looked complete, and **it was invisible until it
+> produced a wrong answer.** No test could have caught it: the rule ran, matched, and returned a
+> plausible number.
+>
+> **IT IS NOW WRITTEN INTO THE DEFINITION RATHER THAN THE RESULT**, which is exactly what item 331
+> failed to do. **A parameter that changes the answer is part of the method whether or not anyone
+> wrote it down** -- and 49-against-50 is the smallest possible demonstration that the difference
+> between a stated definition and a reproducible one is the parameters nobody thought worth stating.
+
+#### ★ THE SECOND FINDING: NOTHING MOVED, ACROSS 1,782 INSERTIONS
+
+Re-run against `f50a65f`, the 25 August HEAD, with the identical definition:
+
+```
+25 Aug   49 occurrences / 42 lines
+TODAY    49 occurrences / 42 lines      added 0 · removed 0 · unchanged 42
+```
+
+**Three days, 32 copy files, 1,782 insertions -- the type pages, the brand index, the category grids,
+the supplements chips and three retailer additions -- and NOT ONE in-scope line changed.**
+
+> **THE UMBRELLA WORD LIVES ONLY IN TOP-LEVEL SELF-DESCRIPTION, AND EVERY NEW SURFACE NAMES ITS OWN
+> CATEGORY.** `/compare/whey-protein` says protein, `/fragrance` says eau de parfum, the supplements
+> chips say collagen and biotin. **A page about one category never needs the word for all of them.**
+>
+> **This is why the change is smaller than the churn suggested**, and it is the opposite of what a
+> re-sweep is usually for. Re-sweeping was still right: the finding is that it did not move, and
+> **"it did not move" is only available to someone who looked.**
+
+#### THE THREE COMPLICATIONS WERE ALL BIGGER THAN RECORDED
+
+**1. FOUR over-cap lines, not three.**
+
+| surface | now | naive | cap | |
+|---|---:|---:|---:|---|
+| `index.html` `<title>` | 56 | 67 | 60 | over by 7 |
+| `app/layout.tsx` title | 56 | 67 | 60 | over by 7 |
+| `about.html` description | 152 | 163 | 155 | over by 8 |
+| **`app/supplements/page.tsx:9`** | **59** | **70** | **60** | **over by 10 -- NOT in item 331** |
+
+The fourth was written on 27 August, during the supplements work, **after item 331 measured.**
+
+**2. SIX lines carry the word more than once, not four.** The named four are `og:title`,
+`og:description`, `twitter:title`, `twitter:description`. Two more: **`index.html:8` at THREE
+occurrences** and `index.html:456` at two.
+
+**3. FOUR substantive comments, not two.** The 25% badge record (`index.html:292`), the ROADMAP
+comment (`index.html:451`), and **a PAIR** -- `lib/queries.ts:62` and `components/SubcategoryPage.tsx:29`
+-- both quoting `"Beauty supplements"` while recording the 406/407 chip-versus-page drift.
+
+#### AND A FIFTH COMPLICATION ITEM 331 DID NOT HAVE: A LIVE LABEL, NOT PROSE
+
+`lib/queries.ts:67` was `supplements: 'Beauty supplements'`. **A sweep makes it "Health and beauty
+supplements". The right answer was neither.**
+
+> **CHOSEN, NOT SUBSTITUTED: `'Vitamins & supplements'`.** Plain `'Supplements'` recreates items
+> 406/407 exactly -- *"Browse by area > Supplements"* inside Supplements, the chip and its destination
+> named the same thing one click apart. **And "beauty supplements" undersold the shelf the moment
+> Healf brought sports nutrition, greens and mushroom extracts.**
+
+#### THE REWRITES, AND WHAT WAS DELIBERATELY LEFT
+
+| surface | from | to | |
+|---|---|---|---:|
+| `<title>` x2 | Compare Beauty Prices Across UK Retailers \| FindMyBasket | **Health & Beauty Price Comparison UK \| FindMyBasket** | 56 -> 50 |
+| `about.html` description | ...lowest total cost. Built in Hampshire by Robbie Coffin. | **...Built in Hampshire.** | 152 -> 146 |
+| supplements title | Beauty supplement prices... | **Supplement prices across UK retailers** | 59 -> 52 |
+| `og:`/`twitter:title` x2 | ...\| UK Health & Beauty Price Comparison | **...\| UK Price Comparison** | 94 -> 78 |
+
+**The description took the 146 rather than a 155 that fitted exactly.** **Sitting on a cap is the same
+fragility as a bare integer** -- one word anywhere puts it over, and nothing warns you. Item 494's
+lesson, applied the same day it was written.
+
+#### ★ THE og:title IS A BETTER OUTCOME THAN THE INSTRUCTION ASKED FOR
+
+The instruction was to shorten a line that would truncate. At 94 it read *"Your health and beauty
+routine. Optimised. | UK Health & Beauty Price Comparison"* -- and link previews cut near 88, so it
+would have shown *"UK Health & Beauty Price Comp"*.
+
+**BUT THE LINE SAID "HEALTH AND BEAUTY" TWICE**, once in the tagline half and once in the descriptor
+half. **The room came from removing the repetition, not from cutting a phrase.** 94 -> 78 with the
+category still stated, because the tagline half already carries it.
+
+> **THE FIT WAS A SIDE EFFECT OF FIXING A DEFECT NOBODY HAD ASKED ABOUT.** The brief was "it is too
+> long"; the cause was "it says the same thing twice", and only the second reading produces a line
+> that is both shorter AND better. **Had it been solved as a length problem, the honest move would
+> have been dropping a true clause -- and the duplication would have survived at a shorter width.**
+>
+> **A CONSTRAINT IS SOMETIMES A SYMPTOM.** Measuring why the line was long, rather than only that it
+> was, is what separated the two.
+
+**Two lines rewritten rather than swept**, because the phrase does not fit English:
+`"that's how you actually buy beauty"` -> `"that's how you actually shop"`, and
+`"on ingestible beauty supplements"` -> `"on supplements"`.
+
+**Three keep a bare `beauty`, each deliberately:** `app/finder/page.tsx:15` (the finder is
+skincare-only -- niacinamide, retinol, anti-ageing -- and the phrase would oversell a one-category
+tool); `savings-hub.html:230` (an excerpt about *Beauty Bay vs Boots vs Escentual for skincare* --
+the sentence is about them, not us); and the third keyword below.
+
+#### ★ SCOPE ROBBIE ADDED, WITH THE REASON -- NOT A SLIP
+
+`index.html:8` carried the word three times. Two took the phrase; the third stayed bare, because
+**three full phrases in one line is keyword stuffing rather than positioning.** And one term changed
+that was not a `beauty` occurrence at all:
+
+```
+-  best price skincare UK
++  supplement price comparison UK
+```
+
+**Flagged as out of scope and Robbie kept it, with the reason recorded as his:**
+
+> *"The line carried two skincare terms and no supplements term, which stopped describing the
+> catalogue when Healf landed -- the same defect as the tagline, on the same line, and reverting it
+> would fix the umbrella and leave the keyword."*
+
+**A defect found while fixing its twin, on the same line, is not scope creep. Leaving it would have
+been.**
+
+#### THE COMMENT THAT NEEDED A DATE RATHER THAN AN EDIT
+
+`lib/queries.ts:62` describes **present behaviour that the change makes past**: *"the destination page
+is headed 'Beauty supplements'"*. After the label change it is headed "Vitamins & supplements".
+
+**The record was left exactly as written and a dated note added beneath it.**
+
+> **A COMMENT QUOTING A STRING THAT NO LONGER EXISTS IS WORSE THAN ONE CARRYING ITS OWN DATE.** Editing
+> the quotation would make the record describe a defect that never happened in that form; deleting it
+> loses why the map exists at all. **Dating it keeps both the history and its expiry.**
+
+#### AND ITEM 331's PREDICTION HELD, WHICH IS WORTH MORE THAN TRIMMING IT
+
+`about.html`'s `<h1>` is now **69 characters** -- *"The health and beauty price comparison engine for
+your whole routine."* Item 331 said it *"reads noticeably heavier at 69 characters"*, and it does.
+
+> **IT STANDS. The prediction was weighed when the change was approved**, and **recording that a
+> forecast held is worth more than removing the evidence for it.** A prediction quietly edited away
+> is a prediction that can never be scored.
+
+#### WHY THE HOLD REVERSED
+
+**Blocker one expired on 27 August** when supplements got its shape. **Blocker two -- the register
+question, "health and beauty" being how Boots and Superdrug describe themselves against a premium
+editorial position -- weakened rather than expired**, and it weakened because the catalogue moved:
+
+```
+6,551 supplement products live
+  714 brands            (361 before Healf; recorded as 712 this morning and ALREADY STALE)
+   10 retailers carry supplements, THREE of them 98.7%
+        Healf 4,190 · Boots 1,784 · MyProtein 494 · seven others 410
+```
+
+> **"TEN RETAILERS, THREE AT 98.7%" IS STRONGER FOR THE ARGUMENT THAN "THREE RETAILERS", BECAUSE IT
+> SAYS THE HEALTH HALF IS NOT ONE SUPPLIER DEEP.** A category held up by a single onboarding is a
+> dependency; one with a long tail behind three anchors is a category.
+
+**A TAGLINE THAT UNDERSELLS THE CATALOGUE IS ITS OWN DEFECT, and the register objection was weighed
+against a smaller catalogue than exists today.** The hold was correct when made and stopped being
+correct without anyone revisiting it -- **the same shape as the bare `12` and the stale 2,530, arriving
+on a decision rather than a number.**
+
+**And 712 went stale within a day. Third time today** (items 493, 494).
+
+#### ★ HOW ITEM 331 CLOSES: HELD ON JUDGEMENT, REVERSED ON MEASUREMENT
+
+**NEITHER REASON WAS OVERTURNED BY ARGUMENT.** That is the whole shape of it:
+
+| the hold rested on | what happened | how |
+|---|---|---|
+| **1.** supplements had no shape | **EXPIRED** | 2,274 products, a second retailer, Boots 95.2% -> 76.6% |
+| **2.** the register question -- "health and beauty" is how Boots and Superdrug describe themselves, against a premium editorial position | **WEAKENED** | 6,551 supplements, 714 brands, ten retailers with three at 98.7% |
+
+**ONE EXPIRED AND ONE WEAKENED. THE CATALOGUE IS WHAT MOVED.**
+
+> **Nobody won the register argument, and nobody needed to.** The objection was never wrong -- it was
+> weighed against a smaller catalogue than exists today, and **a judgement made against a measurement
+> stops being current when the measurement does.** Item 331 said as much about its own sweep and did
+> not extend it to its own conclusion.
+>
+> **A DECISION HELD FOR A REASON THAT CAN EXPIRE NEEDS THE REASON RECORDED, OR THE EXPIRY IS
+> UNDETECTABLE.** Item 331 recorded both, which is the only thing that made today's reversal a
+> measurement rather than a change of mind. **Its value was not the sweep. It was the two reasons.**
+
+**Held 25 August on judgement. Reversed 28 August on measurement.**

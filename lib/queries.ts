@@ -63,8 +63,18 @@ export function sortCategories(cats: string[]): string[] {
 // supplements" — the same thing named two ways one click apart. That is the
 // exact failure mode duplicated label maps produce, so the label lives here and
 // both surfaces read it rather than each carrying its own copy.
+//
+// THE QUOTED LABEL ABOVE IS DATED, NOT WRONG. Until 28 August 2026 the value was
+// "Beauty supplements", which is what the paragraph above quotes. It became
+// "Vitamins & supplements" with the health-and-beauty tagline change (item 495):
+// Healf brought sports nutrition, greens and mushroom extracts, so "beauty
+// supplements" undersold what the shelf holds. Plain "Supplements" was NOT chosen
+// -- it would recreate items 406/407 exactly, the chip and its destination named
+// the same thing one click apart. The record above is left as written and dated
+// here rather than edited, because a comment quoting a string that no longer
+// exists is worse than one carrying its own date.
 export const SUBCATEGORY_DISPLAY: Record<string, string> = {
-  supplements: 'Beauty supplements',
+  supplements: 'Vitamins & supplements',
   sports: 'Sports nutrition',
   // Slug and label deliberately differ. The sibling shelves under bath_body are
   // BODY-PART NOUNS -- body, hand, foot -- so 'oral' (an adjective) would have been
