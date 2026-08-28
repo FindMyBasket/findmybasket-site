@@ -37333,11 +37333,53 @@ through one worker"* (`import-awin-feed:771`), while a real import slices.
 > neither is measured. **Written into the config `notes` as unknown**, so the next reader inherits the
 > question rather than a guess.
 
-**THE TEST THAT SETTLES IT WITHOUT WRITING ANYTHING:** `max_rows` with stride sampling — the same
-instrument that established Gorgeous Shop's failure was **row-dependent rather than a download
-problem**. **If a bounded dry run completes where an unbounded one fails, the failure is accumulation
-and a sliced real import is unaffected. If it fails at every bound, the flag's cost is inspectability
-itself** — a different finding, and a worse one.
+#### ★ TESTED AT THREE BOUNDS: IT IS ACCUMULATION, AND A SLICED IMPORT IS NOT IMPLICATED
+
+`max_rows` with stride sampling — the same instrument that established Gorgeous Shop's failure was
+**row-dependent rather than a download problem**.
+
+| bound | result |
+|---|---|
+| unbounded, 7,999 rows | **546** |
+| `max_rows=2000, stride=4` | **546** |
+| **`max_rows=400, stride=20`** | **SUCCESS** |
+
+> **IT DOES NOT FAIL AT EVERY BOUND, SO THE FLAG'S COST IS NOT INSPECTABILITY ITSELF.** The failure is
+> row-dependent: **accumulation in the dry-run path**, which is never sliced and holds diagnostics it
+> never writes. **A real sliced import is not implicated** — and that is now the tested reading rather
+> than the plausible one.
+
+**What the flag actually costs is the UNBOUNDED dry run.** The ceiling falls from ~8,000 rows without
+it to between 400 and 2,000 with it, because the supplements branch adds per-row work. **A bounded run
+is the inspection route from here.**
+
+#### THE CLASSIFICATION WITH THE FLAG — A 400-ROW STRIDE SAMPLE, STATED AS A SAMPLE
+
+```
+sampled: max_rows 400 · stride 20 · rows_seen 7999 · rows_kept 400 · tail_unsampled TRUE
+```
+
+| | before the flag (whole feed) | after (400-row sample) |
+|---|---|---|
+| `on_supplements_path` | **0** | **223 of 400** |
+| dropped as `supplement` | **1,222** | **0** |
+| `skincare` | 2,961 of 4,999 | **9 of 400** |
+
+**NOT SCALED TO THE FEED, DELIBERATELY.** The sample reports `tail_unsampled: true`, so 223/400 is a
+reading of 400 rows and not an estimate of 7,999. **Item 440's rule: the number that may be claimed is
+the number that was read.**
+
+**THE NAMES, AGAIN RATHER THAN THE COUNTS** — every one landing `supplements / supplements`:
+
+> *Wild Nutrition Women's Food-Grown Daily Multi Nutrient · Wild Nutrition Food-Grown Breastfeeding
+> Complex · KIKI Health Body Biotics · Organifi Critical Immune · Optibac For Women · Pure
+> Encapsulations Magnesium Glycinate · Pure Encapsulations Vitamin K with D3 · Metagenics Multi
+> Essentials for Women · BodyBio Balance Oil · Ancient Nutrition Organic SuperGreens · BodyHealth
+> Perfect Amino Electrolytes · Thorne L-Glutamine*
+
+**These are the SAME PRODUCTS the first dry run dropped as `supplement` or filed as `skincare`.** The
+flag moved them to where they belong — **which is what "it is the mechanism, not an override"
+predicted, and the prediction is now observed rather than argued.**
 
 #### THE THREE DECISIONS OWED, NONE TAKEN
 
