@@ -4,11 +4,19 @@ name: refresh Healf
 # become possible. import-dry-run.yml deliberately cannot express a write; this can,
 # and that is why it is a separate, per-retailer file like refresh-debenhams.
 #
-# ── NO SCHEDULE YET, AND THAT IS THE POINT ──────────────────────────────────────
+# ── THE SCHEDULE WENT IN WITH THE ACTIVE FLIP, WHICH IS WHEN ITS REASON ARRIVED ──
 #
-# retailers.active is FALSE. The catalogue does not show Healf until someone has read
-# what arrived, so a daily cron would refresh a retailer nobody can see. The cron
-# goes in with the active flip, not before. Item 485.
+# This file shipped with NO cron and the reason was correct: retailers.active was
+# FALSE, so a daily run would have refreshed a retailer nobody could see.
+#
+# THAT JUSTIFICATION WAS CONSUMED BY A LATER STEP IN THE SAME SEQUENCE. active
+# flipped true on 28 Aug and absence_threshold_days = 7 put a date on it: a week
+# later Healf's 4,373 rows begin aging out of a catalogue that now shows them.
+# Nothing about this file changed and it became wrong anyway — the same shape as
+# the denylist entry in item 476, in a different artefact. Item 490.
+#
+# 03:13 UTC: off-minute by house convention, after the 02:37 and 03:00 feed
+# stagers, and before the first pg_cron import (refresh-stylevana, 03:30).
 #
 # ── WHAT TO EXPECT, WRITTEN DOWN BEFORE THE RUN ─────────────────────────────────
 #
@@ -26,6 +34,8 @@ name: refresh Healf
 # EITHER WAY THE FAILURE IS A FAILED RUN RATHER THAN A BAD ONE.
 
 "on":
+  schedule:
+    - cron: '13 3 * * *'
   workflow_dispatch:
     inputs:
       note:
