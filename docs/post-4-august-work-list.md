@@ -37964,3 +37964,160 @@ left.
 **JOB TWO'S SCOPE IS UNCHANGED, NOT SHRUNK.** The 6,480 are protected, not recovered, so the
 undetectable remainder is still the whole misfiled population — **and its acceptance criteria stand as
 item 492 records them.**
+
+---
+
+### 494. Healf's logo, three hand-maintained surfaces, and a coincidence that expired on schedule
+
+**Raised and applied:** 28 August 2026 · **Logo cut, three surfaces swept, all diffed both ways.**
+
+#### ★ 9% AGAINST 680%: WHY THIS IS NOT MYPROTEIN'S CASE
+
+```
+source canvas   892 x 292   palette PNG, 256 colours, no tRNS   aspect 3.055
+INK BAND        671 x 202   at (121,49)                         aspect 3.322
+padding         L121  R100  T49  B41
+```
+
+| | canvas | band | what the crop changes |
+|---|---|---|---|
+| **MyProtein** | 3417 x 3417 **square** | 3417 x 505 | **aspect by 6.8x — the whole job** |
+| **Healf** | 892 x 292 landscape | 671 x 202 | **aspect by 9% — a modest improvement** |
+
+> **AND IT STILL MATTERS.** Uncropped, the wordmark carries **15% horizontal and 31% vertical dead
+> space**, so at the same box height it renders **visually smaller than every neighbour**. The crop is
+> worth doing and it is not the same operation.
+>
+> **TREATING THE TWO AS ONE CASE WOULD HAVE BEEN THE ANALOGY CARRYING THE CAUTION WITHOUT THE CAUSE** —
+> the same failure recorded against the Boots comparison earlier today (item 492).
+
+**TARGET 173 x 52, FROM THE MEASURED 3.322 ASPECT RATHER THAN A SPECIFIED WIDTH.** The recent wordmarks
+converge on height 52 — `myprotein.png` 352x52, `niche-beauty.png` 256x52.
+
+> **173 IS SLIM BESIDE ITS PEERS AND THAT IS THE TRUE SHAPE.** Forcing it to niche-beauty's 256 would
+> stretch it **48%**. **MyProtein's spec said 256x52 and the measurement gave 352x52** — the spec was
+> an estimate written before the source was measured. **This is that lesson applied rather than
+> repeated.**
+
+**Format PNG.** Census: 13 webp, **11 png**, 3 jpg, 1 avif. webp leads and **no webp encoder exists on
+this machine**, so png is the established fallback. `sips` did the crop and resize.
+
+#### THE THREE SURFACES, DIFFED AS SETS IN BOTH DIRECTIONS
+
+**Truth = `retailers.active` less any non-null `unlisted_reason` = 13, none unlisted. Established from
+the table rather than by adding one to 12.**
+
+| surface | in table, not on page | on page, not in table |
+|---|---|---|
+| homepage strip `img` set | **Healf** | none |
+| `about.html` `li` set | **Healf** | none |
+| `about.html` prose | said **12** | — |
+
+**NEVER COUNT AGAINST COUNT.** `about.html` carried 12 `li` under a prose "12" — internally consistent
+and wrong. **That is the rule its own comment records**, written after it read 11 over a list of 11.
+Its comment also predicted the gap: *"Gorgeous Shop, Atelier De Glow and Perfume Click added and were
+missing from this list for days. Niche Beauty went live 9 August and was missing for seven. A retailer
+change MUST sweep this block; nothing detects it."* **Today was day zero of the same gap and it was
+closed the same day.**
+
+#### ★ AND THE COINCIDENCE RESOLVED ITSELF, EXACTLY AS ITEM 329 SAID IT WOULD
+
+`work-with-us.html` carried a bare `<span class="stat-num">12</span>`:
+
+```
+11 active retailers  ->  WRONG
+12 active retailers  ->  CORRECT, by coincidence rather than by maintenance
+13 active retailers  ->  WRONG AGAIN, without anyone touching the file
+```
+
+> **A NUMBER RIGHT BY ACCIDENT IS WORSE THAN ONE THAT IS WRONG, BECAUSE NOTHING DISTINGUISHES IT FROM A
+> MAINTAINED ONE** (item 329). **The prediction arrived on schedule** — the figure drifted back into
+> error through no edit at all, which is the property a bare integer has by construction.
+
+**AND THE FIX WAS ALREADY SITTING ONE CARD TO THE RIGHT.** That neighbour had been through this: *"100k+
+products tracked in real time"* became **"Every product from every retailer we carry, refreshed
+daily"** — a claim that stays true as the catalogue moves in either direction. **The retailer card was
+left standing beside the repaired one.** Same defect, one card to the left.
+
+**Now:** `Every · retailer we carry, compared on price and delivery in one basket` — **no integer to
+drift.**
+
+**Three surfaces, and only one of them could ever have been caught by a count.**
+
+#### THE MERGE ORDER, AND THE INVERSION THAT WAS RIGHT FOR THE WRONG REASON
+
+Four PRs stood open, three of them a chain:
+
+```
+main
+ +-- #514  items 490-492  Healf cron, Stage 2 split      docs + a cron line
+      +-- #515  item 493  recategorise-products composed  EDGE FUNCTION
+           +-- #516  item 494  logo, three surfaces       SITE HTML + PNG
+#508  items 485-486  the dry run                         docs only
+```
+
+**PROPOSED: invert it** -- docs first, then #516 alone so the site deploy is attributable, then #515
+last. The stated reason was that merging the chain as a chain lands an edge-function change and a
+production site deploy in the same window, and **the separate-deploys rule buys attribution rather
+than safety**: two unrelated changes in one window are not more dangerous than two in two windows,
+they are harder to tell apart afterwards, and telling them apart is the entire value.
+
+**Robbie approved the inversion. It did not survive contact with the contiguity check.**
+
+Dropping #515's commit from #516 would have left a gap at 493, because **494's record cannot land
+before 493's**. The only route was to split #515 -- its record with #516, its code after -- which
+separates a change from its record, the one thing the item forbids.
+
+> **★ AND THE REASON FOR THE INVERSION DISSOLVED WHEN THE MERGE WAS LOOKED AT RATHER THAN ASSUMED.**
+> Merging #515 **does not dispatch the edge function**. `deploy-edge-function.yml` is
+> `workflow_dispatch` only. **So #515's merge is inert** -- it lands text and a `.ts` file nothing is
+> running.
+>
+> The two events needing separation are the **site deploy** (caused by #516's merge) and the
+> **function dispatch** (a manual act, later). **Neither is caused by #515's merge.**
+>
+> **I WAS SEPARATING THEM IN THE WRONG CURRENCY** -- merge order, when the thing that buys
+> attribution is dispatch order, and the dispatch was already free to go last. The conclusion was
+> right and the mechanism given for it was not, which is the same defect as item 492's Boots analogy
+> **argued from the other end**: there a correct caution was carried by a mechanism that did not
+> obtain, here a correct ordering was.
+
+**ORDER TAKEN: #514 -> #515 (inert) -> #516 (the site deploy, alone in its window) -> the dispatch.**
+Same outcome Robbie asked for; the merge order it actually requires.
+
+#### AND #508 WAS CLOSED RATHER THAN MERGED, BECAUSE IT CONFLICTED
+
+```
+lines #508 adds over its merge base:  99
+of those, already on main:            91      (carried by #511/#512/#513)
+of those, absent from main:            8
+```
+
+**The 8 are two passages main DELIBERATELY REPLACED**: `**RECOMMENDED, NOT SET:**
+supplements_path_prefixes ... **Left for Robbie**`, superseded by the prefix being set and by the
+instruction that left it unset being recorded as wrong; and a terser draft of *"a tool that inherits
+the assumption it exists to test"*, superseded by the expanded version carrying item 442.
+
+> **MERGING IT WOULD NOT HAVE BEEN A NO-OP. It would have reinstated a superseded recommendation
+> beside the correction that supersedes it.** A branch old enough to conflict is old enough that its
+> content may have been decided differently since. **The conflict was the signal, not an obstacle** --
+> and resolving it by taking either side blindly would have destroyed the finding.
+
+**Both squash-merges also forced a rebase downstream**, because squashing rewrites the SHA the stacked
+branch was built on. #515 conflicted on the worklist tail until replayed onto the new main, and #516
+after it. **A stack costs one rebase per merge below it**, and that is the price of the contiguity
+rule, paid knowingly.
+
+#### ★ THE DISPATCH IS ITS OWN ACT -- ITEM 300'S SHAPE
+
+**Merged and running are different facts.** Item 300 found five functions stale that way, including
+one behind an ACTIVE cron that sent a month of customer email with an invented GBP 3.95 baseline three
+weeks after the fix had merged.
+
+**So the supplements flag and the composed call go together, never separably** -- the constraint
+recorded against 493 survives into how it ships, not just how it was written.
+
+**And the refusal is verified by being read.** The preflight's message changed with the composed
+call; **a refusal nobody has read is a refusal nobody has verified.** Confirmed from the DEPLOYED
+SOURCE rather than the merge state -- item 300's method, not just its finding -- and seen to name
+**supplements alone**.

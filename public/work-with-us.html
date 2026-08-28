@@ -263,8 +263,15 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
 
   <div class="stat-grid">
     <div class="stat-card">
-      <span class="stat-num">12</span>
-      <span class="stat-label">UK retailers currently live</span>
+      <!-- WAS A BARE "12". Wrong at 11 active retailers, correct at 12 BY COINCIDENCE rather than
+           by being maintained, and wrong again at 13 when Healf went live on 28 Aug -- WITHOUT
+           ANYONE TOUCHING THIS FILE. Item 329 predicted exactly that: a number right by accident is
+           worse than one that is wrong, because nothing distinguishes it from a maintained one.
+           The card to its right had already had this treatment ("100k+ products" -> "Every
+           product..."); this one was left standing beside it. Same defect, one card to the left.
+           Item 494. -->
+      <span class="stat-num">Every</span>
+      <span class="stat-label">retailer we carry, compared on price and delivery in one basket</span>
     </div>
     <div class="stat-card">
       <!-- WAS "100k+ products tracked in real time". It read 100k+ at 99,865 live products -- false
