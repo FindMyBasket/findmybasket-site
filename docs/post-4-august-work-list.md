@@ -36972,3 +36972,84 @@ the row stores.
 > it costs one count in the feed to know. **Measure it; do not assume it from the two we have.**
 
 **NOTHING IS CONFIGURED.** No secret, no workflow, no config row, no retailer row.
+
+---
+
+### 484. A hint that teaches a working path with a credential in it, and the check that would have caught Branded Beauty
+
+**Raised:** 28 August 2026, Robbie, out of the Healf onboarding · **Hint CORRECTED. Programme check
+SCOPED AND NOT BUILT — after Healf, not before.**
+
+#### 1 — THE HINT WAS NOT WRONG, WHICH IS WHY IT WAS WORTH CHANGING
+
+`import-awin-feed` returns a 400 when a `google_shopping` retailer has no `feed_url`, with:
+
+> *"Find the download URL in the AWIN dashboard (right-click the download button → Copy Link Address)
+> and store it in `retailer_import_config.feed_url`"*
+
+**Both existing Google retailers hold `storage://awin-feeds/<slug>.csv` instead**, and the credentialed
+URL lives in a GitHub secret. **The hint describes an older version of its own system.**
+
+> **★ FOLLOWING IT WOULD PUT A CREDENTIAL IN A DATABASE COLUMN AND PRODUCE A SUCCESSFUL IMPORT.** The
+> path works — `feedUrlOverride` is used directly, so an HTTP URL in `feed_url` imports fine. **There
+> is no error at any step, so nothing would ever reveal it.** A broken instruction gets found; a
+> working one that teaches the wrong practice does not.
+>
+> **And it is the kind of instruction that is FOLLOWED RATHER THAN CHECKED** — it appears at the moment
+> someone is stuck, phrased as the fix.
+
+**CORRECTED, AND IT SAYS WHY RATHER THAN JUST WHAT**, because the next person reading it is by
+definition about to do what it says: the URL carries credentials, the column is readable wherever the
+database is, so the URL goes in a secret, a `sync-<retailer>-feed.yml` stages the CSV to Storage, and
+`feed_url` holds the pointer. **One string, no consumers, no test asserting on it** — verified before
+changing rather than assumed.
+
+#### 2 — THE PROGRAMME CHECK: FLAG, NOT REFUSE
+
+**The decision, and the reasoning is a comparison of harms:**
+
+> **An import refusing on a closed programme stops the catalogue updating for a RELATIONSHIP problem.**
+> **Stale prices are a harm the refusal CAUSES; dead links are the harm it REPORTS.** A check that
+> creates a worse failure than the one it detects is not a guard, and the standing rule's own
+> justification — *"stale prices erode trust faster than missing retailers do"* — argues against
+> refusing on exactly these grounds.
+
+**So it flags, and it flags where a human reads it:** the standing-check findings table and the Monday
+monitor, **in item 194's three-state form — PASS · FOUND-SOMETHING · CANNOT-RUN** — because a red tick
+answers *did this exit non-zero* and three states do not fit in two.
+
+**THE SHAPE, WHICH IS MOSTLY ALREADY WRITTEN.** `scripts/brand-hub-programme-check.mjs` asks
+`GET api.awin.com/publishers/{PUB}/programmes?relationship=joined`, builds a Set of joined merchant
+ids, and compares it against ids extracted from hub links. **The retailer version compares the same set
+against `retailer_import_config.awin_merchant_id`.** One API read covers the fleet.
+
+**Coverage is complete, checked rather than assumed:**
+
+| | |
+|---|---|
+| active retailers | **12** |
+| with an `awin_merchant_id` | **12 of 12** |
+| without | 3 — Amazon, eBay, Evolve Beauty, all inactive, none on AWIN |
+
+**TWO CONDITIONS WRITTEN AT THE CHECK, NOT LEFT TO THE AUTHOR:**
+
+1. **The empty-list guard stays.** *"Refusing to report every hub as closed"* on an empty programmes
+   response. **A check that cannot look must fail rather than pass** — item 255, where `gone-ids-drift`
+   printed "No drift" twice from empty variables.
+2. **It must be SEEN TO REFUSE.** A canary merchant id absent from the joined set, inserted, observed
+   to be reported, and removed — **the way the supplement-type fixture canary was** (item 463). **A
+   check that has only ever passed is not yet known to be capable of failing.**
+
+#### ★ THE CASE FOR BUILDING IT IS A PAST FAILURE, NOT A HAZARD
+
+**Branded Beauty is AWIN merchant `48313`.** Its programme closed, **its deep links returned HTTP 200
+with a closed-merchant page**, and nothing watching error rates could see it (item 14). Its feed went on
+refreshing — **99.8% barcode fill, third of fifteen** — while every link it carried was dead.
+
+> **THIS CHECK WOULD HAVE CAUGHT IT ON THE NEXT WEEKLY RUN.** A concrete past failure a check would
+> have prevented is a stronger argument than a hazard it might, and this one has a merchant id, a date
+> and a measured cost.
+
+**NOT BUILT, AND THE ORDER IS DELIBERATE: after Healf.** The sync run is in flight and the onboarding
+sequence has a person waiting on it. **A check for a failure that already happened can wait behind work
+that is happening now.**
