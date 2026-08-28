@@ -37874,3 +37874,93 @@ bars in, granola out, the boundary already argued.
   DHC's face wash. **A signal that fails those two is already known to be wrong before it ships.**
 
 **Not started. It is what items 476, 490 and 491 are all waiting behind, and it now has a size.**
+
+---
+
+### 493. Job one shipped, and the sign on the one-line change was wrong
+
+**Raised and applied:** 28 August 2026 · **One commit, never separable.**
+
+## ★ THE CENTRE: A ONE-LINE CHANGE WITH AN OBVIOUS SIGN, AND THE SIGN WAS WRONG
+
+Job one as approved — *"`recategorise-products` calls the composed function rather than the inner one.
+One line, every move a correction"* — **would have moved roughly 6,650 supplements rows OUT of the
+category, including all 4,173 of today's Healf onboarding.**
+
+`onSupplementsPath` **defaults to `false`**, and `inferCategorisationForImport` reaches `supplements`
+**only** through its short-circuit. Switch the call alone and every stored supplement is re-derived
+from a name the Stage-1 classifier calls skincare — or drops on the `supplement` denylist.
+
+> **THE DIFF WOULD HAVE READ AS AN UNAMBIGUOUS IMPROVEMENT.** One import line, one call site, a
+> function all three importers already use. **Nothing in the change names the input it omits.**
+
+#### WHAT FOUND IT: COUNTING ON THE POPULATION RATHER THAN THE SAMPLE
+
+| | rows | changed | supplements lost |
+|---|---:|---:|---:|
+| 817-row stratified sample | 817 | 257 (31%) | *not measured* |
+| **1-in-10 of `products`** | **14,185** | **2,543 (17.9%)** | **665 → ~6,650** |
+
+**The sample SIZE was not the error — the missing INPUT was.** A larger sample of the same shape would
+have reported the same 31% and the same silence about supplements. **What exposed it was running
+against real stored rows, where `top_category` exists to be compared against.** The 31% was also
+wrong: the stratified sample over-weighted small product types.
+
+#### ★ AND A CORRECTION OF MY OWN CORRECTION, RETRACTED BEFORE IT WAS RECORDED
+
+I reported that option 1 **does** promote — *"493 skincare→supplements and 155 excluded→supplements,
+a route nobody traced"* — and asked for it to be recorded as a correction to item 492.
+
+**It was wrong, and item 492's original text was right.**
+
+> The `a -> b` labels compare the **Stage-1 verdict** to the **composed verdict**, not the stored value
+> to the composed one. Since supplements is reachable only via the short-circuit, **every one of those
+> 648 rows is already stored as supplements** and its Stage-1 verdict merely disagreed. **They are
+> preservations.**
+
+**Confirmed by the check Robbie asked for rather than by assumption** — the named misfiled rows were
+run directly:
+
+```
+NOT REACHED   DHC Chitosan / Garcinia / Maca — 20 Days Supply
+NOT REACHED   Phytonutrient 20 capsules | The Organic Pharmacy
+NOT REACHED   KIKI Health Activated Charcoal Capsules
+NOT REACHED   MyProtein Tanning Tablets
+PRESERVED     Solgar Curcumin / Ashwagandha / Solgar 7   ← only because item 489 moved them by hand
+```
+
+> **~6,480 IS HARM PREVENTED, NOT GROUND GAINED.** I invalidated a correct finding by reading my own
+> output as though a column meant something it did not, and **"confirm rather than assume" is what
+> caught it, one step before it entered the register.**
+
+#### THE CHANGE, AS SHIPPED
+
+```diff
+-import { inferCategorisation } from "../_shared/categorisation.ts";
++import { inferCategorisationForImport } from "../_shared/categorisation.ts";
+
+-const cat = inferCategorisation(p.name, p.brand ?? "");
++const cat = inferCategorisationForImport(
++  p.name, p.brand ?? "", undefined,
++  p.top_category === "supplements",     // NEVER separable from the line above
++);
+
+-const UNREACHABLE_TOP_CATEGORIES = ["fragrance", "bath_body", "supplements"] as const;
++const UNREACHABLE_TOP_CATEGORIES = ["supplements"] as const;
+```
+
+**The preflight narrows from 28,085 rows across three categories to 2,530 in one**, and its message
+stops listing categories and starts explaining one:
+
+> *"…SUPPLEMENTS IS NOT, and cannot be from a stored product row: it is assigned from the retailer's
+> feed category path, and that path is never persisted — so the evidence needed to classify these rows
+> was discarded at import… When that signal ships this count reaches zero and the preflight lifts
+> itself."*
+
+**A GUARD THAT NAMES A SHRINKING SET IS REPORTING PROGRESS RATHER THAN STANDING AS A WALL — and the
+self-deleting property is what makes that true rather than rhetorical.** It is now a measure of what is
+left.
+
+**JOB TWO'S SCOPE IS UNCHANGED, NOT SHRUNK.** The 6,480 are protected, not recovered, so the
+undetectable remainder is still the whole misfiled population — **and its acceptance criteria stand as
+item 492 records them.**

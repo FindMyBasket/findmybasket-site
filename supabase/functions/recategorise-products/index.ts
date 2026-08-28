@@ -23,7 +23,7 @@
 // as the bearer token. Required env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { inferCategorisation } from "../_shared/categorisation.ts";
+import { inferCategorisationForImport } from "../_shared/categorisation.ts";
 import { requireServiceRole } from "../_shared/require-service-role.ts";
 
 // Brand -> URL slug. MUST mirror brandSlug() in lib/queries.ts, brandSlugify()
@@ -175,7 +175,17 @@ Deno.serve(async (req: Request) => {
     // dry_run is refused too: the dry run's OUTPUT is what a human acts on, and today
     // it reports ~11,740 exclusions as a finding rather than as a bug. Previewing is
     // what scripts/recategorise-preview.mts is for. Work-list items 476, 477.
-    const UNREACHABLE_TOP_CATEGORIES = ["fragrance", "bath_body", "supplements"] as const;
+    // NARROWED FROM THREE CATEGORIES TO ONE. This function now calls
+    // inferCategorisationForImport, so fragrance and bath_body are reachable and no
+    // longer need blocking. Supplements remains unreachable BY CONSTRUCTION rather
+    // than by omission: it is assigned from a per-feed-row category path that is
+    // never persisted, so nothing downstream can ask the question again (item 492).
+    //
+    // A GUARD THAT NAMES A SHRINKING SET IS REPORTING PROGRESS RATHER THAN STANDING
+    // AS A WALL, and the self-deleting property is what makes that true rather than
+    // rhetorical: when job two lands, this count goes to zero and the block lifts
+    // itself. 28,085 rows -> 2,530.
+    const UNREACHABLE_TOP_CATEGORIES = ["supplements"] as const;
     const blocking: Array<[string, number]> = [];
     for (const tc of UNREACHABLE_TOP_CATEGORIES) {
       const { count, error: pfErr } = await supabase
@@ -195,11 +205,16 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           ok: false,
-          error: "refusing_to_run_stage1_classifier",
+          error: "refusing_to_run_supplements_unreachable",
           detail:
-            "inferCategorisation() cannot return these top categories. Every row in them would be " +
-            "excluded (deleted, if delete_excluded) or re-tagged out to skincare. Fix the classifier " +
-            "— or point this function at inferCategorisationForImport — then remove this preflight.",
+            "This function now calls inferCategorisationForImport, so fragrance and bath_body are " +
+            "reachable. SUPPLEMENTS IS NOT, and cannot be from a stored product row: it is assigned " +
+            "from the retailer's feed category path (supplements_path_prefixes), and that path is " +
+            "never persisted — so the evidence needed to classify these rows was discarded at import. " +
+            "Passing the stored top_category preserves rows already correct but cannot promote a " +
+            "misfiled one. Until a name-and-brand supplements signal exists (work-list item 492), " +
+            "every row below would be re-tagged out of supplements. When that signal ships this count " +
+            "reaches zero and the preflight lifts itself.",
           blocking: Object.fromEntries(blocking),
           rows_at_risk: blocking.reduce((n, [, c]) => n + c, 0),
         }),
@@ -247,7 +262,26 @@ Deno.serve(async (req: Request) => {
         scanned++;
         if (!p.name || !String(p.name).trim()) continue; // data hygiene; should not happen
 
-        const cat = inferCategorisation(p.name, p.brand ?? "");
+        // THE COMPOSED FUNCTION, NOT THE INNER ONE. All three importers call
+        // inferCategorisationForImport; this path called inferCategorisation and so
+        // could only ever return skincare | makeup | hair (item 476). Stage 1 and
+        // Stage 2 already share — this was reaching for the wrong entry point.
+        //
+        // onSupplementsPath IS NOT OPTIONAL HERE AND THE TWO MUST NEVER BE SEPARATED.
+        // It defaults to false, and supplements is reachable ONLY through its
+        // short-circuit. Switching the call alone, measured on a 1-in-10 sample of
+        // products: 665 stored-supplements rows in the sample — ~6,650 extrapolated,
+        // the whole category including all 4,173 of Healf's — would be reclassified
+        // OUT of supplements. Passing the stored value preserves them. It does NOT
+        // promote a misfiled row: DHC's "20 Days Supply" tablets and The Organic
+        // Pharmacy's Phytonutrient capsules still classify as skincare, which is
+        // job two (item 492). Item 493.
+        const cat = inferCategorisationForImport(
+          p.name,
+          p.brand ?? "",
+          undefined,
+          p.top_category === "supplements",
+        );
         // Abort the whole run on a missing verdict — that signals a categoriser
         // logic regression, not a stale row.
         if (!cat || typeof cat !== "object") {
