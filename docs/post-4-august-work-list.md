@@ -37650,3 +37650,98 @@ stated when it was proposed. *IQBAR · Transparent Labs Grass-Fed Protein+ · La
 
 **`active` STAYS FALSE** until the three are fixed: Healf's prices would point at skincare pages for
 exactly the rows the brand-comparison proposition is about.
+
+---
+
+### 489. Healf live: 361 brands to 712, Boots 71.9% to 27.2%, and a brand that was on both sides
+
+**Raised and applied:** 28 August 2026 · **`active = true`. The onboarding is complete.**
+
+| | before | after |
+|---|---:|---:|
+| supplements buyable | 2,436 | **6,551** |
+| **supplement brands** | **361** | **712** |
+| **Boots share** | **71.9%** | **27.2%** |
+| **comparable products (2+ retailers)** | **84** | **287** |
+
+> **BOOTS FALLS FROM 71.9% TO 27.2% WITHOUT LOSING A PRODUCT.** The category stops being one retailer
+> wearing its name — `docs/supplements-brand-comparison-proposition.md`'s premise, now arithmetic
+> rather than argument.
+
+**156 of the 287 comparable products involve Healf. 28 of its 386 brands meet Boots or MyProtein, and
+50 brands now sit at 2+ retailers against the 12 the two incumbents shared (item 482).**
+
+#### ★ THE PLANT PROTEIN PAGE IS THE OUTCOME
+
+| page | ranked → | from Healf | median → |
+|---|---|---:|---|
+| whey | 56 → **78** | 21 | £5.20 → £5.63 |
+| creatine | 34 → **56** | 22 | £6.76 → £7.77 |
+| **plant protein** | **17 → 50** | **42** | **£7.20 → £5.70** |
+
+> **A PAGE WHOSE 17-ROW MEDIAN WAS FLAGGED AS MOVABLE BY TWO ABSENT ROWS HAS BEEN REWRITTEN BY ONE
+> RETAILER** — 42 of its 50 rows are Healf's, and the median falls 20%.
+
+**AND THE MEDIANS MOVING IN BOTH DIRECTIONS IS THE RANKING WORKING RATHER THAN DRIFTING.** The cheapest
+row on each page is unchanged — £1.88, £2.80, £1.42 — so **the distribution grew a tail rather than the
+floor rising.** Practitioner-grade brands are dearer per 100g than own-brand tubs; nothing got worse
+for a shopper.
+
+*(All six figures are SQL replications of each page's filters, matching their recorded counts before
+today. The pages are ISR-cached until they revalidate.)*
+
+#### ★ THE MISFILED POPULATION: BOTH PROBES FAILED, AND A BRAND ON BOTH SIDES SETTLED IT
+
+**Seven was what I saw. Enumerating the rest failed twice:**
+
+- **By name.** ~380 rows carry `capsules|tablets`, but **`capsule` is predominantly a SKINCARE word
+  here** — *Elizabeth Arden Advanced Ceramide Capsules*, and an entire K-beauty format in *VT*,
+  *SUNGBOON*, *P.CALM*, *medicube* and *Eqqualberry* **capsule creams**. A sweep would have moved
+  dozens of creams into supplements: **this morning's `micellar` failure in a second vocabulary.**
+- **By brand.** *DHC*, *The Organic Pharmacy* and *KIKI Health* are **mixed** — face wash and lip cream
+  beside supplements. Brand is not a proxy either.
+
+> **WHAT SETTLED IT WAS A BRAND APPEARING ON BOTH SIDES.** Solgar: **83 rows in supplements, 63 in
+> skincare, and ZERO of the 63 carrying any topical word.** **A brand cannot be half topical.** The
+> split is itself the evidence and it needs no probe — which is why it survives where two detectors
+> did not.
+
+**Applied:** snapshot `fmb_solgar_misfiled_snapshot_20260828` (63 rows), then
+`top_category='supplements'`, `subcategory='supplements'`, `product_type=NULL` — matching what the
+supplements branch produces, so the rows become indistinguishable from a correct create. **Solgar is
+now 146 in supplements and 0 outside**, and **comparable products rose 235 → 287 on that write alone**,
+because Solgar is one of the overlapping brands.
+
+**LEFT AND NAMED RATHER THAN SWEPT:** the *DHC "Days Supply"* tablets, *The Organic Pharmacy
+Phytonutrient* capsules, *KIKI Health* charcoal capsules, *MyProtein Tanning Tablets*. **Mixed brands
+need per-row reading, and naming them beats guessing a rule.**
+
+#### THE OPTIONS, DECIDED RATHER THAN LISTED
+
+| | |
+|---|---|
+| **targeted write + snapshot** | **taken.** Names read, reversible, touches no function |
+| wait for the classifier to learn Stage 2 | **principled and wrong here** — the fix does not depend on it and the rows are live today |
+| lift the preflight for one run | **refused** — it would reclassify the catalogue through a Stage-1 function to fix a family of 63, **the exact hazard the preflight was added for this morning** |
+
+#### ★ THE DAY'S SHAPE
+
+**FOUR CORRECTIONS WENT IN AS FINDINGS RATHER THAN FOOTNOTES — THREE ROBBIE'S, ONE MINE:**
+
+| | |
+|---|---|
+| `Eat` read from `product_type`, matched against `merchant_category` | Robbie's |
+| a Stage-1 classifier asked for a Stage-2 category, four hours after item 476 | Robbie's |
+| the Boots analogy carrying the caution without the cause | Robbie's |
+| a cheap experiment approved without bounding its failure mode | **shared — his reasoning, my dispatch** |
+| naming a type that already existed; conflating comparability with concentration | mine (items 474, 479) |
+
+**AND THE ORDERING HELD TWICE.** `active = false` before the import:
+
+1. made a **failed import invisible** — 3,255 partial products failed the `products_active` predicate;
+2. made a **destructive cleanup low-risk** — deleting 3,357 products was safe because nothing being
+   deleted had ever been seen.
+
+> **THE SECOND USE WAS NOT WHAT THE FLAG WAS SET FOR.** It was set so the catalogue would not show an
+> unread retailer. **It is the reason today cost an inconvenience rather than an incident** — and it
+> was a decision nobody was thinking about when it was made.
