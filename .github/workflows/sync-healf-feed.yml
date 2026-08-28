@@ -1,0 +1,93 @@
+name: Sync Healf feed to Supabase Storage
+
+# Mirrors sync-adg-feed.yml. Healf (AWIN advertiser 22320) supplies an AWIN Darwin
+# (Google-Shopping) feed, so the same staging applies: the edge runtime cannot
+# reliably gunzip a Darwin feed, so it is downloaded and decompressed here and the
+# plain CSV is staged to Supabase Storage.
+#
+# ── FOUR THINGS DIFFER FROM THE ADG COPY, AND TWO OF THEM MATTER ─────────────────
+#
+# 1. NO SCHEDULE. ADG and BB run on a daily cron because a retailer row and an
+#    import cron exist to consume the file. HEALF HAS NEITHER — no retailer row, no
+#    retailer_import_config, no feed_url. A cron here would sync a feed that nothing
+#    imports, every day, for a retailer that may never be onboarded. Dispatch only
+#    until the onboarding decision is made. Item 483.
+#
+# 2. THE ROW FLOOR IS 2, NOT 100, AND THAT IS DELIBERATE. Both siblings use `< 100`
+#    with a comment stating the feed's known size ("~690 products"). WE HAVE NOT READ
+#    THIS FEED, so 100 would be a claim about a size nobody has measured — inert if
+#    Healf is large, and a false abort if it is small. A floor of 2 catches the thing
+#    a floor is for on a first run: an empty file or a header with no rows. RAISE IT
+#    once stage 1 has measured the real row count; a floor that cannot fire is a
+#    guard in name only (item 444).
+#
+# 3. No `feed_url` to name in the summary. The importer reads
+#    storage://awin-feeds/healf.csv only once that config row exists, and it does not.
+#
+# 4. Secret and slug: DARWIN_FEED_URL_HEALF, awin-feeds/healf.csv.
+#
+# WRITES ONE OBJECT TO STORAGE. No database write, no import trigger, no retailer row.
+on:
+  workflow_dispatch:
+
+jobs:
+  sync-healf-feed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Healf feed from AWIN
+        run: |
+          set -euo pipefail
+          echo "Downloading Healf feed..."
+          curl -sSf -o healf-feed.csv.gz "${DARWIN_FEED_URL_HEALF}"
+          ls -la healf-feed.csv.gz
+          # Verify it's actually gzip. AWIN returns HTML/JSON errors with a 200, so a
+          # successful curl is not proof of a feed (same guard as feed-diag).
+          file healf-feed.csv.gz | grep -q "gzip compressed" || (echo "Not a gzip file"; exit 1)
+        env:
+          DARWIN_FEED_URL_HEALF: ${{ secrets.DARWIN_FEED_URL_HEALF }}
+
+      - name: Decompress
+        run: |
+          set -euo pipefail
+          gunzip healf-feed.csv.gz
+          ls -la healf-feed.csv
+          rows=$(wc -l < healf-feed.csv)
+          echo "Decompressed feed has $rows rows"
+          # See note 2 in the header: floor of 2 on a feed nobody has measured.
+          if [ "$rows" -lt 2 ]; then
+            echo "Feed has fewer than 2 rows — empty or header-only, aborting"
+            exit 1
+          fi
+          echo "--- header ---"
+          head -n 1 healf-feed.csv
+
+      - name: Upload to Supabase Storage
+        run: |
+          set -euo pipefail
+          # POST /storage/v1/object/{bucket}/{path}, upsert to overwrite.
+          response=$(curl -sS -w "\n%{http_code}" -X POST \
+            "${SUPABASE_URL}/storage/v1/object/awin-feeds/healf.csv" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_KEY}" \
+            -H "Content-Type: text/csv" \
+            -H "x-upsert: true" \
+            --data-binary @healf-feed.csv)
+
+          body=$(echo "$response" | head -n -1)
+          status=$(echo "$response" | tail -n 1)
+          echo "Upload status: $status"
+          echo "Upload response: $body"
+
+          if [ "$status" != "200" ] && [ "$status" != "201" ]; then
+            echo "Upload failed with status $status"
+            exit 1
+          fi
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      - name: Summary
+        run: |
+          echo "Healf feed staged to Supabase Storage"
+          echo "Bucket: awin-feeds   Path: healf.csv"
+          echo "NOT YET IMPORTED: no retailer row, no retailer_import_config, no feed_url."
+          echo "This is a pre-onboarding read only."
