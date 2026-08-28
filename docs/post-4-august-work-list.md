@@ -37967,6 +37967,94 @@ item 492 records them.**
 
 ---
 
+#### ★ THE PREFLIGHT NOW BLOCKS 6,620 RATHER THAN 2,530, AND THE DIFFERENCE IS HEALF
+
+**Dispatched 28 August, run 33162171547, success. Verified from the deployed source: version 13,
+`updated_at` 10:08:12 UTC, `index.ts` 24,309 bytes, sha256 IDENTICAL to main's file.** Both lines
+present and inseparable, as required:
+
+```
+DEPLOYED CALL:  const cat = inferCategorisationForImport(p.name, p.brand ?? "", undefined,
+                              p.top_category === "supplements");
+DEPLOYED LIST:  UNREACHABLE_TOP_CATEGORIES = ["supplements"] as const;
+```
+
+**And the refusal was seen to refuse** — the preflight block extracted verbatim from the DEPLOYED
+source (1,924 characters) and run against the live table, item 477's method:
+
+```
+HTTP 409
+{ "ok": false,
+  "error": "refusing_to_run_supplements_unreachable",
+  "blocking": { "supplements": 6620 },
+  "rows_at_risk": 6620 }
+```
+
+**It names supplements alone, as intended. It names it at 6,620.**
+
+| retailer | supplements rows | |
+|---|---:|---|
+| **Healf** | **4,190** | **63% of the population the refusal protects** |
+| Boots | 1,837 | |
+| MyProtein | 513 | |
+| Niche Beauty | 224 | |
+| Beauty Flash | 69 | |
+| Gorgeous Shop | 66 | |
+| Beauty Bay, Escentual, Debenhams, Stylevana | 53 | |
+
+**THE ONBOARDING MULTIPLIED THE POPULATION THE REFUSAL PROTECTS BY 2.6 TIMES.**
+
+**Every one of those 4,190 reached supplements through `supplements_path_prefixes` — a feed path that
+is NEVER PERSISTED.** So every one is precisely the row the composed call preserves and could never
+re-derive. `p.top_category === "supplements"` reads the verdict; the evidence behind it was discarded
+at import.
+
+> **THE ACT THAT GREW THE GUARD'S VALUE IS THE SAME ACT THAT GREW THE WORK IT IS HOLDING BACK.** Job
+> two's population and the refusal's blast radius are one population, and Healf enlarged both at once.
+
+#### ★ THE COUNTERFACTUAL, WHICH IS THE POINT
+
+**Without the refusal in force, this morning's `active = true` would have put 4,190 fresh rows into
+the blast radius of a function that was ONE DISPATCH from running.**
+
+> **The guard was added YESTERDAY, for a hazard measured at 28,085 rows** (fragrance 15,039, bath_body
+> 10,516, supplements 2,530), **and its first real service was protecting rows that did not exist when
+> it was written.** Two of the three categories it named have since been made reachable and dropped
+> out of it; the one that remains is the one that grew.
+
+**A guard earns its place on the hazards it meets, not the ones it was drawn against.** Item 477 argued
+it from a count that has already been superseded, and it was right anyway.
+
+#### ★ AND 2,530 IS THE BARE `12`, ONE LAYER UP
+
+**Correct when written in item 477. Wrong through an unrelated act. Nothing marked the change.**
+
+**It survived into Robbie's instruction and into mine** — "the preflight seen to refuse with its new
+message naming supplements alone at 2,530" — carried by both of us as a fact rather than a
+measurement, exactly as `work-with-us.html` carried its integer (item 494, item 329).
+
+> **WHAT CAUGHT IT IS WORTH THE LINE. Verifying against the deployed source and the live table rather
+> than against the number in the instruction.**
+>
+> **A VERIFICATION THAT CHECKS THE CLAIM IT WAS GIVEN CONFIRMS THE CLAIM; ONE THAT CHECKS THE WORLD
+> FINDS THE DRIFT.** Had the check been "does it say 2,530", it would have passed on the old bundle
+> and failed on the new one for the right reason by accident. **The target of a verification is not
+> the assertion handed to it.**
+
+**AND IT HAPPENED A THIRD TIME IN THE SAME BREATH.** The day's closing figures were *"6,551 supplements
+from 712 brands"*. Measured: **6,551 exact**, and **714 brands, not 712** — item 489's number, taken
+this morning, already moved, with Healf's cron not yet run. **The drift arrived inside the sentence
+closing the day on drift.**
+
+#### WHERE THIS LEAVES THE DAY
+
+```
+Healf live                6,551 supplements live, 714 supplement brands (361 before Healf)
+recategorise path         composed, dispatched, refusing at 6,620
+job two                   the thing everything waits behind, acceptance criteria written (item 492)
+```
+
+
 ### 494. Healf's logo, three hand-maintained surfaces, and a coincidence that expired on schedule
 
 **Raised and applied:** 28 August 2026 · **Logo cut, three surfaces swept, all diffed both ways.**
