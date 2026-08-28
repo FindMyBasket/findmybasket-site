@@ -37227,6 +37227,54 @@ against 4,865.** Setting the prefix would force roughly two thousand rows into s
 definition admits. **That is a decision, not a detail, and it needs the names read first** — the same
 read that found a recipe book in MyProtein's feed.
 
+#### THE DRY RUN, AND IT ANSWERS THE `supplements_path_prefixes` QUESTION THE OTHER WAY
+
+**Config written 28 Aug: retailer 34, `active=false`, `enabled=false`** (writes blocked, dry runs
+permitted by design). Dry run via a new dry-run-only workflow — `dry_run` is not an input, so it
+cannot express a write.
+
+**THE COALESCE IS PROVEN IN BEHAVIOUR, NOT IN FILL RATES:**
+
+```
+sibling_coalesce            true          rows_with_ean               4674
+ean_from_sibling            4702          category_path_from_sibling  7999
+category_name_from_sibling  7999
+```
+
+**All three would be zero on the default.** 3,000 rows excluded by the allowlist, 4,999 admitted.
+
+**★ AND THE CLASSIFICATION IS THE FINDING:**
+
+```
+v6_top_category_breakdown:  skincare 2961 · hair 52 · makeup 2      SUPPLEMENTS: 0
+v6_exclusion_breakdown:     supplement 1222 · baby 19 · oral_care 9 · bath_set 8 · …
+```
+
+> **NOT ONE ROW CLASSIFIED AS SUPPLEMENTS.** 1,222 were **dropped** by the `supplement` denylist and
+> ~2,900 landed in **skincare**, the catchall.
+>
+> **THIS IS ITEM 476 ARRIVING AT A LIVE ONBOARDING DECISION.** `inferCategorisation` is Stage 1 and
+> returns skincare, makeup or hair and nothing else; supplements exist only through the
+> `onSupplementsPath` branch. **So "let the classifier decide per row" cannot produce a supplement.**
+> The flag is not an override of the classifier's judgement — **it is the only route to the category.**
+
+**THE NAMES, READ RATHER THAN COUNTED.** Excluded as `supplement`: *Bare Biology Omega-3*, *Fushi
+Organic Ashwagandha*, *Wild Nutrition Food-Grown Zinc / B12 / Immune Support*, *Hifas da Terra
+Bio-Intestin*. Created as `skincare`: *Vivo Life Perform Plant Protein*, *Rheal Clean Greens*, *Microbz
+fermented drinks*, *Fushi Aloe Vera Juice*, *KIKI Health Activated Charcoal*, *Wild Nutrition Daily
+Multi Nutrient*. **One row went correctly elsewhere** — *Fushi Shea Butter* to `bath_body`.
+
+**AND THIS DISSOLVES THE 2,000-ROW WORRY THAT LEFT THE FLAG UNSET.** The gap between 4,865 on the path
+and 2,212 by definition **v1.0** was a **stale yardstick**: v1.1 admits protein powder, whey, creatine
+and drinks, and the names on that path are supplements throughout. **The population is not unread any
+more, and it is not what the concern assumed.**
+
+**RECOMMENDED, NOT SET:** `supplements_path_prefixes =
+["Health & Beauty > Health Care > Fitness & Nutrition > Vitamins & Supplements"]` — the same
+`category_path` vocabulary as the allowlist, and a leaf inside it, so the importer's own
+`supplements_path_unreachable` guard stays empty. **Left for Robbie**, because a forcing flag is the
+most consequential value in the row and this class of value has been wrong twice today.
+
 #### THE THREE DECISIONS OWED, NONE TAKEN
 
 1. **The allowlist prefix** — **NOT `Eat`, which admits zero.** Proposed:
@@ -37237,3 +37285,54 @@ read that found a recipe book in MyProtein's feed.
    proposition's question, not comparison depth's.
 
 **Nothing configured.**
+
+---
+
+### 486. Three config values, one shape: correct against the column you can see, matched against one nobody read
+
+**Raised:** 28 August 2026, Robbie · **The session's own summary, recorded as an item because the
+pattern is only visible across all of it.**
+
+**One retailer, one config row, one morning:**
+
+| # | value | correct against | matched against | result |
+|---|---|---|---|---|
+| 1 | **`sibling_coalesce = false`** *(the default)* | — | `ean`, `category_name`, `merchant_product_category_path` — all **0%** on this feed | 7,999 rows, **zero barcodes, no category**, allowlist cannot run |
+| 2 | **`feed_url = <the AWIN URL>`** *(the importer's own hint)* | the mechanism — it genuinely works | a design that reads `storage://` and keeps the URL in a secret | **a credential in a database column**, and a successful import |
+| 3 | **`category_path_must_contain = ["Eat"]`** *(Robbie's instruction)* | `product_type`, where `Eat > Vitamins & Supplements` is plainly visible | `merchant_category` — **the Google taxonomy** | **zero rows admitted** |
+
+> **★ ALL THREE ARE CORRECT AGAINST THE COLUMN YOU CAN SEE AND MATCHED AGAINST ONE NOBODY HAD READ.**
+> **And all three produce a SUCCESSFUL IMPORT.** Nothing errors, `last_import_status` goes green, and
+> **the only symptom is an absence** — no barcodes, no category, no rows, no complaint.
+
+**THE THIRD WAS ROBBIE'S AND HE RECORDED IT AS HIS**, which is why the count is three rather than two:
+*"my `Eat` was read from `product_type` and the allowlist reads `merchant_category`, so the instruction
+was wrong and your reading is the correct one."* **A default, a hint and an instruction — three
+different authors, one failure mode.**
+
+#### ★ AND THE SHARPEST PART IS THE LAST
+
+`feed-diag` exists to audit an allowlist before it is set. Run against `Eat`, it reported:
+
+```
+EXCLUDED by allowlist: 7999 (100.0%)
+excluded paths, by volume:  7999  supp 2212  (empty path)
+```
+
+**It reads `category_path` — the primary column — exactly as the importer does.** So it saw an empty
+path on every row and would have reported 100% excluded **whether the prefix was right or wrong.**
+
+> **A TOOL THAT INHERITS THE ASSUMPTION IT EXISTS TO TEST.** The diagnostic did not fail; it
+> faithfully reproduced the blind spot it was run to find, and its output was consistent with both
+> answers. **The question was only settled by printing `merchant_category` directly** — going around
+> the instrument rather than through it.
+
+**This is item 442's shape at one more remove.** There the instrument discarded the information it was
+asked about; here it shares a premise with the thing under test, so agreement between them means
+nothing. **Two readings that share an assumption are one reading** — item 481's cache, item 462's two
+detectors, and now a harness and an importer reading the same column.
+
+**WHAT IT ARGUES FOR, WITHOUT BEING BUILT:** an audit that reports **which column it matched on** and
+its fill rate, so "100% excluded" and "100% excluded because the column is empty" stop looking
+identical. **Not scoped here** — the finding is the class, and the fix belongs with whoever next
+touches the harness.
