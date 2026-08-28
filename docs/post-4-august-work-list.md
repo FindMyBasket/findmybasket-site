@@ -37745,3 +37745,132 @@ need per-row reading, and naming them beats guessing a rule.**
 > **THE SECOND USE WAS NOT WHAT THE FLAG WAS SET FOR.** It was set so the catalogue would not show an
 > unread retailer. **It is the reason today cost an inconvenience rather than an incident** — and it
 > was a decision nobody was thinking about when it was made.
+
+---
+
+### 490. A justification consumed by a later step, and a guard routed around twice
+
+**Raised:** 28 August 2026, Robbie · **Cron APPLIED. The pattern RECORDED, not acted on.**
+
+#### THE CRON'S REASON ARRIVED AFTER THE FILE DID
+
+`refresh-healf.yml` shipped with **no schedule**, and the reason was correct at the time:
+`retailers.active` was FALSE, so a daily run would refresh a retailer nobody could see.
+
+> **NOTHING ABOUT THE FILE CHANGED AND IT BECAME WRONG ANYWAY.** `active` flipped true in the same
+> sequence, and **`absence_threshold_days = 7` put a date on it** — a week later Healf's 4,373 rows
+> begin aging out of a catalogue that now shows them.
+
+**A DECISION CORRECT AT THE MOMENT IT WAS MADE, WHOSE JUSTIFICATION WAS CONSUMED BY A LATER STEP IN
+THE SAME SEQUENCE.** That is **item 476's denylist shape in a different artefact**: the `fragrance`
+entry was right until a go-live changed the scope under it, and this cron's absence was right until a
+flag changed the visibility under it. **Neither was edited; both expired.**
+
+**Applied:** `13 3 * * *` — off-minute by house convention, after the 02:37 and 03:00 feed stagers and
+before the first pg_cron import (`refresh-stylevana`, 03:30), with the expiry written at the site.
+
+#### ★ THE PREFLIGHT HAS BEEN ROUTED AROUND TWICE, BOTH TIMES CORRECTLY
+
+| | write | why it went around |
+|---|---|---|
+| item 471 | 75 rows out of makeup into fragrance | targeted, names read |
+| item 489 | 63 Solgar rows into supplements | targeted, snapshot taken |
+
+> **A GUARD THAT IS ROUTED AROUND TWICE IS BEING MANAGED RATHER THAN OBEYED.** Both writes were right,
+> both were smaller and safer than the run the preflight blocks, and **the third will be easier to
+> justify than the second was.**
+
+**THIS IS NOT AN ARGUMENT TO REMOVE IT.** The hazard is real and measured: **28,085 rows**. It is an
+argument that **the classifier learning Stage 2 has a cost accruing against it that nothing is
+counting** — every targeted write is a small payment on a debt with no ledger.
+
+---
+
+### 491. JOB ONE: the repair path reaches for the wrong entry point, and it is one line
+
+**Raised:** 28 August 2026 · **SCOPED, NOT BUILT.**
+
+**The composed function already exists and already returns all six categories.** All three importers
+call it. `recategorise-products` calls the inner one.
+
+```
+inferCategorisationForImport(name, brand, enabled, onSupplementsPath)   ← importers
+  base = inferCategorisation(name, brand)                              ← recategorise-products
+    ├─ onSupplementsPath && !isSupplementPathTopical   → supplements
+    ├─ base eligible? (excluded fragrance|deodorant|shaving, or the skincare catchall)
+    │     └─ classifyFragranceOrPersonalCare(…)        → fragrance | bath_body
+    └─ applyDefensiveRouting(result, name)
+```
+
+> **STAGE 1 AND STAGE 2 ALREADY SHARE RATHER THAN DUPLICATE.** No new return type, no second
+> vocabulary, no rewrite. **`ImportTopCategory` is already `TopCategory | ExtendedTopCategory |
+> "supplements"`, and both extended categories are LIVE** — `ENABLED_EXTENDED_CATEGORIES` holds
+> `fragrance` and `bath_body`.
+
+**THIS IS A DEFECT RATHER THAN MISSING WORK.** The shared implementation exists and the repair path
+reaches for the wrong door.
+
+**SIZED ON 817 LIVE ROWS: 257 change — 31% — and every move is a correction.**
+
+```
+179  skincare            -> bath_body
+ 60  excluded:fragrance  -> fragrance
+ 10  skincare            -> fragrance
+  4  excluded:deodorant  -> bath_body
+  4  excluded:shaving    -> bath_body
+```
+
+#### ★ AND THE PREFLIGHT THEN NARROWS FROM THREE CATEGORIES TO ONE
+
+It currently blocks on **fragrance (15,039) + bath_body (10,516) + supplements (2,530) = 28,085**.
+With the call switched, **fragrance and bath_body become reachable**, and the guard's scope shrinks to
+**supplements alone — 2,530 rows**, with a message that says *why* that one category is still
+unreachable rather than naming three.
+
+> **A GUARD THAT NAMES A SHRINKING SET IS REPORTING PROGRESS.** It stops being a wall and becomes a
+> measure of what is left, and it still deletes itself when the last category is reached.
+
+**Not built. One line, and it changes what a destructive path does, so it wants its own review.**
+
+---
+
+### 492. JOB TWO: supplements is unreachable by construction, not by omission
+
+**Raised:** 28 August 2026 · **THE REAL WORK, AND IT IS SCOPED RATHER THAN OPEN.**
+
+> **★ `onSupplementsPath` IS A PER-FEED-ROW INPUT AND THE RECATEGORISER WORKS FROM STORED PRODUCTS.**
+> The retailer's category path is read at import and **never persisted**, so nothing downstream can ask
+> the question again.
+
+**The module says so itself:** *"Supplements is assigned by path, not detected."*
+
+**THE CATEGORY THAT MOST NEEDS REPAIR IS THE ONE WHOSE EVIDENCE WAS DISCARDED AT IMPORT.** Solgar's 63
+rows, the DHC tablets, The Organic Pharmacy capsules — all misfiled since May, and none of them
+carries the thing that would let a classifier fix them.
+
+#### WHY THE TWO CHEAPER OPTIONS DO NOT REACH IT
+
+| option | what it does | why it misses |
+|---|---|---|
+| **1. pass `onSupplementsPath = (stored top_category = 'supplements')`** | preserves rows already correct | **it can only PRESERVE, never PROMOTE.** A row misfiled in May stays misfiled — that is precisely the population |
+| **2. persist the feed's category path** on `retailer_prices` at import | future rows gain the evidence | **it fills FORWARD from the next import.** The rows that need it are the ones already stored, and they never gain one |
+
+> **BOTH ARE CORRECT AND NEITHER TOUCHES THE POPULATION.** They are improvements to the mechanism that
+> leave the misfiled set exactly as it is — which is the test any option has to pass.
+
+#### OPTION 3 IS THE WORK: A NAME-AND-BRAND SUPPLEMENTS SIGNAL
+
+**So supplements stops depending on a path at all**, and becomes detectable from what is stored — the
+same way `classifyFragranceOrPersonalCare` detects fragrance from a name.
+
+**AND IT IS SCOPED RATHER THAN OPEN, BECAUSE THE SPECIFICATION ALREADY EXISTS.**
+`docs/supplements-definition.md` is what job two would be written against — v1.1, protein powder and
+bars in, granola out, the boundary already argued.
+
+**Two evidence sources today's work already produced:**
+- **Solgar's split** — 83 in supplements against 63 in skincare — is a ready-made test case: **a brand
+  cannot be half topical**, and any signal worth shipping must move all 63.
+- **The failed probes are the negative tests.** `capsule` catches capsule creams; brand alone catches
+  DHC's face wash. **A signal that fails those two is already known to be wrong before it ships.**
+
+**Not started. It is what items 476, 490 and 491 are all waiting behind, and it now has a size.**
