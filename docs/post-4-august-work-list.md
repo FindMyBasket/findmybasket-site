@@ -37448,3 +37448,72 @@ detectors, and now a harness and an importer reading the same column.
 its fill rate, so "100% excluded" and "100% excluded because the column is empty" stop looking
 identical. **Not scoped here** — the finding is the class, and the fix belongs with whoever next
 touches the harness.
+
+---
+
+### 487. "A failed run rather than a bad one" — the 546 is not atomic, and the status field cannot say so
+
+**Raised:** 28 August 2026, Healf's first real import · **THE PREMISE WAS WRONG AND IT WAS MINE AS MUCH
+AS ROBBIE'S. Reported, nothing repaired.**
+
+The first real import returned **HTTP 546**. It had already written.
+
+```
+healf price rows   0 -> 3,522        products total  137,696 -> 141,053  (+3,357)
+last_import_status running           last_import_error  (none)
+```
+
+> **★ THE 546 IS NOT ATOMIC.** A `single`-mode import writes as it walks the feed. The worker was
+> killed mid-walk, so **rows committed and no terminal status was ever written.**
+> `last_import_status` says **`running`** and will say it forever.
+
+**THAT IS ITEM 14'S SILENT-KILL CLASS LANDING IN THE ONE FIELD BUILT TO REPORT IT.** The run failed
+loudly at the HTTP layer and the database's own account of it is *"in progress"* — **a status
+structurally incapable of going red on this failure mode**, which is the exact property item 14
+catalogued for `storage_passthrough` retailers.
+
+#### THE PREMISE, AND WHOSE IT WAS
+
+*"If the 546 turns out to affect real imports the failure is a failed run rather than a bad one. That
+is a cheap way to answer a question nothing else can."*
+
+**Robbie's reasoning, and I wrote it into the workflow header myself and dispatched on it.** It was
+knowable beforehand and I did not check: **the code writes as it goes**, so a worker death mid-run
+leaves partial state by construction. **The question the run was designed to answer was answered — the
+546 does reach real imports — and it cost a partial write that nobody had priced in.**
+
+> **A CHEAP EXPERIMENT IS ONLY CHEAP IF THE FAILURE MODE IS BOUNDED, AND NOBODY BOUNDED THIS ONE.**
+> "Failed" and "partial" are different outcomes and the plan treated them as one. **The thing to have
+> read first was not the feed — it was what the importer does between the first row and the last.**
+
+#### WHAT LANDED IS CORRECT, WHICH IS THE ONE PIECE OF GOOD NEWS
+
+| top_category | rows | Healf-only | shared |
+|---|---:|---:|---:|
+| **supplements** | **3,374** | 3,255 | 119 |
+| skincare | 134 | 100 | 34 |
+| fragrance · bath_body · makeup | 14 | 2 | 12 |
+
+**Against the flagless dry run — zero supplements, 2,961 skincare, 1,222 dropped — the flag is doing
+exactly what the 400-row sample predicted.** Names read rather than counted: *Zita West Revital
+Essence, Vital Essence 1 & 2, Vitafem, Choline, Folate, NAC, Inositol + Folate, Vital DHA, Vitamen* — a
+complete fertility range — plus *MaryRuth's AM/PM Bundle*, *Nuchido TIME+ NAD+*, *Real Mushrooms
+Tremella*. **All `supplements/supplements`. No cookware, no yoga mats, no recipe books. The allowlist
+held.**
+
+#### CONTAINMENT HELD, AND IT WAS VERIFIED RATHER THAN ASSUMED
+
+**`products_active` supplements is still 2,475, unchanged.** The 3,255 Healf-only products fail the
+view predicate — their only price row is at an inactive retailer — so **none of this is visible to the
+catalogue.** `active = false` before the import, rather than after, is the reason a partial write is an
+inconvenience instead of an incident.
+
+#### THREE THINGS OWED, NONE TAKEN
+
+1. **The partial state.** ~3,522 of ~3,700 expected rows. Re-running risks item 314's duplicate-create
+   leak; the clean route is **`sliced_import = true`**, which exists for this exact failure and commits
+   per slice.
+2. **`last_import_status = 'running'` is false and needs clearing**, or the next reader believes an
+   import is in flight. **Left as evidence rather than tidied away.**
+3. **The 546 reaches real imports.** Answered, at a price. Item 425's question is closed and item 485's
+   config is half-applied.
