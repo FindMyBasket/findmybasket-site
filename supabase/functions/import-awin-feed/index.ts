@@ -1190,7 +1190,18 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       error: "Google Shopping (Darwin) format requires config.feed_url to be set",
       retailer_id: retailerId,
-      hint: "Find the download URL in the AWIN dashboard (right-click the download button → Copy Link Address) and store it in retailer_import_config.feed_url",
+      // THIS HINT USED TO SAY "store the download URL in retailer_import_config.feed_url",
+      // and that path WORKS — which is exactly why it was worth changing. A Darwin URL
+      // carries credentials, so following the old hint put a secret in a database column
+      // and produced a successful import: no error at any step, nothing to notice. Both
+      // existing google_shopping retailers hold a storage:// pointer instead, and the URL
+      // lives in a GitHub secret. Item 484.
+      hint: "Do NOT put the AWIN download URL here: it carries credentials, and this column "
+        + "is readable wherever the database is. Copy the URL from the AWIN dashboard "
+        + "(right-click the download button → Copy Link Address) into a GitHub secret "
+        + "(DARWIN_FEED_URL_<RETAILER>), add a sync-<retailer>-feed.yml that stages the "
+        + "decompressed CSV to Supabase Storage, and set feed_url to the pointer: "
+        + "storage://awin-feeds/<retailer>.csv. See sync-adg-feed.yml.",
     }), { status: 400, headers: { "Content-Type": "application/json" } });
   } else {
     feedUrl = buildFeedUrl(apiKey, config.awin_feed_id);

@@ -61,6 +61,20 @@ jobs:
           echo "--- header ---"
           head -n 1 healf-feed.csv
 
+          # IDENTIFY THE FEED FROM THE FEED. A legacy AWIN datafeed states its own
+          # data_feed_id and merchant_id in the first two columns, which is the only
+          # way we have to learn the numeric fid: "F521" is a Darwin identifier from
+          # the AWIN UI, not a fid (cf. sync-adg-feed.yml, "fid 119037 / Darwin
+          # identifier F1207"). Printing it here is what lets feed-diag take over.
+          echo "--- identity (row 2, first three columns) ---"
+          sed -n '2p' healf-feed.csv | cut -d',' -f1-3
+          echo "--- columns ---"
+          head -n 1 healf-feed.csv | tr ',' '\n' | wc -l
+          echo "--- top brand_name values (the brand check) ---"
+          BCOL=$(head -n 1 healf-feed.csv | tr ',' '\n' | grep -n '^brand_name$' | cut -d: -f1)
+          echo "brand_name is column ${BCOL}"
+          tail -n +2 healf-feed.csv | cut -d',' -f"${BCOL}" | sort | uniq -c | sort -rn | head -25
+
       - name: Upload to Supabase Storage
         run: |
           set -euo pipefail
