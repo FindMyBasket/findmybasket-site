@@ -37448,3 +37448,205 @@ detectors, and now a harness and an importer reading the same column.
 its fill rate, so "100% excluded" and "100% excluded because the column is empty" stop looking
 identical. **Not scoped here** — the finding is the class, and the fix belongs with whoever next
 touches the harness.
+
+---
+
+### 487. "A failed run rather than a bad one" — the 546 is not atomic, and the status field cannot say so
+
+**Raised:** 28 August 2026, Healf's first real import · **THE PREMISE WAS WRONG AND IT WAS MINE AS MUCH
+AS ROBBIE'S. Reported, nothing repaired.**
+
+The first real import returned **HTTP 546**. It had already written.
+
+```
+healf price rows   0 -> 3,522        products total  137,696 -> 141,053  (+3,357)
+last_import_status running           last_import_error  (none)
+```
+
+> **★ THE 546 IS NOT ATOMIC.** A `single`-mode import writes as it walks the feed. The worker was
+> killed mid-walk, so **rows committed and no terminal status was ever written.**
+> `last_import_status` says **`running`** and will say it forever.
+
+**THAT IS ITEM 14'S SILENT-KILL CLASS LANDING IN THE ONE FIELD BUILT TO REPORT IT.** The run failed
+loudly at the HTTP layer and the database's own account of it is *"in progress"* — **a status
+structurally incapable of going red on this failure mode**, which is the exact property item 14
+catalogued for `storage_passthrough` retailers.
+
+## ★ THE CENTRE: A CHEAP EXPERIMENT APPROVED WITHOUT BOUNDING ITS FAILURE MODE
+
+*"If the 546 turns out to affect real imports the failure is a failed run rather than a bad one. That
+is a cheap way to answer a question nothing else can."*
+
+**Robbie's reasoning, recorded at his instruction as his — and I wrote it into the workflow header
+myself and dispatched on it, so it was not challenged by the person best placed to.** It was
+knowable beforehand and I did not check: **the code writes as it goes**, so a worker death mid-run
+leaves partial state by construction. **The question the run was designed to answer was answered — the
+546 does reach real imports — and it cost a partial write that nobody had priced in.**
+
+> **A CHEAP EXPERIMENT IS ONLY CHEAP IF THE FAILURE MODE IS BOUNDED, AND NOBODY BOUNDED THIS ONE.**
+> "Failed" and "partial" are different outcomes and the plan treated them as one. **The thing to have
+> read first was not the feed — it was what the importer does between the first row and the last.**
+
+#### WHAT LANDED IS CORRECT, WHICH IS THE ONE PIECE OF GOOD NEWS
+
+| top_category | rows | Healf-only | shared |
+|---|---:|---:|---:|
+| **supplements** | **3,374** | 3,255 | 119 |
+| skincare | 134 | 100 | 34 |
+| fragrance · bath_body · makeup | 14 | 2 | 12 |
+
+**Against the flagless dry run — zero supplements, 2,961 skincare, 1,222 dropped — the flag is doing
+exactly what the 400-row sample predicted.** Names read rather than counted: *Zita West Revital
+Essence, Vital Essence 1 & 2, Vitafem, Choline, Folate, NAC, Inositol + Folate, Vital DHA, Vitamen* — a
+complete fertility range — plus *MaryRuth's AM/PM Bundle*, *Nuchido TIME+ NAD+*, *Real Mushrooms
+Tremella*. **All `supplements/supplements`. No cookware, no yoga mats, no recipe books. The allowlist
+held.**
+
+#### CONTAINMENT HELD, AND IT WAS VERIFIED RATHER THAN ASSUMED
+
+**`products_active` supplements is still 2,475, unchanged.** The 3,255 Healf-only products fail the
+view predicate — their only price row is at an inactive retailer — so **none of this is visible to the
+catalogue.** `active = false` before the import, rather than after, is the reason a partial write is an
+inconvenience instead of an incident.
+
+#### ★ THE 479: ITEM 314'S LEAK WITH A MEASURED SIZE, FIRING ON THE NEXT RUN
+
+**Completing the import by re-running it would have created 479 duplicate products.** The mechanism,
+from the code rather than from the item:
+
+```ts
+if (!matchedProductId && wrappedUrl && createdUrls.has(wrappedUrl)) {
+  countSkippedShadeVariant++;          // 479 on Healf's dry run
+```
+
+**`createdUrls` IS PER-RUN**, seeded only from that run's own slices. So on a fresh run over a
+partially-imported retailer:
+
+1. the **3,357 already-created products match by `merchant_product_id`** — tier 0 — so they are
+   **updated rather than created**;
+2. **a product that is not created never puts its URL into `createdUrls`**;
+3. the **479 rows previously suppressed as shade variants** then have no product match *and* nothing
+   left to suppress against;
+4. **they are created as separate products.**
+
+> **ITEM 314 RECORDED THIS AS A LEAK THAT DELAYS DUPLICATION BY ONE RUN. HERE IS THE NEXT RUN, WITH A
+> NUMBER ON IT.** Not a hazard that might materialise — **479 rows, and it fires immediately.**
+
+#### ★ AND THIS IS THE ARGUMENT FOR REPORTING BEFORE RUNNING RATHER THAN AFTER
+
+**A re-run would have looked exactly like completing the import.** More products, more rows, a green
+finish.
+
+> **NOTHING IN THE OUTCOME WOULD HAVE IDENTIFIED THE 479.** They would have arrived **alongside
+> legitimate creates in the same run**, indistinguishable by count, by timestamp or by any field —
+> 3,700 expected creates and 479 of them wrong, with no way afterwards to say which.
+>
+> **The only moment the distinction existed was BEFORE the run**, in the code. **An after-the-fact
+> check cannot separate two populations that a single run merged.**
+
+**Applied:** the 3,357 partial products and 3,522 price rows were **deleted first**, restoring the exact
+pre-import baseline (`products` 137,696, Healf rows 0, supplements visible 2,475, brands 361), so the
+sliced run starts from empty and `createdUrls` works as designed within one run.
+
+#### ★ AND `active = false` HELD TWICE
+
+| | what it did |
+|---|---|
+| **during the failed import** | 3,255 Healf-only products failed the `products_active` predicate — a partial write nobody could see |
+| **during the cleanup** | **a destructive delete of 3,357 products was low-risk because none of them had ever been seen** |
+
+> **THE SECOND USE WAS NOT WHAT THE FLAG WAS SET FOR.** It was set so the catalogue would not show an
+> unread retailer. **It then made an unplanned deletion safe** — the same property, doing work nobody
+> was thinking about when the order was chosen. **Ordering bought both, and it cost nothing.**
+
+#### THREE THINGS OWED, NONE TAKEN
+
+1. **The partial state.** ~3,522 of ~3,700 expected rows. Re-running risks item 314's duplicate-create
+   leak; the clean route is **`sliced_import = true`**, which exists for this exact failure and commits
+   per slice.
+2. **`last_import_status = 'running'` is false and needs clearing**, or the next reader believes an
+   import is in flight. **Left as evidence rather than tidied away.**
+3. **The 546 reaches real imports.** Answered, at a price. Item 425's question is closed and item 485's
+   config is half-applied.
+
+---
+
+### 488. Healf's import landed, and the three misfiled rows predate it by three months
+
+**Raised and measured:** 28 August 2026 · **The sliced run completed. `active` STAYS FALSE.**
+
+| | single (failed) | **sliced** |
+|---|---:|---:|
+| price rows | 3,522 partial | **4,373** |
+| products created | 3,357 partial | **4,155** |
+| `last_import_status` | `running`, stuck | **`ok`** |
+| 546 | yes, mid-walk | **no** |
+
+#### ★ THE HEADROOM CAME FROM THE BOUNDARY, NOT FROM SMALLER PIECES
+
+**`slice_rows` is 9,000 against a 7,999-row feed — this ran as ONE slice.** Same volume, same matching,
+same writes. What changed is that **staging and processing are separate invocations**: the download and
+inflate in one worker, the matching and writing in a fresh one.
+
+> **THAT CLOSES ITEM 425'S QUESTION PROPERLY.** The failure is **accumulation across one worker's
+> lifetime**, and the remedy is **a boundary rather than smaller pieces.** All three wrong diagnoses in
+> that item looked for something to shrink; the answer was somewhere to restart.
+
+#### THE SAMPLE WAS ACCURATE ON THE MEASURE THAT TRANSFERS
+
+| | |
+|---|---|
+| 400-row sample, raw | 223 of 400 = **56%** — *not the measure* |
+| 400-row sample, of allowlist survivors | 223 of 243 = **92%** |
+| full run | 4,173 of 4,373 = **95.4%** |
+
+**The raw figure divides by rows the allowlist was always going to drop.** Corrected, a 400-row stride
+sample predicted the full run to within three points — **the number that looked wrong was the one taken
+against the wrong denominator.**
+
+#### ★ THE THREE MISFILED ROWS: NEITHER THE PREFIX NOR THE TOPICAL VETO
+
+Both hypotheses tested, both wrong.
+
+- **`isSupplementPathTopical` did not veto them.** Run directly: all three return `false`, and with
+  `onSupplementsPath=true` all three classify as `supplements`.
+- **The prefix did not miss them.** They were never Healf creates.
+
+```
+KIKI Health Pure Marine Collagen        created 27 May   Beauty Bay, MyProtein       + Healf
+Solgar Full Spectrum Curcumin Softgels  created 27 May   Beauty Bay, Boots           + Healf
+Solgar Ashwagandha Root Extract         created  6 Jun   Beauty Flash, Gorgeous Shop + Healf
+```
+
+> **THEY ARE EXISTING PRODUCTS HEALF LINKED A PRICE ROW TO, MISFILED SINCE MAY.** Categorisation is
+> creates-only (items 105, 125), so a link never reclassifies — **Healf's import did the right thing
+> with a row that was already wrong.**
+
+**AND THE TELL IS IN THE ROW ITSELF.** The misfiled ones carry `category='Skincare'`,
+`product_type='Skincare'`, `subcategory='face'`. **Every genuine Healf create carries `null` for both**,
+because the `onSupplementsPath` branch nulls `product_type` deliberately (items 151, 152).
+**Provenance is legible in the data without a join.**
+
+**WIDER THAN THREE:** `Solgar Vitamin D3` exists as **four separate strengths**, all `skincare/face`,
+created by Beauty Bay, Boots, Beauty Flash and Gorgeous Shop.
+
+> **SOLGAR AND KIKI HEALTH ARE TWO OF THE THREE BRANDS OVERLAPPING THE CATALOGUE (item 482), SO THESE
+> ARE EXACTLY THE ROWS WHERE A CROSS-RETAILER COMPARISON COULD FORM — AND THEY ARE ON THE WRONG PAGE.**
+> They matter beyond their count.
+
+**Newest scrutiny surfacing the oldest defect:** onboarding a supplements retailer is what made a
+three-month-old misfiling visible, and **nothing in the onboarding caused it or can fix it.**
+
+#### THE 129 NUTRITION BARS ARE A KNOWN INCLUSION, AND THE RULE ALREADY DECIDES THEM
+
+They arrived because the prefix was proposed at the **parent** node rather than the leaf, and that was
+stated when it was proposed. *IQBAR · Transparent Labs Grass-Fed Protein+ · Laird Superfood · Truvani ·
+1st Phorm Level-1 · Ombar cacao.*
+
+> **`docs/supplements-definition.md` v1.1 PUT PROTEIN BARS IN AND GRANOLA OUT — THIS IS THE SAME
+> BOUNDARY.** The bars are **in scope by the standing rule**; *Ombar 100% Cacao* and *Ombar Matcha
+> Blonde* are chocolate, which is the granola side. **The node is mixed and the rule already settles
+> it. What is open is whether the prefix should be the leaf plus an explicit bars rule.**
+
+**`active` STAYS FALSE** until the three are fixed: Healf's prices would point at skincare pages for
+exactly the rows the brand-comparison proposition is about.
