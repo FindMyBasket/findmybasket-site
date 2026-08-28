@@ -1,0 +1,70 @@
+name: refresh Healf
+
+# THE FIRST REAL IMPORT for Healf (retailer 34), and the reviewed step where writes
+# become possible. import-dry-run.yml deliberately cannot express a write; this can,
+# and that is why it is a separate, per-retailer file like refresh-debenhams.
+#
+# ── NO SCHEDULE YET, AND THAT IS THE POINT ──────────────────────────────────────
+#
+# retailers.active is FALSE. The catalogue does not show Healf until someone has read
+# what arrived, so a daily cron would refresh a retailer nobody can see. The cron
+# goes in with the active flip, not before. Item 485.
+#
+# ── WHAT TO EXPECT, WRITTEN DOWN BEFORE THE RUN ─────────────────────────────────
+#
+# sliced_import is FALSE, so effectiveMode is "single": all 7,999 rows through one
+# worker. The UNBOUNDED dry run at that size returned HTTP 546 with
+# supplements_path_prefixes set (bounded at 400 rows it succeeded), so this run may
+# 546 too. That is deliberate and it is the cheap answer to a question nothing else
+# can settle: a real import does LESS accumulation than a dry run (no sample arrays)
+# and MORE work (writes), and item 425 records Gorgeous Shop and Beauty Flash
+# returning 546 on dry runs while importing successfully for real.
+#
+#   IF IT 546s   -> the limit reaches real imports too. Next step is sliced_import.
+#   IF IT LANDS  -> the dry-run path was the accumulation, as tested.
+#
+# EITHER WAY THE FAILURE IS A FAILED RUN RATHER THAN A BAD ONE.
+
+"on":
+  workflow_dispatch:
+    inputs:
+      note:
+        description: 'Why you are running it (appears in the run summary)'
+        required: false
+        default: 'first real import'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Preflight
+        env:
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          [ -n "${SERVICE_KEY}" ] || { echo "::error::SUPABASE_SERVICE_KEY not set"; exit 1; }
+          [ -n "${PROJECT_REF}" ] || { echo "::error::SUPABASE_PROJECT_REF not set"; exit 1; }
+
+      - name: Import
+        env:
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -fsSL -X POST \
+            "https://${PROJECT_REF}.supabase.co/functions/v1/import-awin-feed" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            --max-time 1200 \
+            -d '{"retailer_id": 34, "dry_run": false}')
+          echo "$RESPONSE" | python3 -m json.tool || echo "$RESPONSE"
+
+      - name: Note
+        if: always()
+        run: echo "> Healf import — ${{ inputs.note }}" >> "$GITHUB_STEP_SUMMARY"
