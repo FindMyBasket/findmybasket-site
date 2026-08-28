@@ -70,6 +70,19 @@ jobs:
           sed -n '2p' healf-feed.csv | cut -d',' -f1-3
           echo "--- columns ---"
           head -n 1 healf-feed.csv | tr ',' '\n' | wc -l
+          # THE ALLOWLIST IS MATCHED AGAINST merchant_category (via sibling_coalesce),
+          # NOT against product_type — and feed-diag audits the primary column, so it
+          # reports "(empty path)" and cannot see this one. Printing it is the only way
+          # to know what an allowlist prefix would actually be matched against. Item 485.
+          echo "--- merchant_category: top 40 (THE COLUMN THE ALLOWLIST MATCHES) ---"
+          MCOL=$(head -n 1 healf-feed.csv | tr ',' '\n' | grep -n '^merchant_category$' | cut -d: -f1)
+          tail -n +2 healf-feed.csv | cut -d',' -f"${MCOL}" | sort | uniq -c | sort -rn | head -40
+          echo "--- product_type: FULL taxonomy, supplements outside Eat are read here ---"
+          PCOL=$(head -n 1 healf-feed.csv | tr ',' '\n' | grep -n '^product_type$' | cut -d: -f1)
+          tail -n +2 healf-feed.csv | cut -d',' -f"${PCOL}" | sort | uniq -c | sort -rn | head -120
+          echo "--- distinct product_type paths ---"
+          tail -n +2 healf-feed.csv | cut -d',' -f"${PCOL}" | sort -u | wc -l
+
           echo "--- top brand_name values (the brand check) ---"
           BCOL=$(head -n 1 healf-feed.csv | tr ',' '\n' | grep -n '^brand_name$' | cut -d: -f1)
           echo "brand_name is column ${BCOL}"

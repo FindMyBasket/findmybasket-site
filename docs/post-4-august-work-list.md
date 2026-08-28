@@ -37053,3 +37053,120 @@ refreshing — **99.8% barcode fill, third of fifteen** — while every link it 
 **NOT BUILT, AND THE ORDER IS DELIBERATE: after Healf.** The sync run is in flight and the onboarding
 sequence has a person waiting on it. **A check for a failure that already happened can wait behind work
 that is happening now.**
+
+---
+
+### 485. Healf's four stages, and the third feed shape: both category columns present, in the halves we do not read
+
+**Raised and measured:** 28 August 2026 · **The before-onboarding sequence, run. NOTHING CONFIGURED —
+no retailer row, no config row, no import. Three decisions owed and none taken.**
+
+**`fid 114953`, `merchant_id 22320`, `merchant_name Healf`.** The feed identifies itself in its own
+first three columns, which is how the fid was learned: **"F521" is a Darwin identifier, not a fid** —
+the same distinction `sync-adg-feed.yml` records for itself. **And it is a LEGACY AWIN datafeed, not
+Google Shopping**, which corrects the premise of item 483 in the opposite direction: the format
+question was real and the answer was the other format.
+
+#### STAGE 1 — 7,999 PRODUCTS, AND THE SHAPE IS A THIRD ONE
+
+| | fill |
+|---|---:|
+| `product_name` `brand_name` `aw_deep_link` `merchant_deep_link` `search_price` `in_stock` `mpn` `merchant_image_url` | **100.0%** |
+| `store_price` `rrp_price` | 0.0% |
+
+> **★ NEITHER THE DEBENHAMS SHAPE NOR THE COHORTED SHAPE. BOTH CATEGORY COLUMNS ARE POPULATED — IN THE
+> HALF THE IMPORTER DOES NOT READ.**
+
+```
+ean                              0.0%   |  product_GTIN        93.0%
+category_name                    0.0%   |  product_type       100.0%
+merchant_product_category_path   0.0%   |  merchant_category  100.0%
+```
+
+**The importer already maps all three `_alt` columns — but only when
+`retailer_import_config.sibling_coalesce = true`, which DEFAULTS TO FALSE.** Six of twelve active
+retailers have it on.
+
+> **★ THIS IS THE FINDING THAT MATTERS. ON DEFAULT SETTINGS HEALF IMPORTS WITH ZERO BARCODES AND NO
+> CATEGORY, AND `category_path` IS EMPTY — SO THE ALLOWLIST CANNOT RUN.** That is the Debenhams failure
+> exactly, *a path that dies before the allowlist*, **reached by a different mechanism: not a missing
+> path, but a path in a column we do not read.**
+>
+> **A CONFIG VALUE WHOSE DEFAULT IS WRONG FOR THIS FEED, AND WHOSE WRONGNESS PRODUCES A SUCCESSFUL
+> IMPORT.** Nothing errors. `last_import_status` goes green. 7,999 rows arrive, none of them
+> comparable and none of them categorised, and the only symptom is an absence — which is the class this
+> list keeps finding and the reason the check is run *before* the first import rather than after it.
+
+`sibling_coalesce` must be **true from the first import**, not fixed afterwards: a first import with it
+false does not fail, it succeeds wrongly, and the repair is then a backfill rather than a setting.
+
+**AND THE COUNT THAT WAS MEASURED RATHER THAN INFERRED:** `aw_deep_link` is **100.0%, 7,999 of
+7,999 — zero rows with an empty deep link.** The risk item 483 named does not exist in this feed, and
+it could not have been known from the format.
+
+#### STAGE 2 — SUPPLEMENTS SIT UNDER `Eat`, AND NEITHER PRIOR ALLOWLIST SHAPE REACHES THEM
+
+`product_type` is the live field. The taxonomy is four pillars — **Eat · Sleep · Move · Mind**:
+
+```
+4,550  Eat > Vitamins & Supplements          222  Sleep > Skincare > Lotion & Moisturizer
+  236  Eat > … > Vitamin D3                   91  Move > Fitness Equipment > Yoga & Pilates Mats
+   46  Eat > … > Omega 3                      62  Mind > Healthy Home > Saucepans
+```
+
+> **A BEAUTY-SHAPED ALLOWLIST (`Health and Beauty`) ADMITS NOTHING. A SPORTS-SHAPED ONE
+> (`Sports and Nutrition`) ADMITS NOTHING.** The prefix is **`Eat`**. Item 305's lesson — MyProtein
+> filed everything under Sports and Nutrition and a beauty allowlist would have dropped the entire
+> reason for onboarding — **repeats with a third vocabulary**, which is the argument for auditing the
+> taxonomy every time rather than carrying a prefix forward.
+
+**An allowlist is not optional here:** the rest of the feed is saucepans, mugs, notebooks, yoga mats,
+shoes, water bottles and toothpaste. Beauty/skincare keyword hits **835 (10%)**; fragrance **60 (0.8%)**.
+
+#### STAGE 3 — OVERLAP, AGAINST THE ZERO-CONTROL
+
+```
+A. deepen LIVE comparison:                     22
+B. hidden/merged row:                           1
+C. same-brand NEW sku:                      1,110
+D. NET-NEW (brand not carried at all):      6,866
+```
+
+**Cohorted was a true zero and the NAMES decided it (item 223); MyProtein was 8 of 7,192. Healf is 22
+— nonzero and 0.3%.** Not the Cohorted case: a real range with a thin product intersection.
+
+#### ★ STAGE 4 / THE BRAND QUESTION — THE PREDICTION IS REFUTED AND ITS MECHANISM WAS RIGHT
+
+**612 distinct brands, top brand 2.4% — a multi-brand retailer. 66 already carried, 546 (89%) new.**
+The top-18 hand sample was representative: 16 of 18 absent under punctuation-insensitive matching.
+
+**Robbie's prediction, recorded before the read (item 482), was OVERLAP** — a wellness retailer carries
+third-party brands, and MyProtein's near-zero was an own-brand property rather than a category one.
+
+> **THE REASONING WAS SOUND AND THE CONCLUSION DID NOT FOLLOW FROM IT** — which is why the diagnosis is
+> the transferable half and the prediction is not. The brands *are* third-party — Pure Encapsulations,
+> Thorne, Metagenics, Designs for Health, Cytoplan, Seeking Health — **but they are third-party ranges
+> THE CATALOGUE HAS NEVER CARRIED**, because **Boots does not stock practitioner-grade and MyProtein is
+> own-brand**.
+>
+> **★ THIRD-PARTY DOES NOT IMPLY THE SAME THIRD PARTIES.** The premise correctly ruled out MyProtein's
+> own-brand explanation and then assumed the only alternative was a shared shelf. **There is a third
+> state — a third-party range disjoint from the other third-party ranges — and it is the one that
+> obtains.**
+
+**★ AND THE 66 AGAINST 12 IS THE FIGURE TO KEEP.** 66 overlapping brands is **more than five times the
+12** that Boots and MyProtein share with each other (item 482).
+
+> **HEALF INTERSECTS THE CATALOGUE FIVE TIMES MORE THAN THE TWO INCUMBENTS INTERSECT EACH OTHER, WHILE
+> BEING 89% NEW. BOTH FACTS ARE TRUE AND THEY POINT IN OPPOSITE DIRECTIONS** — a third disjoint range
+> *and* the largest brand intersection supplements has ever had. **Neither figure alone describes the
+> retailer**, and quoting either without the other would support a different decision.
+
+#### THE THREE DECISIONS OWED, NONE TAKEN
+
+1. **The allowlist prefix** — `Eat`, and whether `Sleep > Skincare` (222 rows) comes with it.
+2. **`sibling_coalesce = true`** at the config row, before the first import rather than after.
+3. **Whether 22 deepened comparisons plus 546 new brands is the trade** — the brand-comparison
+   proposition's question, not comparison depth's.
+
+**Nothing configured.**
