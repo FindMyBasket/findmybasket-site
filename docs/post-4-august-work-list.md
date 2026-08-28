@@ -38043,3 +38043,81 @@ left standing beside the repaired one.** Same defect, one card to the left.
 drift.**
 
 **Three surfaces, and only one of them could ever have been caught by a count.**
+
+#### THE MERGE ORDER, AND THE INVERSION THAT WAS RIGHT FOR THE WRONG REASON
+
+Four PRs stood open, three of them a chain:
+
+```
+main
+ +-- #514  items 490-492  Healf cron, Stage 2 split      docs + a cron line
+      +-- #515  item 493  recategorise-products composed  EDGE FUNCTION
+           +-- #516  item 494  logo, three surfaces       SITE HTML + PNG
+#508  items 485-486  the dry run                         docs only
+```
+
+**PROPOSED: invert it** -- docs first, then #516 alone so the site deploy is attributable, then #515
+last. The stated reason was that merging the chain as a chain lands an edge-function change and a
+production site deploy in the same window, and **the separate-deploys rule buys attribution rather
+than safety**: two unrelated changes in one window are not more dangerous than two in two windows,
+they are harder to tell apart afterwards, and telling them apart is the entire value.
+
+**Robbie approved the inversion. It did not survive contact with the contiguity check.**
+
+Dropping #515's commit from #516 would have left a gap at 493, because **494's record cannot land
+before 493's**. The only route was to split #515 -- its record with #516, its code after -- which
+separates a change from its record, the one thing the item forbids.
+
+> **★ AND THE REASON FOR THE INVERSION DISSOLVED WHEN THE MERGE WAS LOOKED AT RATHER THAN ASSUMED.**
+> Merging #515 **does not dispatch the edge function**. `deploy-edge-function.yml` is
+> `workflow_dispatch` only. **So #515's merge is inert** -- it lands text and a `.ts` file nothing is
+> running.
+>
+> The two events needing separation are the **site deploy** (caused by #516's merge) and the
+> **function dispatch** (a manual act, later). **Neither is caused by #515's merge.**
+>
+> **I WAS SEPARATING THEM IN THE WRONG CURRENCY** -- merge order, when the thing that buys
+> attribution is dispatch order, and the dispatch was already free to go last. The conclusion was
+> right and the mechanism given for it was not, which is the same defect as item 492's Boots analogy
+> **argued from the other end**: there a correct caution was carried by a mechanism that did not
+> obtain, here a correct ordering was.
+
+**ORDER TAKEN: #514 -> #515 (inert) -> #516 (the site deploy, alone in its window) -> the dispatch.**
+Same outcome Robbie asked for; the merge order it actually requires.
+
+#### AND #508 WAS CLOSED RATHER THAN MERGED, BECAUSE IT CONFLICTED
+
+```
+lines #508 adds over its merge base:  99
+of those, already on main:            91      (carried by #511/#512/#513)
+of those, absent from main:            8
+```
+
+**The 8 are two passages main DELIBERATELY REPLACED**: `**RECOMMENDED, NOT SET:**
+supplements_path_prefixes ... **Left for Robbie**`, superseded by the prefix being set and by the
+instruction that left it unset being recorded as wrong; and a terser draft of *"a tool that inherits
+the assumption it exists to test"*, superseded by the expanded version carrying item 442.
+
+> **MERGING IT WOULD NOT HAVE BEEN A NO-OP. It would have reinstated a superseded recommendation
+> beside the correction that supersedes it.** A branch old enough to conflict is old enough that its
+> content may have been decided differently since. **The conflict was the signal, not an obstacle** --
+> and resolving it by taking either side blindly would have destroyed the finding.
+
+**Both squash-merges also forced a rebase downstream**, because squashing rewrites the SHA the stacked
+branch was built on. #515 conflicted on the worklist tail until replayed onto the new main, and #516
+after it. **A stack costs one rebase per merge below it**, and that is the price of the contiguity
+rule, paid knowingly.
+
+#### ★ THE DISPATCH IS ITS OWN ACT -- ITEM 300'S SHAPE
+
+**Merged and running are different facts.** Item 300 found five functions stale that way, including
+one behind an ACTIVE cron that sent a month of customer email with an invented GBP 3.95 baseline three
+weeks after the fix had merged.
+
+**So the supplements flag and the composed call go together, never separably** -- the constraint
+recorded against 493 survives into how it ships, not just how it was written.
+
+**And the refusal is verified by being read.** The preflight's message changed with the composed
+call; **a refusal nobody has read is a refusal nobody has verified.** Confirmed from the DEPLOYED
+SOURCE rather than the merge state -- item 300's method, not just its finding -- and seen to name
+**supplements alone**.
