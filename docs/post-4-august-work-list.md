@@ -37269,11 +37269,117 @@ and 2,212 by definition **v1.0** was a **stale yardstick**: v1.1 admits protein 
 and drinks, and the names on that path are supplements throughout. **The population is not unread any
 more, and it is not what the concern assumed.**
 
-**RECOMMENDED, NOT SET:** `supplements_path_prefixes =
+#### ★ AND THE INSTRUCTION THAT LEFT IT UNSET WAS WRONG, RECORDED AS ROBBIE'S
+
+*"Let the classifier decide per row, read what it produces, and set the override afterwards only if the
+classification is worse than the override would be."* **Recorded at his instruction as wrong, with the
+reason:**
+
+> **I WAS ASKING A STAGE-1 FUNCTION ABOUT A STAGE-2 CATEGORY, FOUR HOURS AFTER WE WROTE DOWN THAT IT
+> CANNOT ANSWER.** Item 476 was recorded this morning: `inferCategorisation` returns
+> `skincare | makeup | hair` and nothing else. **There was never a per-row judgement to defer to.**
+
+**THE FRAMING HAD THE FLAG AS AN OVERRIDE OVER AN UNREAD POPULATION. IT IS THE MECHANISM.** Not a
+thumb on the scale of a classifier that has an opinion — **the only route to the category**, for a
+classifier that has none.
+
+**AND THE BOOTS ANALOGY WAS WRONG FOR THE SAME REASON.** *"A forcing flag over an unread population is
+what produced the non-ingestibles on Boots"* — but **Boots' non-ingestibles came from a path that
+genuinely contained non-supplements**, and this path's names are supplements throughout.
+
+> **THE ANALOGY CARRIED THE CAUTION AND NOT THE CAUSE.** It transferred a correct warning from a case
+> whose mechanism does not obtain here, and the caution then argued for the wrong action. **A
+> precedent is only transferable at the level of its mechanism.**
+
+**WHAT MADE IT DECIDABLE WAS THE 2,000-ROW GAP DISSOLVING** — a **stale yardstick** rather than a real
+gap, definition **v1.0** measured against a **v1.1** catalogue. Until that was checked, the caution was
+reasonable on the numbers available; it was the numbers that were wrong.
+
+**SET 28 AUGUST:** `supplements_path_prefixes =
 ["Health & Beauty > Health Care > Fitness & Nutrition > Vitamins & Supplements"]` — the same
 `category_path` vocabulary as the allowlist, and a leaf inside it, so the importer's own
-`supplements_path_unreachable` guard stays empty. **Left for Robbie**, because a forcing flag is the
-most consequential value in the row and this class of value has been wrong twice today.
+`supplements_path_unreachable` guard stays empty.
+
+#### ★ THE FLAG SET, AND A FOUR-POINT A/B TAKEN RATHER THAN INFERRED
+
+Setting `supplements_path_prefixes` made the dry run return **HTTP 546**, `WORKER_RESOURCE_LIMIT`.
+
+| run | `supplements_path_prefixes` | result |
+|---|---|---|
+| 33155536943 | `{}` | **success** |
+| 33155994306 | set | **546** |
+| 33156047804 | set | **546** |
+| **33156094427** | **`{}` — control, taken deliberately** | **success** |
+
+> **TWO AND TWO, CLEANLY SEPARATED, AND THE FOURTH POINT WAS TAKEN RATHER THAN INFERRED.** Three runs
+> would have supported the same conclusion and would have been an inference; the flag was unset again
+> **on purpose** to make it a measurement. **`supplements_path_prefixes` is the cause of the dry-run
+> 546.**
+
+**THIS IS ITEM 425'S FAILURE MODE HANDLED THE OTHER WAY.** That item diagnosed **this same
+`WORKER_RESOURCE_LIMIT` three times in sequence** — *"I diagnosed it three times and was wrong three
+times, each diagnosis built on the last"* — because each was asserted and none was tested. **The
+difference here is not care. It is that a control was run.**
+
+#### AND THE REFUSAL TO CLAIM A REAL IMPORT WOULD FAIL
+
+**Not claimed, and the reason is item 425's own counter-evidence:** Gorgeous Shop and Beauty Flash
+**return 546 on dry runs and import successfully for real.** The dry-run path accumulates samples and
+diagnostics it never writes, and *"a dry run is never sliced — dry_run:true pushes the whole feed
+through one worker"* (`import-awin-feed:771`), while a real import slices.
+
+> **THE TWO PATHS HAVE DIFFERENT MEMORY PROFILES, SO ASSERTING EITHER WAY IS THE ERROR THAT ITEM
+> REPEATS.** *"The 546 blocks the import"* and *"the 546 is only inspection"* are both available and
+> neither is measured. **Written into the config `notes` as unknown**, so the next reader inherits the
+> question rather than a guess.
+
+#### ★ TESTED AT THREE BOUNDS: IT IS ACCUMULATION, AND A SLICED IMPORT IS NOT IMPLICATED
+
+`max_rows` with stride sampling — the same instrument that established Gorgeous Shop's failure was
+**row-dependent rather than a download problem**.
+
+| bound | result |
+|---|---|
+| unbounded, 7,999 rows | **546** |
+| `max_rows=2000, stride=4` | **546** |
+| **`max_rows=400, stride=20`** | **SUCCESS** |
+
+> **IT DOES NOT FAIL AT EVERY BOUND, SO THE FLAG'S COST IS NOT INSPECTABILITY ITSELF.** The failure is
+> row-dependent: **accumulation in the dry-run path**, which is never sliced and holds diagnostics it
+> never writes. **A real sliced import is not implicated** — and that is now the tested reading rather
+> than the plausible one.
+
+**What the flag actually costs is the UNBOUNDED dry run.** The ceiling falls from ~8,000 rows without
+it to between 400 and 2,000 with it, because the supplements branch adds per-row work. **A bounded run
+is the inspection route from here.**
+
+#### THE CLASSIFICATION WITH THE FLAG — A 400-ROW STRIDE SAMPLE, STATED AS A SAMPLE
+
+```
+sampled: max_rows 400 · stride 20 · rows_seen 7999 · rows_kept 400 · tail_unsampled TRUE
+```
+
+| | before the flag (whole feed) | after (400-row sample) |
+|---|---|---|
+| `on_supplements_path` | **0** | **223 of 400** |
+| dropped as `supplement` | **1,222** | **0** |
+| `skincare` | 2,961 of 4,999 | **9 of 400** |
+
+**NOT SCALED TO THE FEED, DELIBERATELY.** The sample reports `tail_unsampled: true`, so 223/400 is a
+reading of 400 rows and not an estimate of 7,999. **Item 440's rule: the number that may be claimed is
+the number that was read.**
+
+**THE NAMES, AGAIN RATHER THAN THE COUNTS** — every one landing `supplements / supplements`:
+
+> *Wild Nutrition Women's Food-Grown Daily Multi Nutrient · Wild Nutrition Food-Grown Breastfeeding
+> Complex · KIKI Health Body Biotics · Organifi Critical Immune · Optibac For Women · Pure
+> Encapsulations Magnesium Glycinate · Pure Encapsulations Vitamin K with D3 · Metagenics Multi
+> Essentials for Women · BodyBio Balance Oil · Ancient Nutrition Organic SuperGreens · BodyHealth
+> Perfect Amino Electrolytes · Thorne L-Glutamine*
+
+**These are the SAME PRODUCTS the first dry run dropped as `supplement` or filed as `skincare`.** The
+flag moved them to where they belong — **which is what "it is the mechanism, not an override"
+predicted, and the prediction is now observed rather than argued.**
 
 #### THE THREE DECISIONS OWED, NONE TAKEN
 
@@ -37322,10 +37428,16 @@ excluded paths, by volume:  7999  supp 2212  (empty path)
 **It reads `category_path` — the primary column — exactly as the importer does.** So it saw an empty
 path on every row and would have reported 100% excluded **whether the prefix was right or wrong.**
 
-> **A TOOL THAT INHERITS THE ASSUMPTION IT EXISTS TO TEST.** The diagnostic did not fail; it
-> faithfully reproduced the blind spot it was run to find, and its output was consistent with both
-> answers. **The question was only settled by printing `merchant_category` directly** — going around
-> the instrument rather than through it.
+> **★ A TOOL THAT INHERITS THE ASSUMPTION IT EXISTS TO TEST.** The diagnostic did not fail. It
+> faithfully reproduced the blind spot it was run to find, and **its output was consistent with both
+> answers** — right prefix and wrong prefix produce the identical line.
+>
+> **ITEM 442 AT ONE MORE REMOVE.** There the instrument DISCARDED the information it was asked about.
+> Here it **shares a premise with the thing under test**, so **agreement between them carries no
+> information at all.** A harness that reads the same column as the importer can only ever confirm
+> that they read the same column.
+>
+> **Only going around the instrument and printing the column settled it.**
 
 **This is item 442's shape at one more remove.** There the instrument discarded the information it was
 asked about; here it shares a premise with the thing under test, so agreement between them means
