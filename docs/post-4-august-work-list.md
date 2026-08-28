@@ -37162,9 +37162,76 @@ third-party brands, and MyProtein's near-zero was an own-brand property rather t
 > *and* the largest brand intersection supplements has ever had. **Neither figure alone describes the
 > retailer**, and quoting either without the other would support a different decision.
 
+#### ★ THE SAME CLASS AGAIN, ONE LAYER UP, IN THE SAME CONFIG ROW AN HOUR LATER
+
+**The instruction was `allowlist on Eat`, from the taxonomy in this item — and `Eat` admits ZERO rows.**
+
+> **A VALUE CORRECT AGAINST THE TAXONOMY YOU CAN SEE, MATCHED AGAINST A COLUMN YOU HAVE NOT LOOKED AT,
+> PRODUCES A WORKING IMPORT WITH AN EMPTY CATALOGUE.**
+
+`Eat > Vitamins & Supplements` lives in **`product_type`** (`category_name_alt`). The allowlist is
+matched against **`category_path`** — `merchant_product_category_path` (0%) or, under coalesce,
+**`merchant_category`** (100%), which turns out to be **the Google product taxonomy**:
+
+```
+4865  Health & Beauty > Health Care > Fitness & Nutrition > Vitamins & Supplements
+ 129  Health & Beauty > Health Care > Fitness & Nutrition > Nutrition Bars
+ 113  Food, Beverages & Tobacco > Beverages > Coffee
+  62  Home & Garden > Kitchen & Dining > Cookware & Bakeware > Cookware > Saucepans
+  42  Office Supplies > General Office Supplies > Paper Products > Notebooks & Notepads
+```
+
+**BOTH FAILURES SUCCEED, AND THAT IS THE PROPERTY THEY SHARE.** `sibling_coalesce = false` imports
+7,999 rows with no barcodes and no category; an `Eat` allowlist imports none at all. **Neither errors,
+both go green, and the only symptom is an absence** — item 478's shape from this morning, a defect
+whose signature is that nothing goes wrong.
+
+**AND `feed-diag` COULD NOT SEE IT EITHER.** Its allowlist audit reported *"EXCLUDED by allowlist: 7999
+(100.0%) — (empty path)"*, because it reads the primary column exactly as the importer does. **The
+diagnostic reproduced the blind spot it was run to find**, so it would have said the same thing whether
+the prefix was right or wrong. The answer came from printing `merchant_category` directly.
+
+#### ★ AND IT IS THE MYPROTEIN LESSON EXACTLY INVERTED
+
+**MyProtein filed everything under `Sports and Nutrition` with nothing under `Health and Beauty`**, so a
+beauty-shaped allowlist would have dropped the entire reason for onboarding (item 305).
+**Healf files its supplements under `Health & Beauty > Health Care > Fitness & Nutrition`.**
+
+> **THE BEAUTY-SHAPED PREFIX IS THE RIGHT ONE HERE AND THE WELLNESS-SHAPED ONE IS WRONG.** Two
+> supplements retailers, opposite answers, and **neither could be guessed from the other.** That is the
+> argument for auditing the taxonomy every time rather than carrying a prefix forward — stated at
+> MyProtein as a caution and demonstrated here as a reversal.
+
+**SUPPLEMENTS OUTSIDE THE NODE, READ RATHER THAN COUNTED:** every `Sleep`, `Move` and `Mind` branch was
+listed. **`Sleep > Sleep Aids > Sleeping Aids` (23) is the only supplement-shaped node outside `Eat`**;
+the rest are eye masks, alarm clocks, blankets, sunglasses, snoring aids, pillowcases, shampoo,
+deodorant, candles, watches, shoes and body-weight scales. **The hypothesis that magnesium would sit
+under Sleep and recovery products under Move does not hold for this feed** — magnesium is at
+`Eat > Vitamins & Supplements > Magnesium` (15), and `Move > Recovery` is massagers and scales. **One
+prefix nearly covers it, and that is a finding rather than a formality.**
+
+#### AND ONE COUNT THAT DOES NOT RECONCILE, HELD BEFORE `supplements_path_prefixes` IS SET
+
+`supplements_path_prefixes` **forces `top_category = supplements`**, discarding the denylist verdict for
+every row on the path except topicals (`inferCategorisationForImport`, the `onSupplementsPath` branch).
+
+| | |
+|---|---:|
+| rows under Healf's Vitamins & Supplements node | **4,865** |
+| supplements per definition **v1.0** (harness) | **2,212** |
+| sports-nutrition-shaped | 693 |
+
+**Part of the gap is a stale yardstick** — the harness measures v1.0 and the live definition is v1.1,
+which added protein powder, whey, creatine, pre-workout and protein bars. **But 2,212 + 693 is 2,905
+against 4,865.** Setting the prefix would force roughly two thousand rows into supplements that neither
+definition admits. **That is a decision, not a detail, and it needs the names read first** — the same
+read that found a recipe book in MyProtein's feed.
+
 #### THE THREE DECISIONS OWED, NONE TAKEN
 
-1. **The allowlist prefix** — `Eat`, and whether `Sleep > Skincare` (222 rows) comes with it.
+1. **The allowlist prefix** — **NOT `Eat`, which admits zero.** Proposed:
+   `Health & Beauty > Health Care > Fitness & Nutrition` (**4,994** = 4,865 supplements + 129 nutrition
+   bars). `Health & Beauty` alone drags in ~600 rows of shampoo, deodorant, sunscreen and toothpaste.
 2. **`sibling_coalesce = true`** at the config row, before the first import rather than after.
 3. **Whether 22 deepened comparisons plus 546 new brands is the trade** — the brand-comparison
    proposition's question, not comparison depth's.
