@@ -289,3 +289,103 @@ price — which is a feed.** There is no version of this that a link unblocks an
 
 **Nothing is built.** The mechanism was never the constraint: `ClickOutLink` already carries
 `brandSlug` with no `retailerId`, which is how the brand hub cards work today (item 461).
+
+---
+
+## Healf — `approved-pending-integration`
+
+**Approved 28 August 2026 via AWIN. Advertiser 22320. NOT ONBOARDED — recorded before any work.**
+
+**Robbie called this "pipeline"; the file's vocabulary calls it `approved-pending-integration`**, which
+is the same state. **Mapping written down rather than a fifth status invented** — the vocabulary exists
+so that "in the pipeline" cannot mean two things.
+
+| Field | Value |
+|---|---|
+| Network | **AWIN**, advertiser **22320** |
+| Feed | **"F521", as supplied.** **NOT a numeric `fid`**, which is what every tool here takes — see below |
+| Status | `approved-pending-integration`. No retailer row, no import config, no feed read yet |
+| Commission | **Not recorded** — fill from the source agreement, not from memory |
+| **Delivery terms** | **£3.99, free over £50 — CONFIRMED BY ROBBIE HIMSELF, 28 Aug.** To be written **with `delivery_terms_source`** when the config row is created |
+| **`delivery_terms_source`** | **BOTH — read on the site AND confirmed at checkout.** Asked rather than assumed (item 160: ten of eleven retailers had unverifiable provenance). **This is stronger provenance than MyProtein's**, where the site alone was sufficient because both numbers were published; here the two agree, which also rules out the failure a checkout-only figure carries — that it can vary by basket in a way a published page does not |
+| Shape | **Wellness retailer, not a sports specialist.** Expect third-party brands rather than own-brand, so **barcode overlap may be REAL rather than near-zero** — the opposite of MyProtein's prediction |
+
+### The before-onboarding sequence is BLOCKED on one input, and it is not the feed's fault
+
+`feed-diag.yml` — the read-only harness that answers stages 1, 2 and 4 — takes a **numeric AWIN feed
+id**, used directly in
+`productdata.awin.com/datafeed/download/apikey/…/fid/${FID}/…`. MyProtein's was `3196`; Gorgeous Shop's
+`110188`; Atelier De Glow's `119037`.
+
+> **"F521" IS NOT THAT SHAPE, AND GUESSING `521` WOULD HAVE BEEN THE WRONG MOVE.** A wrong `fid` does
+> not fail loudly — the account can see many feeds, so it would download **a different advertiser's
+> feed** and every number in the report would be confidently about the wrong retailer.
+
+**The one path that resolves an advertiser id to a feed id is `awin-feed-count?list=1&q=`, which is
+service-role gated**, and `cohorted-probe.mjs` — which does exactly this resolution — takes no inputs
+and has its advertiser hardcoded. **So the resolution was a question rather than a lookup. Asked; Robbie
+confirmed `fid = 521`; dispatched.**
+
+> **`fid=521` RETURNS 404. The feed does not exist at that id** (run 33151299143). The harness refused
+> rather than reporting on a wrong feed, and four runs succeeded on 25 August, so the instrument is
+> sound. **A confirmation is not a verification** — neither of us had read the feed list, and the
+> value came back with a second person's confidence rather than with evidence. Item 482.
+
+**THE `fid` WAS NEVER THE BLOCKER.** Healf's is a **Google Shopping (Darwin) feed**, and that path
+takes a **URL**, not a feed id — which is why 521 returned 404 and why `feed-diag.yml`, which builds
+`…/fid/${FID}/…`, cannot read this feed at all.
+
+### PROCEEDS AS A CATALOGUE RETAILER — decided 28 August on the evidence (item 483)
+
+`google_shopping` is a **first-class `feed_format`**, not an AWIN fallback: two retailers run it,
+Branded Beauty was **third of fifteen on barcode fill at 99.8%** — above Boots by 35 points — and
+Atelier's Google feed **synced successfully at 05:21 on 28 August**. The deep link arrives **fully
+wrapped with the publisher id baked in**, so it needs *less* configuration than the legacy format, not
+more.
+
+**Branded Beauty's failure was a closed programme still answering HTTP 200 — a relationship risk no
+format prevents and no column list predicts.** An argument about the monitor, not the shape.
+
+### What is needed before onboarding — THREE things, not one
+
+| | |
+|---|---|
+| 1 | **The Darwin download URL** from the AWIN dashboard — *right-click the download button → Copy Link Address*. It carries credentials, so it goes in as a **GitHub secret**: `DARWIN_FEED_URL_HEALF`, the way `DARWIN_FEED_URL_BB` and `DARWIN_FEED_URL_ADG` do |
+| 2 | **`sync-healf-feed.yml`**, copied from `sync-adg-feed.yml`: curl → verify gzip → gunzip → `POST storage/v1/object/awin-feeds/healf.csv` |
+| 3 | **`retailer_import_config.feed_url = 'storage://awin-feeds/healf.csv'`** — a pointer, not the URL. Both existing Google retailers store exactly this shape, and **the credential never touches the database** |
+
+**AND ONE THING TO COUNT IN THE FEED RATHER THAN INFER:** rows with an **empty `aw_deep_link`**. The
+importer skips a row for no match id, no price or out of stock — **not for a missing deep link** — so
+such a row stores with `url = ''`, which is a product page with no click-out. Both existing Google
+retailers are at 100% URL fill; that says nothing about Healf's.
+
+**Nothing configured. No secret, no workflow, no config row, no retailer row.**
+
+### The baseline stage 5 will be measured against, taken now
+
+The proposition is **brand-across-brands, not product-across-retailers** — so the question is whether
+Healf adds a **third range**, not whether it overlaps the first two.
+
+| Retailer | supplements products | brands |
+|---|---:|---:|
+| **Boots** | 1,755 | **301** |
+| **MyProtein** | 494 | 38 |
+| Niche Beauty | 211 | 35 |
+| the other six | 78 | ≤7 each |
+
+**361 distinct supplement brands live today**, and the two incumbents barely intersect:
+
+```
+Boots only      289 brands
+MyProtein only   26
+BOTH             12          <- the entire overlap
+neither          34 brands, 188 products
+```
+
+> **TWELVE BRANDS OF 361 ARE STOCKED BY BOTH.** The catalogue's supplements are not two competing
+> ranges — they are **two disjoint ranges filed under one heading**, which is what
+> `docs/supplements-brand-comparison-proposition.md` was written about. **A third range is additive by
+> default here; the interesting question is whether Healf's brands are a THIRD disjoint set or the
+> first real overlap.**
+
+**Nothing is configured. Nothing is imported. No retailer row exists.**

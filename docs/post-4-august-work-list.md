@@ -36697,3 +36697,278 @@ cache rather than a column.
 
 **Recorded because the next verification will look the same.** A deploy check that reads a page the
 browser has already loaded is not a deploy check.
+
+---
+
+### 482. Twelve brands of 361: supplements is two DISJOINT ranges filed under one heading
+
+**Raised and measured:** 28 August 2026, taking the baseline for the Healf onboarding · **The
+proposition's own premise, measured at the brand level for the first time. Nothing built.**
+
+**Recorded now rather than waiting on Healf's feed**, because it is a fact about the catalogue we
+already have and it is what decides how Healf's feed should be read when it arrives.
+
+| Retailer | supplements products | brands |
+|---|---:|---:|
+| **Boots** | 1,755 | **301** |
+| **MyProtein** | 494 | 38 |
+| Niche Beauty | 211 | 35 |
+| six others | 78 | ≤7 each |
+
+**361 distinct supplement brands are live. The two incumbents almost do not intersect:**
+
+```
+Boots only      289 brands
+MyProtein only   26
+BOTH             12        <- the entire overlap
+neither          34 brands, 188 products
+```
+
+> **★ SUPPLEMENTS IS NOT TWO COMPETING RANGES. IT IS TWO DISJOINT RANGES FILED UNDER ONE HEADING.**
+> Twelve brands of 361 — **3.3%** — are carried by both. The category reads as one shelf and behaves
+> as two catalogues that happen to share a `top_category`.
+
+#### THIS IS WHAT THE PROPOSITION WAS WRITTEN ABOUT, AND IT HAD NEVER BEEN MEASURED
+
+`docs/supplements-brand-comparison-proposition.md` argues the comparison is
+**brand-across-brands rather than product-across-retailers**, and it anticipated the shape — *"a table
+built now would compare brands INSIDE Boots"* — **but it carries no brand-level overlap figure
+anywhere.** The document reasoned to the conclusion and the count was never taken.
+
+> **A premise argued three times and measured none.** The 1-of-99 barcode figure from the Amazon
+> harvest was read as evidence for it, but that is **product** overlap; **this is the brand overlap the
+> argument actually rests on**, and it is 12 of 361.
+
+#### ★ AND IT SETS THE QUESTION HEALF ANSWERS, WITH THE PREDICTION ON THE RECORD FIRST
+
+| outcome | what it would mean |
+|---|---|
+| **a third disjoint range** | **additive and predictable** — the pattern holds, and supplements is three catalogues under one heading |
+| **a real overlap** | **the first time two supplements retailers carry the same brands**, and the first chance to compare a supplement on price at all |
+
+**ROBBIE'S EXPECTATION, STATED BEFORE THE FEED IS READ: overlap.** A wellness retailer carries
+**third-party** brands, and **MyProtein's near-zero was an OWN-BRAND property rather than a category
+one** — a barcode per flavour per size across a matrix they control (item 305). **Reading that as "how
+supplements behave" would generalise from the one retailer least able to represent them.**
+
+> **The prediction is written down before the measurement**, which is item 426's practice: a prediction
+> recorded beforehand is falsifiable, and the same prediction offered afterwards is a description.
+
+#### TWO SMALLER THINGS FROM THE SAME HOUR, BOTH ABOUT PROVENANCE
+
+**`delivery_terms_source` = BOTH, and "both" is not merely redundant.** £3.99 free over £50 was read on
+Healf's site **and** confirmed at checkout.
+
+> **A published page cannot vary by basket; a checkout figure can.** So the two sources fail in
+> different ways, and their agreement rules out the failure mode each one carries alone. **Two sources
+> agreeing is stronger than either — not a repetition of one.** *(Contrast item 481, the same morning:
+> two checks agreeing because they read one cached artefact, which was not two measurements at all.
+> The difference is whether the paths are independent, and here they are.)*
+
+**AND THE REFUSED GUESS CAME BACK CONFIRMED — AND WAS STILL WRONG.** `feed-diag` needs a numeric
+`fid`; the value supplied was **"F521"**, which is not that shape. Guessing `521` was refused, because
+a wrong `fid` downloads **a different advertiser's feed** rather than failing. Asked; **Robbie
+confirmed `fid = 521`**; dispatched on that confirmation.
+
+```
+run 33151299143   curl: (22) The requested URL returned error: 404
+```
+
+> **★ A CONFIRMATION IS NOT A VERIFICATION, AND THIS IS THE CLEANEST INSTANCE OF IT ON THE LIST.**
+> Asking was right and it did not make the value true. **What came back was the same recalled value
+> with a second person's confidence attached** — the feed list was never read, by either of us. **The
+> reading is what would have made it evidence, and the reading says the feed does not exist.**
+>
+> **I recorded, an hour before the dispatch, that the value "arrived as evidence". It had not.** It
+> arrived as an answer, and answers and readings are different things — which is the distinction the
+> refusal was originally protecting and which I then dropped one step later.
+
+**THE HARNESS REFUSED RATHER THAN REPORTING ON THE WRONG FEED, WHICH IS THE DESIGN WORKING.** Its own
+guard — *"AWIN returns HTML/JSON errors with a 200, so a successful curl is not proof of a feed.
+Require gzip magic"* — plus `curl -f` meant a bad id produced an error instead of a report. **And the
+instrument is not the problem: four `feed-diag` runs succeeded on 25 August during MyProtein's
+onboarding**, which is the zero-control the Cohorted probe established the habit of taking.
+
+**BLOCKED, AND THE BLOCKER IS UNCHANGED.** The numeric `fid` for advertiser 22320 has to come from the
+AWIN **datafeed list**, which needs the feed API key: `awin-feed-count?list=1&q=` is service-role
+gated, and `cohorted-probe.mjs` — which performs exactly this resolution — has its advertiser
+hardcoded and takes no inputs. **Nothing about Healf's feed has been read, and no stage of the
+sequence has run.**
+
+---
+
+### 483. A CORRECTION TO THE INSTRUCTION: google_shopping is a configured format, not an AWIN fallback
+
+**Raised:** 28 August 2026 · **ROBBIE'S CORRECTION OF HIS OWN PREMISE, recorded at his instruction as
+a correction to the instruction rather than as a finding of mine.** The brief said Healf's Google
+Shopping feed was "Branded Beauty's shape — the auto-generated fallback AWIN produces when a merchant
+supplies no real datafeed", and asked which reading of the standing rule the record supported.
+
+> **THE RECORD REFUTES THE PREMISE ON EVERY POINT, AND THE INSTRUCTION WAS TO CHECK IT RATHER THAN
+> APPLY IT.** That is why the check was asked for; the value of asking is only realised when the answer
+> comes back different, and this one came back different on all four questions.
+
+| the premise | the record |
+|---|---|
+| an auto-generated AWIN fallback | **a first-class `feed_format`** with its own column mapping (`:1698`) and its own sync workflow |
+| unusable shape | **Branded Beauty third of fifteen on barcode fill, 99.8% — above Boots by 35 points** |
+| the thing the rule was written after | **Atelier's Google feed synced successfully at 05:21 this morning** |
+| fewer fields, so weaker links | **the deep link arrives fully wrapped with the publisher id baked in** — more self-sufficient than the legacy format, not less |
+
+**AND THE CITATIONS, WHICH ROBBIE CORRECTS HIMSELF:** *"I cited a rule to a source that does not carry
+it, and the source I meant is about copy."* Item 7 is `ListReports`; the standing rule entered
+`docs/strategy.md` on **3 August** (`0d6c65a`, #174) attributed to **no retailer**; and Branded
+Beauty's recorded refresh failure is **item 10 — hand-written prices in four articles**.
+
+#### 1 — WHAT BRANDED BEAUTY'S FEED ACTUALLY CONTAINED, AND WHAT MADE IT UNUSABLE
+
+**It is not an auto-generated fallback.** `retailer_import_config.feed_format = 'google_shopping'` is a
+**first-class configured value** with its own column mapping in `import-awin-feed`
+(`:1698`–`:1726`), and its own daily sync workflow — `sync-bb-feed.yml`, 03:00 UTC, pulling a Darwin
+URL from a secret.
+
+**What it contained, measured on the 2,166 rows still stored** (`retailer_prices.ean`, which is where
+the barcode lives — `products.ean` holds 8 rows in the whole table):
+
+| Retailer | format | barcode fill |
+|---|---|---:|
+| YesStyle | awin | 100.0% |
+| Perfume Click | awin | 99.9% |
+| **Branded Beauty** | **google_shopping** | **99.8%** |
+| Beauty Bay · Niche Beauty · Superdrug | awin | 99.7 · 99.1 · 99.0 |
+| **Atelier De Glow** | **google_shopping** | **98.9%** |
+| Escentual · Debenhams · Beauty Flash | awin | 84.4 · 84.1 · 83.3 |
+| **Boots** | awin | **64.7%** |
+| **Stylevana** | awin | **54.6%** |
+
+> **THE TWO GOOGLE-FORMAT RETAILERS SIT THIRD AND SEVENTH OF FIFTEEN ON BARCODES, ABOVE BOOTS BY 35
+> POINTS.** URL fill is 100% for both. **This is not an impoverished shape.**
+
+**WHAT MADE BRANDED BEAUTY UNUSABLE WAS THE PROGRAMME CLOSING, NOT THE FEED.** From item 14's table:
+*"Branded Beauty AWIN programme closed — the deep links returned **HTTP 200** with a closed-merchant
+page. Nothing watching error rates can see a 200."* The silent-kill class. **`sync-bb-feed.yml` last
+ran 1 August and failed; it has not run since.**
+
+**AND A CORRECTION TO THE PREMISE'S CITATION.** Item 7 is *"Re-run `ListReports` periodically"* and
+records none of this. The standing rule entered `docs/strategy.md` on **3 August 2026** (`0d6c65a`,
+#174) as a general qualifying rule in §8, **attributed to no retailer.** Branded Beauty's own
+refresh-path failure on the record is **item 10 — hand-written prices in four articles, refreshed by
+nothing.** That is about copy, not about a feed.
+
+#### 2 — CAN A GOOGLE FEED CARRY A DEEP LINK, GTINs AND A STABLE ID? ALL THREE, ALREADY MAPPED
+
+```
+title                    -> product_name
+id                       -> merchant_product_id AND aw_product_id     <- the stable merchant id
+aw_deep_link             -> merchant_deep_link   "already wrapped, used directly"
+gtin                     -> ean
+mpn / brand / image_link / description
+price, sale_price        -> store_price, search_price
+availability             -> in_stock
+google_product_category  -> category path        product_type -> category name
+```
+
+> **★ THE DEEP LINK IS MORE SELF-SUFFICIENT THAN AWIN'S, NOT LESS.** In the legacy format
+> `merchant_deep_link` is a **raw merchant URL** that must be wrapped through `cread.php` with
+> `awin_merchant_id`. **In Google format `aw_deep_link` arrives fully wrapped with the publisher id
+> baked in** and is used as-is (`:2326`). One fewer configured value to get wrong.
+
+The importer's own comment settles the barcode question: *"Already reads gtin correctly, which is why
+the two google_shopping retailers have ~99% barcode coverage while five awin ones had none."*
+**Nothing is structurally absent.**
+
+#### 3 — THE IMPORTER'S MINIMUM: THREE COLUMNS PER ROW, ONE PER CONFIG
+
+| | requirement | on failure |
+|---|---|---|
+| row | a **match id** (`id`) | `countNoMatchId`, row skipped (`:2307`) |
+| row | a **price** > 0 | `countNoPrice`, row skipped (`:2314`) |
+| row | **in stock** | `countOOS`, row skipped (`:2317`) |
+| config | **`feed_url`** — the Darwin URL, since there is no `fid` to build one from | error (`:1177`) |
+
+**NOT required: barcode, mpn, category, description — and NOT the deep link.** A row with an empty
+`aw_deep_link` **still stores**, with `url = ""`.
+
+> **THAT IS A RISK RATHER THAN A BLOCKER, AND IT IS THE ONE TO COUNT BEFORE ONBOARDING.** A stored row
+> with no URL is a product page with no click-out — it costs nothing to measure in the feed and cannot
+> be inferred from the format.
+
+#### 4 — ★ WHICH READING THE RECORD SUPPORTS: REFRESHABILITY
+
+The wording is *"a **usable** network feed, a scheduled SFTP feed, a maintained scraper or a structured
+API. If the answer is that refresh will be figured out later, the answer is no. **Stale prices erode
+trust faster than missing retailers do.**"*
+
+**The stated rationale is staleness. The record supports refreshability, and not on wording alone:**
+
+- **Two retailers were onboarded on `google_shopping` feeds under this rule.**
+- **`sync-adg-feed.yml` succeeded at 05:21 THIS MORNING, 28 August.** A Google-format feed is
+  refreshing daily, successfully, today.
+- **What the rule was written after, on the record, is prices with NO refresh path at all** — Superdrug's
+  retired feed with 29,547 rows quoted long after they stopped moving, and Branded Beauty's
+  hand-written article tables. **Both are frozen state. Neither is a feed format.**
+
+> **AN AUTO-GENERATED FEED THAT REFRESHES DAILY DOES NOT SATISFY THE RULE "LITERALLY WHILE BEING THE
+> THING IT WAS WRITTEN AFTER". IT SATISFIES IT AND IS NOT THAT THING.** The catalogue already runs this
+> format; the rule's target is a price nothing updates.
+
+**SO THIS IS A FEED WITH A DIFFERENT COLUMN SET, NOT A FEED THAT CANNOT WORK** — and on barcodes it is
+a *better* column set than most of the fleet.
+
+**THE REAL RISK IS NOT THE FORMAT AND IS WORTH SAYING PLAINLY:** Branded Beauty's failure — a closed
+programme still answering 200 — is a **relationship** risk that no feed format prevents and no column
+list predicts. **It is an argument about the monitor, not about the shape.**
+
+#### ★ THE REAL RISK, AND IT IS AN ARGUMENT ABOUT THE MONITOR RATHER THAN THE SHAPE
+
+> **BRANDED BEAUTY FAILED BECAUSE A CLOSED PROGRAMME KEPT ANSWERING 200.** That is a **relationship**
+> risk. **No feed format prevents it and no column list predicts it** — a perfect feed with 99.8%
+> barcodes went on refreshing while every link it carried landed on a closed-merchant page.
+
+**The format question and the failure that motivated it are unrelated**, and treating the format as the
+lesson would harden the wrong surface. **The lesson is item 14's**: the silent class never reaches
+`last_import_status`, so the thing to build for Healf is detection of a 200 that is not a product page.
+
+#### DECIDED: HEALF PROCEEDS AS A CATALOGUE RETAILER
+
+**On the evidence, not on the format.** The two-tier question resolves toward catalogue rather than
+links-only.
+
+#### WHAT THE BEFORE-ONBOARDING SEQUENCE ACTUALLY NEEDS
+
+**A Darwin feed URL, not a `fid`.** That is why `fid=521` returned 404 and why `feed-diag.yml` — which
+builds `productdata.awin.com/.../fid/${FID}/...` — **cannot read this feed at all.**
+
+**The importer's own error message is the instruction:**
+
+> *"Find the download URL in the AWIN dashboard (right-click the download button → Copy Link Address)
+> and store it in `retailer_import_config.feed_url`"* — `import-awin-feed:1177-1194`
+
+**AND THE URL DOES NOT GO IN THE DATABASE. THE TWO EXISTING GOOGLE RETAILERS BOTH DO IT THIS WAY:**
+
+```
+retailer_import_config.feed_url
+  Branded Beauty    storage://awin-feeds/branded-beauty.csv     (39 chars)
+  Atelier De Glow   storage://awin-feeds/atelier-de-glow.csv    (40 chars)
+```
+
+**Neither holds the Darwin URL.** The credentialed URL lives as a **GitHub secret** —
+`DARWIN_FEED_URL_BB`, `DARWIN_FEED_URL_ADG` — read by a nightly workflow that curls it, verifies gzip,
+gunzips, and `POST`s to `storage/v1/object/awin-feeds/<slug>.csv`. The importer then reads
+`storage://`.
+
+> **THE CREDENTIAL NEVER TOUCHES THE DATABASE, AND THE DATABASE HOLDS A POINTER THAT IS SAFE TO READ.**
+> So Healf needs **three** things, not one: the Darwin URL as `DARWIN_FEED_URL_HEALF`, a
+> `sync-healf-feed.yml` copied from the ADG one, and `feed_url = 'storage://awin-feeds/healf.csv'`.
+
+#### ★ THE ONE THING TO COUNT RATHER THAN INFER WHEN THE FEED ARRIVES
+
+**Rows with an empty `aw_deep_link`.** The importer skips a row for **no match id, no price, or out of
+stock** (`:2307, :2314, :2317`) — **and not for a missing deep link.** `wrappedUrl` becomes `""` and
+the row stores.
+
+> **A STORED ROW WITH NO URL IS A PRODUCT PAGE WITH NO CLICK-OUT.** It cannot be inferred from the
+> format — both existing Google retailers are at 100% URL fill, which says nothing about Healf's — and
+> it costs one count in the feed to know. **Measure it; do not assume it from the two we have.**
+
+**NOTHING IS CONFIGURED.** No secret, no workflow, no config row, no retailer row.
