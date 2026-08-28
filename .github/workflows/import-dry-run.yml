@@ -26,6 +26,16 @@ name: import dry-run (read-only)
         description: 'retailers.id to dry-run (e.g. 34 = Healf)'
         required: true
         type: string
+      max_rows:
+        description: 'Optional stride sample cap (item 425). Blank = whole feed. A dry run is never sliced, so a large feed can exceed the worker limit unbounded and complete bounded.'
+        required: false
+        default: ''
+        type: string
+      sample_stride:
+        description: 'Keep every Nth row when max_rows is set. Default 4.'
+        required: false
+        default: '4'
+        type: string
       note:
         description: 'Why you are running it (appears in the run summary)'
         required: false
@@ -57,14 +67,23 @@ jobs:
           SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           RID: ${{ inputs.retailer_id }}
+          MAXROWS: ${{ inputs.max_rows }}
+          STRIDE: ${{ inputs.sample_stride }}
         run: |
           set -euo pipefail
+          # dry_run stays literal. max_rows is additive and cannot turn this into a write.
+          BODY="{\"retailer_id\": ${RID}, \"dry_run\": true"
+          if [ -n "${MAXROWS}" ]; then
+            BODY="${BODY}, \"max_rows\": ${MAXROWS}, \"sample_stride\": ${STRIDE:-4}"
+            echo "BOUNDED: max_rows=${MAXROWS} stride=${STRIDE:-4} — the result is a SAMPLE, not the feed"
+          fi
+          BODY="${BODY}}"
           RESPONSE=$(curl -fsSL -X POST \
             "https://${PROJECT_REF}.supabase.co/functions/v1/import-awin-feed" \
             -H "Authorization: Bearer ${SERVICE_KEY}" \
             -H "Content-Type: application/json" \
             --max-time 900 \
-            -d "{\"retailer_id\": ${RID}, \"dry_run\": true}")
+            -d "${BODY}")
           echo "$RESPONSE" | python3 -m json.tool || echo "$RESPONSE"
 
       - name: Note
