@@ -38255,8 +38255,17 @@ STATED.** The first run reported 50: `app/sitemap-pages.xml/route.ts:56` is
 filename rule only when the window widened from **24 characters to the whole line**, because
 `beauty-delivery-threshold-savings.html` is 38 characters long and the `.html` fell outside the window.
 
-> **A METHOD THAT REPORTS ITS OWN EDGE CASES IS ONE THE NEXT SWEEP CAN ACTUALLY MATCH.** The window
-> width is part of the definition, and it was invisible until it produced a wrong answer.
+> **A METHOD THAT REPORTS ITS OWN EDGE CASES IS ONE THE NEXT SWEEP CAN ACTUALLY MATCH.**
+>
+> **24 CHARACTERS AGAINST A 38-CHARACTER FILENAME.** The window width was never a decision -- it was a
+> default nobody chose, sitting inside a rule that looked complete, and **it was invisible until it
+> produced a wrong answer.** No test could have caught it: the rule ran, matched, and returned a
+> plausible number.
+>
+> **IT IS NOW WRITTEN INTO THE DEFINITION RATHER THAN THE RESULT**, which is exactly what item 331
+> failed to do. **A parameter that changes the answer is part of the method whether or not anyone
+> wrote it down** -- and 49-against-50 is the smallest possible demonstration that the difference
+> between a stated definition and a reproducible one is the parameters nobody thought worth stating.
 
 #### ★ THE SECOND FINDING: NOTHING MOVED, ACROSS 1,782 INSERTIONS
 
@@ -38322,10 +38331,23 @@ supplements". The right answer was neither.**
 fragility as a bare integer** -- one word anywhere puts it over, and nothing warns you. Item 494's
 lesson, applied the same day it was written.
 
-**AND THE og:title SHORTENING FIXED A SECOND THING.** At 94 it read *"Your health and beauty routine.
-Optimised. | UK Health & Beauty Price Comparison"* -- **the phrase twice in one line.** Link previews
-truncate near 88, so it would have shown *"UK Health & Beauty Price Comp"*. **Dropping the repetition
-is what bought the room**; the category is already in the tagline half.
+#### ★ THE og:title IS A BETTER OUTCOME THAN THE INSTRUCTION ASKED FOR
+
+The instruction was to shorten a line that would truncate. At 94 it read *"Your health and beauty
+routine. Optimised. | UK Health & Beauty Price Comparison"* -- and link previews cut near 88, so it
+would have shown *"UK Health & Beauty Price Comp"*.
+
+**BUT THE LINE SAID "HEALTH AND BEAUTY" TWICE**, once in the tagline half and once in the descriptor
+half. **The room came from removing the repetition, not from cutting a phrase.** 94 -> 78 with the
+category still stated, because the tagline half already carries it.
+
+> **THE FIT WAS A SIDE EFFECT OF FIXING A DEFECT NOBODY HAD ASKED ABOUT.** The brief was "it is too
+> long"; the cause was "it says the same thing twice", and only the second reading produces a line
+> that is both shorter AND better. **Had it been solved as a length problem, the honest move would
+> have been dropping a true clause -- and the duplication would have survived at a shorter width.**
+>
+> **A CONSTRAINT IS SOMETIMES A SYMPTOM.** Measuring why the line was long, rather than only that it
+> was, is what separated the two.
 
 **Two lines rewritten rather than swept**, because the phrase does not fit English:
 `"that's how you actually buy beauty"` -> `"that's how you actually shop"`, and
@@ -38400,4 +38422,24 @@ on a decision rather than a number.**
 
 **And 712 went stale within a day. Third time today** (items 493, 494).
 
-**Held 25 August. Reversed 28 August on measurement rather than preference.**
+#### ★ HOW ITEM 331 CLOSES: HELD ON JUDGEMENT, REVERSED ON MEASUREMENT
+
+**NEITHER REASON WAS OVERTURNED BY ARGUMENT.** That is the whole shape of it:
+
+| the hold rested on | what happened | how |
+|---|---|---|
+| **1.** supplements had no shape | **EXPIRED** | 2,274 products, a second retailer, Boots 95.2% -> 76.6% |
+| **2.** the register question -- "health and beauty" is how Boots and Superdrug describe themselves, against a premium editorial position | **WEAKENED** | 6,551 supplements, 714 brands, ten retailers with three at 98.7% |
+
+**ONE EXPIRED AND ONE WEAKENED. THE CATALOGUE IS WHAT MOVED.**
+
+> **Nobody won the register argument, and nobody needed to.** The objection was never wrong -- it was
+> weighed against a smaller catalogue than exists today, and **a judgement made against a measurement
+> stops being current when the measurement does.** Item 331 said as much about its own sweep and did
+> not extend it to its own conclusion.
+>
+> **A DECISION HELD FOR A REASON THAT CAN EXPIRE NEEDS THE REASON RECORDED, OR THE EXPIRY IS
+> UNDETECTABLE.** Item 331 recorded both, which is the only thing that made today's reversal a
+> measurement rather than a change of mind. **Its value was not the sweep. It was the two reasons.**
+
+**Held 25 August on judgement. Reversed 28 August on measurement.**
