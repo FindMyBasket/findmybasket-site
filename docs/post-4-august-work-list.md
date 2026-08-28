@@ -37964,3 +37964,82 @@ left.
 **JOB TWO'S SCOPE IS UNCHANGED, NOT SHRUNK.** The 6,480 are protected, not recovered, so the
 undetectable remainder is still the whole misfiled population — **and its acceptance criteria stand as
 item 492 records them.**
+
+---
+
+### 494. Healf's logo, three hand-maintained surfaces, and a coincidence that expired on schedule
+
+**Raised and applied:** 28 August 2026 · **Logo cut, three surfaces swept, all diffed both ways.**
+
+#### ★ 9% AGAINST 680%: WHY THIS IS NOT MYPROTEIN'S CASE
+
+```
+source canvas   892 x 292   palette PNG, 256 colours, no tRNS   aspect 3.055
+INK BAND        671 x 202   at (121,49)                         aspect 3.322
+padding         L121  R100  T49  B41
+```
+
+| | canvas | band | what the crop changes |
+|---|---|---|---|
+| **MyProtein** | 3417 x 3417 **square** | 3417 x 505 | **aspect by 6.8x — the whole job** |
+| **Healf** | 892 x 292 landscape | 671 x 202 | **aspect by 9% — a modest improvement** |
+
+> **AND IT STILL MATTERS.** Uncropped, the wordmark carries **15% horizontal and 31% vertical dead
+> space**, so at the same box height it renders **visually smaller than every neighbour**. The crop is
+> worth doing and it is not the same operation.
+>
+> **TREATING THE TWO AS ONE CASE WOULD HAVE BEEN THE ANALOGY CARRYING THE CAUTION WITHOUT THE CAUSE** —
+> the same failure recorded against the Boots comparison earlier today (item 492).
+
+**TARGET 173 x 52, FROM THE MEASURED 3.322 ASPECT RATHER THAN A SPECIFIED WIDTH.** The recent wordmarks
+converge on height 52 — `myprotein.png` 352x52, `niche-beauty.png` 256x52.
+
+> **173 IS SLIM BESIDE ITS PEERS AND THAT IS THE TRUE SHAPE.** Forcing it to niche-beauty's 256 would
+> stretch it **48%**. **MyProtein's spec said 256x52 and the measurement gave 352x52** — the spec was
+> an estimate written before the source was measured. **This is that lesson applied rather than
+> repeated.**
+
+**Format PNG.** Census: 13 webp, **11 png**, 3 jpg, 1 avif. webp leads and **no webp encoder exists on
+this machine**, so png is the established fallback. `sips` did the crop and resize.
+
+#### THE THREE SURFACES, DIFFED AS SETS IN BOTH DIRECTIONS
+
+**Truth = `retailers.active` less any non-null `unlisted_reason` = 13, none unlisted. Established from
+the table rather than by adding one to 12.**
+
+| surface | in table, not on page | on page, not in table |
+|---|---|---|
+| homepage strip `img` set | **Healf** | none |
+| `about.html` `li` set | **Healf** | none |
+| `about.html` prose | said **12** | — |
+
+**NEVER COUNT AGAINST COUNT.** `about.html` carried 12 `li` under a prose "12" — internally consistent
+and wrong. **That is the rule its own comment records**, written after it read 11 over a list of 11.
+Its comment also predicted the gap: *"Gorgeous Shop, Atelier De Glow and Perfume Click added and were
+missing from this list for days. Niche Beauty went live 9 August and was missing for seven. A retailer
+change MUST sweep this block; nothing detects it."* **Today was day zero of the same gap and it was
+closed the same day.**
+
+#### ★ AND THE COINCIDENCE RESOLVED ITSELF, EXACTLY AS ITEM 329 SAID IT WOULD
+
+`work-with-us.html` carried a bare `<span class="stat-num">12</span>`:
+
+```
+11 active retailers  ->  WRONG
+12 active retailers  ->  CORRECT, by coincidence rather than by maintenance
+13 active retailers  ->  WRONG AGAIN, without anyone touching the file
+```
+
+> **A NUMBER RIGHT BY ACCIDENT IS WORSE THAN ONE THAT IS WRONG, BECAUSE NOTHING DISTINGUISHES IT FROM A
+> MAINTAINED ONE** (item 329). **The prediction arrived on schedule** — the figure drifted back into
+> error through no edit at all, which is the property a bare integer has by construction.
+
+**AND THE FIX WAS ALREADY SITTING ONE CARD TO THE RIGHT.** That neighbour had been through this: *"100k+
+products tracked in real time"* became **"Every product from every retailer we carry, refreshed
+daily"** — a claim that stays true as the catalogue moves in either direction. **The retailer card was
+left standing beside the repaired one.** Same defect, one card to the left.
+
+**Now:** `Every · retailer we carry, compared on price and delivery in one basket` — **no integer to
+drift.**
+
+**Three surfaces, and only one of them could ever have been caught by a count.**
