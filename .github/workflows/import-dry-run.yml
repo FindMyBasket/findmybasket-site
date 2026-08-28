@@ -1,0 +1,73 @@
+name: import dry-run (read-only)
+
+# ONE DRY RUN of import-awin-feed against a retailer, on demand.
+#
+# WHY THIS EXISTS. Every retailer has its own refresh workflow (refresh-debenhams,
+# sync-bb-feed + cron, …) and each is scoped to that retailer with `dry_run` as a
+# line to edit. There is no way to dry-run a NEW retailer before its refresh
+# workflow exists, which is exactly when a dry run is most useful: onboarding.
+#
+# ── IT CANNOT WRITE, AND THAT IS STRUCTURAL RATHER THAN A DEFAULT ────────────────
+#
+# `dry_run` is NOT an input. The body is literally {"retailer_id": N, "dry_run": true}.
+# A workflow that takes a boolean can be dispatched with the wrong boolean; this one
+# cannot express a write at all. When a retailer goes live it gets its own refresh
+# workflow like the others, and that is the reviewed step where writes become possible.
+#
+# `config.enabled = false` blocks writes and PERMITS dry runs by design
+# (import-awin-feed:624), so a retailer can be inspected before it is enabled.
+#
+# Prints the response. No database write, no storage upload, no active flip.
+
+"on":
+  workflow_dispatch:
+    inputs:
+      retailer_id:
+        description: 'retailers.id to dry-run (e.g. 34 = Healf)'
+        required: true
+        type: string
+      note:
+        description: 'Why you are running it (appears in the run summary)'
+        required: false
+        default: 'onboarding inspection'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Preflight — a check that cannot look must fail, not pass
+        env:
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          [ -n "${SERVICE_KEY}" ]  || { echo "::error::SUPABASE_SERVICE_KEY not set"; exit 1; }
+          [ -n "${PROJECT_REF}" ]  || { echo "::error::SUPABASE_PROJECT_REF not set"; exit 1; }
+          case "${{ inputs.retailer_id }}" in
+            ''|*[!0-9]*) echo "::error::retailer_id must be numeric"; exit 1 ;;
+          esac
+
+      - name: Dry run
+        env:
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          RID: ${{ inputs.retailer_id }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -fsSL -X POST \
+            "https://${PROJECT_REF}.supabase.co/functions/v1/import-awin-feed" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            --max-time 900 \
+            -d "{\"retailer_id\": ${RID}, \"dry_run\": true}")
+          echo "$RESPONSE" | python3 -m json.tool || echo "$RESPONSE"
+
+      - name: Note
+        if: always()
+        run: |
+          echo "> Dry run, retailer ${{ inputs.retailer_id }} — ${{ inputs.note }}" >> "$GITHUB_STEP_SUMMARY"
