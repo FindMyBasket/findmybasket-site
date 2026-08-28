@@ -72,16 +72,28 @@ jobs:
           head -n 1 healf-feed.csv | tr ',' '\n' | wc -l
           # THE ALLOWLIST IS MATCHED AGAINST merchant_category (via sibling_coalesce),
           # NOT against product_type — and feed-diag audits the primary column, so it
-          # reports "(empty path)" and cannot see this one. Printing it is the only way
-          # to know what an allowlist prefix would actually be matched against. Item 485.
-          echo "--- merchant_category: top 40 (THE COLUMN THE ALLOWLIST MATCHES) ---"
-          MCOL=$(head -n 1 healf-feed.csv | tr ',' '\n' | grep -n '^merchant_category$' | cut -d: -f1)
-          tail -n +2 healf-feed.csv | cut -d',' -f"${MCOL}" | sort | uniq -c | sort -rn | head -40
-          echo "--- product_type: FULL taxonomy, supplements outside Eat are read here ---"
-          PCOL=$(head -n 1 healf-feed.csv | tr ',' '\n' | grep -n '^product_type$' | cut -d: -f1)
-          tail -n +2 healf-feed.csv | cut -d',' -f"${PCOL}" | sort | uniq -c | sort -rn | head -120
-          echo "--- distinct product_type paths ---"
-          tail -n +2 healf-feed.csv | cut -d',' -f"${PCOL}" | sort -u | wc -l
+          # reports "(empty path)" and cannot see this one. Item 485.
+          #
+          # PARSED, NOT CUT. A first attempt used `cut -d','` and returned fragments of
+          # the description field: this CSV quotes commas, and cut does not know that.
+          # Same splitter as scripts/cohorted-probe.mjs.
+          echo "--- merchant_category / product_type ---"
+          node -e '
+            const fs = require("fs");
+            const lines = fs.readFileSync("healf-feed.csv", "utf8").split(/\r?\n/).filter(Boolean);
+            const parse = (l) => (l.match(/("([^"]*)"|[^,]*)(,|$)/g) ?? [])
+              .map((f) => f.replace(/,$/, "").replace(/^"|"$/g, ""));
+            const cols = parse(lines[0]);
+            const iM = cols.indexOf("merchant_category"), iP = cols.indexOf("product_type");
+            const tally = (i) => { const m = new Map();
+              for (const l of lines.slice(1)) { const v = parse(l)[i] ?? ""; m.set(v, (m.get(v) ?? 0) + 1); }
+              return [...m.entries()].sort((a, b) => b[1] - a[1]); };
+            const mc = tally(iM), pt = tally(iP);
+            console.log(`merchant_category: ${mc.length} distinct`);
+            for (const [v, n] of mc.slice(0, 40)) console.log(String(n).padStart(6), v || "(empty)");
+            console.log(`\nproduct_type: ${pt.length} distinct — FULL LIST`);
+            for (const [v, n] of pt) console.log(String(n).padStart(6), v || "(empty)");
+          '
 
           echo "--- top brand_name values (the brand check) ---"
           BCOL=$(head -n 1 healf-feed.csv | tr ',' '\n' | grep -n '^brand_name$' | cut -d: -f1)
