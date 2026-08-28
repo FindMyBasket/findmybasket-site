@@ -18,7 +18,7 @@ export const SITE_OG_IMAGE = {
   // reflows. Fixed there in the same pass; stated here so the next copy starts correct.
   width: 2500,
   height: 1312,
-  alt: 'FindMyBasket — compare beauty prices across UK retailers, delivery included',
+  alt: 'FindMyBasket — compare health and beauty prices across UK retailers, delivery included',
 };
 
 /**
