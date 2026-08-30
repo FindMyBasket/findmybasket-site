@@ -38577,6 +38577,82 @@ free and carries drift riders. **A barcode-discovered merge can leave every `mat
 4. **Tiering, which the name-based preview already has and a barcode-based one would need from
    scratch.** Reusing the tier vocabulary is not the same as reusing the tiers.
 
+#### ★ THE SIX READ: A SHARED BARCODE IS NOT SUFFICIENT, AND THE FAILURE MODE HAS A NAME
+
+**The 5+ bucket was the cheapest test of "is a shared barcode sufficient evidence", and it is a read.**
+Six barcodes, read by name, and they are **THREE DIFFERENT THINGS**:
+
+**1. BUNDLE CONTAMINATION -- a component's barcode filed against every bundle containing it.**
+
+```
+3474630608368   Shu Uemura Art of Hair Ultimate Reset — SEVEN rows, ALL Gorgeous Shop
+  Shampoo 300ml Double                 GBP  78.20
+  Shampoo 300ml & Conditioner          GBP  82.94
+  Shampoo 300ml & Masque               GBP  96.24
+  Shampoo, Conditioner, ...            GBP 121.22
+  Ultimate Reset Pack                  GBP 142.03
+  Shampoo, Conditioner, ...            GBP 180.31
+```
+
+**These are not one product. They are a shampoo and six bundles that contain it**, and every one
+carries the shampoo's barcode. **Merging them would produce a "cheapest price" of GBP 78.20 for a
+GBP 180.31 pack, or the reverse.** A merge here is worse than the split.
+
+**2. CROSS-BRAND BARCODE COLLISION -- two brands on one number.**
+
+```
+5056182346776   Goldwell Dualsenses Rich Repair 1000ml bundle   GBP 77.70 – 111.00
+                Redken Acidic Bonding Concentrate Leave-In      GBP 44.46 –  60.40
+5056182346790   Goldwell Blonde & Highlights Anti-Yellow        GBP 77.70 – 111.00
+                Redken Acidic Bonding Concentrate Shampoo       GBP 63.65 –  88.90
+```
+
+**Different brands, different products, adjacent barcodes** -- `...776` and `...790` -- which is the
+signature of a retailer assigning sequential internal numbers into a barcode field. **The identifier
+is not a barcode at all.**
+
+**3. THE GENUINE ARTICLE, and it is the reason the item exists.**
+
+```
+756848207117   Ultrasun Face & Scalp UV Protection Mist SPF50 75ml
+  Debenhams   GBP 17.60      Beauty Flash  GBP 20.00      Beauty Bay  GBP 22.00
+  Gorgeous Shop GBP 18.00    Boots         GBP 22.00      Escentual   GBP 22.00
+```
+
+**Six retailers, one product, no bundles, a 25% spread, and the site shows none of it.**
+
+*And two of the six are MIXED* -- Kérastase Chronologiste and Schwarzkopf BC Repair Rescue each hold
+a genuine cross-retailer duplicate **and** Gorgeous Shop's bundle rows on the same barcode.
+
+#### ★ AND THEN THE POPULATION SAID THE OPPOSITE OF THE SAMPLE
+
+**Bundle contamination has a cheap signature: two live product rows for the SAME barcode at the SAME
+retailer.** One retailer does not sell one product as two products; it sells a product and a bundle.
+
+| | groups | |
+|---|---:|---|
+| **same-retailer split** (bundle contamination) | **120** | **1.7%** |
+| clean, cross-retailer, same brand | **6,236** | **88.9%** |
+| cross-retailer, cross-brand | 656 | 9.4% |
+
+> **THE 5+ BUCKET WAS THE CHEAPEST TEST AND THE LEAST REPRESENTATIVE ONE, FOR THE SAME REASON.**
+> Contamination is what *inflates* a row count, so the deepest bucket is **selected for** the defect
+> it was chosen to detect. **Five of the six involve Gorgeous Shop; across all 7,012 the whole class
+> is 1.7%.**
+>
+> **This is item 496's own detector lesson recurring inside item 496.** The ASIN map found one hit
+> because it held 477 barcodes; the 5+ bucket found bundles everywhere because bundles are what put
+> a barcode in the 5+ bucket. **Reading it was still right** -- it is what named the failure mode and
+> produced a test for it. **What it could not do was size it.**
+
+**SO THE ANSWER IS YES, WITH TWO NAMED EXCLUSIONS.** A shared barcode is sufficient evidence for
+**88.9%** of groups. The other 11.1% is **1.7% bundle contamination, detectable mechanically**, and
+**9.4% cross-brand, which needs names read** and is a mixture of naming variance (*Fushi* /
+*Fushi Wellbeing*) and genuine collision (*Goldwell* / *Redken*).
+
+**That is a different item from the one scoped above.** It was "7,012 groups of unknown quality"; it
+is now "6,236 clean, 656 to read, 120 to exclude by rule."
+
 **A catalogue question the size of the 42 brand collisions. It is scoped here and it is not started.**
 
 #### ★ AND A CLEAN, PLAUSIBLE ZERO FROM THE WRONG COLUMN
@@ -38718,6 +38794,53 @@ market with the same sellers.
 > SELLING and AT WHAT PRICE -- **fields the harvest returns for free and neither hypothesis thought
 > to name.** Had the probe measured only its stated question it would have reported 85.4% and
 > recommended the harvest.
+
+#### ★ THE OPPOSITE ROUTE TO THE SAME VERDICT, AS A RESULT RATHER THAN A PRINCIPLE
+
+| | two-brand tranche (17 Aug) | this probe (30 Aug) |
+|---|---|---|
+| coverage | **too low to bother** — MyProtein 3% | **good** — 23.7%, 43.1% |
+| match rate | 1% | **85.4%, 70.8%, 50.0%**, all above Solgar |
+| verdict | do not harvest | **do not harvest** |
+| what decided it | the numbers it set out to measure | **126 of 127 sellers fail the brand-store test** |
+
+> **TWO HYPOTHESES, BOTH WRONG, AND THE VARIABLE THAT DECIDED IT WAS ONE NEITHER ASKED ABOUT.**
+>
+> **THAT IS THE CASE FOR A PROBE OVER A PROJECTION, STATED AS A RESULT RATHER THAN A PRINCIPLE.** A
+> projection can only be wrong about its own variables. **A probe returns the fields you did not
+> think to ask for** -- and here those fields, `seller` and `sellerPrice`, came back for free in the
+> same response and reversed a recommendation the stated question would have made confidently.
+
+#### ★ THE LINE TO KEEP
+
+> **PRACTITIONER-CHANNEL POLICY DOES NOT PRODUCE ABSENCE. IT PRODUCES A GREY MARKET.**
+
+The hypothesis was directionally right about the mechanism and wrong about every observable it
+predicted. **The brands are not on Amazon; their stock is.**
+
+**AND `Thorne Health Supplies & Thorne Produce` IS ITEM 200 ARRIVING VERBATIM.** That item, written
+18 August, said: *"a seller name is a string, not an attestation, and naming yourself after the brand
+is the counterfeiter's move."*
+
+> **A RULE WRITTEN MONTHS AGO RECOGNISING ITS OWN CASE WITHOUT BEING CONSULTED.** Nothing looked it
+> up. The single brand-named seller in 127 records is the exact shape item 200 described, and a
+> brand-store allowlist matching on name would admit it. **The rule was not applied to this data —
+> the data walked into the rule.**
+
+#### ★ AND THE PRICES SAY WHAT THE AMAZON MODULE IS FOR
+
+```
+cheaper on               75 of 78     (96.2%)
+Amazon cheaper            3 of 78      (3.8%)
+average Amazon premium  +21.7%
+```
+
+> **THIS IS THE STRONGEST EVIDENCE YET THAT THE AMAZON MODULE IS A CROSS-CHECK RATHER THAN A
+> COMPETITOR** -- and it argues **the module is doing its job on the 484 it already covers.** A
+> second opinion that agrees with us 96% of the time is a corroboration surface; one that undercut us
+> routinely would be a distribution problem. **Its value is confirming the ranking, not entering it**
+> -- which is the same conclusion the `deliveryInfo` constraint forces for a different reason, now
+> reached from the price side as well.
 
 **THE CONSTRAINT IS UNCHANGED.** Amazon stays outside the basket ranking, product page only, because
 `deliveryInfo` is not in the Creators API and a delivered total cannot be computed.
