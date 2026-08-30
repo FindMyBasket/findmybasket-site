@@ -39305,3 +39305,87 @@ has shipped and been watched.**
   catches every shampoo and `Vitamins` contains `niacinamide`. **It is a within-class router with no
   way to say no, and its catch-all `Supplements` is safe where it is called and fatal here.**
 
+#### ★ THE SHARPEST FORM OF IT: TWO CLAIMS IN ONE STRING, TRUE SEPARATELY AT DIFFERENT MOMENTS
+
+```
+"Passing the stored top_category PRESERVES rows already correct
+ but cannot promote a misfiled one.
+ ... every row below WOULD BE RE-TAGGED OUT of supplements."
+```
+
+**Written together. True separately, at different moments.** The second was true before item 493
+passed `onSupplementsPath`; the first became true the instant it did. **They shipped in the same
+string, in the same commit as the change that falsified one of them.**
+
+> **NOTHING FLAGS A MESSAGE THAT DESCRIBES BOTH SIDES OF ITS OWN CHANGE.** A comment can be written
+> against the state it is fixing and against the state it produces, and read as coherent, because
+> each half is a sentence somebody meant. **The contradiction is only visible if you ask which
+> moment each half is about** — and the answer is on either side of one deploy.
+>
+> **This is why it survived two days.** Not because nobody read it. Because reading it does not help.
+
+#### CLOSED ON THE SUPPLEMENTS HALF. THE `curl` IS OUTSTANDING.
+
+**Deployed version 14, 30 August 17:45:42 UTC, `sha d88f8839a5e98c17`, byte-identical to main.**
+`UNREACHABLE_TOP_CATEGORIES` gone; `isSupplementPathTopical` and
+`refusing_supplements_would_be_demoted` present.
+
+```
+supplements rows                                        7,196
+rows that could POSSIBLY match SUPP_TOPICAL_FORM           28
+of those, isSupplementPathTopical() true                    0
+of those, inferCategorisationForImport(...,true)            28 -> supplements
+preflight verdict                              PASSES (0 == 0)
+```
+
+#### ★ THE SUPERSET ARGUMENT, WHICH IS THE PART WORTH KEEPING
+
+`isSupplementPathTopical` opens with `if (!SUPP_TOPICAL_FORM.test(name)) return false`, and
+`SUPP_TOPICAL_FORM` requires one of `serum|toner|cream|lotion|mask|shampoo|conditioner|moistur*|
+body spray` **as a literal substring**.
+
+> **SO 7,168 ROWS RETURN FALSE AT THE FIRST LINE WITHOUT EVALUATING ANYTHING**, and testing the 28
+> that contain one of those substrings with the real function **is equivalent to testing all 7,196.**
+>
+> **THAT IS A STRONGER CLAIM THAN A SAMPLE AND IT COSTS LESS THAN A DRY RUN.** A sample would have
+> said "none of the 30 I looked at"; this says "none, and here is why the rest cannot". **The
+> structure of the rule, not the size of the draw, is what makes it exhaustive** — and it is
+> available for any rule that opens with a cheap necessary condition.
+
+**AND RUNNING `inferCategorisationForImport` OVER THE SAME 28 CLOSES THE OTHER DIRECTION.** The veto
+test shows nothing is demoted; it does not show anything is preserved. **Preservation was measured
+rather than inferred from the absence of a veto** — all 28 returned `supplements`.
+
+#### WHAT IS OUTSTANDING, AND WITH WHOM
+
+**The fragrance and bath_body correction counts need the run, and the run needs the key.**
+`requireServiceRole` precedes the preflight; `SUPABASE_SERVICE_ROLE_KEY` was neither held nor sought,
+and no workflow calls this function.
+
+```
+curl -sS -X POST https://crtrjoescntlcjiwdtrt.supabase.co/functions/v1/recategorise-products \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+  -H "Content-Type: application/json" -d '{"dry_run":true}' -w '\n%{http_code}\n'
+```
+
+**Expected 200, not 409.** The supplements half is certain — **zero moved**. The other counts are
+**not estimated here**, because a number that has not been run is not a measurement. **Robbie's
+command, and its result decides whether a real run happens.**
+
+#### ★ AND JOB TWO'S SHAPE HAS CHANGED
+
+**It is promotion only. It is no longer a guard question.**
+
+| before | after |
+|---|---|
+| "ship a signal so the preflight lifts" | the preflight is lifted, by measurement |
+| 7,196 rows at stake | **0 at stake** |
+| a classifier that decides membership both ways | **a promoter, for rows already misfiled** |
+| tier 1 then tier 2 | **tier 2 only** — tier 1 was proposed and not built |
+
+**The work sits in the 1,720 supplements inside mixed brands, and in the 198 non-supplement rows a
+name rule would move in.** Those 198 stay unread.
+
+> **THE GUARD COMING DOWN DID NOT ADVANCE JOB TWO. IT REMOVED JOB TWO'S DEADLINE**, which was the
+> only thing making a circular signal look acceptable.
+
