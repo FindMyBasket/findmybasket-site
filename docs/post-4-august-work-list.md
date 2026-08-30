@@ -38443,3 +38443,287 @@ on a decision rather than a number.**
 > measurement rather than a change of mind. **Its value was not the sweep. It was the two reasons.**
 
 **Held 25 August on judgement. Reversed 28 August on measurement.**
+
+---
+
+### 496. One barcode, five product rows, and the comparison never forms
+
+**Raised:** 30 August 2026 · **Found while running the item 187(b) re-derivation check against the post-Healf catalogue.** · **MEASUREMENT ONLY. Nothing merged, nothing written.**
+
+#### ★ THE CASE, WHICH IS THE WHOLE ITEM
+
+```
+barcode 33984013186   —   Solgar Extra Strength Glucosamine Chondroitin MSM
+
+  Boots          £48.00
+  Beauty Flash   £47.50
+  Gorgeous Shop  £47.50
+  Beauty Bay     £53.50
+  Healf          £38.82     <- 18% under the cheapest of the other four
+```
+
+**FIVE LIVE PRODUCT ROWS. ONE PRODUCT. ONE BARCODE. THE SITE COMPARES NONE OF THEM.**
+
+> **COMPARISON HAPPENS WITHIN A PRODUCT ROW.** Five rows means five product pages, each showing one
+> retailer and each correct in isolation. **Nothing is wrong on any page.** The defect is that the
+> page which would show £38.82 beside £53.50 does not exist -- and **the site's entire proposition is
+> that page.**
+
+#### THE POPULATION
+
+```
+distinct live barcodes                              82,366
+barcodes on MORE THAN ONE live product row           7,012
+product rows involved                               14,961
+```
+
+**HEALF IS 27 OF THE 7,012 -- 0.4%.** This is not something the onboarding introduced; it is a
+long-standing condition the onboarding made visible.
+
+#### ★ AND HEALF IS THE CHEAPER SIDE IN NEARLY ALL 27
+
+Read rather than counted:
+
+| barcode | our rows | Healf |
+|---|---|---|
+| KIKI Health Himalayan Shilajit | MyProtein **£45.00** | **£23.99** |
+| Puresport Energy Gels | MyProtein **£44.00** | **£24.00** |
+| Vital Proteins Beauty Collagen | Boots £44.99 · Beauty Flash £44.99 · Beauty Bay **£44.95** | **£29.45** |
+| BetterYou Magnesium Flakes | MyProtein **£10.95** | **£6.99** |
+| KIKI Health Activated Charcoal | MyProtein **£12.00** | **£8.26** |
+| Aduna Super Cacao | MyProtein **£14.99** | **£10.62** |
+
+> **THE NEW RETAILER'S BEST EVIDENCE IS INVISIBLE ON EXACTLY THE PRODUCTS WHERE IT IS STRONGEST.**
+> Healf was onboarded on a brand-comparison proposition. **On the 27 products where it most obviously
+> proves that proposition, the comparison does not exist** -- not because it was computed and lost,
+> but because the two prices were never in the same row to be compared.
+
+#### ★ AND THE SEARCH THAT FOUND IT MEASURED THE WRONG THING
+
+The check asked whether any Healf product shares a barcode with a **mapped ASIN**. It returned
+**one** -- `B0019K7VKM`, `ambiguous`, unpublished, the Solgar row above.
+
+> **THE ASIN MAP HOLDS 477 BARCODES. THE CATALOGUE HOLDS 82,366.** So "one hit" measured the map's
+> reach, not the catalogue's condition -- **the population was defined by the detector**, and the
+> detector covered 0.6% of the space.
+>
+> Widening from the map to the catalogue moved the answer from **1** to **7,012**, and the class
+> from *"an Amazon identifier question"* to *"the comparison the site exists to make, absent on
+> 14,961 rows."* **The finding was four orders of magnitude larger than the probe that surfaced it.**
+
+#### THE SPLIT: A CLEAN MAJORITY AND A TAIL, THE SAME SHAPE AS THE 42 BRAND COLLISIONS
+
+| rows sharing one barcode | barcodes | product rows |
+|---|---:|---:|
+| **2** | **6,141** (87.6%) | 12,282 |
+| 3 | 815 (11.6%) | 2,445 |
+| 4 | 50 | 200 |
+| 5+ | 6 | 34 |
+
+| | barcodes | |
+|---|---:|---|
+| **same brand** | **6,337** | **90.4% -- the clean majority** |
+| cross-brand | 675 | **9.6% -- the tail, and it needs names read** |
+| cross-category | 698 | 10.0%, overlapping the above |
+| **already share a `match_key`** | **88** | **1.3%** |
+
+**The tail is not uniformly wrong.** *Fushi* against *Fushi Wellbeing*, and *Solgar* against
+*SOLGAR*, are **one brand written two ways** -- cross-brand by string comparison and same brand in
+fact. **Some of the 675 are naming variance and some are genuine barcode collisions, and only
+reading them separates the two.**
+
+#### ★ WHAT MERGING WOULD INVOLVE: THE MACHINERY EXISTS AND THE DISCOVERY DOES NOT
+
+**The apply path is complete and it is barcode-agnostic:**
+
+```
+fmb_soft_merge_group(p_keeper integer, p_removed integer[], p_note text)
+fmb_merged_into_departure_ids()      -- redirects for the removed ids
+fmb_revalidate_on_merge_log()        -- ISR revalidation on merge
+```
+
+**None of it cares how a group was discovered.** A barcode-derived group could feed the same
+function unchanged.
+
+**THE GAP IS DISCOVERY, AND IT IS STRUCTURAL.** `scripts/dedup-preview.mts` groups on
+**brand + `match_key`** and tiers by confidence. `match_key` is derived from the NAME, and its own
+module records that *"sizes, counts, shade-tokens, fragrance concentration, version and set all live
+in the match_key, so rows that differ by any of those never land in the same collision group."*
+
+> **THE TWO MECHANISMS ARE COMPLEMENTARY AND VERY NEARLY DISJOINT. Only 88 of 7,012 -- 1.3% --
+> already share a `match_key`.**
+>
+> `match_key` finds **same name, different row.** The barcode finds **same product, different name.**
+> **6,924 barcode-sharing groups are invisible to the existing dedup by construction**, because the
+> names differ in exactly the ways the key is built to keep apart. *"KIKI Health Activated Charcoal
+> Capsules - 50 Vegicaps"* and *"KIKI Health Activated Charcoal | Coconut Charcoal Capsules for..."*
+> are different keys and always will be.
+>
+> **THIS IS NOT A BUG IN THE MATCH KEY.** It is the match key working: distinguishing names is what
+> it is for. **The catalogue simply has a second identity signal it has never grouped on.**
+
+**MATCH KEYS DO NOT NEED TO MOVE.** A soft merge keeps a keeper and redirects the removed ids; it
+does not recompute keys. **That matters** -- item 491 records that recomputing a derived key is not
+free and carries drift riders. **A barcode-discovered merge can leave every `match_key` untouched.**
+
+#### WHAT IS NOT SCOPED, AND MUST BE BEFORE ANYONE ACTS
+
+1. **Which row keeps `amazon_asin`, and what happens to the 88 that both mechanisms claim.**
+2. **Whether a shared barcode is sufficient evidence on its own.** A retailer that files one barcode
+   against a range makes every member of that range look like one product. **The 5+ bucket is six
+   barcodes and it is the first place to look**, not the last.
+3. **Cross-category pairs (698) are a signal about categorisation, not only about duplication** --
+   one barcode in two `top_category` values means at least one is wrong.
+4. **Tiering, which the name-based preview already has and a barcode-based one would need from
+   scratch.** Reusing the tier vocabulary is not the same as reusing the tiers.
+
+**A catalogue question the size of the 42 brand collisions. It is scoped here and it is not started.**
+
+#### ★ AND A CLEAN, PLAUSIBLE ZERO FROM THE WRONG COLUMN
+
+The first pass at Healf's barcode fill queried `products.ean` and returned **0 of 4,957 -- 0.0%**.
+
+```
+products.ean          8 non-empty rows in a 142,790-row catalogue
+retailer_prices.ean_normalised   where barcodes actually live
+                                 Healf: 4,642 of 4,957 = 93.6%
+```
+
+> **IT DID NOT ERROR. IT RETURNED A ROUND NUMBER THAT LOOKED LIKE A FINDING** -- "the new retailer
+> supplies no barcodes" is an entirely plausible thing for a feed to do, and it would have been
+> reported as one.
+>
+> **A SCHEDULED CHECK BUILT ON THAT COLUMN WOULD REPORT "NO BARCODES" FOREVER, IN GREEN.** Nothing
+> about the query is malformed; the column exists, it is spelled correctly, and it is nearly empty.
+> **The wrong column is not a syntax error, and there is no exception to catch.**
+>
+> It was found by asking why the answer disagreed with the import's own recorded `rows_with_ean 4674`
+> -- **the same method as item 493's 6,620: the claim was checked against the world rather than
+> against itself.**
+
+---
+
+### 497. The fourth harvest probe: present, matching well, and unusable
+
+**Raised:** 30 August 2026 · **Three-brand probe, 26 API calls. Robbie's call to run it.** · **RECOMMENDATION: DO NOT HARVEST THE REMAINING BRANDS.**
+
+Healf brought six practitioner-grade brands the catalogue had never carried. **798 live products,
+779 with barcodes (97.6%), and every one of the six is HEALF-ONLY** -- sole-supplier, no comparison
+today at all. That is the strongest case a harvest has had.
+
+#### THE TWO HYPOTHESES POINTED OPPOSITE WAYS
+
+| | predicts | basis |
+|---|---|---|
+| **H1 SKU granularity** | ~28%, Solgar-like | item 163: MyProtein is 1% because it registers a barcode per flavour per size; Solgar is 28% because capsules are cut into few variants |
+| **H2 practitioner channel** | ~0%, absent | these brands restrict Amazon distribution by policy |
+
+**The measurable half of H1 said Solgar or flatter.** Flavour-variant density, from product names:
+
+```
+MyProtein  42%  <- 1% match        Metagenics           3%
+Thorne      8%                     Solgar               2%   <- 28% match
+Seeking H.  7%                     Pure Encapsulations  1%
+Designs f.H 6%                     Cytoplan             0%
+```
+
+**And US barcode prefixes are not a barrier: Solgar's own 172 rows are US UPC and it matched at 28%.**
+
+#### ★ THE THREE WERE CHOSEN TO SEPARATE THE HYPOTHESES, NOT FOR SIZE
+
+**The largest three would have been Designs for Health (188), Pure Encapsulations (186), Thorne
+(176). Designs for Health was dropped for Cytoplan (58).**
+
+| brand | why this one |
+|---|---|
+| **Pure Encapsulations** | **MAXIMUM DISAGREEMENT.** 1% flavour density -- H1 predicts the HIGHEST rate of the six, more Solgar-like than Solgar. Strictest practitioner channel -- H2 predicts zero. **One result discriminates.** |
+| **Thorne** | **H2's WEAKEST CASE.** The most consumer-retail of the six. If even Thorne is absent, channel policy dominates absolutely. |
+| **Cytoplan** | **CONTROLS THE CONFOUND.** Four of six are US-prefix, two UK. Cytoplan is UK brand, UK barcode, 0% flavour. Isolates barcode origin from brand type. |
+
+> **PICKING THE LARGEST THREE WOULD HAVE BOUGHT THE MOST DATA AND THE LEAST INFORMATION.** Designs
+> for Health sits beside Pure Encapsulations on every measurable axis, so it could only have
+> confirmed. **Cytoplan was the only brand that could move a variable nothing else touched.**
+
+#### THE RESULT: BOTH HYPOTHESES WRONG, AND THE THIRD ANSWER DECIDES IT
+
+```
+127 ASINs enumerated · 127 returned · 0 absent · 26 calls · no rate limiting
+```
+
+**H2 IS DEAD ON PRESENCE.** All three brands are on Amazon UK.
+
+**H1 IS BEATEN, NOT MET:**
+
+| brand | ASINs | matched | **match rate** | our products | **coverage** |
+|---|---:|---:|---:|---:|---:|
+| Pure Encapsulations | 48 | 41 | **85.4%** | 177 | 23.7% |
+| Thorne | 24 | 17 | **70.8%** | 168 | 10.1% |
+| Cytoplan | 50 | 25 | **50.0%** | 58 | **43.1%** |
+| *Solgar, for comparison* | | | *28%* | | *43%* |
+
+**Every one beats Solgar's match rate, and Cytoplan lands on Solgar's coverage exactly.** The SKU-
+granularity model predicted the direction and understated the size.
+
+#### ★ AND THE SELLER FIELD DECIDES IT, WHICH NEITHER HYPOTHESIS ASKED ABOUT
+
+```
+sold by the brand's own store   1 of 127
+sold by Amazon                  0 of 127
+third-party sellers           118 of 127
+no seller returned              8 of 127
+```
+
+```
+Pattern UK          63     HEALTH PLUS MORE    24     Planszowki-co-uk   21
+Candy house sweets   2     Sweeeeeetz           2     TINGO Sweets        1
+```
+
+> **NOT ONE OFFICIAL BRAND STORE.** The brands are not selling on Amazon UK -- **resellers are.**
+> H2 was right about the mechanism and wrong about the symptom: practitioner-channel policy does not
+> produce absence, **it produces a grey market.**
+
+**AND THE ONE BRAND-NAMED SELLER IS ITEM 200's WARNING ARRIVING VERBATIM.**
+`Thorne Health Supplies & Thorne Produce` -- against item 200's *"a seller name is a string, not an
+attestation, and naming yourself after the brand is the counterfeiter's move."* **A brand-store
+allowlist matching on name would admit exactly this row.**
+
+**Under "brand store or Amazon only", 126 of 127 disappear -- 99.2%.** The K-beauty tranche lost
+23.4% under the same rule and item 200 called that a real cost.
+
+#### AND THE PRICES REMOVE THE LAST REASON
+
+Amazon seller price against our best price, on the 78 matched products:
+
+```
+Amazon cheaper            3 of 78     (3.8%)
+we are cheaper           75 of 78    (96.2%)
+average Amazon premium  +21.7%       (best -16.7%, worst +70.2%)
+```
+
+> **THE HARVEST WOULD BUY AN AMAZON ROW THAT IS MORE EXPENSIVE 96% OF THE TIME, SOLD BY A GREY-MARKET
+> RESELLER, ON A PRODUCT PAGE THAT CANNOT RANK IT ANYWAY.**
+
+#### THE VERDICT, AND WHY THE PROBE WAS WORTH ITS 26 CALLS
+
+**Do not harvest Designs for Health, Metagenics or Seeking Health.** The remaining three are the same
+market with the same sellers.
+
+> **THE TWO-BRAND TRANCHE'S LESSON HELD AND ARRIVED BY A NEW ROUTE.** There, a cheap control stopped
+> a twelve-brand harvest that would have returned single-digit coverage. **Here the coverage would
+> have been GOOD** -- 23.7%, 43.1%, better than Solgar on match rate -- **and the harvest is still
+> not worth running.**
+>
+> **A PROBE DESIGNED TO SETTLE TWO HYPOTHESES ANSWERED A THIRD QUESTION NEITHER OF THEM ASKED.**
+> Both predictions were about whether the products would MATCH. The disqualifying facts were WHO IS
+> SELLING and AT WHAT PRICE -- **fields the harvest returns for free and neither hypothesis thought
+> to name.** Had the probe measured only its stated question it would have reported 85.4% and
+> recommended the harvest.
+
+**THE CONSTRAINT IS UNCHANGED.** Amazon stays outside the basket ranking, product page only, because
+`deliveryInfo` is not in the Creators API and a delivered total cannot be computed.
+
+**And the re-derivation check was not overdue.** It ran 30 August 07:12 UTC on its Sunday cron, after
+Healf: **482 published, 447 in scope, 447 agree, 0 findings, 0 cross-product conflicts, 35
+out_of_scope.** Published moved 484 to 482 -- two products leaving the catalogue, not two ASINs
+breaking.
+
