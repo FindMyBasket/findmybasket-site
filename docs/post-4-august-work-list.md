@@ -39101,19 +39101,77 @@ reversing UPDATE in its own COMMENT.** Solgar-shaped: targeted write, names read
 six siblings, plus *"Gorgeous Premier Delivery"*. **Brand `Gorgeous Shop` on a *Gorgeous Gift for
 Her* bundle is the column working** -- exactly as Boots' 584 were.
 
-> **AND THE DISCRIMINATOR THAT FOUND THEM SAID 0 of 27, WHICH WAS TRUE AND MISLEADING.** The names
-> start with *Gorgeous*, not *Gorgeous Shop*, so a prefix test on the full retailer name reported them
-> all as suspect. **It is the Evolve failure again -- a missing middle word -- inside the very set the
-> test was trusted on.**
+> **★ AND THE DISCRIMINATOR FAILED INSIDE THE ONE SET IT HAD JUST BEEN TRUSTED ON. 0 of 27 WAS TRUE
+> AND MISLEADING.** The names start with *Gorgeous*, not *Gorgeous Shop*, so a prefix test against the
+> full retailer name marked all 27 suspect.
 >
-> **READING THE NAMES SHRANK THE POPULATION A FOURTH TIME TODAY: 1,132 -> 30 -> 22.** Each narrowing
-> came from reading, and none from a better rule.
+> **THE MISSING-MIDDLE-WORD FAILURE, RECURRING ONE STEP AFTER IT WAS NAMED.** It had already been
+> written down for *Evolve Beauty* against *Evolve Organic Beauty*, in the table directly above, and
+> was then relied on unqualified for Gorgeous Shop -- **the one column where the test scored a perfect
+> 0 of 27 and therefore looked most conclusive.**
+>
+> **A CLEAN EXTREME IS NOT EVIDENCE THE TEST IS SOUND. IT IS WHERE A TEST'S FAILURE MODE IS HARDEST TO
+> SEE**, because there is no mixture to look wrong.
+>
+> **★ READING THE NAMES SHRANK THE POPULATION A FOURTH TIME TODAY: 1,132 -> 30 -> 22. EACH NARROWING
+> CAME FROM READING, AND NONE FROM A BETTER RULE.** That is the shape to keep. Every rule tried today
+> -- brand-equals-retailer, name-starts-with-brand, first-token-is-a-known-brand -- **produced a
+> population it defined rather than a population that existed**, and each was corrected by looking at
+> rows, not by refining the rule that produced it.
 
-**AND ONE NON-PRODUCT, FLAGGED NOT FIXED.** `135145 Gorgeous Premier Delivery` is a **GBP 6.99
-delivery charge sold by Beauty Flash and filed as `top_category = skincare`.** A shipping line in the
-product catalogue. Its own item; untouched here.
+#### ★ THE NON-PRODUCT: ONE ROW, AND THE OBVIOUS DURABLE FIX IS REFUTED BY THE SEARCH THAT FOUND IT
 
-#### ★ THE SIDE EFFECT: THIRTEEN LEFT THE 656, AND THE FOURTEENTH BECAME A TRUE POSITIVE
+`135145 Gorgeous Premier Delivery` -- **a GBP 6.99 shipping charge from Beauty Flash's feed, carried
+as a product and filed as `top_category = skincare`.** No barcode. **Its brand was the retailer's
+name, which is the only reason it surfaced at all.**
+
+**ONE ROW OR A CLASS? THREE PROBES, ONE ROW:**
+
+```
+all products, /delivery|shipping|postage|gift wrap|voucher|tester|.../   ->  6 hits
+Beauty Flash, service words OR price <= GBP 2.00                        -> 10 hits
+all products, name ENDING in a service word, or "premier/next-day ..."  ->  1 hit
+```
+
+**AND THE FIRST PROBE IS THE ONE THAT MATTERS, BECAUSE FIVE OF ITS SIX HITS ARE REAL PRODUCTS:**
+
+```
+The Ordinary Multi-Active Delivery Essence 100ml   4 retailers, live
+The Ordinary Multi-Active Delivery Essence Duo     Boots
+Philosophy Special Cardamon Delivery Shower Gel    2 retailers
+Made By Mitchell ... Liner "Deep Delivery" 0.25g   a SHADE NAME
+```
+
+> **SO THE OBVIOUS DURABLE FIX -- A `delivery` DENYLIST ENTRY -- WOULD DELETE FIVE REAL PRODUCTS TO
+> CATCH ONE CHARGE.** That is `\mdiet\M` again, exactly: a word that names a product category in one
+> context and a product's own name in another. **The complement test was already sitting in the search
+> results and only needed reading.**
+>
+> **Any rule must be ANCHORED** -- to the end of the name, or to a whole-name service phrase. The
+> anchored probe found the row and nothing else.
+
+**ACTED ON, NOT QUEUED. Excluded rather than deleted**, via `product_exclusions` -- the mechanism
+`products_active` already reads:
+
+```
+still live         0        row preserved   1        price rows preserved   1
+```
+
+> **AN EXCLUSION SURVIVES A RE-IMPORT AND A DELETION DOES NOT.** Deleting the row leaves the feed free
+> to recreate it on the next Beauty Flash sync, silently, with a new id. **The exclusion is the
+> durable half of the fix even though the denylist entry is still unwritten.**
+
+**`reason = 'other'`,** because the constraint offers `medicine | device | veterinary |
+not_a_supplement | food_or_drink | other` and has no `not_a_product`. **One row does not justify
+widening a constraint; the note carries the class.** If a second appears, the class earns its own
+value -- *and that is the judgement item 187 made the other way when nine rows needed
+`identifier_conflict` and `legacy_unconfirmed`.* **The difference is the count, and it is worth being
+explicit that it is only the count.**
+
+**THREE NAME-BASED PROBES CANNOT PROVE THERE IS NO CLASS.** They prove no *nameable* second instance.
+A charge called "Priority Dispatch" or a wrap called "Presentation Box" matches nothing above.
+
+#### ★★ THE ITEM'S CENTRE: THIRTEEN LEFT THE 656, AND THE FOURTEENTH BECAME A TRUE POSITIVE
 
 **Predicted 14. Measured 13.**
 
@@ -39133,9 +39191,17 @@ Before the fix this read *"gorgeous shop"* against *"redken"* -- a disagreement 
 defect. **After it, it reads *"sigma beauty"* against *"redken"*, and those genuinely are two brands
 on one barcode.**
 
-> **THE DEFECT WAS MASKING A REAL COLLISION BY MAKING IT LOOK LIKE A DIFFERENT KIND OF PROBLEM.**
-> Thirteen were noise and resolved; **the fourteenth was signal wearing the noise's clothes.** A fix
-> that only removed rows from a class would have removed this one too.
+> **THE BRAND DEFECT WAS MASKING A REAL CROSS-BRAND COLLISION BY MAKING IT LOOK LIKE A DIFFERENT KIND
+> OF PROBLEM. THIRTEEN WERE NOISE AND RESOLVED; ONE WAS SIGNAL WEARING THE NOISE'S CLOTHES.**
+>
+> **AND A FIX JUDGED ON HOW MANY ROWS LEFT THE CLASS WOULD HAVE SCORED REMOVING IT AS SUCCESS.**
+> "14 of 656 resolved" was the prediction and it would have read as a clean hit. **The measured 13 is
+> the better result**, because the fourteenth staying is the fix working *harder* than predicted --
+> it converted an artefact into a finding rather than deleting both.
+>
+> **THE METRIC AND THE GOAL POINTED IN OPPOSITE DIRECTIONS ON ONE ROW IN FOURTEEN**, and only naming
+> the row showed it. A count of departures cannot distinguish "this was never a collision" from "this
+> is a collision that was mislabelled".
 
 *And its barcode sits in the same `5056182...` block as the Goldwell/Redken pair. **That is one more
 reason adjacency looked like a signature, and it is still not one*** -- item 496 measured it at 62.2%
