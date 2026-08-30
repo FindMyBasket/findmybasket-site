@@ -39389,3 +39389,190 @@ name rule would move in.** Those 198 stay unread.
 > **THE GUARD COMING DOWN DID NOT ADVANCE JOB TWO. IT REMOVED JOB TWO'S DEADLINE**, which was the
 > only thing making a circular signal look acceptable.
 
+---
+
+### 500. Scoping the barcode merge: no redirects to build, and the cost is all revalidation
+
+**Raised:** 30 August 2026 · **SCOPE ONLY. Nothing merged.** · **Item 496 keeps the population and the four classes; this is the merge.**
+
+#### ROBBIE'S CORRECTION, RECORDED FIRST
+
+**8,148 groups / 7,476 same-brand / 672 cross-brand was counted against PRICE ROWS rather than live
+products, and reported as the population having moved. IT HAS NOT MOVED.**
+
+```
+measured, live products   7,012 groups · 120 contamination · 6,249 clean · 643 cross-brand
+against price rows       11,558
+against unmerged products 11,269
+```
+
+**The 643 is the afternoon's post-fix figure, unchanged.** The caution about staleness *"the last three
+counts in this thread went stale within a day"* **was right in general and wrong here** — and the
+mismatch is a definition difference, which is the same class this thread keeps finding, arriving from
+the other side.
+
+#### WHAT A MERGE OF THE CLEAN CLASS MOVES
+
+```
+clean groups                   6,249
+product rows involved         13,242
+ROWS REMOVED                   6,993      6.6% of 106,118 live products
+groups gaining a 2nd retailer  3,132      50.1% of clean groups
+median spread on gainers        18.0%     mean 17.9% · p90 40.6%
+```
+
+**Half the clean groups are a product shown at one price today with another price already in the
+catalogue, unshown.** Ultrasun's 25% sits just above the median: **representative, not exceptional.**
+
+#### ★ THERE ARE NO REDIRECTS TO BUILD
+
+`/product/<removed_id>` resolves **at request time**: `resolveCanonicalKeeper(id)` then
+`permanentRedirect` — a 308. **No stored redirect list, and no growth in
+`fmb_merged_into_departure_ids`**, which explicitly excludes rows whose keeper is active:
+
+```
+departure ids today   218        merged rows today   2,801
+```
+
+**A 6,993-row merge adds essentially nothing to that set.** The redirect question, which looked like
+the largest part of the exercise, is the smallest.
+
+#### THE COST IS ALL REVALIDATION, AND IT IS 18.6x LARGER THAN IT NEEDS TO BE
+
+```
+fmb_revalidate_on_merge_log   TRIGGER on product_merge_log, PER ROW
+  -> fmb_revalidate_brand_slugs(ARRAY[one slug])
+  -> net.http_post  https://www.findmybasket.co.uk/api/revalidate   timeout 15s
+```
+
+| | |
+|---|---|
+| removed rows | **6,993 HTTP POSTs to production** |
+| distinct brands behind them | **376** |
+| redundant posts per brand page | **18.6x** |
+| `product_merge_log` rows in its entire life | **4,790** — this is **1.5x its whole history at once** |
+
+#### ★ BATCHING IS FOR OBSERVABILITY, NOT THROUGHPUT
+
+`net.http_post` is asynchronous. The merge would not block on 6,993 requests — they queue in
+`net.http_request_queue`, **the transaction would report success in seconds, and the queue would then
+drain against production with every failure discarded** (item 502).
+
+> **THE MERGE WOULD LOOK INSTANT AND CORRECT WHILE THE PART THAT MAKES IT VISIBLE FAILED SILENTLY
+> AFTERWARDS.** Batching is not to protect the database from load. **It is so that a failure exists
+> anywhere it can be seen.**
+
+**Shape, as agreed and NOT built:** batch **by brand**; suppress the per-row trigger for bulk runs;
+call `fmb_revalidate_brand_slugs` **once per batch** with the distinct slugs; put the product paths in
+the same call via `fmb_revalidate_paths`, which already accepts arbitrary paths. **The 18.6x collapses
+by construction rather than by tuning.**
+
+#### ★ THE FIRST BATCH: RETAILER COUNT, NOT SPREAD
+
+| ordering | selects for |
+|---|---|
+| highest spread | **the mis-merges.** A large spread is also the signature of two different products sharing a barcode |
+| **most retailers** | **the checkable.** A six-retailer group is verifiable by eye on one page and its correctness is self-evident |
+
+**Ordering by value selects against correctness.** That is the whole argument, and it is why the first
+exercise is ordered by the less interesting number.
+
+**AND 4-AND-5 IS TOO BIG TO READ:**
+
+| retailers after merge | groups | rows removed | brands |
+|---|---:|---:|---:|
+| 9 | 1 | 2 | 1 |
+| 7 | 9 | 14 | 9 |
+| 6 | 73 | 120 | 31 |
+| **6+ subtotal** | **83** | **136** | **~41** |
+| 5 | 313 | 440 | 82 |
+| 4 | 883 | 1,165 | 152 |
+| *4-and-5 subtotal* | *1,196* | *1,605* | *~180* |
+
+**1,196 groups cannot be read; 83 can.** So the proposed first batch is the **6-or-more tier: 83
+groups, 136 rows removed, ~41 brands** — strictly more observable than 4-and-5 and small enough that
+every group is looked at.
+
+**AND READING IT ALREADY EARNS ITS PLACE.** The top of that list by spread is fragrance at 50-77%:
+
+```
+Calvin Klein Obsession EDT for Him 125ml    6 retailers   GBP 18.75 - 82.00   77%
+Issey Miyake L'Eau D'Issey EDT 50ml         6             GBP 26.65 - 83.00   68%
+COSRX Rice Overnight Spa Mask               7             GBP  7.50 - 24.00   69%
+Beauty of Joseon Matte Sun Stick            9             GBP  9.43 - 24.00   61%
+```
+
+> **THOSE ARE EXACTLY THE ROWS WHERE A SIZE VARIANT SHARING A BARCODE WOULD LOOK LIKE A BARGAIN.**
+> A 125ml and a 50ml on one number produces this shape, and so does a genuine discounter spread.
+> **Only reading the group tells them apart** — which is the argument for the batch being 83 rather
+> than 1,196, arriving before the batch has run.
+
+---
+
+### 501. Every merge ever done has left the removed page cached, and this is not a property of the batch
+
+**Raised:** 30 August 2026 · **Found while scoping item 500. It is older and larger than that work.** · **NOT FIXED HERE.**
+
+`fmb_revalidate_on_merge_log` revalidates **`/brands/<slug>` and nothing else.**
+
+`app/product/[id]/page.tsx` carries `export const revalidate = 3600`.
+
+> **SO AFTER EVERY MERGE, FOR UP TO AN HOUR:**
+>
+> - **the removed product page keeps serving its CACHED 200** — old name, old prices, no 308 — because
+>   nothing invalidates it and the redirect only fires on a cache miss;
+> - **the keeper's page does not show the prices it just gained**, for the same reason.
+>
+> **The merge is invisible to a crawler, and to anyone holding a bookmark, for the length of the ISR
+> window.**
+
+#### ★ THIS IS 4,790 ROWS OF HISTORY, NOT A PLANNED BATCH'S PROBLEM
+
+**`product_merge_log` holds 4,790 rows.** Every one of them is a merge whose removed product page went
+on serving a cached page after the row was written, and whose keeper went on showing the old offer
+list. **The defect is as old as the trigger.**
+
+> **IT WAS INVISIBLE BECAUSE IT IS SELF-CORRECTING ON A TIMER.** An hour later every page is right, so
+> nothing is ever found wrong by looking. **A defect that repairs itself before anyone checks is not
+> discovered by checking** — it is only discovered by reading the code that was supposed to prevent it.
+>
+> And it is worst exactly when it matters most: **a large merge is when the most pages are stale, and
+> a large merge is when someone goes to look.**
+
+**The fix is small and it is not this work.** `fmb_revalidate_paths` already accepts arbitrary paths,
+so the trigger could post `/product/<removed>` and `/product/<keeper>` alongside `/brands/<slug>`.
+**Its own item, because it changes every merge and not just the barcode one.**
+
+---
+
+### 502. A merge reports complete success whether or not one revalidation landed
+
+**Raised:** 30 August 2026 · **Found while scoping item 500.** · **NOT FIXED HERE.**
+
+```sql
+BEGIN
+  PERFORM public.fmb_revalidate_brand_slugs(ARRAY[public.fmb_brand_slug(kbrand)]);
+EXCEPTION WHEN OTHERS THEN
+  NULL;                                   -- <-- every failure, discarded
+END;
+```
+
+**`fmb_soft_merge_group` returns its counts and the trigger returns NEW regardless.** If
+`revalidate_secret` is missing from the vault, or `pg_net`'s queue backs up, or production answers 500
+to six thousand consecutive posts, **the merge reports `prices_moved`, `marked_merged`,
+`scoped_orphans: 0` and looks perfect.**
+
+> **★ THIS IS GONE-IDS-DRIFT'S SHAPE ON THE WRITE PATH RATHER THAN IN A CHECK, WHICH IS WHERE IT
+> CANNOT BE SEEN.** Item 255's green-over-nothing was a *check* that passed while reading nothing —
+> bad, and at least the check existed to be audited. **Here the swallowing sits inside the operation
+> itself**, so there is no report to go stale and no run to look at. The only artefact is a successful
+> merge.
+>
+> **AND THE `WHEN OTHERS` IS DELIBERATE AND DEFENSIBLE**, which is why it survived: a revalidation
+> failure must not roll back a merge. **The error is not catching the exception. It is catching it and
+> recording nothing** — no counter, no warning, no row. `RAISE WARNING` alone would have made it
+> visible in the logs at zero risk.
+
+**Its own item, because it is shared machinery and because the correct fix — record the failure without
+failing the merge — is a different change from what item 500 needs.**
+
