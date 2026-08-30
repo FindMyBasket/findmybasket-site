@@ -38450,7 +38450,26 @@ on a decision rather than a number.**
 
 **Raised:** 30 August 2026 · **Found while running the item 187(b) re-derivation check against the post-Healf catalogue.** · **MEASUREMENT ONLY. Nothing merged, nothing written.**
 
-#### ★ THE CASE, WHICH IS THE WHOLE ITEM
+#### ★ WHAT THE WORK IS FOR
+
+```
+barcode 756848207117   —   Ultrasun Face & Scalp UV Protection Mist SPF50 75ml
+
+  Debenhams      GBP 17.60
+  Gorgeous Shop  GBP 18.00
+  Beauty Flash   GBP 20.00
+  Beauty Bay     GBP 22.00
+  Boots          GBP 22.00
+  Escentual      GBP 22.00
+```
+
+**SIX RETAILERS. ONE PRODUCT. NO BUNDLES. A 25% SPREAD. THE SITE SHOWS NONE OF IT.**
+
+**This is the cleanest case in the catalogue and it is what the rest of the item is in service of.**
+No ambiguity about identity, no bundle contamination, no brand disagreement -- six retailers selling
+the same 75ml bottle at six prices, sitting in six product rows that never meet.
+
+#### THE SECOND CASE, WHICH IS THE ONE THAT WAS FOUND FIRST
 
 ```
 barcode 33984013186   —   Solgar Extra Strength Glucosamine Chondroitin MSM
@@ -38652,6 +38671,100 @@ retailer.** One retailer does not sell one product as two products; it sells a p
 
 **That is a different item from the one scoped above.** It was "7,012 groups of unknown quality"; it
 is now "6,236 clean, 656 to read, 120 to exclude by rule."
+
+#### ★ THE 656 CROSS-BRAND GROUPS READ, AND THEY ARE FOUR THINGS
+
+**These decide whether this is a merge or a merge PLUS a data-quality finding. It is both.**
+
+| | groups | treatment |
+|---|---:|---|
+| **one brand written two ways** (substring containment) | **437** | **brand-alias problem — `brand_aliases` already exists, 196 rows over 134 brands** |
+| **a RETAILER NAME in the brand field** | **14** | **feed defect. Not a merge candidate.** |
+| remaining, read by hand | **205** | mostly attribution, some genuine |
+| | **656** | |
+
+**AND THE 205 ARE MOSTLY NOT WHAT THE STRING TEST CALLED THEM.** Read by name:
+
+```
+22548445563    aramis :: Aramis Intuition EDP 50ml [Boots]
+               estee lauder :: Aramis Intuition EDP 50ml [Perfume Click, Superdrug]
+                              -> PARENT COMPANY vs SUB-BRAND. Same product.
+
+25929127140    colour me :: Colour Me Black 50ml EDP [Boots]
+               milton lloyd :: Milton Lloyd Colour Me Black EDP 50ml [Perfume Click]
+                              -> MANUFACTURER vs HOUSE BRAND. Same product.
+
+30161153       l oreal professionnel :: L'Oreal Professionnel Metal Detox [Boots]
+               l'oréal paris :: L'Oréal Professionnel Metal Detox [Debenhams, Perfume Click]
+                              -> MIS-ATTRIBUTION. The NAME says Professionnel on both sides;
+                                 two retailers file it under Paris.
+
+192608243214   doll smash :: Doll Smash Glass Lip Oil in Rose [Debenhams]
+               morphe :: Morphe Soulmatte Velvet Lip Mousse Wifey [Boots]
+                              -> A GENUINE COLLISION. Different products entirely.
+```
+
+> **THE SUBSTRING TEST MEASURED SPELLING, AND THE QUESTION IS ABOUT IDENTITY.** *Estée Lauder* does
+> not contain *Aramis*; they are the same product. *Doll Smash* does not contain *Morphe*; they are
+> not. **The test cannot tell those apart and neither can any string comparison** -- one needs a
+> corporate-ownership fact and the other needs the product names read.
+>
+> **So 437 is a floor on the alias class, not a measure of it**, and the genuine-collision class is
+> much smaller than 219.
+
+#### ★ AND THE SEQUENTIAL-ID SIGNATURE DOES NOT SURVIVE ITS COMPLEMENT
+
+Goldwell and Redken shared `5056182346776` and `...790` -- adjacent numbers, different brands. **The
+hypothesis: adjacency plus cross-brand is a signature of a retailer writing internal sequential IDs
+into a barcode field, and it would exclude groups the way the same-retailer test excludes the 120.**
+
+**Tested by running it on the population it is meant to exclude AND on the population it must not:**
+
+| class | groups | with another group's barcode within ±100 | |
+|---|---:|---:|---|
+| **clean, same brand** | 6,224 | **3,870** | **62.2%** |
+| alias shape | 437 | 266 | 60.9% |
+| **cross-brand, other** | 205 | 89 | **43.4%** |
+| retailer-as-brand | 26 | 12 | 46.2% |
+
+> **THE SUSPECT CLASS IS *LESS* ADJACENT THAN THE CLEAN MAJORITY. THE SIGNATURE IS BACKWARDS.**
+>
+> **Adjacency is simply what barcodes do.** A brand registers a contiguous GS1 block for a range, so
+> nearly every product in that range has near neighbours. **62% of the CLEAN population would be
+> excluded by a rule built to catch collisions.**
+>
+> **The Goldwell/Redken adjacency was a coincidence that looked like a signature in a sample of two.**
+> It is exactly the shape the same-retailer test had -- a real pattern, read off two examples -- and
+> the difference is that the same-retailer test held at 1.7% against the population and this one
+> inverted. **Only running it against its complement distinguished them, and both looked equally
+> convincing before that.**
+
+**SO: the 120 are excludable by rule. The 656 are NOT, beyond the 14 retailer-as-brand rows. The rest
+is a read.**
+
+#### AND A SECOND CLEAN ZERO FROM THE SAME CLASS OF MISTAKE, IN THE SAME SESSION
+
+The retailer-name-as-brand count first came back **0** -- catalogue-wide, on 142,790 products.
+
+```
+lower(regexp_replace(name,'[^a-z0-9]','','g'))     'Gorgeous Shop' -> 'orgeoushop'
+regexp_replace(lower(name),'[^a-z0-9]','','g')     'Gorgeous Shop' -> 'gorgeousshop'
+```
+
+**`[^a-z0-9]` DELETES UPPERCASE LETTERS.** Stripping before lowercasing eats the initial of every
+capitalised word, so every retailer key was mangled and nothing could ever match. **The true figure
+is 1,132 live products carrying a retailer's name in the brand field.**
+
+> **THIS IS `products.ean` AGAIN, TWO HOURS LATER, IN A DIFFERENT EXPRESSION.** A clean, round,
+> entirely plausible zero -- *"no retailer names have leaked into the brand column"* is exactly what a
+> healthy catalogue looks like -- produced by an operator ordering nobody would look at twice.
+>
+> **Both were caught the same way: the answer disagreed with something already seen.** The first
+> disagreed with the import's own `rows_with_ean`; this one disagreed with `gorgeous shop :: NUXE Reve
+> de Miel` sitting in the sample output on the screen above it. **Neither was caught by suspecting the
+> query.**
+>
+> **AND 1,132 IS ITS OWN ITEM.** It has nothing to do with barcodes; it was found through them.
 
 **A catalogue question the size of the 42 brand collisions. It is scoped here and it is not started.**
 
