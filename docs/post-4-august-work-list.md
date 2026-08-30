@@ -38709,8 +38709,30 @@ is now "6,236 clean, 656 to read, 120 to exclude by rule."
 > not. **The test cannot tell those apart and neither can any string comparison** -- one needs a
 > corporate-ownership fact and the other needs the product names read.
 >
-> **So 437 is a floor on the alias class, not a measure of it**, and the genuine-collision class is
-> much smaller than 219.
+> **So 437 is a FLOOR on the alias class, not a measure of it**, and the genuine-collision class is
+> **much smaller than 219.**
+
+#### ★ AND THE THIRD TREATMENT IS THE ONE THAT NEEDED NAMING: BRAND ATTRIBUTION
+
+Two treatments were expected -- **alias** (a spelling problem) and **feed defect** (a retailer writing
+non-brands into a brand field). **The read produced a third, and most of the 205 are in it.**
+
+| | example | what it is |
+|---|---|---|
+| **parent company vs sub-brand** | *Aramis* / *Estée Lauder* | Aramis IS an Estée Lauder brand |
+| **manufacturer vs house brand** | *Colour Me* / *Milton Lloyd* | Milton Lloyd MAKES Colour Me |
+| **sibling ranges conflated** | *L'Oréal Professionnel* / *L'Oréal Paris* | two ranges of one parent |
+
+> **NEITHER AN ALIAS NOR A DEFECT. A FACT ABOUT WHO OWNS WHAT.** Both retailers are right: Boots
+> calling it *Aramis* and Perfume Click calling it *Estée Lauder* are both defensible answers to
+> "what brand is this", and the product is identical either way.
+>
+> **`brand_aliases` CAN HOLD IT, AND IT IS A DIFFERENT KIND OF ENTRY FROM A SPELLING VARIANT.**
+> *Fushi* -> *Fushi Wellbeing* asserts two strings name one thing. *Aramis* -> *Estée Lauder* asserts
+> an ownership relation, and **it is directional and it can go stale** -- brands are bought and sold.
+> **Storing both in one table without marking which is which puts a corporate fact and a typo behind
+> the same lookup**, which is the class this list keeps recording: a value correct about one thing
+> stored as another.
 
 #### ★ AND THE SEQUENTIAL-ID SIGNATURE DOES NOT SURVIVE ITS COMPLEMENT
 
@@ -38727,17 +38749,32 @@ into a barcode field, and it would exclude groups the way the same-retailer test
 | **cross-brand, other** | 205 | 89 | **43.4%** |
 | retailer-as-brand | 26 | 12 | 46.2% |
 
-> **THE SUSPECT CLASS IS *LESS* ADJACENT THAN THE CLEAN MAJORITY. THE SIGNATURE IS BACKWARDS.**
+> **★ THE SUSPECT CLASS IS *LESS* ADJACENT THAN THE CLEAN MAJORITY. THE SIGNATURE IS BACKWARDS,
+> AND THIS IS THE ITEM'S CENTRE.**
+>
+> **IT FAILED ON ITS COMPLEMENT RATHER THAN ON ITS TARGET.** Run against the rows it was built to
+> catch, 43.4% fired and it looked like a weak but real rule. Run against the rows it must not touch,
+> **62.2% fired.** A rule that is *more* true of the clean population than the suspect one is not a
+> weak signature; **it is an anti-signature, and no amount of tightening produces a correct version of
+> it.**
 >
 > **Adjacency is simply what barcodes do.** A brand registers a contiguous GS1 block for a range, so
 > nearly every product in that range has near neighbours. **62% of the CLEAN population would be
 > excluded by a rule built to catch collisions.**
 >
 > **The Goldwell/Redken adjacency was a coincidence that looked like a signature in a sample of two.**
-> It is exactly the shape the same-retailer test had -- a real pattern, read off two examples -- and
-> the difference is that the same-retailer test held at 1.7% against the population and this one
-> inverted. **Only running it against its complement distinguished them, and both looked equally
-> convincing before that.**
+> It is EXACTLY the shape the same-retailer test had -- a real pattern, read off two examples, stated
+> with the same confidence. **The same-retailer test held at 1.7% against the population; this one
+> inverted.**
+>
+> **THE TWO WERE INDISTINGUISHABLE BEFORE MEASUREMENT.** Nothing about either, read off its examples,
+> said which would survive. **Only the complement separated them.**
+>
+> **AND THIS IS THE FIRST COMPLEMENT TEST HERE THAT KILLED A RULE RATHER THAN REFINING ONE.** 26
+> August produced three in a day -- `\mdiet\M`, `Cookies & Cream`, `Pillar Box Red` -- and **all three
+> narrowed a rule that was firing too widely**, leaving a correct rule behind. *(Recorded as the third
+> this week and it is the fourth; the distinction it draws is the load-bearing half.)* **There is no
+> narrowed version of a backwards rule.** Refinement assumes the direction is right.
 
 **SO: the 120 are excludable by rule. The 656 are NOT, beyond the 14 retailer-as-brand rows. The rest
 is a read.**
@@ -38764,7 +38801,8 @@ is 1,132 live products carrying a retailer's name in the brand field.**
 > de Miel` sitting in the sample output on the screen above it. **Neither was caught by suspecting the
 > query.**
 >
-> **AND 1,132 IS ITS OWN ITEM.** It has nothing to do with barcodes; it was found through them.
+> **AND 1,132 IS ITS OWN ITEM -- 498 -- WHERE IT TURNS OUT TO BE 30.** It has nothing to do with
+> barcodes; it was found through them.
 
 **A catalogue question the size of the 42 brand collisions. It is scoped here and it is not started.**
 
@@ -38962,4 +39000,116 @@ average Amazon premium  +21.7%
 Healf: **482 published, 447 in scope, 447 agree, 0 findings, 0 cross-product conflicts, 35
 out_of_scope.** Published moved 484 to 482 -- two products leaving the catalogue, not two ASINs
 breaking.
+
+---
+
+### 498. 1,132 retailer names in the brand field, and thirty of them are wrong
+
+**Raised:** 30 August 2026 · **Found through item 496's barcode work and unrelated to it.** · **MEASUREMENT ONLY.**
+
+**1,132 live products carry a value in `normalised_brand` that exactly matches a retailer's name.**
+That number was the finding. **It is not the defect.**
+
+#### WHO THEY ARE
+
+| brand value = retailer | products | name starts with it | **name says something else** |
+|---|---:|---:|---:|
+| **Boots** | 584 | **584** | **0** |
+| MyProtein | 294 | 63 | 231 |
+| The Organic Pharmacy | 132 | 25 | 107 |
+| Evolve Beauty | 73 | 21 | 52 |
+| **Gorgeous Shop** | **27** | **0** | **27** |
+| Healf | 17 | 14 | 3 |
+| Niche Beauty | 3 | 3 | 0 |
+| Debenhams | 2 | 2 | 0 |
+
+#### ★ THE POPULATION MEASURES THE RULE, NOT THE DEFECT -- FOR THE THIRD TIME TODAY
+
+**Boots is 584 of the 1,132 and every one is correct.** *Boots Vitamin C Serum* has brand *Boots*
+because **Boots is a brand**. So are MyProtein, The Organic Pharmacy, Evolve and Healf -- **a retailer
+that sells its own products puts its own name in the brand column, and that is the column working.**
+
+> **"BRAND EQUALS A RETAILER NAME" DEFINES A POPULATION THAT MEASURES THE RULE.** It is item 496's ASIN
+> map (477 barcodes), item 496's 5+ bucket (selected for bundles), and now this -- **three in one
+> session, each one a count that looked like a finding and was a property of the detector.**
+
+#### THE DISCRIMINATOR WORKS AT THE EXTREMES AND FAILS IN THE MIDDLE
+
+**"Does the product name start with the brand?"** separates Boots (584/584) from Gorgeous Shop (0/27)
+perfectly. **The middle three are all false positives, and each fails differently:**
+
+```
+Evolve Beauty          "Evolve Organic Beauty Kalahari Dream Cleansing Oil"
+                       -> the retailer is 'Evolve Beauty', the brand is 'Evolve Organic
+                          Beauty'. A MIDDLE WORD defeats a prefix test.
+
+The Organic Pharmacy   "Arnica Massage Oil | 100ml | The Organic Pharmacy"
+                       -> the brand is at the END of the name. A prefix test cannot see it.
+
+MyProtein              "Impact BCAA 2:1:1 - 250g - Unflavoured"
+                       -> own-brand range names carry NO brand token at all. There is
+                          nothing for any name-based test to find.
+```
+
+> **THREE DIFFERENT REASONS A NAME-BASED TEST MISSES, AND ONLY THE THIRD IS UNFIXABLE.** A test that
+> handled prefixes AND suffixes AND infixes would still return 231 false positives on MyProtein,
+> **because the information is genuinely absent from the name.**
+
+#### ★ THE ACTUAL DEFECT IS THIRTY PRODUCTS IN TWO RETAILERS
+
+| | products | real brands, recovered from the name |
+|---|---:|---|
+| **Gorgeous Shop** | **27** | **Decleor, NUXE, Sigma, Stila** |
+| **Healf** | **3** | **Fushi, Wild Nutrition** |
+
+```
+brand "gorgeous shop"  ::  NUXE Reve de Miel Face and Body Ultra-Rich Cleansing Gel
+brand "gorgeous shop"  ::  Decleor Eucalyptus Cica-Botanic Mask
+brand "healf"          ::  Fushi Really Good Hair Oil | Botanical Hair Oil for ...
+brand "healf"          ::  Wild Nutrition Botanical Menopause Complex | ...
+```
+
+**YES, THE BRAND IS RECOVERABLE FROM THE NAME -- in all thirty.** 16 of Gorgeous Shop's 27 and all 3
+of Healf's have a FIRST TOKEN that is already a known brand elsewhere in the catalogue. **The
+remainder are multi-word brands** (*Wild Nutrition*) where the first token alone is not enough, **not
+cases where the brand is missing.**
+
+**AND THESE ARE THE ROWS THAT MADE ITEM 496's CROSS-BRAND TAIL LOOK WORSE THAN IT IS.** The NUXE
+groups appeared there as *"gorgeous shop"* against *"nuxe"* -- a cross-brand disagreement caused
+entirely by this defect. **Fix these thirty and fourteen of item 496's 656 stop being cross-brand at
+all.**
+
+#### WHAT IS NOT DECIDED
+
+**Whether recovery should be automatic.** A first-token rule fixes 19 of 30 and would need a
+brand-vocabulary lookup for the rest. **Thirty rows is small enough to do by hand and large enough
+that doing it by hand teaches nothing about preventing the next thirty** -- the importer wrote these,
+and nothing stopped it.
+
+#### AND THE ZERO THAT HID ALL OF IT
+
+This entire item was invisible for one query, because `[^a-z0-9]` deletes uppercase letters and the
+strip ran before the lowercase:
+
+```
+lower(regexp_replace('Gorgeous Shop','[^a-z0-9]','','g'))  ->  'orgeoushop'
+regexp_replace(lower('Gorgeous Shop'),'[^a-z0-9]','','g')  ->  'gorgeousshop'
+```
+
+**Every retailer key lost the initial of every capitalised word, so nothing could match anything and
+the count was 0.**
+
+> **THE SAME DEFECT TWICE IN TWO HOURS, IN DIFFERENT EXPRESSIONS, BOTH RETURNING A CLEAN ZERO.**
+> `products.ean` returned *"Healf supplies no barcodes"*; this returned *"no retailer names have
+> leaked into the brand column"*. **Both are entirely plausible states for a healthy catalogue to be
+> in**, which is why neither reads as an error.
+>
+> **NEITHER WAS FOUND BY REVIEW, AND BOTH WOULD HAVE SHIPPED AS FINDINGS.** The first was caught
+> because it disagreed with the import's own `rows_with_ean 4674`; the second because
+> `gorgeous shop :: NUXE Reve de Miel` was sitting in sample output on the screen directly above it.
+> **In both cases the query was read after the answer was doubted, and the answer was doubted because
+> it contradicted something already seen** -- not because anything about the SQL looked wrong.
+>
+> **THAT IS THE PATTERN WORTH CARRYING. A wrong query does not announce itself; a wrong answer
+> sometimes does, and only if something else is already on the screen to disagree with it.**
 
