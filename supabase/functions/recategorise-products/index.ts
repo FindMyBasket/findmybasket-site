@@ -23,7 +23,11 @@
 // as the bearer token. Required env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { inferCategorisationForImport } from "../_shared/categorisation.ts";
+import {
+  inferCategorisationForImport,
+  // THE PREFLIGHT CALLS THIS, IT DOES NOT RE-EXPRESS IT. See the block below.
+  isSupplementPathTopical,
+} from "../_shared/categorisation.ts";
 import { requireServiceRole } from "../_shared/require-service-role.ts";
 
 // Brand -> URL slug. MUST mirror brandSlug() in lib/queries.ts, brandSlugify()
@@ -183,15 +187,53 @@ Deno.serve(async (req: Request) => {
     //
     // A GUARD THAT NAMES A SHRINKING SET IS REPORTING PROGRESS RATHER THAN STANDING
     // AS A WALL, and the self-deleting property is what makes that true rather than
-    // rhetorical: when job two lands, this count goes to zero and the block lifts
-    // itself. 28,085 rows -> 2,530.
-    const UNREACHABLE_TOP_CATEGORIES = ["supplements"] as const;
-    const blocking: Array<[string, number]> = [];
-    for (const tc of UNREACHABLE_TOP_CATEGORIES) {
-      const { count, error: pfErr } = await supabase
+    // rhetorical.
+    //
+    // ── RE-SCOPED 30 AUGUST. IT COUNTED THE CATEGORY; IT NOW COUNTS THE HAZARD. ──
+    //
+    // WHAT IT COUNTED BEFORE: every row with top_category='supplements'. 7,196 of them,
+    // and it refused on all 7,196. The comment above promised the count would "go to
+    // zero and the block lifts itself".
+    //
+    // THAT COUNT CAN NEVER REACH ZERO. It is a count of the supplements category, and
+    // the category is not going to empty. **A GUARD WHOSE EXIT CONDITION CANNOT BE MET
+    // IS A PERMANENT GUARD DESCRIBING ITSELF AS TEMPORARY**, and this one described
+    // itself that way for two days.
+    //
+    // AND THE HAZARD IT NAMED WAS ALREADY GONE. Item 493 shipped at 10:08 UTC on
+    // 28 August and passed `onSupplementsPath = (p.top_category === "supplements")`.
+    // With that flag, inferCategorisationForImport short-circuits to supplements for
+    // every stored supplements row EXCEPT those isSupplementPathTopical() rejects.
+    // Measured across all 7,196: 24 names carry a topical form word, every one of them
+    // is rescued by the flavour veto ("Vanilla Ice Cream", "Cookies & Cream") or the
+    // device veto (Soma Lives' five Pelvic Floor Vaginal Toners), and the demotion
+    // count is ZERO. The old message asserted both "preserves rows already correct"
+    // and "every row below would be re-tagged out of supplements". Only the first was
+    // true, and only after 493.
+    //
+    // ── THE PREFLIGHT CALLS THE OPERATIVE FUNCTION. IT DOES NOT REIMPLEMENT IT. ──
+    //
+    // This is not a style preference, it is the bug that was just found. The first
+    // measurement of this hazard was a SQL translation of SUPP_TOPICAL_FORM that
+    // dropped its `(?=\d|\b)` lookahead, so it matched "Creamy Porridge" and
+    // "Sheetmask" and reported 4 where the truth was 0. Running the real
+    // isSupplementPathTopical over the same names returned 0 of 30.
+    //
+    // A guard that re-expresses the rule it guards drifts from it silently, and the
+    // drift shows up as a wrong count that looks like a finding. So this pages the
+    // rows and calls the same function the run calls. It costs one scan of ~7k rows
+    // and it cannot disagree with the classifier.
+    const PREFLIGHT_PAGE = 1000;
+    let demotable = 0;
+    let supplementsScanned = 0;
+    const demotableSamples: string[] = [];
+    for (let from = 0; ; from += PREFLIGHT_PAGE) {
+      const { data, error: pfErr } = await supabase
         .from("products")
-        .select("id", { count: "exact", head: true })
-        .eq("top_category", tc);
+        .select("id,name")
+        .eq("top_category", "supplements")
+        .order("id")
+        .range(from, from + PREFLIGHT_PAGE - 1);
       // A preflight that cannot look must fail, not pass. Item 255.
       if (pfErr) {
         return new Response(
@@ -199,24 +241,44 @@ Deno.serve(async (req: Request) => {
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-      if ((count ?? 0) > 0) blocking.push([tc, count ?? 0]);
+      if (!data || data.length === 0) break;
+      for (const row of data) {
+        supplementsScanned++;
+        const nm = String(row.name ?? "");
+        if (nm && isSupplementPathTopical(nm)) {
+          demotable++;
+          if (demotableSamples.length < 20) demotableSamples.push(`${row.id}: ${nm}`);
+        }
+      }
+      if (data.length < PREFLIGHT_PAGE) break;
     }
-    if (blocking.length > 0) {
+    // ZERO IS THE RIGHT THRESHOLD BECAUSE THE UNIT IS A PRODUCT, NOT A RATE. One row
+    // silently leaving supplements is one product page that stops comparing against the
+    // rest of its category, and nothing downstream reports it. There is no acceptable
+    // number of those, so there is no percentage to argue about.
+    if (demotable > 0) {
       return new Response(
         JSON.stringify({
           ok: false,
-          error: "refusing_to_run_supplements_unreachable",
+          error: "refusing_supplements_would_be_demoted",
           detail:
-            "This function now calls inferCategorisationForImport, so fragrance and bath_body are " +
-            "reachable. SUPPLEMENTS IS NOT, and cannot be from a stored product row: it is assigned " +
-            "from the retailer's feed category path (supplements_path_prefixes), and that path is " +
-            "never persisted — so the evidence needed to classify these rows was discarded at import. " +
-            "Passing the stored top_category preserves rows already correct but cannot promote a " +
-            "misfiled one. Until a name-and-brand supplements signal exists (work-list item 492), " +
-            "every row below would be re-tagged out of supplements. When that signal ships this count " +
-            "reaches zero and the preflight lifts itself.",
-          blocking: Object.fromEntries(blocking),
-          rows_at_risk: blocking.reduce((n, [, c]) => n + c, 0),
+            "This preflight counts rows THIS RUN WOULD DEMOTE out of supplements, not rows in " +
+            "the supplements category. A stored supplements row is preserved by the " +
+            "onSupplementsPath short-circuit unless isSupplementPathTopical() rejects its name; " +
+            "the rows below are the ones it rejects, and each would silently leave the category. " +
+            "Zero is the threshold because the unit is a product: one row leaving is one page that " +
+            "stops comparing against its category. " +
+            "WHAT THIS DOES NOT GUARD, AND WHY THAT IS NOT A REASON TO RE-BLOCK: this function " +
+            "PRESERVES supplements but CANNOT PROMOTE a misfiled row into them, because the " +
+            "evidence — the retailer's feed category path — is never persisted. So a run leaves " +
+            "DHC's 'Days Supply' tablets, The Organic Pharmacy's Phytonutrient capsules, KIKI " +
+            "Health's Activated Charcoal and MyProtein's Tanning Tablets misfiled where they are. " +
+            "THAT IS A REASON A RUN IS INCOMPLETE, NOT A REASON TO REFUSE ONE. Promotion is job " +
+            "two (work-list item 492) and it is not a guard question. Do not reach for this " +
+            "preflight to express it.",
+          would_be_demoted: demotable,
+          supplements_scanned: supplementsScanned,
+          samples: demotableSamples,
         }),
         { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
