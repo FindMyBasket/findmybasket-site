@@ -39184,3 +39184,124 @@ the count was 0.**
 > count printed above ten example rows has ten chances to be caught by something that does not match
 > it -- **and neither catch today came from suspecting the query.**
 
+---
+
+### 499. A guard whose exit condition could not be met, describing itself as temporary
+
+**Raised and applied:** 30 August 2026 · **Found while scoping job two, which is now not needed for this.** · **The preflight is re-scoped. Tier 1 is proposed and NOT built.**
+
+#### ★ THE CENTRE: IT REFUSED FOR TWO DAYS ON A HAZARD ITS OWN CHANGE HAD REMOVED
+
+**Item 493 shipped at 10:08 UTC on 28 August** and passed
+`onSupplementsPath = (p.top_category === "supplements")`. From that instant, every stored
+supplements row resolved through the short-circuit and was preserved.
+
+**The preflight kept refusing on all 7,196 of them until 30 August.**
+
+Its own message asserted both of these:
+
+```
+"Passing the stored top_category PRESERVES rows already correct ..."      TRUE
+"... every row below WOULD BE RE-TAGGED OUT of supplements."             FALSE since 493
+```
+
+**Two claims that cannot both hold, shipped in the same string, in the same commit as the change
+that made the second one false.**
+
+#### ★ AND THE EXIT CONDITION COUNTED A POPULATION THAT CANNOT REACH ZERO
+
+The comment promised: *"when job two lands, this count goes to zero and the block lifts itself."*
+
+**The count was `count(products where top_category='supplements')`.** That is a count of the
+category. **The supplements category is not going to empty**, so the count could not reach zero
+whatever job two did.
+
+> **A GUARD WHOSE EXIT CONDITION CANNOT BE MET IS A PERMANENT GUARD DESCRIBING ITSELF AS
+> TEMPORARY.** The self-deleting property was the reason it was acceptable to ship a block on the
+> most destructive path in the repository. **It was never wired to anything that could happen.**
+>
+> **The comment was not wrong about intent and was wrong about mechanism**, which is the harder
+> failure to see: nothing about "this count goes to zero" reads as false until you ask what the
+> count is over.
+
+#### ★ WHAT SETTLED IT: 0 OF 30, BY RUNNING THE OPERATIVE FUNCTION
+
+**The first measurement said 4.** It was a SQL translation of
+`SUPP_TOPICAL_FORM = /\b(?:serum|toner|cream|...)(?=\d|\b)/i` that **dropped the lookahead**, so
+it matched:
+
+```
+"Maxinutrition Creamy Core ..."    'cream' + 'y'      -> real rule: NO match
+"Nip+Fab Vitamin C Sheetmask ..."  'mask' after 't'   -> real rule: NO match
+"Kendamil Creamy Porridge"                            -> real rule: NO match
+"Just Ingredients ... Creamy Peanut Butter"           -> real rule: NO match
+```
+
+**Running the real `isSupplementPathTopical` over the candidates returned 0 of 30.** All 24 rows
+whose names carry a topical form word are rescued — by the flavour veto (*Vanilla Ice Cream*,
+*Cookies & Cream*, *Strawberries And Cream*) or the device veto (Soma Lives' five *Pelvic Floor
+Vaginal Toners*).
+
+> **THE NEAR-NEIGHBOUR CLASS AGAIN, AND THE DISCIPLINE THAT CAUGHT IT WAS RUNNING THE OPERATIVE
+> FUNCTION RATHER THAN REPRODUCING IT.** A re-expression is a second implementation with no test
+> holding it to the first. **4-against-0 is small enough to look like a rounding difference and it
+> is the difference between a guard that stays up and one that comes down.**
+
+**SO THE RE-SCOPED PREFLIGHT CALLS `isSupplementPathTopical` DIRECTLY.** It pages the supplements
+rows and asks the same function the run asks. One scan of ~7k rows, and **it cannot disagree with
+the classifier it guards.**
+
+#### THE NEW THRESHOLD, AND WHY ZERO
+
+**Zero is right because the unit is a product, not a rate.** One row silently leaving supplements
+is one product page that stops comparing against the rest of its category, and nothing downstream
+reports it. **There is no acceptable number of those, so there is no percentage to argue about.**
+
+#### AND THE MESSAGE NOW STATES THE LIMITATION THAT REMAINS
+
+The function **preserves** supplements and **cannot promote** into them, because the evidence — the
+retailer's feed category path — is never persisted. A run therefore leaves **DHC's "Days Supply"
+tablets, The Organic Pharmacy's Phytonutrient capsules, KIKI Health's Activated Charcoal and
+MyProtein's Tanning Tablets** misfiled.
+
+> **THAT IS A REASON A RUN IS INCOMPLETE, NOT A REASON TO REFUSE ONE**, and the message says so in
+> those words — because **the next reader will otherwise reach for the guard again.** The block was
+> the right instrument for "this run destroys data" and is the wrong instrument for "this run does
+> not fix everything." Nothing in the old message drew that line, which is part of why it survived
+> two days past its cause.
+
+#### ★ TIER 1 IS PROPOSED AND NOT BUILT
+
+Job two's tier 1 was a **brand-purity signal**: 570 brands whose every stored row is a supplement,
+admitting 5,476 of 7,196.
+
+**Not built, for two measured reasons:**
+
+| | |
+|---|---|
+| **It is circular** | brand purity is computed from `top_category`, which came from the feed path. It reports agreement with its own source — **preserves perfectly, cannot correct, and cannot classify a brand the catalogue has not seen.** |
+| **It solves a measured-zero hazard** | the demotion count is 0. Tier 1 would have prevented nothing. |
+| **And it would not have lifted the guard on its own terms** | 1,720 rows sit in mixed brands, so the count would have gone 7,196 -> 1,720 and still refused. |
+
+> **A CIRCULAR SIGNAL SHIPPED TO PREVENT A HAZARD THAT MEASURES ZERO, WHICH WOULD NOT HAVE MET ITS
+> OWN EXIT CONDITION EITHER.** It was the right shape for the problem as stated and the problem as
+> stated was two days out of date.
+
+**Tier 2 — promoting the misfiled rows — is untouched, and its 198 candidates stay unread until this
+has shipped and been watched.**
+
+#### THE CORRECTIONS CARRIED
+
+- **7,196, not 6,620.** Two Healf cron runs since the figure was written.
+- **The positive acceptance criterion's population no longer exists.** Solgar is 154 of 154
+  supplements; the 63 survive only in `fmb_solgar_misfiled_snapshot_20260828`. **Second time this
+  week reversibility produced an audit trail nobody planned** — the first was the 1 July artefact.
+  **The test set was consumed by the fix that motivated it.**
+- **The 13 Solgar misses settle the criterion rather than fail it.** *Multi One*, *Omnium®\**,
+  *Formula VM-5®\**, *30 Nuggets* — **not one carries a dose form**, so no name rule can satisfy
+  "a brand cannot be half topical". What the Solgar finding established was **a test on the brand.**
+- **The browse classifier answers a different question and its vocabulary inverts.** `47.1% of hair
+  products` match a named supplement type, because `Hair, skin & nails -> \m(hair|nails|scalp)`
+  catches every shampoo and `Vitamins` contains `niacinamide`. **It is a within-class router with no
+  way to say no, and its catch-all `Supplements` is safe where it is called and fatal here.**
+
