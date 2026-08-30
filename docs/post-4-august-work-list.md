@@ -38733,6 +38733,13 @@ non-brands into a brand field). **The read produced a third, and most of the 205
 > **Storing both in one table without marking which is which puts a corporate fact and a typo behind
 > the same lookup**, which is the class this list keeps recording: a value correct about one thing
 > stored as another.
+>
+> **SO THE SECOND KIND WANTS A COLUMN, OR AT MINIMUM A NOTE SAYING WHICH IT IS.** A spelling variant
+> is true forever and needs no review. **An ownership claim has an expiry nobody will be told about**
+> -- when a house sells a brand, the alias silently becomes a lie and every surface reading it inherits
+> the error. `brand_aliases` already carries a `notes` column; **using it to record the KIND of claim
+> is the cheapest version, and a typed column is the honest one.** Unmarked, the only way to find the
+> stale ones later is to re-derive every entry, which is the same trap as an undated measurement.
 
 #### ★ AND THE SEQUENTIAL-ID SIGNATURE DOES NOT SURVIVE ITS COMPLEMENT
 
@@ -39079,12 +39086,67 @@ groups appeared there as *"gorgeous shop"* against *"nuxe"* -- a cross-brand dis
 entirely by this defect. **Fix these thirty and fourteen of item 496's 656 stop being cross-brand at
 all.**
 
+#### ★ FIXED, AND READING THE NAMES SHRANK IT AGAIN: THIRTY IS TWENTY-TWO
+
+**Applied 30 August. Snapshot table `fmb_snapshot_item498_brand_fix` written first, 22 rows, with the
+reversing UPDATE in its own COMMENT.** Solgar-shaped: targeted write, names read, reversible.
+
+| recovered via | rows | brands |
+|---|---:|---|
+| **first token** | **18** | NUXE 11, Decleor 3, Stila 2, Fushi 2 |
+| **first two tokens** | **4** | Sigma Beauty 3, Wild Nutrition 1 |
+| **not a defect** | **8** | left alone |
+
+**THE EIGHT ARE GORGEOUS SHOP'S OWN PRODUCTS.** *"Gorgeous Gift For Her - Body Beautiful Bundle"* and
+six siblings, plus *"Gorgeous Premier Delivery"*. **Brand `Gorgeous Shop` on a *Gorgeous Gift for
+Her* bundle is the column working** -- exactly as Boots' 584 were.
+
+> **AND THE DISCRIMINATOR THAT FOUND THEM SAID 0 of 27, WHICH WAS TRUE AND MISLEADING.** The names
+> start with *Gorgeous*, not *Gorgeous Shop*, so a prefix test on the full retailer name reported them
+> all as suspect. **It is the Evolve failure again -- a missing middle word -- inside the very set the
+> test was trusted on.**
+>
+> **READING THE NAMES SHRANK THE POPULATION A FOURTH TIME TODAY: 1,132 -> 30 -> 22.** Each narrowing
+> came from reading, and none from a better rule.
+
+**AND ONE NON-PRODUCT, FLAGGED NOT FIXED.** `135145 Gorgeous Premier Delivery` is a **GBP 6.99
+delivery charge sold by Beauty Flash and filed as `top_category = skincare`.** A shipping line in the
+product catalogue. Its own item; untouched here.
+
+#### ★ THE SIDE EFFECT: THIRTEEN LEFT THE 656, AND THE FOURTEENTH BECAME A TRUE POSITIVE
+
+**Predicted 14. Measured 13.**
+
+```
+cross-brand groups   656 -> 643        clean same-brand   6,236 -> 6,249
+cross-brand groups still carrying a retailer name as a brand:  0
+```
+
+**The fourteenth did not leave. It stayed and stopped being an artefact:**
+
+```
+5056182320448   redken       :: Redken All Soft Shampoo 500ml & All Soft Conditioner
+                sigma beauty :: Sigma Beauty SigMagic Brush Shampoo Liquid 150ml
+```
+
+Before the fix this read *"gorgeous shop"* against *"redken"* -- a disagreement caused by the brand
+defect. **After it, it reads *"sigma beauty"* against *"redken"*, and those genuinely are two brands
+on one barcode.**
+
+> **THE DEFECT WAS MASKING A REAL COLLISION BY MAKING IT LOOK LIKE A DIFFERENT KIND OF PROBLEM.**
+> Thirteen were noise and resolved; **the fourteenth was signal wearing the noise's clothes.** A fix
+> that only removed rows from a class would have removed this one too.
+
+*And its barcode sits in the same `5056182...` block as the Goldwell/Redken pair. **That is one more
+reason adjacency looked like a signature, and it is still not one*** -- item 496 measured it at 62.2%
+on the clean population.
+
 #### WHAT IS NOT DECIDED
 
-**Whether recovery should be automatic.** A first-token rule fixes 19 of 30 and would need a
-brand-vocabulary lookup for the rest. **Thirty rows is small enough to do by hand and large enough
-that doing it by hand teaches nothing about preventing the next thirty** -- the importer wrote these,
-and nothing stopped it.
+**Whether recovery should be automatic.** A first-token rule fixes 18 of 22 and needs a
+brand-vocabulary lookup for the other 4. **Twenty-two rows is small enough to do by hand and large
+enough that doing it by hand teaches nothing about preventing the next twenty-two** -- the importer
+wrote these, and nothing stopped it.
 
 #### AND THE ZERO THAT HID ALL OF IT
 
@@ -39110,6 +39172,15 @@ the count was 0.**
 > **In both cases the query was read after the answer was doubted, and the answer was doubted because
 > it contradicted something already seen** -- not because anything about the SQL looked wrong.
 >
-> **THAT IS THE PATTERN WORTH CARRYING. A wrong query does not announce itself; a wrong answer
-> sometimes does, and only if something else is already on the screen to disagree with it.**
+> **★ THAT IS THE PATTERN WORTH CARRYING FROM TODAY. A WRONG QUERY DOES NOT ANNOUNCE ITSELF; A WRONG
+> ANSWER SOMETIMES DOES, AND ONLY IF SOMETHING ELSE IS ALREADY ON THE SCREEN TO DISAGREE WITH IT.**
+>
+> **AND THAT IS AN ARGUMENT FOR KEEPING SAMPLE OUTPUT VISIBLE, NOT FOR CHECKING QUERIES HARDER.**
+> Checking harder does not scale and did not work: both expressions were read, both looked correct,
+> and `regexp_replace(lower(x))` against `lower(regexp_replace(x))` is not a difference the eye
+> catches. **What worked both times was an unrelated number and an unrelated sample sitting nearby.**
+>
+> **So the practice is: print the rows, not only the count.** A count has nothing to contradict it. A
+> count printed above ten example rows has ten chances to be caught by something that does not match
+> it -- **and neither catch today came from suspecting the query.**
 
