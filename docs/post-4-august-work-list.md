@@ -42835,3 +42835,132 @@ instances in one evening, one found by writing the check and one by tripping ove
 closed here and it is left open deliberately — **the check is cheap but it is not free, and running it
 on every push to every branch would make it noise.** Recorded so the next person finds the boundary
 stated rather than having to re-derive where it sits.
+
+### 533. `enabled = false` refuses a dry run, so the safe sequence requires an unsafe step
+
+**Raised:** 31 August 2026 · **NOT FIXED. Reported with its blast radius.**
+
+```ts
+// supabase/functions/import-rakuten-feed/index.ts:719
+if (!config.enabled) {
+  return jsonResponse({ error: "Retailer import is disabled (config.enabled = false)" }, 400);
+}
+// :723 — dry_run is not consulted until here
+const effectiveMode = reqMode === "process" ? "process" : (…&& !dryRun && …) ? "stage" : "single";
+```
+
+**The state specified in every onboarding brief — `active` false, `enabled` false, dry run — cannot
+happen.** The gate is read four lines before `dryRun` is looked at.
+
+> **★★★ A GUARD PLACED ABOVE THE THING IT SHOULD BE BELOW, SO THE SAFE SEQUENCE REQUIRES AN UNSAFE
+> STEP.** `enabled` exists to stop a retailer importing for real. A dry run is the act you perform
+> *because* you are not ready to import for real — **the one operation the flag has no reason to
+> block**, and the only one it makes impossible.
+>
+> **THE WORKAROUND IS THE HAZARD.** Reaching the classification means setting `enabled = true` on a
+> retailer that is not ready, running, and setting it back. For three minutes the retailer is importable
+> by anything that fires. Here that was checked and empty — every `refresh-*` cron names its own
+> retailer, `fmb-import-watchdog` only re-fires STALLED runs and there were none, and no workflow
+> references retailer 35 — **but the check had to be done, and it has to be done again every time.**
+
+#### WHAT MOVING IT WOULD TOUCH — READ, NOT CHANGED
+
+The gate sits in the shared request handler, above the mode dispatch, so it applies to **every retailer
+on both importers**. Moving it below the `dryRun` branch would mean:
+
+| | |
+|---|---|
+| **`single` mode** | a disabled retailer could dry-run. The intent. |
+| **`stage` mode** | unreachable for a dry run already — `effectiveMode` picks `stage` only when `!dryRun`. No change. |
+| **`process` mode** | slice workers re-enter the same handler. **A slice fired before the flag was cleared would proceed**, so the check must stay above `process` rather than move wholesale below the dispatch. |
+| **`recordImportStatus`** | writes `last_import_status` on the config row. A dry run currently never reaches it; moving the gate must not start writing import status for runs that import nothing. |
+
+> **SO IT IS NOT A LINE MOVE, IT IS A CONDITION CHANGE**: `if (!config.enabled && !dryRun)` at :719,
+> leaving `process` covered because a slice run is never a dry run. **Two importers share this handler
+> shape and every retailer goes through it, which is why it is reported rather than done at the end of
+> an onboarding.**
+
+---
+
+### 534. What `skip_name_match` gives up, priced rather than absorbed
+
+**Raised:** 31 August 2026 · **The flag is TRUE. This is the bill.**
+
+`skip_name_match = false` returned **`WORKER_RESOURCE_LIMIT`** — the Healf 546 class. `index.ts:343`
+loads every product in the catalogue for fuzzy name matching and skips that load for high-EAN retailers.
+At 99.9% UPC coverage this feed qualifies; the `false` set on catalogue grounds is what exhausted the
+worker.
+
+> **THE CHOICE IS NOT A PREFERENCE, IT IS NAME-MATCHING 585 PRODUCTS AGAINST A DRY RUN THAT CAN RUN AT
+> ALL.** And the ceiling is nowhere in the config — **discovered by running, not by reading.**
+
+#### THE COST, MEASURED
+
+```
+creates (no barcode match)                1,150
+live fragrance products with NO barcode     585   of 11,937 — 4.9%, unreachable by UPC
+creates whose brand+name matches one       <=38   would have linked; will create
+```
+
+**38 IS AN UPPER BOUND AND THE NORMALISATION THAT FOUND IT IS WHY.** Matching required stripping sizes
+and format words, and that collapses genuinely distinct products:
+
+```
+Calvin Klein Eternity For Men  50ml  -> product 152658
+Calvin Klein Eternity For Women 100ml -> product 152658    <- different products, same key
+Dkny Golden Delicious 30 / 50 / 100ml -> product 113930    <- three sizes, one key
+```
+
+> **THE SAME LOOSENING THAT MAKES A NAME MATCH POSSIBLE MAKES IT WRONG**, and a size-aware read returns
+> fewer. **Reported as a ceiling rather than a count** — the decision does not turn on whether it is 38
+> or 12, and inventing precision here would be the error this thread keeps recording.
+
+#### ★★ THE 157 WERE NOT COMPUTED, AND THAT IS THE POINT
+
+The dry run returns category counts for new products and **does not join them to the feed row or the
+category path.** 157 of 1,131 creates classify outside fragrance; 297 feed rows carry a malformed leaf;
+roughly a third of those would be new after the 64.5% barcode match.
+
+> **TWO AGGREGATES THAT WERE NEVER JOINED DO NOT MAKE A THIRD.** ~105 against 157 is arithmetic, not a
+> measurement, and it would have read as one. **A plausible partial explanation stated as a plausible
+> partial explanation** — the malformed leaves account for some of the non-fragrance classifications and
+> the output cannot say which.
+
+#### WHAT IS ACTUALLY IN THE NON-PERFUME CREATES — BY NAME, AS A NAME READ
+
+```
+creates                1,150
+name is not perfume      231
+
+gift set 142 · body mist 32 · deodorant 16 · body spray 9 · after shave 11
+shower gel 6 · body lotion 5 · advent calendar 5 · body cream 4 · hand cream 1
+```
+
+**Labelled as a name-based read and not the categoriser's output**, because the categoriser's output is
+the thing that is not joined.
+
+> **142 GIFT SETS IS THE ANSWER TO ROBBIE'S QUESTION AND IT IS NOT A DEFECT.** *"Barbour Heritage For
+> Her Eau De Parfum 30ml Gift Set"* is a fragrance product; *"Missguided Self Love Club Gift Set"* is
+> not. **The v6 exclusions read correctly on the sample** — `bath_set` for the body-mist sets,
+> `deodorant` for seven Tom Ford body sprays, `fragrance` kept for aftershaves. **Body sprays and gift
+> sets landing in `bath_body` may be right rather than wrong, and only the names say which**, which is
+> why they are listed rather than counted.
+
+#### AND A THRESHOLD CLAIM THAT WAS INVENTED RATHER THAN MEASURED
+
+> *"£40 is the lowest threshold in the fleet against a roughly £30 median, so it clears on a typical
+> fragrance basket."*
+
+```
+thresholds  25, 25, 25, 30, 30, 30, 39, 50, 50, 50, 55, 75      lowest 25   median 34.50
+£40 is the EIGHTH lowest of twelve, and ABOVE the median.
+```
+
+**The conclusion survives on a fact the claim did not use: the median fragrance price on active
+retailers is £59.60, so a single bottle clears £40 on its own.**
+
+> **RIGHT ANSWER, WRONG REASON, AND THE REASON WAS INVENTED RATHER THAN MEASURED.** It clears easily
+> because fragrance is expensive, not because the threshold is low — and a threshold above the fleet
+> median matters to the optimiser in the opposite direction to the one claimed. **A conclusion that
+> survives its justification being wrong is the hardest kind to catch**, because nothing downstream
+> misbehaves.
