@@ -41,6 +41,70 @@
 
 @tailwind utilities;
 
+/* ── THE HERO PHOTOGRAPH ─────────────────────────────────────────────────────
+   public/images/hero-bottles-desktop.jpg (2880x1440) and its portrait crop
+   (1200x1500), which the static homepage used and the port dropped along with
+   everything else that had no number attached. Item 520.
+
+   WHY REAL CSS AND NOT ARBITRARY UTILITIES. Three stacked background layers with
+   four-stop gradients each is unreadable as `bg-[linear-gradient(...)]`, and the
+   static page expressed it exactly this way. Same reason `.fmb-home` is here.
+
+   AND WHY THE FADE RUNS SIDEWAYS AT DESKTOP WHEN THE STATIC PAGE'S RAN DOWN.
+   That hero was CENTRED, so a vertical fade put cream behind the text and let the
+   photograph show at the foot. This one is left-aligned in a 1,200px column with
+   379px of text in it — the empty right two-thirds IS the complaint — so the
+   cream goes left, behind the words, and the photograph occupies the space that
+   was empty. The vertical layer stays underneath to keep the foot of the section
+   quiet where the band separator meets it. Same device, turned ninety degrees to
+   a layout the static page did not have.
+
+   MOBILE KEEPS THE ORIGINAL ORIENTATION, because at 390px the text spans the full
+   width and there is no right-hand space to fill. Portrait crop, vertical fade,
+   the static page's own numbers.
+
+   COSTS NOTHING IN HEIGHT: absolute, inset-0, behind content that already exists.
+   Item 524. */
+.fmb-hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(
+      to bottom,
+      rgba(250, 248, 244, 0.55) 0%,
+      rgba(250, 248, 244, 0.10) 40%,
+      rgba(250, 248, 244, 0.75) 100%
+    ),
+    url('/images/hero-bottles-mobile.jpg');
+  background-size: cover, cover;
+  background-position: center, center 65%;
+  background-repeat: no-repeat, no-repeat;
+}
+
+@media (min-width: 768px) {
+  .fmb-hero-bg {
+    background-image:
+      linear-gradient(
+        to right,
+        #FAF8F4 0%,
+        rgba(250, 248, 244, 0.94) 34%,
+        rgba(250, 248, 244, 0.40) 68%,
+        rgba(250, 248, 244, 0.18) 100%
+      ),
+      linear-gradient(
+        to bottom,
+        rgba(250, 248, 244, 0.45) 0%,
+        rgba(250, 248, 244, 0) 45%,
+        rgba(250, 248, 244, 0.80) 100%
+      ),
+      url('/images/hero-bottles-desktop.jpg');
+    background-size: cover, cover, cover;
+    background-position: center, center, center right;
+  }
+}
+
 /* Match the existing site's body baseline */
 html, body {
   background: #FAF8F4;
