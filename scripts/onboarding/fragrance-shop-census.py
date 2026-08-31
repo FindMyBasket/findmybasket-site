@@ -277,7 +277,8 @@ print(f"\n### Creates whose NAME is not perfume — a name-based read, not the c
 print(f"```\ncreates                {len(creates)}\nname is not perfume    {len(odd)}\n```\n")
 kinds = Counter(NOT_PERFUME.search(r["name"]).group(0).lower() for r in odd)
 print("by kind: " + ", ".join(f"{k} {v}" for k, v in kinds.most_common()) + "\n")
-for r in sorted(odd, key=lambda r: r["name"])[:60]:
-    print(f"  - {r['brand'][:16]:<18} {r['name'][:70]}")
-if len(odd) > 60:
-    print(f"  … and {len(odd)-60} more")
+# Hand the FULL create-candidate set to the operative categoriser. A name read
+# cannot say where a row lands; only inferCategorisationForImport can. Item 535.
+with open("creates.json", "w", encoding="utf-8") as fh:
+    json.dump([{"name": r["name"], "brand": r["brand"]} for r in creates], fh, ensure_ascii=False)
+print(f"\nwrote creates.json — {len(creates)} candidates for the categoriser")

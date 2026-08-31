@@ -226,6 +226,15 @@ jobs:
           grep -qE '"applied"|"dry_run"|"would_' dry-run.json || {
             echo "::error::importer did not return a dry-run shape"; exit 1; }
 
+      - name: Classify the creates with the operative function
+        if: steps.locate.outputs.found_dir != '' && inputs.list_only != true
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f creates.json || { echo "::error::creates.json missing -- the census did not emit it"; exit 1; }
+          npm ci --silent
+          npx --yes tsx scripts/onboarding/classify-creates.mts creates.json | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Note
         if: always()
         run: |
