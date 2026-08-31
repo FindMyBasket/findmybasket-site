@@ -223,3 +223,61 @@ print(f"### Brands\n```\nfeed brands                    {len(feed_brands)}\n"
       f"products under a new brand     {sum(feed_brands[b] for b in new)}\n```\n")
 print("Top feed brands: " + ", ".join(f"{b} {c}" for b, c in feed_brands.most_common(8)))
 print("\nNOTHING WAS WRITTEN. No bucket upload, no importer call, no config row.")
+
+# ── WHAT skip_name_match=true GIVES UP ────────────────────────────────────────
+# A READ, NOT A FIX. Nothing below merges, links or writes anything. It sizes the
+# cost of the flag: 585 of 11,937 live fragrance products carry no barcode on any
+# active retailer, so the feed's UPCs cannot reach them, and any of them present in
+# this feed become NEW products rather than links. With skip_name_match=true the
+# importer never even looks. Item 534.
+print("\n### What name-matching would have reached\n")
+
+def norm_name(s):
+    s = (s or "").lower()
+    s = re.sub(r"\b\d+(\.\d+)?\s?(ml|g|kg|oz|cl|l)\b", " ", s)   # sizes differ per listing
+    s = re.sub(r"\b(eau de parfum|eau de toilette|edp|edt|parfum|elixir|edc|spray|for (?:her|him|men|women))\b", " ", s)
+    s = re.sub(r"[^a-z0-9]+", " ", s)
+    return " ".join(s.split())
+
+creates = [r for r in rows if norm_ean(r["upc"]) not in ean_to_product]
+bare = page("products_active", {"select": "id,name,brand", "top_category": "eq.fragrance"})
+bare_ids = {p["id"] for p in bare}
+# products with NO barcode on any active retailer
+with_ean_ids = {row["product_id"] for row in rp if row["retailer_id"] in active}
+barcodeless = [p for p in bare if p["id"] not in with_ean_ids]
+
+index = {}
+for p in barcodeless:
+    index.setdefault((str(p.get("brand") or "").strip().lower(), norm_name(p["name"])), []).append(p)
+
+hits = []
+for r in creates:
+    k = (r["brand"].strip().lower(), norm_name(r["name"]))
+    if k[1] and k in index:
+        hits.append((r, index[k][0]))
+
+print(f"```\ncreates (no barcode match)            {len(creates)}\n"
+      f"live fragrance products with NO barcode {len(barcodeless)}\n"
+      f"creates whose brand+name matches one   {len(hits)}   <- would have LINKED, will CREATE\n```\n")
+for r, p in hits[:25]:
+    print(f"  - {r['brand'][:18]:<20} {r['name'][:56]:<58} -> product {p['id']}")
+if len(hits) > 25:
+    print(f"  … and {len(hits)-25} more")
+
+# ── THE CREATES THAT ARE NOT PERFUME, BY NAME ─────────────────────────────────
+# The dry run reports category counts and does NOT join them to the feed path or to
+# the row, so this is a NAME-BASED READ and not the categoriser's own output. Stated
+# as what it is. Item 534.
+NOT_PERFUME = re.compile(
+    r"\b(body spray|body mist|body cream|body lotion|body wash|shower gel|gift set|"
+    r"after ?shave|aftershave|deodorant|antiperspirant|advent calendar|candle|"
+    r"hand cream|soap|talc|bath)\b", re.I)
+odd = [r for r in creates if NOT_PERFUME.search(r["name"])]
+print(f"\n### Creates whose NAME is not perfume — a name-based read, not the categoriser\n")
+print(f"```\ncreates                {len(creates)}\nname is not perfume    {len(odd)}\n```\n")
+kinds = Counter(NOT_PERFUME.search(r["name"]).group(0).lower() for r in odd)
+print("by kind: " + ", ".join(f"{k} {v}" for k, v in kinds.most_common()) + "\n")
+for r in sorted(odd, key=lambda r: r["name"])[:60]:
+    print(f"  - {r['brand'][:16]:<18} {r['name'][:70]}")
+if len(odd) > 60:
+    print(f"  … and {len(odd)-60} more")
