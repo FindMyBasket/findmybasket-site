@@ -20,12 +20,20 @@
    So the reset is the pair, not the style alone: width 0 on everything, style
    solid on everything, and the utilities that follow put the width back on the
    edges that asked for it. SITE-WIDE THIS IS ITEM 521 and it turns on 86
-   borders at once; scoped to `.fmb-demo` it turns on this block's and nothing
-   else's, which is what lets item 520 land on its own. */
-.fmb-demo,
-.fmb-demo *,
-.fmb-demo ::before,
-.fmb-demo ::after {
+   borders at once; scoped to `.fmb-home` it turns on the homepage's and nothing
+   else's, which is what let item 520 land on its own.
+
+   WIDENED FROM `.fmb-demo` TO `.fmb-home` BY ITEM 523, and the widening is the
+   answer to a real question rather than convenience. The hero field, the trust
+   cards and the CTA panel are all defined by borders in `public/index.html`,
+   which drew them with the `border:` SHORTHAND — style included — so they have
+   always rendered there. Substituting a background step or a shadow here would
+   be inventing a device to avoid a bug. The reset is the smaller change and it
+   is the one that makes the authored design appear. */
+.fmb-home,
+.fmb-home *,
+.fmb-home ::before,
+.fmb-home ::after {
   border-width: 0;
   border-style: solid;
   border-color: #E8E2D5;

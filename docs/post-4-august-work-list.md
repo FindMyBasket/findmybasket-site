@@ -41684,3 +41684,114 @@ restated explicitly when this styling was scoped. **There is no decision here to
 > the reason and had it first. **What the skill actually caught on this page was the opposite failure:
 > not a templated look, but no look at all** — a page whose borders did not draw and whose search field
 > was a browser default, arrived at by measuring one dimension and shipping.
+
+### 523. The hero field, and a sentence that described the repository and called it the site
+
+**Raised:** 31 August 2026 · **Proposal 2 of the homepage styling. Built, and the finding is Robbie's.**
+
+#### ★★★ THE SCOPING SENTENCE WAS WRONG, AND WRONG IN THE WAY THIS SURFACE KEEPS BEING WRONG
+
+> *"The existing site has cards with borders and radius — the category grids and product cards — so the
+> vocabulary exists and the homepage is not using it."*
+
+**The homepage was using it. Every page is. It has never rendered anywhere.** 86 `border-border`
+classes, no `border-style` in the stylesheet, every one computing to `border-width: 0px`. Item 521.
+
+> **THAT IS A DESCRIPTION OF THE REPOSITORY OFFERED AS A DESCRIPTION OF THE SITE**, and it is the same
+> class as reading the code and calling it the page. **The fourth instance on this one surface.**
+
+| | the code said | the built page said |
+|---|---|---|
+| **`demo-section`** (513) | the solver's output is the demo | the fallback had been serving |
+| **the `<h1>`** (506) | a comment guarded it against change | `canonical_size` changed underneath it |
+| **`SiteSearch`** (519) | a search component | a button; the field is behind a click |
+| **the card borders** (521) | 86 bordered cards | no border has ever been drawn |
+
+**Each of the four was authored correctly and did something else.** Nothing in any of them is a mistake
+in the source; the source is not where the answer lives. **Four times, and every one found by loading
+the page.**
+
+#### ★★ AND THE INSTRUMENT FLIPPED HALFWAY THROUGH
+
+> **THE SCREENSHOT FOUND THE CLASS OF PROBLEM AND `getComputedStyle` FOUND ITS SHAPE. NEITHER WOULD
+> HAVE FOUND THE OTHER.**
+>
+> **A person cannot see a 3px cream border on cream** — the first `border-solid` attempt rendered the
+> footer rule as `1px 3px 3px 3px` and looked, in a screenshot, like a slightly heavy line.
+> **And a computed style cannot tell you a page looks unfinished.** Every probe run against this route
+> before Robbie opened it returned correct numbers: 13 tags, 3.53 screens, a real field at 417px. **The
+> page was passing every check it had, and the missing check was a pair of eyes.**
+
+Item 520 recorded the measurement discipline as applied to one dimension. **This is the sharper version:
+the two instruments do not overlap at all, and having one is not most of the way to having both.**
+
+#### WHAT SHIPPED
+
+`public/index.html`'s own `.hero-form` rule set — **two pills and a gap, not a wrapper with a field
+inside it** — plus `.btn-primary` on the button. Pill radius, warm-white fill, 1px border, 15px, and on
+focus `border-color: gold` with a 4px `rgba(201,169,110,0.12)` ring, replacing the outline that
+`outline-none` removes.
+
+**`font-[inherit]`, not `font-sans`.** Two separate reasons, and the second is the one that would have
+bitten silently:
+
+- Without Preflight an `<input>` does not inherit `font-family`. Measured: the placeholder rendered in
+  **Arial** on a page whose every other word is DM Sans.
+- **`font-sans` resolves to the literal `"DM Sans"`, which is not the family `next/font` loaded it as.**
+  The real family is `__DM_Sans_be8b38`. `font-sans` would have silently fallen back to system sans and
+  looked *nearly* right. `inherit` takes the body's `var(--font-dm-sans)` and cannot drift from it.
+  **Verified equal: input and body both report `__DM_Sans_be8b38`.**
+
+**`min-w-0` so the row never wraps.** At 390 the column is 342px; a wrapped button costs ~66px of a
+budget that had 4px in it.
+
+#### AND THE RING READ AS ABSENT THREE TIMES BEFORE IT READ AS PRESENT
+
+```
+boxShadow: none   borderColor: rgb(232,226,213)     <- three consecutive readings
+```
+
+The rules were in the sheet, the selectors matched, the specificity was right, and the ring was not
+there. **The cause was the instrument: `document.hasFocus()` was `false`.** `:focus` does not match in a
+document whose window is not focused, and every reading had been taken in an offscreen iframe or an
+unfocused tab.
+
+> **A NEGATIVE FROM AN INSTRUMENT THAT CANNOT REGISTER THE THING IS NOT A NEGATIVE** — the same shape as
+> item 519's preview emitting no tags, and item 255's "No drift" from empty variables. **The tell was
+> that `--tw-shadow` held the gold value while `box-shadow` did not**: a rule that is setting one of its
+> own declarations and not the other is not a rule that is failing to apply. Confirmed with a real click
+> and a genuine blur/focus cycle: `rgb(201,169,110)` and `rgba(201,169,110,0.12) 0 0 0 4px`.
+
+#### THE RESET WIDENED, AND WHY THAT AND NOT A SUBSTITUTE DEVICE
+
+`.fmb-demo` → `.fmb-home`, on a wrapper around the homepage's sections only. Nav and footer excluded;
+`main` elsewhere on the site untouched.
+
+The question this answers is proposal 3's: **if the trust cards and the CTA panel are defined by borders
+that draw nothing, do they need the reset extended or a different device — a background step, a shadow,
+or the warm-white band?**
+
+> **THE RESET, AND IT IS NOT CLOSE. `public/index.html` DREW ALL OF THEM WITH BORDERS AND THEY HAVE
+> ALWAYS RENDERED THERE** — `border: 1px solid var(--border)` in shorthand, style included, which is the
+> single reason the static page never had this bug. **Substituting a background step for a border here
+> would be inventing a device to avoid a defect, and it would put the homepage's card treatment out of
+> step with the rest of the site the day item 521 lands.** The reset is the smaller change and it is the
+> one that makes the authored design appear.
+
+**Item 521's global fix stays its own act.** The reflow table plus the 86 classes is its scope, and it is
+larger than a styling item — **it changes what every card on the site looks like**, which is not a thing
+to discover as a side effect of a homepage PR.
+
+#### MEASURED, AND THE BUDGET IMPROVED
+
+```
+                   before 523     after      change
+390x844   doc      2,976px        2,969px     -7px      3.53 -> 3.52 screens
+          first    417px          398px       -19px
+1440x900  doc      2,336px        2,330px     -6px      2.60 -> 2.59 screens
+          first    467px          448px       -19px
+```
+
+**The band separators on `#how-it-works` and the trust pair now draw** — `border-y border-border` had
+been in the source since the route was built and had never appeared. That is +4px, and the page still
+came out shorter than it went in.
