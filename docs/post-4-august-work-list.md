@@ -41376,7 +41376,7 @@ A plain `GET` form to `/search`:
 > because only a human opening the admin page can tell. This one cannot go dark that way.
 > `app/search/page.tsx:23` already declares `from?: string` and ignores it; verified live returning 200.
 
-#### ★★ AND THE CORRECTION THAT VERIFICATION FORCED — I REPORTED THE WRONG BEFORE
+#### ★★★ TWO CORRECTIONS, AND WHY A SUBSTITUTED NUMBER IS THE WORSE KIND
 
 I reported the preview measurement as *"first interaction 1,581px → 417px"*. **Measuring the static page
 directly, rather than reading its section offsets, says otherwise:**
@@ -41391,6 +41391,13 @@ directly, rather than reading its section offsets, says otherwise:**
 static hero always had `<input type="search" name="q">` in it. **I substituted the number I had for the
 number I was asked for**, and the substitution flattered the change.
 
+> **A SUBSTITUTED NUMBER IS WORSE THAN A MISSING ONE, BECAUSE IT ANSWERS THE QUESTION ASKED AND NOTHING
+> MARKS IT AS A DIFFERENT MEASUREMENT.** A gap in a report invites the follow-up that closes it. A
+> plausible figure in the right slot closes the question instead — it is read, accepted, and quoted
+> onward, and the only thing that can dislodge it is someone independently measuring the same quantity.
+> **This one survived a report, a decision, and a deploy, and died the first time the number was taken
+> rather than recalled.**
+>
 > **THE FIRST-INTERACTION OFFSET IS NOT WHAT THIS REBUILD IMPROVED. THE DOCUMENT HEIGHT IS.** 11.82
 > screens → 3.53 at 390 is the whole of the gain, and it is large enough that it did not need the other
 > claim. **A real result does not need a borrowed one beside it.**
@@ -41407,6 +41414,22 @@ page does not use. **Moving the homepage onto the React shell is what introduced
 It is a button and a field rather than two of the same thing, which is the defensible version — but the
 count went from one to two and the honest sentence is that, not "it does not exist."
 
+> **AND THE ZERO WENT INTO THE RECORD ON MY WORD.** Robbie recorded the double-search as not existing
+> because I reported it as not existing; nothing else in the session asserted it. **A wrong reading does
+> not stop at the report — it propagates into the register, which is the thing later work trusts instead
+> of re-measuring.**
+
+#### BOTH CORRECTED WITHIN THE DAY, AND BY MEASURING RATHER THAN RE-REASONING
+
+Neither correction came from re-reading the code or thinking harder about the earlier claim. Both came
+from running the same probe against the **old** page as well as the new one — the comparison the first
+measurement skipped, because the "before" numbers were already to hand from the 21 August snapshot.
+
+> **THE ERROR WAS USING A REMEMBERED BASELINE INSTEAD OF MEASURING ONE, AND THE FIX WAS MEASURING IT.**
+> Both wrong claims were about the static page, not the new page; every number taken from the new page
+> was right. **The half of a comparison that feels already known is the half that goes unmeasured**, and
+> a before/after has exactly one such half by construction.
+
 #### ★★★ THREE TIMES ON THIS PAGE THE BUILT SURFACE CONTRADICTED THE CODE
 
 | | the code said | the built page said |
@@ -41415,12 +41438,19 @@ count went from one to two and the honest sentence is that, not "it does not exi
 | **the `<h1>`** (item 506) | a comment guarded the h1 against change | `canonical_size` had changed underneath it |
 | **`SiteSearch`** (this item) | `<SiteSearch />` — a search component | a button; the field is behind a click |
 
-> **NO OTHER SURFACE IN THIS CODEBASE HAS DONE THIS THREE TIMES, AND THE COMMON FACTOR IS THAT THE
-> HOMEPAGE IS ASSEMBLED FROM PARTS WHOSE RENDERED BEHAVIOUR IS NOT IN THEIR NAMES.** A component called
-> `SiteSearch`, a section called `demo-section`, a field called `canonical_size` — each reads as its
-> intent and none of the three reads as its output. **The rule this yields is narrow and worth keeping:
-> on this page, load it before describing it.** Every one of the three was found by rendering, none by
-> reading, and two of the three had already shipped.
+> **EACH READS AS ITS INTENT; NONE READS AS ITS OUTPUT. ALL THREE WERE FOUND BY RENDERING, NONE BY
+> READING, AND TWO OF THE THREE HAD ALREADY SHIPPED.**
+>
+> A component called `SiteSearch`, a section called `demo-section`, a field called `canonical_size` —
+> every one of them names what it is for, and in each case what it *did* was something the name had no
+> room to say. **That is not a naming failure. A name can carry an intent or a state, and these carry
+> intent, which is the right choice for all three** — which is exactly why reading them cannot detect
+> the divergence. **The name is not lying and the code is not wrong; the output is simply not derivable
+> from either.**
+>
+> **NO OTHER SURFACE IN THIS CODEBASE HAS DONE THIS THREE TIMES**, and the two that shipped shipped
+> because a read stood in for a look. **The rule is narrow and worth keeping: on this page, load it
+> before describing it.**
 
 #### THE PREVIEW EMITTED NO TAGS, WHICH IS NOT A FAILING TAG CHECK
 
