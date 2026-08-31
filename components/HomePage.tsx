@@ -77,8 +77,21 @@ export function HomePage() {
             THE ITALIC IS RESTORED AND THE FONT LOADER CHANGED WITH IT. `not-italic` was
             cancelling a style the static page set deliberately; removing it alone would
             have produced a synthesised oblique, because no italic face was being loaded.
-            See app/layout.tsx. Item 525. */}
-        <h1 className="font-serif text-4xl md:text-6xl text-ink leading-tight mb-4">
+            See app/layout.tsx. Item 525.
+
+            `font-semibold` IS A RESTORATION AND IT IS LOAD-BEARING IN BOTH DIRECTIONS.
+            Nothing here set a weight, so the element took the user agent's
+            `h1 { font-weight: bold }` — 700 — where public/index.html specified 600. At
+            60px on a high-contrast display face that is the difference between elegant
+            and heavy, and it is why the h1 stopped looking like Cormorant while being
+            Cormorant.
+            
+            DO NOT DELETE IT WHEN ITEM 521 LANDS. Preflight sets `h1 { font-weight:
+            inherit }`, which takes this to the body's 400 — lighter than the UA default
+            and further from the 600 that was designed. The class is what makes the
+            weight correct under BOTH configurations, which is the only reason it can be
+            added before 521 is decided. Item 526. */}
+        <h1 className="font-serif font-semibold text-4xl md:text-6xl text-ink leading-tight mb-4">
           Your health &amp; beauty<br />routine. <em className="text-gold">Optimised.</em>
         </h1>
         <p className="text-base md:text-lg text-ink-light max-w-xl mb-7 leading-relaxed">

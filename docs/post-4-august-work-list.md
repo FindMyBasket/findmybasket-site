@@ -41617,6 +41617,30 @@ card  border-top-width: 0px   border-top-style: none   border-top-color: rgb(232
 > homepage is not using it"* — describe the repository accurately and the rendered site not at all. **The
 > homepage was using it. So was everything else. It has never been visible anywhere.**
 
+#### ★★ AND A SIBLING IN THE SAME FILE, FOUND 31 AUGUST: `font-sans` NAMES A FAMILY THAT IS NOT LOADED
+
+Not a Preflight defect, but the same shape — **a value that is correct as a string and wrong as a
+reference** — and it sits four lines from the one that is right:
+
+```ts
+// tailwind.config.ts
+sans:  ['"DM Sans"', 'sans-serif'],                    // literal    -- BROKEN
+serif: ['var(--font-cormorant)', 'Georgia', 'serif'],  // variable   -- correct
+```
+
+`next/font` loaded DM Sans as **`__DM_Sans_be8b38`**. Nothing on the page is called `"DM Sans"`, so
+`font-sans` falls through to the system sans-serif.
+
+> **IT IS ON EVERY FOOTER LINK ON EVERY REACT PAGE**, via `components/SiteLayout.tsx:20`. The body
+> inherits `var(--font-dm-sans)` from `globals.css` and is fine, which is why this has never been
+> visible: **only the elements that ask for the font explicitly do not get it.** The ones that say
+> nothing are correct.
+
+**FILED HERE RATHER THAN FIXED WHERE IT WAS FOUND.** It surfaced during item 525's h1 check and the fix
+is one line in `tailwind.config.ts` — `['var(--font-dm-sans)', 'sans-serif']` — but it changes the
+typeface of the footer on every React page, which belongs with the border decision and not inside a
+hero styling PR. **Same file, same class, same blast radius question.**
+
 #### THE SCOPE OF FIXING IT, MEASURED BY INJECTING PREFLIGHT AND READING THE HEIGHT BACK
 
 | page | before | after | change |
@@ -41946,12 +41970,14 @@ generic serif    444.5px
 
 **Three distinct widths, so the h1 is neither fallback. It is Cormorant.**
 
-> **AND THE SAME READ FOUND A LIVE INSTANCE OF THE DEFECT IT WENT LOOKING FOR.** `font-sans` resolves to
-> the literal `"DM Sans"`, which is not the family `next/font` loaded (`__DM_Sans_be8b38`), and
-> `components/SiteLayout.tsx:20` puts it on **every footer link on every React page on the site.** The
-> body inherits `var(--font-dm-sans)` from `globals.css` and is fine; anything with an explicit
-> `font-sans` class is not. **Second instance of the mechanism, found by checking a place it turned out
-> not to be.**
+> **AND THE SAME READ FOUND A LIVE INSTANCE OF THE DEFECT IT WENT LOOKING FOR, FOUR LINES AWAY.**
+> `font-sans` resolves to the literal `"DM Sans"`, which is not the family `next/font` loaded, and
+> `components/SiteLayout.tsx:20` puts it on **every footer link on every React page.** **Recorded in
+> item 521 with the border finding rather than fixed here** — same file, same class of defect, same
+> blast-radius question, and the fix changes the footer typeface on every React page.
+>
+> **THE CHECK WAS NEGATIVE AND THE READ WAS NOT WASTED.** Looking for a defect where it was not is what
+> put the two config lines side by side.
 
 #### ★★ WHY IT DOES NOT LOOK LIKE CORMORANT: THE WEIGHT, AND IT IS PREFLIGHT AGAIN
 
@@ -41966,11 +41992,16 @@ The page it replaced specified 600.** Cormorant Garamond is a high-contrast disp
 step is the difference between elegant and heavy, at 60px, on the largest element on the site.
 
 > **THIRD THING THE MISSING `@tailwind base` HAS CHANGED THE LOOK OF**, after the form controls and the
-> lists, and the first that is not a defect anyone would file. **Preflight would set `font-weight:
-> inherit` here and take it to 400, which is too light** — so this one is not fixed by item 521 landing.
-> It needs an explicit `font-semibold`, and it needs it whether 521 lands or not. **Reported, not
-> applied: it is a visual change to the largest element on the page and it was not one of the two asked
-> for.**
+> lists, and the first that is not a defect anyone would file.
+>
+> **★ AND THE ONLY ONE ITEM 521 LANDING WOULD MAKE WORSE.** Preflight sets `h1 { font-weight: inherit }`,
+> which takes this to the body's 400 — lighter than the user agent's 700 and further from the 600 that
+> was designed. **The page is currently wrong in one direction and 521 would make it wrong in the
+> other.** `font-semibold` is what makes it correct under both configurations, which is the only reason
+> it could be applied before 521 is decided.
+
+**APPLIED, `font-semibold` on the h1** — item 526, on Robbie's call: *"the weight is a restoration."*
+Nothing was chosen; a value the static page stated was reinstated where nothing had stated one.
 
 #### AND THE PORT CHANGED THE GOLD AS WELL AS CANCELLING THE ITALIC
 
@@ -41986,11 +42017,23 @@ the port            <em className="text-gold not-italic">                       
 
 **Two changes, not one** — the italic cancelled and the gold lightened by a full token. `gold` is the
 decorative gold and `gold-text` is the one the palette provides for type; item 520 used `gold-text` for
-the demo price for exactly this reason. **Also reported and not applied**: at 60px display size the
-lighter gold is defensible and may even be the better call, which makes it a decision rather than a
-correction.
+the demo price for exactly this reason.
 
-#### ★★★ THE ITALIC COULD NOT BE RESTORED BY REMOVING `not-italic`
+> **★ THE GOLD STAYS, AND THE REASONING IS THE LINE BETWEEN THE TWO CASES.** Robbie: *"at 60px the
+> lighter value is defensible, it has been looked at on a real screen, and reversing it on my judgement
+> would be substituting a decision for a restoration."*
+>
+> **THE WEIGHT AND THE GOLD ARRIVED BY THE SAME ACCIDENT AND ARE NOT THE SAME KIND OF THING.** Nothing
+> in the React h1 stated a weight, so a user agent supplied one; something in the React h1 stated a
+> colour, and it was a different colour from the one before it. **A value nobody chose can be restored.
+> A value somebody chose, that has been seen at size and works, is a decision** — and changing it
+> because an older file said otherwise is not restoring anything, it is overruling with extra steps.
+>
+> **`gold-text` REMAINS RIGHT FOR THE DEMO PRICE AND THAT IS NOT A CONTRADICTION.** That figure is
+> 30px body-adjacent type where `gold` measures about 2.1:1; this is a 60px display word. **The palette
+> separates the two tokens by role, and the roles genuinely differ here.**
+
+#### ★★★ THE CENTRE: THE CHANGE AS ASKED WOULD HAVE PRODUCED THE APPEARANCE OF THE CHANGE
 
 `app/layout.tsx` never asked for an italic face, and `next/font` defaults to `style: ['normal']`.
 
@@ -42003,9 +42046,15 @@ after    width of "Optimised" at 200px:  roman 835.4   italic 731.4
 slanting the roman because it has nothing else. Adding `style: ['normal', 'italic']` produced four real
 italic faces and a different set of advances.
 
-> **A SYNTHETIC OBLIQUE IS THE WORST CASE FOR THIS TYPEFACE SPECIFICALLY.** Cormorant's italic is a
+> **THE INSTRUCTION WAS "REMOVE `not-italic`", AND CARRYING IT OUT EXACTLY WOULD HAVE PRODUCED A
+> BROWSER-SLANTED ROMAN.** The word would have leaned. The diff would have been one class deleted. The
+> screenshot would have looked like the change had been made. **Nothing available at the point of
+> instruction distinguishes that outcome from the intended one** — not the code, not the class name, not
+> the rendered page at a glance.
+>
+> **AND A SYNTHETIC OBLIQUE IS THE WORST CASE FOR THIS TYPEFACE SPECIFICALLY.** Cormorant's italic is a
 > separate drawing — a true cursive with different letterforms — and it is the most characteristic thing
-> in the family. **Slanting the upright gives none of that while looking, from across a room, like it
+> in the family. **Slanting the upright gives none of it while looking, from across a room, like it
 > worked.** The same "nearly right" class as `font-sans` falling back to system sans, and the same class
 > as the borders: authored correctly, rendering as something else.
 
@@ -42015,10 +42064,15 @@ italic faces and a different set of advances.
 document.fonts.check('italic 600 60px __Cormorant_Garamond_07d15b')  ->  true, with no italic loaded
 ```
 
-> **`check()` ANSWERS "CAN THIS TEXT BE RENDERED", AND SYNTHESIS COUNTS AS YES.** The discriminator that
-> works is the width test above. **A check that cannot return false for the condition you care about is
-> not a check** — the fourth instance of that shape today, after the preview's zero tags, the unfocused
-> `:focus`, and the arithmetic.
+> **`check()` ANSWERS "CAN THIS TEXT BE RENDERED", AND SYNTHESIS COUNTS AS YES — SO THE HONEST READING
+> IS THAT IT WAS ANSWERING A DIFFERENT QUESTION CORRECTLY.** It is not broken and it did not lie. It was
+> asked "is there an italic face" by someone who typed "can you render this italic", and those are the
+> same sentence in the API and different questions in the world.
+>
+> **A CHECK THAT CANNOT RETURN FALSE FOR THE CONDITION YOU CARE ABOUT IS NOT A CHECK OF THAT CONDITION**
+> — the fourth today, after the preview's zero tags, the unfocused `:focus`, and the arithmetic. The
+> discriminator that works is the width test above, because advance widths are a property of the actual
+> glyphs and cannot be synthesised into agreement.
 
 **It costs one file, not four.** `next/font` declares `@font-face` for the whole weight × style cross
 product and the browser fetches lazily — measured on the live page beforehand, weight 500 had **0 of its
@@ -42037,10 +42091,14 @@ Robbie's read was *"the h1 only: `&` in a title tag reads as informal and the ca
 - **And that title already contains an ampersand** — item 495 put it there, in the same rewrite that
   produced the 78. **The informality concern was settled the other way, by the item the concern cites.**
 
-> **THE ANSWER WAS RIGHT AND THE MAP IT WAS DRAWN FROM WAS A MONTH OLD.** Both reasons describe the
-> site as it was before items 513, 515 and 523 moved the tagline out of the metadata and the metadata
-> off the static page. **A correct decision from stale premises is still worth checking, because the
-> next decision from the same premises may not be.**
+> **★ A RIGHT ANSWER DRAWN FROM A WRONG MAP.** Both reasons describe the site as it was a month ago,
+> before items 513, 515 and 523 moved the tagline out of the metadata and the metadata off the static
+> page — **and the second reason cites the very item that refutes the first.** Item 495 put the
+> ampersand in the title, in the same rewrite that produced the 78 the reason appeals to.
+>
+> **THE DECISION SURVIVED ON ITS OWN MERITS AND NEITHER STATED REASON SURVIVED AT ALL.** That is worth
+> writing down precisely because nothing went wrong: a correct outcome leaves no evidence that the
+> premises were checked, and the next decision from the same map has no reason to expect one.
 
 #### AND ONE OF MY OWN, CAUGHT BEFORE IT WAS RECORDED
 
@@ -42049,6 +42107,78 @@ change had not worked. It had. The filter was `f.family.includes('Cormorant_Gara
 from the **previous** build; the new one is `e9ff3d`.
 
 > **A PROBE PINNED TO A BUILD HASH REPORTS ZERO FOR THE NEXT BUILD, AND ZERO READS AS A FINDING.** It
-> was caught only because the width test in the same run said the opposite. **Two instruments
-> disagreeing is the cheapest error detection available**, and it is the third time today one has caught
-> the other.
+> was caught only because the width test in the same run said the opposite.
+>
+> **THIRD TIME TODAY ONE INSTRUMENT CAUGHT ANOTHER**, which makes it the pattern rather than an
+> anecdote:
+>
+> | | said | was caught by |
+> |---|---|---|
+> | the screenshot | the page looks unfinished | `getComputedStyle` naming the 3px border |
+> | `getComputedStyle` | no focus ring, six times | a screenshot of the focused field |
+> | the hash-pinned probe | zero italic faces | the width test in the same run |
+>
+> **TWO INSTRUMENTS DISAGREEING IS THE CHEAPEST ERROR DETECTION AVAILABLE** — cheaper than reasoning
+> about either, because it needs no theory of how the first one fails, only that the second answers the
+> same question by a different route. **All three today were caught in under an hour and none was caught
+> by thinking harder about the first reading.**
+
+### 526. A weight nobody set, and the line between a restoration and a decision
+
+**Raised:** 31 August 2026 · **Applied. One class. The reasoning is the item.**
+
+```
+h1 classes before   font-serif text-4xl md:text-6xl text-ink leading-tight mb-4     <- no weight
+computed            font-weight: 700          <- user agent `h1 { font-weight: bold }`
+public/index.html   .hero h1 { font-weight: 600 }
+h1 classes after    font-serif font-semibold text-4xl md:text-6xl …
+```
+
+**Nothing in the React h1 stated a weight, so the user agent supplied one.** At 60px on a high-contrast
+display face, 700 against 600 is the difference between elegant and heavy — and it is the whole of why
+the h1 stopped looking like Cormorant while being Cormorant. Item 525.
+
+#### ★★ THE PAGE WAS WRONG IN ONE DIRECTION AND ITEM 521 WOULD MAKE IT WRONG IN THE OTHER
+
+```
+today                 UA `font-weight: bold`      -> 700    too heavy
+after item 521        Preflight `inherit`         -> 400    too light
+with font-semibold    the class                   -> 600    correct under both
+```
+
+> **THIS IS THE FIRST OF THE PREFLIGHT CONSEQUENCES THAT LANDING ITEM 521 WOULD NOT FIX, AND THE FIRST
+> IT WOULD ACTIVELY WORSEN.** The borders appear, the bullets go, the form controls reset — all of those
+> are 521 doing its job. **A heading with no weight class is not waiting for a reset; it is waiting for
+> a value**, and both defaults available to it are wrong. **That is the only reason this could be applied
+> before 521 is decided:** the class makes it correct under both configurations, so it does not encode a
+> bet on which way 521 goes.
+
+Commented at the element accordingly — **do not delete `font-semibold` when 521 lands.**
+
+#### ★★★ AND THE GOLD DID NOT MOVE, WHICH IS THE POINT OF THE ITEM
+
+The same read found a second divergence on the same element: `public/index.html` used `--gold-text`
+(#8A6A30) and the port used `text-gold` (#C9A96E). **Both were reported. Only one was changed.**
+
+> Robbie: *"the gold stays. At 60px the lighter value is defensible, it has been looked at on a real
+> screen, and reversing it on my judgement would be substituting a decision for a restoration."*
+
+| | what the port did | what it is |
+|---|---|---|
+| **the weight** | stated nothing, so a user agent stated it | **a value nobody chose** — restorable |
+| **the gold** | stated `text-gold` | **a value somebody chose**, seen at size, working — a decision |
+
+> **THE TWO ARRIVED BY THE SAME ACCIDENT AND ARE NOT THE SAME KIND OF THING.** Both differ from the
+> static page; both surfaced in one grep; both are one class. **The distinction is not how the
+> divergence happened but whether anything is currently asserting the value.** Nothing asserts 700 —
+> it is what is left when no one speaks. Something asserts #C9A96E.
+>
+> **AND CHANGING IT BECAUSE AN OLDER FILE SAID OTHERWISE IS NOT RESTORING ANYTHING. IT IS OVERRULING
+> WITH EXTRA STEPS**, dressed as a restoration because a prior value happens to exist. **"The static
+> page did it this way" has been right three times today** — the demo card, the search field, the italic
+> — **which is exactly what makes it dangerous as a general licence.** A rule with a good record is the
+> one that gets applied past its edge.
+
+**`gold-text` remains correct for the demo price and that is not a contradiction.** That figure is 30px
+body-adjacent type where `gold` measures about 2.1:1; this is a 60px display word. The palette separates
+the two tokens by role and the roles genuinely differ.
