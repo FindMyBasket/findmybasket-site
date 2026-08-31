@@ -41313,3 +41313,172 @@ branch before pushing, not by anything automatic.**
 
 **Merged with a failing check: once. The correct count is zero.**
 
+
+### 519. `SiteSearch` is a trigger, not a field — and only the built page said so
+
+**Raised:** 31 August 2026 · **The homepage route is live at `/`; the `beforeFiles` rewrite is gone.**
+Item 513 built it, this records what building it found.
+
+#### ★ THE FINDING: THE COMPONENT I WAS TOLD TO MOUNT IS NOT A SEARCH BOX
+
+The approved plan was *"`SiteSearch` mounted once in the hero with the nav's version untouched."* It was
+built that way, and the first measurement came back with **zero visible inputs on the page**. The only
+two `<input>`s in the document were the cookie modal's hidden toggles.
+
+```
+components/SiteSearch.tsx
+  renders:  <button aria-label="Search">           <- always
+  the <input> lives inside:
+            <div class="fixed left-4 right-4 top-16 md:absolute ...">   <- only when open === true
+```
+
+> **`SiteSearch` RENDERS A BUTTON. Mounting it in the hero would have put a second *trigger* on the
+> first screen — the same click-to-reach-the-mechanic the static CTA already was, and the exact thing
+> this rebuild exists to remove.** The hero would have contained a button that opens a panel that
+> contains a field, one interaction deeper than the page it replaced, while reporting as "search in the
+> hero" in every description of it including mine.
+
+**The question that came with the instruction — *"what does the desktop double-search look like?"* — was
+malformed, and neither of us could see it from the code.** Two of a field is a layout question. Two of a
+trigger is not: it is one affordance duplicated, and the answer is that you do not ship it.
+
+#### AND A SECOND REASON, FOUND BY THE SAME READ
+
+The dropdown is `fixed left-4 right-4 top-16` on mobile — **anchored to the viewport, not to its
+trigger.** Two mounts therefore open **two panels in the same place**, stacked, regardless of where the
+triggers sit. The nav mount and a hero mount would have collided at the top of the screen.
+
+> **ONE READ OF THE BUILT PAGE PRODUCED BOTH OBJECTIONS.** Neither is visible in the component's
+> signature, which is `<SiteSearch />` and takes no props.
+
+#### WHAT SHIPPED INSTEAD, AND WHY IT IS BETTER THAN WHAT WAS APPROVED
+
+A plain `GET` form to `/search`:
+
+```tsx
+<form action="/search" method="get">
+  <input type="hidden" name="from" value="homepage_hero" />
+  <input type="text" name="q" required minLength={2} placeholder="Search products and brands…" />
+  <button type="submit">Search</button>
+</form>
+```
+
+| | `SiteSearch` mounted | the GET form |
+|---|---|---|
+| interactions to a query | **two** — click, then type | **one** — type |
+| needs hydration | **yes** — `open` is React state | **no** — the browser submits it |
+| with JavaScript off | **inert** | **works** |
+| entry point distinguishable | no | **`from=homepage_hero`** |
+
+> **`from` IS A QUERY PARAMETER, NOT A CUSTOM EVENT PARAM.** It lands in `page_location` on the `/search`
+> pageview and is readable in a standard GA4 report **without a registered custom dimension** — which
+> is the failure mode item 43 recorded, where a param ships, fires correctly, and stays unreadable
+> because only a human opening the admin page can tell. This one cannot go dark that way.
+> `app/search/page.tsx:23` already declares `from?: string` and ignores it; verified live returning 200.
+
+#### ★★★ TWO CORRECTIONS, AND WHY A SUBSTITUTED NUMBER IS THE WORSE KIND
+
+I reported the preview measurement as *"first interaction 1,581px → 417px"*. **Measuring the static page
+directly, rather than reading its section offsets, says otherwise:**
+
+```
+                          static /index.html      route /
+390x844   first field           342px               417px      <- 75px LOWER, not 1,164px higher
+1440x900  first field           484px               467px      <- 17px higher
+```
+
+**1,581px is `#how-it-works` — the first functional *block*, which is not the first interaction.** The
+static hero always had `<input type="search" name="q">` in it. **I substituted the number I had for the
+number I was asked for**, and the substitution flattered the change.
+
+> **A SUBSTITUTED NUMBER IS WORSE THAN A MISSING ONE, BECAUSE IT ANSWERS THE QUESTION ASKED AND NOTHING
+> MARKS IT AS A DIFFERENT MEASUREMENT.** A gap in a report invites the follow-up that closes it. A
+> plausible figure in the right slot closes the question instead — it is read, accepted, and quoted
+> onward, and the only thing that can dislodge it is someone independently measuring the same quantity.
+> **This one survived a report, a decision, and a deploy, and died the first time the number was taken
+> rather than recalled.**
+>
+> **THE FIRST-INTERACTION OFFSET IS NOT WHAT THIS REBUILD IMPROVED. THE DOCUMENT HEIGHT IS.** 11.82
+> screens → 3.53 at 390 is the whole of the gain, and it is large enough that it did not need the other
+> claim. **A real result does not need a borrowed one beside it.**
+
+**And the desktop double-search does exist — it is new, and I said it did not.**
+
+```
+static /index.html  1440   INPUT[field]@484 hero                      <- one affordance, no nav search
+route /             1440   BUTTON[trigger]@28 nav + INPUT[field]@467 hero   <- two
+```
+
+The static homepage carried **no nav search at all**; `SiteSearch` is part of `SiteNav`, which the static
+page does not use. **Moving the homepage onto the React shell is what introduced the second entry point.**
+It is a button and a field rather than two of the same thing, which is the defensible version — but the
+count went from one to two and the honest sentence is that, not "it does not exist."
+
+> **AND THE ZERO WENT INTO THE RECORD ON MY WORD.** Robbie recorded the double-search as not existing
+> because I reported it as not existing; nothing else in the session asserted it. **A wrong reading does
+> not stop at the report — it propagates into the register, which is the thing later work trusts instead
+> of re-measuring.**
+
+#### BOTH CORRECTED WITHIN THE DAY, AND BY MEASURING RATHER THAN RE-REASONING
+
+Neither correction came from re-reading the code or thinking harder about the earlier claim. Both came
+from running the same probe against the **old** page as well as the new one — the comparison the first
+measurement skipped, because the "before" numbers were already to hand from the 21 August snapshot.
+
+> **THE ERROR WAS USING A REMEMBERED BASELINE INSTEAD OF MEASURING ONE, AND THE FIX WAS MEASURING IT.**
+> Both wrong claims were about the static page, not the new page; every number taken from the new page
+> was right. **The half of a comparison that feels already known is the half that goes unmeasured**, and
+> a before/after has exactly one such half by construction.
+
+#### ★★★ THREE TIMES ON THIS PAGE THE BUILT SURFACE CONTRADICTED THE CODE
+
+| | the code said | the built page said |
+|---|---|---|
+| **`demo-section` fallback** (item 513) | the solver's output is the demo | the fallback had been serving, silently |
+| **the `<h1>`** (item 506) | a comment guarded the h1 against change | `canonical_size` had changed underneath it |
+| **`SiteSearch`** (this item) | `<SiteSearch />` — a search component | a button; the field is behind a click |
+
+> **EACH READS AS ITS INTENT; NONE READS AS ITS OUTPUT. ALL THREE WERE FOUND BY RENDERING, NONE BY
+> READING, AND TWO OF THE THREE HAD ALREADY SHIPPED.**
+>
+> A component called `SiteSearch`, a section called `demo-section`, a field called `canonical_size` —
+> every one of them names what it is for, and in each case what it *did* was something the name had no
+> room to say. **That is not a naming failure. A name can carry an intent or a state, and these carry
+> intent, which is the right choice for all three** — which is exactly why reading them cannot detect
+> the divergence. **The name is not lying and the code is not wrong; the output is simply not derivable
+> from either.**
+>
+> **NO OTHER SURFACE IN THIS CODEBASE HAS DONE THIS THREE TIMES**, and the two that shipped shipped
+> because a read stood in for a look. **The rule is narrow and worth keeping: on this page, load it
+> before describing it.**
+
+#### THE PREVIEW EMITTED NO TAGS, WHICH IS NOT A FAILING TAG CHECK
+
+Step 2 was *"socialTags wired and verified on the preview before the page reads as finished."* The first
+check on `/home-preview` found **zero** `og:` or `twitter:` tags — because `app/home-preview/page.tsx`
+exported no metadata, and the only route that carried it was `app/page.tsx`, which the rewrite made
+unreachable.
+
+> **CHECKING THE TAGS THERE WOULD HAVE BEEN A CHECK ON A SURFACE THAT CANNOT SERVE THEM.** The preview
+> existed to measure a page the rewrite hid; it inherited the hiding. **A zero from an instrument that
+> was never wired to the thing is not a measurement of the thing** — the same shape as item 255's
+> gone-ids-drift printing "No drift" from empty variables. Fixed by giving the preview the same
+> `socialTags` call plus `noindex`, so the check had something to look at.
+
+#### VERIFIED ON PRODUCTION AFTER THE FLIP
+
+```
+/                    200, serves app/page.tsx      (__NEXT_DATA__ present, hero form present)
+og + twitter tags    13   (9 og + 4 twitter)       static page had 11 — gains og:image:alt, twitter:image
+noindex              0 occurrences
+/home-preview        404                            deleted with the flip
+/index.html          200                            still served, still canonical -> `/`. Item 515.
+390x844              2,980px   3.53 screens         was 9,978px / 11.82
+1440x900             2,184px   2.43 screens         was 6,325px / 7.03
+```
+
+**`/index.html` still declares `<link rel="canonical" href="https://www.findmybasket.co.uk/">` — pointing
+at a page that is no longer its content — and 12 hrefs across 8 static pages, plus `SiteNav.tsx:91` and
+`RoutineBuilder.tsx:1412`, still link to it.** Item 515 was cosmetic while `/` served the same bytes.
+**The flip is what makes it a defect: the site logo now leads back to the homepage this replaced.**
+Recorded, not fixed — a redirect `/index.html → /` closes all 14 in one line and is a separate act.
