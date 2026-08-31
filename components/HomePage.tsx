@@ -146,27 +146,30 @@ export function HomePage() {
           bordered are warm-white on cream and the "border" is a 1% background step.
           `border-solid` is the one utility that makes them draw. Item 521.
 
-          COMPACTED FOR MOBILE, DELIBERATELY. The first build of this block took 390x844
-          from 3.53 screens to 3.72, and the whole justification for the route is 11.82 ->
-          3.53. Padding was cut rather than the regression reported: the routine renders
-          as ONE divided container on mobile and only becomes three separate tiles at md,
-          because three bordered boxes cost ~70px of vertical that a divided list does not.
+          COMPACTED FOR MOBILE, DELIBERATELY, IN TWO PASSES. The first build of this block
+          took 390x844 from 3.53 screens to 3.72; the second, to 3.59. The whole
+          justification for this route is 11.82 -> 3.53, so padding was cut rather than the
+          regression reported. Two levers, in order of size: the routine renders as ONE
+          divided container on mobile and only becomes three separate tiles at md, because
+          three bordered boxes cost ~70px of vertical that a divided list does not; then
+          every mobile padding step went down one notch. EVERY md: VALUE IS UNTOUCHED —
+          the screen budget is a mobile constraint and desktop should not pay for it.
 
           gold-text (#8A6A30) FOR THE PRICE, NOT gold (#C9A96E). gold on warm-white is
           about 2.1:1. The palette already separates the two for exactly this reason. */}
-      <section className="max-w-site mx-auto px-6 py-8 md:py-12">
+      <section className="max-w-site mx-auto px-6 py-6 md:py-12">
         <p className="text-xs uppercase tracking-widest text-gold font-medium mb-2 md:mb-3">See it in action</p>
         {demo.kind === 'demo' ? (
           <>
             <h2 className="font-serif text-2xl md:text-3xl text-ink mb-4 md:mb-6">
               A real routine, priced two ways
             </h2>
-            <div className="rounded-2xl border border-solid border-border bg-warm-white p-4 md:p-8">
+            <div className="rounded-2xl border border-solid border-border bg-warm-white p-3.5 md:p-8">
               <p className="text-[11px] uppercase tracking-widest text-gold font-medium mb-2 md:mb-3">
                 Your routine
               </p>
               <ul
-                className="list-none p-0 m-0 mb-4 md:mb-6 rounded-xl border border-solid border-border
+                className="list-none p-0 m-0 mb-3 md:mb-6 rounded-xl border border-solid border-border
                            bg-cream divide-y divide-solid divide-border
                            md:grid md:grid-cols-3 md:gap-3 md:rounded-none md:border-0
                            md:bg-transparent md:divide-y-0"
@@ -174,7 +177,7 @@ export function HomePage() {
                 {demo.products.map(p => (
                   <li
                     key={p.name}
-                    className="px-3.5 py-2.5 md:px-4 md:py-3 md:rounded-xl md:border md:border-solid
+                    className="px-3.5 py-2 md:px-4 md:py-3 md:rounded-xl md:border md:border-solid
                                md:border-border md:bg-cream"
                   >
                     <div className="text-[13px] font-medium text-ink leading-snug">{p.brand}</div>
@@ -185,7 +188,7 @@ export function HomePage() {
 
               {/* THE WINNER. One retailer, so one delivery charge — which is the whole
                   point, and the retailer names carry it without a word of new copy. */}
-              <div className="relative overflow-hidden rounded-xl border border-solid border-gold/40 bg-gold/[0.08] px-4 py-3 md:px-6 md:py-4 mb-2">
+              <div className="relative overflow-hidden rounded-xl border border-solid border-gold/40 bg-gold/[0.08] px-4 py-2.5 md:px-6 md:py-4 mb-1.5">
                 <span className="absolute top-0 right-0 bg-gold text-ink text-[10px] font-bold tracking-widest px-3 py-1 rounded-bl-xl">
                   BEST
                 </span>
@@ -200,7 +203,7 @@ export function HomePage() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-solid border-border bg-cream px-4 py-3 md:px-6 md:py-4">
+              <div className="rounded-xl border border-solid border-border bg-cream px-4 py-2.5 md:px-6 md:py-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-4">
                   <div>
                     <div className="text-[15px] font-medium text-ink">{demo.worse.retailer}</div>
@@ -215,7 +218,7 @@ export function HomePage() {
                 </div>
               </div>
 
-              <p className="mt-4 pt-3 md:mt-5 md:pt-4 border-t border-solid border-border text-sm text-ink-light">
+              <p className="mt-3 pt-2.5 md:mt-5 md:pt-4 border-t border-solid border-border text-sm text-ink-light">
                 Same products. <strong className="text-ink font-medium">{money(demo.gap)}</strong> apart
                 once delivery is counted.
               </p>
