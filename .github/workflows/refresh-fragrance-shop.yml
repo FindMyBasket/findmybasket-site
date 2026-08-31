@@ -33,10 +33,15 @@ name: fragrance shop census
   workflow_dispatch:
     inputs:
       remote_dir:
-        description: 'SFTP directory holding the feed. Leave EMPTY to list and report only.'
+        description: 'SFTP directory holding the feed. Leave EMPTY to discover it by listing.'
         required: false
         default: ''
         type: string
+      list_only:
+        description: 'Stop after locating the feed. Use for the first run so the directory is READ before anything is measured against it.'
+        required: false
+        default: true
+        type: boolean
       note:
         description: 'Why you are running it (appears in the run summary)'
         required: false
@@ -126,8 +131,14 @@ jobs:
           echo "found_dir=$FOUND" >> "$GITHUB_OUTPUT"
           echo "FEED DIRECTORY: $FOUND"
 
+      # ── LIST-ONLY STOPS HERE ──────────────────────────────────────────────────
+      #    The first dispatch reports where the feed is and does nothing with it, so
+      #    the directory is established by reading rather than by a run that also
+      #    consumed it. A path that turns out to be wrong should cost a listing, not
+      #    a census whose numbers then have to be re-examined for whether they came
+      #    from the right file.
       - name: Download the feed
-        if: steps.locate.outputs.found_dir != ''
+        if: steps.locate.outputs.found_dir != '' && inputs.list_only != true
         env:
           SFTP_USER: ${{ secrets.RAKUTEN_SFTP_USER }}
           SFTP_PASSWORD: ${{ secrets.RAKUTEN_SFTP_PASSWORD }}
@@ -149,7 +160,7 @@ jobs:
           test -n "$(ls feed/*.xml 2>/dev/null)" || { echo "::error::no XML after download -- cannot_run"; exit 2; }
 
       - name: Census
-        if: steps.locate.outputs.found_dir != ''
+        if: steps.locate.outputs.found_dir != '' && inputs.list_only != true
         env:
           SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
