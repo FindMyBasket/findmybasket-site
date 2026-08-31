@@ -42,6 +42,7 @@ const money = (n: number) => `£${n.toFixed(2)}`;
 export function HomePage() {
   return (
     <SiteLayout>
+      <div className="fmb-home">
       {/* ── HERO ─────────────────────────────────────────────────────────────
           A PLAIN GET FORM TO /search, NOT SiteSearch. Measured on the preview: SiteSearch
           renders a BUTTON, and its <input> exists only inside a dropdown once `open` is
@@ -55,7 +56,12 @@ export function HomePage() {
           
           A form needs no hydration, works with JavaScript off, and puts a REAL FIELD at the
           top of the page. `from=homepage_hero` so the existing SearchEventTracker can tell
-          this entry point apart. The nav's SiteSearch is untouched. Item 513. */}
+          this entry point apart. The nav's SiteSearch is untouched. Item 513.
+
+          IT SHIPPED UNSTYLED AND THAT WAS NOT AN OMISSION HERE EITHER. public/index.html
+          carried a full rule set for this field — pill radius, warm-white fill, gold focus
+          ring — and the port dropped it, like everything else without a number attached.
+          Item 520. */}
       <section className="max-w-site mx-auto px-6 pt-10 pb-12 md:pt-16">
         <p className="text-xs uppercase tracking-widest text-gold font-medium mb-4">
           Compare across UK retailers · delivery included
@@ -68,25 +74,45 @@ export function HomePage() {
           retailer&rsquo;s own delivery terms in the total.
         </p>
 
-        <form action="/search" method="get" className="max-w-xl mb-4">
+        {/* TWO PILLS AND A GAP, WHICH IS public/index.html's `.hero-form`, NOT A WRAPPER
+            WITH A FIELD INSIDE IT. `padding: 16px 24px; border: 1px solid var(--border);
+            border-radius: 100px; background: var(--warm-white)` on the input itself, and
+            `.btn-primary` beside it. Item 523.
+
+            `font-[inherit]`, NOT `font-sans`. Without Preflight an <input> does not
+            inherit font-family — measured: the placeholder rendered in Arial — and
+            `font-sans` resolves to the literal "DM Sans", which is NOT what next/font
+            loaded it as. `inherit` takes the body's `var(--font-dm-sans)` and cannot drift
+            from it.
+
+            `min-w-0` ON THE INPUT SO THE ROW NEVER WRAPS. At 390 the column is 342px and
+            a wrapped button costs ~66px of a budget that has 4px in it.
+
+            THE FOCUS RING IS THE POINT, NOT AN EXTRA. `outline-none` on its own removes
+            the only keyboard indicator the field has; the static page replaced it with
+            `border-color: gold` plus a 4px gold ring, and so does this. */}
+        <form action="/search" method="get" className="flex gap-3 max-w-2xl mb-4">
           <input type="hidden" name="from" value="homepage_hero" />
-          <div className="flex items-center gap-2 bg-warm-white border border-border rounded-full px-5 py-3">
-            <input
-              type="text"
-              name="q"
-              required
-              minLength={2}
-              placeholder="Search products and brands…"
-              aria-label="Search products and brands"
-              className="w-full bg-transparent text-sm text-ink placeholder:text-ink-light outline-none"
-            />
-            <button
-              type="submit"
-              className="shrink-0 bg-ink text-cream text-sm px-5 py-2 rounded-full hover:bg-gold transition-colors"
-            >
-              Search
-            </button>
-          </div>
+          <input
+            type="text"
+            name="q"
+            required
+            minLength={2}
+            placeholder="Search products and brands…"
+            aria-label="Search products and brands"
+            className="flex-1 min-w-0 appearance-none rounded-full border border-border bg-warm-white
+                       px-5 md:px-6 py-4 font-[inherit] text-[15px] text-ink outline-none
+                       placeholder:text-[#AAA8A4] transition-[border-color,box-shadow] duration-200
+                       focus:border-gold focus:shadow-[0_0_0_4px_rgba(201,169,110,0.12)]"
+          />
+          <button
+            type="submit"
+            className="shrink-0 appearance-none rounded-full bg-ink px-6 md:px-8 py-4 font-[inherit]
+                       text-[15px] font-medium text-cream transition-[background-color,transform]
+                       duration-200 hover:bg-gold hover:-translate-y-0.5"
+          >
+            Search
+          </button>
         </form>
 
         <p className="text-sm text-ink-light">
@@ -166,7 +192,7 @@ export function HomePage() {
 
           gold-text (#8A6A30) FOR THE PRICE, NOT gold (#C9A96E). gold on warm-white is
           about 2.1:1. The palette already separates the two for exactly this reason. */}
-      <section className="fmb-demo max-w-site mx-auto px-6 py-6 md:py-12">
+      <section className="max-w-site mx-auto px-6 py-6 md:py-12">
         <p className="text-xs uppercase tracking-widest text-gold font-medium mb-2 md:mb-3">See it in action</p>
         {demo.kind === 'demo' ? (
           <>
@@ -289,6 +315,7 @@ export function HomePage() {
           Build your routine →
         </Link>
       </section>
+      </div>
     </SiteLayout>
   );
 }
