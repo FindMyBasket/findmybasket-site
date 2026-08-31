@@ -40262,7 +40262,7 @@ that dependency; no test asserts it; the two files do not import each other.
 > does** — it is the only thing standing between "make it consistent" and a silent regression on
 > another surface.
 
-#### ★★ AND THE DEPENDENCY IT NAMED WAS NOT THE ONE THAT MOVED
+#### ★★ THE ITEM'S CENTRE: THE COMMENT GUARDED ONE DIRECTION AND THE OTHER SIDE MOVED
 
 **The comment was answered rather than assumed, as it asked. The answer is that the guard is dormant.**
 
@@ -40277,10 +40277,25 @@ The comment was written when `canonical_size` held the **unit** size, so the chi
 products and the guard fired. **The column now holds the pack total, so the equality the guard tests is
 never true and it suppresses nothing.** The 446 is historical.
 
-> **IT ASKED TO BE CONSULTED IF THE `<h1>` CHANGED, AND THE COLUMN CHANGED UNDERNEATH IT INSTEAD.** The
-> note guarded one direction and the other side moved. **A dependency written down is still only
-> written down in the direction its author was worried about** — which is not an argument against
-> writing it, since the note is why the h1 was not routed through `displayProductTitle` regardless.
+> **IT ASKED TO BE CONSULTED IF THE `<h1>` CHANGED. `canonical_size` CHANGED UNDERNEATH IT INSTEAD.**
+>
+> **A DEPENDENCY WRITTEN DOWN IS ONLY WRITTEN DOWN IN THE DIRECTION ITS AUTHOR WAS WORRIED ABOUT.** The
+> author of line 525 was worried about the title being tidied — a change a person makes deliberately —
+> and wrote the tripwire there. **The column moved on its own, through an import, with nobody reading
+> this file at all.**
+>
+> **AND IT CUTS BOTH WAYS, WHICH IS WHY THIS IS THE STRONGEST VERSION OF THE PATTERN:**
+>
+> | | |
+> |---|---|
+> | **right about the consequence** | routing the `<h1>` through `displayProductTitle` WOULD strip the brand prefix |
+> | **wrong about the trigger** | the `<h1>` never changed; the column did, years of imports ago |
+> | **and it still worked** | **it prevented the exact change it existed to prevent, today** |
+>
+> **A note can be wrong about why it will be needed and still be the only thing that stops the
+> mistake.** Its value was not the accuracy of its prediction — **it was that it named a relationship
+> nothing else in the codebase records.** No type expresses it, no test asserts it, and the two files
+> do not import each other.
 >
 > **Left in place and DATED rather than deleted.** The guard is still correct for the shape it
 > describes; if `canonical_size` reverts, it fires again. **Deleting a dormant guard because it is
