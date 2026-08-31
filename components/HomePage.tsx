@@ -117,7 +117,29 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── THE DEMO — the only block that shows rather than tells ──────────── */}
+      {/* ── THE DEMO — the only block that shows rather than tells ──────────────
+          RESTYLED, NOT REBUILT. Item 520. Same section, same copy, same artefact
+          fields — `products[]`, `best`, `worse`, `gap` are all `lib/homepage-demo.json`
+          carries and nothing below asks for a field that does not exist.
+
+          THE STYLING IS public/index.html's OWN, TRANSLATED. The static page this
+          replaced had `.demo-basket.best` in a gold border over a gold/8% fill with a
+          BEST corner tag, `.basket-price` in serif `--gold-text`, and `.basket-saving`
+          in sage. The port carried the content and dropped all of it. These are that
+          rule set in Tailwind, not a new direction.
+
+          TWO SUB-LABELS RESTORED. "Whole routine, delivery included" and "Each item at
+          its best price" are `.basket-items` from the static page, dropped in the same
+          port. Without them the block is two numbers; with them it is a comparison.
+
+          `list-none p-0 m-0` IS A SCOPED RESET, AND IT IS LOAD-BEARING. app/globals.css
+          has no `@tailwind base`, so Preflight never runs and a bare <ul> keeps the
+          user-agent's `list-style: disc` and 40px indent — which is why this block
+          rendered as a bullet list. Item 521 carries the site-wide fix; this does not
+          depend on it landing.
+
+          gold-text (#8A6A30) FOR THE PRICE, NOT gold (#C9A96E). gold on warm-white is
+          about 2.1:1. The palette already separates the two for exactly this reason. */}
       <section className="max-w-site mx-auto px-6 py-12">
         <p className="text-xs uppercase tracking-widest text-gold font-medium mb-3">See it in action</p>
         {demo.kind === 'demo' ? (
@@ -125,29 +147,57 @@ export function HomePage() {
             <h2 className="font-serif text-2xl md:text-3xl text-ink mb-6">
               A real routine, priced two ways
             </h2>
-            <div className="rounded-2xl border border-border bg-warm-white p-6">
-              <ul className="mb-6 space-y-1">
+            <div className="rounded-2xl border border-border bg-warm-white p-5 md:p-8">
+              <p className="text-[11px] uppercase tracking-widest text-gold font-medium mb-3">
+                Your routine
+              </p>
+              <ul className="list-none p-0 m-0 grid gap-2 md:grid-cols-3 md:gap-3 mb-6">
                 {demo.products.map(p => (
-                  <li key={p.name} className="text-sm text-ink-light">
-                    <span className="text-ink">{p.brand}</span> — {p.name}
+                  <li
+                    key={p.name}
+                    className="rounded-xl border border-border bg-cream px-4 py-3"
+                  >
+                    <div className="text-[13px] font-medium text-ink">{p.brand}</div>
+                    <div className="text-[11px] text-ink-light leading-snug mt-0.5">{p.name}</div>
                   </li>
                 ))}
               </ul>
-              <div className="flex flex-wrap gap-6">
-                <div>
-                  <div className="text-xs uppercase tracking-widest text-gold mb-1">Best value, delivered</div>
-                  <div className="font-serif text-2xl text-ink">{money(demo.best.delivered)}</div>
-                  <div className="text-sm text-ink-light">{demo.best.retailer}</div>
-                </div>
-                <div>
-                  <div className="text-xs uppercase tracking-widest text-ink-light mb-1">Cheapest goods, delivered</div>
-                  <div className="font-serif text-2xl text-ink-light">{money(demo.worse.delivered)}</div>
-                  <div className="text-sm text-ink-light">{demo.worse.retailer}</div>
+
+              {/* THE WINNER. One retailer, so one delivery charge — which is the whole
+                  point and is carried by the retailer names alone. */}
+              <div className="relative overflow-hidden rounded-xl border border-gold/40 bg-gold/[0.08] px-4 py-4 md:px-6 mb-2.5">
+                <span className="absolute top-0 right-0 bg-gold text-ink text-[10px] font-bold tracking-widest px-3 py-1 rounded-bl-xl">
+                  BEST
+                </span>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4 pr-14 sm:pr-0">
+                  <div>
+                    <div className="text-[15px] font-medium text-ink">{demo.best.retailer}</div>
+                    <div className="text-[13px] text-ink-light mt-0.5">Whole routine, delivery included</div>
+                  </div>
+                  <div className="font-serif text-3xl text-gold-text leading-none shrink-0">
+                    {money(demo.best.delivered)}
+                  </div>
                 </div>
               </div>
-              <p className="mt-5 text-sm text-ink-light">
-                Same products. <strong className="text-ink">{money(demo.gap)}</strong> apart once
-                delivery is counted.
+
+              <div className="rounded-xl border border-border bg-cream px-4 py-4 md:px-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
+                  <div>
+                    <div className="text-[15px] font-medium text-ink">{demo.worse.retailer}</div>
+                    <div className="text-[13px] text-ink-light mt-0.5">Each item at its best price</div>
+                  </div>
+                  <div className="sm:text-right shrink-0">
+                    <div className="font-serif text-3xl text-ink-light leading-none">
+                      {money(demo.worse.delivered)}
+                    </div>
+                    <div className="text-[12px] text-sage mt-1">{money(demo.gap)} more, delivered</div>
+                  </div>
+                </div>
+              </div>
+
+              <p className="mt-5 pt-4 border-t border-border text-sm text-ink-light">
+                Same products. <strong className="text-ink font-medium">{money(demo.gap)}</strong> apart
+                once delivery is counted.
               </p>
             </div>
           </>
