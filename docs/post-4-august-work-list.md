@@ -42209,12 +42209,24 @@ The old strip was rebuilt from `public/index.html`'s own numbers — 36px card, 
 — and re-measured at **+245px** against the **243** on record from an entirely separate measurement
 weeks earlier.
 
-> **A CALIBRATION FRAME IS THE CHEAPEST WAY TO KNOW A MEASUREMENT IS COMPARABLE.** The other four
-> numbers are only meaningful against the 243 everyone remembers, and nothing else in the exercise
-> would have caught a systematically wrong rig — a mis-set viewport, a missing font, an unloaded image.
-> **Reproducing a known quantity costs one extra frame and converts four unverified numbers into four
-> verified ones.** It is the same move as the canary fixture in `supplement-type-fixtures.yml`: prove
-> the instrument can produce the answer you already know.
+> **★ THE METHOD, AND IT IS WORTH REUSING: MEASURE ONE THING WHOSE ANSWER IS ALREADY KNOWN.**
+>
+> The 243 was taken weeks earlier, by a different route, for a different purpose. The 245 came from a
+> rebuild off `public/index.html`'s own numbers on today's rig. **Two independent routes to the same
+> quantity agreeing to within a pixel is what makes the other four numbers comparable to it** — and
+> without it, all five would have been internally consistent and jointly wrong.
+>
+> **NOTHING ELSE IN THE EXERCISE COULD HAVE CAUGHT A SYSTEMATICALLY WRONG RIG.** A mis-set viewport, a
+> font that did not load, an image still fetching — each of those shifts every frame by the same amount
+> and leaves the *comparison* looking perfectly sensible. **The four options would have ranked
+> correctly and every absolute number would have been wrong**, which is the failure a table of deltas
+> cannot show you.
+>
+> **IT COSTS ONE FRAME.** A calibration frame is the cheapest way to know a measurement is comparable,
+> and the only cheap way to detect a whole-rig error. Same move as the canary fixture in
+> `supplement-type-fixtures.yml` — **prove the instrument can produce the answer you already know,
+> before trusting it on the ones you do not.** Reusable wherever several measurements are being
+> compared: include one whose value is already on record.
 
 #### ★★ OPTION B FAILED ITS OWN CONSTRAINT, AND THAT IS THE RESULT RATHER THAN A DEAD END
 
@@ -42304,8 +42316,19 @@ rather than implied:**
 same file. That set takes `active = true` alone because it answers *whose offers count in a comparison*,
 and an active retailer we have stopped linking to still has real prices in the table. This one answers
 *how many we tell a stranger about*, and a retailer we cannot send anyone to must not be in that
-sentence. **Two predicates, two questions, one file, and the comment says which is which** — the
-alternative is a third definition invented later by someone who found only one of them.
+sentence.
+
+> **★★ TWO PREDICATES, FOUR LINES APART, EACH COMMENTED WITH THE QUESTION IT ANSWERS. THAT IS THE
+> MITIGATION FOR A HAZARD THIS CODEBASE ALREADY HAS A NAME FOR.** The match-key twin shape — the same
+> rule expressed twice with nothing forcing the two to agree — is cited twice in this list as the thing
+> it keeps paying for. **The usual responses are to unify them or to accept the drift. Neither applies
+> here: the two predicates SHOULD differ, because they answer different questions.**
+>
+> **SO THE DEFENCE IS NOT UNIFICATION, IT IS ADJACENCY PLUS A LABEL.** The next person needing a
+> retailer set finds both within four lines and a sentence saying which is which. **A third definition
+> gets invented by someone who found exactly one of them and could not tell whether it was the one they
+> wanted** — and the only thing that reliably prevents that is the pair being impossible to encounter
+> separately.
 
 **Either test alone has a hole:** Superdrug is `active = false` with 9,375 live priced rows still in the
 table; **Branded Beauty carried an `unlisted_reason` while still `active = true`**, unlisted 30 July,
@@ -42317,8 +42340,14 @@ three days *before* the flip.
 not a credible reading of this table — **so zero means the instrument broke, not that the answer is
 zero.** The hero renders nothing when it is null.
 
-> **"0 UK retailers" IS WORSE THAN NO SENTENCE**, and an empty result and a broken query must not look
-> the same. Item 194's `cannot_run` contract, applied to a headline.
+> **A FALLBACK THAT STATES SOMETHING FALSE IS WORSE THAN ONE THAT STATES NOTHING.** "0 UK retailers"
+> would tell a visitor the site carries nothing — the exact opposite of what the line exists to say, and
+> more damaging than the absence it replaces. **An absent sentence costs a stranger one unanswered
+> question. A wrong one costs them the page.**
+>
+> **AND AN EMPTY RESULT AND A BROKEN QUERY MUST NOT LOOK THE SAME.** Item 194's `cannot_run` contract,
+> applied to a headline rather than a check: the only reading of zero that is available here is
+> "something failed", so zero is routed to silence rather than to prose.
 
 #### ★★★ AND THE NUMBER IS NEVER TYPED
 
@@ -42355,3 +42384,70 @@ with the correct title the whole time.**
 > an assumption about the output's form, returning zero, and zero reading as a result. **Third time
 > today, and the first two were caught by a second instrument.** These two were caught by looking at
 > the raw response, which is the same move at a lower level.
+
+### 529. The homepage thread closes
+
+**Raised:** 31 August 2026 · **Phase 5, started and finished in two days. Items 513–528.**
+
+```
+                      static        after 513      now
+390x844               9,978px       2,980px        2,989px
+                      11.82 screens 3.53           3.54
+first interaction     342px         417px          398px
+1440x900              6,325px       2,184px        2,546px
+                      7.03 screens  2.43           2.83
+og + twitter tags     11            13             13
+```
+
+**11.82 screens to 3.54.** A real search field at 398px, the demo styled from the static page's own rule
+set, the hero photographed, the italic restored with a real face behind it, and the proof line derived
+rather than typed. **`/` is a Next route; `/index.html` 308s to it.**
+
+#### WHAT THE THREAD PRODUCED THAT IS NOT THE PAGE
+
+Four findings that outlive it, each recorded where it belongs:
+
+| | |
+|---|---|
+| **the port dropped the styling** (520) | it carried the content and the measurement; everything it kept had a number attached |
+| **86 borders draw nothing** (521) | `.border` sets a width and no style, and the site has never had Preflight |
+| **the instrument follows the property** (523, 524) | `getComputedStyle` exactly right for a border and exactly wrong for a focus ring, within the hour |
+| **the calibration frame** (527) | measure one thing whose answer is already known, or a whole-rig error is invisible |
+
+#### ★★ AND THE PATTERN THAT RAN THROUGH ALL OF IT: A QUERY THAT CANNOT SEE THE THING IT IS LOOKING FOR
+
+**Six times in two days, and every one presented as a finding about the world rather than about the
+search:**
+
+| | the instrument said | the truth |
+|---|---|---|
+| the preview's social tags (519) | zero og/twitter tags | the route carrying them was unreachable |
+| the focus ring (523) | absent, six readings | present; the window was not focused |
+| `document.fonts.check` (525) | italic available | synthesis counts as yes |
+| the font-hash probe (525) | zero italic faces | the filter was pinned to the previous build |
+| `grep '\|500'` (528) | the deploy is 500ing | `og:image:width content="2500"` |
+| `grep '<strong…>13 UK retailers'` (528) | the count is missing | React emits `13<!-- --> UK retailers` |
+
+> **THE COMMON SHAPE IS A NEGATIVE FROM AN INSTRUMENT THAT COULD NOT HAVE RETURNED A POSITIVE**, and in
+> every case the negative was more interesting than the truth — a missing tag, a dead ring, a broken
+> deploy. **A false negative arrives dressed as a discovery, which is why it gets believed and acted
+> on**; I pulled Vercel runtime logs over one of them.
+>
+> **THE LAST THREE ARE THE SAME MECHANISM AT THREE LEVELS**: a pattern pinned to an assumption about the
+> output's form — a build hash, contiguous text, contiguous text again. **And the fix was identical
+> every time: print the surrounding bytes instead of testing a hypothesis about them.**
+>
+> **TWO INSTRUMENTS DISAGREEING CAUGHT THREE OF THE SIX** (item 525's table). Looking at the raw
+> response caught two more. **None was caught by reasoning harder about the first reading.**
+
+#### WHAT REMAINS
+
+| | |
+|---|---|
+| **item 521** | the global `@tailwind base`. **Its own act.** The reflow table plus 86 border classes plus the `font-sans` literal — it changes what every card on the site looks like and the footer typeface on every React page. |
+| **item 514** | `#roadmap` argues for a positioning the tagline now states. Redundancy, not error. |
+| **item 516** | the homepage JSON-LD advertises a `SearchAction` path `robots.txt` forbids. |
+
+**Also still open and unrelated:** the barcode merge programme, paused with `docs/barcode-merge-programme.md`
+carrying its state; job two's tier 2 promotion, 198 candidates unread; and Robbie's `curl` for the
+recategorise dry run.
