@@ -40839,5 +40839,101 @@ the prediction has never fallen outside its stated range.** That is enough to ac
 > brand behaves unlike its category, which is the only result here that would be interesting.**
 > Reporting the sitting as one number would discard exactly the signal item 510 was built to read.
 
-**Result follows once run.**
+#### THE RESULT: 0 OF 68, BOTTOM OF THE RANGE ON EVERY BRAND
+
+```
+predicted at 9788240, before reading
+Philip Kingsley  25 groups   predicted 0-1   ACTUAL 0
+Ultrasun         23 groups   predicted 0-1   ACTUAL 0
+Kerastase        20 groups   predicted 0-1   ACTUAL 0
+                 68 groups · 121 rows removed · 0 orphans
+                 ONE call · 192 paths · 3 brand paths · request 10974
+```
+
+> **NOTHING BEHAVED UNLIKE ITS CATEGORY, AND THAT IS A RESULT RATHER THAN AN ABSENCE.** Per-brand
+> reporting exists to detect one brand diverging from its category. **A divergence can only be found by
+> looking for it, and it did not occur** — a sitting total of 0 would have said the same thing while
+> being unable to rule it out.
+
+#### ★★ THE WEEK'S FINDING: READING A BRAND COMPLETELY ALSO *RELEASES* HOLDS
+
+```
+756848462301  Family SPF30 100ml   +  Super Sensitive Family SPF 30 100ml
+756848462318  Family SPF30 150ml   +  Super Sensitive Family SPF30 150ml
+756848462363  Family SPF30 400ml   +  Super Sensitive Family SPF 30 400ml   <- item 503 HELD this
+756848462707  Extreme SPF50+ 100ml +  Ultra Sensitive Extreme SPF50+ 100ml
+756848462714  Extreme SPF50+ 150ml +  Ultra Sensitive Extreme SPF50+ 150ml
+756848462769  Extreme SPF50+ 400ml +  Ultra Sensitive Extreme SPF 50+ 400ml
+```
+
+**Six groups. Every one paired. Every pair at the same size. Two lines, three sizes each.** If
+`Super Sensitive Family` were a separate SKU it would have its own barcode and at least one group would
+carry one variant alone. **Six-for-six symmetry is a naming convention, and it cannot be seen from one
+group.**
+
+> **THE SAME MECHANISM AS THE TOOTSIE PROOF, RUNNING THE OTHER WAY: THE EVIDENCE IS NOT IN THE GROUP,
+> IT IS IN THE SET.** Where Tootsie's set CREATED a hold, Ultrasun's set DISSOLVED three.
+>
+> **AND THE EPISTEMICS MUST NOT BE COLLAPSED. THE HOLD WAS CORRECT ON THE INFORMATION AVAILABLE AND
+> WRONG ON THE FACTS.** Reading one group, *Family* against *Super Sensitive Family* is genuinely
+> ambiguous and holding was the right call. **A decision that was right to make and produced the wrong
+> answer is a different thing from a mistake** — and the difference decides what to change. Here:
+> **change the process (read the brand), not the judgement.**
+
+**Noted, not chased:** `756848236513` Sun Stick carries `10g`, `10g` and **`9g`** on one barcode with
+identical names — a wrong `canonical_size` on one row, not two products. Rule 2 kept the 10g name.
+
+---
+
+### 512. A sitting overrode a recorded hold, and nothing could have stopped it
+
+**Raised:** 31 August 2026 · **A PROCESS FAILURE WITH A CORRECT OUTCOME, which is the harder kind to notice.**
+
+Item 511's sitting selected **every** Ultrasun group at 4+ retailers and **did not exclude
+`756848462363`, which item 503 had explicitly held.** It merged under the sitting's note:
+
+```
+756848462363   keeper 12013 "Ultrasun Family Sun Protection Spf30 400ml"
+               removed 20114, 85757, 95729
+```
+
+**The outcome is right** — the hold was wrong and item 511's symmetry proves it. **But it was never a
+decision.** The release was authorised separately and then found to have already happened.
+
+> **A RECORDED JUDGEMENT STOPPED BEING TRUE BECAUSE A LATER QUERY DID NOT KNOW ABOUT IT.**
+
+#### ★ THE CAUSE, AND IT IS NOT CARELESSNESS
+
+**Holds live only in work-list prose. Every batch excluded its own by hand-listing eans in whichever
+query built it** — and that was correct in all five batches that used it.
+
+> **THE SITTING IS THE FIRST CONSTRUCT WHERE THE READER OF THE HOLDS AND THE WRITER OF THE QUERY WERE
+> SEPARATED IN TIME.** I read Ultrasun, concluded the hold was wrong, then built a query from the
+> category and the retailer count without returning to the hold list. **The process worked until the
+> thing it depended on — one person holding both facts at once — stopped being true.**
+>
+> **A CONVENTION THAT DEPENDS ON A SINGLE READER SURVIVES EXACTLY UNTIL THE FIRST TIME IT IS SCALED.**
+
+#### THE FIX, SCOPED AND NOT BUILT
+
+```sql
+create table fmb_merge_holds (
+  ean text primary key, held_at timestamptz not null default now(),
+  item text not null, reason text not null,
+  released_at timestamptz, released_reason text
+);
+```
+
+Batch queries exclude **by join, never by literal**. A release becomes an explicit update with a reason
+and **cannot happen by omission.** **Seed it with item 503's eight remaining holds before anything else
+runs** — the two Spicebomb groups and the Black Opium group are at exactly this risk, and the next
+Viktor & Rolf or YSL sitting would sweep them up identically.
+
+#### AND 511'S RESULT, RESTATED HONESTLY
+
+> **"0 of 68" is not quite the claim. The accurate statement is 0 NEW holds of 68, PLUS ONE PRIOR HOLD
+> RELEASED WITHOUT BEING FLAGGED AS A RELEASE.** The number is unchanged; what it means is not.
+
+**Full programme state is now in `docs/barcode-merge-programme.md`** — method, category model, batching
+decision, totals, what remains, both open decisions, and the symmetry verdicts on item 503's eight.
 
