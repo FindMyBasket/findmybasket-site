@@ -119,8 +119,8 @@ carry no size, so rule 2 rejected them correctly.
 and swallows every failure (`EXCEPTION WHEN OTHERS THEN NULL` — item 502). A 66-row Redken batch would
 have posted `/brands/redken` sixty-six times. **Batching by brand collapses the redundancy by
 construction.** And the trigger never revalidates *product* paths, so before this programme every merge
-left the removed page serving a cached 200 instead of its 308 for up to an hour (item 501, 4,790 rows
-of history).
+left the removed page serving a cached 200 instead of its 308 for up to an hour — item 501, and the
+merge log holds 4,790 rows of history.
 
 **Batching is for observability, not throughput.** `net.http_post` is async: an unbatched merge reports
 success in seconds and the queue drains against production with every failure discarded.
