@@ -40937,3 +40937,226 @@ Viktor & Rolf or YSL sitting would sweep them up identically.
 **Full programme state is now in `docs/barcode-merge-programme.md`** — method, category model, batching
 decision, totals, what remains, both open decisions, and the symmetry verdicts on item 503's eight.
 
+---
+
+### 513. The homepage measured, read, and scoped — and every read changed a proposal
+
+**Raised:** 31 August 2026 · **SCOPE ONLY. Nothing built.** · **Phase 5, never started.**
+
+`public/index.html`, 63,811 bytes, served at `/` by a `beforeFiles` rewrite. **There is no
+`app/page.tsx`.** It is the only significant surface that never became a route.
+
+#### THE MEASUREMENT
+
+Same instrument as the category roots — a same-origin iframe at the exact viewport,
+`getBoundingClientRect` inside `contentDocument`. **A real layout, not a scaled estimate.**
+
+```
+390 x 844                                    1440 x 900
+  nav                 0     65px               hero fills the viewport
+  hero section        0    842px               first functional block  1,316px
+    hero-badge      110     49                 document                6,325px
+    h1              173     65                 SCREENS                    7.03
+    hero-sub        250     74
+    ---- 151px of nothing ----
+    hero-trust      475    243   <- 29% of the first screen
+    hero-form       736     81
+  stats            1,355   226
+  #how-it-works    1,581 1,502
+  #roadmap         3,083 2,026
+  #save-feature    5,109   620
+  demo-section     5,729 1,199
+  document         9,978px
+  SCREENS           11.82
+```
+
+> **THE ENTIRE FIRST SCREEN IS THE HERO, AND THE FIRST FUNCTIONAL BLOCK IS AT 1,581px.** The category
+> roots were cut from 3.68 screens to 1.19 by demotion. **The homepage is three times worse than they
+> were before that work**, and it is the surface a shared link lands on.
+
+#### ★★ AND THEN THE READS. ALL THREE CHANGED A PROPOSAL.
+
+**This is the argument for reading rather than measuring, made concrete on one page.** The shape
+proposed from the numbers was wrong in three places, and only the third was wrong in the direction the
+numbers suggested.
+
+**1. `#how-it-works` was proposed for FOLDING INTO THE HERO. It is the only place the mechanic is
+stated.**
+
+```
+01  Build your routine        search and add products
+02  We compare the prices     live prices ... INCLUDING DELIVERY THRESHOLDS
+03  Shop your optimal basket  the best value 1 OR 2 RETAILER SPLIT for your whole routine
+```
+
+> **"The best value 1 or 2 retailer split for your whole routine" is what this site does that a price
+> comparison site does not**, and nothing else on the page says it. **Folding it into a hero line would
+> have deleted the proposition to save pixels.**
+>
+> **1,502px is too much for three sentences. The sentences stay.** The block is over-furnished, not
+> redundant, and those are different repairs.
+
+**2. `#why`'s keepers were proposed FROM COUNTS. The read says which two, and neither is a feature.**
+
+| | card | verdict |
+|---|---|---|
+| 1 | Routine-first thinking | **restates** how-it-works 1 and 3 |
+| 2 | Fewer parcels | a consequence of the split |
+| 3 | Delivery costs included | **restates** how-it-works 2 |
+| **4** | **Completely free to use** | **KEEP** — free, *and the affiliate model stated* |
+| **5** | **Honest pricing** | **KEEP** — feeds not scrapes, *"we'll never overstate"* |
+| 6 | Built for UK shoppers | scope, not a reason |
+
+> **THE TWO KEEPERS ARE TRUST, NOT FEATURES. A stranger arriving from a shared link has no reason to
+> believe the prices, and those two cards are the only answer to that anywhere on the page.** A count
+> of six cards could not have said which two; only the text could.
+>
+> **AND THE REDUNDANCY IS BETWEEN BLOCKS RATHER THAN INSIDE ONE.** Cards 1 and 3 repeat
+> `#how-it-works`. Assessing either block alone would have found each internally coherent.
+
+**3. ★ `demo-section` IS THE INVERSION, AND THE SHARPEST OF THE THREE.**
+
+```
+public/index.html   <!-- GENERATED FALLBACK. No candidate basket demonstrated the
+                         mechanism at build time, so no figures are shown. -->
+                    0 prices · prose only
+
+PRODUCTION          4 prices · Torriden BALANCEFUL Cica Cleansing Gel 200ml
+                             · SKIN1004 Madagascar Centella Matrixyl 10 Ampoule 30ml
+                    a real solved basket
+```
+
+`scripts/generate-homepage-demo.mjs` **runs before every `next build`** and re-solves against live
+prices. **The repo carries the fallback; the deployed page carries a real basket.**
+
+> **READING THE FILE SAID "DESCRIBES". THE DEPLOYED PAGE SHOWS.** It is the only block on the homepage
+> that demonstrates the mechanism rather than asserting it — **and I proposed keeping it for a reason I
+> had not established, which happened to be true.**
+>
+> **THE SAME LESSON AS THE `<h1>` IN ITEM 506: THE CODE READS ONE WAY AND THE DEPLOYED SURFACE IS THE
+> FACT.** There the code implied `displayProductTitle` covered the page and the `<h1>` used the raw
+> column; here the file implies prose and the build produces a basket. **Both were only settled by
+> loading the page.**
+
+**AND THE FALLBACK'S OWN COMMENT IS WORTH KEEPING:**
+
+> *"a hero showing a 'best' basket that is no longer best is worse than one that is merely stale."*
+
+#### THE SHAPE
+
+```
+NOW       hero(842) how(1502) roadmap(2026) feature(620) demo(1199) why(951) cta(555)
+          11.82 screens · first functional block at 1,581px
+
+PROPOSED  hero + SiteSearch          the mechanic at 0px
+          how-it-works, compressed   the 1-or-2-retailer split — the only place it is said
+          demo-section               kept: the only block that SHOWS
+          trust pair (why 4 + 5)     free/affiliate · feeds-not-scrapes
+          one CTA                    the duplicated pair merged
+          ~4 screens
+```
+
+**RETIRED:** `#roadmap` (item 514), `#why` cards 1, 3 and 6, and one of the two identical
+save-routine blocks — `#save-routine-feature` and `#save-routine` carry **the same headline**,
+620px and 555px, four screens apart.
+
+**THE FIRST SCREEN GETS `components/SiteSearch.tsx`**, which exists, does typeahead over products and
+brands, and is currently used **only by `SiteNav`**. The homepage has no search box. The hero's
+existing `.hero-form` is a **CTA button to `/app`** — a link to the mechanic, not the mechanic. *A
+builder is a commitment; a search box is not, and a shared link lands on a stranger.*
+
+**The 151px gap and part of the 243px logo strip pay for it.** The logos stay — they are the only proof
+the site carries anything — but 243px of the first 844 is one claim made thirteen times.
+
+#### CORRECTIONS TO MY OWN REPORTING
+
+**The hero-form is a CTA to `/app`, not an email capture.** Stated wrongly and corrected on reading.
+
+**★ AND THE MIGRATION CONSTRAINT DISSOLVED BEFORE THIS WORK STARTED.**
+
+```
+/  static today                8 og + 3 twitter = 11
+/compare/creatine (socialTags) 9 og + 4 twitter = 13
+```
+
+The 21 August snapshot recorded that **the homepage is the only page with complete OpenGraph tags while
+being the page due for replacement** — and that every Next route replacing a static page lost them.
+**`lib/format/social-tags.ts` did not exist when that was written.** A route using it **gains
+`og:image:alt` and `twitter:image` and loses nothing.**
+
+> **THE SNAPSHOT WAS RIGHT AND WENT STALE. THIRD MEASUREMENT THIS MONTH THAT WAS CORRECT WHEN TAKEN**
+> — after item 331's sweep and item 493's 2,530. **The constraint that would have shaped this rebuild
+> was removed by unrelated work ten days ago, and nothing connected the two.**
+
+---
+
+### 514. A block arguing for a positioning the tagline now states
+
+**Raised:** 31 August 2026 · **Found while scoping the homepage.** · **NOT FIXED.**
+
+`#roadmap` is **2,026px — a fifth of the document, 20% of 9,978px** — with **zero links and zero
+cards**. Its own comment:
+
+> `<!-- ROADMAP: shows users what's live and what's coming, addressing 'beauty' positioning honestly -->`
+
+**Item 495 moved that argument into the tagline three days ago.** The `<h1>` now reads *"Your health
+and beauty routine. Optimised."* and the `<title>` *"Health & Beauty Price Comparison UK"*.
+
+> **THE BLOCK'S JOB WAS TO COMPENSATE FOR A CLAIM THE OLD TAGLINE WOULD NOT MAKE. THE TAGLINE NOW MAKES
+> IT.** A section explaining that supplements and fragrance are in scope, beneath a heading that says
+> so.
+>
+> **AND IT IS THE SAME SHAPE AS THE NOTE WHOSE TRIGGER NEVER FIRED (item 506): A THING MADE REDUNDANT
+> BY A CHANGE ELSEWHERE, WITH NO MECHANISM THAT WOULD SAY SO.** Item 495's sweep touched
+> `index.html` in eleven places — including this section's own heading, which it rewrote to *"A full
+> health and beauty price comparison platform"* — **and never asked whether the section still had a
+> job.** The sweep changed the words inside the block and could not see the block.
+
+**Not retired here.** It belongs to the homepage rebuild (item 513) and is recorded separately so the
+reason survives the rebuild being deferred.
+
+---
+
+### 515. The nav logo points at `/index.html` on every page
+
+**Raised:** 31 August 2026 · **From the 21 August snapshot, finding 2. NOT FIXED.**
+
+`/index.html` returns **200** and is byte-identical to `/`, separated only by the canonical tag — and
+**it is the nav logo's own `href` on every static page.**
+
+> **EVERY INTERNAL PATH TO THE HOMEPAGE POINTS AT THE NON-CANONICAL URL.** The canonical tag tells a
+> crawler which to index; the site's own navigation tells it which to follow. **Independent of the
+> rebuild**, and it should not be repaired inside it.
+
+---
+
+### 516. The homepage JSON-LD advertises a path robots.txt forbids
+
+**Raised:** 31 August 2026 · **From the 21 August snapshot, finding 8. NOT FIXED.**
+
+Two `WebSite` blocks disagree on their `SearchAction` target: the homepage points at `/search?q=`, the
+savings hub at **`/app?q=`** — **and `/app` is `Disallow`ed in robots.txt.**
+
+> **A STRUCTURED-DATA DECLARATION INVITING A CRAWLER INTO A PATH THE SAME SITE TELLS IT NOT TO ENTER.**
+> Neither surface is wrong on its own; the pair cannot both be right. **Its own item because it spans
+> two pages and robots.txt, and the rebuild only touches one of the three.**
+
+---
+
+### 517. The product page does not use `socialTags`, and is the thinnest share surface on the site
+
+**Raised:** 31 August 2026 · **Measured while checking the homepage's migration constraint. NOT FIXED.**
+
+```
+/compare/creatine  (socialTags)   9 og + 4 twitter = 13
+/  static                          8 og + 3 twitter = 11
+/product/20225                     4 og + 4 twitter =  8   <- builds its own metadata
+```
+
+**`app/product/[id]/page.tsx` constructs its OpenGraph object directly and never calls `socialTags`.**
+It is missing `og:type`, `og:site_name`, `og:image:alt`, `og:image:width` and `og:image:height`.
+
+> **THE MOST-SHARED PAGE TYPE ON THE SITE HAS THE THINNEST SHARE CARD**, and the fix is to call a
+> function that already serves 14 routes. **Not part of the homepage rebuild** — it is a different
+> file, a different surface, and a smaller change than folding it in would suggest.
+
