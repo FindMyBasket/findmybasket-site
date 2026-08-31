@@ -40754,5 +40754,186 @@ previous results are consistent with.
 > result would mean the category label has been doing work the per-name story denied — and would make
 > every batch-planning decision depend on a brand's worst component rather than its average.
 
-**Result and reading follow once run.**
+#### ★★ THE CENTRE: THE DISTRIBUTION, NOT THE COUNT
+
+```
+predicted 1-3 of 29, committed before reading
+ACTUAL    1 of 29
+
+   makeup     11 groups   1 hold   9.1%
+   skincare   16 groups   0 holds  0.0%
+   bath_body   1 group    0
+   fragrance   1 group    0
+```
+
+**The single hold is a makeup group.** `85805211905` — `Ceramide Lift and Firm Makeup SPF 15 30ml-340N`
+x2 against `Ceramide Lift & Firm Cream Makeup 30ml in **340W**`. **Two shades on one barcode.**
+
+| reading | verdict |
+|---|---|
+| **proportional** | **SUPPORTED** — one hold, and it is IN the makeup groups |
+| presence-based | refuted — would need the whole batch holding at makeup's rate |
+| dominant-category | refuted — skincare-dominant predicts zero, and makeup held |
+
+> **THE TOTAL ALONE COULD NOT SEPARATE PROPORTIONAL FROM DOMINANT-CATEGORY.** 1 is a small number and 0
+> is a small number; **29 groups cannot tell them apart arithmetically.** The LOCATION does.
+>
+> **A RATE WEAKENS A MODEL AND A CLUSTERING SUPPORTS ONE** — the same distinction as the
+> shared-vocabulary test, arriving from the other side. That test produced a rate that killed a rival;
+> **this produced a clustering that confirms the MECHANISM rather than the output.** Five batches
+> confirmed what the model predicts. **This is the first that confirms how it predicts it.**
+
+**Makeup's 9.1% here against Urban Decay's 14.3% is the same order on 11 groups.** *Sign and location,
+not a rate to defend to a decimal.*
+
+#### AND TWO THINGS CHECKED THAT WERE NOT PROBLEMS
+
+**No product sits in two groups** — 79 products, 79 memberships. The eight near-identical
+`Ceramide Lift And Firm Cream Makeup Spf 15 30ml` names are eight distinct rows, one per shade.
+**The visual scan made them look like one row in eight groups**, which is why the id check was run
+rather than assumed.
+
+**And a price spread noticed and not chased:** `85805240288` Prevage Anti-Aging Daily Serum 2.0 runs
+**GBP 34.79 to GBP 197.00** across three rows — all 50ml, with the 5ml carrying its own barcode.
+**An 82% spread on one genuine product: a PRICING anomaly, not an identity one. It merges correctly.**
+
+---
+
+### 511. The sitting holds several brands; the unit stays the brand
+
+**Raised:** 31 August 2026 · **BATCHING DECISION, AND PREDICTIONS COMMITTED BEFORE READING.**
+
+#### ★ THE DECISION, AND IT IS NOT ABOUT TRUST
+
+**Low-prediction brands are grouped into one sitting. Makeup and fragrance brands stay one at a time.**
+
+The model's record: **five batches, two killed falsifiers, one replication, one distribution test, and
+the prediction has never fallen outside its stated range.** That is enough to act on.
+
+> **BUT GROUPING IS NOT A CONSEQUENCE OF TRUST, AND SAYING SO MATTERS.** Trust would justify reading
+> LESS. **Grouping reduces ceremony and not reading** — the plan table, the trigger suppression, the
+> revalidation call and the production check happen once instead of three times, and every group is
+> still read.
+>
+> **FOUR OF THIS WEEK'S HOLDS WERE PROVABLE ONLY BECAUSE A WHOLE BRAND WAS PRESENT AT ONCE** — the
+> Tootsie row whose Hemp Milk group sat beside it, the High Profile row whose Space Cowboy group did,
+> and Dermalogica's 500ml whose own barcode was in the same read. **The evidence was the relationship
+> between two groups of one brand.**
+>
+> **SO THE UNIT STAYS THE BRAND AND THE SITTING HOLDS SEVERAL.** A sitting that mixed brands into one
+> undifferentiated pool would keep the group count and lose the property that found all four.
+
+#### THE FIRST SITTING: 68 GROUPS, THREE BRANDS
+
+| brand | groups | shape | **predicted holds** |
+|---|---:|---|---:|
+| **Philip Kingsley** | 25 | hair, 100% low-risk | **0-1** |
+| **Ultrasun** | 23 | skincare, 100% low-risk | **0-1** |
+| **Kérastase** | 20 | hair, 95% (5% fragrance) | **0-1** |
+| | **68** | | **0-3 for the sitting** |
+
+**PREDICTED PER BRAND, AND THE RESULT WILL BE REPORTED PER BRAND.**
+
+> **THE MODEL PREDICTS PER BRAND; THE AGGREGATE IS NOT WHAT IT CLAIMS.** A sitting total of 2 is
+> consistent with 0/0/2 and with 1/1/0, and those say different things — **the first would mean one
+> brand behaves unlike its category, which is the only result here that would be interesting.**
+> Reporting the sitting as one number would discard exactly the signal item 510 was built to read.
+
+#### THE RESULT: 0 OF 68, BOTTOM OF THE RANGE ON EVERY BRAND
+
+```
+predicted at 9788240, before reading
+Philip Kingsley  25 groups   predicted 0-1   ACTUAL 0
+Ultrasun         23 groups   predicted 0-1   ACTUAL 0
+Kerastase        20 groups   predicted 0-1   ACTUAL 0
+                 68 groups · 121 rows removed · 0 orphans
+                 ONE call · 192 paths · 3 brand paths · request 10974
+```
+
+> **NOTHING BEHAVED UNLIKE ITS CATEGORY, AND THAT IS A RESULT RATHER THAN AN ABSENCE.** Per-brand
+> reporting exists to detect one brand diverging from its category. **A divergence can only be found by
+> looking for it, and it did not occur** — a sitting total of 0 would have said the same thing while
+> being unable to rule it out.
+
+#### ★★ THE WEEK'S FINDING: READING A BRAND COMPLETELY ALSO *RELEASES* HOLDS
+
+```
+756848462301  Family SPF30 100ml   +  Super Sensitive Family SPF 30 100ml
+756848462318  Family SPF30 150ml   +  Super Sensitive Family SPF30 150ml
+756848462363  Family SPF30 400ml   +  Super Sensitive Family SPF 30 400ml   <- item 503 HELD this
+756848462707  Extreme SPF50+ 100ml +  Ultra Sensitive Extreme SPF50+ 100ml
+756848462714  Extreme SPF50+ 150ml +  Ultra Sensitive Extreme SPF50+ 150ml
+756848462769  Extreme SPF50+ 400ml +  Ultra Sensitive Extreme SPF 50+ 400ml
+```
+
+**Six groups. Every one paired. Every pair at the same size. Two lines, three sizes each.** If
+`Super Sensitive Family` were a separate SKU it would have its own barcode and at least one group would
+carry one variant alone. **Six-for-six symmetry is a naming convention, and it cannot be seen from one
+group.**
+
+> **THE SAME MECHANISM AS THE TOOTSIE PROOF, RUNNING THE OTHER WAY: THE EVIDENCE IS NOT IN THE GROUP,
+> IT IS IN THE SET.** Where Tootsie's set CREATED a hold, Ultrasun's set DISSOLVED three.
+>
+> **AND THE EPISTEMICS MUST NOT BE COLLAPSED. THE HOLD WAS CORRECT ON THE INFORMATION AVAILABLE AND
+> WRONG ON THE FACTS.** Reading one group, *Family* against *Super Sensitive Family* is genuinely
+> ambiguous and holding was the right call. **A decision that was right to make and produced the wrong
+> answer is a different thing from a mistake** — and the difference decides what to change. Here:
+> **change the process (read the brand), not the judgement.**
+
+**Noted, not chased:** `756848236513` Sun Stick carries `10g`, `10g` and **`9g`** on one barcode with
+identical names — a wrong `canonical_size` on one row, not two products. Rule 2 kept the 10g name.
+
+---
+
+### 512. A sitting overrode a recorded hold, and nothing could have stopped it
+
+**Raised:** 31 August 2026 · **A PROCESS FAILURE WITH A CORRECT OUTCOME, which is the harder kind to notice.**
+
+Item 511's sitting selected **every** Ultrasun group at 4+ retailers and **did not exclude
+`756848462363`, which item 503 had explicitly held.** It merged under the sitting's note:
+
+```
+756848462363   keeper 12013 "Ultrasun Family Sun Protection Spf30 400ml"
+               removed 20114, 85757, 95729
+```
+
+**The outcome is right** — the hold was wrong and item 511's symmetry proves it. **But it was never a
+decision.** The release was authorised separately and then found to have already happened.
+
+> **A RECORDED JUDGEMENT STOPPED BEING TRUE BECAUSE A LATER QUERY DID NOT KNOW ABOUT IT.**
+
+#### ★ THE CAUSE, AND IT IS NOT CARELESSNESS
+
+**Holds live only in work-list prose. Every batch excluded its own by hand-listing eans in whichever
+query built it** — and that was correct in all five batches that used it.
+
+> **THE SITTING IS THE FIRST CONSTRUCT WHERE THE READER OF THE HOLDS AND THE WRITER OF THE QUERY WERE
+> SEPARATED IN TIME.** I read Ultrasun, concluded the hold was wrong, then built a query from the
+> category and the retailer count without returning to the hold list. **The process worked until the
+> thing it depended on — one person holding both facts at once — stopped being true.**
+>
+> **A CONVENTION THAT DEPENDS ON A SINGLE READER SURVIVES EXACTLY UNTIL THE FIRST TIME IT IS SCALED.**
+
+#### THE FIX, SCOPED AND NOT BUILT
+
+```sql
+create table fmb_merge_holds (
+  ean text primary key, held_at timestamptz not null default now(),
+  item text not null, reason text not null,
+  released_at timestamptz, released_reason text
+);
+```
+
+Batch queries exclude **by join, never by literal**. A release becomes an explicit update with a reason
+and **cannot happen by omission.** **Seed it with item 503's eight remaining holds before anything else
+runs** — the two Spicebomb groups and the Black Opium group are at exactly this risk, and the next
+Viktor & Rolf or YSL sitting would sweep them up identically.
+
+#### AND 511'S RESULT, RESTATED HONESTLY
+
+> **"0 of 68" is not quite the claim. The accurate statement is 0 NEW holds of 68, PLUS ONE PRIOR HOLD
+> RELEASED WITHOUT BEING FLAGGED AS A RELEASE.** The number is unchanged; what it means is not.
+
+**Full programme state is now in `docs/barcode-merge-programme.md`** — method, category model, batching
+decision, totals, what remains, both open decisions, and the symmetry verdicts on item 503's eight.
 
