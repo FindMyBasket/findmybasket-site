@@ -42964,3 +42964,110 @@ retailers is £59.60, so a single bottle clears £40 on its own.**
 > median matters to the optimiser in the opposite direction to the one claimed. **A conclusion that
 > survives its justification being wrong is the hardest kind to catch**, because nothing downstream
 > misbehaves.
+
+### 535. 231 names read with the operative function, and zero clearly wrong
+
+**Raised:** 31 August 2026 · **`scripts/onboarding/classify-creates.mts`. Read only.**
+
+The dry run reports category counts for new products and **does not join them to the row**, so
+*"157 land outside fragrance"* could not be turned into *"these 157"*. A sample of 20 cannot separate
+`Barbour Heritage For Her Eau De Parfum 30ml Gift Set` from `Missguided Self Love Club Gift Set`, **and
+a count certainly cannot** — the distinction is carried by the name and nothing else.
+
+```
+candidates classified   1,150
+  fragrance 974 · skincare 78 · bath_body 69 · hair 7 · makeup 3
+  EXCLUDED  deodorant 9 · fragrance 6 · bath_set 4
+
+the 231 whose NAME is not perfume
+  CLEARLY WRONG   0     a body/bath product classified fragrance
+  arguable      231     fragrance 138 · bath_body 64 · skincare 11 · excluded 18
+```
+
+#### ★★★ IT CALLS `inferCategorisationForImport`, WHICH IS WHY THE NAMES ARE EVIDENCE
+
+`import-rakuten-feed/index.ts:531` calls exactly that function and nothing else. The harness imports it
+rather than re-expressing what it appears to do.
+
+> **THE BREAKDOWN CAME OUT IDENTICAL TO THE IMPORTER'S — 974 / 78 / 69 / 7 / 3 / 19 — AND THAT IS THE
+> VERIFICATION, NOT A COINCIDENCE.** Same function, same inputs, same six figures. **It is what makes
+> 231 names evidence about where they WILL land rather than where they OUGHT to.**
+>
+> **A READ AGAINST A REIMPLEMENTATION WOULD HAVE BEEN THE NEAR-NEIGHBOUR CLASS AGAIN** — a plausible
+> classifier agreeing with the real one on the easy 90% and diverging on exactly the arguable rows the
+> exercise existed to examine. Item 499's lesson, applied before the fact rather than after.
+
+#### THE ERROR TO LOOK FOR, STATED AS A RULE RATHER THAN LEFT TO THE READER
+
+**A body or bath product classified as fragrance is wrong. A fragrance gift set classified as
+`bath_body` is arguable.** The harness encodes the asymmetry and flags only the first.
+
+**Zero.** And the excluded 19 read correctly on every name: nine Tom Ford body sprays as `deodorant`,
+four genuine body-product gift sets as `bath_set`, two Police aftershave sprays and Ghost's 30ml set as
+`fragrance`.
+
+#### ★ THE RESIDUE: THREE ADVENT CALENDARS
+
+```
+Missguided 12 Days Advent Calendar          -> skincare
+Missguided 25 Days Advent Calendar Nude     -> skincare
+Missguided 25 Days Advent Calendar Red      -> skincare
+The Fragrance Shop Men's Advent Calendar    -> EXCLUDED:fragrance
+The Fragrance Shop Women's Advent Calendar  -> EXCLUDED:fragrance
+```
+
+> **SAME OBJECT, TWO OUTCOMES, DECIDED BY BRAND VOCABULARY.** The Missguided three land in skincare on
+> the word "calendar" with no product signal; the retailer's own two are excluded because "Fragrance
+> Shop" is in the name. **Not wrong enough to block and worth knowing**, which is the grade — recorded
+> rather than fixed, because the fix is a categoriser change on five rows.
+
+The other eight in `skincare` are aftershave lotions and balms — Dior ×6, Chanel, Dolce & Gabbana — and
+those are defensible: an aftershave balm is a skincare product sold by a fragrance house.
+
+---
+
+### 536. The first real Rakuten import since Superdrug, and no 546
+
+**Raised:** 31 August 2026 · **Retailer 35 imported. `active` STILL FALSE.**
+
+```
+feed rows              3,246     status ok, no error
+linked to existing     2,068     ALL by EAN — 0 by mpn, 0 by name
+created new            1,131
+v6 excluded               19
+price rows landed      3,199     3,197 with a barcode
+offers now comparable  2,812     against another active retailer
+```
+
+**Classification identical to the dry run — 974 / 78 / 69 / 7 / 3 / 19 — read from
+`products.created_at`, not from the response.** The dry run predicted the import rather than describing
+it.
+
+#### ★★★ THE PRICE RULE FIRED, AND THAT IS THE RUN'S RESULT
+
+```
+rows with BOTH sale and retail   557
+  sale taken (below retail)      557
+  sale IGNORED (>= retail)         0
+```
+
+> **A TEMPLATE COPY WOULD HAVE LANDED 557 PRODUCTS AT RRP, MEDIAN 33% OVERSTATED, UP TO 97%.** The Boots
+> AWIN defect, which cost roughly 40% accuracy on a sample — **avoided because the field was read rather
+> than the file copied.** `refresh-superdrug.yml.disabled` reads `price/retail` and never mentions
+> `<sale>`; the field was in the feed the whole time.
+>
+> **THE STRONGEST ARGUMENT IN THIS THREAD FOR READING A FEED RATHER THAN INHERITING A PARSER, AND IT IS
+> MEASURED RATHER THAN ARGUED.** 557 rows, one comparison, a number that would have been wrong on every
+> one of them.
+
+#### AND NO 546 — THE CEILING IS BETWEEN 3,246 AND 7,999
+
+`sliced_import=false`, `staging_mode=inline`, single mode, 3,246 rows through one worker, completed.
+
+> **HEALF NEEDED SLICING AT 7,999 AND THIS DID NOT AT 3,246, SO THE STAGE-THEN-PROCESS SPLIT WAS NOT
+> REQUIRED HERE.** The ceiling sits somewhere between, and it is not a Rakuten-versus-AWIN property —
+> **the same handler, the same worker limit, a different row count.** Recorded so the next onboarding
+> reaches for slicing on size rather than on importer.
+
+**`skip_name_match=true` is visible in the result**: 0 links by name, 0 by mpn, 2,068 by EAN alone. The
+≤38 creates that name-matching would have linked were paid for deliberately — item 534.
