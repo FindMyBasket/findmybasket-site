@@ -41809,3 +41809,113 @@ to discover as a side effect of a homepage PR.
 **The band separators on `#how-it-works` and the trust pair now draw** — `border-y border-border` had
 been in the source since the route was built and had never appeared. That is +4px, and the page still
 came out shorter than it went in.
+
+### 524. The instrument follows the property, and the day proved it three ways
+
+**Raised:** 31 August 2026 · **Proposal 3 of the homepage styling. Built. The finding is the method.**
+
+#### ★★★ THE CENTRE: `getComputedStyle` WAS EXACTLY RIGHT AND EXACTLY WRONG WITHIN THE HOUR
+
+| | the question | the instrument | the result |
+|---|---|---|---|
+| **borders** (521) | is there an edge here? | `getComputedStyle` | **right** — `0px / none`, a defect no eye can see |
+| **the focus ring** (523) | does the field light up? | `getComputedStyle` | **wrong** — said absent six times; it is there |
+| **the height cost** (this) | how much will this add? | arithmetic | **wrong** — projected +50px, measured **+173** |
+
+**The second was carried over from the first because the first had just worked.** A 3px cream border on
+a cream page is invisible to a person and obvious to a probe; **a focus ring is a visual state and its
+instrument is a picture.** Nothing about the borders' success transferred, and nothing signalled that it
+would not.
+
+> **THE INSTRUMENT FOLLOWS THE PROPERTY, NOT THE PREVIOUS QUESTION.** Item 523 recorded the screenshot
+> finding the class of problem and the computed style finding its shape — two tools that do not overlap.
+> **This is the same lesson arriving from the other side**, and the difference worth keeping is that
+> **it corrected itself rather than being corrected.** The borders finding came from Robbie opening the
+> page and saying it was ugly. This one came from a probe disagreeing with a picture and the picture
+> being believed.
+
+**And the third row is the same shape without a browser in it.** The revised proposal costed the trust
+cards and CTA panel at **+50px** and shipped nothing until the preview said **+173px** — out by 3.5×,
+because the estimate counted the padding values and not the two card borders, the gap change, or the way
+`p-6` on a stacked pair pays twice. **Arithmetic about a layout is not a measurement of it**, and the
+only reason it did not ship as a claim is that Robbie said measure at each cut rather than ship the
+arithmetic.
+
+#### AND ONE CASE LEFT UNEXPLAINED, DELIBERATELY
+
+Item 523 names two faults in the probe — `document.hasFocus()` false in an offscreen iframe, and click
+coordinates computed in CSS pixels for a tool that takes screenshot pixels (1568 for a 1462px viewport).
+**A third set of readings had `:focus` genuinely matching and still showed no ring, and that is recorded
+as unexplained.**
+
+> **TWO FAULTS FOUND AND NAMED, ONE NOT — AND THE ONE NOT IS LEFT AS A GAP RATHER THAN CLOSED WITH THE
+> NEAREST PLAUSIBLE MECHANISM.** A wrong explanation is worse than an open question: it is durable, it
+> reads as settled, and the next person to hit the same reading trusts it. **The transition was the
+> obvious candidate and it was tested and did not account for it.** It stays open.
+
+#### THE CUT, MEASURED RATHER THAN ARGUED
+
+```
+first pass          3,142px   3.72 screens    +173px on 2,969
+after one cut       2,953px   3.50 screens    UNDER the budget it started at
+```
+
+**One cut, not three, and no trimming.** The trust pair and the CTA are carded at `md:` only:
+
+> **A CARD IS A DEVICE FOR STRUCTURING HORIZONTAL SPACE, AND AT 390 THERE IS NONE TO STRUCTURE.** Every
+> block is already full width and the tinted band already separates the trust pair. **Robbie's complaint
+> was explicitly "from screenshots at desktop"** — 584px of text in a 1,200px column — so the fix
+> belongs where the complaint is. Carding on mobile buys a border and two paddings for no hierarchy and
+> costs 80px of a screen budget. **Same reasoning as the routine list's `max-md:` rows**, which is now
+> the second time this page has answered a budget problem by asking what the device is actually for.
+
+The gold hairline proposed above `01 / 02 / 03` was **dropped rather than built**: the band's own
+`border-y` draws now and does that job for nothing.
+
+#### THE PHOTOGRAPH, AND WHY IT COSTS ZERO
+
+`hero-bottles-desktop.jpg` (2880×1440) and its portrait crop (1200×1500) — the static page's own assets,
+dropped in the port with everything else that had no number attached.
+
+> **SUBTRACTION JUSTIFIED THE DOCUMENT HEIGHT, NOT THE FIRST SCREEN.** 11.82 → 3.53 is a scroll-length
+> argument; the hero was 379px of text in a 1,200px column with the right two-thirds empty, and no
+> amount of removing things fixes an empty space. **Absolute, `inset-0`, behind content that already
+> exists: 0px.**
+
+**The fade runs sideways at desktop where the static page's ran down.** That hero was centred, so a
+vertical fade put cream behind the text and let the photograph show at the foot. This one is
+left-aligned, so the cream goes left behind the words and the photograph occupies what was empty.
+**Mobile keeps the original orientation and the portrait crop**, because at 390 the text spans the full
+width and there is no right-hand space to fill. Same device, turned ninety degrees for a layout the
+static page did not have.
+
+#### `font-[inherit]`, AND WHY NEARLY RIGHT IS THE HARD KIND
+
+`font-sans` resolves to the literal `"DM Sans"`. **`next/font` loaded the family as `__DM_Sans_be8b38`.**
+So `font-sans` on the hero input would have fallen back to system sans — **and looked nearly right**, on
+a page where every other word is DM Sans, at 15px, in a pill.
+
+> **A WRONG FONT THAT LOOKS NEARLY RIGHT IS HARDER THAN ARIAL**, which announced itself in the first
+> screenshot Robbie took. `inherit` takes the body's `var(--font-dm-sans)` and cannot drift from it.
+> Verified equal: input and body both report `__DM_Sans_be8b38`. Item 523.
+
+#### THE DEVICE QUESTION, ANSWERED BY WHAT WAS ALREADY THERE
+
+`.fmb-demo` → `.fmb-home`, wrapping the homepage's sections. Nav, footer and every other route untouched.
+
+> **`public/index.html` DREW THESE CARDS WITH `border: 1px solid var(--border)` — SHORTHAND, STYLE
+> INCLUDED — AND THEY HAVE ALWAYS RENDERED THERE.** A background step or a shadow would be inventing a
+> device to avoid a defect, and it would put the homepage out of step with every other page the day item
+> 521 lands. **The reset is the smaller change and the one that makes the authored design appear.**
+
+#### WHERE THE PAGE ENDED UP
+
+```
+                 static      after 513     now
+390x844          9,978px     2,980px       2,953px      11.82 -> 3.53 -> 3.50 screens
+1440x900         6,325px     2,184px       2,510px       7.03 -> 2.43 -> 2.79
+first field      342px       417px         398px
+```
+
+**Mobile is shorter than the day it flipped and desktop is 326px taller than its thinnest.** That is the
+right direction on both: the budget was a mobile constraint and the complaint was a desktop one.
