@@ -40120,7 +40120,7 @@ lib/format/metadata-copy.ts    meta descriptions and social tags
 > `<h1>` is seen by a person who can also see the price; the structured data is consumed by a machine
 > that indexes the claim as the product's identity.
 
-#### ★ AND THE COMPLEMENT TEST KILLED THE FIRST VERSION
+#### ★★ THE ITEM'S CENTRE: THE COMPLEMENT TEST KILLED THE FIRST VERSION
 
 The expression that was about to ship ended with a `\s{2,}` -> `" "` whitespace collapse. Run against
 all 105,982 live products:
@@ -40133,15 +40133,31 @@ final version    changed 178    178 in target      0 outside
 **437 names changed because they merely contained a double space.** Nothing to do with price claims;
 the collapse ran on every name it was handed.
 
-> **A RULE THAT DOES MORE THAN IT CLAIMS IS NOT VISIBLE FROM ITS TARGET SET** — on the 178, the extra
-> clause was invisible and even mildly helpful. **It was only visible from the other side**, which is
-> the fifth complement save this week and the second where the rule was doing something its author had
-> not noticed rather than something wrong.
+> **A RULE DOING MORE THAN IT CLAIMS CANNOT BE SEEN FROM THE ROWS IT WAS WRITTEN FOR.** On the 178 the
+> collapse was invisible **and mildly helpful** — it tidied a double space in a name that also carried
+> a claim. **Nothing about the target set could have raised it.**
+>
+> **FIFTH COMPLEMENT SAVE THIS WEEK, AND THE SECOND WHERE THE RULE WAS DOING SOMETHING UNNOTICED
+> RATHER THAN SOMETHING WRONG. THAT IS THE HARDER CASE: A WRONG RULE FAILS A TEST AND AN EXTRA CLAUSE
+> PASSES ONE.** Every assertion anyone would think to write about `stripPriceClaim` — does it remove
+> the claim, does it leave the rest, does it handle the parenthesised form — **passes with the collapse
+> in place.** The clause is only reachable by asking what the rule does to rows it was never meant to
+> touch.
 
-**AND POSTGRES `\b` IS BACKSPACE, NOT A WORD BOUNDARY.** The first draft used `\b` and matched **zero
-of 178** — a rule that silently does nothing, which is the same shape as the four wrong-but-plausible
-queries above, arriving inside the fix for one of them. `\m` in SQL, `\b` in the shipped TypeScript,
-where it means what it says.
+#### ★ AND POSTGRES `\b` IS BACKSPACE, NOT A WORD BOUNDARY
+
+The first SQL draft used `\b` and matched **ZERO of 178.**
+
+> **A RULE SILENTLY DOING NOTHING, INSIDE THE FIX FOR EXACTLY THAT CLASS OF ERROR.** Postgres ARE reads
+> `\b` as a backspace character; the word boundary is `\y`, and `\m` / `\M` are the word edges. Nothing
+> errors. The expression is valid, runs, and returns every row unchanged.
+>
+> **IT WAS CAUGHT BECAUSE ZERO DISAGREED WITH A COUNT ALREADY KNOWN.** 178 was measured minutes
+> earlier, so "unchanged: 178" was visibly wrong. **Had the strip been written before the population
+> was counted, it would have reported "no products carry a price claim" and been believed** — the
+> fifth wrong-but-plausible number in this thread, produced by the fix for the fourth.
+>
+> `\m` in SQL; `\b` in the shipped TypeScript, where it means what it says.
 
 #### THE MEASUREMENT, BOTH DIRECTIONS
 
@@ -40158,9 +40174,33 @@ target rows missed                 0
 **Nine names needed the lookahead** — `"... Worth £29 in 3.5"` — where a shade follows the claim. A
 `$` anchor alone missed all nine.
 
+#### ★ THE TWO CASES THAT JUSTIFY THE READING
+
+**`Worth Je Reviens Eau de Toilette 10ml Spray`. WORTH IS A FRAGRANCE HOUSE** — House of Worth, Paris,
+1858. Its name begins with the token the rule hunts.
+
+> **A LOOSER PATTERN RENAMES A PERFUMER.** Any rule keyed on the word rather than on `worth` + a
+> currency-or-digit strips the brand out of its own product's title, and the result reads as an
+> ordinary name — `Je Reviens Eau de Toilette 10ml Spray` — so **nothing downstream looks wrong.** It
+> is `\mdiet\M` and `Cookies & Cream` again: a token that names a category in one context and is part
+> of a proper noun in another.
+
+**And the NINE shade-suffixed names were found by reading, not by the count.** `"... Worth £29 in 3.5"`
+puts the claim mid-name, and a `$`-anchored pattern reported **169 of 178 handled** — a 95% result that
+looks like success. **The nine are only visible as names.**
+
 **5 tests added, 260 pass, `tsc` clean.** The complement cases in the test file are real live product
-names — *Worth It*, *Worth The Hype*, *Worth Defending*, and **`Worth Je Reviens`, where Worth is the
-brand.**
+names — *Worth It*, *Worth The Hype*, *Worth Defending*, and **`Worth Je Reviens`**.
+
+#### AND THE ONE-FORM NOTE LIVES IN THE CODE, NOT ONLY HERE
+
+The measurement — 178 `Worth £X`, and **zero** `RRP`, `was £`, `Save £`, `N% off` or `half price` —
+sits in the comment above the expression.
+
+> **WHOEVER WIDENS IT WILL READ THE CODE BEFORE ADDING A FORM THAT HAS NEVER APPEARED.** In the item it
+> is a finding; in the comment it is a warning at the point of use. **The distinction it preserves is
+> that a future `RRP` is genuinely new rather than a miss** — and someone adding one should know they
+> are extending the rule's reach rather than patching a hole in it.
 
 **The stored names are untouched. `match_key` moves on nothing.**
 
