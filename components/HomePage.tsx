@@ -62,7 +62,9 @@ export function HomePage() {
           carried a full rule set for this field — pill radius, warm-white fill, gold focus
           ring — and the port dropped it, like everything else without a number attached.
           Item 520. */}
-      <section className="max-w-site mx-auto px-6 pt-10 pb-12 md:pt-16">
+      <section className="relative overflow-hidden">
+        <div className="fmb-hero-bg" aria-hidden="true" />
+        <div className="relative max-w-site mx-auto px-6 pt-10 pb-12 md:pt-16">
         <p className="text-xs uppercase tracking-widest text-gold font-medium mb-4">
           Compare across UK retailers · delivery included
         </p>
@@ -116,12 +118,13 @@ export function HomePage() {
         </form>
 
         <p className="text-sm text-ink-light">
-          or{' '}
-          <Link href="/app" className="text-ink underline underline-offset-4 hover:text-gold transition-colors">
-            build your whole routine
-          </Link>{' '}
-          — free, no account needed.
-        </p>
+            or{' '}
+            <Link href="/app" className="text-ink underline underline-offset-4 hover:text-gold transition-colors">
+              build your whole routine
+            </Link>{' '}
+            — free, no account needed.
+          </p>
+        </div>
       </section>
 
       {/* ── HOW IT WORKS — compressed, three sentences intact ───────────────── */}
@@ -282,17 +285,22 @@ export function HomePage() {
         )}
       </section>
 
-      {/* ── THE TRUST PAIR — #why 4 and 5. Neither is a feature. ────────────── */}
+      {/* ── THE TRUST PAIR — #why 4 and 5. Neither is a feature. ──────────────
+          CARDS, USING THE VOCABULARY THE REST OF THE SITE ALREADY WRITES DOWN:
+          `rounded-2xl border border-border` on a tinted band, which is BrandPage,
+          CategoryPage, ProductCard and SubcategoryPage verbatim. It renders here
+          only because `.fmb-home` resets border-width AND border-style; site-wide
+          it still does not, which is item 521 and not this. Item 524. */}
       <section className="bg-warm-white border-y border-border">
-        <div className="max-w-site mx-auto px-6 py-12 grid gap-8 md:grid-cols-2">
-          <div>
+        <div className="max-w-site mx-auto px-6 py-12 grid gap-4 md:gap-6 md:grid-cols-2">
+          <div className="rounded-2xl border border-border bg-cream p-6 md:p-8">
             <h2 className="font-serif text-xl text-ink mb-2">Completely free to use</h2>
             <p className="text-sm text-ink-light leading-relaxed">
               Free for everyone, always. We earn a small affiliate commission when you click
               through and buy, at no extra cost to you.
             </p>
           </div>
-          <div>
+          <div className="rounded-2xl border border-border bg-cream p-6 md:p-8">
             <h2 className="font-serif text-xl text-ink mb-2">Honest pricing</h2>
             <p className="text-sm text-ink-light leading-relaxed">
               We pull prices directly from each retailer&rsquo;s official feed. Sometimes the
@@ -303,17 +311,19 @@ export function HomePage() {
       </section>
 
       {/* ── ONE CTA — the duplicated pair merged ────────────────────────────── */}
-      <section className="max-w-site mx-auto px-6 py-14 text-center">
-        <h2 className="font-serif text-2xl md:text-3xl text-ink mb-3">
-          Save your routine. We&rsquo;ll find the best price each month.
-        </h2>
-        <p className="text-ink-light mb-6">Free to use. No account needed.</p>
-        <Link
-          href="/app"
-          className="inline-block bg-ink text-cream px-8 py-4 rounded-full font-sans text-sm no-underline hover:bg-gold transition-colors"
-        >
-          Build your routine →
-        </Link>
+      <section className="max-w-site mx-auto px-6 py-12 md:py-14">
+        <div className="rounded-2xl border border-border bg-warm-white px-6 py-10 md:py-14 text-center">
+          <h2 className="font-serif text-2xl md:text-3xl text-ink mb-3">
+            Save your routine. We&rsquo;ll find the best price each month.
+          </h2>
+          <p className="text-ink-light mb-6">Free to use. No account needed.</p>
+          <Link
+            href="/app"
+            className="inline-block bg-ink text-cream px-8 py-4 rounded-full text-sm no-underline transition-[background-color,transform] duration-200 hover:bg-gold hover:-translate-y-0.5"
+          >
+            Build your routine →
+          </Link>
+        </div>
       </section>
       </div>
     </SiteLayout>
