@@ -40615,5 +40615,144 @@ haircare.**
 > precisely because it is not the reading I expect** — a falsifier only does work if it is written
 > before the result makes it unattractive.
 
+#### ★★ THE CENTRE: THE MODEL REPRODUCED ITSELF, WHICH IT HAD NEVER DONE
+
+```
+predicted 0-2 of 30, committed before reading
+ACTUAL    0 of 30
+```
+
+```
+fragrance-heavy, 82   9 held  11.0%   name-ambiguous
+Urban Decay,     42   6 held  14.3%   name-ambiguous (shades)
+Dermalogica,     34   1 held   2.9%   not ambiguous, deep range
+Redken,          49   0 held   0.0%   not ambiguous
+L'OREAL PROF,    30   0 held   0.0%   not ambiguous          <- REPLICATION
+```
+
+> **FIRST TIME IN FIVE BATCHES THAT A RESULT WAS NOT ALSO AN EXTRAPOLATION.** Four batches were four
+> different categories, so every confirmation carried a new assumption: the model predicted a shape it
+> had never seen and was right, four times, **without once being asked to reproduce.**
+>
+> **A MODEL THAT HAS NEVER BEEN RUN TWICE ON THE SAME INPUT HAS NOT BEEN REPLICATED, HOWEVER MANY
+> TIMES IT HELD.** This is the run that removes that objection, and it is worth more than the fifth
+> category would have been.
+
+**The three candidates all dissolved on full names**, which is itself the category signature: `Molecular
+Ha...` was **Hair Shampoo** truncated; `Long-Lasting Leave-In` is the renamed **Leave-In Moisturiser**;
+`Curl Reviving` is **Caring Reviving**. *Retailers varying in how much descriptor they keep* — exactly
+Redken's shape.
+
+#### ★★ AND THE SHARED-VOCABULARY ALTERNATIVE IS WEAKENED, NOT MERELY UNTESTED
+
+Item 509 named the replacement in advance: **if this held high, Redken's 0 was about Redken, and the
+driver was HOW MANY LINES SHARE VOCABULARY WITHIN A BRAND.**
+
+**L'Oréal Professionnel is that model's best case:**
+
+```
+"Serie Expert"              prefixes almost every product in the brand
+"Absolut Repair Molecular"  spans a SHAMPOO, a MASK, a RINSE-OFF SERUM,
+                            a LEAVE-IN and a BI-PHASE OIL
+"Scalp Advanced"            spans anti-discomfort, anti-oiliness, anti-dandruff
+"Vitamino Color"            spans shampoo, conditioner, spray, three tinted variants
+```
+
+> **THE CONDITION THE ALTERNATIVE PREDICTS HOLDS FROM WAS ABUNDANTLY PRESENT AND PRODUCED ZERO.** Not
+> "the test was inconclusive" — **the strongest available case for the rival returned the incumbent's
+> prediction exactly.**
+
+#### ★ TWO ALTERNATIVES NAMED IN ADVANCE AND WEAKENED BY MEASUREMENT
+
+| named before reading | best case | result |
+|---|---|---|
+| **range density** (item 508) | Dermalogica's BioLumin-C: 7 members, two sizes of one SKU | **1 of 34** |
+| **shared vocabulary** (item 509) | L'Oréal Professionnel: Serie Expert everywhere, Molecular across 5 types | **0 of 30** |
+
+> **THAT IS WORTH MORE THAN FIVE CONFIRMATIONS.** A confirmation adds a point to a curve the model
+> already fits. **Killing a rival removes an explanation that fitted the same points** — and both rivals
+> fitted every result available when they were written.
+>
+> **AND BOTH WERE NAMED WHEN THEY WERE NOT THE EXPECTED READING.** Neither was a hedge: in each case the
+> prediction went the other way and the alternative was written down anyway, before the result made it
+> unattractive. **A falsifier authored after the data is a rationalisation with the grammar of a
+> prediction.**
+
+#### THE RUN
+
+```
+30 groups · 32 rows removed · 0 orphan prices
+ONE revalidation call · 63 paths (1 brand + 62 product) · request 10972
+rule 2: 30/30 keepers carry a size token
+```
+
+**Plan preserved in `fmb_merge_batch_lp_20260831`.**
+
+#### ★ THE WEEK'S TOTALS, AND THE SHAPE MATTERS MORE THAN THE PERCENTAGE
+
+```
+groups merged                 221        rows removed              308
+products gaining a comparison 221        (every keeper, ACTIVE retailers)
+
+clean population remaining  5,958
+   4+ active retailers        640    across ~100 brands, mean ~6
+   exactly 3                1,775
+   exactly 2                3,543
+all groups remaining        6,710    (+121 contamination, +631 cross-brand)
+```
+
+**221 of ~6,180 is 3.6% in a week, which reads as a long tail. The shape says otherwise.**
+
+> **THE 640 AT 4+ FINISH IN A FEW SITTINGS** — roughly 100 brands at a mean of 6, and this week
+> disposed of 221 in five batches. **The mass is below it: 5,318 of 5,958 sit at TWO OR THREE
+> retailers, 89% of what remains.**
+>
+> **SO IT IS A PROGRAMME FOR THE 640 AND A LONG TAIL BELOW IT. VALUE IS FRONT-LOADED BY RETAILER COUNT
+> RATHER THAN SPREAD EVENLY**, because a 2-retailer group yields a comparison of two prices and many
+> of those two prices will barely differ.
+
+**AND THE DECISION AFTER THE 4+ TIER IS NOT WHETHER TO CONTINUE.** It is **whether a 2-retailer merge is
+worth a read** — a different question with a different answer, and **one that should be asked when the
+tier is done rather than answered now.** Answering it today would be deciding the cheap work's fate
+from inside the expensive work's momentum.
+
+---
+
+### 510. Elizabeth Arden: the first genuinely mixed brand
+
+**Raised:** 31 August 2026 · **WRITTEN AND COMMITTED BEFORE THE 29 GROUPS WERE READ.** · **Batch not yet run.**
+
+**29 groups. Skincare-dominant, 38% makeup, 3% fragrance.** Every brand so far has been essentially one
+shape. **This is the first that is not**, and it separates two readings of the model that all five
+previous results are consistent with.
+
+#### ★ WHAT THE MODEL SHOULD PREDICT IF IT IS PROPORTIONAL
+
+```
+~11 groups makeup      at makeup's 14.3%   ->  1.6
+~18 groups skincare    at skincare's 2.9%  ->  0.5
+                                      TOTAL ~2
+```
+
+> **PREDICTED: 1-3 HOLDS OF 29.** The model claims holds come from **what an individual name must
+> adjudicate**, so a mixed brand should hold at the weighted average of its parts. **Each group is
+> judged on its own name; nothing about the brand's composition reaches a single group.**
+
+#### ★★ AND THE TWO READINGS THIS SEPARATES, STATED BEFORE READING
+
+| if it comes back | reading |
+|---|---|
+| **~2** | **PROPORTIONAL** — the model operates per group, as claimed |
+| **~4 or more** | **PRESENCE-BASED** — a brand is "ambiguous" if any meaningful part of it is, and the rate is set by the most ambiguous component rather than the mix |
+| **0** | **DOMINANT-CATEGORY** — the brand behaves as its majority shape and the makeup 38% is invisible |
+
+> **ALL FIVE PREVIOUS RESULTS ARE CONSISTENT WITH ALL THREE READINGS**, because every brand so far has
+> been ~90%+ one category — proportional, presence-based and dominant-category predictions coincide
+> when there is only one component. **Elizabeth Arden is the first case where they come apart.**
+>
+> **THE MODEL HAS BEEN SAYING "PER NAME" THROUGHOUT AND HAS NEVER BEEN TESTED ON IT.** A presence-based
+> result would mean the category label has been doing work the per-name story denied — and would make
+> every batch-planning decision depend on a brand's worst component rather than its average.
+
 **Result and reading follow once run.**
 
