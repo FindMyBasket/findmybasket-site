@@ -290,17 +290,25 @@ export function HomePage() {
           `rounded-2xl border border-border` on a tinted band, which is BrandPage,
           CategoryPage, ProductCard and SubcategoryPage verbatim. It renders here
           only because `.fmb-home` resets border-width AND border-style; site-wide
-          it still does not, which is item 521 and not this. Item 524. */}
+          it still does not, which is item 521 and not this.
+
+          `md:` ONLY, AND THAT IS AN ARGUMENT RATHER THAN A TRIM. A card is a device
+          for structuring HORIZONTAL space, and at 390 there is none to structure —
+          every block is already full width and the tinted band already separates
+          this one. Robbie's complaint was explicitly "from screenshots at desktop":
+          584px of text in a 1,200px column. Carding it on mobile buys a border and
+          two paddings for no hierarchy, and costs 80px of a screen budget. Same
+          reasoning as the routine list's `max-md:` rows. Item 524. */}
       <section className="bg-warm-white border-y border-border">
-        <div className="max-w-site mx-auto px-6 py-12 grid gap-4 md:gap-6 md:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-cream p-6 md:p-8">
+        <div className="max-w-site mx-auto px-6 py-12 grid gap-8 md:gap-6 md:grid-cols-2">
+          <div className="md:rounded-2xl md:border md:border-border md:bg-cream md:p-8">
             <h2 className="font-serif text-xl text-ink mb-2">Completely free to use</h2>
             <p className="text-sm text-ink-light leading-relaxed">
               Free for everyone, always. We earn a small affiliate commission when you click
               through and buy, at no extra cost to you.
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-cream p-6 md:p-8">
+          <div className="md:rounded-2xl md:border md:border-border md:bg-cream md:p-8">
             <h2 className="font-serif text-xl text-ink mb-2">Honest pricing</h2>
             <p className="text-sm text-ink-light leading-relaxed">
               We pull prices directly from each retailer&rsquo;s official feed. Sometimes the
@@ -312,7 +320,7 @@ export function HomePage() {
 
       {/* ── ONE CTA — the duplicated pair merged ────────────────────────────── */}
       <section className="max-w-site mx-auto px-6 py-12 md:py-14">
-        <div className="rounded-2xl border border-border bg-warm-white px-6 py-10 md:py-14 text-center">
+        <div className="text-center md:rounded-2xl md:border md:border-border md:bg-warm-white md:px-6 md:py-14">
           <h2 className="font-serif text-2xl md:text-3xl text-ink mb-3">
             Save your routine. We&rsquo;ll find the best price each month.
           </h2>
