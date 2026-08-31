@@ -41156,7 +41156,36 @@ savings hub at **`/app?q=`** — **and `/app` is `Disallow`ed in robots.txt.**
 **`app/product/[id]/page.tsx` constructs its OpenGraph object directly and never calls `socialTags`.**
 It is missing `og:type`, `og:site_name`, `og:image:alt`, `og:image:width` and `og:image:height`.
 
-> **THE MOST-SHARED PAGE TYPE ON THE SITE HAS THE THINNEST SHARE CARD**, and the fix is to call a
-> function that already serves 14 routes. **Not part of the homepage rebuild** — it is a different
-> file, a different surface, and a smaller change than folding it in would suggest.
+> **THE MOST-SHARED PAGE TYPE ON THE SITE HAS THE THINNEST SHARE CARD.**
+
+#### ★ AND THE FIX I PROPOSED — "CALL socialTags" — WAS WRONG
+
+**`socialTags` forces the SITE CARD, and it is right to.** Its own comment records why: it exists for
+brand and category pages, where *"the first product"* is whatever `.order('id')` returned —
+**Maybelline's 595 products yielding one lip gloss shade.** No representative image exists there, so
+the site card *"is at least true."*
+
+> **A PRODUCT PAGE HAS A REPRESENTATIVE IMAGE: ITS OWN PRODUCT.** Routing this through the helper
+> would replace `product.image_url` with a logo **on the most-shared page type on the site** — turning
+> a card that shows the product into a card that shows a brand mark.
+>
+> **A REGRESSION WEARING CONSISTENCY'S CLOTHES.** The proposal came from comparing tag COUNTS —
+> 8 against 13 — and the count could not see that five of the thirteen are only correct because the
+> helper owns the asset they describe.
+
+**WHAT WAS ACTUALLY MISSING IS SMALLER: `og:type` and `og:site_name`.** Both are static strings, both
+were absent, and both are now set. `twitter:title` was absent from the object and filled by Next from
+`title`; it is now explicit.
+
+**AND `og:image:width`/`height` ARE DELIBERATELY NOT ADDED.** `socialTags` declares 2500x1312 because
+it owns that asset, and `social-tags.ts` records that **Facebook lays the card out from the declared
+values before it fetches**, so a mismatch renders wrong. `product.image_url` is a remote retailer URL
+of unknown size.
+
+> **A MISSING DIMENSION MAKES THE CARD LAY OUT AFTER FETCH. A WRONG ONE MAKES IT LAY OUT WRONG.**
+> Copying the pair across to close a count would have been the same error as calling the helper: a
+> value correct where it was written, wrong where it was copied.
+
+**Applied. `tsc` clean, 260 tests pass.** Not part of the homepage rebuild — a different file, a
+different surface.
 

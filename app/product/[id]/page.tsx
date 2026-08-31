@@ -195,14 +195,35 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
     title,
     description: metaDescription,
     alternates: { canonical },
+    // NOT socialTags(). That helper forces the SITE CARD, and it is right to: it
+    // exists for brand and category pages, where "the first product" is whatever
+    // `.order('id')` returned and a card showing one lip gloss shade for a 595-product
+    // brand claims something the ordering never meant. See lib/format/social-tags.ts.
+    //
+    // A PRODUCT PAGE HAS A REPRESENTATIVE IMAGE — its own. Routing this through the
+    // helper would swap the product for a logo on the most-shared page type on the site,
+    // which is a regression wearing consistency's clothes. Item 517.
+    //
+    // `type` and `siteName` WERE missing and are the whole of what was wrong here.
+    //
+    // NO og:image:width/height. socialTags declares 2500x1312 because it owns that asset
+    // and Facebook lays the card out from the declared values BEFORE it fetches, so a
+    // mismatch renders wrong. `product.image_url` is a remote retailer URL of unknown
+    // size. A MISSING DIMENSION MAKES THE CARD LAY OUT AFTER FETCH; A WRONG ONE MAKES IT
+    // LAY OUT WRONG.
     openGraph: {
       title,
       description: socialDescription,
       url: canonical,
-      images: product.image_url ? [product.image_url] : undefined,
+      type: 'website' as const,
+      siteName: 'FindMyBasket',
+      images: product.image_url
+        ? [{ url: product.image_url, alt: baseTitle }]
+        : undefined,
     },
     twitter: {
       card: 'summary_large_image',
+      title,
       description: socialDescription,
       images: product.image_url ? [product.image_url] : undefined,
     },
