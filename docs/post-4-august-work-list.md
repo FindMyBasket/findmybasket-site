@@ -40204,3 +40204,90 @@ sits in the comment above the expression.
 
 **The stored names are untouched. `match_key` moves on nothing.**
 
+---
+
+### 506. Four surfaces, and not the one a person looks at
+
+**Raised and fixed:** 31 August 2026 · **Found by verifying item 505 on production.**
+
+#### ★ THE CLAIM I MADE AND ROBBIE APPROVED WAS WRONG
+
+*"One function reaches all four surfaces."* **It does not reach the `<h1>`.**
+
+```
+/product/101655   after item 505 deployed
+
+  <title>       Debenhams The Ultimate Edit | ...              CLEAN
+  JSON-LD name  Debenhams The Ultimate Edit                    CLEAN
+  <h1>          Debenhams The Ultimate Edit (Worth £134, Yours for £30)   NOT CLEAN
+  img alt       Debenhams The Ultimate Edit (Worth £134, Yours for £30)   NOT CLEAN
+```
+
+`app/product/[id]/page.tsx:462` renders `{product.name}` **raw**, and `:445` uses the same string as the
+image `alt`.
+
+> **THE CODE READS AS THOUGH `displayProductTitle` COVERS THE PAGE.** It is imported at the top, used
+> for the metadata title, the JSON-LD name and the search query — **and the `<h1>` sits between them
+> using the raw column.** Counting the call sites gives four surfaces and the impression of
+> completeness.
+>
+> **FOUR SURFACES, AND NOT THE ONE A PERSON ACTUALLY SEES.** The three that were already clean are the
+> ones read by machines; the two that were not are the ones a human reads.
+
+**VERIFYING ON PRODUCTION IS WHAT FOUND IT.** The measurement in item 505 — 178 changed, 0 outside
+target — was correct and complete about the FUNCTION. It could not say anything about which callers use
+it. **A test of a pure function cannot detect an un-wired caller**, and nothing in the diff looked
+incomplete.
+
+#### THE FIX
+
+`stripPriceClaim(product.name)` in the `<h1>` and the `alt` — **not `displayProductTitle`.** The claim
+goes; the brand prefix and the pack text stay.
+
+#### ★ AND THE LINE-525 COMMENT HELD THE BOUNDARY
+
+The obvious change — route the `<h1>` through `displayProductTitle` like everything else — would have
+stripped the brand prefix too. Four lines below, a comment says:
+
+> *"Suppression is honest here because the `<h1>` above renders `product.name` RAW ... **If that title
+> ever stops showing the raw name, revisit `lib/format/pack-size.ts` — the justification lapses with
+> it.**"*
+
+**The size-chip suppression is justified BY the h1 showing the full raw name.** Nothing else states
+that dependency; no test asserts it; the two files do not import each other.
+
+> **SECOND TIME THIS WEEK A NOTE HELD A BOUNDARY RATHER THAN DESCRIBING ONE**, after `pack-size.ts`'s
+> own header naming the constraint five days before the work that hit it. **A comment that names its
+> dependency, states the consequence, and asks to be consulted is doing work no type and no test
+> does** — it is the only thing standing between "make it consistent" and a silent regression on
+> another surface.
+
+#### ★★ AND THE DEPENDENCY IT NAMED WAS NOT THE ONE THAT MOVED
+
+**The comment was answered rather than assumed, as it asked. The answer is that the guard is dormant.**
+
+```
+canonical_size, measured 31 Aug:   186ml  <-  "15 x 12.4ml"     the PACK TOTAL
+                                    540g  <-  "6 X 90 g"
+                                     10g  <-  "4 x 2.5g"
+displaySizeChip suppressions:      0 of 11 tested with the real function
+```
+
+The comment was written when `canonical_size` held the **unit** size, so the chip understated 446
+products and the guard fired. **The column now holds the pack total, so the equality the guard tests is
+never true and it suppresses nothing.** The 446 is historical.
+
+> **IT ASKED TO BE CONSULTED IF THE `<h1>` CHANGED, AND THE COLUMN CHANGED UNDERNEATH IT INSTEAD.** The
+> note guarded one direction and the other side moved. **A dependency written down is still only
+> written down in the direction its author was worried about** — which is not an argument against
+> writing it, since the note is why the h1 was not routed through `displayProductTitle` regardless.
+>
+> **Left in place and DATED rather than deleted.** The guard is still correct for the shape it
+> describes; if `canonical_size` reverts, it fires again. **Deleting a dormant guard because it is
+> dormant is how the shape comes back unnoticed.**
+
+**Checked with `displaySizeChip` itself rather than a reimplementation** — the discipline item 499
+established, and the third time this week it changed an answer.
+
+**260 tests pass, `tsc` clean.**
+
