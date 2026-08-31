@@ -16,17 +16,28 @@ name: Work-list integrity
 #
 # Runs on pull requests, because both failures are introduced by a branch and are cheapest to
 # see before it merges.
+#
+# ── NO `paths:` FILTER, AND THAT IS THE POINT. Item 532. ──────────────────────────────────
+#
+# It had one, covering .ts, .tsx, .mts, .sql and .md. On 31 August 2026 PR #552 added a
+# workflow and a Python script that cited item 531 twice before item 531 existed -- exactly
+# the failure the citation check was written for, in PR #410's own words -- and the check
+# DID NOT RUN, because .yml and .py were not in the list.
+#
+# THE CHECKER SCANS THE WHOLE REPOSITORY AND THE TRIGGER DID NOT. `check-worklist-citations.sh`
+# greps every tracked file; run by hand on that branch it found both citations in a second.
+# It was never asked.
+#
+#   A CHECK WHOSE SCOPE IS WIDER THAN ITS TRIGGER IS SILENT PRECISELY WHERE ITS TRIGGER IS
+#   WRONG -- and nothing about a green pull request distinguishes "it passed" from "it never
+#   ran". The path list was an optimisation on a job that takes well under a minute and needs
+#   no secrets, so it was buying nothing and hiding the cases nobody had thought of.
+#
+# Same reasoning as retailer-logos.yml: a failure that can arrive without touching the
+# filtered paths is silenced by a path filter in exactly the case the check exists for.
 
 "on":
   pull_request:
-    paths:
-      - 'docs/post-4-august-work-list.md'
-      - 'scripts/check-worklist-*.sh'
-      - '**/*.ts'
-      - '**/*.tsx'
-      - '**/*.mts'
-      - '**/*.sql'
-      - '**/*.md'
   workflow_dispatch:
 
 jobs:

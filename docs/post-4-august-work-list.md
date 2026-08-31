@@ -42717,6 +42717,40 @@ The brief cited **564** live fragrance brands. Measured 31 August: **590**, acro
 > answers a question about last week. **The fourth figure this week to go stale between being taken and
 > being used** — after the 243 strip height, the 78-against-88 og:title, and the 13-files premise.
 
+#### ★★ THE DIRECTORY WAS READ, AND BOTH AVAILABLE GUESSES WERE WRONG
+
+```
+── root ────────────────────────────────        ── /43488 ── HOLDS THE FEED ────────────
+/43488                                          /43488/43488_4684964_2_cmp.xml.gz
+/43488_4684964_mp.xml.gz                        /43488/43488_4684964_2_cmp_delta.xml.gz
+/43488_4684964_mp_delta.xml.gz                  /43488/43488_4684964_2_cmp_template.txt.gz
+/53421
+/53421_4684964_mp.xml.gz                        FEED DIRECTORY: /43488
+/ADDITIONAL
+/GLOBAL
+```
+
+**`/43488` is the MERCHANT ID.** Not the SID — `/4684964` does not exist, and the SID appears only
+inside filenames. Not Superdrug's `/50336` shape either.
+
+> **BOTH NUMBERS IN THE BRIEF WERE AVAILABLE AND NEITHER WAS THE ANSWER.** A guess from the SID hits
+> nothing; a guess from the Superdrug precedent hits nothing. **Either fails as an empty fetch**, which
+> on a feed onboarding reads as "the merchant has no products" rather than "you looked in the wrong
+> place" — the same shape as the all-zero census above, arriving one step earlier.
+
+**AND THE LISTING TURNED UP TWO THINGS NOBODY WAS LOOKING FOR:**
+
+- **An `_mp` feed at root, same merchant, same SID** — `43488_4684964_mp.xml.gz` beside the `_2_cmp`
+  one inside `/43488`. Different products, and Rakuten's merchandiser format rather than the cmp
+  schema this importer parses. **A future hand reaching for "the Fragrance Shop feed" at root gets the
+  wrong file with the right prefix**, and it will parse far enough to produce numbers.
+- **`/53421` — a second merchant sharing SID 4684964.** The account is not single-tenant. **A `mget` at
+  root would have pulled a stranger's catalogue**, and the filenames differ only in the leading id.
+
+> **THE LISTING COST ONE RUN AND ANSWERED THREE QUESTIONS**, two of which had not been asked. **A read
+> of the environment returns the thing you wanted and the things adjacent to it; a guess returns only
+> whether you were right.**
+
 #### AND A HOLE IN THE CITATION CHECK, FOUND BY THIS ITEM'S OWN PR
 
 `worklist-integrity` did not run on the PR that introduced this item's citations, and it would have
@@ -42735,7 +42769,69 @@ Its `paths:` filter is `docs/post-4-august-work-list.md`, `scripts/check-worklis
 > locally in a second; it simply was never asked. **The hole is exactly the shape of the PR that found
 > it**, which is the only reason it surfaced at all.
 >
-> **REPORTED, NOT FIXED.** The one-line change is to drop the `paths:` filter, the same reasoning as
-> `retailer-logos.yml`: a failure that can arrive without touching the filtered paths is silenced by a
-> path filter in exactly the case the check exists for. It is a change to the integrity apparatus and
-> that is Robbie's call.
+**Fixed in item 532**, which carries the finding: the `paths:` filter is gone.
+
+### 532. A check whose scope was wider than its trigger
+
+**Raised:** 31 August 2026 · **Fixed. One line: the `paths:` filter is gone from
+`worklist-integrity.yml`.**
+
+PR #552 added `.github/workflows/refresh-fragrance-shop.yml` and
+`scripts/onboarding/fragrance-shop-census.py`, both citing **item 531 before item 531 existed**. The
+citation check would have failed:
+
+```
+DANGLING item citations -- cited in the repository, absent from the work list: 531
+  .github/workflows/refresh-fragrance-shop.yml:8
+  scripts/onboarding/fragrance-shop-census.py:3
+```
+
+**It did not run.** Its trigger was:
+
+```yaml
+pull_request:
+  paths:
+    - 'docs/post-4-august-work-list.md'
+    - 'scripts/check-worklist-*.sh'
+    - '**/*.ts'  '**/*.tsx'  '**/*.mts'  '**/*.sql'  '**/*.md'
+```
+
+**A PR adding only `.yml` and `.py` matches none of them.**
+
+#### ★★★ THE FINDING: SCOPE WIDER THAN TRIGGER IS SILENCE EXACTLY WHERE THE TRIGGER IS WRONG
+
+`check-worklist-citations.sh` greps **every tracked file**. Run by hand on that branch it found both
+citations in about a second. It was never asked.
+
+> **A CHECK WHOSE SCOPE IS WIDER THAN ITS TRIGGER IS SILENT PRECISELY WHERE ITS TRIGGER IS WRONG.** The
+> filter is a claim about where the failure can come from, and the checker's own breadth is a
+> contradiction of that claim — **the two disagree by construction, and the trigger wins.**
+>
+> **AND NOTHING ABOUT A GREEN PULL REQUEST DISTINGUISHES "IT PASSED" FROM "IT NEVER RAN".** GitHub
+> renders an untriggered check as absent, not as skipped, and a merge queue that waits for "no failing
+> checks" is satisfied by both. **The absence has to be noticed by a person who expected the check to be
+> there** — which is how this surfaced: a poll loop waiting for `integrity:completed/success` sat green
+> on everything else for fifteen iterations while the one check it wanted never appeared.
+
+#### THE HOLE WAS EXACTLY THE SHAPE OF THE PR THAT FOUND IT
+
+The citation check exists because of PR #410, which *"shipped code citing item 263 before item 263 was
+written"* — and was caught by accident. **This is the same failure, in a file type the fix did not
+cover, found by accident again.**
+
+> **THE FILTER WAS BUYING NOTHING.** The job takes well under a minute, needs no secrets, and installs
+> nothing. **It was an optimisation on a cost that did not exist, paid for with silence in every case
+> nobody had enumerated** — and the enumeration is the part that cannot be made complete, because it is
+> a list of file extensions someone thought of in August.
+
+Same reasoning as `retailer-logos.yml` an hour earlier: **a failure that can arrive without touching the
+filtered paths is silenced by a path filter in exactly the case the check exists for.** Two independent
+instances in one evening, one found by writing the check and one by tripping over the gap.
+
+#### WHAT THIS DOES NOT FIX
+
+**Contiguity and citations still only run on pull requests.** A citation introduced by a direct push to
+`main`, or by an edit made outside the repository, is still unseen. That is a narrower hole than the one
+closed here and it is left open deliberately — **the check is cheap but it is not free, and running it
+on every push to every branch would make it noise.** Recorded so the next person finds the boundary
+stated rather than having to re-derive where it sits.
