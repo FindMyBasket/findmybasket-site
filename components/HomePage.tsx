@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { SiteLayout } from './SiteLayout';
-import { SiteSearch } from './SiteSearch';
 import { homepageDemo as demo } from '../lib/homepage-demo';
 
 const money = (n: number) => `£${n.toFixed(2)}`;
@@ -44,9 +43,19 @@ export function HomePage() {
   return (
     <SiteLayout>
       {/* ── HERO ─────────────────────────────────────────────────────────────
-          SiteSearch is mounted HERE and the nav's instance is untouched. Two mounts
-          rather than a lifted shared instance: the second is simpler and the cost is a
-          duplicate typeahead request, which only occurs if someone types in both. */}
+          A PLAIN GET FORM TO /search, NOT SiteSearch. Measured on the preview: SiteSearch
+          renders a BUTTON, and its <input> exists only inside a dropdown once `open` is
+          true. Mounting it here would have put a second trigger on the first screen — the
+          same click-to-reach-the-mechanic the static hero's CTA already was, which is the
+          exact thing this change exists to remove.
+          
+          It would also have collided: the panel is `fixed left-4 right-4 top-16` on mobile,
+          anchored to the VIEWPORT rather than its trigger, so two mounts open two panels in
+          one place.
+          
+          A form needs no hydration, works with JavaScript off, and puts a REAL FIELD at the
+          top of the page. `from=homepage_hero` so the existing SearchEventTracker can tell
+          this entry point apart. The nav's SiteSearch is untouched. Item 513. */}
       <section className="max-w-site mx-auto px-6 pt-10 pb-12 md:pt-16">
         <p className="text-xs uppercase tracking-widest text-gold font-medium mb-4">
           Compare across UK retailers · delivery included
@@ -59,9 +68,26 @@ export function HomePage() {
           retailer&rsquo;s own delivery terms in the total.
         </p>
 
-        <div className="max-w-xl mb-4">
-          <SiteSearch />
-        </div>
+        <form action="/search" method="get" className="max-w-xl mb-4">
+          <input type="hidden" name="from" value="homepage_hero" />
+          <div className="flex items-center gap-2 bg-warm-white border border-border rounded-full px-5 py-3">
+            <input
+              type="text"
+              name="q"
+              required
+              minLength={2}
+              placeholder="Search products and brands…"
+              aria-label="Search products and brands"
+              className="w-full bg-transparent text-sm text-ink placeholder:text-ink-light outline-none"
+            />
+            <button
+              type="submit"
+              className="shrink-0 bg-ink text-cream text-sm px-5 py-2 rounded-full hover:bg-gold transition-colors"
+            >
+              Search
+            </button>
+          </div>
+        </form>
 
         <p className="text-sm text-ink-light">
           or{' '}
