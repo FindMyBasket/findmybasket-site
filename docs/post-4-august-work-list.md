@@ -41919,3 +41919,136 @@ first field      342px       417px         398px
 
 **Mobile is shorter than the day it flipped and desktop is 326px taller than its thinnest.** That is the
 right direction on both: the budget was a mobile constraint and the complaint was a desktop one.
+
+### 525. The h1 is Cormorant. Three other things about it were wrong
+
+**Raised:** 31 August 2026 · **Two changes asked for, one of which did not work as asked. Two further
+findings on the same element, one of them site-wide.**
+
+#### THE HYPOTHESIS WAS THE RIGHT SHAPE AND THE WRONG LINE
+
+The question was whether `font-serif` had the same defect the search field had an hour earlier — a
+literal family name where a `next/font` variable belongs. **It does not, and the two sit next to each
+other in the same object:**
+
+```ts
+sans:  ['"DM Sans"', 'sans-serif'],                  // literal — BROKEN
+serif: ['var(--font-cormorant)', 'Georgia', 'serif'], // variable — correct
+```
+
+Measured on production, `Optimised` at 100px:
+
+```
+declared stack   417.7px      <- what the h1 renders
+Georgia          534.5px
+generic serif    444.5px
+```
+
+**Three distinct widths, so the h1 is neither fallback. It is Cormorant.**
+
+> **AND THE SAME READ FOUND A LIVE INSTANCE OF THE DEFECT IT WENT LOOKING FOR.** `font-sans` resolves to
+> the literal `"DM Sans"`, which is not the family `next/font` loaded (`__DM_Sans_be8b38`), and
+> `components/SiteLayout.tsx:20` puts it on **every footer link on every React page on the site.** The
+> body inherits `var(--font-dm-sans)` from `globals.css` and is fine; anything with an explicit
+> `font-sans` class is not. **Second instance of the mechanism, found by checking a place it turned out
+> not to be.**
+
+#### ★★ WHY IT DOES NOT LOOK LIKE CORMORANT: THE WEIGHT, AND IT IS PREFLIGHT AGAIN
+
+```
+h1 classes:  font-serif text-4xl md:text-6xl text-ink leading-tight mb-4     <- no weight
+computed:    font-weight: 700
+public/index.html:  .hero h1 { font-weight: 600 }
+```
+
+**Nothing in the React h1 sets a weight, so it takes the user agent's `h1 { font-weight: bold }` — 700.
+The page it replaced specified 600.** Cormorant Garamond is a high-contrast display face where that
+step is the difference between elegant and heavy, at 60px, on the largest element on the site.
+
+> **THIRD THING THE MISSING `@tailwind base` HAS CHANGED THE LOOK OF**, after the form controls and the
+> lists, and the first that is not a defect anyone would file. **Preflight would set `font-weight:
+> inherit` here and take it to 400, which is too light** — so this one is not fixed by item 521 landing.
+> It needs an explicit `font-semibold`, and it needs it whether 521 lands or not. **Reported, not
+> applied: it is a visual change to the largest element on the page and it was not one of the two asked
+> for.**
+
+#### AND THE PORT CHANGED THE GOLD AS WELL AS CANCELLING THE ITALIC
+
+> *"The static page set `font-style: italic` with the gold colour, and the port kept the colour and
+> cancelled it."*
+
+**It did not keep the colour.**
+
+```
+public/index.html   .hero h1 em { font-style: italic; color: var(--gold-text); }   #8A6A30
+the port            <em className="text-gold not-italic">                          #C9A96E
+```
+
+**Two changes, not one** — the italic cancelled and the gold lightened by a full token. `gold` is the
+decorative gold and `gold-text` is the one the palette provides for type; item 520 used `gold-text` for
+the demo price for exactly this reason. **Also reported and not applied**: at 60px display size the
+lighter gold is defensible and may even be the better call, which makes it a decision rather than a
+correction.
+
+#### ★★★ THE ITALIC COULD NOT BE RESTORED BY REMOVING `not-italic`
+
+`app/layout.tsx` never asked for an italic face, and `next/font` defaults to `style: ['normal']`.
+
+```
+before   width of "Optimised" at 200px:  roman 835.4   italic 835.4     <- identical to 0.1px
+after    width of "Optimised" at 200px:  roman 835.4   italic 731.4
+```
+
+**Identical advance widths in both styles is the signature of a synthesised oblique** — the browser
+slanting the roman because it has nothing else. Adding `style: ['normal', 'italic']` produced four real
+italic faces and a different set of advances.
+
+> **A SYNTHETIC OBLIQUE IS THE WORST CASE FOR THIS TYPEFACE SPECIFICALLY.** Cormorant's italic is a
+> separate drawing — a true cursive with different letterforms — and it is the most characteristic thing
+> in the family. **Slanting the upright gives none of that while looking, from across a room, like it
+> worked.** The same "nearly right" class as `font-sans` falling back to system sans, and the same class
+> as the borders: authored correctly, rendering as something else.
+
+**And the obvious check says yes when the answer is no:**
+
+```
+document.fonts.check('italic 600 60px __Cormorant_Garamond_07d15b')  ->  true, with no italic loaded
+```
+
+> **`check()` ANSWERS "CAN THIS TEXT BE RENDERED", AND SYNTHESIS COUNTS AS YES.** The discriminator that
+> works is the width test above. **A check that cannot return false for the condition you care about is
+> not a check** — the fourth instance of that shape today, after the preview's zero tags, the unfocused
+> `:focus`, and the arithmetic.
+
+**It costs one file, not four.** `next/font` declares `@font-face` for the whole weight × style cross
+product and the browser fetches lazily — measured on the live page beforehand, weight 500 had **0 of its
+5 declared faces loaded**.
+
+#### THE AMPERSAND: h1 ONLY — RIGHT CALL, DIFFERENT REASONS
+
+Robbie's read was *"the h1 only: `&` in a title tag reads as informal and the caps were measured on the
+'and' form."* **The conclusion holds and neither reason is load-bearing:**
+
+- **The route's `<title>` and `og:title` do not carry the tagline at all.** They are
+  `Health & Beauty Price Comparison UK | FindMyBasket` — 49 characters, nowhere near a cap, and the
+  tagline is not in them. **There is nothing for the ampersand to follow into.**
+- **The 78-against-88 measurement belongs to `public/index.html`'s `og:title`**, which has not been
+  served since item 515 redirected the file. It is a measurement of a page no longer reachable.
+- **And that title already contains an ampersand** — item 495 put it there, in the same rewrite that
+  produced the 78. **The informality concern was settled the other way, by the item the concern cites.**
+
+> **THE ANSWER WAS RIGHT AND THE MAP IT WAS DRAWN FROM WAS A MONTH OLD.** Both reasons describe the
+> site as it was before items 513, 515 and 523 moved the tagline out of the metadata and the metadata
+> off the static page. **A correct decision from stale premises is still worth checking, because the
+> next decision from the same premises may not be.**
+
+#### AND ONE OF MY OWN, CAUGHT BEFORE IT WAS RECORDED
+
+The first probe on the new build reported **`italicFacesDeclared: 0`** — apparently proving the loader
+change had not worked. It had. The filter was `f.family.includes('Cormorant_Garamond_07')`, the hash
+from the **previous** build; the new one is `e9ff3d`.
+
+> **A PROBE PINNED TO A BUILD HASH REPORTS ZERO FOR THE NEXT BUILD, AND ZERO READS AS A FINDING.** It
+> was caught only because the width test in the same run said the opposite. **Two instruments
+> disagreeing is the cheapest error detection available**, and it is the third time today one has caught
+> the other.
