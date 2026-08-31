@@ -42182,3 +42182,176 @@ The same read found a second divergence on the same element: `public/index.html`
 **`gold-text` remains correct for the demo price and that is not a contradiction.** That figure is 30px
 body-adjacent type where `gold` measures about 2.1:1; this is a 60px display word. The palette separates
 the two tokens by role and the roles genuinely differ.
+
+### 527. The hero proof: four options measured, and a calibration frame
+
+**Raised:** 31 August 2026 · **A judgement made from a picture. The measuring is the item.**
+
+Item 513 cut the retailer logo strip from the hero. It was 243px and 29% of the first screen at
+390×844, and cutting it was right on the fold budget. **It was also the only proof on the page that the
+site carries anything**, and the demo that answers the question better — a solved basket at £47.70
+against £54.96, Stylevana and YesStyle named — sits at 1,165px. **The proof moved below the fold rather
+than being replaced on it.**
+
+#### THE FOUR OPTIONS, MEASURED ON THE LIVE PAGE AGAINST 2,953px / 3.50 SCREENS
+
+```
+D  nothing                   +0px     3.50
+C  a count                  +21px     3.52
+B  logos, one row, no wrap  +55px     3.56    only 3 of 5 marks fit
+A  names, hero type         +80px     3.59
+E  the old strip           +245px     3.79    calibration, not an option
+```
+
+#### ★★ E IS WHAT PUTS THE OTHER FOUR ON THE SAME INSTRUMENT
+
+The old strip was rebuilt from `public/index.html`'s own numbers — 36px card, 17px image, 8px gap, wrap
+— and re-measured at **+245px** against the **243** on record from an entirely separate measurement
+weeks earlier.
+
+> **A CALIBRATION FRAME IS THE CHEAPEST WAY TO KNOW A MEASUREMENT IS COMPARABLE.** The other four
+> numbers are only meaningful against the 243 everyone remembers, and nothing else in the exercise
+> would have caught a systematically wrong rig — a mis-set viewport, a missing font, an unloaded image.
+> **Reproducing a known quantity costs one extra frame and converts four unverified numbers into four
+> verified ones.** It is the same move as the canary fixture in `supplement-type-fixtures.yml`: prove
+> the instrument can produce the answer you already know.
+
+#### ★★ OPTION B FAILED ITS OWN CONSTRAINT, AND THAT IS THE RESULT RATHER THAN A DEAD END
+
+*"A compressed logo strip at a fraction of 243px — smaller marks, one row, no wrap."*
+
+```
+row wants        513px
+column has       342px
+marks that fit   3 of 5
+```
+
+At 13px the marks are illegible — Boots vanishes, Stylevana is a grey smudge, YesStyle a green sliver.
+At 14–15px they read, and **three fit.** There is no height at which the constraint and legibility are
+both satisfied at 390.
+
+> **A CONSTRAINT STATED AS A DESIGN AND FOUND IMPOSSIBLE AT BUILD.** "One row, no wrap" and "legible"
+> are independently reasonable and jointly unsatisfiable in 342px, and nothing in the sentence says so.
+> **This is recorded rather than dropped because the option will be proposed again** — it is the obvious
+> compromise between the strip and nothing, and the next person to reach for it should find the 513
+> already measured.
+
+**AND LEGIBILITY ORDERING IS NOT CATALOGUE ORDERING.** The first five retailers by live priced rows —
+Boots 28,953, Debenhams 16,507, YesStyle 14,052, Stylevana 11,511, Perfume Click 10,195 — include three
+of the weakest small marks. **The five that read at 15px are a different five**, so any "show the top N"
+rule picks the wrong N. Measured by looking, which is the only instrument for it.
+
+#### ★★★ THE STATIC PAGE'S OWN MAINTENANCE RECORD IS THE EVIDENCE AGAINST COPYING IT
+
+The strip is 13 hand-written logo cards, and diffed both ways against the database **the 13 names match
+the 13 live-and-listed retailers exactly. No drift.**
+
+**It took three manual corrections in six weeks to be right:**
+
+| | when | how |
+|---|---|---|
+| Superdrug removed | 27 Jul 2026 | a copy sweep |
+| Atelier De Glow removed | 19 Aug 2026 | a copy sweep, three days after the flip |
+| Healf added | 30 Aug 2026 | item 494's sweep |
+
+> **THE ONLY REASON THE STRIP IS ACCURATE TODAY IS ITEM 494, EIGHT DAYS AGO.** Its correctness is a
+> snapshot of the last time a person looked, not a property of the thing.
+>
+> **"THE STATIC PAGE DID IT THIS WAY" HAS BEEN RIGHT THREE TIMES TODAY — THE DEMO CARD, THE SEARCH
+> FIELD, THE ITALIC — AND THIS IS ITS EDGE.** Item 526 named the hazard in the abstract, that a rule
+> with a good record gets applied past its limit. **Here the same source that has been right three times
+> supplies the argument against itself**, and it does so in the form the rule is weakest against: not
+> "the static page was wrong" but "the static page was right, at a cost that is invisible in the
+> artefact and visible only in its history."
+
+### 528. The count is derived, and it uses the definition the site already has
+
+**Raised:** 31 August 2026 · **Option C, live. `13 UK retailers, each one's delivery terms in the total.`**
+
+```
+                        before      after
+390x844   document      2,953px     2,989px      3.50 -> 3.54 screens
+          search field  398px       398px        unchanged, fully above the fold at 451px
+          the line      —           523-544px    above the fold
+1440x900  document      2,510px     2,546px      2.79 -> 2.83 screens
+```
+
+**IT LANDED AT 3.54, WHICH IS OVER 3.53, AND THAT IS THE REPORT.** The mock measured +21px and the built
+line costs +36. **Not trimmed to fit** — a `mt-3` would recover it and the instruction was to say so
+rather than shave. The field did not move and `01 Build your routine` is still above the fold at 605px.
+
+#### ★★ THE DEFINITION IS THE SITE'S, NOT A NEW ONE
+
+```sql
+active = true AND unlisted_reason IS NULL      -- 13
+```
+
+> **A HOMEPAGE THAT APPLIED A VOLUME THRESHOLD ON TOP WOULD STATE A DIFFERENT NUMBER FROM THE ONE EVERY
+> OTHER SURFACE IS BUILT FROM.** This thread has spent a week on second definitions. **The sentence is
+> not "13 big retailers", it is "13 retailers", and that is true under the predicate the site already
+> uses everywhere else.**
+
+**BOTH THIN ONES WERE CONSIDERED AND INCLUDED, and the numbers are here so the decision is visible
+rather than implied:**
+
+| | live priced rows | |
+|---|---:|---|
+| Boots … Healf (eleven) | 4,974 – 28,953 | |
+| **MyProtein** | **565** | importer disabled |
+| **The Organic Pharmacy** | **110** | |
+
+**AND IT IS DELIBERATELY A DIFFERENT PREDICATE FROM `getActiveRetailerIds`**, four lines above it in the
+same file. That set takes `active = true` alone because it answers *whose offers count in a comparison*,
+and an active retailer we have stopped linking to still has real prices in the table. This one answers
+*how many we tell a stranger about*, and a retailer we cannot send anyone to must not be in that
+sentence. **Two predicates, two questions, one file, and the comment says which is which** — the
+alternative is a third definition invented later by someone who found only one of them.
+
+**Either test alone has a hole:** Superdrug is `active = false` with 9,375 live priced rows still in the
+table; **Branded Beauty carried an `unlisted_reason` while still `active = true`**, unlisted 30 July,
+three days *before* the flip.
+
+#### ★ IT RETURNS null RATHER THAN 0, AND THE LINE DISAPPEARS
+
+`getListedRetailerCount()` returns `null` on a query error **or on an empty result**, because zero is
+not a credible reading of this table — **so zero means the instrument broke, not that the answer is
+zero.** The hero renders nothing when it is null.
+
+> **"0 UK retailers" IS WORSE THAN NO SENTENCE**, and an empty result and a broken query must not look
+> the same. Item 194's `cannot_run` contract, applied to a headline.
+
+#### ★★★ AND THE NUMBER IS NEVER TYPED
+
+Queried in `app/page.tsx`, which became `async` for it. `revalidate = 3600` means one extra query an
+hour.
+
+> **REQUEST TIME RATHER THAN THE DEMO GENERATOR, AND THE REASON IS THE FAILURE MODE.** A build-time
+> artefact is only as fresh as the last deploy: **a retailer added on a Tuesday with no deploy until
+> Friday is three days of a wrong number in a headline.** The query cannot go stale across deploys.
+>
+> **A HARDCODED COUNT DOES NOT SHIP. IF IT CANNOT BE DERIVED IT DOES NOT GO IN.** This is the
+> frozen-copy class the list has paid for three times, and **a number in a headline is the worst place
+> for it** — it is the most quotable thing on the page and the least likely to be re-read.
+
+#### TWO FALSE ALARMS OF MINE, BOTH FROM GREPPING HTML AS IF IT WERE TEXT
+
+The preview was declared broken twice before it was measured, and both were my own instrument:
+
+| the grep | what it matched | what I concluded |
+|---|---|---|
+| `grep -oE '\|500'` | `og:image:width content="2500"`, `fontWeight:500` | **"the deploy is 500ing"** |
+| `grep -oE '<strong[^>]*>[0-9]+ UK retailers'` | nothing — React emits `13<!-- --> UK retailers` | **"the count is missing"** |
+
+I went as far as pulling Vercel runtime logs on the first one. **The page had been returning HTTP 200
+with the correct title the whole time.**
+
+> **A PATTERN THAT ASSUMES CONTIGUOUS TEXT, RUN AGAINST HTML THAT IS NOT.** Both greps were looking for
+> a thing that was there and failing to see it, and both failures presented as findings about the
+> deployment rather than about the search. **The fix in each case was to print the surrounding bytes
+> instead of testing a hypothesis about them** — `grep -oE 'build your whole routine.{0,420}'` found the
+> line immediately.
+>
+> **AND IT IS THE SAME SHAPE AS THE FONT-HASH PROBE IN ITEM 525**, two items earlier: a query pinned to
+> an assumption about the output's form, returning zero, and zero reading as a result. **Third time
+> today, and the first two were caught by a second instrument.** These two were caught by looking at
+> the raw response, which is the same move at a lower level.
