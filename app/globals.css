@@ -1,4 +1,36 @@
 @tailwind components;
+
+/* ── A SCOPED PREFLIGHT, FOR ONE BLOCK ──────────────────────────────────────
+   THIS FILE HAS NO `@tailwind base`, so Tailwind's Preflight has never run on
+   this app. Two consequences, both measured on production rather than inferred:
+
+     1. `.border` sets `border-width: 1px` AND NOTHING ELSE. The `border-style:
+        solid` it depends on is Preflight's. Without it every one of the 86
+        `border-border` classes in components/ and app/ computes to
+        `border-width: 0px; border-style: none` and draws nothing. What looks
+        like a bordered card is warm-white on cream — a 1% background step.
+
+     2. Reaching for `border-solid` to fix that ALONE MAKES IT WORSE on any
+        element that sets only some sides. `border-t border-solid` turns the
+        style on for all four sides while setting the width of one, so the
+        other three fall back to the CSS initial `medium` — 3px. Measured:
+        the demo's footer rule rendered `1px 3px 3px 3px`, a box where a
+        hairline was intended.
+
+   So the reset is the pair, not the style alone: width 0 on everything, style
+   solid on everything, and the utilities that follow put the width back on the
+   edges that asked for it. SITE-WIDE THIS IS ITEM 521 and it turns on 86
+   borders at once; scoped to `.fmb-demo` it turns on this block's and nothing
+   else's, which is what lets item 520 land on its own. */
+.fmb-demo,
+.fmb-demo *,
+.fmb-demo ::before,
+.fmb-demo ::after {
+  border-width: 0;
+  border-style: solid;
+  border-color: #E8E2D5;
+}
+
 @tailwind utilities;
 
 /* Match the existing site's body baseline */
