@@ -39907,3 +39907,189 @@ missed all of this:**
 > acceptance criterion was still testable after the fix consumed its population. **Nobody has yet taken
 > one of these for the purpose it keeps turning out to serve.**
 
+---
+
+### 504. The Redken batch: 49 groups, zero holds, and one brand path against sixty-six
+
+**Raised, run and verified:** 31 August 2026 · **49 merged, 0 held, 0 overrides.** · **First per-brand batch.**
+
+```
+49 groups · 66 rows removed · 0 orphan prices · 66 merge_log rows
+ONE revalidation call · 116 paths (1 brand + 115 product) · request 10969 · status 200
+/product/31534  Redken All Soft Shampoo ... 300ml
+   Gorgeous Shop GBP 18.80 · Debenhams GBP 20.37 · Beauty Flash GBP 23.50 · Boots GBP 23.50
+/product/96376  308 -> /product/31534        /brands/redken  200
+```
+
+#### ★ ONE BRAND PATH AGAINST SIXTY-SIX: THE REDUNDANCY ARGUMENT AT ITS CLEANEST
+
+**The per-row trigger would have posted `/brands/redken` SIXTY-SIX TIMES** — once per removed row, the
+same path every time, every response discarded (item 502).
+
+> **A SINGLE-BRAND BATCH COLLAPSES 18.6x TO 1x BY CONSTRUCTION.** Yesterday's 73 groups across 34
+> brands needed 34 brand paths for 118 rows; this needed **one for 66**. The redundancy was never a
+> property of the trigger's rate — **it is a property of batching by something other than the thing the
+> call is keyed on.** Batch by brand and the argument disappears rather than being mitigated.
+
+#### ★ THE HOLD RATE IS A PROPERTY OF THE CATEGORY, NOT OF THE BATCH
+
+```
+82 groups, mixed, fragrance-heavy   ->  9 held    (11.0%)
+49 groups, one haircare brand       ->  0 held    ( 0.0%)
+```
+
+**Fragrance names must adjudicate real distinctions.** *Angel* against *Angel Star*; *Dark Leather*
+against *Black Leather*; *Family* against *Super Sensitive Family*; refillables, concentrations,
+flankers and gift sets. **The name is doing work, and sometimes it cannot.**
+
+**A systematic haircare range varies only in how much of the descriptor a retailer keeps.** Every one
+of today's three doubtful groups resolved on reading:
+
+```
+Control Hairspray 400ml / Hairsprays Control Addict 28 400ml   Control Addict 28 IS the 400ml control hairspray
+All Soft Mega Conditioner / All Soft Mega Curl(s) Conditioner  "All Soft Mega" IS the curls line; Boots drops the word
+Texture Paste Styling Product / Long-Lasting Hair Paste /
+  Pliable Styling Texture Paste 75ml                           one product, three phrasings
+```
+
+> **THE CONSEQUENCE IS A METHOD CHANGE: PLAN THE READING BUDGET BY CATEGORY, NOT BY COUNT.** A
+> fragrance batch of 49 is not the same work as a haircare batch of 49 — **it is roughly eleven times
+> the adjudication for the same number of groups.**
+>
+> **AND CHOOSING BATCHES BY SIZE ALONE WOULD HAVE DISCOVERED THIS THE EXPENSIVE WAY** — by scheduling a
+> fragrance batch as though it were a haircare one, running out of reading, and either holding half of
+> it or waving it through.
+
+#### THE TWO BROKEN SIZE TOKENS STAY
+
+`Redken Frizz Dismiss Rebel Tame250 ml, 250ml` and `Redken Hair Cleansing Cream Shampoo250 ml, 250ml`
+became keepers because rule 2 prefers a size-bearing name and the tidier alternatives carry none.
+
+> **THIS IS BEAUTY OF JOSEON'S *"Camilia"* AGAIN AND IT IS THE RULE WORKING.** A malformed name that can
+> be verified beats a clean one that cannot. **Overriding it here would make the exceptions a pattern
+> rather than exceptions** — two named rows yesterday were cheap precisely because they were two.
+
+**Plan preserved in `fmb_merge_batch_redken_20260831`.**
+
+#### AND TWO PRs CLOSED AS ALREADY-LANDED THIS WEEK
+
+**#508 and #477**, both conflicting because they were stale rather than because they carried anything.
+47 of 47 lines and 91 of 99 lines respectively were already on main, checked line by line rather than
+by diffstat. **The conflict was the signal to check, not an obstacle to resolve.**
+
+**And the stack cost, now charged three times** (#515 on #514, #516 on #515, #528 on #527): **a squash
+rewrites the SHA and puts the dependent into conflict, so a rebase is the standing price of stacking on
+a branch that will be squashed.**
+
+#### THE THIRD SNAPSHOT, AND THE ACTION ATTACHED
+
+> **THREE TIMES THIS WEEK A SNAPSHOT TAKEN FOR REVERSIBILITY BECAME THE AUDIT TRAIL** — the 1 July
+> artefact, `fmb_solgar_misfiled_snapshot_20260828` (the only reason item 499's positive acceptance
+> criterion was still testable after the fix consumed its population), and `fmb_merge_batch_20260831`.
+>
+> **NOBODY HAS YET TAKEN ONE FOR THE PURPOSE IT KEEPS SERVING.** The cheap action: **take it for both
+> reasons and say so in the COMMENT**, so the next reader knows the table is a record and not just an
+> undo.
+
+---
+
+### 505. The site renders an unverified discount claim, and it lives in the product name
+
+**Raised:** 31 August 2026 · **Found while reading the Redken batch.** · **MEASUREMENT ONLY. NOTHING FIXED.**
+
+#### ★ THE CLAIM
+
+**178 live products carry a price claim inside `products.name`.** The name is rendered by the product
+page, its `<title>`, its JSON-LD, the category grid, the brand page, search results and the sitemap —
+**so the site states a discount on a retailer's behalf, everywhere a product name appears.**
+
+```
+/product/101655
+
+  <title>       Debenhams The Ultimate Edit (Worth GBP 134, Yours for GBP 30) | ... | FindMyBasket
+  JSON-LD name  Debenhams The Ultimate Edit (Worth GBP 134, Yours for GBP 30)
+  actual offer  GBP 22.50
+```
+
+> **THE NAME SAYS "YOURS FOR GBP 30". THE PAGE SELLS IT AT GBP 22.50.** Both are on the same page, one
+> in the title tag and structured data that Google indexes, the other in the offer the user clicks.
+>
+> **AND NO PRICE CHECK VALIDATES IT, BECAUSE IT IS NOT A PRICE. IT IS TEXT.** Every guard this codebase
+> has for stale prices — the 24-hour boundary, the freshness columns, the suspect-price population —
+> watches the `price` column. **A number inside a name is invisible to all of it by construction.**
+
+More, ordered by the size of the implied saving:
+
+```
+Debenhams The Summer Icons Edit (Worth GBP 210)              selling at GBP 35.00
+Spotlight Oral Care Make Smiles Happen for Him Worth GBP 160 selling at GBP 49.00
+Pureology Hydrate Conditioner 1000ml Double Worth GBP 184    selling at GBP 80.48
+```
+
+#### ★ THE CLASS ARRIVES WHERE IT HAS NEVER BEEN AUDITED
+
+**Frozen prices have been found three times in COPY and fixed by removing the number each time:**
+
+| | was | became |
+|---|---|---|
+| the hero badge | *"Save up to around 25%"* | no figure, deliberately (item 329's comment) |
+| a stat card | *"100k+ products tracked"* | *"Every product from every retailer we carry"* |
+| a stat card | a bare **12** | *"Every retailer we carry"* (item 494) |
+
+> **THIS IS THE SAME CLASS INSIDE CATALOGUE DATA, WHERE THE COPY AUDITS COULD NOT SEE IT.** Every one
+> of those was found by reading an HTML file. **`products.name` is not an HTML file**, it arrives from
+> a feed, it is 178 rows deep, and it renders in more places than any single piece of copy does.
+>
+> **A sweep over copy cannot find a frozen price in data, and nothing has ever swept the data for one.**
+
+#### ONLY ONE FORM IS PRESENT, WHICH IS UNUSUAL AND USEFUL
+
+```
+"Worth GBP X"                    178
+"RRP" / "was GBP"                  0
+"Save GBP X" / "N% off"            0
+"half price"                       0
+                          TOTAL  178   across 48 brands
+retailers: Beauty Flash, Boots, Debenhams, Gorgeous Shop, MyProtein
+```
+
+> **ONE PATTERN COVERS THE WHOLE CLASS.** This list's usual experience is the opposite — a rule that
+> catches most of a population and leaves a tail that needs reading. **Here there is no tail**, and
+> that is worth stating rather than assumed: it means a fix is a single expression, and it means a
+> future instance of `RRP` or `was GBP` would be a genuinely new thing rather than a miss.
+
+#### THE OPTIONS, AND IT IS THE RENDER-VERSUS-DATA QUESTION AGAIN
+
+**Robbie's read: closer to the ampersand case than the brand prefix — a retailer's promotional copy in
+an identity field.** Recorded, and argued rather than assumed:
+
+| | brand prefix | `Worth GBP 134` |
+|---|---|---|
+| is it true? | **yes**, and redundant | **a claim** — and demonstrably wrong on 101655 |
+| does it change? | no | **yes, whenever the price moves** |
+| is it the supplier's text? | yes | yes |
+
+**A. STRIP AT DISPLAY TIME, in `displayProductTitle`.** The precedent is already built: that function
+strips the redundant brand prefix for display and leaves the column alone, and its own comment states
+**"MISSING IS SAFE WHERE OVER-STRIPPING IS NOT."** Measured: it is called by
+`app/product/[id]/page.tsx` (including the JSON-LD name), `components/ProductCard.tsx` (category grid
+and brand page) and `lib/format/metadata-copy.ts` — **one function covers every rendering surface.**
+
+**B. CLEAN THE STORED NAME.** Honest about the data, and **it moves `match_key`**, which is derived
+from the name. **178 products would get new keys**, changing which rows group together — item 491's
+drift riders, on the column the barcode-merge work is currently reading.
+
+**C. LEAVE IT.** The status quo: the site keeps making the claim.
+
+> **THE DECISIVE ARGUMENT IS NOT AESTHETIC. THE STORED NAME IS LOAD-BEARING FOR MATCHING** — a
+> display-time strip moves nothing, and a data fix re-keys 178 products in the middle of a merge
+> programme that groups on those keys.
+>
+> **THAT ALSO ANSWERS THE AMPERSAND-VERSUS-BRAND-PREFIX QUESTION IN THE OTHER DIRECTION.** The
+> ampersand case was a NORMALISATION defect — the stored value was right and the derived key was
+> wrong. **Here the stored value is faithful supplier text and the rendering is wrong**, which is
+> exactly the brand-prefix shape. **The claim is closer to the ampersand in how it FEELS — junk in an
+> identity field — and closer to the brand prefix in what it IS.**
+
+**Not fixed. Not decided.**
+
