@@ -1,0 +1,63 @@
+name: retailer logos
+
+# THE HOMEPAGE STRIP READS logo_path FROM THE DATABASE AND public/logos FROM THE REPO,
+# AND NOTHING ELSE MAKES THOSE TWO AGREE. A path naming a file that was renamed or never
+# committed renders as a broken image on the first screen of the homepage, and no build
+# step, type check or measurement sees it. Item 530.
+#
+# IT RUNS ON EVERY PR, NOT ONLY ON PATH CHANGES. The failure can be introduced from the
+# database with no commit at all, so a path filter would make it silent in exactly the
+# case it exists for. Cheap enough to run always.
+
+"on":
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      note:
+        description: 'Why you are running it (appears in the run summary)'
+        required: false
+        default: 'manual logo path check'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  logos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      # NODE 22, NOT 20. @supabase/supabase-js builds a RealtimeClient at createClient()
+      # and needs a global WebSocket. Same reason match-key-parity and the supplement
+      # fixtures pin 22.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+
+      - name: Preflight -- can this check actually look?
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f scripts/check-retailer-logos.mts || { echo "::error::scripts/check-retailer-logos.mts missing"; exit 1; }
+          test -d public/logos || { echo "::error::public/logos missing"; exit 1; }
+          if [ -z "${{ secrets.SUPABASE_SERVICE_KEY }}" ]; then
+            echo "::error::SUPABASE_SERVICE_KEY not set -- cannot_run"; exit 1
+          fi
+
+      - name: Every logo_path resolves to a file
+        shell: bash
+        env:
+          SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          # pipefail is load-bearing: without it a piped step takes the LAST command's
+          # exit code and a dead script is green. Item 255.
+          set -euo pipefail
+          npx --yes tsx scripts/check-retailer-logos.mts
+
+      - name: Note
+        if: always()
+        run: |
+          echo "> Run reason: ${{ inputs.note }}" >> "$GITHUB_STEP_SUMMARY"

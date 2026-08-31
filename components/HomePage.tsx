@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { SiteLayout } from './SiteLayout';
 import { homepageDemo as demo } from '../lib/homepage-demo';
+import type { ListedRetailer } from '../lib/retailers';
 
 const money = (n: number) => `£${n.toFixed(2)}`;
 
@@ -39,7 +40,9 @@ const money = (n: number) => `£${n.toFixed(2)}`;
  * link to the mechanic, not the mechanic. A builder is a commitment and a search is not, and
  * a shared link lands on a stranger.
  */
-export function HomePage({ retailerCount }: { retailerCount: number | null }) {
+export function HomePage({ retailers }: { retailers: ListedRetailer[] | null }) {
+  const count = retailers?.length ?? null;
+  const marks = (retailers ?? []).filter(r => r.logoPath);
   return (
     <SiteLayout>
       <div className="fmb-home">
@@ -160,15 +163,60 @@ export function HomePage({ retailerCount }: { retailerCount: number | null }) {
               returns null rather than 0 when it cannot answer, and this renders
               nothing on null. "0 UK retailers" is worse than no sentence.
 
-              NEVER TYPE THE NUMBER HERE. A hardcoded count is the frozen-copy
-              class this work list has paid for three times, and a headline is the
-              worst place for it. If it cannot be derived it does not ship.
-              Item 528. */}
-          {retailerCount !== null && (
-            <p className="mt-4 text-[13px] leading-relaxed text-ink-light">
-              <strong className="text-ink font-medium">{retailerCount} UK retailers</strong>, each
-              one&rsquo;s delivery terms in the total.
-            </p>
+              NEVER TYPE THE NUMBER HERE, AND NEVER LIST THE MARKS HERE EITHER.
+              Both come from one query under one predicate, so a retailer that
+              leaves disappears from the count AND the strip on the next
+              revalidation. public/index.html's strip was hand-written and took
+              three manual corrections in six weeks; its accuracy on any given day
+              was a snapshot of the last time a person looked.
+
+              AND THE STRIP IS NOT DERIVED FROM public/logos. That directory is a
+              superset nobody has cleaned -- 29 files, 12 matching no live
+              retailer, four of them retailers whose affiliate programmes are
+              CLOSED. A strip built from the directory puts Superdrug back on the
+              homepage. The mark resolves from the retailer ROW, or not at all.
+
+              A RETAILER WITH NO logo_path IS COUNTED AND NOT PICTURED, so the
+              label can read 14 while 13 marks show. That is deliberate: the
+              number is the claim and the marks illustrate it, and a missing mark
+              is better than a broken image. Items 528, 530. */}
+          {count !== null && (
+            <>
+              {/* BELOW md: THE COUNT LINE, UNCHANGED. The strip was cut on a MOBILE fold
+                  budget and the budget has not moved: 390x844 is 2,989px / 3.54 screens
+                  and the marks cost 245px there. */}
+              <p className="md:hidden mt-4 text-[13px] leading-relaxed text-ink-light">
+                <strong className="text-ink font-medium">{count} UK retailers</strong>, each
+                one&rsquo;s delivery terms in the total.
+              </p>
+
+              {/* md: AND UP, THE MARKS. Thirteen recognisable logos answer "is this real"
+                  in a way a number cannot, and desktop has 1,200px of column and 2.83
+                  screens to put them in. The complaint that cut them came from a desktop
+                  screenshot; the budget that kept them out is a mobile one. Item 530. */}
+              <div className="hidden md:block mt-6">
+                <span className="block text-[10px] uppercase tracking-[0.12em] text-gold-text font-medium mb-3">
+                  Comparing across {count} UK retailers
+                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {marks.map(r => (
+                    <span
+                      key={r.name}
+                      className="inline-flex items-center justify-center h-10 px-3.5 bg-white border border-border rounded-xl"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`/${r.logoPath}`}
+                        alt={r.name}
+                        loading="lazy"
+                        decoding="async"
+                        className="h-5 w-auto object-contain block"
+                      />
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </>
           )}
         </div>
       </section>
