@@ -42451,3 +42451,147 @@ search:**
 **Also still open and unrelated:** the barcode merge programme, paused with `docs/barcode-merge-programme.md`
 carrying its state; job two's tier 2 promotion, 198 candidates unread; and Robbie's `curl` for the
 recategorise dry run.
+
+### 530. The logo strip, derived — and the canary demonstrated itself by accident
+
+**Raised:** 31 August 2026 · **`md:` and up the marks, below `md:` the count. One query behind both.**
+Item 529 closed the homepage thread; this reopens it for one block, on Robbie's call: **logos are proof
+of partnership and a count is not.**
+
+```
+              before      after     strip
+390x844       2,989px     2,989px   hidden -- count line untouched   3.54 -> 3.54
+768x1024      2,737px     2,837px   3 rows, 568-735px, above fold    2.67 -> 2.77
+1440x900      2,546px     2,637px   2 rows, 562-679px, above fold    2.83 -> 2.93
+```
+
+**Desktop +91px, mobile 0.** The strip was cut on a **mobile** fold budget for a complaint that came
+from a **desktop** screenshot, and desktop has 1,200px of column to put it in.
+
+#### ★★★ THE CENTRE: THE GUARD WAS PROVED ABLE TO FAIL, THEN THE FAILURE HAPPENED LIVE AND UNNOTICED
+
+`scripts/check-retailer-logos.mts` was written and then verified against a canary — `Healf.logo_path`
+set to a file that does not exist:
+
+```
+##[error]Healf: logo_path "logos/healf-CANARY-does-not-exist.png" has no file at public/...
+1 logo path(s) point at files that are not in the repository.        exit 1
+```
+
+Restored, re-run, `All logo paths resolve.` **A check that has only ever passed is not yet known to be
+capable of failing** — the convention this repository already holds.
+
+**AND THEN THE PREVIEW BUILT DURING THE CANARY WINDOW.** ISR rendered `/` while the bogus path was in
+the database, so the deployed page served:
+
+```html
+<img src="/logos/healf-CANARY-does-not-exist.png" alt="Healf">
+```
+
+**A broken image on the first screen of the homepage, for the best part of an hour.**
+
+> **THE GUARD WAS VERIFIED AGAINST A SYNTHETIC FAILURE AND THE REAL ONE OCCURRED IN THE SAME HOUR,
+> UNNOTICED.** Nothing else saw it: the build was green, types passed, the page returned 200, every
+> layout measurement was correct, and `integrity` and `Vercel` were both success. **The only instrument
+> in the entire pipeline that could have caught it was the one being tested at that moment** — and it
+> was pointed at the database, not at the deployment.
+>
+> **A CHECK ON THE SOURCE DOES NOT COVER WHAT IS ALREADY RENDERED.** The database was corrected in
+> seconds; the page kept serving the broken mark until the next build, because ISR had baked it in.
+> **The guard prevents a bad path from being introduced. It does nothing about a bad path already
+> served**, and those are different windows.
+>
+> **AND I FOUND IT WITH A GREP THAT NEARLY HID IT AGAIN.** `src="/logos/[a-z-]+\.(webp|png)"` returned
+> **12** marks, because the canary filename has uppercase in it. I read that as a missing retailer.
+> **Fourth instance in two days of a pattern pinned to an assumed output shape** — and the fix was the
+> same as the other three: print the values verbatim instead of matching a guess about them.
+
+#### ★★ THE DIRECTORY: THE COINCIDENCE DID NOT EXIST, AND THE REASON IS WORSE THAN THE COINCIDENCE
+
+The instruction was to check whether *"public/logos has thirteen files and the count query has thirteen
+rows, and those two agreeing today"* was a coincidence.
+
+**There are 29 files. Twelve match no live retailer.** Four of those twelve are **departed partners**:
+
+```
+superdrug.png / .webp          AWIN programme closed, last import 19 Jul 2026
+branded-beauty.png / .webp     UK affiliate programme closed 2 Aug 2026
+atelier-de-glow.webp           deactivated 16 Aug 2026, not expected to return
+evolve.avif / .webp            inactive
+amazon.png / .webp             deliberately outside the basket ranking
+ebay.png / .webp               inactive
+Stylevana Logo.jpg             a stray, with a space and capitals
+```
+
+> **A STRIP DERIVED FROM THE DIRECTORY WOULD HAVE PUT A CLOSED PROGRAMME BACK ON THE HOMEPAGE.**
+> Superdrug's own `unlisted_reason` says listing a retailer we cannot send anyone to is worse than the
+> gap in the strip — and the directory would have relisted it, silently, as a *consequence of
+> automating the maintenance*. **The question was whether two numbers agreeing was luck. The answer is
+> that they never agreed, and the file that made me look is the one that would have shipped the
+> defect.**
+>
+> **THE DIRECTORY IS AN APPEND-ONLY RECORD OF EVERY RETAILER WE HAVE EVER HAD.** Nobody deletes a logo
+> when a partnership ends, because deleting it has never been part of ending one. **It is a perfectly
+> good archive and a catastrophic source of truth**, and nothing about it announces which it is.
+
+#### AND THE SLUG ANSWER WAS REJECTED FOR THE SAME REASON
+
+Slugifying `retailers.name` resolves **all 13** today — checked one by one, every name to a real file:
+
+```
+Boots -> boots.webp      Perfume Click -> perfume-click.webp      The Organic Pharmacy -> the-organic-pharmacy.webp
+```
+
+> **THIRTEEN OF THIRTEEN READS AS A RULE AND IS A COINCIDENCE OF NAMING.** The first retailer with an
+> accent, an ampersand or a full stop breaks it **silently** — `L'Oréal Paris` slugs to `l-or-al-paris`
+> — and the failure is a missing mark nobody notices rather than an error anybody sees.
+>
+> **SAME SHAPE AS THE DIRECTORY ANSWER: a correspondence that holds today, offered as a mechanism.**
+> Both were rejected on the same ground, and the ground is not "it might break" — it is that **when it
+> breaks it produces a wrong page rather than a failure.**
+
+**So the mark resolves from the retailer ROW.** `retailers.logo_path`, nullable, set for the thirteen;
+`getListedRetailers()` is the single source and `getListedRetailerCount()` calls it. **The number and
+the marks cannot disagree about who is listed**, and a departed retailer leaves both on the next
+revalidation.
+
+#### ★ COUNTED BUT NOT PICTURED IS DESIGNED, NOT TOLERATED
+
+`logo_path` is nullable, so the label can read **14 UK retailers** above **13 marks**.
+
+> **THE NUMBER IS THE CLAIM AND THE MARKS ILLUSTRATE IT.** The count is the sentence a stranger is asked
+> to believe; the strip is evidence for it, and evidence does not have to be exhaustive to be evidence.
+> **A missing mark beats a broken image**, and it also beats blocking a new retailer from the count
+> until someone finds a logo file.
+>
+> **THE ALTERNATIVE IS A COUNT THAT WAITS FOR AN ASSET**, which makes a copy claim depend on a design
+> task — the exact coupling that made the static page's strip need three manual corrections in six
+> weeks. `check-retailer-logos.mts` prints `note: X is counted and not pictured` on every run, so the
+> state is visible without being fatal.
+
+#### THE THREE SQUARE MARKS STAY
+
+```
+Boots       rendered  20px wide    intrinsic  96x96     aspect 1.00
+YesStyle    rendered  20px wide    intrinsic 500x500    aspect 1.00
+Stylevana   rendered  34px wide    intrinsic 163x96     aspect 1.70
+Beauty Bay  rendered 131px wide    intrinsic 400x61     aspect 6.56
+```
+
+**Height-constrained square logos render as 20px dots beside 130px wordmarks.** Robbie's call to leave
+them, and the reasoning is the item's:
+
+> **A PER-LOGO HEIGHT BUMP IS A HAND-MAINTAINED EXCEPTION LIST, WHICH IS WHAT DERIVING FROM `logo_path`
+> JUST REMOVED.** Sourcing wordmark versions is real work with a licensing question attached. The static
+> page lived with it. **Fixing three marks by re-introducing the class of thing this item deleted is a
+> bad trade at any size of improvement.**
+
+#### AND `loading="lazy"` CAME OFF, VIA A MEASUREMENT THAT LIED
+
+The first probe reported **one row at 768 and +41px at 1440**. Both wrong. The marks were `loading=lazy`
+and the measuring iframe sat at `left:-9999px`, so **they never fetched, had zero intrinsic width, and
+thirteen cards collapsed into one row.** Re-measured on-screen with loading forced: **three rows, +91px.**
+
+> **THE ARTEFACT REVEALED A REAL DEFECT.** The strip is above the fold at every width it renders at, and
+> a first-screen image marked lazy is one the browser is entitled to defer. **The wrong measurement and
+> the wrong attribute had the same cause**, and only one of them would have been noticed.
