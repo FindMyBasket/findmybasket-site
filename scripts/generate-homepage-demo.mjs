@@ -62,6 +62,20 @@ const START = '<!-- FMB:DEMO:START -->'
 const END = '<!-- FMB:DEMO:END -->'
 const TARGET = 'public/index.html'
 
+// THE SAME SOLVE, EMITTED TWICE. `public/index.html` gets HTML; the Next route gets JSON.
+//
+// The route imports this artefact rather than re-solving at request time, and that is the
+// decision rather than a convenience: a live solve would change what the CATALOGUE FALLBACK
+// MEANS. "No candidate demonstrated the mechanism at build time" is a statement about one
+// moment with one set of prices, and the fallback copy — no figures, deliberately — is the
+// answer to it. Re-solving per request makes it a statement about a request, and the comment
+// that governs it ("a hero showing a 'best' basket that is no longer best is worse than one
+// that is merely stale") was written about a build. Item 513.
+//
+// SHAPE MIRRORS THE FALLBACK: `{ kind: 'demo', ... }` or `{ kind: 'fallback' }`. The route
+// branches on `kind` and never has to decide what missing figures mean.
+const JSON_TARGET = 'lib/homepage-demo.json'
+
 // Ordered: strongest first, then by HEADROOM rather than by gap. Headroom is the
 // distance between the host leg and its delivery threshold, so it is what survives
 // a price move; the gap is only what the reader sees. A leads on both.
@@ -339,6 +353,7 @@ async function main() {
     const html = readFileSync(TARGET, 'utf8')
     const block = renderDemo(ordered, solved, theseOffers)
     writeFileSync(TARGET, replaceBlock(html, block), 'utf8')
+    writeDemoJson(ordered, solved)
 
     console.log(
       `FMB demo: candidate ${cand.id} (${cand.label}) selected. ` +
@@ -353,6 +368,36 @@ async function main() {
   }
 
   catalogueFallback(rejections)
+}
+
+/**
+ * Emit the solved basket for the Next route. Same numbers as the HTML block, no second
+ * solve — the values are read off `solved`, which is the only place they exist.
+ */
+function writeDemoJson(products, solved) {
+  try {
+    writeFileSync(JSON_TARGET, JSON.stringify({
+      kind: 'demo',
+      products: products.map(p => ({ name: p.name, brand: p.brand })),
+      best:  { retailer: solved.deliveryOptimalName, delivered: solved.deliveryOptimal.delivered },
+      worse: { retailer: solved.goodsOptimalName,    delivered: solved.goodsOptimal.delivered },
+      gap: solved.gap,
+    }, null, 2) + '\n', 'utf8')
+  } catch (e) {
+    // Non-fatal AND reported. The HTML block is already written by this point, so the
+    // static page is correct either way; failing loudly here is what stops the route
+    // silently serving a stale artefact next to a fresh static page. Item 502's lesson.
+    console.error(`FMB demo: HTML written but JSON artefact FAILED: ${String(e)}`)
+  }
+}
+
+/** The no-figures artefact. The route branches on `kind` and renders the fallback copy. */
+function writeFallbackJson() {
+  try {
+    writeFileSync(JSON_TARGET, JSON.stringify({ kind: 'fallback' }, null, 2) + '\n', 'utf8')
+  } catch (e) {
+    console.error(`FMB demo: could NOT write the fallback JSON artefact: ${String(e)}`)
+  }
 }
 
 function replaceBlock(html, block) {
@@ -373,6 +418,7 @@ function writeNoFiguresHero() {
   try {
     const html = readFileSync(TARGET, 'utf8')
     writeFileSync(TARGET, replaceBlock(html, renderFallback()), 'utf8')
+    writeFallbackJson()
     return true
   } catch (e) {
     console.error(`FMB demo: could NOT write the no-figures hero: ${String(e)}`)
