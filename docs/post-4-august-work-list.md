@@ -43071,3 +43071,54 @@ rows with BOTH sale and retail   557
 
 **`skip_name_match=true` is visible in the result**: 0 links by name, 0 by mpn, 2,068 by EAN alone. The
 ≤38 creates that name-matching would have linked were paid for deliberately — item 534.
+### 537. The first retailer mark that carries its own background
+
+**Raised:** 31 August 2026 · **`public/logos/the-fragrance-shop.png`, 183×52. Applied.**
+
+```
+source   The Fragrance Shop.png   317x90  PNG RGB, no alpha, aspect 3.522
+output   the-fragrance-shop.png   183x52  aspect 3.519   distortion 0.08%
+```
+
+Height 52 follows the recent convention — `myprotein 352x52`, `niche-beauty 256x52`,
+`healf 173x52`. **The width is derived from the measured source, not chosen**: item 494's rule, where
+MyProtein's written spec of 256×52 was an estimate that would have distorted its source by 27%.
+
+#### ★★ IT IS NOT A WORDMARK, AND THAT IS A FIRST
+
+**Every other mark in the strip is type on white or on transparency. This one is white type on a solid
+purple panel that bleeds to all four edges.**
+
+```
+purple panel      317 x 90   aspect 3.522     <- what was supplied
+white type only   260 x 58   aspect 4.483     <- padding L30 R27 T20 B12
+```
+
+**The strip renders every mark inside `bg-white border border-border rounded-xl`, so this one puts a
+mark with its own background inside a container that already provides one.** A filled block inside a
+white pill, beside twelve marks that are not.
+
+> **THE PANEL WAS KEPT, AND THE ALTERNATIVE IS WHY.** Cropping to the type band gives 233×52 and matches
+> the peers — **but the type is white, and white type on a white card is invisible**, so cropping
+> requires recolouring it to ink.
+>
+> **A RESIZE PRESERVES WHAT WAS SUPPLIED; A RECOLOUR ASSERTS SOMETHING THEY DID NOT.** Item 494's Healf
+> treatment was careful to preserve the measured band rather than force a width, and recolouring a
+> partner's mark is a larger liberty than forcing a width would have been. **A partner strip should
+> carry the partner's mark.**
+>
+> **SO THE INCONSISTENCY IS ACCEPTED RATHER THAN OVERLOOKED.** Reading differently from twelve
+> neighbours is a fact about their brand, not a defect in ours. Recorded here so the next person finds
+> a decision rather than an oddity — and **swapping in a transparent version is one file** if the
+> retailer's press kit has one.
+
+#### WHY THIS WAS NOT CAUGHT BY MEASURING
+
+The first ink-band pass sampled the four corners, took the most common as the background, and returned a
+"band" of 291×90 — **almost the whole canvas, because it was measuring the panel against itself.** The
+tell was that two corners came back different colours, `(128,122,166)` and `(43,33,102)`.
+
+> **A BOUNDING-BOX ROUTINE ASSUMES THE BACKGROUND IS THE THING AT THE EDGES, AND HERE THE THING AT THE
+> EDGES IS THE LOGO.** It did not fail; it answered a different question correctly. **What settled it
+> was opening the image** — the same instrument-follows-the-property finding as item 524, on a file
+> rather than a page.
