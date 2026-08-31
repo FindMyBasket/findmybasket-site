@@ -39776,5 +39776,68 @@ is its second line. **It was caught by reading the output, one step before the g
 >
 > **The guard is the floor. Reading is what finds the defect while it is still cheap.**
 
-**Plan preserved in `fmb_merge_batch_20260831` (73 rows, keeper/removed/overridden) for reversibility.**
+#### ★ THE TIER IS EXHAUSTED, AND IT WAS ONLY READABLE BECAUSE THE CRITERION WAS WRONG
+
+```
+6+ retailers, loose count (any retailer)      83 groups   <- what the batch was chosen from
+6+ retailers, ACTIVE only                      3 groups   <- what remains
+```
+
+> **THE FIRST BATCH WAS READABLE BECAUSE OF A CRITERION THAT OVERSTATED VISIBILITY.** A tier defined on
+> active retailers alone would have held ~26 groups, not 83, and the loose count is what produced a
+> batch large enough to be worth running and small enough to read. **The error made the batch better.**
+>
+> **THE NEXT BATCH CANNOT BE CHOSEN THE SAME WAY.** Not because the method is discredited but because
+> the tier is empty: three groups remain. **Retailer count as a batching axis is spent at the top and
+> unusable below it** — 4+ is 788 groups and 3+ is 2,563, and neither can be read group by group.
+
+#### ★ PER-BRAND SPLITTING IS THE METHOD, NOT A WORKAROUND
+
+**34 brands averaged 2 groups each in this batch and every group was read.** That property is not a
+property of the tier — it is a property of splitting by brand, and it holds at any tier:
+
+```
+clean groups, 4+ ACTIVE retailers      788 across 110 brands   mean 7.2 per brand
+largest brand                          redken 49
+97 brands carry 15 or fewer            424 groups between them
+
+redken 49 · urban decay 42 · dermalogica 34 · l oreal professionnel 30 · elizabeth arden 29
+clarins 27 · bareminerals 27 · philip kingsley 25 · ultrasun 23 · mugler 22 · kerastase 20
+```
+
+**A BATCH IS ONE OR TWO BRANDS READ COMPLETELY.** At 4+ that is 7 groups on average and 49 at worst —
+the same order as today's 73, and every one still read.
+
+> **AND A BRAND IS THE RIGHT UNIT FOR A SECOND REASON THAT ONLY APPEARED AFTER THE RUN.** The
+> revalidation call is per brand path. **Batching by brand makes the 18.6x redundancy collapse and
+> makes the batch readable with the same decision** — one axis, two problems. *At 3+ the brands are too
+> large (clarins 110, redken 109, kerastase 104), so 4+ is the working tier.*
+
+#### ★ WHAT A SAMPLE WOULD HAVE COST, WHICH IS THE ALTERNATIVE
+
+The other way to handle 788 groups is to read a sample. **Measured against today, a sample would have
+missed all of this:**
+
+| found by reading ALL 73 (and the 9 held) | a sample's chance |
+|---|---|
+| **Calvin Klein Obsession's honest 77% spread** — 3 rows, all 125ml men's | 1 group in 82 |
+| **the nine held groups** — Angel vs Angel Star, Family vs Super Sensitive, Dark vs Black Leather, 3x size-less Alien | 9 in 82, and each needed its own names |
+| **three misspelled keepers** — *Toillette*, *MiRetinol*, *Camilia* | 3 in 73, invisible in aggregate |
+
+> **EVERYTHING THAT EARNED ITS PLACE TODAY CAME FROM READING ALL OF THEM.** Not one of those was
+> visible in a count, a spread, or a rate. **A sample answers "is the population broadly safe"; every
+> finding today was a single row that was not.**
+>
+> That is the argument for brand-sized batches stated as a cost rather than a preference: **the
+> alternative is not cheaper reading, it is not reading.**
+
+#### AND THE SNAPSHOT IS THE AUDIT TRAIL AGAIN
+
+`fmb_merge_batch_20260831` holds all 73 rows — ean, brand, keeper, keeper_name, removed[], overridden —
+**taken for reversibility and immediately serving as the record of what was decided and why.**
+
+> **THIRD TIME THIS WEEK A SNAPSHOT TAKEN FOR REVERSIBILITY BECAME THE AUDIT TRAIL**, after the 1 July
+> artefact and `fmb_solgar_misfiled_snapshot_20260828` — which is the only reason item 499's positive
+> acceptance criterion was still testable after the fix consumed its population. **Nobody has yet taken
+> one of these for the purpose it keeps turning out to serve.**
 
