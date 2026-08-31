@@ -42595,3 +42595,147 @@ thirteen cards collapsed into one row.** Re-measured on-screen with loading forc
 > **THE ARTEFACT REVEALED A REAL DEFECT.** The strip is above the fold at every width it renders at, and
 > a first-screen image marked lazy is one the browser is entitled to defer. **The wrong measurement and
 > the wrong attribute had the same cause**, and only one of them would have been noticed.
+
+### 531. A census that could only have returned zero, and the guard that now refuses it
+
+**Raised:** 31 August 2026 · **The Fragrance Shop onboarding — Rakuten merchant 43488, SID 4684964,
+feed `43488_4684964_2_cmp`. Measure-only. Nothing has been imported, configured or enabled.**
+
+#### ★★★ THE CENTRE: A PLAUSIBLE FINDING THAT WAS A FACT ABOUT THE READER
+
+Robbie's first census matched `<product .*?</product>`. Rakuten cmp XML nests
+`<URL><product>…</product></URL>` inside every product, so every record truncated at the inner closing
+tag and **UPC, price, brand and image all came back zero.**
+
+**Reproduced exactly, in a committed fixture:**
+
+```
+REGEX   <product .*?</product>
+  records matched: 2
+  record 1: has <upc> False   has <brand> False
+  record 2: has <upc> False   has <brand> False
+
+DEPTH-AWARE iterparse
+  products 2 · with UPC 2 (100%) · with brand 2 · with image 2
+```
+
+> **A CLEAN ZERO ACROSS EVERY FIELD IS THE MOST PLAUSIBLE-LOOKING RESULT A BROKEN READER CAN PRODUCE.**
+> It is not noise, not a crash, not a partial. It is a complete, internally consistent census of a feed
+> that carries nothing — a finding, of the kind that would justify abandoning an onboarding. **It
+> survived until 3,166 products with no prices stopped being credible**, which is judgement rather than
+> instrumentation.
+>
+> **EVERY FIELD FAILING IDENTICALLY IS A FACT ABOUT THE READER, NOT THE FEED.** Four independent
+> attributes do not vanish together for four independent reasons. **The signature of a parse failure is
+> uniformity**, and uniformity is exactly what a census is looking for.
+
+**So the guard is an exit, not a warning:**
+
+```
+::error::every field is empty on every product -- this is a parse failure, not a feed
+property. Refusing to report it as a census.        exit=1
+```
+
+> **THE GUARD CONVERTS THE SHAPE INTO AN ERROR RATHER THAN LEAVING IT AS DATA.** It cannot be read,
+> quoted or acted on, because it is never printed as a result. **Verified able to fail** against
+> `rakuten-cmp-all-fields-empty.xml`, committed beside the parser.
+
+#### ★★ AND THE FIXTURE REPRODUCES THE BUG IT REPLACES
+
+`rakuten-cmp-nested-product.xml` is not a happy-path sample. It carries the nested `<URL><product>` that
+broke the census, a `<sale>` below `<retail>`, and one secondary path whose leaf is a product name.
+
+> **A TEST THAT REPRODUCES THE BUG IT REPLACES IS WORTH MORE THAN ONE THAT PASSES.** A passing fixture
+> proves the parser handles what its author imagined. This one proves it handles **the thing that
+> actually went wrong**, and the regex is run against the same file in the same breath so the
+> difference is visible rather than asserted. **The depth-aware parser is proven rather than assumed.**
+
+#### THE NOTE WAS IN THE RIGHT PLACE AND WAS NOT REACHED
+
+`.github/workflows/refresh-superdrug.yml.disabled`, lines 10–13 — written by the previous Rakuten
+onboarding, in the file this one is copied from:
+
+> *"Each `<product>` contains `<URL><product>…</product></URL>` — i.e. nested `<product>` tags. Our
+> iterparse loop must use depth-aware processing so we only act on top-level products, otherwise inner
+> `<URL><product>` tags get mistaken for products and the `.clear()` call wipes URLs before
+> extraction."*
+
+> **THE KNOWLEDGE EXISTED, IN THE CORRECT FILE, ONE COMMENT ABOVE THE CODE THAT NEEDED IT — AND THE
+> CENSUS RAN OUTSIDE THE PIPELINE THE NOTE LIVES IN.** Nothing about downloading an XML and grepping it
+> routes anyone past that comment. **A note is only as good as the path that reaches it**, and a
+> one-off measurement is by definition off the path.
+
+#### ★★ THE SALE FIELD IS ABSENT FROM THE PARSER, NOT MIS-SELECTED
+
+```python
+# refresh-superdrug.yml.disabled -- the only Rakuten precedent
+price_elem = p.find("price/retail")
+```
+
+**`<sale>` is never read.** So copying the template is not a risk of taking the wrong price; it is a
+certainty of taking the wrong price on **532 products, median 33% overstated, up to 97%** — the Boots
+AWIN defect that cost roughly 40% accuracy on a sample, reproduced with the field sitting in the file
+unread.
+
+```python
+price = sale if (sale and 0 < float(sale) < float(retail)) else retail
+```
+
+> **THE `< retail` GUARD FAILS SAFE ON A FEED THAT CHANGES SHAPE.** Every sale in this feed is below
+> retail today. A future feed where that stops being true would, without the comparison, silently take
+> the higher number — the same defect arriving through the fix for it. **The census prints
+> `sale >= retail` as its own line, labelled as the case the guard exists for**, so the assumption is
+> re-measured on every run rather than assumed once.
+
+#### THE ALLOWLIST VALUE, AND WHY IT IS THE WHOLE RISK
+
+`isPathIncluded` (`import-rakuten-feed/index.ts:158`) is a case-insensitive **substring test on the
+whole path**, so the mechanism supports either intent and the config value decides.
+
+```
+category_path_must_contain: ["Perfume & Cologne"]
+```
+
+**Two reasons, and both are failure modes rather than preferences:**
+
+- **It matches the 128 rows whose leaf is a product name** — `…~~Perfume & Cologne~~Chanel Bleu De Eau
+  Toilette 50ml`. A leaf term drops them and the import succeeds.
+- **It avoids `"Health  & Beauty"`, which carries two spaces in the file.** Typed from memory with one,
+  it matches nothing and the import succeeds with **0 of 3,166** — a green run, a written
+  `last_import_status`, no products. **Item 486's class: a config value whose wrongness produces a
+  successful import.**
+
+The census prints `A leaf allowlist would import N and silently drop M` as a measured line, so the
+choice is a number rather than an argument.
+
+#### A FIGURE THAT WENT STALE BETWEEN BEING TAKEN AND BEING USED
+
+The brief cited **564** live fragrance brands. Measured 31 August: **590**, across 11,937 products.
+
+> **THE CENSUS RE-MEASURES IT AT RUN TIME RATHER THAN CARRYING EITHER NUMBER.** Both are correct
+> readings of different moments, and a comparison of 143 feed brands against a remembered denominator
+> answers a question about last week. **The fourth figure this week to go stale between being taken and
+> being used** — after the 243 strip height, the 78-against-88 og:title, and the 13-files premise.
+
+#### AND A HOLE IN THE CITATION CHECK, FOUND BY THIS ITEM'S OWN PR
+
+`worklist-integrity` did not run on the PR that introduced this item's citations, and it would have
+failed:
+
+```
+DANGLING item citations -- absent from the work list: 531
+  .github/workflows/refresh-fragrance-shop.yml:8
+  scripts/onboarding/fragrance-shop-census.py:3
+```
+
+Its `paths:` filter is `docs/post-4-august-work-list.md`, `scripts/check-worklist-*.sh`, `**/*.ts`,
+`**/*.tsx`, `**/*.mts`, `**/*.sql`, `**/*.md`. **A PR adding only `.yml` and `.py` triggers nothing.**
+
+> **THE CHECKER SCANS THE WHOLE REPOSITORY AND ITS TRIGGER DOES NOT.** It found the dangling citation
+> locally in a second; it simply was never asked. **The hole is exactly the shape of the PR that found
+> it**, which is the only reason it surfaced at all.
+>
+> **REPORTED, NOT FIXED.** The one-line change is to drop the `paths:` filter, the same reasoning as
+> `retailer-logos.yml`: a failure that can arrive without touching the filtered paths is silenced by a
+> path filter in exactly the case the check exists for. It is a change to the integrity apparatus and
+> that is Robbie's call.
