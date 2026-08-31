@@ -41128,6 +41128,41 @@ reason survives the rebuild being deferred.
 > crawler which to index; the site's own navigation tells it which to follow. **Independent of the
 > rebuild**, and it should not be repaired inside it.
 
+#### ★ CLOSED 31 AUGUST — AND THE FLIP IS WHAT MADE IT WORTH CLOSING
+
+```js
+async redirects() {
+  return [{ source: '/index.html', destination: '/', permanent: true }];   // 308
+}
+```
+
+**The sentence above — *"byte-identical to `/`, separated only by the canonical tag"* — stopped being
+true the moment item 513 flipped the rewrite.** While it held, this was a canonicalisation nicety: both
+URLs served the same page and a link to either was the same link.
+
+> **AFTER THE FLIP, `/index.html` IS A DIFFERENT PAGE — THE ONE THE ROUTE REPLACED — AND THE SITE LOGO
+> LEADS THERE FROM EVERY REACT PAGE.** The defect did not change; the surface under it did. **A
+> deferred item can be re-graded by a change that never touches it.**
+
+**ONE LINE CLOSES 14 REFERENCES**, rather than 14 edits across two languages:
+
+| | |
+|---|---|
+| 12 hrefs | across 8 static pages in `public/` |
+| 1 | `SiteNav.tsx:91` — the logo, on every React page |
+| 1 | `RoutineBuilder.tsx:1412` — `/index.html#waitlist` |
+
+**And it catches what the repo cannot reach.** `public/index.html` was the homepage's real URL for
+months; it is in inbound links and in bookmarks, and no amount of editing this repository moves those.
+
+**Two things checked before applying, both by looking rather than reasoning:**
+
+- **No loop.** The rewrite that pointed `/` back at this file is gone, so `/` resolves to `app/page.tsx`
+  and never re-enters the rule. Next.js evaluates redirects **before** the `public/` filesystem, so the
+  static file stops being reachable rather than being served alongside a redirect.
+- **`#waitlist` was already dead.** `grep -c 'id="waitlist"' public/index.html` returns **0**. The
+  redirect changes where a broken anchor lands, not whether it was broken. Its own defect, not this one.
+
 ---
 
 ### 516. The homepage JSON-LD advertises a path robots.txt forbids
