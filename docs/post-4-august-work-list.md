@@ -40350,5 +40350,86 @@ across finishes within a brand, so *"Perversion"* can be a mascara, an eyeliner 
 > and then rationalised is worth nothing; this list has recorded enough after-the-fact reasoning to
 > know the difference.
 
-**The batch, the reading and the outcome follow below once run.**
+#### ★ THE RESULT: 6 OF 42, AND THE PREDICTION HOLDS
+
+```
+fragrance-heavy, 82 groups    9 held   11.0%
+Redken, 49 groups             0 held    0.0%
+URBAN DECAY, 42 groups        6 held   14.3%    <- predicted 3-6, nearer 11% than 0%
+```
+
+**Landed at the top of the predicted range.** The prediction was committed at **`f6f3c15`** before the
+42 were read.
+
+> **THE COMMIT IS WHAT MAKES THE CLAIM CHECKABLE.** A hold rate discovered and then explained is worth
+> nothing; anyone can reconstruct a category story after seeing 6. **The category framing survives its
+> first real test rather than being confirmed by a reading of its own result**, and the alternative
+> reading it was written against — that Redken's 0% came from being ONE BRAND rather than from being
+> haircare — is refuted: **Urban Decay is also one brand, and it held six.**
+
+#### ★★ THE ITEM'S CENTRE: TWO HOLDS ARE PROVABLE, NOT JUDGED
+
+```
+3605973003866   Tootsie x2   +  "24/7 Eye Pencil 1.2g in Hemp Milk"
+                             ...and HEMP MILK HAS ITS OWN GROUP at 3605973003781
+
+3605972982865   High Profile x2  +  "Bond Highlighter 30ml in Space Cowboy"
+                             ...and SPACE COWBOY HAS ITS OWN GROUP in the same batch
+```
+
+**A misfiled shade whose correct barcode is sitting elsewhere in the same batch is PROOF, not
+judgement.** Every hold before this one rested on reading two names and deciding they described
+different things — *Angel* against *Angel Star*, *Dark* against *Black Leather*. **These two are
+settled by the catalogue: the row belongs to a barcode that exists, holds the same brand, and carries
+its name.**
+
+> **AND IT EXISTS ONLY BECAUSE THE WHOLE BRAND WAS READ AT ONCE.** A sample containing the Tootsie
+> group and not the Hemp Milk group shows **nothing** — the misplaced row reads as a plausible naming
+> variant, exactly like the forty that were merged. **The proof is not in either group. It is in
+> holding both at the same time.**
+>
+> **THAT IS THE SHARPEST ARGUMENT YET FOR BRAND-COMPLETE BATCHES OVER SAMPLING, AND IT ARRIVED AS A
+> RESULT RATHER THAN A PRINCIPLE.** Item 503 argued for reading everything on the grounds that findings
+> were single rows invisible in aggregate. **This is stronger: a finding that is invisible in any
+> proper subset**, because the evidence is the relationship between two groups.
+
+**The other four are judged, in the older way:** `Electric Empire` against `in Brown`; `Cool Cookie`
+against `Neutral Mania`; `Vice Lipstick High Impact Backtalk` against `Reno-Backtalk` (same shade,
+different finish); and `24/7 Eye Pencil Perversion` against `Bourbon` and `Black`.
+
+*And the Hydromaniac pairs flagged as doubtful resolved CLEAN* — `Foundation 70` / `Glow-Shade 70`,
+`Foundation 90` / `Glow-Shade 90`, shade numbers agreeing across the group.
+
+#### ★ AND RULE 2 DEGRADES IN MAKEUP, WHICH NOTHING SAID UNTIL NOW
+
+```
+keepers carrying a size token:   Redken 49/49 (100%)   ·   Urban Decay 30/36 (83%)
+```
+
+**Six keepers carry no size token at all.** Makeup names are **shade-bearing rather than
+size-bearing** — *"24/7 Eye Pencil Roxy"*, *"Bond Highlighter -Mirror Ball"* — so rule 2 has nothing to
+prefer on and falls through to the id tie-break.
+
+> **CORRECT BEHAVIOUR, LESS WORK DONE. AND THE TWO BATCHES THAT ESTABLISHED THE RULE WERE BOTH
+> SIZE-BEARING CATEGORIES** — fragrance carries `50ml`, haircare carries `300ml`, and rule 2 looked
+> universal because nothing had tested it where sizes are absent.
+>
+> **SO RULE 2 IS CATEGORY-DEPENDENT IN THE SAME WAY THE HOLD RATE IS, AND NOTHING SAID SO UNTIL
+> MAKEUP.** It was derived from a read (item 503) and is still right — **but its coverage is a property
+> of the category, not of the rule**, and a category with no size tokens gets keeper selection by age
+> alone. **Worth knowing before it is trusted on a third shape.**
+
+#### THE RUN
+
+```
+36 groups · 55 rows removed · 0 orphan prices · 55 merge_log rows
+ONE revalidation call · 92 paths (1 brand + 91 product) · request 10970 · status 200
+
+/product/20225  Urban Decay All Nighter Setting Spray Vitamin C 240ml
+   Debenhams GBP 30.80 · Beauty Bay GBP 43.00 · Beauty Flash GBP 43.00
+   Gorgeous Shop GBP 43.00 · Boots GBP 44.00
+/product/63670  308 -> /product/20225        /brands/urban-decay  200
+```
+
+**One brand path for 55 removed rows.** Plan preserved in `fmb_merge_batch_ud_20260831`.
 
