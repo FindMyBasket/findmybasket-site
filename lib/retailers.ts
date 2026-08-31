@@ -47,12 +47,31 @@ export const getActiveRetailerIds = cache(async (): Promise<Set<number>> => {
 // credible reading of this table, so zero means the query failed, and the caller
 // renders nothing rather than "0 UK retailers". Item 194's cannot_run contract:
 // an empty result and a broken instrument must not look the same.
-export const getListedRetailerCount = cache(async (): Promise<number | null> => {
+export type ListedRetailer = { name: string; logoPath: string | null };
+
+export const getListedRetailers = cache(async (): Promise<ListedRetailer[] | null> => {
   const { data, error } = await supabase
     .from('retailers')
-    .select('id')
+    .select('name, logo_path')
     .eq('active', true)
-    .is('unlisted_reason', null);
+    .is('unlisted_reason', null)
+    .order('name');
   if (error || !data || data.length === 0) return null;
-  return data.length;
+  return data.map((r) => ({
+    name: r.name as string,
+    logoPath: (r.logo_path as string | null) ?? null,
+  }));
+});
+
+// ONE QUERY, ONE PREDICATE, TWO RENDERINGS. The count below and the logo strip on the
+// homepage both come out of getListedRetailers, so the number and the marks cannot
+// disagree about who is listed. Item 530.
+//
+// THEY CAN DISAGREE ABOUT HOW MANY ARE PICTURED, AND THAT IS THE DESIGN. logo_path is
+// nullable: a retailer added without one is counted and not pictured, because the strip
+// rendering without a mark is better than rendering a broken image. The number is the
+// authoritative claim and the marks illustrate it.
+export const getListedRetailerCount = cache(async (): Promise<number | null> => {
+  const rows = await getListedRetailers();
+  return rows === null ? null : rows.length;
 });
