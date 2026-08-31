@@ -205,10 +205,20 @@ export function HomePage({ retailers }: { retailers: ListedRetailer[] | null }) 
                       className="inline-flex items-center justify-center h-10 px-3.5 bg-white border border-border rounded-xl"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {/* NOT `loading="lazy"`. The strip is ABOVE THE FOLD at every
+                          width it renders at — 562-679px at 1440, 568-735 at 768 —
+                          and a first-screen image marked lazy is a first-screen
+                          image the browser is entitled to defer.
+
+                          IT ALSO HID A MEASUREMENT. The first probe of this strip
+                          ran in an offscreen iframe, where lazy marks never fetch,
+                          have zero intrinsic width, and collapse 13 cards into one
+                          row: it reported ONE row at 768 and +41px at 1440. Both
+                          were wrong. The real figures are three rows and +91px.
+                          Item 530. */}
                       <img
                         src={`/${r.logoPath}`}
                         alt={r.name}
-                        loading="lazy"
                         decoding="async"
                         className="h-5 w-auto object-contain block"
                       />
