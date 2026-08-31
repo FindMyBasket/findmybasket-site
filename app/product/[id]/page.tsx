@@ -13,7 +13,7 @@ import {
 } from '../../../lib/product-queries';
 import { buildBreadcrumbJsonLd } from '../../../lib/breadcrumb';
 import { SPECIALIST_IMPORTER_RETAILER_IDS, categoryToSlug, categoryDisplay } from '../../../lib/queries';
-import { displayProductTitle } from '../../../lib/format/product-name';
+import { displayProductTitle, stripPriceClaim } from '../../../lib/format/product-name';
 import { buildSeoDescription, productMetadataCopy } from '../../../lib/format/metadata-copy';
 import { displaySizeChip } from '../../../lib/format/pack-size';
 import { ProductDescription } from '../../../components/ProductDescription';
@@ -442,7 +442,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={product.image_url || '/placeholder-product.svg'}
-              alt={product.name}
+              alt={stripPriceClaim(product.name)}
               className="max-w-full max-h-full object-contain p-8"
             />
           </div>
@@ -458,8 +458,13 @@ export default async function ProductPage({ params }: { params: { id: string } }
                 )}
               </p>
             )}
+            {/* stripPriceClaim ONLY — NOT displayProductTitle. Item 506.
+                The claim goes ("(Worth £134, Yours for £30)" beside a £22.50 offer);
+                the brand prefix and the pack text STAY. Routing this through
+                displayProductTitle would also strip the brand, which is what the
+                size-chip comment below depends on. */}
             <h1 className="font-serif text-2xl md:text-3xl text-ink mb-4 leading-tight">
-              {product.name}
+              {stripPriceClaim(product.name)}
             </h1>
             {/* Price and the primary action sit directly under the title so they
                 clear the fold on a laptop without scrolling. Secondary metadata
@@ -523,11 +528,24 @@ export default async function ProductPage({ params }: { params: { id: string } }
                 size of a pack pattern in the name.
 
                 Suppression is honest here because the <h1> above renders
-                product.name RAW: for exactly these rows the pack is already
-                stated in full four lines up, so this removes a contradiction
-                rather than a fact. If that title ever stops showing the raw
-                name, revisit lib/format/pack-size.ts — the justification lapses
-                with it. The column itself is still wrong; see
+                product.name minus only a promotional price claim (item 506): for
+                exactly these rows the pack is still stated in full four lines up,
+                so this removes a contradiction rather than a fact. If that title
+                ever stops showing the pack text, revisit lib/format/pack-size.ts —
+                the justification lapses with it.
+
+                MEASURED 31 AUG 2026, AND THE GUARD IS DORMANT. This comment was
+                written when canonical_size held the UNIT size of an "N x M<unit>"
+                name. It no longer does: the column holds the PACK TOTAL — 186ml
+                for "15 x 12.4ml", 540g for "6 X 90 g" — so the equality this guard
+                tests is never true and it suppresses NOTHING today. The 446 is
+                historical. Checked with displaySizeChip itself, not a reimplementation.
+
+                THE DEPENDENCY THIS COMMENT NAMED WAS NOT THE ONE THAT MOVED. It
+                asked to be consulted if the <h1> stopped showing the raw name, and
+                the column changed underneath it instead. Left in place and dated
+                rather than deleted: the guard is still correct for the shape it
+                describes, and if canonical_size reverts it fires again. The column itself is still wrong; see
                 docs/supplements-brand-comparison-proposition.md item B2. */}
             {(product.product_type || sizeChip || product.shade) && (
               <div className="flex flex-wrap gap-2 mb-6">
