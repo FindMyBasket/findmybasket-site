@@ -41745,22 +41745,36 @@ bitten silently:
 **`min-w-0` so the row never wraps.** At 390 the column is 342px; a wrapped button costs ~66px of a
 budget that had 4px in it.
 
-#### AND THE RING READ AS ABSENT THREE TIMES BEFORE IT READ AS PRESENT
+#### ★★ AND THE RING READ AS ABSENT SIX TIMES AND IS THERE
 
 ```
-boxShadow: none   borderColor: rgb(232,226,213)     <- three consecutive readings
+boxShadow: none   borderColor: rgb(232,226,213)     <- six readings, preview and production
 ```
 
-The rules were in the sheet, the selectors matched, the specificity was right, and the ring was not
-there. **The cause was the instrument: `document.hasFocus()` was `false`.** `:focus` does not match in a
-document whose window is not focused, and every reading had been taken in an offscreen iframe or an
-unfocused tab.
+The rules were in the sheet, the selectors matched, `.focus\:border-gold:focus` outranked
+`.border-border`, `inp.matches(':focus')` returned `true`, and the computed value was the unfocused one.
+**The ring is present.** Verified on production by clicking the field with a mouse and looking at the
+screenshot: gold border, soft 4px gold halo.
 
-> **A NEGATIVE FROM AN INSTRUMENT THAT CANNOT REGISTER THE THING IS NOT A NEGATIVE** — the same shape as
-> item 519's preview emitting no tags, and item 255's "No drift" from empty variables. **The tell was
-> that `--tw-shadow` held the gold value while `box-shadow` did not**: a rule that is setting one of its
-> own declarations and not the other is not a rule that is failing to apply. Confirmed with a real click
-> and a genuine blur/focus cycle: `rgb(201,169,110)` and `rgba(201,169,110,0.12) 0 0 0 4px`.
+**Two faults in the probe are identified and a third is not:**
+
+- **`document.hasFocus()` was `false`** for every reading taken in an offscreen iframe or an unfocused
+  tab. `:focus` does not match in a document whose window is not focused.
+- **The click coordinates were wrong.** `computer` takes SCREENSHOT pixels and the screenshot is scaled
+  — 1568 wide for a 1462px viewport, a factor of 1.0725. Clicks computed from
+  `getBoundingClientRect()` landed ~34px above the field and focused nothing.
+- **And the readings where `:focus` genuinely matched still showed no ring, and I have not pinned that
+  down.** Recorded as unexplained rather than attributed to a mechanism I did not prove.
+
+> **THE LESSON IS NOT "TRUST THE SCREENSHOT" — IT IS THAT THE INSTRUMENT FOLLOWS THE PROPERTY, AND I
+> CARRIED ONE OVER FROM THE PREVIOUS HOUR.** `getComputedStyle` had just been exactly right for the
+> borders, where the defect was a 3px edge no eye could see. **A focus ring is a visual state, and its
+> instrument is a picture.** Reaching for the probe again was reaching for the tool that had just
+> worked rather than the tool the question needed.
+>
+> **SO THE INSTRUMENT FLIP RAN IN BOTH DIRECTIONS IN ONE DAY, ON ONE PAGE.** The screenshot missed the
+> borders and the probe missed the ring. **Neither instrument is the better one; they answer different
+> questions, and the failure mode both times was assuming the last question's tool fits this one.**
 
 #### THE RESET WIDENED, AND WHY THAT AND NOT A SUBSTITUTE DEVICE
 
