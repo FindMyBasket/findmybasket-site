@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<productFeed>
+<product name="Chanel Bleu De Chanel Eau De Toilette 50ml" sku_number="A1" product_id="P1" manufacturer_name="Chanel">
+  <category><primary>Health  &amp; Beauty</primary><secondary>Personal Care~~Cosmetics~~Perfume &amp; Cologne~~EDP / EDT / PARFUM / ELIXIR / EDC</secondary></category>
+  <price currency="GBP"><retail>98.00</retail><sale>66.00</sale></price>
+  <URL><product>https://click.linksynergy.com/x?id=1</product><productImage>https://img/1.jpg</productImage></URL>
+  <upc>03145891073607</upc>
+  <brand>Chanel</brand>
+  <shipping><availability>in-stock</availability></shipping>
+  <attribute name="Size">50ml</attribute>
+</product>
+<product name="Dior Sauvage Eau De Parfum 100ml" sku_number="A2" product_id="P2" manufacturer_name="Dior">
+  <category><primary>Health  &amp; Beauty</primary><secondary>Personal Care~~Cosmetics~~Perfume &amp; Cologne~~Dior Sauvage Eau De Parfum 100ml</secondary></category>
+  <price currency="GBP"><retail>115.00</retail></price>
+  <URL><product>https://click.linksynergy.com/x?id=2</product><productImage>https://img/2.jpg</productImage></URL>
+  <upc>03348901419250</upc>
+  <brand>Dior</brand>
+  <shipping><availability>in-stock</availability></shipping>
+  <attribute name="Size">100ml</attribute>
+</product>
+</productFeed>

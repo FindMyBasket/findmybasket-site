@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<productFeed>
+<product name="A" sku_number="A1"><category><primary>x</primary><secondary>y</secondary></category></product>
+<product name="B" sku_number="A2"><category><primary>x</primary><secondary>y</secondary></category></product>
+</productFeed>
