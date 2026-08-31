@@ -105,7 +105,49 @@ export function stripBrandPrefix(name: string, brand: string | null | undefined)
  * carries the brand, the brand isn't repeated; if it doesn't, the brand is
  * prepended once. Always includes the brand (except when no brand is given).
  */
+// ─── Promotional price claims, stripped for DISPLAY ONLY ────────────────────
+//
+// 178 live product names carry a price claim the retailer wrote into the title:
+// "Debenhams The Ultimate Edit (Worth £134, Yours for £30)". That name is rendered
+// by the product page, its <title>, its JSON-LD, ProductCard on the category grid
+// and brand page, and metadata-copy — so THE SITE STATES A DISCOUNT ON A RETAILER'S
+// BEHALF, and no price check validates it because it is not a price, it is text.
+// Product 101655 carried "Yours for £30" in its structured data beside a £22.50
+// offer. Work-list item 505.
+//
+// STRIPPED HERE AND NOT IN THE COLUMN, for the reason the brand prefix is:
+// products.name is faithful supplier text — Debenhams really did title it that —
+// and it is LOAD-BEARING FOR match_key. Rewriting 178 names re-keys 178 products
+// in the middle of a merge programme that groups on those keys (items 491, 503).
+// A display-time strip moves nothing.
+//
+// ONE FORM EXISTS. Measured across 105,982 live products: 178 "Worth £X", and
+// ZERO "RRP", "was £", "Save £", "N% off" or "half price". That is why a single
+// expression suffices with no tail — AND IT MEANS A FUTURE "RRP" WOULD BE
+// GENUINELY NEW RATHER THAN A MISS. Anyone widening this should know they are
+// adding a form that has never appeared, not patching a hole.
+//
+// TESTED AGAINST ITS COMPLEMENT, which is how the version above this one died:
+// it ended with a `\s{2,}` -> " " collapse that changed 437 names OUTSIDE the
+// target set, because most of them merely contained a double space. Run over all
+// 105,982: 178 changed, 178 in target, 0 outside, 0 emptied, 0 residual claims.
+//
+// The lookahead is load-bearing: the claim is not always final. Nine names read
+// "... Worth £29 in 3.5", where a shade follows it.
+const PRICE_CLAIM_PARENTHESISED = /\s*\([^()]*\bworth\s*[£$€]?[0-9][^()]*\)/gi;
+const PRICE_CLAIM_TRAILING =
+  /\s*[-–—,]?\s*\bworth\s*[£$€]?[0-9][0-9.,]*(?:\s*,?\s*\byours\s+for\s*[£$€]?[0-9][0-9.,]*)?(?=\s+in\s|\s*$)/gi;
+
+/** Remove a retailer's promotional price claim from a name, for display. */
+export function stripPriceClaim(name: string): string {
+  return name
+    .replace(PRICE_CLAIM_PARENTHESISED, '')
+    .replace(PRICE_CLAIM_TRAILING, '')
+    .trim();
+}
+
 export function displayProductTitle(name: string, brand: string | null | undefined): string {
+  name = stripPriceClaim(name);
   if (!brand) return name;
   const clean = stripBrandPrefix(name, brand);
   if (clean !== name) {
