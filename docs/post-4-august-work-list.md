@@ -40754,5 +40754,90 @@ previous results are consistent with.
 > result would mean the category label has been doing work the per-name story denied — and would make
 > every batch-planning decision depend on a brand's worst component rather than its average.
 
-**Result and reading follow once run.**
+#### ★★ THE CENTRE: THE DISTRIBUTION, NOT THE COUNT
+
+```
+predicted 1-3 of 29, committed before reading
+ACTUAL    1 of 29
+
+   makeup     11 groups   1 hold   9.1%
+   skincare   16 groups   0 holds  0.0%
+   bath_body   1 group    0
+   fragrance   1 group    0
+```
+
+**The single hold is a makeup group.** `85805211905` — `Ceramide Lift and Firm Makeup SPF 15 30ml-340N`
+x2 against `Ceramide Lift & Firm Cream Makeup 30ml in **340W**`. **Two shades on one barcode.**
+
+| reading | verdict |
+|---|---|
+| **proportional** | **SUPPORTED** — one hold, and it is IN the makeup groups |
+| presence-based | refuted — would need the whole batch holding at makeup's rate |
+| dominant-category | refuted — skincare-dominant predicts zero, and makeup held |
+
+> **THE TOTAL ALONE COULD NOT SEPARATE PROPORTIONAL FROM DOMINANT-CATEGORY.** 1 is a small number and 0
+> is a small number; **29 groups cannot tell them apart arithmetically.** The LOCATION does.
+>
+> **A RATE WEAKENS A MODEL AND A CLUSTERING SUPPORTS ONE** — the same distinction as the
+> shared-vocabulary test, arriving from the other side. That test produced a rate that killed a rival;
+> **this produced a clustering that confirms the MECHANISM rather than the output.** Five batches
+> confirmed what the model predicts. **This is the first that confirms how it predicts it.**
+
+**Makeup's 9.1% here against Urban Decay's 14.3% is the same order on 11 groups.** *Sign and location,
+not a rate to defend to a decimal.*
+
+#### AND TWO THINGS CHECKED THAT WERE NOT PROBLEMS
+
+**No product sits in two groups** — 79 products, 79 memberships. The eight near-identical
+`Ceramide Lift And Firm Cream Makeup Spf 15 30ml` names are eight distinct rows, one per shade.
+**The visual scan made them look like one row in eight groups**, which is why the id check was run
+rather than assumed.
+
+**And a price spread noticed and not chased:** `85805240288` Prevage Anti-Aging Daily Serum 2.0 runs
+**GBP 34.79 to GBP 197.00** across three rows — all 50ml, with the 5ml carrying its own barcode.
+**An 82% spread on one genuine product: a PRICING anomaly, not an identity one. It merges correctly.**
+
+---
+
+### 511. The sitting holds several brands; the unit stays the brand
+
+**Raised:** 31 August 2026 · **BATCHING DECISION, AND PREDICTIONS COMMITTED BEFORE READING.**
+
+#### ★ THE DECISION, AND IT IS NOT ABOUT TRUST
+
+**Low-prediction brands are grouped into one sitting. Makeup and fragrance brands stay one at a time.**
+
+The model's record: **five batches, two killed falsifiers, one replication, one distribution test, and
+the prediction has never fallen outside its stated range.** That is enough to act on.
+
+> **BUT GROUPING IS NOT A CONSEQUENCE OF TRUST, AND SAYING SO MATTERS.** Trust would justify reading
+> LESS. **Grouping reduces ceremony and not reading** — the plan table, the trigger suppression, the
+> revalidation call and the production check happen once instead of three times, and every group is
+> still read.
+>
+> **FOUR OF THIS WEEK'S HOLDS WERE PROVABLE ONLY BECAUSE A WHOLE BRAND WAS PRESENT AT ONCE** — the
+> Tootsie row whose Hemp Milk group sat beside it, the High Profile row whose Space Cowboy group did,
+> and Dermalogica's 500ml whose own barcode was in the same read. **The evidence was the relationship
+> between two groups of one brand.**
+>
+> **SO THE UNIT STAYS THE BRAND AND THE SITTING HOLDS SEVERAL.** A sitting that mixed brands into one
+> undifferentiated pool would keep the group count and lose the property that found all four.
+
+#### THE FIRST SITTING: 68 GROUPS, THREE BRANDS
+
+| brand | groups | shape | **predicted holds** |
+|---|---:|---|---:|
+| **Philip Kingsley** | 25 | hair, 100% low-risk | **0-1** |
+| **Ultrasun** | 23 | skincare, 100% low-risk | **0-1** |
+| **Kérastase** | 20 | hair, 95% (5% fragrance) | **0-1** |
+| | **68** | | **0-3 for the sitting** |
+
+**PREDICTED PER BRAND, AND THE RESULT WILL BE REPORTED PER BRAND.**
+
+> **THE MODEL PREDICTS PER BRAND; THE AGGREGATE IS NOT WHAT IT CLAIMS.** A sitting total of 2 is
+> consistent with 0/0/2 and with 1/1/0, and those say different things — **the first would mean one
+> brand behaves unlike its category, which is the only result here that would be interesting.**
+> Reporting the sitting as one number would discard exactly the signal item 510 was built to read.
+
+**Result follows once run.**
 
