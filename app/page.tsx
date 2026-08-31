@@ -1,5 +1,6 @@
 import { HomePage } from '../components/HomePage';
 import { socialTags } from '../lib/format/social-tags';
+import { getListedRetailerCount } from '../lib/retailers';
 
 export const revalidate = 3600;
 
@@ -27,6 +28,11 @@ export const metadata = {
   ...socialTags({ title, description, url: canonical }),
 };
 
-export default function Page() {
-  return <HomePage />;
+// ASYNC SO THE RETAILER COUNT IS QUERIED, NOT TYPED. `revalidate = 3600` above means
+// one extra query an hour, and the number cannot go stale between deploys the way a
+// build-time artefact would -- a retailer added on a Tuesday with no deploy until
+// Friday is three days of a wrong number in a headline. Item 528.
+export default async function Page() {
+  const retailerCount = await getListedRetailerCount();
+  return <HomePage retailerCount={retailerCount} />;
 }

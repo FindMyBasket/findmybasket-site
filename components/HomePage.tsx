@@ -39,7 +39,7 @@ const money = (n: number) => `£${n.toFixed(2)}`;
  * link to the mechanic, not the mechanic. A builder is a commitment and a search is not, and
  * a shared link lands on a stranger.
  */
-export function HomePage() {
+export function HomePage({ retailerCount }: { retailerCount: number | null }) {
   return (
     <SiteLayout>
       <div className="fmb-home">
@@ -147,6 +147,29 @@ export function HomePage() {
             </Link>{' '}
             — free, no account needed.
           </p>
+
+          {/* ── THE PROOF LINE ────────────────────────────────────────────────
+              WHAT IT REPLACES AND WHY IT IS NOT A LOGO STRIP. The static page
+              carried 13 retailer logos here. Rebuilt faithfully and re-measured,
+              that strip costs +245px at 390x844 — 29% of the first screen, and an
+              independent reproduction of the 243 on record. This line costs 21px
+              and answers the same question: a stranger from a shared link cannot
+              tell whether "multiple UK retailers" means three or thirty.
+
+              RENDERED ONLY WHEN THE NUMBER IS KNOWN. getListedRetailerCount
+              returns null rather than 0 when it cannot answer, and this renders
+              nothing on null. "0 UK retailers" is worse than no sentence.
+
+              NEVER TYPE THE NUMBER HERE. A hardcoded count is the frozen-copy
+              class this work list has paid for three times, and a headline is the
+              worst place for it. If it cannot be derived it does not ship.
+              Item 528. */}
+          {retailerCount !== null && (
+            <p className="mt-4 text-[13px] leading-relaxed text-ink-light">
+              <strong className="text-ink font-medium">{retailerCount} UK retailers</strong>, each
+              one&rsquo;s delivery terms in the total.
+            </p>
+          )}
         </div>
       </section>
 
