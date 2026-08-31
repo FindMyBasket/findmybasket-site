@@ -41188,4 +41188,93 @@ of unknown size.
 
 **Applied. `tsc` clean, 260 tests pass.** Not part of the homepage rebuild — a different file, a
 different surface.
+### 518. I merged over a red check, and the check was right
+
+**Raised:** 31 August 2026 · **A process failure of mine, recorded because the outcome was harmless and the behaviour was not.**
+
+`worklist-integrity` reported **FAILURE** on #534 across four consecutive polls. **I merged anyway.**
+
+```
+[1] UNSTABLE  integrity:FAILURE  Vercel:SUCCESS
+[2] UNSTABLE  integrity:FAILURE  Vercel:SUCCESS
+[3] UNSTABLE  integrity:FAILURE  Vercel:SUCCESS
+[4] UNSTABLE  integrity:FAILURE  Vercel:SUCCESS
+-> merged
+```
+
+#### WHAT IT CAUGHT
+
+```
+DANGLING item citations -- cited in the repository, absent from the work list: 790
+  docs/barcode-merge-programme.md:122:
+    ... for up to an hour (item 501, 4,790 rows of history).
+```
+
+**`(item 501, 4,790` parses as a citation of item 790.** A false positive — and produced by my own
+prose, in the handover document, one line after a correct citation.
+
+#### ★ THE CHECK DID ITS JOB AND I OVERRODE IT
+
+> **A FALSE POSITIVE IS STILL A RED CHECK, AND THE TIME TO ESTABLISH WHICH IT IS COMES BEFORE THE
+> MERGE.** The polling loop existed precisely to wait for checks; it reported `FAILURE` four times and
+> I read the loop as "not yet settled" rather than "settled, and failing." **`UNSTABLE` is a settled
+> state.**
+>
+> **AND THE CONTENT OF THE FAILURE WAS ARGUABLE IN A WAY THAT MAKES THE BEHAVIOUR WORSE, NOT BETTER.**
+> Had it been a real dangling citation, the merge would have shipped a broken reference into the
+> handover document — the exact defect `check-worklist-citations.sh` was built for, described in its
+> own header: *"on 24 August it passed a PR that shipped four citations of an item that did not
+> exist."* **The check was written because this happened before, and I merged past it.**
+
+#### THE FIX, AND WHAT IT IS NOT
+
+Reworded to `— item 501, and the merge log holds 4,790 rows of history.` **The checker is not changed.**
+
+> **THE PARSE IS AMBIGUOUS AND THE CHECKER RESOLVES IT CONSERVATIVELY, WHICH IS CORRECT.** `item N, M`
+> is a citation of one item followed by a number, or of two items, and nothing in the text distinguishes
+> them. **Loosening the pattern to exclude comma-separated digits would silence a real
+> double-citation** — `(items 501, 502)` is a form this list uses. **The prose moved because the prose
+> was ambiguous.**
+
+#### ★★ THE DEFECT IS THE PREDICATE, NOT THE MERGE
+
+**The merge was the symptom. The polling loop was the cause:**
+
+```bash
+case "$s" in *PENDING*|*UNSTABLE*|*BLOCKED*) sleep 25;; *) break;; esac
+#            ^^^^^^^^^ waits while UNSTABLE ... then falls through and merges
+```
+
+The loop waits while a check is unsettled and proceeds when it settles. **`UNSTABLE` IS A SETTLED
+STATE — settled as failing.** So the loop's exit condition is *"no longer pending"*, and the action
+after it is *merge*.
+
+> **A LOOP THAT WAITS FOR "NO LONGER PENDING" ACCEPTS RED BY CONSTRUCTION. IT WOULD HAVE ACCEPTED EVERY
+> RED CHECK IT EVER SAW**, and the only reason it had not is that no check had failed until now.
+>
+> **THE RULE IS NOW: MERGE ON GREEN, NEVER ON NOT-PENDING.** The predicate must name the state it
+> wants — `CLEAN` / all checks `SUCCESS` — rather than enumerate the states it will keep waiting
+> through. **An allow-list of failure modes to wait for is an implicit allow-list of everything else.**
+
+#### AND THE COLLISION: THE THIRD, THE SECOND THIS WEEK, AND NONE CAUGHT BY A CHECK
+
+This item was first written as **513**, a number PR #535 had already taken. **Caught by reading the
+branch before pushing, not by anything automatic.**
+
+| | when | how it was caught |
+|---|---|---|
+| **two item 450s** (item 454) | 27 Aug | **by accident** — `git checkout` refused to switch over an unstaged file |
+| a numbering slip beside `delivery_cost` (item 245) | earlier | during a read |
+| **this one, 513** | 31 Aug | **by reading the branch before pushing** |
+
+> **`check-worklist-contiguity.sh` GUARDS THE SHARED STATE AND EVERY COLLISION HAPPENS BEFORE THE WRITE
+> REACHES IT.** Item 454 named this exactly: *"the window in which two sessions can both be right about
+> the next item number is exactly the window the check cannot see."* **Two branches open at once, each
+> internally contiguous, colliding only on merge — and by then the first has landed and the second
+> rebases onto a file that already contains its number.**
+>
+> **THREE INSTANCES, THREE DIFFERENT ACCIDENTS, NO DETECTION.** The check is not weak; it is looking at
+> a file, and the collision lives between branches.
+
+**Merged with a failing check: once. The correct count is zero.**
 
