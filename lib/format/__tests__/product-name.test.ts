@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { stripBrandPrefix, displayProductTitle } from '../product-name.ts';
+import { stripBrandPrefix, displayProductTitle,
+  stripPriceClaim,
+} from '../product-name.ts';
 
 // --- stripBrandPrefix --------------------------------------------------------
 
@@ -259,4 +261,58 @@ test('the Next and Deno implementations agree on displayProductTitle', () => {
       `displayProductTitle disagreed for name=${JSON.stringify(name)} brand=${JSON.stringify(brand)}`,
     );
   }
+});
+
+// ─── Promotional price claims (work-list item 505) ──────────────────────────
+//
+// The complement cases are the point: the version that shipped before these
+// tests ended with a whitespace collapse and changed 437 names outside the
+// target set. Every "must not touch" case below is a real live product name.
+test('stripPriceClaim removes a parenthesised claim', () => {
+  assert.equal(
+    stripPriceClaim('Debenhams The Ultimate Edit (Worth £134, Yours for £30)'),
+    'Debenhams The Ultimate Edit',
+  );
+  assert.equal(
+    stripPriceClaim('Debenhams The Summer Icons Edit (Worth £210)'),
+    'Debenhams The Summer Icons Edit',
+  );
+});
+
+test('stripPriceClaim removes a trailing claim', () => {
+  assert.equal(
+    stripPriceClaim('Pureology Hydrate Conditioner 1000ml Double Worth £184'),
+    'Pureology Hydrate Conditioner 1000ml Double',
+  );
+});
+
+test('stripPriceClaim removes a claim followed by a shade or size', () => {
+  // Nine live names read "... Worth £29 in 3.5" — the claim is not final, so the
+  // lookahead is load-bearing and a `$` anchor alone missed all nine.
+  assert.equal(
+    stripPriceClaim('Benefit Bigtime Brow Minis - Precisely, My Pencil & Gel Setter Duo Shade 2 Worth £29 in 3.5'),
+    'Benefit Bigtime Brow Minis - Precisely, My Pencil & Gel Setter Duo Shade 2 in 3.5',
+  );
+  assert.equal(
+    stripPriceClaim('JOICO K-Pak Reconstructing Shampoo 1000ml Worth £58 in Clear'),
+    'JOICO K-Pak Reconstructing Shampoo 1000ml in Clear',
+  );
+});
+
+test('stripPriceClaim leaves "worth" without a price alone — THE COMPLEMENT', () => {
+  for (const n of [
+    "L'Oréal Paris Color Riche Satin Lipstick 635 Worth It",
+    'Worth Je Reviens Eau de Toilette 10ml Spray',            // Worth is a BRAND
+    'NYX Professional Makeup Worth The Hype Volumizing Mascara',
+    'Glow Hub Tinted Sunsilk SPF 30 Worth Defending',
+  ]) {
+    assert.equal(stripPriceClaim(n), n, `must not touch: ${n}`);
+  }
+});
+
+test('stripPriceClaim changes nothing else about a name', () => {
+  // The double space is deliberate. An earlier draft collapsed whitespace and so
+  // rewrote 437 names that carried no claim at all.
+  const n = 'Marc Jacobs Perfect Eau de Toilette Spray  50ml';
+  assert.equal(stripPriceClaim(n), n);
 });

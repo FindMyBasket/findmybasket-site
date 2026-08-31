@@ -40091,5 +40091,76 @@ drift riders, on the column the barcode-merge work is currently reading.
 > exactly the brand-prefix shape. **The claim is closer to the ampersand in how it FEELS — junk in an
 > identity field — and closer to the brand prefix in what it IS.**
 
-**Not fixed. Not decided.**
+#### ★ FIXED AT DISPLAY, AND ROBBIE'S READ CORRECTED
+
+**Robbie's read was that this is closer to the ampersand case — a retailer's promotional copy in an
+identity field. Recorded as corrected, and the correction is his instruction:**
+
+> **THE AMPERSAND CASE WAS A NORMALISATION DEFECT: the stored value was right and the DERIVED KEY was
+> wrong.** Here the stored value is **faithful supplier text** — Debenhams really did title it that —
+> **and the RENDERING is wrong.** That is the brand-prefix shape exactly. *Closer to the ampersand in
+> how it feels, closer to the brand prefix in what it is.*
+
+**AND THE DECIDING ARGUMENT IS THE MECHANISM, NOT THE TAXONOMY: `products.name` is load-bearing for
+`match_key`.** Cleaning 178 names re-keys 178 products **in the middle of a merge programme that groups
+on those keys** (items 491, 503). **That makes the data fix actively hazardous rather than merely
+unnecessary** — it would move the ground under work in progress.
+
+`stripPriceClaim()` in `lib/format/product-name.ts`, called first by `displayProductTitle`, so it
+reaches all four surfaces through one function:
+
+```
+app/product/[id]/page.tsx      the <h1>, the <title>, AND the JSON-LD name
+components/ProductCard.tsx     the category grid and the brand page
+lib/format/metadata-copy.ts    meta descriptions and social tags
+```
+
+> **THE JSON-LD IS THE ONE THAT MATTERS MOST.** `/product/101655` carried *"Yours for £30"* in its
+> structured data beside a **£22.50** offer — **a contradiction Google reads, not a cosmetic one.** The
+> `<h1>` is seen by a person who can also see the price; the structured data is consumed by a machine
+> that indexes the claim as the product's identity.
+
+#### ★ AND THE COMPLEMENT TEST KILLED THE FIRST VERSION
+
+The expression that was about to ship ended with a `\s{2,}` -> `" "` whitespace collapse. Run against
+all 105,982 live products:
+
+```
+first version    changed 615    178 in target    437 OUTSIDE THE TARGET
+final version    changed 178    178 in target      0 outside
+```
+
+**437 names changed because they merely contained a double space.** Nothing to do with price claims;
+the collapse ran on every name it was handed.
+
+> **A RULE THAT DOES MORE THAN IT CLAIMS IS NOT VISIBLE FROM ITS TARGET SET** — on the 178, the extra
+> clause was invisible and even mildly helpful. **It was only visible from the other side**, which is
+> the fifth complement save this week and the second where the rule was doing something its author had
+> not noticed rather than something wrong.
+
+**AND POSTGRES `\b` IS BACKSPACE, NOT A WORD BOUNDARY.** The first draft used `\b` and matched **zero
+of 178** — a rule that silently does nothing, which is the same shape as the four wrong-but-plausible
+queries above, arriving inside the fix for one of them. `\m` in SQL, `\b` in the shipped TypeScript,
+where it means what it says.
+
+#### THE MEASUREMENT, BOTH DIRECTIONS
+
+```
+live products                105,982
+changed                          178
+of those, in target              178
+CHANGED OUTSIDE TARGET             0
+emptied / left a fragment          0
+residual claim after strip         0
+target rows missed                 0
+```
+
+**Nine names needed the lookahead** — `"... Worth £29 in 3.5"` — where a shade follows the claim. A
+`$` anchor alone missed all nine.
+
+**5 tests added, 260 pass, `tsc` clean.** The complement cases in the test file are real live product
+names — *Worth It*, *Worth The Hype*, *Worth Defending*, and **`Worth Je Reviens`, where Worth is the
+brand.**
+
+**The stored names are untouched. `match_key` moves on nothing.**
 
