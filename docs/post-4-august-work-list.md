@@ -40306,3 +40306,49 @@ established, and the third time this week it changed an answer.
 
 **260 tests pass, `tsc` clean.**
 
+---
+
+### 507. Urban Decay, and a hold-rate prediction recorded before the batch was read
+
+**Raised:** 31 August 2026 · **THIS SECTION WAS WRITTEN AND COMMITTED BEFORE THE 42 GROUPS WERE READ.** · **Batch not yet run.**
+
+#### ★ THE PREDICTION, MADE IN ADVANCE
+
+Item 504 concluded that **the hold rate is a property of the category, not of the batch**:
+
+```
+82 groups, fragrance-heavy   ->  9 held   (11.0%)
+49 groups, one haircare brand ->  0 held   ( 0.0%)
+```
+
+**Urban Decay is makeup, 42 groups at 4+ active retailers, and the prediction is that it behaves
+nearer fragrance than Redken.**
+
+**THE REASONING, STATED BEFORE THE EVIDENCE:**
+
+| | the distinction names must carry |
+|---|---|
+| **fragrance** | flankers, concentrations, refillables, gift sets — *Angel* against *Angel Star* |
+| **haircare (Redken)** | none. One systematic range; retailers vary only in how much descriptor they keep |
+| **makeup (predicted)** | **shade against shade**, and **finish or formulation against the same shade name** |
+
+**A Naked palette and a Naked single are the makeup equivalent of *Angel* against *Angel Star*** — one
+word shared, two products, and the name is the only thing that separates them. Shade names also repeat
+across finishes within a brand, so *"Perversion"* can be a mascara, an eyeliner and a lipstick.
+
+> **PREDICTED: A HOLD RATE NEARER 11% THAN 0%, so roughly 3-6 of 42.**
+
+#### ★ AND THE PREDICTION IS FALSIFIABLE, WHICH IS THE POINT OF WRITING IT HERE
+
+> **IF THE HOLD RATE COMES BACK NEAR ZERO, THE CATEGORY FRAMING NEEDS REVISITING RATHER THAN
+> CONFIRMING.** Two data points — one fragrance-heavy mixed batch and one single haircare brand — are
+> enough to suggest a rule and not enough to establish one. **The alternative explanation is that
+> Redken's 0% came from it being ONE BRAND rather than from it being haircare**, and a single-brand
+> makeup batch at 0% would support that reading over the category one.
+>
+> **Recorded in advance so the result is a test rather than an explanation.** A hold rate discovered
+> and then rationalised is worth nothing; this list has recorded enough after-the-fact reasoning to
+> know the difference.
+
+**The batch, the reading and the outcome follow below once run.**
+
