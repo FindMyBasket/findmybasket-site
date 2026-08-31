@@ -40433,3 +40433,72 @@ ONE revalidation call · 92 paths (1 brand + 91 product) · request 10970 · sta
 
 **One brand path for 55 removed rows.** Plan preserved in `fmb_merge_batch_ud_20260831`.
 
+---
+
+### 508. Dermalogica, and a prediction the framework has no observation for
+
+**Raised:** 31 August 2026 · **WRITTEN AND COMMITTED BEFORE THE 34 GROUPS WERE READ.** · **Batch not yet run.**
+
+#### THE STATE OF THE MODEL, IN THREE POINTS
+
+```
+fragrance-heavy, 82 groups    9 held   11.0%    shades? no    flankers? YES
+Redken haircare,  49 groups   0 held    0.0%    shades? no    flankers? no
+Urban Decay makeup, 42 groups 6 held   14.3%    shades? YES   flankers? no
+```
+
+**The model: holds come from distinctions the NAME must adjudicate.** Fragrance has flankers,
+concentrations and refillables; makeup has shades and finishes; a systematic haircare range has
+neither, and retailers vary only in how much descriptor they keep.
+
+#### ★ THE PREDICTION: LOW, AND IT IS AN EXTRAPOLATION RATHER THAN A MEASUREMENT
+
+**Dermalogica is 34 groups, skincare, 3% makeup.** Skincare has **no shades and no flankers**, so the
+model predicts **Redken-shaped: 0-2 holds of 34.**
+
+> **THIS IS THE WEAKEST PREDICTION THE MODEL HAS MADE, AND THAT IS WHY THIS BATCH IS WORTH RUNNING.**
+> Fragrance and makeup were each predicted from an observed neighbour. **Skincare has no observation at
+> all** — the low call comes from noting the absence of two features, which is an argument from
+> silence. **A third shape is worth more than a second instance of one already tested.**
+
+#### ★★ THE FALSIFIER, STATED BEFORE READING
+
+**If Dermalogica holds HIGH — say 4 or more of 34 — the category model is wrong in a way two batches
+could not have shown, and here is what would replace it:**
+
+Skincare has no shades and no flankers, but it does have **strengths** (a 10% and a 15% vitamin C),
+**formulations** (gel against cream cleanser), **skin-type variants** (oily, dry, sensitive) and
+**deep ranges of near-identical members.**
+
+> **A HIGH SKINCARE HOLD RATE WOULD MEAN THE DRIVER IS NOT "SHADES AND FLANKERS" BUT RANGE DENSITY —
+> how many near-identical members a line contains — AND THAT CATEGORY WAS ONLY EVER A PROXY FOR IT.**
+>
+> That would demote the category model to a coincidence: fragrance and makeup are both deep-range
+> categories, and Redken's Acidic Bonding line is broad but **shallow** — one shampoo, one conditioner,
+> one mask. **Two results consistent with both models cannot separate them, and only a category with
+> the features decoupled can.** Skincare is that category: **no shades, deep ranges.**
+>
+> **So a high result does not merely weaken the model — it names its replacement.** That is the point
+> of writing the falsifier down rather than only the prediction.
+
+#### ★ AND THE BATCH NOT CHOSEN, WHICH IS THE TWO-VARIABLE POINT ON A REAL DECISION
+
+**bareMinerals: 27 groups, 78% makeup.** Second-largest available and **deliberately not chosen.**
+
+| | bareMinerals | Dermalogica |
+|---|---|---|
+| groups | 27 | 34 |
+| shape | **78% makeup** | skincare, 3% makeup |
+| expected reading | **Urban-Decay-shaped — shade adjudication** | unknown, predicted low |
+| expected rule 2 | **degraded — makeup names are shade-bearing** | intact — skincare carries sizes |
+
+> **NOTHING IN THE GROUP COUNT SAYS ANY OF THAT.** A list ordered by size puts bareMinerals two rows
+> below Dermalogica and says nothing about the second variable. **Chosen by count alone it would be a
+> 27-group batch costing what a 42-group makeup batch cost, with keeper selection falling through to
+> the id tie-break on most of it.**
+>
+> **THE READING BUDGET HAS TWO VARIABLES AND ONLY ONE IS VISIBLE IN A LIST** — demonstrated on a real
+> choice rather than asserted.
+
+**Result and reading follow once run.**
+
