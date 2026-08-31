@@ -1,0 +1,166 @@
+name: fragrance shop census
+
+# MEASURE-ONLY. THIS WORKFLOW WRITES NOTHING.
+#
+# The Fragrance Shop — Rakuten merchant 43488, SID 4684964, feed 43488_4684964_2_cmp.
+# It is the first Rakuten retailer since Superdrug, so import-rakuten-feed has not run
+# against a live retailer since it was deployed on Sunday with the extractCanonicalSize
+# fix. Item 531.
+#
+# WHAT IT DOES NOT DO, DELIBERATELY: no upload to the rakuten-feeds bucket, no call to
+# import-rakuten-feed, no row in retailers or retailer_import_config, no dry run. It
+# fetches, counts, and prints. The Supabase key it uses is read-only in effect because
+# every request it makes is a GET.
+#
+# ── IT LISTS THE DIRECTORY RATHER THAN GUESSING IT ────────────────────────────
+#
+# Superdrug's feed lived in /50336/, which is not its SID, so the path cannot be derived
+# from the merchant or SID numbers. A GUESSED PATH FAILS AS AN EMPTY FETCH, and an empty
+# fetch reads as a finding about the feed rather than about the path. The first job walks
+# the SFTP tree and reports where the file actually is.
+#
+# ── AND IT REFUSES TO REPORT AN ALL-ZERO CENSUS ───────────────────────────────
+#
+# Robbie's first census matched `<product .*?</product>` with a regex. Rakuten cmp XML
+# nests <URL><product>…</product></URL> inside each product, so every record truncated at
+# the inner tag and UPC, price, brand and image all came back 0. A clean zero across every
+# field read as a finding until 3,166 products with no prices stopped being credible.
+#
+# EVERY FIELD FAILING IDENTICALLY IS A FACT ABOUT THE READER, NOT THE FEED. The census
+# below exits 1 rather than printing that shape, so it can never be reported as data.
+
+"on":
+  workflow_dispatch:
+    inputs:
+      remote_dir:
+        description: 'SFTP directory holding the feed. Leave EMPTY to list and report only.'
+        required: false
+        default: ''
+        type: string
+      note:
+        description: 'Why you are running it (appears in the run summary)'
+        required: false
+        default: 'fragrance shop census'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preflight -- can this run at all?
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f scripts/onboarding/fragrance-shop-census.py || { echo "::error::census script missing"; exit 1; }
+          for s in RAKUTEN_SFTP_USER RAKUTEN_SFTP_PASSWORD SUPABASE_SERVICE_KEY SUPABASE_PROJECT_REF; do :; done
+          if [ -z "${{ secrets.RAKUTEN_SFTP_USER }}" ] || [ -z "${{ secrets.RAKUTEN_SFTP_PASSWORD }}" ]; then
+            echo "::error::RAKUTEN_SFTP_* not set -- cannot_run"; exit 2
+          fi
+          if [ -z "${{ secrets.SUPABASE_SERVICE_KEY }}" ]; then
+            echo "::error::SUPABASE_SERVICE_KEY not set -- cannot_run"; exit 2
+          fi
+
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+
+      # ── FIND THE FEED. Walk one level of the tree and report every match, rather
+      #    than assuming a path. Superdrug's /50336/ is not derivable from its ids.
+      - name: Locate the feed on SFTP
+        id: locate
+        env:
+          SFTP_USER: ${{ secrets.RAKUTEN_SFTP_USER }}
+          SFTP_PASSWORD: ${{ secrets.RAKUTEN_SFTP_PASSWORD }}
+          WANT: '43488_4684964_2_cmp'
+          GIVEN_DIR: ${{ inputs.remote_dir }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          sftp_ls () {
+            sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no -o BatchMode=no \
+              "$SFTP_USER@aftp.linksynergy.com" <<EOF 2>/dev/null
+          ls -1 $1
+          bye
+          EOF
+          }
+
+          if [ -n "$GIVEN_DIR" ]; then
+            echo "dir given: $GIVEN_DIR"
+            echo "found_dir=$GIVEN_DIR" >> "$GITHUB_OUTPUT"
+            sftp_ls "$GIVEN_DIR" | tee /tmp/dirlist.txt
+            exit 0
+          fi
+
+          echo "── root ─────────────────────────────────────────────"
+          sftp_ls "/" | tee /tmp/root.txt
+          echo
+
+          # Directory entries look like bare tokens; try each, capped, and stop at the
+          # first that holds the wanted feed.
+          FOUND=""
+          n=0
+          while read -r entry; do
+            entry="$(echo "$entry" | tr -d '\r' | sed 's#^/##; s#/$##')"
+            case "$entry" in ''|sftp*|'Connected'*|ls*|bye*|*'>'*) continue;; esac
+            n=$((n+1)); [ "$n" -gt 40 ] && break
+            listing="$(sftp_ls "/$entry")"
+            if echo "$listing" | grep -q "$WANT"; then
+              echo "── /$entry  ── HOLDS THE FEED ───────────────────"
+              echo "$listing" | grep "$WANT"
+              FOUND="/$entry"
+              break
+            fi
+          done < /tmp/root.txt
+
+          if [ -z "$FOUND" ]; then
+            echo "::error::$WANT not found under any of the $n directories listed at root."
+            echo "Root listing is above. Re-run with remote_dir set once the path is known."
+            echo "found_dir=" >> "$GITHUB_OUTPUT"
+            exit 2
+          fi
+          echo "found_dir=$FOUND" >> "$GITHUB_OUTPUT"
+          echo "FEED DIRECTORY: $FOUND"
+
+      - name: Download the feed
+        if: steps.locate.outputs.found_dir != ''
+        env:
+          SFTP_USER: ${{ secrets.RAKUTEN_SFTP_USER }}
+          SFTP_PASSWORD: ${{ secrets.RAKUTEN_SFTP_PASSWORD }}
+          DIR: ${{ steps.locate.outputs.found_dir }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p feed
+          sshpass -p "$SFTP_PASSWORD" sftp -o StrictHostKeyChecking=no -o BatchMode=no \
+            "$SFTP_USER@aftp.linksynergy.com" <<EOF
+          cd $DIR
+          mget 43488_4684964_2_cmp*
+          bye
+          EOF
+          mv 43488_4684964_2_cmp* feed/ 2>/dev/null || true
+          ls -la feed/
+          gunzip -f feed/*.gz 2>/dev/null || true
+          ls -la feed/
+          test -n "$(ls feed/*.xml 2>/dev/null)" || { echo "::error::no XML after download -- cannot_run"; exit 2; }
+
+      - name: Census
+        if: steps.locate.outputs.found_dir != ''
+        env:
+          SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        shell: bash
+        run: |
+          # pipefail is load-bearing: without it a piped step takes the LAST command's
+          # exit code and a dead script is green. Item 255.
+          set -euo pipefail
+          python3 scripts/onboarding/fragrance-shop-census.py feed/*.xml | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Note
+        if: always()
+        run: |
+          echo "> Run reason: ${{ inputs.note }}" >> "$GITHUB_STEP_SUMMARY"
