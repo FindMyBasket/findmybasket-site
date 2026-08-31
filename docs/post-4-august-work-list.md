@@ -41482,3 +41482,205 @@ at a page that is no longer its content — and 12 hrefs across 8 static pages, 
 `RoutineBuilder.tsx:1412`, still link to it.** Item 515 was cosmetic while `/` served the same bytes.
 **The flip is what makes it a defect: the site logo now leads back to the homepage this replaced.**
 Recorded, not fixed — a redirect `/index.html → /` closes all 14 in one line and is a separate act.
+
+### 520. The port carried the content and the measurement and left the styling behind
+
+**Raised:** 31 August 2026 · **The demo block is restyled and live. The finding is why it needed to be.**
+
+Robbie's words on seeing the route on production: *"measurably better and looks unfinished."* Three
+complaints — an unstyled search input, a demo section rendering as a bullet list, one column of
+left-aligned prose.
+
+#### ★★★ THE CENTRE: WHAT THE PORT DROPPED
+
+`public/index.html` — the page item 513 replaced — already contained every answer:
+
+```css
+.hero-form input:focus   { border-color: var(--gold); box-shadow: 0 0 0 4px rgba(201,169,110,0.12); }
+.demo-basket.best        { border-color: rgba(201,169,110,0.4); background: rgba(201,169,110,0.08); }
+.demo-basket.best::before{ content: 'BEST'; background: var(--gold); }
+.basket-price            { font-family: 'Cormorant Garamond'; color: var(--gold-text); }
+.basket-saving           { color: var(--sage-text); }
+.hero-bg                 { url('/images/hero-bottles-desktop.jpg') under a cream gradient }
+```
+
+> **A GOLD FOCUS RING, A BEST-TAGGED WINNING BASKET, A SERIF GOLD PRICE, A SAGE SAVING LINE AND A
+> PHOTOGRAPHIC HERO. NONE OF IT CAME ACROSS.** The port carried the content and the measurement and left
+> the styling behind. **Everything it kept was a thing with a number attached.**
+
+The two sub-labels are the same shape in miniature. `.basket-items` on the static page read *"Whole
+routine, delivery included"* and *"Each item at its best price"*. Without them the block is two numbers;
+with them it is a comparison. **They were dropped in the port and restored here** — existing copy, not
+new.
+
+#### ★★★ AND THE INSTRUMENTATION HALF, WHICH IS ROBBIE'S
+
+> *"I asked for a fold measurement and a screen count, got both, and approved the flip on them."*
+
+**A PAGE CAN GET 70 PER CENT SHORTER AND 100 PER CENT PLAINER AT THE SAME TIME, AND ONLY ONE OF THOSE WAS
+MEASURED.** 11.82 screens → 3.53 is real and survives everything below. It was also the only axis
+anyone asked about, so it was the only axis anyone got.
+
+> **THE MEASUREMENT DISCIPLINE ON THIS PAGE WAS APPLIED TO ONE DIMENSION AND READ AS APPLYING TO THE
+> PAGE.** Every earlier finding on this surface — the `demo-section` fallback, the `<h1>` in item 506,
+> `SiteSearch` in item 519 — came from loading the built page. **So did this one, and the instrument was
+> a person looking at a screenshot.** Three of those four needed no tooling at all.
+
+**And the design skill was available throughout.** `frontend-design` was installed the whole time and
+nobody consulted it until the page was live and Robbie said it was ugly. **It was not missing, and it was
+not unknown. It was simply never opened, because the brief said "measure" and measuring succeeded.**
+
+#### WHAT WAS BUILT
+
+Same section, same copy, same artefact fields — `products[]`, `best`, `worse`, `gap` are everything
+`lib/homepage-demo.json` carries and nothing in the block asks for a field that does not exist. The
+styling is the static page's own rule set in Tailwind.
+
+**The retailer names carry the argument and no new copy was needed to say it:** `best.retailer` is
+`Stylevana` and `worse.retailer` is `Stylevana + YesStyle`. **The cheaper-goods route needs two
+retailers and therefore two delivery charges.** That was in the data the whole time, under a bullet list.
+
+#### THREE DEFECTS FOUND BY BUILDING IT, EACH BY MEASURING RATHER THAN LOOKING
+
+| | what was reached for | what it did | how it was caught |
+|---|---|---|---|
+| **borders** | `border-solid` | style on four sides, width on one → `1px 3px 3px 3px` | computed style, after a screenshot looked wrong |
+| **dividers** | `divide-y` + `md:divide-y-0` | two-class selector outranks `md:border` → `0px 1px 0px 1px` | computed style on every `li`, not just the first |
+| **height** | the first build | 3.53 → **3.72 screens** | re-measured before reporting |
+
+> **THE FIRST TWO WERE INVISIBLE IN A SCREENSHOT AND OBVIOUS IN `getComputedStyle`.** A 3px border on
+> a cream box against a cream page is not a thing a person sees; it is a thing a number says. **The
+> screenshot found the class of problem and the probe found its shape** — which is the opposite of the
+> earlier pattern on this page, where the probe was fine and the screenshot was the missing instrument.
+
+#### THE BUDGET WAS HELD, IN TWO PASSES
+
+```
+first build   3,137px   3.72 screens    +157px
+second        3,031px   3.59            after the divided-list restructure
+third         2,976px   3.53            after every mobile padding step went down one notch
+baseline      2,980px   3.53
+```
+
+**Padding was cut rather than the regression reported.** Two levers, largest first: on mobile the routine
+is ONE divided container and only becomes three separate tiles at `md`, because three bordered boxes
+cost ~70px a divided list does not; then every mobile padding value dropped a notch. **Every `md:` value
+is untouched — the screen budget is a mobile constraint and desktop should not pay for it.** Desktop went
+2,184px → 2,336px, 2.43 → 2.60 screens, which is the block gaining structure where there is no budget.
+
+---
+
+### 521. `@tailwind base` has never been in this app, and 86 borders do not draw
+
+**Raised:** 31 August 2026 · **NOT FIXED. Item 520 works around it in one scoped block.**
+
+```css
+/* app/globals.css, in full, since the React app began */
+@tailwind components;
+@tailwind utilities;
+```
+
+**Preflight has never run.** Measured on production rather than read off the file:
+
+```
+PREFLIGHT_PRESENT: false
+input   border: 2px inset rgb(118,118,118)   radius: 0   appearance: auto   font-family: Arial
+button  border: 2px outset rgb(0,0,0)
+ul      list-style: disc   padding-left: 40px
+h1      margin: 40.2px 0 16px          <- 40px of that is the user agent, not a class
+```
+
+> **TWO OF ROBBIE'S THREE COMPLAINTS ARE THIS, AND NEITHER IS A HOMEPAGE DEFECT.** Divs and headings
+> barely notice a missing reset. **Form controls and lists are the two things user-agent stylesheets
+> style heavily**, and they are exactly the two elements he picked out of a screenshot.
+
+#### ★★★ AND THE PART NOBODY WAS LOOKING FOR: NO BORDER ON THIS SITE IS DRAWN
+
+```
+.border { border-width: 1px }     <- the entire rule. There is no border-style anywhere in the CSS.
+```
+
+`border-style` initial value is `none`, and a border with no style computes to width `0`. Measured on
+the live homepage and on `/skincare`:
+
+```
+card  border-top-width: 0px   border-top-style: none   border-top-color: rgb(232,226,213)
+```
+
+> **ALL 86 `border-border` CLASSES IN `components/` AND `app/` DRAW NOTHING.** Every "card with a border"
+> — the category grids, the product cards, the brand pages, the search dropdown — has a border colour, a
+> border width class, and no border. **What reads as an edge is `warm-white` on `cream`: a 1% background
+> step doing the work of a hairline.**
+>
+> **THE DESIGN VOCABULARY IS IN THE SOURCE AND NOT ON THE SCREEN.** Robbie's own words when scoping the
+> styling — *"the existing site has cards with borders and radius, so the vocabulary exists and the
+> homepage is not using it"* — describe the repository accurately and the rendered site not at all. **The
+> homepage was using it. So was everything else. It has never been visible anywhere.**
+
+#### THE SCOPE OF FIXING IT, MEASURED BY INJECTING PREFLIGHT AND READING THE HEIGHT BACK
+
+| page | before | after | change |
+|---|---|---|---|
+| `/` | 2,184px | 1,999px | **−8.5%** |
+| `/skincare` | 7,586px | 7,068px | **−6.8%** |
+| `/search?q=cerave` | 2,523px | 2,102px | **−16.7%** |
+
+And `a { color: inherit; text-decoration: inherit }` is part of Preflight: **50 links on `/skincare` and
+33 on `/search` carry no colour or underline class** and would go bare. `h1–h6` get `font-size: inherit`;
+2–4 headings per page have no explicit size class.
+
+> **ONE LINE REFLOWS EVERY REACT PAGE AND TURNS ON 86 BORDERS AT ONCE.** That is its own act with its own
+> verification, which is why item 520 shipped a scoped reset instead and this stayed open.
+
+#### AND THE OBVIOUS FIX IS WORSE THAN THE PROBLEM
+
+Reaching for `border-solid` — the utility that looks like it fixes exactly this — **makes it worse on any
+element that sets only some sides.** `border-t border-solid` turns the style on for four sides while
+setting the width of one, so the other three fall back to the CSS initial `medium`:
+
+```
+footer rule, as built:   border-width: 1px 3px 3px 3px    <- a box where a hairline was intended
+```
+
+**The reset is the pair or it is nothing:** width `0` and style `solid` on everything, with the utilities
+that follow putting width back on the edges that asked for it. `app/globals.css` now carries that for
+`.fmb-demo` only, placed **between** `@tailwind components` and `@tailwind utilities` so source order
+lets the utilities win on width. **That placement is load-bearing and is commented at the rule.**
+
+---
+
+### 522. The brand is one of the design skill's three named AI defaults, and predates it by a year
+
+**Raised:** 31 August 2026 · **REFERENCE. Nothing to fix; worth never rediscovering.**
+
+The `frontend-design` skill's calibration section names three looks AI-generated design clusters around.
+The first:
+
+> a warm cream background (near #F4F1EA) with a high-contrast serif display and a terracotta accent
+
+**FindMyBasket is cream `#FAF8F4`, Cormorant Garamond, and gold `#C9A96E`.**
+
+```
+tailwind.config.ts   cream #FAF8F4 · ink #1C1A18 · gold #C9A96E · sage #7A9E87
+public/index.html    Cormorant Garamond display, DM Sans body — since before this work list began
+```
+
+#### THE BRIEF WINS, AND THE SKILL SAYS SO ITSELF
+
+> *"Where the brief pins down a visual direction, follow it exactly — the brief's own words always win,
+> including when it asks for one of these looks."*
+
+The palette and the faces are a year old, they are in the config, they are on every page, and they were
+restated explicitly when this styling was scoped. **There is no decision here to revisit.**
+
+#### WHY IT IS WRITTEN DOWN ANYWAY
+
+> **THE RESEMBLANCE IS REAL AND IT WILL BE NOTICED AGAIN — by a future reader of the skill, by a
+> designer, or by me on the next pass.** Without this line the next encounter is an argument from
+> scratch, and the tempting resolution is to "differentiate" a year-old identity against a paragraph
+> written about generated pages.
+>
+> **THE DEFAULT IS NOT THE PALETTE. IT IS REACHING FOR THE PALETTE WITHOUT A REASON.** FindMyBasket has
+> the reason and had it first. **What the skill actually caught on this page was the opposite failure:
+> not a templated look, but no look at all** — a page whose borders did not draw and whose search field
+> was a browser default, arrived at by measuring one dimension and shipping.
