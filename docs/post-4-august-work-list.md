@@ -39575,4 +39575,206 @@ to six thousand consecutive posts, **the merge reports `prices_moved`, `marked_m
 
 **Its own item, because it is shared machinery and because the correct fix — record the failure without
 failing the merge — is a different change from what item 500 needs.**
+### 503. The first barcode merge: 73 groups, one revalidation call, and a tier that was not what it said
+
+**Raised, run and verified:** 31 August 2026 · **73 groups merged. Nine held. Two keepers overridden by name.**
+
+#### ★ WHAT THE WORK IS FOR
+
+```
+/product/11378   Ultrasun Face & Scalp UV Protection Mist SPF50 75ml
+
+  Debenhams      GBP 17.60        Beauty Bay   GBP 22.00
+  Gorgeous Shop  GBP 18.00        Escentual    GBP 22.00
+  Beauty Flash   GBP 20.00        Boots        GBP 22.00
+```
+
+**Six offers on one page, GBP 17.60 to GBP 22.00. That page showed ONE price this morning**, and the
+other five sat on five separate product rows that never met. **Verified on production after the run**,
+not inferred from the write.
+
+#### THE RUN
+
+```
+plan          73 groups · 118 rows · 34 brands · 2 overrides
+trigger       trg_revalidate_on_merge_log DISABLED for the run, re-enabled after
+merge         73 x fmb_soft_merge_group, ordered by brand
+after         keepers still live 73 · removed pointing at keeper 118
+              ORPHAN PRICES LEFT 0 · merge_log rows 118
+verified      /product/20131 -> 308 -> /product/11378 · /brands/ultrasun 200
+```
+
+**All 73 keepers gained a comparison on ACTIVE retailers alone. Median spread 40%.**
+
+#### ★ THE REVALIDATION, AND IT IS ITEM 501'S FIX DEMONSTRATED BEFORE THE ITEM IS BUILT
+
+```
+ONE call · 225 paths (34 brand + 191 product) · request 10968
+status 200 · {"ok":true,"revalidated":[...]}
+```
+
+**Against the 118 posts the per-row trigger would have fired** — one per removed row, brand paths only,
+every response discarded by `EXCEPTION WHEN OTHERS THEN NULL` (item 502).
+
+> **THE PRODUCT PATHS WERE REVALIDATED DELIBERATELY, WHICH HAS NEVER HAPPENED BEFORE.** Item 501
+> records that every merge in 4,790 rows of history left the removed page serving a cached 200 for up
+> to an hour. **This is the first merge where `/product/<removed>` returned its 308 immediately and the
+> keeper showed its new prices immediately**, and the check on 11378 and 20131 is that fix measured.
+>
+> **AND THE STATUS WAS READ RATHER THAN ASSUMED.** 200, from `net._http_response`. The trigger's
+> defect is not that it can fail; it is that nobody would know. **One call has one response, and a
+> response that is looked at is a different object from 118 that are not.**
+
+#### ★ THE TIER WAS NOT WHAT IT SAID, AND THAT IS A DIFFERENT ERROR FROM A WRONG MERGE
+
+**Every merge is correct.** Same barcode, same brand, same product, names read one by one, zero orphan
+prices, every price row preserved — `rp_rows_any_retailer` is 6 in each case below.
+
+**The SELECTION was wrong.** The query joined `retailers` **without filtering `r.active`**, so the
+"6-or-more retailers" tier counted retailers the site does not show:
+
+```
+SOME BY MI 30 Days Miracle Clear Spot Patch     6 price rows, 4 ACTIVE
+  Atelier De Glow [INACTIVE] · Boots · Perfume Click · Stylevana · Superdrug [INACTIVE] · YesStyle
+
+Jean Paul Gaultier La Belle EDP 50ml            6 price rows, 4 ACTIVE
+  Beauty Flash · Branded Beauty [INACTIVE] · Escentual · Gorgeous Shop · Perfume Click · Superdrug [INACTIVE]
+```
+
+**26 of 73 have six or more ACTIVE retailers. The minimum is 4.**
+
+> **THE DISTINCTION IS THE POINT AND IT SHOULD NOT BE BLURRED. A wrong merge would have joined two
+> different products. This joined the right products on a criterion that overstated how visible they
+> were.** The batch is still the batch that should have been merged; the sentence describing why it
+> was chosen was false.
+>
+> **AND IT IS THE RETAILER-LIVENESS RULE ARRIVING IN A THIRD PLACE.** `active` AND the programme still
+> paying is the site's own rule for who is listed; a barcode query that ignores it is counting shelf
+> space that does not exist.
+
+#### THE CORRECTED POPULATION, AND THE PROPAGATION SEPARATED FROM THE MERGE
+
+**Item 496's 7,012 / 6,249 / 643 were measured the same way and are inflated by the same amount.**
+Decomposed so the two effects are not confused:
+
+| | groups | clean | cross-brand | clean with 6+ retailers |
+|---|---:|---:|---:|---:|
+| item 496, pre-merge, uncorrected | 7,012 | 6,249 | 643 | 83 |
+| post-merge, uncorrected | 6,942 | 6,180 | 641 | 9 |
+| **post-merge, `r.active` CORRECTED** | **6,858** | **6,106** | **631** | **3** |
+| *the r.active correction alone* | *-84* | *-74* | *-10* | *-6* |
+
+```
+clean, 4+ ACTIVE retailers    788
+clean, 3+ ACTIVE retailers  2,563
+```
+
+> **THE HEADLINE FIGURES WERE INFLATED BY ~1.2% AND THE TIER COUNTS BY MOST OF THEIR VALUE.** 7,012
+> against 6,858 is a rounding difference; **83 against 3 is not.** So item 496's population is
+> approximately right and its *selection criterion* was materially wrong -- **every number in it is
+> now suspect rather than wrong**, and the two are different claims.
+
+#### ★ FOURTH DEFINITION MISMATCH IN THIS THREAD, LISTED TOGETHER
+
+| # | the query said | the truth | why it looked fine |
+|---|---|---|---|
+| 1 | `products.ean` -> Healf has **0%** barcodes | 93.6%, on `retailer_prices.ean_normalised` | a new retailer supplying no barcodes is entirely plausible |
+| 2 | **0** retailer names in the brand field | 1,132, after `lower()` before the strip | a clean catalogue is what that looks like |
+| 3 | **4** supplements rows would be demoted | 0, after restoring the `(?=\d|\b)` lookahead | 4 is a small plausible number |
+| 4 | **83** groups with 6+ retailers | 26, after filtering `r.active` | the count was real, the retailers were not shown |
+| *and Robbie's* | *8,148 groups* | *7,012 — counted on price rows* | *internally consistent with its own parts* |
+
+> **ALL FOUR RETURNED PLAUSIBLE NUMBERS AND NONE ERRORED.** Not one raised, not one returned zero rows,
+> not one looked malformed. **A query against the wrong column, with the wrong operator order, with a
+> dropped lookahead, or with a missing filter is still a valid query** — and the only thing that caught
+> any of them was an answer disagreeing with something already on the screen.
+
+#### ROBBIE'S CALVIN KLEIN CALL, RECORDED AS WRONG
+
+*"Calvin Klein Obsession at GBP 18.75 to GBP 82.00 across six retailers is that shape"* — named as what
+a 125ml and a 50ml sharing a barcode produces, **and the spread agreed.**
+
+```
+Calvin Klein Obsession Eau de Toilette for Him 125ml
+Calvin Klein Obsession For Men Eau De Toilette 125ml
+Calvin Klein Obsession for Men Eau de Toilette Spray 125ml
+```
+
+**All three 125ml. All three men's. A genuine discounter spread.**
+
+> **THE SPREAD POINTED ONE WAY AND THE NAMES THE OTHER, AND THE NAMES WERE RIGHT.** That is the
+> argument for the read stated as a result rather than as a principle.
+
+#### ★ THE SIZE FLAG: 21 HITS, ZERO GENUINE
+
+Every one was formatting, not size:
+
+```
+Clarins Tonic Sugar Polisher   "250g" vs "250ml" vs no token
+Color WOW Dream Coat           "200ml" vs "Spray200 ml, 200ml"
+Some By Mi Miracle Cream       "60g"  vs "60ml"
+Urban Decay 24/7 Eye Pencil    "1.2g" vs absent
+```
+
+> **IT MEASURED HOW RETAILERS PUNCTUATE A SIZE, NOT WHETHER SIZES DIFFER. ITS EMPTINESS IS THE
+> FINDING, AND IT STILL EARNED ITS PLACE BY DIRECTING THE READING.**
+>
+> **THIRD INSTANCE OF A DETECTOR MEASURING ITSELF** — the ASIN map's 477 barcodes, the 5+ bucket's
+> selection for bundles, and this.
+
+#### RULE 2, EARNED RATHER THAN PROPOSED
+
+```
+1. prefer a name that does not double the brand
+2. prefer a name that CARRIES a size token      <- earned
+3. tie-break on lowest id
+```
+
+**Rule 2 came from the read, not from a principle.** The three `Mugler Alien Extraintense Eau De Pafum`
+rows are why: **the identical size-less string sits in three different-size groups**, so a size-less
+name cannot verify anything and must not become the surviving URL. **It found a size-bearing keeper in
+all 73 groups.** *A rule derived from a read is a different object from one derived from a principle.*
+
+**TWO NAMED EXCEPTIONS, NOT A FOURTH CLAUSE:** Ralph Lauren Polo 67 `44080` *"Eau De Toillette"* ->
+`113358`; Some By Mi Retinol Serum `5084` *"Some By MiRetinol"* -> `38287`. Both lost on the id
+tie-break to an equally-qualified, correctly-spelled row.
+
+> **A FOURTH CLAUSE WOULD NEED ITS OWN COMPLEMENT TEST. TWO NAMED ROWS DO NOT.** Beauty of Joseon's
+> *"Camilia"* keeper STANDS: the correctly-spelled alternatives carry no size token, so rule 2 rejected
+> them correctly. **That is the rule working, not failing.**
+
+#### THE NINE HELD
+
+`Mugler Angel` vs `Angel Star` · `Angel Refillable` vs `Angel Seducing Offer` · `Ultrasun Family` vs
+`Super Sensitive Family` · `YSL Black Opium Over Red` vs `Red` · `V&R Spicebomb Dark Leather` vs
+`Black Leather` (x2) · `Mugler Alien Extraintense` (x3, size-less name in three groups).
+
+> **A GROUP WHOSE NAMES CANNOT ADJUDICATE IT IS NOT READABLE, WHATEVER ITS RETAILER COUNT.**
+
+#### ★★ THE SHARPEST PRACTICAL POINT: THE GUARD EXISTED AND WAS NOT WHAT FOUND IT
+
+**The first assignment run was malformed.** Its `removed` arrays contained the keeper itself and
+repeated every id five times:
+
+```
+ean 3274872441033   keeper 113131   removed 113131,113131,113131,113131,115124
+```
+
+The member set had one row per RETAILER rather than per product, so `row_number()` ranked each product
+once per retailer and `rn > 1` swept up duplicate rows of the keeper.
+
+**`fmb_soft_merge_group` would have refused it** — `IF p_keeper = ANY(p_removed) THEN RAISE EXCEPTION`
+is its second line. **It was caught by reading the output, one step before the guard was needed.**
+
+> **THE GUARD EXISTED AND WAS NOT WHAT FOUND IT.**
+>
+> **THIS IS THE CONTIGUITY CHECK'S SHAPE** — which confirmed a duplicate item number rather than
+> preventing one. **A guard doing its job is not evidence the work was right.** Had the guard fired it
+> would have been called a success: the bad plan refused, the system working. **The plan would have
+> been just as wrong, and the reason for it — a join producing one row per retailer — would have gone
+> unexamined**, because a raised exception names the symptom and not the cause.
+>
+> **The guard is the floor. Reading is what finds the defect while it is still cheap.**
+
+**Plan preserved in `fmb_merge_batch_20260831` (73 rows, keeper/removed/overridden) for reversibility.**
 
