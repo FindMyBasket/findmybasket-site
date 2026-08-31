@@ -148,6 +148,13 @@ export function HomePage() {
           `1px 3px 3px 3px` — a box where a hairline was intended. Item 521 is the
           site-wide fix.
 
+          THE ROUTINE ROWS USE `max-md:` RATHER THAN `divide-y`, AND THAT IS NOT A STYLE
+          PREFERENCE. `divide-y` compiles to `.divide-y > :not([hidden]) ~ :not([hidden])`
+          — two classes, so it outranks the single-class `md:border` on the row, and
+          `md:divide-y-0` was zeroing the top and bottom of every tile but the first at
+          desktop. Measured `0px 1px 0px 1px`. `max-md:` and `md:` cannot both apply, so
+          the two treatments never compete.
+
           COMPACTED FOR MOBILE, DELIBERATELY, IN TWO PASSES. The first build of this block
           took 390x844 from 3.53 screens to 3.72; the second, to 3.59. The whole
           justification for this route is 11.82 -> 3.53, so padding was cut rather than the
@@ -171,16 +178,16 @@ export function HomePage() {
                 Your routine
               </p>
               <ul
-                className="list-none p-0 m-0 mb-3 md:mb-6 rounded-xl border border-border
-                           bg-cream divide-y divide-border
+                className="list-none p-0 m-0 mb-3 md:mb-6 rounded-xl border border-border bg-cream
                            md:grid md:grid-cols-3 md:gap-3 md:rounded-none md:border-0
-                           md:bg-transparent md:divide-y-0"
+                           md:bg-transparent"
               >
                 {demo.products.map(p => (
                   <li
                     key={p.name}
-                    className="px-3.5 py-2 md:px-4 md:py-3 md:rounded-xl md:border
-                               md:border-border md:bg-cream"
+                    className="px-3.5 py-2 max-md:border-t max-md:border-border
+                               max-md:first:border-t-0 md:px-4 md:py-3 md:rounded-xl
+                               md:border md:border-border md:bg-cream"
                   >
                     <div className="text-[13px] font-medium text-ink leading-snug">{p.brand}</div>
                     <div className="text-[11px] text-ink-light leading-tight mt-0.5">{p.name}</div>
