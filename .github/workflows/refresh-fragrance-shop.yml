@@ -37,6 +37,16 @@ name: fragrance shop census
         required: false
         default: ''
         type: string
+      dry_run:
+        description: 'After the census, convert to NDJSON, stage it, and call import-rakuten-feed with dry_run TRUE. Still writes no products.'
+        required: false
+        default: false
+        type: boolean
+      real_import:
+        description: 'THE REAL IMPORT. dry_run FALSE on the importer — this WRITES products and prices. Requires config.enabled = true.'
+        required: false
+        default: false
+        type: boolean
       list_only:
         description: 'Stop after locating the feed. Use for the first run so the directory is READ before anything is measured against it.'
         required: false
@@ -170,6 +180,90 @@ jobs:
           # exit code and a dead script is green. Item 255.
           set -euo pipefail
           python3 scripts/onboarding/fragrance-shop-census.py feed/*.xml | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # ── STAGE AND DRY RUN. Item 533. ─────────────────────────────────────────
+      #    dry_run TRUE on the importer: it classifies, matches and reports, and
+      #    writes no products and no prices. The only thing this leaves behind is the
+      #    NDJSON in the rakuten-feeds bucket, which the importer needs to read.
+      - name: Convert to NDJSON with the sale-aware price rule
+        if: steps.locate.outputs.found_dir != '' && inputs.list_only != true && (inputs.dry_run == true || inputs.real_import == true)
+        shell: bash
+        env:
+          NDJSON_OUT: fragrance-shop.ndjson
+        run: |
+          set -euo pipefail
+          python3 scripts/onboarding/fragrance-shop-to-ndjson.py feed/*.xml | tee -a "$GITHUB_STEP_SUMMARY"
+          ls -lah fragrance-shop.ndjson.gz
+
+      - name: Stage the feed
+        if: steps.locate.outputs.found_dir != '' && inputs.list_only != true && (inputs.dry_run == true || inputs.real_import == true)
+        env:
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          curl -fsSL -X POST \
+            "https://${PROJECT_REF}.supabase.co/storage/v1/object/rakuten-feeds/feeds/the-fragrance-shop/latest.ndjson.gz" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "Content-Type: application/gzip" \
+            -H "x-upsert: true" \
+            --data-binary "@fragrance-shop.ndjson.gz" \
+            -w "Storage upload HTTP %{http_code}\n"
+
+      - name: Dry run import-rakuten-feed
+        if: steps.locate.outputs.found_dir != '' && inputs.list_only != true && inputs.dry_run == true
+        env:
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -X POST \
+            "https://${PROJECT_REF}.supabase.co/functions/v1/import-rakuten-feed" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            --max-time 300 \
+            -d '{"retailer_id": 35, "feed_path": "feeds/the-fragrance-shop/latest.ndjson.gz", "dry_run": true}')
+          echo "$RESPONSE" > dry-run.json
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          python3 -c "import json,sys; print(json.dumps(json.load(open('dry-run.json')), indent=1)[:12000])" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          grep -qE '"applied"|"dry_run"|"would_' dry-run.json || {
+            echo "::error::importer did not return a dry-run shape"; exit 1; }
+
+      # ── THE REAL IMPORT ───────────────────────────────────────────────────────
+      #    Separate input, separate step, default false. It cannot be reached by the
+      #    census or dry-run paths, and it names itself in the step title so a run
+      #    that wrote products is distinguishable from one that did not at a glance.
+      - name: REAL IMPORT — writes products and prices
+        if: steps.locate.outputs.found_dir != '' && inputs.list_only != true && inputs.real_import == true
+        env:
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -X POST \
+            "https://${PROJECT_REF}.supabase.co/functions/v1/import-rakuten-feed" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            --max-time 600 \
+            -d '{"retailer_id": 35, "feed_path": "feeds/the-fragrance-shop/latest.ndjson.gz", "dry_run": false}')
+          echo "$RESPONSE" > real-import.json
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          python3 -c "import json; print(json.dumps(json.load(open('real-import.json')), indent=1)[:14000])" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          grep -qE '"applied"|"staged"' real-import.json || {
+            echo "::error::importer did not return applied or staged"; exit 1; }
+
+      - name: Classify the creates with the operative function
+        if: steps.locate.outputs.found_dir != '' && inputs.list_only != true
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f creates.json || { echo "::error::creates.json missing -- the census did not emit it"; exit 1; }
+          npm ci --silent
+          npx --yes tsx scripts/onboarding/classify-creates.mts creates.json | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Note
         if: always()
