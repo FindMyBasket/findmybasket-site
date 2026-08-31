@@ -1,4 +1,10 @@
 import { HomePage } from '../../components/HomePage';
+import { socialTags } from '../../lib/format/social-tags';
+
+const title = 'Health & Beauty Price Comparison UK | FindMyBasket';
+const description =
+  'Build your health and beauty routine and compare prices across multiple UK retailers. Delivery thresholds included. Free to use.';
+const canonical = 'https://www.findmybasket.co.uk/';
 
 /**
  * TEMPORARY. Item 513, step 1.
@@ -11,7 +17,20 @@ import { HomePage } from '../../components/HomePage';
  * DELETE THIS DIRECTORY when the rewrite flips. It is noindex'd so a preview cannot be
  * indexed as a second homepage — item 515 records what happens when two URLs serve one page.
  */
-export const metadata = { robots: { index: false, follow: false } };
+/**
+ * THE SAME metadata AS app/page.tsx, PLUS noindex.
+ *
+ * Without this the preview path emits no og/twitter tags at all — it would have made step 2
+ * of the plan (verify socialTags BEFORE the page looks finished) unverifiable, because the
+ * only route carrying them is the one the rewrite makes unreachable. Checking the tags on
+ * the surface that cannot serve them is not a check.
+ */
+export const metadata = {
+  title,
+  description,
+  robots: { index: false, follow: false },
+  ...socialTags({ title, description, url: canonical }),
+};
 
 export default function Page() {
   return <HomePage />;
