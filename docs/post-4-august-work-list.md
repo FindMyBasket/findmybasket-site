@@ -40306,3 +40306,314 @@ established, and the third time this week it changed an answer.
 
 **260 tests pass, `tsc` clean.**
 
+---
+
+### 507. Urban Decay, and a hold-rate prediction recorded before the batch was read
+
+**Raised:** 31 August 2026 · **THIS SECTION WAS WRITTEN AND COMMITTED BEFORE THE 42 GROUPS WERE READ.** · **Batch not yet run.**
+
+#### ★ THE PREDICTION, MADE IN ADVANCE
+
+Item 504 concluded that **the hold rate is a property of the category, not of the batch**:
+
+```
+82 groups, fragrance-heavy   ->  9 held   (11.0%)
+49 groups, one haircare brand ->  0 held   ( 0.0%)
+```
+
+**Urban Decay is makeup, 42 groups at 4+ active retailers, and the prediction is that it behaves
+nearer fragrance than Redken.**
+
+**THE REASONING, STATED BEFORE THE EVIDENCE:**
+
+| | the distinction names must carry |
+|---|---|
+| **fragrance** | flankers, concentrations, refillables, gift sets — *Angel* against *Angel Star* |
+| **haircare (Redken)** | none. One systematic range; retailers vary only in how much descriptor they keep |
+| **makeup (predicted)** | **shade against shade**, and **finish or formulation against the same shade name** |
+
+**A Naked palette and a Naked single are the makeup equivalent of *Angel* against *Angel Star*** — one
+word shared, two products, and the name is the only thing that separates them. Shade names also repeat
+across finishes within a brand, so *"Perversion"* can be a mascara, an eyeliner and a lipstick.
+
+> **PREDICTED: A HOLD RATE NEARER 11% THAN 0%, so roughly 3-6 of 42.**
+
+#### ★ AND THE PREDICTION IS FALSIFIABLE, WHICH IS THE POINT OF WRITING IT HERE
+
+> **IF THE HOLD RATE COMES BACK NEAR ZERO, THE CATEGORY FRAMING NEEDS REVISITING RATHER THAN
+> CONFIRMING.** Two data points — one fragrance-heavy mixed batch and one single haircare brand — are
+> enough to suggest a rule and not enough to establish one. **The alternative explanation is that
+> Redken's 0% came from it being ONE BRAND rather than from it being haircare**, and a single-brand
+> makeup batch at 0% would support that reading over the category one.
+>
+> **Recorded in advance so the result is a test rather than an explanation.** A hold rate discovered
+> and then rationalised is worth nothing; this list has recorded enough after-the-fact reasoning to
+> know the difference.
+
+#### ★ THE RESULT: 6 OF 42, AND THE PREDICTION HOLDS
+
+```
+fragrance-heavy, 82 groups    9 held   11.0%
+Redken, 49 groups             0 held    0.0%
+URBAN DECAY, 42 groups        6 held   14.3%    <- predicted 3-6, nearer 11% than 0%
+```
+
+**Landed at the top of the predicted range.** The prediction was committed at **`f6f3c15`** before the
+42 were read.
+
+> **THE COMMIT IS WHAT MAKES THE CLAIM CHECKABLE.** A hold rate discovered and then explained is worth
+> nothing; anyone can reconstruct a category story after seeing 6. **The category framing survives its
+> first real test rather than being confirmed by a reading of its own result**, and the alternative
+> reading it was written against — that Redken's 0% came from being ONE BRAND rather than from being
+> haircare — is refuted: **Urban Decay is also one brand, and it held six.**
+
+#### ★★ THE ITEM'S CENTRE: TWO HOLDS ARE PROVABLE, NOT JUDGED
+
+```
+3605973003866   Tootsie x2   +  "24/7 Eye Pencil 1.2g in Hemp Milk"
+                             ...and HEMP MILK HAS ITS OWN GROUP at 3605973003781
+
+3605972982865   High Profile x2  +  "Bond Highlighter 30ml in Space Cowboy"
+                             ...and SPACE COWBOY HAS ITS OWN GROUP in the same batch
+```
+
+**A misfiled shade whose correct barcode is sitting elsewhere in the same batch is PROOF, not
+judgement.** Every hold before this one rested on reading two names and deciding they described
+different things — *Angel* against *Angel Star*, *Dark* against *Black Leather*. **These two are
+settled by the catalogue: the row belongs to a barcode that exists, holds the same brand, and carries
+its name.**
+
+> **AND IT EXISTS ONLY BECAUSE THE WHOLE BRAND WAS READ AT ONCE.** A sample containing the Tootsie
+> group and not the Hemp Milk group shows **nothing** — the misplaced row reads as a plausible naming
+> variant, exactly like the forty that were merged. **The proof is not in either group. It is in
+> holding both at the same time.**
+>
+> **THAT IS THE SHARPEST ARGUMENT YET FOR BRAND-COMPLETE BATCHES OVER SAMPLING, AND IT ARRIVED AS A
+> RESULT RATHER THAN A PRINCIPLE.** Item 503 argued for reading everything on the grounds that findings
+> were single rows invisible in aggregate. **This is stronger: a finding that is invisible in any
+> proper subset**, because the evidence is the relationship between two groups.
+
+**The other four are judged, in the older way:** `Electric Empire` against `in Brown`; `Cool Cookie`
+against `Neutral Mania`; `Vice Lipstick High Impact Backtalk` against `Reno-Backtalk` (same shade,
+different finish); and `24/7 Eye Pencil Perversion` against `Bourbon` and `Black`.
+
+*And the Hydromaniac pairs flagged as doubtful resolved CLEAN* — `Foundation 70` / `Glow-Shade 70`,
+`Foundation 90` / `Glow-Shade 90`, shade numbers agreeing across the group.
+
+#### ★ AND RULE 2 DEGRADES IN MAKEUP, WHICH NOTHING SAID UNTIL NOW
+
+```
+keepers carrying a size token:   Redken 49/49 (100%)   ·   Urban Decay 30/36 (83%)
+```
+
+**Six keepers carry no size token at all.** Makeup names are **shade-bearing rather than
+size-bearing** — *"24/7 Eye Pencil Roxy"*, *"Bond Highlighter -Mirror Ball"* — so rule 2 has nothing to
+prefer on and falls through to the id tie-break.
+
+> **CORRECT BEHAVIOUR, LESS WORK DONE. AND THE TWO BATCHES THAT ESTABLISHED THE RULE WERE BOTH
+> SIZE-BEARING CATEGORIES** — fragrance carries `50ml`, haircare carries `300ml`, and rule 2 looked
+> universal because nothing had tested it where sizes are absent.
+>
+> **SO RULE 2 IS CATEGORY-DEPENDENT IN THE SAME WAY THE HOLD RATE IS, AND NOTHING SAID SO UNTIL
+> MAKEUP.** It was derived from a read (item 503) and is still right — **but its coverage is a property
+> of the category, not of the rule**, and a category with no size tokens gets keeper selection by age
+> alone. **Worth knowing before it is trusted on a third shape.**
+
+#### THE RUN
+
+```
+36 groups · 55 rows removed · 0 orphan prices · 55 merge_log rows
+ONE revalidation call · 92 paths (1 brand + 91 product) · request 10970 · status 200
+
+/product/20225  Urban Decay All Nighter Setting Spray Vitamin C 240ml
+   Debenhams GBP 30.80 · Beauty Bay GBP 43.00 · Beauty Flash GBP 43.00
+   Gorgeous Shop GBP 43.00 · Boots GBP 44.00
+/product/63670  308 -> /product/20225        /brands/urban-decay  200
+```
+
+**One brand path for 55 removed rows.** Plan preserved in `fmb_merge_batch_ud_20260831`.
+
+---
+
+### 508. Dermalogica, and a prediction the framework has no observation for
+
+**Raised:** 31 August 2026 · **WRITTEN AND COMMITTED BEFORE THE 34 GROUPS WERE READ.** · **Batch not yet run.**
+
+#### THE STATE OF THE MODEL, IN THREE POINTS
+
+```
+fragrance-heavy, 82 groups    9 held   11.0%    shades? no    flankers? YES
+Redken haircare,  49 groups   0 held    0.0%    shades? no    flankers? no
+Urban Decay makeup, 42 groups 6 held   14.3%    shades? YES   flankers? no
+```
+
+**The model: holds come from distinctions the NAME must adjudicate.** Fragrance has flankers,
+concentrations and refillables; makeup has shades and finishes; a systematic haircare range has
+neither, and retailers vary only in how much descriptor they keep.
+
+#### ★ THE PREDICTION: LOW, AND IT IS AN EXTRAPOLATION RATHER THAN A MEASUREMENT
+
+**Dermalogica is 34 groups, skincare, 3% makeup.** Skincare has **no shades and no flankers**, so the
+model predicts **Redken-shaped: 0-2 holds of 34.**
+
+> **THIS IS THE WEAKEST PREDICTION THE MODEL HAS MADE, AND THAT IS WHY THIS BATCH IS WORTH RUNNING.**
+> Fragrance and makeup were each predicted from an observed neighbour. **Skincare has no observation at
+> all** — the low call comes from noting the absence of two features, which is an argument from
+> silence. **A third shape is worth more than a second instance of one already tested.**
+
+#### ★★ THE FALSIFIER, STATED BEFORE READING
+
+**If Dermalogica holds HIGH — say 4 or more of 34 — the category model is wrong in a way two batches
+could not have shown, and here is what would replace it:**
+
+Skincare has no shades and no flankers, but it does have **strengths** (a 10% and a 15% vitamin C),
+**formulations** (gel against cream cleanser), **skin-type variants** (oily, dry, sensitive) and
+**deep ranges of near-identical members.**
+
+> **A HIGH SKINCARE HOLD RATE WOULD MEAN THE DRIVER IS NOT "SHADES AND FLANKERS" BUT RANGE DENSITY —
+> how many near-identical members a line contains — AND THAT CATEGORY WAS ONLY EVER A PROXY FOR IT.**
+>
+> That would demote the category model to a coincidence: fragrance and makeup are both deep-range
+> categories, and Redken's Acidic Bonding line is broad but **shallow** — one shampoo, one conditioner,
+> one mask. **Two results consistent with both models cannot separate them, and only a category with
+> the features decoupled can.** Skincare is that category: **no shades, deep ranges.**
+>
+> **So a high result does not merely weaken the model — it names its replacement.** That is the point
+> of writing the falsifier down rather than only the prediction.
+
+#### ★ AND THE BATCH NOT CHOSEN, WHICH IS THE TWO-VARIABLE POINT ON A REAL DECISION
+
+**bareMinerals: 27 groups, 78% makeup.** Second-largest available and **deliberately not chosen.**
+
+| | bareMinerals | Dermalogica |
+|---|---|---|
+| groups | 27 | 34 |
+| shape | **78% makeup** | skincare, 3% makeup |
+| expected reading | **Urban-Decay-shaped — shade adjudication** | unknown, predicted low |
+| expected rule 2 | **degraded — makeup names are shade-bearing** | intact — skincare carries sizes |
+
+> **NOTHING IN THE GROUP COUNT SAYS ANY OF THAT.** A list ordered by size puts bareMinerals two rows
+> below Dermalogica and says nothing about the second variable. **Chosen by count alone it would be a
+> 27-group batch costing what a 42-group makeup batch cost, with keeper selection falling through to
+> the id tie-break on most of it.**
+>
+> **THE READING BUDGET HAS TWO VARIABLES AND ONLY ONE IS VISIBLE IN A LIST** — demonstrated on a real
+> choice rather than asserted.
+
+#### ★★ THE ITEM'S CENTRE: THE FALSIFIER WAS WRITTEN DOWN AND IS NOT SUPPORTED
+
+```
+predicted at f417f55, BEFORE reading:   0-2 holds of 34
+actual:                                 1 hold  of 34   (2.9%)
+```
+
+**The alternative recorded in advance was RANGE DENSITY** — that fragrance and makeup hold because
+their lines are deep, that Redken's are broad but shallow, and that "category" was only ever a proxy
+for it. **Dermalogica is the case that separates them, and it separates them against the alternative.**
+
+```
+Dermalogica BioLumin-C, one line:
+   Serum 30ml · Serum 59ml · Eye Serum 15ml · Gel Moisturiser 50ml
+   Night Restore 25ml · Heat Aging Protector SPF50 15ml · Heat Aging Protector SPF50 50ml
+```
+
+**A deep range by any measure — and the brand held 1 of 34.**
+
+> **DEEP RANGE, NO SHADES, LOW HOLDS. The driver is WHAT THE NAME MUST ADJUDICATE, not how many
+> members a line has.**
+>
+> **THAT WAS THE MODEL'S CLAIM RATHER THAN ITS OBSERVATION UNTIL TODAY.** Fragrance and makeup are both
+> deep AND name-ambiguous; Redken is neither. **Three results consistent with both readings cannot
+> separate them.** Dermalogica is the first case where the two features come apart, and the outcome
+> follows the name-ambiguity reading.
+>
+> **AN ALTERNATIVE RECORDED IN ADVANCE AND THEN WEAKENED BY MEASUREMENT IS WORTH MORE THAN A MODEL
+> CONFIRMED FOUR TIMES.** A fourth confirmation would have added a data point; this removed a rival.
+
+#### ★ THE SECOND FINDING: THE FIRST GENUINE SIZE CONFLICT IN FOUR BATCHES
+
+```
+666151011328   "Active Clearing Skin Wash 500ml"  (19227)
+             + "Active Clearing Skin Wash 250ml"  (19228)
+
+   ...and 19227 ALSO sits on 666151011359, ITS OWN BARCODE.
+```
+
+**Two sizes on one number, and the 500ml has a correct barcode elsewhere in the data.** Same proof
+structure as Urban Decay's Hemp Milk — **the misfiled row's true home exists** — arriving on a size
+rather than a shade.
+
+> **AND IT IS THE FIRST REAL ONE AFTER ITEM 503's SIZE FLAG FIRED 21 TIMES AND FOUND NONE.** That flag
+> ran on a fragrance-heavy batch and then on Redken. **Fragrance and haircare print sizes
+> consistently** — `50ml`, `300ml`, `250ml` — so every one of its 21 hits was punctuation.
+>
+> **ITS EMPTINESS WAS A FACT ABOUT WHERE IT RAN, NOT ABOUT THE CATALOGUE.** Item 503 recorded it as a
+> detector measuring itself; it is that, and it is also a detector run in the two categories least
+> likely to trip it. **Skincare is where sizes are the distinction that matters, and the first batch
+> there produced one immediately** — found by reading, not by the flag.
+
+*The second candidate resolved CLEAN: `Biolumin-c Serum in Clear` carries `canonical_size 15ml` and the
+face serum has its own barcodes at 30ml, so the Debenhams row is the Eye Serum under a truncated name.*
+
+#### ★ AND RULE 2's CATEGORY DEPENDENCE IS NOW SETTLED, NOT OBSERVED
+
+```
+keepers carrying a size token
+   Redken       haircare   49/49   100%
+   Dermalogica  skincare   33/33   100%
+   Urban Decay  makeup     30/36    83%
+```
+
+> **THE DEGRADATION IS SPECIFIC TO SHADE-BEARING CATEGORIES, NOT A GENERAL WEAKNESS.** Item 507 could
+> only say the rule did less work in makeup than in the two batches that established it. **With
+> skincare at 100% the shape is settled**: rule 2 is complete wherever names carry sizes and falls
+> through to the id tie-break wherever they carry shades instead.
+
+#### THE RUN
+
+```
+33 groups · 37 rows removed · 0 orphan prices
+ONE revalidation call · 71 paths (1 brand + 70 product) · request 10971 · status 200
+```
+
+**Plan preserved in `fmb_merge_batch_derm_20260831`.**
+
+---
+
+### 509. L'Oréal Professionnel: a replication rather than a fifth data point
+
+**Raised:** 31 August 2026 · **WRITTEN AND COMMITTED BEFORE THE 30 GROUPS WERE READ.** · **Batch not yet run.**
+
+```
+fragrance-heavy, 82   9 held  11.0%    name-ambiguous
+Urban Decay,     42   6 held  14.3%    name-ambiguous (shades)
+Dermalogica,     34   1 held   2.9%    not ambiguous, DEEP RANGE
+Redken,          49   0 held   0.0%    not ambiguous
+```
+
+**L'Oréal Professionnel: 30 groups, hair, 100% hair/bath-body. The closest available replication of
+Redken.** Predicted: **0-2 holds of 30.**
+
+> **THE MODEL HAS NOT BEEN REPLICATED ON THE SAME SHAPE YET.** Four batches, four different categories
+> — every result so far has been a NEW shape, so every confirmation has also been an extrapolation.
+> **This is the first chance to run the same shape twice**, and a model that predicts four different
+> categories correctly but cannot reproduce itself on one of them is not a model.
+
+#### ★ WHAT A HIGH HOLD RATE HERE WOULD MEAN, STATED BEFORE READING
+
+**If L'Oréal Professionnel holds 4 or more of 30, Redken's 0 was a property of REDKEN and not of
+haircare.**
+
+> The candidate explanation would be **catalogue depth per brand**: Redken's 49 groups came from a
+> narrow set of lines (All Soft, Extreme, Acidic Bonding, Frizz Dismiss) each with a shampoo, a
+> conditioner and a mask. **L'Oréal Professionnel carries Serie Expert, Metal Detox, Absolut Repair,
+> Serioxyl, Vitamino Color and Pro Longer** — more lines, and lines that share descriptor words across
+> them.
+>
+> **That would replace "category" with "how many lines share vocabulary within a brand"**, which is a
+> third model neither the category nor the range-density reading predicts. **It is worth naming now
+> precisely because it is not the reading I expect** — a falsifier only does work if it is written
+> before the result makes it unattractive.
+
+**Result and reading follow once run.**
+
