@@ -145,19 +145,35 @@ ALLOW = "perfume & cologne"
 paths = Counter(f"{r['primary']} > {r['secondary']}".replace("~~", " > ") for r in rows)
 matched = sum(c for p, c in paths.items() if ALLOW in p.lower())
 leaves = Counter(r["secondary"].split("~~")[-1].strip() for r in rows)
-LEAF_CANON = "EDP / EDT / PARFUM / ELIXIR / EDC"
-odd_leaves = {k: v for k, v in leaves.items() if k != LEAF_CANON}
+# MEASURED PER ROW, NOT ASSUMED AND NOT THRESHOLDED. The brief described the leaf
+# as one composite string, "EDP / EDT / PARFUM / ELIXIR / EDC". The feed splits it:
+# the leaf is a SINGLE format token. The first run carried the composite as a
+# constant, reported all 3,246 rows as malformed and printed "a leaf allowlist
+# would import 0" -- a wrong number produced by a value nobody had looked at.
+#
+# THE TEST IS NOW WHAT THE DEFECT ACTUALLY IS: a leaf that repeats the product
+# name is a product name. Observable on the row itself, so it needs no frequency
+# threshold and no guess about which tokens are formats. Item 531.
+def leaf_is_product_name(r):
+    leaf = r["secondary"].split("~~")[-1].strip()
+    return len(leaf) > 8 and leaf.lower() in r["name"].lower()
+
+name_leaf_rows = [r for r in rows if leaf_is_product_name(r)]
+odd_leaves = Counter(r["secondary"].split("~~")[-1].strip() for r in name_leaf_rows)
+FORMAT_LEAVES = {k for k in leaves if k not in odd_leaves}
+print("format leaves (every leaf that is NOT a repeat of its product name): "
+      + ", ".join(f"{k} {leaves[k]}" for k in sorted(FORMAT_LEAVES, key=lambda k: -leaves[k])[:12]) + "\n")
 print(f"### Category paths\n```\ndistinct primary values          {len(set(r['primary'] for r in rows))}\n"
       f"distinct full paths              {len(paths)}\n"
       f"matched by must_contain          {matched} / {n}   term: \"Perfume & Cologne\"\n"
       f"distinct leaves                  {len(leaves)}\n"
-      f"leaves that are NOT the canonical one: {sum(odd_leaves.values())} rows, "
+      f"leaves that REPEAT the product name: {sum(odd_leaves.values())} rows, "
       f"{len(odd_leaves)} distinct\n```\n")
 for k, v in list(sorted(odd_leaves.items(), key=lambda kv: -kv[1]))[:8]:
     print(f"  - {v:>4}  {k[:90]}")
 print()
 # What a LEAF-matching allowlist would have cost.
-leaf_matched = sum(c for k, c in leaves.items() if k == LEAF_CANON)
+leaf_matched = sum(c for k, c in leaves.items() if k in FORMAT_LEAVES)
 print(f"**A leaf allowlist would import {leaf_matched} and silently drop "
       f"{n - leaf_matched}.**\n")
 
@@ -187,7 +203,7 @@ for row in rp:
 hits = {e: ean_to_product[e] for e in feed_eans if e in ean_to_product}
 one_stockist = sum(1 for pid in hits.values() if len(product_stockists[pid]) == 1)
 two_plus = sum(1 for pid in hits.values() if len(product_stockists[pid]) >= 2)
-print(f"live rows with a barcode (active)     {len(rp)}\n"
+print(f"live rows with a barcode (all retailers) {len(rp)}\n"
       f"MATCHES                               {len(hits)}  "
       f"({100*len(hits)/max(len(feed_eans),1):.1f}% of feed barcodes)\n"
       f"  of which currently 1 stockist       {one_stockist}   <- deepened to a comparison\n"
