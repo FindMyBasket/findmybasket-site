@@ -6,9 +6,28 @@ import './globals.css';
 // Self-hosted, optimised, zero render-blocking.
 // CSS variables are exposed so they can be referenced from globals.css and
 // from the routine-builder.css module.
+// `style` INCLUDES ITALIC BECAUSE THE HERO USES IT AND next/font DEFAULTS TO
+// ['normal'] ONLY. Without this line the browser SYNTHESISES an oblique by
+// slanting the roman: measured on production, `Optimised` was 835.4px wide at
+// 200px in both styles, identical to the tenth of a pixel, and `document.fonts`
+// held 20 Cormorant faces of which every single one was `style: normal`.
+//
+// A SYNTHETIC OBLIQUE IS THE WORST CASE FOR THIS PARTICULAR TYPEFACE. Cormorant's
+// italic is a separate drawing -- a true cursive with different letterforms, not a
+// sloped roman -- and it is the most characteristic thing in the family. Slanting
+// the upright gives none of it while looking, from a distance, like it worked.
+//
+// AND `document.fonts.check('italic 600 60px …')` RETURNS TRUE WITH NO ITALIC
+// LOADED. It answers "can this text be rendered", and synthesis counts as yes.
+// The check that does discriminate is whether any face reports `style: italic`.
+//
+// IT COSTS ONE FILE, NOT FOUR. next/font declares @font-face for the whole
+// weight x style cross product and the browser fetches lazily -- measured on the
+// live page, weight 500 had 0 of its 5 declared faces loaded. Item 525.
 const cormorant = Cormorant_Garamond({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
+  style: ['normal', 'italic'],
   variable: '--font-cormorant',
   display: 'swap',
 });

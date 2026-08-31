@@ -68,8 +68,18 @@ export function HomePage() {
         <p className="text-xs uppercase tracking-widest text-gold font-medium mb-4">
           Compare across UK retailers · delivery included
         </p>
+        {/* THE AMPERSAND IS IN THE h1 AND NOWHERE ELSE. The route's <title> and og:title
+            are `Health & Beauty Price Comparison UK | FindMyBasket` — they do not carry
+            the tagline at all, so item 495's 78-against-88 measurement is untouched by
+            this. That figure belongs to public/index.html's og:title, which has not been
+            served since item 515 redirected the file.
+
+            THE ITALIC IS RESTORED AND THE FONT LOADER CHANGED WITH IT. `not-italic` was
+            cancelling a style the static page set deliberately; removing it alone would
+            have produced a synthesised oblique, because no italic face was being loaded.
+            See app/layout.tsx. Item 525. */}
         <h1 className="font-serif text-4xl md:text-6xl text-ink leading-tight mb-4">
-          Your health and beauty<br />routine. <em className="text-gold not-italic">Optimised.</em>
+          Your health &amp; beauty<br />routine. <em className="text-gold">Optimised.</em>
         </h1>
         <p className="text-base md:text-lg text-ink-light max-w-xl mb-7 leading-relaxed">
           Honest comparison across multiple UK health and beauty retailers, with each
