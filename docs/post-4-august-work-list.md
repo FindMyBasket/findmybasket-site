@@ -337,6 +337,26 @@ here under the name it was given, not under an architecture nobody has chosen.
 **Trigger to re-check:** notification that access is granted, or
 `sampleListFeeds.js` returning something other than `AuthorizationFailed`.
 
+#### RESOLVED 1 SEPTEMBER 2026 — THE ENTITLEMENT DOES NOT EXIST. SEE ITEM 549.
+
+**Amazon's technical team, relayed via Associates support:** *"the API function you are trying to
+access is connected to data feeds, which are currently unavailable… instead you can continue using
+GetItems and SearchItems APIs (which are already available to you) as the supported alternative."*
+
+**Everything above this line describes a request that was never outstanding.** "A separate entitlement,
+and access is being actively pursued" and "blocked until the feed entitlement is granted" both assume
+a grant exists to wait for. **It does not.** `AuthorizationFailed` was a property of the function's
+availability, not of this account's standing.
+
+**The trigger is rewritten, not retired.** Watching continues — *"currently unavailable"* can change
+without anyone being told, which is item 7's argument arriving on a second surface. **But a
+non-`AuthorizationFailed` verdict now means Amazon shipped something, not that we were let in.**
+
+**The one part of this item that outlived its own premise** is the warning immediately above:
+*do not assume it is a feed importer like the AWIN ones until that is established.* It was right when
+the surface looked blocked and it is still right now the surface is absent. **Carry that forward;
+everything else here is superseded by item 549.**
+
 ---
 
 ### 10. Rewrite the four Branded Beauty article price tables
@@ -19800,6 +19820,40 @@ and it is the thing item 75 exists to object to.
 
 **Nothing here competes with item 228**, which remains the open item with commercial
 consequence.
+
+#### A 126th INSTANCE, AND THIS ONE IS A CHECK CONSTRAINT RATHER THAN AN OBJECT — 1 September 2026
+
+Found while scoping item 546. **`supabase/migrations/20260814160000_amazon_asin_map.sql` declares
+`amazon_asin_map_state_check` with FIVE values. The live constraint has NINE.**
+
+```
+file    matched | unmatched | ambiguous | no_identifier | no_identifier_bundle
+live    …the same five, plus matched_by_name | confirmed_absent
+                            | identifier_conflict | legacy_unconfirmed
+```
+
+Both extensions were applied through `apply_migration` — `matched_by_name` and `confirmed_absent` on
+14 August (item 105), `identifier_conflict` and `legacy_unconfirmed` on 17 August (item 187) — and
+**neither has a file.** The 21 August comment correction *does* have one
+(`20260821173655_amazon_asin_map_comment_two_tiers.sql`), so the migration directory holds the table's
+documentation history and not its constraint history.
+
+> **★ IT IS A WORSE INSTANCE THAN AN ABSENT OBJECT, BECAUSE THE FILE IS PRESENT AND WRONG RATHER THAN
+> MISSING.** The eleven objects checked above are absent from the repo and present in production —
+> a reader who greps finds nothing and knows they have found nothing. **Here a reader greps, finds a
+> CHECK constraint, and reads five states.** The artefact answers the question confidently and
+> incorrectly.
+>
+> That is item 545's stale-item property arriving in schema history: *"an absent item invites the
+> question; a present one that describes it in detail forecloses it."* **The same sentence, one layer
+> down** — and the migration file, unlike a work-list item, looks by construction like the definition
+> of the object rather than a note about it.
+
+**It changes the reconciliation's step 2, not its size.** The classification is
+applied-unchanged / applied-then-edited / never-applied; this is a fourth shape —
+**applied, then superseded in production by a later `apply_migration` the file knows nothing about** —
+where the file is neither stale nor current but *partial*. **Recorded so step 2 is not costed on three
+categories when the sample already shows four.**
 
 ---
 
@@ -43839,3 +43893,605 @@ own constant rather than the static file's pre-495 copy. **`Organization` NOT sh
 reasoning above: the honest version is `name`, `url` and `logo`, which is close to what `WebSite`
 already says, and `sameAs`, contact and a real logo asset are facts about the business rather than the
 code. **Padding a block to justify its own presence is the shape this list keeps rejecting.**
+
+---
+
+### 546. Bulk through the Amazon store: no mechanism, and one of the six reasons stands alone
+
+**Raised:** 1 September 2026 · **CLOSED.** Scoping only — nothing built, nothing proposed. **Reopening
+condition named at the end, and it is one condition rather than five.**
+
+**The question:** Bulk declined the affiliate application. They are a major UK supplements brand, the
+catalogue holds **zero** Bulk products against **7,148** live supplements, and `/compare/*` ranks on
+price per 100g without ever forming a basket — so a stockist with no delivery data fits there in a way
+it cannot in a basket. Could the Amazon store carry them in?
+
+**No, and the reason is architectural rather than commercial.**
+
+#### THE ASIN MECHANISM ATTACHES; IT CANNOT CREATE
+
+`amazon_asin_map.product_id` is a foreign key to `products`. `products.amazon_asin` is a column *on* a
+product. Item 186's **E1 is "shares a barcode with ours"**, and the only path past a failed E1 —
+brand's own store AND exact title AND size agreement — compares against a catalogue row too. **Every
+gate in the mechanism takes an existing product as its left-hand side.**
+
+For a brand with no catalogue rows every harvested ASIN lands in `unmatched`, which is the manual
+working set and not a creation instruction. **The map has already run this experiment on brands that
+ARE live:** MyProtein matched **1 of 100**, Applied Nutrition **4 of 100**, Optimum Nutrition **10 of
+82**. Bulk would be **0 of N by construction**, not by coverage.
+
+Products are created by exactly three code paths — `import-awin-feed`, `import-rakuten-feed`,
+`import-shopify-feed` — each inserting a `products` row and a `retailer_prices` row together. **There
+is no fourth, and no Amazon surface has ever been established as one.**
+
+**The Feeds entitlement is NOT a known route to this, and item 9 says so in terms.** It has returned
+`AuthorizationFailed` on **32 of 36 runs — every run that reached Amazon, 2 August to 1 September,
+without exception** (re-checked by hand 22:37 UTC on 1 September). But item 9's own warning is the
+operative line: *"Do not assume it is a feed importer like the AWIN ones until that is established —
+it is being recorded here under the name it was given, not under an architecture nobody has chosen."*
+
+> **SO CONDITION 1 IS WEAKER THAN "BLOCKED ON AN ENTITLEMENT", AND WEAKER IS WORSE HERE.** A blocked
+> entitlement is a door that might open. **What actually exists is a surface that is unentitled AND
+> unestablished** — nobody has shown that granting it would produce catalogue rows at all. Writing
+> this up as *"needs the Feeds entitlement"* would have converted item 9's deliberate refusal to
+> assume an architecture into a quiet assumption that there is one.
+
+**CONFIRMED BY AMAZON, 1 SEPTEMBER 2026 — SEE ITEM 549.** Their technical team, relayed via Associates
+support, states the feeds function is *"currently unavailable"* and names **GetItems and SearchItems**
+as *"the supported alternative for programmatic product data retrieval"* — the route already in
+production. **There is no pending grant behind condition 1**, and the correction above, made hours
+earlier from item 9's warning alone, was corrected in the right direction.
+
+#### THE FIELDS: FOUR OF FIVE ARRIVE, AND THE MISSING ONE IS THE UNIT
+
+| Field | Resource | |
+|---|---|---|
+| Barcode | `itemInfo.externalIds.eans`/`.upcs` | ✅ one-to-many, and **87 of 1,004 map rows carry none at all** |
+| Brand | `itemInfo.byLineInfo.brand` | ✅ |
+| Name | `itemInfo.title` | ✅ |
+| Price | `offersV2.listings.price.money` | ✅ buy-box, live only |
+| **Size** | `itemInfo.productInfo.size` | ❌ **barred by standing rule** |
+
+**Size is the one that fails and it fails on the axis a per-100g page runs on.** Item 60's rule, carried
+in both the migration comment and the harvester: *"Amazon reported `1 g` for a 100g cream carried by
+nine retailers, and `3 count` against our `34g`. `size` is a merchandising field, not a spec."* Stored
+for a human to eyeball, **never compared in code**.
+
+**Images have never been probed** — no harvest, no live call, no item has requested an image resource.
+Recorded as **unknown, not unsupported**: item 184's lesson is that an unprobed field is not an absent
+one. `image_url` is a hard `products_active` predicate, so it is an open input rather than a solved one.
+
+#### ★★★ POINT 5 STANDS WITHOUT THE OTHER FIVE, AND IT IS THE ONE TO CARRY FORWARD
+
+Six conditions would have to hold. Five of them are permissions, decisions or unmeasured inputs —
+things an approval, a probe or a call from Robbie could move:
+
+| | condition | what it is |
+|---|---|---|
+| 1 | a path that creates a `products` row from Amazon data | no such path, and none is established as possible — item 9 |
+| 2 | Amazon `active = true` with `retailer_prices` rows | forbidden until item 61 phase 2 |
+| 3 | a grams figure the page can trust | unmeasured |
+| 4 | an image URL | unprobed |
+| **5** | **a stored price** | **NOT ANY OF THOSE** |
+| 6 | eligibility with known margin | unmeasured — item 548-adjacent, see the watch log |
+
+> **AMAZON PRICES CANNOT BE HELD BEYOND 24 HOURS. A COMPARE PAGE RANKS ON A STORED
+> `retailer_prices.price` BEHIND A ONE-HOUR REVALIDATE.**
+>
+> **Those two facts contradict each other, and no approval from Amazon and no decision here resolves
+> it.** Every other condition on the list is something somebody could grant, measure or choose. This one
+> is a property of what the two systems are: `/compare/*` is a statically rendered ranking over held
+> prices, and an Amazon price is a live fetch with a 24-hour ceiling. There is no version of the page
+> that ranks a price it is not allowed to keep.
+
+**AND THE OBVIOUS ESCAPE IS A FAILURE THIS LIST HAS ALREADY RECORDED.** Caching the last known Amazon
+price produces a stored price whose refresh path does not exist — the frozen-state shape named three
+times in item 22 §A: **r12/Superdrug** (retired feed, 29,547 rows retained, figures quoted from them
+for weeks), the **Branded Beauty article price tables** (hand-written, refreshed by nothing, item 10),
+and the **`price_history` gap**. *Item 22 §A holds that the count should be settled when the
+`price_history` gap is pinned down; it is not pinned down, so the count is carried as recorded there
+and not incremented here.*
+
+> **THE POINT OF ISOLATING THIS ONE IS THAT IT SURVIVES GOOD NEWS.** If the Feeds entitlement landed
+> tomorrow, item 61 phase 2 resolved, the image resource returned and the extractor handled Amazon
+> titles, **the page still could not rank the row.** A reason that survives all five of its neighbours
+> being fixed is the reason worth remembering, and the other five are why this scoping took a day
+> rather than the reason it ended.
+
+#### WHAT THE COMPARE PAGE'S OWN BLOCKER TURNS OUT TO BE
+
+The premise that took this question seriously was right: **`/compare/*` genuinely never touches the
+optimiser.** `grep -c delivery` returns **0** across `app/compare/`, `lib/unit-price.ts`,
+`lib/brand-queries.ts` and `components/UnitPriceList.tsx`. It ranks `min(price)` over in-stock offers
+from active retailers, divided by grams. No delivery, no basket, no `deliveryFor`.
+
+**It sidesteps the delivery problem and lands on the membership one.** `products_active` requires
+`EXISTS (retailer_prices rp JOIN retailers r ON r.active = true)`; Amazon is `active = false` with **0
+rows in `retailer_prices`**. Making it active is precisely the act retailer 9's own
+`delivery_terms_note` forbids until item 61 phase 2 lands.
+
+> **THE DOOR THE COMPARE PAGE OPENS IS NOT THE DOOR THAT IS LOCKED, AND THE ONE IT REACHES IS LOCKED BY
+> THE SAME KEY.** Worth stating because the reasoning that got here was sound and the conclusion still
+> does not follow — the page needs no delivery data and is gated by the delivery decision anyway.
+
+#### THE STANDING CONSTRAINT IS UNCHANGED, AND IT IS PROVEN RATHER THAN ASSUMED
+
+Item 199 established `deliveryInfo` is **foreclosed at the API**, with a control: a deliberately bogus
+resource returned 400 (so names are validated), `loyaltyPoints` returned 200 (so a valid one passes),
+and `deliveryInfo`, `isPrimeEligible` and `programEligibility` all returned **400**. The complete
+`offersV2.listings.*` surface — `availability · condition · dealDetails · isBuyBoxWinner ·
+loyaltyPoints · merchantInfo · price · type` — contains no delivery field. **Confirmed still true; do
+not re-derive.**
+
+#### AND THE PRICE EVIDENCE POINTS THE SAME WAY IT DID ON 30 AUGUST
+
+Item 497: **we are cheaper on 75 of 78** matched products, average Amazon premium **+21.7%**, worst
++70.2%. **126 of 127 sellers fail a brand-store test.** *"Its value is confirming the ranking, not
+entering it."* A range of Bulk rows would be entering it.
+
+#### BULK, MEASURED
+
+**0 rows** on `brand`, `normalised_brand`, or a name prefix, 1 September 2026. **No Bulk in
+`amazon_asin_map.via_brand`** — they have never been harvested. The category they would compete in is
+Healf 4,778 / Boots 1,797 / MyProtein 494 live supplement products.
+
+**THE ANSWER IS A DIRECT RELATIONSHIP, AND THEIR DECLINE DOES NOT BLOCK IT.** Recorded in
+`docs/partnership-tracker.md`: the decline is a **volume gate, not a structural one**, so
+`docs/strategy.md`'s reapplication doctrine applies unchanged — *do not re-approach on spec; let
+traffic and tracked transactions accumulate, then reapply with proof.*
+
+#### ★★ CORRECTION, RECORDED AS ONE: CONDITION 1 WAS APPROVED IN A STRONGER FORM THAN IS TRUE
+
+**The draft of this item said Amazon has no importer *because the Feeds entitlement is blocked*, and
+that was approved before it was checked.** It assumes granting Feeds would produce catalogue rows.
+**Item 9 refuses that assumption explicitly and by name:**
+
+> *"Do not assume it is a feed importer like the AWIN ones until that is established — it is being
+> recorded here under the name it was given, not under an architecture nobody has chosen."*
+
+**The honest form is "no such path, and none is established as possible", and it makes condition 1
+WEAKER rather than stronger.** A blocked entitlement is a door that might open. **An unestablished
+surface is not known to be a door.** The wrong version was the more reassuring one: it implied a
+single grant would change the position, and nothing supports that.
+
+**Recorded as a correction rather than a rewording**, because the two forms make different predictions
+about what an Amazon grant would do, and only one of them is checkable against item 9.
+
+#### ★★ THE SAME SHAPE ONE LEVEL UP: THE PA-API QUESTION HAS NO READING AGAINST THIS ACCOUNT
+
+Asked on 1 September whether the Amazon feed for **PA-API** was still gated. **It is not a question
+this account can answer, and answering it as asked would have produced a confident answer about a
+system we are not on.**
+
+`lib/amazon-creators.ts` records the separation from captured traffic rather than documentation:
+
+> *PA-API v5 signed requests with AWS SigV4. The Creators API (Nov 2025) does not: it is OAuth2
+> client-credentials with a Bearer token. There is no canonical request, no region, no service name
+> and no `AWS4-HMAC-SHA256` anywhere in the SDK — it ships `auth/OAuth2Config` and
+> `auth/OAuth2TokenManager` and **no signing module at all**.*
+
+**The Creators API replaced PA-API. The credentials are Creators credentials.** All three watched
+surfaces are Creators surfaces. **"Is PA-API still gated" therefore resolves to nothing** — not to
+*yes* and not to *no*.
+
+> **IT IS CONDITION 1's ERROR ONE LEVEL UP.** There, a surface that is *unestablished* was about to be
+> written down as *blocked*. Here, a system we are *not on* was about to be reported as *still gated*.
+> **Both mistakes replace "we do not know that this exists" with "this exists and is shut"**, and both
+> read as diligence: a specific, confident, negative answer.
+
+#### THE TWO BLOCK TYPES STAY DISTINGUISHED, PER ITEM 9
+
+| surface | verdict | what it is |
+|---|---|---|
+| **Feeds** | `AuthorizationFailed` — **32 of 32** runs that reached Amazon, unchanged since 2 Aug | **an entitlement being asked for** |
+| **Product data** | `OK` — **31** runs, every one since 3 Aug that reached Amazon | **a threshold that was earned, and it CLEARED** |
+
+**Item 9: *"`AuthorizationFailed` is not `AssociateNotEligible`: one is an entitlement we are asking
+for, the other is a threshold we have to earn. Either can clear first."*** One already did. **Merging
+them would report the cleared one as blocked.**
+
+Live re-check by hand, **22:37 UTC 1 September**: `product_data=OK · reporting=reports=0 ·
+feeds=AuthorizationFailed`. Unchanged on all three.
+
+#### REOPENING CONDITION — ONE, NOT SIX
+
+**A refresh path for a Bulk price that FindMyBasket is permitted to store.** That is a feed, from Bulk
+or from a retailer that carries them. **It is the same sentence item 459 reached about Optimum
+Nutrition from the opposite direction** — *"there is no version of this that a link unblocks and a feed
+does not"* — arriving here through Amazon rather than through AWIN, and landing on the same word.
+
+---
+
+### 547. The median-ratio bound has a blind direction, and it is the one that reaches rank 1
+
+**Raised:** 1 September 2026, out of the Bulk scoping (item 546), **but it is a property of shipped
+pages rather than a fact about Amazon** · **OPEN** · **A GUARD WITH A KNOWN BLIND DIRECTION, NOT A
+DEFECT. Nothing on the site is wrong today — measured, below. No remedy proposed.**
+
+`lib/unit-price.ts`, `rankByUnitPrice`:
+
+```js
+if (p.per100g === null) { unranked.push({ ...p, excluded: 'no pack size on this listing' }); continue; }
+if (p.per100g > bound)  { unranked.push({ ...p, excluded: `priced at £… over ${RATIO}x the £… median…` }); continue; }
+ranked.push(p);
+```
+
+**One comparison, one direction.** `bound = median * 10` over the type's own fungible priced set.
+
+#### THE TWO DIRECTIONS ARE NOT SYMMETRIC, AND ONLY ONE IS WATCHED
+
+| the size is | per-100g goes | where the row lands |
+|---|---|---|
+| **too small** | **up** | over the bound → **unranked, with a written reason the visitor can read** |
+| **too large** | **down** | **sorts to rank 1** — the top of the page, the page's headline recommendation |
+
+**The bound was built for the first case and built correctly.** Item 441's worked example is
+`Zooki Creatine+ Sachets` — 6.78g stored against a £39.99 pack, rendering **£589.82/100g** — and it
+was built as a ratio precisely because it had to catch a row the DQ metric scored `agrees`.
+
+#### ★ THIS IS NOT ITEM 441's RESIDUAL, AND THE DIFFERENCE IS THE WHOLE ITEM
+
+Item 441 recorded that the bound **excludes 0 rows on whey**, 1 on creatine, 5 on collagen, and said so
+plainly: *"a bound that never fires is untested in the place it ships, and its first real exercise will
+be whenever a bad row appears."*
+
+> **THAT IS A CLAIM ABOUT COVERAGE. THIS IS A CLAIM ABOUT REACH.**
+>
+> **Item 441's residual closes the day a bad row appears** — one high outlier on whey exercises the
+> branch and the question is answered. **This one cannot close that way at all.** No number of caught
+> rows tests the direction the comparison does not look in, because `p.per100g > bound` has no
+> outcome to record below the median. The guard is not merely unexercised there; **it is not
+> connected there.**
+>
+> Filing this under 441 would have made it look like the same open question waiting on the same event.
+> It is a different question and no event resolves it.
+
+> **★ THE GUARD'S OUTPUT IS VISIBLE EXACTLY WHERE IT FIRES AND INVISIBLE EXACTLY WHERE IT CANNOT.**
+> A caught row appears under "Not ranked" with its reason printed. **An uncaught row appears at
+> number one with a number.** The failure mode is not a missing row or an error; it is a confident
+> recommendation, in the position the page exists to fill, indistinguishable from a correct one.
+>
+> **AND THE BOUND ADAPTS IN THE WRONG DIRECTION UNDER LOAD.** It is a ratio against the type's own
+> median, so a body of rows priced *above* the median pulls the median up and **widens** the bound
+> for everyone. The guard loosens as the population it guards gets worse.
+
+#### IT IS HARMLESS TODAY, AND THAT IS MEASURED RATHER THAN ASSERTED
+
+`canonical_size` is written by `extractCanonicalSize()` in
+`supabase/functions/_shared/match-key.ts` — **derived from the product NAME**, by an extractor written
+for feed names and corrected against them three times (items 252, 435, 439). Item 439 measured its last
+change and found **not one row moved a correct old value to a wrong new one**.
+
+**The top of all three shipped type pages, read 1 September 2026:**
+
+```
+/compare/whey-protein     Essential Whey Protein - 2.5kg - Unflavoured        2.5kg  £46.99  £1.88
+/compare/creatine         Impact Creatine - 1KG - 294servings - Unflavoured     1kg  £27.99  £2.80
+/compare/plant-protein    Sci-Mx Ultra Plant Protein … Chocolate Hazelnut 900g  900g  £15.00  £1.67
+```
+
+**All nine rows in the top three of each page carry a `canonical_size` that matches a size stated
+plainly in their own name.** The blind direction is unexercised. **That is the reason this is filed as
+a property and not as a finding** — and it is also the reason it is filed at all, because nothing
+would announce the day it stops being true.
+
+#### WHAT WOULD MAKE IT BITE
+
+1. **A size source that is not a feed name.** The named instance is Amazon titles — item 546 —
+   where the API's own size field is barred by item 60's rule and the title is the same merchandising
+   surface. **Closed for that route by item 546's point 5**, which is why this is recorded separately:
+   the bound's blind direction outlives the Amazon question entirely.
+2. **A multiplier form the extractor reads as a total** rather than a component. The correction has
+   always run the other way (`90 x 3g` storing `3g`, understating) — **the understating direction is
+   the one the bound catches.** A form that *over*states has never been observed and has never been
+   looked for.
+3. **A unit error in the `kg` branch.** `grams()` multiplies by 1000 on a `kg` suffix; a name whose
+   `kg` figure is not the pack total scales the error by a thousand, downward.
+4. **A new retailer whose naming convention the extractor was not written against.** Healf is
+   **4,778 of the 7,148 live supplements** — the single largest source, and recent. Every future
+   supplements onboarding enlarges the population feeding an extractor tuned on the previous ones.
+
+#### NO REMEDY HERE, DELIBERATELY
+
+**A lower bound needs a floor, and a floor on price-per-100g is a different judgement from a ceiling.**
+The whole point of the page is that a 5kg tub is genuinely cheap per 100g; the ranked spread already
+runs 1.40 to 11.67 on whey. A ratio that caught a wrong 2.5kg would catch a right 5kg on the same
+reasoning. **The remedy is not obvious and is not attempted** — what is recorded is the direction, so
+that the next person to change `extractCanonicalSize`, add a retailer, or point a non-feed size source
+at this column knows which way the guard cannot see.
+
+**Cite this item from any such change.** The rule sits in `lib/unit-price.ts` and the hazard it does
+not cover is created in `supabase/functions/_shared/match-key.ts` — *two files, one property*, which is
+the shape item 238 recorded when the `.order()` rule sat sixty lines above the function that needed
+it and did not cover it.
+
+---
+
+### 548. `published` was never a state in the map, so counting it returns zero from an empty question
+
+**Raised:** 1 September 2026 · **CLOSED. A correction to a figure quoted through the week**, made
+before it was planned against.
+
+#### THE CORRECTION
+
+**`amazon_asin_map.match_state` has nine values and `published` is not one of them.** It never was. A
+query counting published rows in the map returns **0 because there is nothing to count** — not because
+nothing is published.
+
+**Publication has never lived in that table, by design.** `products.amazon_asin` is the consumption
+point, and the separation is the whole argument for the map existing: *"harvesting and publishing are
+never one act."* The map records what Amazon returned; the column records what the site shows.
+
+#### THE VOCABULARY, LIVE, 1 SEPTEMBER 2026 (n = 1,004)
+
+| state | rows | added |
+|---|---:|---|
+| `matched` | 463 | original, 14 Aug |
+| `unmatched` | 385 | original |
+| `no_identifier_bundle` | 68 | original |
+| `matched_by_name` | 36 | **item 105, 14 Aug** |
+| `no_identifier` | 19 | original |
+| `ambiguous` | 14 | original |
+| `confirmed_absent` | 12 | **item 105, 14 Aug** |
+| `identifier_conflict` | 4 | **item 187, 17 Aug** |
+| `legacy_unconfirmed` | 3 | **item 187, 17 Aug** |
+
+**Five values on 14 August, seven by the end of that day, nine on 17 August.** Both extensions were
+made because a real outcome had no state to sit in — item 105's manual pass produced two verdicts the
+original CHECK could not express, and item 187's nine rows were *linked to a live product and not
+confirmed*, the opposite shape from every existing non-matched state.
+
+#### AND THE 484 IS NOW 482
+
+**484 was `products.amazon_asin` and it has not been that number since 30 August.** The re-derivation
+check ran 07:12 UTC that Sunday on its cron: **482 published, 447 in scope, 447 agree, 0 findings, 0
+cross-product conflicts, 35 out_of_scope.**
+
+**Published moved 484 → 482 because two products left the catalogue, not because two ASINs broke.**
+Re-measured 1 September: **482**, unchanged — skincare 392, supplements 67, makeup 14, hair 5,
+bath_body 4.
+
+**The 449 / 28 / 7 tier split is dated too.** It described the 484 as they stood on 21 August. Today's
+map holds 463 `matched` and 36 `matched_by_name`; those are not the published set and were never the
+same population.
+
+#### ★★ THE ZERO IS THE FINDING, AND IT IS THE THIRD TIME THIS SHAPE HAS BEEN RECORDED
+
+> **A COUNT OF A CATEGORY THAT DOES NOT EXIST IS INDISTINGUISHABLE FROM A COUNT OF AN EMPTY ONE.**
+> `where match_state = 'published'` returns 0 rows, no error and no warning. Read at face value it says
+> *nothing is published*, which is false and alarming; the true statement is *this table does not record
+> publication*, which is neither.
+
+Same shape as **item 540** (a sitemap filter excluding zero rows reads exactly like one that works)
+and **item 539** (a pattern pinned to an assumed output shape returns zero, and zero reads as a finding
+about the world — five false findings from that one mechanism).
+
+**What separates them is asking what the query REMOVED, not what it returned.** Here that is one line:
+`pg_get_constraintdef` on `amazon_asin_map_state_check`, which lists nine values and settles it in a
+single read. **The instrument that answers "is this category real?" is not the one that counts it.**
+
+#### THE FILE AND THE CONSTRAINT DISAGREE, AND THAT BELONGS TO ITEM 235
+
+`supabase/migrations/20260814160000_amazon_asin_map.sql` still lists **five** states in its CHECK. The
+live constraint has **nine**. Neither extension has a migration file. **Recorded in item 235**, not
+here — it is that item's class, not a fact about Amazon.
+
+---
+
+### 549. Amazon answered the question the watcher could not ask: Feeds is unavailable, not ungranted
+
+**Raised:** 1 September 2026, from a support reply forwarded by Robbie · **CLOSED, and it closes item 9
+after thirty-two days** · **AMAZON'S STATED POSITION, RELAYED VIA SUPPORT — not a probe result. The
+evidentiary standard is lower than item 199's and the reason it is accepted anyway is below.**
+
+Amazon.co.uk Associates Customer Support, relaying their technical team:
+
+> *"The API function you are trying to access is connected to data feeds, which are currently
+> unavailable. This is why you are receiving the error. Instead you can continue using **GetItems and
+> SearchItems** APIs (which are already available to you) as the supported alternative for programmatic
+> product data retrieval."*
+
+#### ITEM 9's PREMISE WAS WRONG, AND IT WAS WRONG IN THE DIRECTION THAT KEPT IT OPEN
+
+Item 9 recorded Feeds as *"a **separate entitlement**, and access is being actively pursued"*, blocked
+until *"the feed entitlement is granted"*. **There is no entitlement to be granted.** The surface is
+not withheld from this account; the function is not on offer. `AuthorizationFailed` was never a
+statement about our standing.
+
+> **THE ITEM WAS WAITING FOR AN EVENT THAT WAS NOT COMING, AND NOTHING ABOUT IT COULD HAVE SAID SO.**
+> Thirty-two identical readings across a month, each one correct, none of them interpretable. **A
+> trigger phrased as "notification that access is granted" describes a world in which access exists to
+> be granted.**
+
+#### ★★★ THE INSTRUMENT COULD NOT HAVE FOUND THIS, AND THAT IS THE ITEM
+
+`AuthorizationFailed` is **one token covering two states**:
+
+| | what it would mean | how it ends |
+|---|---|---|
+| **not entitled yet** | a threshold or a request outstanding | someone grants it |
+| **not offered** | the function is not available to anyone | nobody grants it; it ships or it does not |
+
+**No call distinguishes them.** The watcher asked 32 times and got the same answer 32 times, because
+it was the same answer — and the series was accumulating confidence about a variable it could not read.
+
+> **★ THIS IS ITEM 199 IN A MIRROR, AND THE PAIR IS WORTH KEEPING TOGETHER.**
+>
+> **Item 199 was the case where a probe WITH A CONTROL was decisive.** A bogus resource returned 400,
+> proving the API validates resource names; `deliveryInfo` returned 400 against that control, so
+> *unsupported* was **proven rather than inferred**.
+>
+> **This is the case where no probe could be.** A control establishes that a resource NAME is not
+> recognised. **It cannot establish that a FEATURE is not offered** — those are different facts, and
+> the second one lives in Amazon's product decisions rather than in their validator. **The only
+> instrument that reaches it is asking a person**, which is what happened.
+>
+> **SO THE RULE IS NOT "PROBE, DON'T ASK" AND IT WAS NEVER MEANT TO BE.** Item 199 earned its standing
+> against a question a probe could settle. **Item 9 sat open for a month because it was handed to the
+> same instrument and the question was of the other kind.**
+
+#### WHAT IT CONFIRMS, AND WHAT IT DOES NOT MOVE
+
+**It confirms item 546's condition 1 and strengthens it.** That condition was corrected hours earlier
+from *"needs the Feeds entitlement"* to *"no such path, and none is established as possible"*, on item
+9's refusal to assume an architecture. **Amazon has now said there is no such path in their own words,
+and named the supported alternative: GetItems and SearchItems — which this project already runs.**
+
+> **THE CORRECTION AND THE CONFIRMATION ARRIVED WITHIN HOURS AND FROM UNRELATED DIRECTIONS.** The
+> correction came from reading item 9's warning; the confirmation came from Amazon.
+>
+> **★ ASK WHICH VERSION THIS REPLY COULD HAVE REFUTED, BECAUSE THAT IS THE ARGUMENT FOR THE WEAKER
+> WORDING.** *"A blocked entitlement, being actively pursued"* **absorbs this reply intact** — it reads
+> as bad news about a timeline and the item stays open, waiting. *"None is established as possible"* is
+> **confirmed by it**, and could have been refuted by it just as easily had Amazon named a route.
+>
+> **THE MORE REASSURING VERSION WAS THE ONE THAT COULD NOT BE REFUTED.** A claim that survives every
+> reply is not a robust claim; it is a claim that was never load-bearing. **The weaker wording was the
+> only one of the two with anything at stake in the answer.**
+
+#### ★★★ AND THE TEST GENERALISES PAST AMAZON, WHICH IS THE PART TO KEEP
+
+> **A CLAIM THAT SURVIVES EVERY REPLY IS NOT A ROBUST CLAIM; IT IS A CLAIM THAT WAS NEVER
+> LOAD-BEARING.**
+
+**It is applicable to any standing claim in this register, and it costs one question:** *what
+observation would refute this?* An item with no answer is not thereby safe — it is unfalsifiable, which
+means it has never been tested and cannot be.
+
+**IT IS A SECOND DISCRIMINATOR FOR ITEM 545's PROBLEM, AND IT CUTS ACROSS THE FIRST.** Item 545 asked
+what a freshness check could look like and answered with tense: *an item recording what was done cannot
+go stale; an item recording what is still wrong is a present-tense claim about the live site.* That
+separates items by **whether they can decay**.
+
+**This separates them by whether they could ever have been wrong** — a different axis:
+
+| | could be refuted | could not |
+|---|---|---|
+| **present-tense** | the checkable set. Item 545's target | **the dangerous cell** — asserts about the live site and no observation touches it |
+| **historical** | a dated measurement, refutable when made | inert. Fine |
+
+> **THE DANGEROUS CELL IS NOT EMPTY AND ITEM 9 SAT IN IT FOR A MONTH.** *"A separate entitlement, and
+> access is being actively pursued"* is present-tense, reads as a status, and **no reply from Amazon
+> could have falsified it** — a grant confirms it, a refusal defers it, silence sustains it. **It was
+> not stale. It was unfalsifiable, and item 545's tense test would have passed it as checkable.**
+>
+> **THE ITEMS NOBODY HAS THOUGHT TO QUESTION ARE SELECTED FOR THIS PROPERTY**, because a claim that
+> invites no observation also invites no doubt. **Nothing here proposes a check** — 545 is honest that
+> none has been written. What is recorded is the question a check would have to ask, and that it is not
+> the same question 545 identified.
+
+**IT DOES NOT MOVE ITEM 546's POINT 5, AND NAMING GetItems AS THE ALTERNATIVE IS WHY.** GetItems is the
+route already in production: live-only, buy-box, **no `deliveryInfo`** (item 199), and a price that
+cannot be held beyond 24 hours. **Amazon has confirmed that the route with the 24-hour ceiling is the
+only route there is.** A compare page ranks a stored price. The contradiction is unchanged and now has
+one fewer hypothetical way out.
+
+#### TWO HONEST CAVEATS, RECORDED RATHER THAN SMOOTHED
+
+1. **"Currently" is undetermined and is doing work.** The reply does not distinguish *temporarily
+   withdrawn* from *not offered and not planned*. **Do not restate this as "Feeds is discontinued"** —
+   what is established is that it is unavailable now and that nothing is pending on our side.
+2. **This is a support-desk relay of a technical team statement, and support desks paraphrase.**
+   It is second-hand and unverifiable by any call we can make. **Accepted because it is the only
+   available instrument for this class of question, not because it is strong evidence** — and recorded
+   with its provenance so a later reader weighs it as what it is.
+
+#### THE WATCH CONTINUES, AND WHAT A CHANGE WOULD MEAN CHANGES
+
+**Keep `sampleListFeeds.js` in the daily run.** *"Currently unavailable"* is precisely a state that can
+change **without anyone touching this repository or being told** — which is item 7's argument for
+watching `ListReports`, arriving unchanged on a second surface.
+
+**But a non-`AuthorizationFailed` feeds verdict is no longer an entitlement grant.** It would be
+**Amazon shipping a product**, and the correct response is to establish what the function actually
+returns before assuming it is a catalogue feed — item 9's original warning, which outlived the premise
+it was attached to and is the part of that item worth carrying forward.
+
+---
+
+### 550. A monitor whose coverage depends on a fact nobody has checked
+
+**Raised:** 2 September 2026, out of item 546's credential question · **OPEN. Robbie settles it in the
+Vercel dashboard — five minutes, and nothing here can do it.** · **FILED BECAUSE IT SURVIVED FOUR
+EXCHANGES BY BEING MENTIONED**, which is this file's founding defect and is dealt with below.
+
+**Two Creators credential pairs exist under one Associates account (`findmybasket-21`).** The laptop
+watcher tests one — it is the only pair in `~/amazon-api-watch/sdk/examples/.env`. **Which pair
+production holds is unknown**, and no instrument available from here can read it: there is no Vercel
+CLI on this machine and no env-listing tool in reach.
+
+#### THE SHAPE, AND IT IS ENTIRELY CONDITIONAL ON ONE FACT
+
+| if | then |
+|---|---|
+| **production and the watcher share a pair** | entitlement reads identically on both — the gate is an account property (item 549) — and **nothing in the record moves.** The watch covers production |
+| **they do not** | **a credential-level failure on production's pair is invisible to the watcher.** It would record `OK` every morning while the site returned "Couldn't reach Amazon" to every visitor |
+
+**Entitlement is not the exposure here, and that distinction is the whole item.** Item 549 settled that
+the gates are account-level, so on *entitlement* one pair is a complete measurement. **A credential can
+fail for reasons that have nothing to do with entitlement** — rotated, revoked, an expired secret, a
+typo on a redeploy — and those are pair-level facts the watcher cannot see past its own `.env`.
+
+#### THE SECOND INSTRUMENT DOES NOT CLOSE THE GAP, AND IT LOOKED LIKE IT DID
+
+`amazon_live_fetch_log` records production's own calls, so it reads the pair production actually holds.
+**It settled the 1 September `NETWORK_FAIL` question decisively** — the laptop failed at 08:14, and
+production called the API successfully at 20:08 the same day.
+
+**But it only records days somebody visited a product page carrying an ASIN.** Daily counts, 12 August
+to 1 September:
+
+```
+12–16 Aug   0  0  0  0  0      ← five consecutive blind days
+17 Aug     44
+18–31 Aug   2 to 25 per day
+ 1 Sep      4
+```
+
+**A credential failure beginning 12 August would have gone unnoticed until the 17th.** The log
+adjudicates a *specific day* well and cannot watch *continuously*, and those are different jobs.
+
+> **★ SO THE MONITORING POSITION IS: ONE INSTRUMENT WITH DAILY CADENCE AND UNKNOWN COVERAGE, AND ONE
+> WITH KNOWN COVERAGE AND TRAFFIC-DEPENDENT CADENCE.** Neither alone is a monitor of production's
+> credential, and **whether the pair together is one depends entirely on the unchecked fact at the top
+> of this item.**
+
+#### ★★ IT IS ITEM 532's SHAPE, ARRIVING FROM THE OTHER SIDE
+
+Item 532 recorded **a check whose scope was wider than its trigger** — it claimed more than it could
+fire on. **This is a monitor whose scope is unknown rather than overstated**, and the effect is the
+same: *"the watcher says access is held"* is read as a statement about the live site, and it is a
+statement about one `.env` file whose relationship to the live site nobody has established.
+
+**The correct reading of a green watcher today is "the pair on the laptop is entitled".** Whether that
+is also a statement about production is the open question, and **it has been read as the stronger
+claim throughout**, including in the README section written on 1 September.
+
+#### ★★ WHY THIS IS AN ITEM AND NOT A NOTE, WHICH IS THE PART WORTH KEEPING
+
+**It was raised, restated and agreed four times across two days without being written down.** Every
+mention ended with the same one-line disposition — *five minutes in the Vercel dashboard* — and each
+one felt like a resolution because it had been said out loud again.
+
+> **THAT IS THIS FILE's FOUNDING DEFECT, VERBATIM:** *"a record believed to exist because discussing it
+> repeatedly produces the same familiarity as having written it. Nothing surfaces its absence, because
+> there is no artefact to go stale."*
+>
+> **AND IT SURVIVED IN THE ONE PLACE MOST LIKELY TO CATCH IT** — four exchanges whose entire subject
+> was the Amazon integration's record, two of which added items to this file, while the outstanding
+> question travelled alongside them as conversation.
+
+#### WHAT CLOSES IT
+
+**Read the three `CREATORS_*` variables in the Vercel project settings and compare
+`CREATORS_CREDENTIAL_ID` against the laptop's — last four characters `e57d` are sufficient and no
+secret needs to move.**
+
+- **Same pair** → close this item, and the watcher is a production monitor. Record that it was
+  established rather than assumed.
+- **Different pairs** → the watcher does not cover production, and the honest options are to point it
+  at production's pair, run it against both, or state its scope in the README. **Do not pick one here**
+  — the choice depends on which pair is which and why there are two.
+
+**Either way the answer is worth recording, because "we checked and they match" and "nobody has
+checked" are the same green light from outside.**
