@@ -41117,6 +41117,34 @@ reason survives the rebuild being deferred.
 
 ---
 
+#### ★★ CLOSED 1 SEPTEMBER — ALREADY RESOLVED WHEN IT WAS WRITTEN
+
+`#roadmap` exists in exactly one file and that file is unreachable:
+
+```
+grep 'id="roadmap"'
+  public/index.html:452         the only occurrence
+  components/HomePage.tsx:34    a comment recording its removal
+
+/index.html      308 -> /       /index.html?x=1  308      /./index.html  308
+/Index.html      404            /index           200  <- serves app/page.tsx, not the file
+production /     contains the string "roadmap" ZERO times
+```
+
+> **THE BLOCK WAS RETIRED BY THE REBUILD ON 31 AUGUST AND THIS ITEM WAS WRITTEN THE SAME DAY DESCRIBING
+> IT AS OPEN.** Item 513 dropped it from the new route; item 515's redirect then made the file that
+> still holds it unreachable. **Two changes hours apart closed an item neither was aimed at.**
+>
+> **CHECKING BEFORE REMOVING IS WHAT CAUGHT IT.** The instruction was to look first precisely because a
+> section retired in a rebuild and recorded as open is the shape that gets fixed twice — **and the
+> second fix would have edited a file nothing serves, felt like work, and changed nothing.** The 2,026px
+> is already inside the 11.82 → 3.54.
+>
+> `/index` was worth the extra check: it returns 200 where `/index.html` returns 308, and it resolves to
+> the route rather than the file. **A redirect on one spelling is not a redirect on the path.**
+
+---
+
 ### 515. The nav logo points at `/index.html` on every page
 
 **Raised:** 31 August 2026 · **From the 21 August snapshot, finding 2. NOT FIXED.**
@@ -41165,18 +41193,65 @@ months; it is in inbound links and in bookmarks, and no amount of editing this r
 
 ---
 
-### 516. The homepage JSON-LD advertises a path robots.txt forbids
+### 516. Not the homepage, and not a wrong target — two rows, one defect
 
-**Raised:** 31 August 2026 · **From the 21 August snapshot, finding 8. NOT FIXED.**
+**Raised:** 31 August 2026 · **REWRITTEN 1 September after reading the current state. The one-line fix
+is applied; the harder half is reported.**
 
-Two `WebSite` blocks disagree on their `SearchAction` target: the homepage points at `/search?q=`, the
-savings hub at **`/app?q=`** — **and `/app` is `Disallow`ed in robots.txt.**
+**As written, the item was wrong in both halves.** It said the homepage's JSON-LD advertised a
+`SearchAction` pointing at a disallowed path.
 
-> **A STRUCTURED-DATA DECLARATION INVITING A CRAWLER INTO A PATH THE SAME SITE TELLS IT NOT TO ENTER.**
-> Neither surface is wrong on its own; the pair cannot both be right. **Its own item because it spans
-> two pages and robots.txt, and the rebuild only touches one of the three.**
+```
+https://www.findmybasket.co.uk/
+  ld+json       0
+  schema.org    0
+  SearchAction  0
+```
 
----
+**The homepage emits no structured data at all** — item 546. And the old static page's target was
+`/search?q=`, which was already correct. **The block the item describes is not on the homepage, and the
+homepage's target was never the wrong one.**
+
+#### THE WRONG TARGET IS ON THE SAVINGS HUB, AND IT IS LINKED FROM EVERY REACT PAGE
+
+```
+/savings-hub.html   HTTP 200, no robots meta, linked from SiteNav and SiteLayout
+  "target": "https://www.findmybasket.co.uk/app?q={search_term_string}"
+
+robots.txt:  Disallow: /app   Disallow: /app/*   Disallow: /api/*
+```
+
+**Fixed: `public/savings-hub.html:28` now names `/search?q=`.** `/search` is the indexable search
+surface; `/app` is the builder and is correctly disallowed. No `/app?q=` remains anywhere in the
+repository.
+
+#### ★★★ THE TWO COVERAGE ROWS ARE ONE DEFECT
+
+The coverage export carries a `SearchAction` pointing at a disallowed path **and** one page indexed
+though blocked by robots.txt. **They are the same URL.**
+
+> **A DISALLOWED URL ADVERTISED AS A SearchAction IS THE INPUT THAT PRODUCES "INDEXED THOUGH BLOCKED".**
+> Google cannot fetch `/app`, so it cannot read a `noindex` there — but it can read the links to it, and
+> it could read structured data on an *allowed* page declaring `/app?q=` to be the site's search
+> endpoint. **That is the strongest possible instruction to index a URL from links alone**, served from
+> a page Google is welcome to crawl, about a page it is not.
+>
+> `/app` is the only disallowed path that returns 200, carries a real title (*"Your routine |
+> FindMyBasket"*), and sits in the header of every React page as **Build a routine**.
+
+#### ★★ AND THE ASYMMETRY THAT MAKES IT HARD TO UNDO
+
+> **`Disallow` ALONE CANNOT UN-INDEX IT, BECAUSE UN-INDEXING NEEDS A `noindex` THAT A DISALLOWED PAGE
+> CANNOT SERVE.** The two directives work in opposite directions on the same URL: `Disallow` stops the
+> crawl that would deliver the `noindex`. **A page can be blocked and indexed simultaneously and the
+> block is what keeps it that way.**
+>
+> **REMOVING THE SIGNAL IS THE FIX AVAILABLE AND IT IS THE ONE APPLIED.** It stops the site asking for
+> the URL to be indexed; it does not retract the request already made.
+>
+> **LIFTING THE `Disallow` SO A `noindex` CAN BE READ IS A SEPARATE DECISION** — it means letting Google
+> crawl the builder in order to tell it not to keep the builder, and the crawl budget that costs is the
+> same budget item 542 found is already being spent on 60,032 declined pages. **Not taken here.**
 
 ### 517. The product page does not use `socialTags`, and is the thinnest share surface on the site
 
@@ -43504,3 +43579,67 @@ Search Console data.
 **Robbie is pulling the Search Console Pages export.** The filter's comment in `lib/sitemap.ts` (item
 540) stays wrong until this resolves, deliberately: its correct wording depends on whether the filter is
 about to be replaced or deleted.
+
+### 545. The rebuild dropped the homepage's structured data rather than porting it
+
+**Raised:** 1 September 2026 · **REPORTED, NOT BUILT. What the route should emit is below; the
+Organization question is Robbie's.**
+
+```
+public/index.html:29   WebSite + SearchAction -> /search?q=     correct, and unreachable since item 515
+https://www.findmybasket.co.uk/    ld+json 0 · schema.org 0 · SearchAction 0
+```
+
+**The static page carried a correct `WebSite` block. The route carries none.** Item 513 ported the
+content, the copy and the measurement; the structured data went the way of the gold focus ring, the BEST
+tag and the hero photograph.
+
+> **★★★ THE PORT-LEFT-THE-STYLING-BEHIND FINDING IN A DIFFERENT LAYER.** Item 520 recorded that the port
+> kept everything with a number attached and dropped everything else. **Structured data has no number
+> attached and is invisible in a screenshot**, so it survived neither the measurement nor the eye — the
+> two instruments item 524 says do not overlap. **This is the gap between them.**
+>
+> **AND NOBODY NOTICED FOR TWO DAYS BECAUSE THE OPEN ITEM SAID THE TARGET WAS WRONG.** Item 516 named a
+> block that was already gone, so every reading of the work list confirmed that the homepage had
+> structured data with a defect in it. **A stale item is worse than no item: it answers the question
+> nobody then asks.**
+
+#### WHAT THE ROUTE SHOULD EMIT
+
+**`WebSite` with the `SearchAction`, ported verbatim from `public/index.html:29`** — it was correct
+before and nothing about it has changed:
+
+```json
+{ "@context": "https://schema.org", "@type": "WebSite",
+  "name": "FindMyBasket",
+  "url": "https://www.findmybasket.co.uk",
+  "description": "…",
+  "potentialAction": { "@type": "SearchAction",
+    "target": "https://www.findmybasket.co.uk/search?q={search_term_string}",
+    "query-input": "required name=search_term_string" } }
+```
+
+**The description should come from `app/page.tsx`'s existing `description` constant rather than being
+retyped** — the static block's copy is the pre-495 wording and would reintroduce a frozen string the
+route already holds.
+
+#### AND `Organization` — THE QUESTION, NOT THE ANSWER
+
+`Organization` appears in this codebase only as a **nested value**: `seller` on product offers, `author`
+and `publisher` on articles. **No page declares FindMyBasket as an entity in its own right.**
+
+> **THE HOMEPAGE IS THE ONLY PAGE WHERE IT WOULD SIT CORRECTLY.** `Organization` describes the publisher
+> of the site, and it belongs on the URL that *is* the site — declaring it on a product page or an
+> article says the same thing from a place that does not mean it.
+>
+> **THE ARGUMENT AGAINST IS THAT IT ASSERTS MORE THAN A LOGO AND A NAME.** A useful `Organization` block
+> carries `logo`, `sameAs` for social profiles, and often contact or address. **FindMyBasket has an
+> `og-image.jpg` and no social profiles**, so the honest block is `name`, `url`, `logo` and nothing
+> else — which is close to what `WebSite` already says. **A three-field Organization is not wrong; it is
+> just not obviously worth a second block**, and the fields that would make it worth one are facts about
+> the business rather than about the code.
+>
+> **RECOMMENDATION: ship `WebSite` alone, and treat `Organization` as a decision that wants the missing
+> fields first** rather than a block padded to justify itself.
+
+**Not built.** One `<script type="application/ld+json">` in `app/page.tsx`, and the decision above.
