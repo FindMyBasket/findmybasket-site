@@ -17,9 +17,23 @@ export function escapeXml(s: string): string {
     .replace(/'/g, '&apos;');
 }
 
-// Count of products eligible for the sitemap. Products without an image render
-// thinly and aren't worth indexing, so they're excluded (matching the per-part
-// query below). products_active already excludes merged products.
+// Count of products eligible for the sitemap.
+//
+// THE image_url FILTER EXCLUDES NOTHING. Measured 1 September 2026: 106,926 of 106,926
+// live products have an image, so this predicate removes zero rows. It is kept because
+// it costs nothing and a feed could yet arrive without images — but it must not be read
+// as a thin-page gate, which is what its previous comment claimed. Item 540.
+//
+// A RULE WHOSE POPULATION IS EMPTY READS IDENTICALLY TO A RULE THAT IS WORKING, and the
+// comment was the thing that stopped anyone checking.
+//
+// AND THE SITEMAP IS DELIBERATELY NOT PRUNED TO COMPARABLE PRODUCTS. That was proposed
+// and refuted by the Search Console Pages export, 1 September: of 944 indexed product
+// URLs, 813 (86.1%) have ONE stockist against 70.4% of the catalogue, and only 59 (6.3%)
+// are comparable against 14.4%. Google keeps single-stockist pages at a HIGHER rate than
+// they occur. Pruning would stop refreshing 86% of what it actually keeps. Item 544.
+//
+// products_active already excludes merged products.
 export async function countSitemapProducts(): Promise<number> {
   const { count } = await supabase
     .from('products_active')
