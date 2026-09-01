@@ -30,6 +30,28 @@
   deliberate: inventing a specification for them would reproduce the exact defect
   this file exists to correct. **The operator holds the detail; it needs writing
   down here before the work starts.**
+- **EVERY ITEM FROM 546 ONWARD CARRIES `OPEN` OR `CLOSED` IN ITS HEADER.** One
+  word, on the `**Raised:**` line. Adopted 1 September 2026, item 545.
+
+  **Why it is one word and not a check.** An item recording what was *done* is a
+  historical statement and cannot go stale. An item recording what is *still
+  wrong* is a present-tense claim about the live site, and only the second kind
+  can be verified against anything. Measured on 1 September: 30 items declare
+  themselves closed, 13 declare themselves open, and **502 declare nothing** — so
+  nothing can separate the two populations, and no check can identify its own
+  input set.
+
+  **Item 516 is the demonstration.** It sat open for eleven days asserting the
+  homepage's JSON-LD advertised a disallowed path; the homepage had no JSON-LD at
+  all. Its header gave a provenance — *"From the 21 August snapshot, finding 3"* —
+  where its neighbours 514, 515 and 521 all say `NOT FIXED` outright. **The one
+  that went stale is the one whose header stated where it came from instead of
+  what state it was in.**
+
+  **NOT RETROFITTED, DELIBERATELY.** Rewriting 502 headers is a large act to
+  enable a check nobody has written. Going forward it costs nothing: the
+  convention already exists and was already followed about half the time. **The
+  point is to stop the open set growing unmarked, not to reconstruct it.**
 
 ---
 
@@ -43608,9 +43630,21 @@ Search Console data.
 >
 > **THE INSTABILITY FINDING ABOVE WAS THE RIGHT OBJECTION FOR THE WRONG REASON.** 76% of the proposed
 > sitemap being one stock-out from leaving it is true and would have mattered. **It is not why the
-> proposal was wrong.** The proposal was wrong because its target population was not the population it
-> would have hit — and no amount of reasoning about churn would have found that. **Only the export
-> could.**
+> proposal was wrong.** The proposal was wrong because **its target population was not the population it
+> would have hit** — reasoned from a plausible mechanism, aimed at the declined 60,032, and it would
+> have landed on the 813.
+>
+> **★★ AND NO AMOUNT OF REASONING ABOUT CHURN WOULD HAVE FOUND THE TARGET MISMATCH.** The instability
+> objection was arrived at by thinking, from data already in hand, and it was correct — **it would have
+> stopped the change for a reason that was not the reason.** A proposal blocked on a true but incidental
+> objection looks exactly like a proposal blocked on the right one, and the difference only shows up
+> when someone later fixes the incidental problem and proceeds.
+>
+> **ONLY THE EXPORT COULD, AND THAT IS THE ARGUMENT FOR PULLING IT RATHER THAN DECIDING ON THE
+> INFERENCE.** The thin-page reading was the most plausible explanation available, the brief said so and
+> flagged it as an inference, and every piece of reasoning built on it pointed the same way. **It was
+> wrong, and nothing internal to the reasoning could have shown that** — the catalogue knows what the
+> site has, and only Search Console knows what Google kept.
 
 **DO NOT PRUNE THE SITEMAP.** Item 540's comment is corrected to state what the filter does rather than
 what it claimed.
@@ -43650,7 +43684,47 @@ path robots.txt disallows"*. **The homepage had no JSON-LD.**
 > contiguity and citation-existence checked, and nothing at all checked about whether they are still
 > true.**
 
-#### WHAT A CHECK COULD LOOK LIKE — MEASURED, NOT BUILT
+#### ★★★ THE TENSE FINDING, WHICH IS A BETTER ANSWER THAN THE CHECK THAT WAS ASKED FOR
+
+The question was what a check could look like. **The answer is that most items cannot go stale and the
+ones that can are not marked.**
+
+> **AN ITEM RECORDING WHAT WAS DONE IS A HISTORICAL STATEMENT AND CANNOT GO STALE.** Item 513 says
+> `app/home-preview/page.tsx` existed and was deleted. The file being absent is the item being *right*.
+> Checking a June item against today's tree asks the wrong question of it, and a checker that flagged
+> those would be reporting the register's correctness as failures.
+>
+> **AN ITEM RECORDING WHAT IS STILL WRONG IS A PRESENT-TENSE CLAIM ABOUT THE LIVE SITE**, and it is the
+> only kind that can be verified against anything. `NOT FIXED`, `HELD`, `REPORTED, NOT BUILT` — those
+> assert something about production *now*, and production moves without them.
+>
+> **SO THE REGISTER IS NOT ONE ARTEFACT WITH NO FRESHNESS BOUND. IT IS TWO POPULATIONS SHARING A FILE**,
+> one of which cannot decay and one of which decays silently — **and nothing distinguishes them.**
+
+```
+items declaring CLOSED     30
+items declaring OPEN       13
+items declaring NEITHER   502   (92%)
+```
+
+**Item 516 is the demonstration, not an example.** It sat open for eleven days asserting the homepage's
+JSON-LD advertised a disallowed path; the homepage had no JSON-LD at all. Its header read *"From the
+21 August snapshot, finding 3"* — **a provenance where its neighbours 514, 515 and 521 all say
+`NOT FIXED` outright.** The one that went stale is the one whose header stated where it came from
+instead of what state it was in.
+
+> **THE OBSTACLE IS NOT THAT THE CLAIMS ARE UNVERIFIABLE. 91% CARRY A MACHINE-CHECKABLE REFERENCE.**
+> It is that nothing says which of them are still being asserted. **A check is blocked on a one-word
+> convention rather than on anything hard**, which is worth knowing precisely because "the register has
+> no check" sounds unfixable.
+
+#### ADOPTED 1 SEPTEMBER: `OPEN` OR `CLOSED` IN EVERY HEADER FROM ITEM 546
+
+Written into this file's own **How to use** section. **Not retrofitted** — rewriting 502 headers is a
+large act to enable a check nobody has written, and going forward it costs nothing. **The point is to
+stop the open set growing unmarked, not to reconstruct it.**
+
+#### THE SUPPORTING MEASUREMENT
 
 **The checkable claims are identifiable and they are most of the list:**
 
