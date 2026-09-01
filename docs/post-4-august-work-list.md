@@ -43594,15 +43594,33 @@ https://www.findmybasket.co.uk/    ld+json 0 · schema.org 0 · SearchAction 0
 content, the copy and the measurement; the structured data went the way of the gold focus ring, the BEST
 tag and the hero photograph.
 
-> **★★★ THE PORT-LEFT-THE-STYLING-BEHIND FINDING IN A DIFFERENT LAYER.** Item 520 recorded that the port
-> kept everything with a number attached and dropped everything else. **Structured data has no number
-> attached and is invisible in a screenshot**, so it survived neither the measurement nor the eye — the
-> two instruments item 524 says do not overlap. **This is the gap between them.**
+#### ★★★ A STALE ITEM IS WORSE THAN NO ITEM, BECAUSE IT ANSWERS THE QUESTION NOBODY THEN ASKS
+
+Item 516 sat open for eleven days saying *"the homepage JSON-LD advertises a SearchAction pointing at a
+path robots.txt disallows"*. **The homepage had no JSON-LD.**
+
+> **EVERY READING OF THE WORK LIST FOR ELEVEN DAYS CONFIRMED THAT THE HOMEPAGE HAD STRUCTURED DATA WITH
+> A DEFECT IN IT.** An absent item invites the question "does the homepage emit structured data?" A
+> present one that describes it in detail forecloses it — **the item was doing the work of a check and
+> returning a wrong answer**, and it was more specific and more confident than silence would have been.
 >
-> **AND NOBODY NOTICED FOR TWO DAYS BECAUSE THE OPEN ITEM SAID THE TARGET WAS WRONG.** Item 516 named a
-> block that was already gone, so every reading of the work list confirmed that the homepage had
-> structured data with a defect in it. **A stale item is worse than no item: it answers the question
-> nobody then asks.**
+> **AND IT DEGRADED WITHOUT BEING TOUCHED.** It was accurate when written on 21 August. Item 513
+> rewrote the homepage on 31 August and the item did not change, because nothing connects a record to
+> the thing it records. **The register is the one artefact in this project with no freshness bound and
+> no check that it still describes the site.**
+
+#### ★★ AND IT SURVIVED BOTH INSTRUMENTS, WHICH IS THE SHARPER HALF
+
+Item 524: `getComputedStyle` and a screenshot answer different questions and do not overlap. **This is a
+demonstration that something can fall between them.**
+
+> **STRUCTURED DATA HAS NO NUMBER ATTACHED AND NOTHING TO SEE IN A SCREENSHOT.** The height measurement
+> did not miss it and the eye did not miss it — **neither was looking at the place it lives.** The port
+> kept everything with a number attached (item 520) and everything Robbie could see; this had neither
+> property, and no third instrument was ever pointed at it.
+>
+> **THE TWO-INSTRUMENT RULE SAYS BELIEVE NEITHER UNTIL A THIRD ROUTE SETTLES IT. IT DOES NOT SAY TWO IS
+> ENOUGH** — and this is what the uncovered region looks like.
 
 #### WHAT THE ROUTE SHOULD EMIT
 
@@ -43642,4 +43660,10 @@ and `publisher` on articles. **No page declares FindMyBasket as an entity in its
 > **RECOMMENDATION: ship `WebSite` alone, and treat `Organization` as a decision that wants the missing
 > fields first** rather than a block padded to justify itself.
 
-**Not built.** One `<script type="application/ld+json">` in `app/page.tsx`, and the decision above.
+#### SHIPPED 1 SEPTEMBER — `WebSite` ALONE
+
+One `<script type="application/ld+json">` in `app/page.tsx`, with `description` taken from the route's
+own constant rather than the static file's pre-495 copy. **`Organization` NOT shipped**, on the
+reasoning above: the honest version is `name`, `url` and `logo`, which is close to what `WebSite`
+already says, and `sameAs`, contact and a real logo asset are facts about the business rather than the
+code. **Padding a block to justify its own presence is the shape this list keeps rejecting.**
