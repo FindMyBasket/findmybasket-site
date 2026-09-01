@@ -43231,3 +43231,172 @@ after the wrong conclusion had already been drawn and, twice, acted on.
 > **THE FIX IS THE SAME EVERY TIME BECAUSE THE MECHANISM IS THE SAME EVERY TIME**, and five instances in
 > two days is a tax rather than a run of bad luck. **It is written here as one rule because five
 > corrections scattered across five items is exactly the shape that does not get read.**
+
+### 540. A sitemap filter that excludes nothing, written to exclude thin pages
+
+**Raised:** 1 September 2026 · **FINDING. Not built — what the site should submit is a decision.**
+
+```ts
+// lib/sitemap.ts:22
+// Count of products eligible for the sitemap. Products without an image render
+// thinly and aren't worth indexing, so they're excluded (matching the per-part
+// query below). products_active already excludes merged products.
+  .not('image_url', 'is', null)
+  .neq('image_url', '')
+```
+
+```
+submitted                106,926
+excluded by the filter          0      every live product has an image
+  comparable (2+ stockists)  15,370
+  single stockist            75,236
+  no stockist in stock       16,320
+85.6% of what the sitemap submits cannot show a comparison.
+```
+
+#### ★★★ A RULE WHOSE POPULATION IS EMPTY READS IDENTICALLY TO A RULE THAT IS WORKING
+
+**It is not broken.** The predicate is correct, the intent is stated, the query runs, and it removes
+nothing — because the condition it tests for does not occur in this catalogue.
+
+> **THE CHECKS-THAT-CANNOT-RETURN-FALSE CLASS, IN A FILTER RATHER THAN A TEST.** Item 528's
+> `getListedRetailerCount` returns null rather than 0 because zero is not a credible reading; item 525's
+> `document.fonts.check` returns true because synthesis counts as yes. **This is the same shape moved
+> from a check to a gate: a filter that has never excluded a row cannot be distinguished, from its
+> output, from a filter that is excluding the right rows.**
+>
+> **AND THE COMMENT MAKES IT WORSE, NOT BETTER.** It states an intent — *"render thinly and aren't worth
+> indexing"* — that the rule cannot serve, so a reader checking whether thin pages are kept out of the
+> sitemap finds a sentence saying they are. **The documentation is the thing that would stop anyone
+> looking.**
+
+**The thinness the comment is reaching for is real and the proxy is wrong.** A missing image is not what
+makes these pages thin; a single stockist is. The filter tests the attribute that happens to be
+universal and not the one that varies.
+
+---
+
+### 541. 16,320 pages that say nothing is available, and Google has found 11
+
+**Raised:** 1 September 2026 · **FINDING. Not built — what the site should serve is a decision.**
+
+```
+products with NO in-stock stockist on any active retailer   16,320
+
+product/201 -> HTTP 200   no robots meta   no "out of stock" wording
+product/217 -> HTTP 200   no robots meta
+product/218 -> HTTP 200   no robots meta
+
+Search Console, soft 404:  11
+```
+
+#### ★★ THE 11 IS GOOGLE'S PROGRESS, NOT THE SITE'S DEFECT COUNT
+
+A page that returns 200, renders successfully, and offers nothing to buy is the textbook soft 404.
+**16,320 of them are live and none carries a `noindex`.**
+
+> **ELEVEN IS WHERE GOOGLE HAS GOT TO. THE EXPOSED SET IS THREE ORDERS OF MAGNITUDE LARGER**, and it
+> will grow as crawling continues rather than because anything changed. **A count from a crawler is a
+> measure of the crawler's reach, not of the population** — the same shape as item 267, where "58
+> mojibake rows" was one pattern's reach and 74 of 93 `Â` rows turned out to be correct text, and item
+> 69, where "eleven places" measured the sweep rather than the surface area.
+>
+> **SO THE NUMBER IN THE REPORT IS THE ONE THING IN IT THAT IS CERTAIN TO BE WRONG BY MORE TOMORROW.**
+
+#### AND BOTH CITATIONS ABOVE WERE WRONG ON THE FIRST WRITING
+
+They read **496** and **470**. Both items exist, so `check-worklist-citations.sh` passed — and its own
+output says why that is not enough:
+
+```
+citations resolve: 273 distinct items cited, all present
+  (target existence only -- a citation can resolve and still misdescribe what it points at)
+```
+
+**496 is the duplicate-barcode population and 470 is a protein-powder successor rule.** Neither is about
+a detector's reach.
+
+> **THE CHECKER PRINTS ITS OWN LIMIT ON EVERY RUN AND I HAD READ THAT LINE A DOZEN TIMES TODAY.** It was
+> caught by grepping for the phrases rather than trusting the numbers — **the same move that has caught
+> five other things this week, applied to my own citations for the first time.**
+
+---
+
+### 542. Two corrections to the coverage brief
+
+**Raised:** 1 September 2026 · **Both measured. The brief's headline finding survives both.**
+
+#### ★★ 39.9%, NOT 31.3% — GOOGLE'S KNOWN SET IS THE SITE'S HISTORY
+
+```
+product rows ever            144,073
+  live now                   106,926
+  not live                    37,147     merged 3,278 + excluded/inactive 33,869
+Google "Total known"         136,362     <- sits BETWEEN the two
+
+42,672 / 136,362 = 31.3%     against every URL the site has ever served
+42,672 / 106,926 = 39.9%     against the pages that exist
+```
+
+> **ABOUT 29,000 OF THE "KNOWN" URLS ARE PAGES THE SITE NO LONGER SERVES**, and they are in the
+> denominator of the share. The 9,033 "Not found" bucket is the visible part of that; the rest sits in
+> "Crawled, not indexed" as URLs Google fetched before they died.
+>
+> **THE DROP AND THE ABSOLUTE LOSS BOTH STAND.** 84.4% → 39.9% is still a collapse, and **−8,076 indexed
+> pages is unaffected by any denominator.** The correction changes the severity of one figure and none
+> of the argument.
+
+#### ★★★ 12 JUNE IS ELIMINATED RATHER THAN EXPLAINED
+
+The brief names four candidates. **Three are ruled out by date and the fourth by size.**
+
+| candidate | verdict |
+|---|---|
+| a sitemap change | **no** — sitemap exists since 8 May, unchanged in June until the 21st |
+| a robots.txt change | **no** — `public/robots.txt` since 7 May, unchanged |
+| a canonical or noindex rule | **no** — no added `canonical`/`noindex` line 8–16 June; the nearest is 17 June |
+| the first large catalogue expansion | **confirmed as an event, eliminated as the cause** |
+
+**The whole 12–13 June window is one commit:**
+
+```
+d4f5d76  13 Jun  refactor(import-awin-feed): fold sizeByProductId into productByStripped
+         supabase/functions/import-awin-feed/index.ts     <- the only file touched
+```
+
+**And Debenhams is confirmed, and too small:**
+
+```
+09 Jun    111        Debenhams live 10 Jun (304ccd4), retailer count bumped 11 Jun (5a38979)
+10 Jun  4,222
+11 Jun  1,811        6,033 products over two days
+12 Jun    443
+13 Jun    113        vs 52,043 not-indexed ARRIVALS and 16,393 indexed DEPARTURES
+```
+
+> **AN ORDER OF MAGNITUDE SHORT, AND NOTHING IN A CATALOGUE EXPANSION REMOVES AN ALREADY-INDEXED PAGE.**
+> Adding products cannot un-index existing ones directly. **So the event is not explained by anything in
+> the repository or the catalogue** — which points away from a deploy and toward Google-side
+> reprocessing or a reporting artefact.
+>
+> **THAT IS A FINDING RATHER THAN AN OPEN QUESTION.** The brief says *"until that is explained, any
+> change made now is being made on top of an unexplained one."* **It is now explained to the extent the
+> site can explain it: the site did not do it.** Waiting for a repository-side cause is waiting for
+> something that is not there.
+
+#### AND A CORRECTION OF MY OWN, MID-CHECK
+
+The first pass reported that **the sitemap did not exist until 21 June**, from
+`git log -- '*sitemap*' '*robots*'` returning `6deaf59 feat: SEO foundation (titles, sitemap,
+schema.org)` as the earliest hit. **That commit revised the sitemap; it did not create it.**
+`--diff-filter=A` on the specific paths shows `38e6234 Phase 7: Dynamic split sitemap` on **8 May**.
+
+> **A LOG FILTERED BY PATH RETURNS THE COMMITS THAT TOUCHED A FILE, AND THE EARLIEST ONE IS ONLY THE
+> CREATION IF NOTHING BEFORE IT WAS RENAMED, MOVED OR RESTRUCTURED.** Here the 21 June commit moved the
+> routes into `app/`, so the older paths did not match the pattern. **`--diff-filter=A` asks the question
+> the reading assumed was being asked.**
+>
+> **IT WOULD HAVE ELIMINATED A CANDIDATE THAT DESERVED ELIMINATING FOR THE WRONG REASON** — "no sitemap
+> existed" and "the sitemap did not change" reach the same verdict on 12 June by different facts, and
+> only one of them is true. **A right answer from a wrong premise, twice in two days**, after item 525's
+> ampersand.
