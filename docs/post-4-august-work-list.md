@@ -43122,3 +43122,112 @@ tell was that two corners came back different colours, `(128,122,166)` and `(43,
 > EDGES IS THE LOGO.** It did not fail; it answered a different question correctly. **What settled it
 > was opening the image** — the same instrument-follows-the-property finding as item 524, on a file
 > rather than a page.
+
+### 538. The surface whose claim changed is not a surface anything revalidates
+
+**Raised:** 1 September 2026 · **REPORTED, NOT BUILT. The answer decides whether it is one line or a
+trigger, and it is a trigger.**
+
+`retailers.active` went true at 21:30. The homepage says how many retailers there are and shows a mark
+for each. **It kept saying 13 for the full hour**, until `fmb_revalidate_paths(array['/'])` was called by
+hand. `revalidate = 3600` is the only thing that would ever have corrected it.
+
+> **ITEM 501'S SHAPE IN A DIFFERENT PLACE.** A write changed what a page should say, and nothing
+> connected the write to the page. **The difference is that item 501's surface had a revalidation path
+> and this one has none at all** — `/` was a static file until item 513, so nothing has ever needed to
+> revalidate it.
+
+#### EVERYTHING THAT CHANGES THE CLAIM, AND NONE OF IT TOUCHES `/`
+
+The count reads `active = true AND unlisted_reason IS NULL`; the strip reads `logo_path` on that same
+set. **So four writes change the homepage and all four are `UPDATE retailers`:**
+
+| | changes | |
+|---|---|---|
+| `active` false → true | count **and** strip | a retailer going live |
+| `active` true → false | count **and** strip | a retailer going dark |
+| `unlisted_reason` set | count **and** strip | unlisted while still active — Branded Beauty, 30 July |
+| `logo_path` set or cleared | **strip only** | counted but not pictured, item 528 |
+
+Plus `INSERT` and `DELETE` on the table. **21 retailer rows, 14 listed, 3 that have ever carried an
+`unlisted_reason` — so this fires a handful of times a year and is invisible every time.**
+
+#### WHERE IT BELONGS: NOT THE ENABLE ACTION, NOT THE ROSTER GUARD
+
+**The enable action does not exist.** `active` is flipped by hand in SQL — it was tonight, it was for
+Healf, it was for Atelier De Glow's departure. **There is no code path to hang a callback on**, and
+inventing one would mean routing a one-line `UPDATE` through an endpoint so that the endpoint can notice
+it. That is the tail wagging the dog.
+
+**The roster guard is a detector and says so.** `roster-parity.yml`'s own header: *"WRITES NOTHING.
+Reads three files and one table, prints, exits."* It would notice the drift on its next scheduled run
+and it is the right tool for the three hand-maintained surfaces it checks — **but making it revalidate
+turns a read-only guard into an actor, and it would still be up to a day late.**
+
+> **★★ SO IT IS A TRIGGER ON `retailers`, BECAUSE A TRIGGER IS THE ONLY THING THAT SEES A MANUAL
+> `UPDATE` — AND A MANUAL `UPDATE` IS HOW EVERY ONE OF THESE CHANGES HAS ACTUALLY BEEN MADE.** The
+> precedent is `trg_revalidate_on_merge_log`, the helper `fmb_revalidate_paths` exists and is granted to
+> `service_role`, and it already speaks `pg_net`.
+
+#### AND IT IS NOT ONE LINE, FOR A REASON WORTH KNOWING
+
+`trg_revalidate_on_merge_log` is `FOR EACH ROW`, because **each merge names a different path**. Here
+every write revalidates the same single path, `/`.
+
+> **A ROW-LEVEL TRIGGER WOULD FIRE ONCE PER ROW FOR A PATH THAT DOES NOT VARY.** A bulk update touching
+> the table — a delivery-terms sweep, a `logo_path` backfill — would fire twenty-one `pg_net` calls to
+> revalidate one page twenty-one times. **The merge-log precedent is the wrong shape to copy here and it
+> is the only precedent there is**, which is exactly the near-neighbour trap this list keeps recording.
+>
+> **STATEMENT-LEVEL IS CORRECT AND COSTS A TRANSITION TABLE**, because `WHEN (OLD.… IS DISTINCT FROM
+> NEW.…)` is not available to a statement trigger — the column test has to move inside the function,
+> over `REFERENCING OLD TABLE`/`NEW TABLE`. Roughly fifteen lines, not one.
+
+**Left unbuilt deliberately.** It is a trigger on the retailer table on a live database, and the
+onboarding it came out of is finished.
+
+---
+
+### 539. Five false findings from one mechanism, and the rule that ends it
+
+**Raised:** 1 September 2026 · **A tax, not five corrections.**
+
+| # | the pattern | what it matched | what I concluded |
+|---|---|---|---|
+| 1 | `grep -oE 'og:\|500'` | `og:image:width content="2500"`, `fontWeight:500` | **"the deploy is 500ing"** — pulled Vercel runtime logs |
+| 2 | `grep -oE '<strong[^>]*>[0-9]+ UK retailers'` | nothing — React emits `13<!-- --> UK retailers` | **"the count is missing"** |
+| 3 | `f.family.includes('Cormorant_Garamond_07')` | nothing — the next build's hash is `e9ff3d` | **"zero italic faces, the loader change failed"** |
+| 4 | `grep -oE 'src="/logos/[a-z-]+\.'` | 12 of 13 — the canary filename has uppercase | **"a retailer is missing from the strip"** |
+| 5 | `grep -c 'src="/logos/'` | `1` — `-c` counts LINES and minified HTML is one line | **"one mark rendered"** |
+
+#### ★★★ EVERY ONE PRODUCED A PLAUSIBLE FINDING RATHER THAN AN ERROR
+
+**Not one of them failed.** No exit code, no exception, no empty-result warning. Each returned a number
+that fitted a story: a broken deploy, a missing count, a failed font change, a dropped retailer, an
+unrendered strip.
+
+> **A PATTERN THAT ASSUMES A SHAPE THE OUTPUT DOES NOT HAVE RETURNS A WRONG ANSWER IN THE RIGHT FORMAT.**
+> That is why none was caught by the run itself — **there is nothing for a run to catch.** Four of the
+> five were caught by a second instrument disagreeing, and one by the number being implausible.
+>
+> **AND THE FALSE ANSWER IS ALWAYS THE MORE INTERESTING ONE.** "The deploy is broken" earns
+> investigation; "the deploy is fine" earns nothing. **A false negative arrives dressed as a discovery**,
+> which is what buys it the benefit of the doubt it does not deserve.
+
+#### THE RULE
+
+```
+NEVER   grep -c  on HTML            -- counts lines; minified HTML is one line
+ALWAYS  grep -o … | wc -l           -- to count occurrences
+FIRST   grep -oE 'anchor.{0,400}'   -- print the bytes before concluding anything
+NEVER   pin a pattern to a build hash, a content hash, or any generated identifier
+NEVER   assume [a-z-] on a filename you did not write
+```
+
+**And the diagnostic that would have caught all five in one step: when a search returns a surprising
+number, print the surrounding bytes before believing it.** Every one of the five was resolved that way,
+after the wrong conclusion had already been drawn and, twice, acted on.
+
+> **THE FIX IS THE SAME EVERY TIME BECAUSE THE MECHANISM IS THE SAME EVERY TIME**, and five instances in
+> two days is a tax rather than a run of bad luck. **It is written here as one rule because five
+> corrections scattered across five items is exactly the shape that does not get read.**
