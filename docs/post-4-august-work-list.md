@@ -43400,3 +43400,107 @@ schema.org)` as the earliest hit. **That commit revised the sitemap; it did not 
 > existed" and "the sitemap did not change" reach the same verdict on 12 June by different facts, and
 > only one of them is true. **A right answer from a wrong premise, twice in two days**, after item 525's
 > ampersand.
+
+### 543. noindex when nothing is in stock, on the value already in scope
+
+**Raised:** 1 September 2026 · **Built. The page keeps serving; it stops asking to be indexed.**
+
+```ts
+robots: { index: facts.stockists > 0, follow: true },
+```
+
+**16,188 products have no stockist.** Each returns 200 and renders successfully while offering nothing
+to buy — the textbook soft 404, and Google agrees on 11 of them so far (item 541).
+
+**`follow: true` and the page stays.** A bookmarked or linked product returning 404 is worse than one
+saying nothing is in stock, and **stock returns — this is a state, not a death.** The departure gate's
+410 is for products that are gone; this is for products that are here and unavailable. `follow` keeps
+the brand and category links working as crawl paths.
+
+#### ★★★ THE TWIN SHAPE AVOIDED AT THE MOMENT IT WOULD HAVE BEEN CREATED
+
+`facts.stockists` is already awaited three lines above the `return`, and the three-branch metadata copy
+already chooses on it. **A new query here would have been a second definition of "has a stockist".**
+
+**AND THE THIRD DEFINITION WAS NEARLY THE ONE THAT SHIPPED.** The brief this came from counted 16,320
+stockless products with `r.active AND rp.in_stock`. `fmb_product_metadata_facts` counts differently:
+
+```sql
+family = the product PLUS its parent_product_id children
+r.active AND rp.in_stock AND coalesce(price,0) > 0 AND coalesce(url,'') <> ''
+```
+
+| | brief's query | the page's RPC |
+|---|---:|---:|
+| zero stockists | 16,320 | **16,188** |
+| one stockist | 75,236 | 75,232 |
+| comparable | 15,370 | **15,506** |
+
+> **132 PAGES THAT CAN TRANSACT WOULD HAVE BEEN NOINDEXED.** No family rollup, no price test, no URL
+> test — three ways to count a stockist, and the one that produced the finding was the loosest.
+>
+> **THIS LIST HAS RECORDED THE TWIN SHAPE FOUR TIMES AND EVERY ONE WAS FOUND AFTERWARDS** — the
+> match-key twin, the supplement-type rule in Deno and in SQL, the two retailer predicates in
+> `lib/retailers.ts`. **This is the first caught at the moment of creation**, and what caught it was
+> reading the RPC rather than trusting the query that produced the brief. **The number in the brief was
+> mine, and checking it against the operative definition is the only reason the difference exists to be
+> reported.**
+
+#### AND IT KEYS ON THE FRESHEST VALUE ON THE PAGE
+
+`getProductMetadataFacts` is an RPC → supabase-js issues a POST → **Next does not cache POSTs.** The
+24 August correction in this same file established the split: `facts.stockists` is read fresh on every
+regeneration while `product.name` survived a write *and a deployment* in the Data Cache for the better
+part of an hour.
+
+> **SO THE VALUE THE NOINDEX KEYS ON IS THE ONE THING ON THE PAGE WITH NO STALENESS BOUND**, and a
+> product coming back into stock is indexable again within the hour rather than whenever a GET cache
+> entry happens to expire. **Had this keyed on anything fetched with `.select()`, a restock could have
+> stayed noindexed indefinitely.**
+
+---
+
+### 544. The sitemap's real answer is instability, not size
+
+**Raised:** 1 September 2026 · **HELD. Recorded now rather than waiting on the Search Console export.**
+
+The proposal was to submit only the 15,506 comparable products instead of all 106,926. **The objection
+is not that the set is small. It is that the set does not hold still.**
+
+```
+comparable total        15,506
+  exactly 2 stockists   11,781    76.0%
+  exactly 3              2,719
+  4 or more              1,006
+```
+
+> **★★★ 76% OF THE PROPOSED SITEMAP IS ONE STOCK-OUT FROM LEAVING IT.** A single retailer marking a
+> single product out of stock removes that URL; it returns when stock does. At 11,781 pages on that
+> boundary, membership churns continuously and **for reasons entirely outside the site's control.**
+>
+> **A URL APPEARING AND DISAPPEARING FROM A SITEMAP IS A QUALITY SIGNAL, AND PLAUSIBLY A WORSE ONE THAN
+> A STABLE LIST GOOGLE DECLINES.** Declining to index a page is a judgement about the page; a sitemap
+> that cannot keep its own membership steady is a statement about the site.
+>
+> **THIS IS THE COMPARISON-DEPTH CONSTRAINT ONE LAYER DOWN.** The strategy document treats depth as the
+> constraint on revenue; item 542 found it may also be the constraint on how much of the site is
+> visible. **This is the third face: the set that can show a comparison is not merely small, it is
+> defined by a condition retailers change without telling us**, so any rule keyed to it inherits their
+> stock-keeping as its own volatility.
+
+#### WHAT IS STILL NOT DERIVABLE HERE
+
+**How many of the 42,672 indexed pages are single-stockist.** No join exists:
+`metrics_ga4_weekly` is site-wide aggregate — sessions, qualified sessions, comparison views, outbound
+clicks — with **no landing-page dimension and no per-URL rows**, and nothing in the database holds
+Search Console data.
+
+> **THE SAME ACTION PRODUCES OPPOSITE OUTCOMES DEPENDING ON THAT ANSWER.** If the indexed set is mostly
+> comparable pages, this prunes a population Google has already declined and costs nothing. If it is
+> mostly single-stockist pages carrying the brand-plus-type long tail, **removing them from the sitemap
+> does not remove them from the index — it stops them being refreshed, and stale is how indexed pages
+> eventually leave.**
+
+**Robbie is pulling the Search Console Pages export.** The filter's comment in `lib/sitemap.ts` (item
+540) stays wrong until this resolves, deliberately: its correct wording depends on whether the filter is
+about to be replaced or deleted.
