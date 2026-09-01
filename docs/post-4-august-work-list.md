@@ -43533,6 +43533,16 @@ part of an hour.
 > entry happens to expire. **Had this keyed on anything fetched with `.select()`, a restock could have
 > stayed noindexed indefinitely.**
 
+#### ★ THE EXPECTED EFFECT, MEASURED BEFORE IT HAPPENS
+
+The Search Console Pages export (1 September) shows **68 of 944 indexed product URLs — 7.2% — have zero
+stockists.** Those are precisely the pages this change tells Google to drop.
+
+> **A FALLING INDEXED COUNT FROM HERE IS INTENDED RATHER THAN A REGRESSION**, and it is written down
+> before it happens so that it cannot be read as one later. Roughly 7% of indexed product URLs should
+> leave over the coming crawls. **An unexplained drop and a predicted one look identical in the report;
+> the difference is whether the prediction was made first.**
+
 ---
 
 ### 544. The sitemap's real answer is instability, not size
@@ -43576,9 +43586,34 @@ Search Console data.
 > does not remove them from the index — it stops them being refreshed, and stale is how indexed pages
 > eventually leave.**
 
-**Robbie is pulling the Search Console Pages export.** The filter's comment in `lib/sitemap.ts` (item
-540) stays wrong until this resolves, deliberately: its correct wording depends on whether the filter is
-about to be replaced or deleted.
+#### ★★★ CLOSED 1 SEPTEMBER — THE EXPORT REFUTES THE PREMISE, NOT JUST THE PROPOSAL
+
+944 indexed product URLs, all three chunks joined to the catalogue:
+
+| | indexed | share of indexed | share of catalogue | |
+|---|---:|---:|---:|---|
+| **single stockist** | **813** | **86.1%** | 70.4% | **kept ABOVE its rate** |
+| comparable | 59 | 6.3% | 14.4% | **kept BELOW its rate** |
+| zero stockist | 68 | 7.2% | 15.3% | |
+| no longer live | 4 | | | |
+
+> **GOOGLE KEEPS SINGLE-STOCKIST PAGES AT A HIGHER RATE THAN THEY OCCUR AND COMPARABLE PAGES AT A LOWER
+> ONE.** The brief's central inference — that 60,032 pages are declined because a single-stockist page is
+> thin — **is refuted, not merely unconfirmed.** If thinness by stockist count drove the declines, the
+> indexed set would be enriched in comparable pages. It is depleted in them.
+>
+> **AND THE PROPOSAL WOULD HAVE DONE THE OPPOSITE OF ITS INTENT.** Pruning to comparable-only stops
+> refreshing **86% of what Google actually keeps**, and stale is how indexed pages leave. It would have
+> been reasoned from a plausible mechanism, aimed at the declined 60,032, and landed on the 813.
+>
+> **THE INSTABILITY FINDING ABOVE WAS THE RIGHT OBJECTION FOR THE WRONG REASON.** 76% of the proposed
+> sitemap being one stock-out from leaving it is true and would have mattered. **It is not why the
+> proposal was wrong.** The proposal was wrong because its target population was not the population it
+> would have hit — and no amount of reasoning about churn would have found that. **Only the export
+> could.**
+
+**DO NOT PRUNE THE SITEMAP.** Item 540's comment is corrected to state what the filter does rather than
+what it claimed.
 
 ### 545. The rebuild dropped the homepage's structured data rather than porting it
 
@@ -43606,8 +43641,71 @@ path robots.txt disallows"*. **The homepage had no JSON-LD.**
 >
 > **AND IT DEGRADED WITHOUT BEING TOUCHED.** It was accurate when written on 21 August. Item 513
 > rewrote the homepage on 31 August and the item did not change, because nothing connects a record to
-> the thing it records. **The register is the one artefact in this project with no freshness bound and
-> no check that it still describes the site.**
+> the thing it records.
+>
+> **★ THE REGISTER IS THE ONE ARTEFACT IN THIS PROJECT WITH NO FRESHNESS BOUND AND NO CHECK THAT IT
+> STILL DESCRIBES THE SITE**, and that is the largest thing in this thread. Every other claim here has a
+> workflow behind it — `worklist-integrity`, `retailer-logos`, `match-key-parity`,
+> `supplement-type-fixtures`, `roster-parity`, `gone-ids-drift`. **545 items of reasoning have
+> contiguity and citation-existence checked, and nothing at all checked about whether they are still
+> true.**
+
+#### WHAT A CHECK COULD LOOK LIKE — MEASURED, NOT BUILT
+
+**The checkable claims are identifiable and they are most of the list:**
+
+```
+items                                        545
+  cite a file path                           208   38%
+  cite file:line                             232   43%
+  name a database object                     137   25%
+  cite another item                          443   81%
+  carry NO machine-checkable claim of any kind  47    9%
+```
+
+**And the cheapest class already mostly holds.** Of 157 distinct file paths cited, **143 resolve to a
+file today and 14 do not** — and reading the 14 is what shows why this is hard:
+
+```
+.ts/.tsx/.mts/.sql/.css              prose, not a path — regex noise
+awin1.com/closedMerchant.html        an external URL
+app/home-preview/page.tsx            REAL, and CORRECTLY absent — item 513 created and deleted it
+lib/superdrug-removed.ts             deleted with Superdrug; the item describing it is still true
+```
+
+> **★★★ A PATH THAT NO LONGER RESOLVES IS USUALLY NOT AN ERROR, BECAUSE THE REGISTER IS A LOG AND NOT A
+> SPEC.** Item 513 says `app/home-preview/page.tsx` existed and was deleted; the file being gone is the
+> item being *right*. **Checking a June item against today's tree asks the wrong question of it.**
+>
+> **THE DISTINCTION IS NOT THE CLAIM TYPE, IT IS THE TENSE.** An item recording what was done is a
+> historical statement and cannot go stale. An item recording what is *still wrong* — `NOT FIXED`,
+> `HELD`, `REPORTED, NOT BUILT` — is a present-tense claim about the live site, and **those are the only
+> ones a check could meaningfully run against.**
+
+#### AND THE PRECONDITION IS MISSING, WHICH IS THE ACTUAL FINDING
+
+```
+items whose header states OPEN     13
+items whose header states CLOSED   30
+items whose header states NEITHER 502   (92%)
+```
+
+**Item 516 was not among the 13.** Its header read *"From the 21 August snapshot, finding 3."* — a
+provenance, not a status. Its neighbours 514, 515 and 521 all say `NOT FIXED` explicitly; **516 did not,
+and it is the one that went stale unnoticed.**
+
+> **A CHECK CANNOT RUN BECAUSE IT CANNOT IDENTIFY ITS OWN INPUT SET.** 92% of items declare no status,
+> so nothing can separate "this describes a defect that is still live" from "this records something
+> fixed in June". **The obstacle is not that the claims are unverifiable — 91% carry a machine-checkable
+> reference. It is that nothing says which claims are still being asserted.**
+>
+> **SO THE MINIMUM PRECONDITION IS A STATUS MARKER IN THE HEADER, AND IT COSTS NOTHING GOING FORWARD**
+> — the convention already exists and is followed about half the time. **Retrofitting 502 items is a
+> different question and is not proposed.** What is worth knowing is that the check is blocked on a
+> one-word convention rather than on anything hard.
+
+**Not built, and the retrofit not proposed.** Reported because "the register has no check" sounds
+unfixable and is in fact blocked on something small.
 
 #### ★★ AND IT SURVIVED BOTH INSTRUMENTS, WHICH IS THE SHARPER HALF
 
