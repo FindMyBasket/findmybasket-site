@@ -195,6 +195,44 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
     title,
     description: metaDescription,
     alternates: { canonical },
+    /*
+     * NOINDEX WHEN NOTHING IS IN STOCK, AND THE PAGE KEEPS SERVING. Item 543.
+     *
+     * 16,188 products have no stockist by the RPC's reckoning. Each returns 200 and
+     * renders successfully while offering nothing to buy, which is the textbook soft 404 —
+     * and Google agrees: it had classified 11 of them as of 28 August. ELEVEN IS GOOGLE'S
+     * PROGRESS, NOT THE DEFECT COUNT (item 541).
+     *
+     * `follow: true` AND THE PAGE STAYS. A bookmarked or linked product returning 404 is
+     * worse than one saying nothing is in stock, and stock returns — this is a state, not
+     * a death. The departure gate (410) is for products that are gone; this is for products
+     * that are here and unavailable. `follow` keeps the brand and category links on the
+     * page working as crawl paths.
+     *
+     * ── IT KEYS ON `facts.stockists`, WHICH IS THE POINT ─────────────────────────────
+     *
+     * The three-branch copy above already chose on this exact value. A NEW QUERY HERE
+     * WOULD BE A SECOND DEFINITION OF "HAS A STOCKIST" and this codebase has paid for that
+     * shape repeatedly — the match-key twin, the two supplement-type expressions, the
+     * retailer predicates in lib/retailers.ts that are deliberately different and
+     * commented so.
+     *
+     * IT WAS NEARLY CREATED. The brief this came from counted stockless products as 16,320
+     * using `r.active AND rp.in_stock` — no family rollup, no `price > 0`, no
+     * `url <> ''`. That is a THIRD definition, and it would have noindexed 132 pages that
+     * can transact. `fmb_product_metadata_facts` says 16,188. Reading the RPC rather than
+     * trusting the query that produced the brief is what caught it.
+     *
+     * ── AND IT IS THE FRESHEST VALUE ON THE PAGE ─────────────────────────────────────
+     *
+     * `getProductMetadataFacts` is an RPC, which supabase-js issues as a POST, which Next
+     * does not cache — see the 24 August correction in the block above, where
+     * `product.name` was shown to survive up to an hour and a deployment in the Data Cache
+     * while the facts did not. So the value the noindex keys on is read fresh on every
+     * regeneration, and a product coming back into stock is indexable again within the
+     * hour rather than whenever a GET cache entry happens to expire.
+     */
+    robots: { index: facts.stockists > 0, follow: true },
     // NOT socialTags(). That helper forces the SITE CARD, and it is right to: it
     // exists for brand and category pages, where "the first product" is whatever
     // `.order('id')` returned and a card showing one lip gloss shade for a 595-product
