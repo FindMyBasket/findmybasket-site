@@ -46305,20 +46305,54 @@ DISTINCT promotionIds : 200          <- 60.0x duplication
 return page one. The response advertises 30,105 offers across 151 pages and **200 of them, 0.66%, are
 all that has been seen.**
 
-#### ★★★ THE FIRST PAGED RUN REPORTED "0 JOINED ADVERTISERS OF 12,000" AND IT WAS A STATEMENT ABOUT 200
+#### ★★★ THE ITEM'S CENTRE: NOTHING ERRORED, AND NOTHING COULD HAVE
 
-**Nothing errored.** 60 pages fetched, 60 HTTP 200s, 12,000 rows collected, every field populated.
+**The first paged run reported "0 joined advertisers of 12,000". It was a statement about 200.**
+
+```
+60 pages fetched      60 HTTP 200s      12,000 rows collected      every field populated
+```
+
 **The only thing wrong was that they were the same 200 rows sixty times.**
 
-> **IT WAS CAUGHT BY ARITHMETIC, NOT BY THE PROBE.** Every derived count came back an exact multiple of
-> 60: delivery 5 -> 300, discount 39 -> 2340, other 156 -> 9360, `voucher.exclusive` null 181 -> 10860.
-> **A clean multiple of the page count is the signature**, and it is only visible if somebody happens to
-> divide.
+> **THERE WAS NO ERROR TO CATCH.** Every request succeeded, every response parsed, every field was
+> present and well typed. **A failure mode with no failure in it** -- the API was asked for page two
+> and answered page one, correctly, with a 200, because it had never agreed to read the parameter.
+
+#### ★★★ THE ARITHMETIC SIGNATURE IS THE TRANSFERABLE HALF
+
+```
+delivery-mentioning        5  ->    300
+price discount            39  ->  2,340
+everything else          156  ->  9,360
+voucher.exclusive null   181  -> 10,860
+voucher.exclusive false   19  ->  1,140
+```
+
+**Every derived count an exact multiple of 60.**
+
+> **A CLEAN MULTIPLE OF THE PAGE COUNT IS THE SIGNATURE, AND IT IS VISIBLE ONLY TO SOMEBODY WHO
+> DIVIDES.** Nothing in the output says "60". The multiplier has to be inferred from the shape of the
+> numbers, against a page count sitting in a different line of the log.
 >
-> **THIS IS THE `localStorage` SWEEP AGAIN, TWELVE HOURS LATER.** Item 551 recorded four iframes
-> returning an identical value for four different inputs because they read stored state rather than the
-> parameter. **Same shape: a loop that varies its input, an API that ignores it, and a result set that
-> looks larger than it is.** There the tell was four identical rows; here it was sixty identical pages.
+> **AND ROW COUNT IS THE ONE FIGURE EVERYONE READS.** "12,000 rows collected" is the summary line, the
+> thing a reader quotes, and the single quantity that cannot detect this -- because a duplicated read
+> and a working one produce **identical** row counts by construction. **The headline number is
+> structurally blind to the failure.**
+
+#### THE SAME SHAPE AS THIS MORNING, TWELVE HOURS APART
+
+| | item 551, 08:00 | item 572, 18:40 |
+|---|---|---|
+| the loop | four iframes, four basket sizes | sixty requests, sixty page numbers |
+| what was ignored | the URL parameter, in favour of `localStorage` | the page parameter, in favour of page one |
+| the tell | **four identical rows** | **sixty identical pages** |
+| what it read as | a curve | a population |
+
+> **A LOOP THAT VARIES ITS INPUT, A SYSTEM THAT IGNORES IT, AND A RESULT SET THAT LOOKS LARGER THAN IT
+> IS.** Twice in one day, in unrelated systems, by the same hand. **The first was caught because four
+> identical rows are obvious; the second needed division**, and would have survived a less suspicious
+> reading.
 
 **THE GUARD IS NOW IN THE PROBE.** Distinct `promotionId` against rows collected, with a loud refusal
 and a deduplication before any count is printed.
