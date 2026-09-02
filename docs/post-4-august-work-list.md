@@ -45818,9 +45818,141 @@ apart, with nothing connecting them.**
 article passed clean. **The gap is the window between writing copy and committing it**, and nothing
 covers that window today.
 
+> **★★★ THE UNCOVERED WINDOW IS THE FINDING, AND IT IS NOT A WEAKNESS IN THE CHECK.** The check
+> reaches the repository. The copy was written in a `.docx`. The word entered the repository only when
+> the copy did, **and at that moment the check ran and passed** -- because by then the word had already
+> been removed by hand.
+>
+> **SO THE CHECK'S PASS AND THE VIOLATION'S EXISTENCE NEVER OVERLAPPED IN TIME.** There was no instant
+> at which a green check was wrong. **The word lived its entire life outside the only place that looks
+> for it**, and the thing that caught it was a person opening the file.
+>
+> **NOTHING COVERS THE WINDOW BETWEEN WRITING COPY AND COMMITTING IT**, and nothing easily could: the
+> window is somebody's `~/Documents`, a CMS, or an email. **The honest position is that this rule has a
+> check for the second half of its life and a reader for the first**, and the two shipped findings this
+> week that a reader caught (this and item 562's) are both from that first half.
+
 #### WHAT WAS DONE
 
 **The five fixes were applied to the copy at publication** rather than to the documents. `.docx` files
 in `~/Documents` are outside version control and are not the artefact of record; **the published row
 and the published file are.** The documents are left as they are, stale, rather than edited into
 agreement with something that now lives elsewhere.
+
+---
+
+### 565. The Optimum Nutrition Spotlight is live, and two readings of 559 are recorded rather than left implicit
+
+**Raised and applied:** 2 September 2026 · **PUBLISHED. `brand_hubs` + 4 `brand_hub_products` rows.
+No code, no migration, no schema change.** · **The first 559-compliant Spotlight.**
+
+**Verified against the live page, not the source:**
+
+```
+/brands/optimum-nutrition-spotlight
+  product cards           4
+  price elements          0          .bh-price
+  pound signs in content  0
+  "Compare prices" links  0
+  content links to /compare or /app   0
+  banned words            0
+  outbound AWIN links     5
+```
+
+#### ★★ READING ONE: 559 GOVERNS THE PAGE'S CONTENT, NOT THE SITE CHROME
+
+**The nav and footer link to `/app` on every page, this one included. Two such links render here.**
+
+> **A Spotlight cannot be expected to strip the site's own navigation, and a rule that required it
+> would be a rule about the site rather than about the page.** 559 says a Spotlight carries no
+> comparison content and no route into the comparison engine. **That governs what the page SAYS. It
+> does not govern what the site IS.**
+
+**Stated now rather than left implicit**, because the next person applying 559 will meet exactly this
+question on their first page and there is no answer in the rule as written. **The compliance figures
+above separate the two deliberately**: content links counted at zero, chrome links counted at two and
+reported rather than suppressed.
+
+#### ★★ READING TWO: THE SLUG IS LOAD-BEARING, AND THE BARE ONE WOULD HAVE INVERTED THE FIREWALL
+
+**`optimum-nutrition-spotlight`, not `optimum-nutrition`.**
+
+`app/brands/[slug]/page.tsx` dispatches hub-first: **a `brand_hubs` row REPLACES the price-comparison
+page at that slug.** Inserting the bare slug would have removed an independent comparison page and put
+a paid Spotlight at its address.
+
+```
+/brands/optimum-nutrition             30 products, 30 prices    STILL LIVE, verified
+/brands/optimum-nutrition-spotlight   the Spotlight             new
+```
+
+> **THAT IS NOT THE FIREWALL BREACHED, IT IS THE FIREWALL INVERTED.** *"Money never buys a better
+> comparison result"* is about influence on a ranking. **This would have been money DELETING a ranking
+> and taking its URL** — a worse outcome by the same clause, reached by a route the clause does not
+> describe.
+>
+> **`abib-spotlight` already set the pattern and nothing said why.** The suffix reads as a naming
+> preference until you know the dispatch replaces rather than augments. **Recorded so the next hub is
+> named on purpose.**
+
+#### WHAT IS IN THE ROW
+
+`show_comparison = false` (the column default). `price = NULL` on all four products, so no `.bh-price`
+renders. Every `buy_url` outbound, so `BrandHubRange` takes the `ClickOutLink` branch with `sponsored
+nofollow` rather than the internal *"Compare prices"* branch. `range_cta_url` is the AWIN deep link.
+`body_html` carries no `/compare` or `/app` link.
+
+**Product imagery is the catalogue's own** rather than invented: the supplied assets are one brand
+photograph, one tub photograph and two logos, which is not four product shots.
+
+**One open defect: the logo 404s** until PR #569 merges, because `/brand-assets/optimum-nutrition/` is
+in that branch and the row is in the database. **The row went live ahead of its assets** and that is a
+property of the split: hub content is a database write and hub assets are a repository commit, with
+nothing sequencing the two.
+
+---
+
+### 566. Both pre-559 hubs are the state 559 exists to prevent, and neither is in violation
+
+**Raised:** 2 September 2026, publishing the first compliant Spotlight · **OPEN. A DECISION IS OWED AND
+IS NOT TAKEN HERE. NOTHING CHANGED.**
+
+| | prices | internal comparison links | `range_cta_url` |
+|---|---:|---:|---|
+| `abib-spotlight` | 0 of 3 | **3 of 3** | **`/brands/abib`**, its own comparison page |
+| `ilapothecary` | **9 of 9** | 0 of 9 | none |
+| `optimum-nutrition-spotlight` | 0 of 4 | 0 of 4 | outbound AWIN |
+
+**Between them the two older hubs carry both halves of what 559 forbids**, and neither carries both.
+
+#### NEITHER IS RETROSPECTIVELY IN VIOLATION
+
+**559 was written on 2 September and applies forward.** Both hubs predate it by months. **This is the
+same treatment item 563 gave the site's em dashes**: a rule stated today does not convert existing work
+into a backlog, and reading it that way would manufacture violations out of a scoping accident.
+
+#### THE DECISION OWED, WITH THE HARD HALF NAMED
+
+**Does 559 apply to hubs that predate it?**
+
+- **`abib-spotlight` is the easier case.** Abib is a **former** partner whose disclosure already says
+  the partnership has ended and the page carries no affiliate links to the brand. **A Spotlight with no
+  commercial relationship is not the surface 559 is about** — the clause is about money sitting beside
+  a comparison result, and there is no longer any money. It may not need to change at all, and the
+  reason would be the absence of the thing the rule guards.
+
+- **`ilapothecary` is the hard one, and the prices may have been the point.** It is a **live commercial
+  relationship**, nine products, nine prices, nine outbound affiliate links, and an `offer` block with
+  a discount code. **A brand-direct price beside a discount code is arguably the deliverable the
+  partnership bought.**
+
+> **★★ THE PRICES THERE ARE NOT COMPARISON OUTPUT, AND THAT DISTINCTION MAY DECIDE IT.** Nine
+> brand-direct prices with no ranking, no per-unit figure and no route into the engine is **a price
+> list, not a comparison.** 559's clause is *"money never buys a better comparison result"* — a
+> price nobody is comparing against anything may sit outside it entirely.
+>
+> **If that reading holds, 559 needs a fourth sentence distinguishing a price from a comparison**, and
+> the ON Spotlight is stricter than the rule requires rather than exactly as strict.
+
+**Not decided here, and deliberately not decided by whoever notices it next**: one is a lapsed
+relationship and the other is live revenue, and those want different conversations.
