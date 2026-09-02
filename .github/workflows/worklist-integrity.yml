@@ -50,3 +50,6 @@ jobs:
         run: bash scripts/check-worklist-contiguity.sh
       - name: Every cited item exists
         run: bash scripts/check-worklist-citations.sh
+
+      - name: banned discount word (docs/editorial-register.md rule 2)
+        run: ./scripts/check-banned-word.sh

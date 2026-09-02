@@ -45595,8 +45595,9 @@ Whey for protein, Creatine Monohydrate for the basics"* keeps the shape and drop
 
 ### 562. The banned discount word is in shipped copy, and the rule is recorded inside a PDF spec
 
-**Raised:** 2 September 2026, from a copy correction on the Optimum Nutrition Edit · **OPEN — two
-shipped strings, not fixed here.** · **MEASURED, not inferred.**
+**Raised:** 2 September 2026, from a copy correction on the Optimum Nutrition Edit · **CLOSED by item
+563, WHICH ALSO CORRECTS IT.** The claim that a grep for the word never finds the rule is FALSE --
+`docs/article-template.html` states it and names both banned words. See 563's first section.
 
 `app/app/RoutineBuilder.tsx`, rendered to visitors on `/app`:
 
@@ -45650,3 +45651,108 @@ wording item 479 chose deliberately. **A copy decision, not a substitution.**
 name the word. **A lint rule over `app/` and `components/` would make it enforceable** — recorded as
 the obvious candidate, not proposed, because the register rules as a set have never been collected
 anywhere and a check for one of them would imply the others are checked too.
+
+---
+
+### 563. The register has a home, a check, and a correction to item 562
+
+**Raised and applied:** 2 September 2026 · **CLOSED. `docs/editorial-register.md` created, check wired
+into CI, both shipped strings fixed.** · **Item 562's central claim was wrong and the correction is
+the first section.**
+
+#### ★★★ THE CORRECTION: THE RULE WAS FINDABLE, AND I DID NOT RUN THE SEARCH I SAID EVERYONE WOULD RUN
+
+**Item 562 said: *"a grep for the word finds violations and never finds the rule."*** That is false.
+
+```
+docs/article-template.html:15
+  Copy conventions (house rules): no em dashes, never "cheapest" /
+  "cheaper"; use "best value" / "best price". Keep the .disclosure line.
+```
+
+**A repository-wide grep for the word returns that line.** I searched `docs/*.md` and the shipped
+component tree, concluded the rule was unfindable, and **wrote that conclusion as a finding without
+running the one search the finding was about.**
+
+> **THE CLAIM WAS "THIS SEARCH FAILS" AND THE SEARCH WAS NEVER RUN.** It was reasoned from two
+> narrower greps that did fail, and the inference felt safe because it explained the violation I had
+> just committed. **A finding that exonerates the person who found it deserves the search it asserts.**
+
+**It was caught by the check.** `check-banned-word.sh` ran against the tree on its first execution and
+returned four hits: the two real ones, a test title, and **the article template stating the rule**.
+The instrument built to enforce the rule found the statement of the rule its own item said did not
+exist.
+
+#### AND THE TEMPLATE CARRIED A WORD NOBODY ELSE MENTIONED
+
+| statement | names the word | covers **"cheaper"** | scope stated |
+|---|---|---|---|
+| `dashboard-build-brief.md` step 13 | **no** | **no** | PDF generator only |
+| `docs/article-template.html` | **yes** | **yes** | that template's articles |
+
+**Only one of the two knew there were two words.** Measured after finding out: **"cheaper" appears in
+zero user-facing strings**, so nothing shipped on it. **That is luck, not coverage** -- the word was
+absent from the statement that was cited everywhere else.
+
+> **THE REAL DEFECT SURVIVES THE CORRECTION AND IS NARROWER THAN 562 CLAIMED.** Not *"the rule was
+> hidden"*. **Two statements, different content, neither a home, and the one carrying more information
+> sat where only someone already building a page from that template would read it.** Which rule you
+> got depended on which artefact you happened to open.
+
+#### WHAT SHIPPED
+
+**`docs/editorial-register.md`.** Four rules, each with its scope stated separately, **because the
+absence of that statement is what let rule 2 ship**: they arrived together in one line of a PDF spec,
+which made them look like one rule with one scope.
+
+| | rule | scope |
+|---|---|---|
+| 1 | British English | site-wide, all surfaces |
+| 2 | the banned words, both named | site-wide, all output, published and internal |
+| 3 | ranges only, no point-in-time figures | **cites `standing-rule-frozen-catalogue-state.md`, does not restate it** |
+| 4 | no em dashes | **written output**: documents, briefs, drafts |
+
+**Rule 3 is a citation on purpose.** A second copy would drift from the first, which is the defect that
+rule is about, reproduced by writing it down twice.
+
+**Rule 4 is scoped to written output rather than declared over the site**, and that is a measurement:
+60 lines of `.tsx` carry em dashes today, including live user-facing strings. **The honest reading is
+that the site predates any statement of the rule, not that the site is in violation** -- declaring 60
+lines non-compliant on the strength of a line in a PDF spec would be inventing a backlog out of a
+scoping accident. Whether the site should adopt it is recorded as open and unasked.
+
+*The register file contains no em dashes. It complies with its own rule 4, as a demonstration.*
+
+**`strategy.md` points at it. Step 13 cites rather than restates.** One statement.
+
+#### THE CHECK, AND BOTH LIMITS
+
+`scripts/check-banned-word.sh`, wired into `worklist-integrity.yml` beside the contiguity and citation
+checks. **Clean across 135 files** after the fix.
+
+Convention 12 warns a string-scoped sweep misses paraphrases, and it is right about every other rule
+here. **A banned word is the one case where string-scoping IS the rule**, because the rule is about a
+literal token rather than a meaning.
+
+1. **It catches the word, not the intent.** *"Lowest price"* passes.
+2. **It reaches only the repository** -- copy written in a document, a CMS or a PDF template is outside
+   it, **which is where this rule was born.** It covers the surface that shipped the violation and not
+   the surface the rule was written for.
+
+*`docs/` and `__tests__` are excluded: the article template states the rule and would flag itself,
+which is the check-worklist-citations problem of a file scanned by itself.*
+
+#### THE TWO STRINGS, AND WHY THE FIX IS AN IMPROVEMENT
+
+```
+was   The cheapest each product can be bought for, across N retailers -- delivery not included.
+now   The best price for each product on its own, across N retailers -- delivery not included.
+```
+
+> **THE CORRECTION STRENGTHENS ITEM 479's SENTENCE RATHER THAN WORKING AROUND THE BAN.** 479 wrote
+> that branch to stop the fallback claiming a basket-level optimisation it had skipped: *"a per-product
+> minimum, not a basket."* **The old copy stated the minimum and left the reader to infer that the
+> prices do not combine. "On its own" says it.**
+>
+> **The inference was the whole point of 479's correction, and it was the half the copy did not
+> carry.** A ban forced a rewrite, and the rewrite says what the item always meant.
