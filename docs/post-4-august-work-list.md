@@ -45348,3 +45348,112 @@ conclude the integration broke. **It did not; the sample data aged.**
 > the accurate phrase and it is different from *"stable"*. **With the column blank, a loss event
 > produces a bad day and no number** — the one observation the watcher exists for is currently
 > uncapturable.
+
+---
+
+### 558. Optimum Nutrition has no feed, measured — and the check needed one line changed to run
+
+**Raised and run:** 2 September 2026 · **CLOSED. Item 458's `links-only` filing is CONFIRMED and now
+has evidence behind it.** · **READ-ONLY probe. Nothing configured, nothing written.**
+
+```
+── Programme ──────────────────────────────────
+  joined programmes total : 20
+  name           : Optimum Nutrition UK
+  advertiser id  : 19863        currency: GBP   region: GB
+
+── Feed ───────────────────────────────────────
+  feeds visible on this account : 610
+  NO FEED for this advertiser. Joined but no datafeed published, or not yet visible.
+```
+
+**Joined, and no datafeed among 610 visible.** So they stay `links-only`, they get no `retailers` row,
+and they do not enter `docs/onboarding-completeness.md` — **state 1 of that definition is a feed
+census, and there is no feed to census.**
+
+#### ★ THE CLAIM WAS RIGHT AND ITS BASIS WAS NOT, WHICH IS WORTH SEPARATING
+
+**Item 458 recorded "no product feed" from the programme page.** That is a reading of what a page
+says, not a measurement of what the account can see. **This is the first time it has been probed.**
+
+> **A CLAIM THAT SURVIVES ITS OWN VERIFICATION IS NOT THE SAME CLAIM IT WAS BEFOREHAND.** Nothing about
+> the filing changes; **what changes is that it can now be wrong in a checkable way.** Had the page been
+> stale — the failure mode item 482 recorded, where a confirmation is not a verification — the
+> `links-only` status would have been correct by accident and nobody could have told.
+
+#### THE CHECK COULD NOT BE RUN AS IT STOOD, AND ITEM 483 SAW THIS COMING
+
+`scripts/cohorted-probe.mjs` resolves an advertiser to a feed and has an explicit `NO FEED` branch —
+**exactly the check** — and everything in it was generic **except one line**: `const TARGET =
+/cohorted/i`. The workflow took no inputs.
+
+Item 483, on Healf: *"`cohorted-probe.mjs` — which does exactly this resolution — takes no inputs and
+has its advertiser hardcoded. So the resolution was a question rather than a lookup."* That produced a
+confirmed `fid=521` which **404'd**, because a confirmation is not a verification.
+
+> **THE HARDCODED LINE HAS NOW BLOCKED TWO ONBOARDINGS AND WAS RECORDED AS A PROBLEM AFTER THE FIRST.**
+> Item 483 named it precisely and did not change it, because Healf's answer arrived by another route.
+> **A defect that is diagnosed and routed around does not stop being load-bearing.**
+
+**Changed: the one line, plus workflow inputs.** Matching is now by **advertiser id** when one is given
+— a name regex is the weaker key, since programmes rename and a word can appear in more than one
+programme name, while **an id is exact and is what the deep link carries.** Defaults reproduce the
+original Cohorted run.
+
+**THE FILE IS STILL CALLED `cohorted-probe.mjs` AND THAT IS NOW WRONG.** Not renamed here: citations
+point at the path, and a rename is a separate act from making the thing runnable. **Recorded so the
+name is a known defect rather than a puzzle.**
+
+---
+
+### 559. STANDING RULE: a Brand Spotlight carries no comparison content, in either direction
+
+**Raised and decided:** 2 September 2026 · **Robbie's call. STANDING RULE for this surface, not a
+one-off for Optimum Nutrition.** · **Reaches further than item 459 and the difference is the point.**
+
+**A Brand Spotlight carries no prices, no per-unit figures, no comparison language, and no links into
+`/compare/*`. Outbound goes to the AWIN deep link for products, and that is the whole of its commercial
+mechanism.**
+
+#### THIS IS THE STRATEGY DOCUMENT'S FIREWALL APPLIED, NOT A NEW RULE
+
+> *"A brand can earn a hub through partnership on CPA, or buy enhanced placement through a fee, **but
+> money never buys a better comparison result**."* — `docs/strategy.md`
+
+**A Spotlight is the paid tier.** Comparison content on a bought page is money sitting beside a
+comparison result, which is the arrangement the clause exists to prevent — **whether or not the
+comparison is favourable.** The rule is about the adjacency, not about the number.
+
+#### ★★★ IT REACHES FURTHER THAN 459, AND 459 DELIBERATELY DID NOT REACH HERE
+
+| | decides | direction |
+|---|---|---|
+| **459** (27 Aug) | compare rows do not get brand-direct links | **comparison surface → brand** |
+| **559** (this) | a brand page does not get comparison content | **brand surface → comparison** |
+
+**Same firewall, both directions, and the second was still open.**
+
+> **AND 459 EXPLICITLY REFUSED THE FIREWALL AS ITS REASON**, which is why this does not contradict it.
+> That item recorded: *"the clause is about **ranking** — about whether money can move a product up a
+> list. Nothing here moves anything."* On a compare row, position and the per-100g figure are computed
+> before any link renders, so a destination cannot reach back into them. **The clause genuinely did not
+> cover that case.**
+>
+> **It covers this one, because a Spotlight is bought.** 459's reason was a *defect* — a page making a
+> price claim and routing to a price it did not check. **This item's reason is the clause itself**, and
+> the two are not the same argument arriving twice.
+
+#### FOR OPTIMUM NUTRITION THE SEPARATION IS COMPLETE, WHICH MAKES IT THE CLEAN CASE TO SET IT ON
+
+**No feed (item 558, measured). Thirty live products, every one Boots-only, zero multi-retailer.**
+
+> **ANY PRICE ON AN ON SPOTLIGHT WOULD BE BOOTS' PRICE WEARING THE BRAND'S NAME.** Not a price we
+> negotiated, not a price the brand sets, and not a price we could refresh if it moved — the feed that
+> would let us hold their own price is the one item 558 confirmed does not exist.
+>
+> **A rule is best set where its instance is unambiguous.** Here there is no version of "show a price"
+> that is even technically available, so the decision is not trading anything away and cannot be read
+> as caution about a close call.
+
+**What the Spotlight may carry:** the brand's own story, its assets, the range, and outbound product
+links. **What it may not:** any number that came from the comparison engine, and any route into it.
