@@ -197,6 +197,8 @@ This is the most important strategic conclusion the project has reached, and it 
 
 ## **Editorial register**
 
+**The four house rules, each with its scope, are in `docs/editorial-register.md`.** British English, the banned discount words, ranges-only, and em dashes. That file is the single statement; this section carries the tone and nothing restates it.
+
 Articles should be commercially constructive: equip the reader to choose and buy confidently and route them to the whole basket comparison, without overstating product claims. Helpful first, honest always. Never sceptical for its own sake, never a hard sell. This was set after a draft came back too sceptical in tone, and it is now the standing instruction.
 
 # **6. The core constraint**

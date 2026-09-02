@@ -1296,8 +1296,14 @@ export default function RoutineBuilder() {
                         // DELIVERY IS NOT INCLUDED HERE AND THE OLD COPY SAID IT WAS.
                         // The fallback sets `deliveryCost: 0` and never computes
                         // delivery — there is no basket to compute it for. Item 479.
-                        ? `The cheapest each product can be bought for, across ${winningRetailerCount} retailers — delivery not included.`
-                        : 'The cheapest each product can be bought for — delivery not included.')
+                        // WORDING CHANGED, AND IT STRENGTHENS ITEM 479's SENTENCE RATHER THAN
+                        // WORKING AROUND A BAN. The original stated a per-product minimum and
+                        // left the reader to infer that these prices do not combine into a
+                        // basket. "on its own" says it. That inference was the whole point of
+                        // 479's correction, and it was the half the copy did not carry.
+                        // docs/editorial-register.md rule 2; work-list item 563.
+                        ? `The best price for each product on its own, across ${winningRetailerCount} retailers — delivery not included.`
+                        : 'The best price for each product on its own — delivery not included.')
                     : results && results.length === 1
                     ? (winningRetailerCount > 1
                         ? `One way to buy this basket, split across ${winningRetailerCount} retailers, delivery included.`
