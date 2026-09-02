@@ -1502,15 +1502,52 @@ export default function RoutineBuilder() {
               </div>
             )}
 
-            {/* SAVE PROMPT SITS BELOW THE RESULT CARDS. It previously sat ABOVE
-                them, between the savings figure and the options, on the reasoning
-                that the email capture should appear "at the most engaged moment".
-                That put a commitment ask in front of the answer the visitor came
-                for: the cards ARE the value, and asking to save a result before
-                showing it inverts the exchange.
 
-                Value first, then commitment, then the disclosure. Item 245,
-                phase 0.5. */}
+
+            {/* DISCLOSURE LAST. It was the first child of the results block, above
+                the cards. It is a legal/truststatement about how the links are
+                monetised, not a piece of the answer, and putting it first delayed
+                the result to make a declaration nobody arrived for. Below the cards
+                and below the save prompt it is still on the screen, still before any
+                outbound click, and no longer standing in front of the value.
+                Item 245, phase 0.5. */}
+            {results && results.length > 0 && (
+              <div className="rb-results-disclosure">
+                <AffiliateDisclosure variant="banner" />
+              </div>
+            )}
+
+            {/* The per-item "Also check Amazon / eBay" links this note described were
+                REMOVED in phase 0.3. Note kept, corrected, rather than deleted: it is
+                the only record in this file that they were once here and deliberately
+                placed, so a future reader does not re-add them as an improvement. */}
+            </div>
+
+            {/* ── THE PROMPT LEFT THE RESULTS FLOW (item 556) ──────────────────────
+                DESKTOP ONLY, and it is a THIRD GRID CHILD rather than a child of
+                either column. That is what lets one element serve both layouts with
+                no order override:
+
+                  <880px   single-column grid, SOURCE ORDER -- so it lands last,
+                           exactly where item 553's cap left it. Unchanged.
+                  >=880px  placed into column 1, row 2 by the CSS below, directly
+                           under the routine list and beside the results.
+
+                WHY NOT INSIDE .rb-col-left. It would then follow the routine list in
+                source order, and at 390 that is ABOVE the optimise button -- further
+                forward than the position item 245 reversed. The layout comment is
+                explicit that the mobile stack is source order "so there are no order
+                overrides to keep the mobile flow honest", and this keeps that true.
+
+                ITEM 245's OBJECTION DOES NOT REACH IT. That reasoning was about
+                asking to save a result before showing it. `showSaveCard` is set only
+                in finishRender, so the prompt cannot exist before an answer does --
+                and beside the results is not in front of them.
+
+                WHAT IT BUYS OVER THE CAP: the cap bounds the DEFAULT view. The
+                position here depends on the ROUTINE LIST's height, not the results',
+                so it holds in the expanded state too -- where the cap does nothing
+                and where the most engaged visitor on the page is standing. */}
             {showSaveCard && (
               <div className="rb-save-card">
                 <div className="rb-save-title">Save your routine ✨</div>
@@ -1585,26 +1622,6 @@ export default function RoutineBuilder() {
                 )}
               </div>
             )}
-
-
-            {/* DISCLOSURE LAST. It was the first child of the results block, above
-                the cards. It is a legal/truststatement about how the links are
-                monetised, not a piece of the answer, and putting it first delayed
-                the result to make a declaration nobody arrived for. Below the cards
-                and below the save prompt it is still on the screen, still before any
-                outbound click, and no longer standing in front of the value.
-                Item 245, phase 0.5. */}
-            {results && results.length > 0 && (
-              <div className="rb-results-disclosure">
-                <AffiliateDisclosure variant="banner" />
-              </div>
-            )}
-
-            {/* The per-item "Also check Amazon / eBay" links this note described were
-                REMOVED in phase 0.3. Note kept, corrected, rather than deleted: it is
-                the only record in this file that they were once here and deliberately
-                placed, so a future reader does not re-add them as an improvement. */}
-            </div>
           </div>
         )}
       </div>
