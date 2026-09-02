@@ -46077,3 +46077,154 @@ nav are three different definitions of done.
 fixing 19 files first means fixing 20 later. **The 19 second**, once measurement 1 says whether they
 are one problem or several. **The reference last**, because it defines what done means, and answering
 it first would be deciding the shape of a fix nobody has scoped.
+
+---
+
+### 568. The Offers brief inherited its hazard from the record of that hazard's repair
+
+**Raised:** 2 September 2026, Phase 0 of the Awin Offers brief · **CLOSED as a correction. The rule
+stays; its STATUS changes.**
+
+**The brief's governing rule, section 1:**
+
+> *"The runtime fallbacks substituting 25 for a missing threshold and 3.95 for a missing cost **still
+> exist in the code**."*
+
+**They do not.** Measured across all five pricing paths, comments stripped:
+
+```
+lib/delivery.ts                                   0
+supabase/functions/_shared/delivery.ts            0
+app/app/RoutineBuilder.tsx                        0
+supabase/functions/send-routine-email/index.ts    0
+lib/product-queries.ts                            0
+```
+
+**`lib/__tests__/delivery.test.ts` asserts their absence** on those same five paths, rejecting `?? 25`,
+`|| 3.95`, `|| 3.99` and a bare `3.95` in arithmetic. **Ran it: 21 of 21 pass.**
+
+#### ★★★ WHERE THE NUMBERS CAME FROM, WHICH IS THE FINDING
+
+The brief expects *"eight occurrences in the app and three in the email path"*. The header of
+`supabase/functions/_shared/delivery.ts` reads:
+
+```
+ *   app/app/RoutineBuilder.tsx                       four sites, `?? '25'` / `?? '3.95'`
+ *   supabase/functions/send-routine-email/index.ts   three sites, `|| 25` / `|| 3.95`
+```
+
+**That is the fix's own commit note, written in the past tense, describing what it removed.**
+
+> **THE BRIEF READ THE COMMENT DESCRIBING THE FIX AS A DESCRIPTION OF THE PROBLEM.**
+>
+> **A DOCUMENT INHERITED A HAZARD FROM THE RECORD OF ITS REPAIR.** The comment is good work: it names
+> the files, counts the sites and quotes the operators, precisely so a later reader understands what
+> was wrong. **Those same properties make it read as a live inventory** -- file paths and counts are
+> the shape of a bug report, and the tense is the only thing separating the two.
+>
+> **AND IT IS WHY THE RULE READ AS URGENT.** A live fabricated default in a pricing path deserves the
+> emphasis section 1 gives it. **A removed one enforced by a test deserves a different sentence**, and
+> the brief was built around the first reading.
+
+#### THE RULE IS KEPT AND RESTATED
+
+**Not deleted.** *"An offer may never be applied on top of a fabricated delivery default"* is correct
+and must govern Phase 3.
+
+> **WHAT CHANGES IS ITS STATUS: A FORWARD GUARANTEE ENFORCED BY A TEST, NOT A LIVE HAZARD.** Phase 3
+> does not have to work around existing fabricated defaults. It has to avoid introducing one, and
+> `delivery.test.ts` will refuse it on all five paths if it tries.
+
+*A comment recording a repair should say what it removed AND that it is removed. This one says the
+first at length and the second by tense alone.*
+
+---
+
+### 569. The brief's governing rule excludes zero of fourteen retailers
+
+**Raised:** 2 September 2026, Phase 0 of the Awin Offers brief · **OPEN. Worth writing into the brief
+itself.**
+
+Section 1: *"Where a retailer's real delivery terms are unknown, no offer applies and the optimiser
+declines to compute rather than quietly computing."*
+
+**Measured against the live table: 14 active retailers, 13 tiered, 1 flat, ZERO unknown.** All 14 carry
+`delivery_terms_source`.
+
+> **THE RULE PROTECTS NOTHING TODAY.** Every active retailer has real terms, so the clause excludes no
+> row, and Phase 3 could ship with it implemented, broken, or absent and **every basket would compute
+> identically.**
+
+#### ★★ IT IS ITEM 540's SHAPE IN A RULE RATHER THAN A FILTER
+
+Item 540 recorded a sitemap filter that excluded nothing: **a filter that removes zero rows reads
+exactly like one that works.** The same is true of a guard clause, and worse, because a guard is
+usually written where the author expects it to fire.
+
+> **THE RULE BECOMES LIVE AT THE NEXT ONBOARDING WITHOUT TERMS, WHICH IS EXACTLY WHEN NOBODY WILL BE
+> WATCHING IT.** By then it will have been in the code for weeks, never having fired, with no test
+> that has seen it refuse. **A guard nobody has watched fail is not known to be a guard** -- item 476's
+> line, arriving on the clause the brief calls its most important.
+>
+> **AND IT IS NOT HYPOTHETICAL.** `retailers_unknown_delivery_needs_reason` exists precisely because
+> retailers arrive without terms. Amazon and eBay both hold `unknown` today and are inactive; the rule
+> already binds them and would fire the day either activated.
+
+#### WHAT TO DO WITH IT, AND IT IS NOT TO WEAKEN THE RULE
+
+**State the vacuity in the brief.** A reader meeting section 1 in three weeks will see a carefully
+argued clause and assume it is doing work. **Its silence is not coverage.**
+
+**And Phase 2's own instruction already has the answer.** The brief says *"construct offers the
+classifier must reject… demonstrate refusal on each"*. **The same treatment is owed to this rule**: a
+constructed retailer with `unknown` terms, an offer that would otherwise apply, and a demonstrated
+refusal to compute. Otherwise the acceptance criterion at §21 -- *"no offer is ever applied to a
+retailer whose delivery terms are unknown, demonstrated by constructing that case"* -- is the only
+place the rule is ever exercised, and it is exercised once, in a test, by construction.
+
+*Which is to say the brief already knew, at §21, something section 1 did not say.*
+
+---
+
+### 570. The Offers brief's sequencing gate has no referent in the repository
+
+**Raised:** 2 September 2026, Phase 0 of the Awin Offers brief · **OPEN — Robbie will say what the
+identifier fix is. Recorded as an ABSENT REFERENT, not as a pending dependency.**
+
+The brief sequences itself: *"after the identifier fix, which has a date attached because of the Fenty
+conversation in mid September. Nothing in this brief should be started while that fix is in staged
+rollout."*
+
+**Searched the whole repository. "Fenty" appears nowhere** -- no document, no item, no comment, no
+migration. **No work-list item is named for an identifier fix.** No September date is attached to any
+work anywhere.
+
+**The nearest candidate is `docs/barcode-merge-programme.md`**, which is *"PAUSED, mid-programme,
+resumes in weeks rather than days"*, written 31 August, **with no date and no Fenty reference.**
+
+#### THE DISTINCTION THAT MATTERS
+
+**A pending dependency is a thing that exists and has not finished.** It can be checked, chased and
+waited for.
+
+> **AN ABSENT REFERENT CANNOT BE CHECKED AT ALL.** *"Do not start while that fix is in staged rollout"*
+> is unfalsifiable here: nothing in the repository can tell anyone whether it is in staged rollout,
+> finished, or not started. **The gate is real and it is unreadable.**
+>
+> **RECORDING IT AS "BLOCKED ON THE IDENTIFIER FIX" WOULD HAVE BEEN THE WRONG ENTRY**, because it
+> asserts the existence of a thing nobody has found. That is item 516's shape: a present, detailed
+> record foreclosing the question of whether the thing exists.
+
+#### ★ AND THE BRIEF ITSELF IS OUTSIDE VERSION CONTROL
+
+**This is the second time today.** Item 564 recorded final copy agreed in conversation that never
+reached its `.docx`. **The Offers brief has the same property**: it exists as a document, it makes
+specific checkable claims about the codebase, and two of them were wrong when measured (items 568,
+569).
+
+> **A BRIEF IS A CLAIM ABOUT A CODEBASE, AND A CLAIM ABOUT A CODEBASE THAT LIVES OUTSIDE IT DRIFTS
+> WITHOUT ANYTHING NOTICING.** `docs/` already holds `dashboard-build-brief.md` and
+> `rakuten-reporting-probe-brief.md`, both versioned, both citable, both greppable.
+>
+> **Not proposed here**, because where a brief lives is a decision rather than a tidy-up. But the two
+> corrections this Phase 0 produced would have been a diff rather than a report.
