@@ -45956,3 +45956,124 @@ into a backlog, and reading it that way would manufacture violations out of a sc
 
 **Not decided here, and deliberately not decided by whoever notices it next**: one is a lapsed
 relationship and the other is live revenue, and those want different conversations.
+
+---
+
+### 567. Nineteen static navs are frozen at the Stage-1 triple, and the parity test guards the one that is not
+
+**Raised:** 2 September 2026 · **OPEN. NOT STARTED — Robbie is holding it to check something else
+first.** · **Fourth instance of item 476's class. Scope MEASURED rather than estimated.**
+
+`public/savings-hub.html` renders **Skincare, Makeup, Hair, K-Beauty, Savings Hub**. Absent:
+**Fragrance, Bath & Body, Supplements, Brands, Brand Spotlight.**
+
+#### THE CLASS, AND WHY IT IS THE FOURTH
+
+Item 476: *"a denylist entry is a claim about scope, and a go-live is a change of scope… the entry did
+not rot; the catalogue moved out from under it."* **Fragrance went live 29 June 2026**
+(`EXTENDED_CATEGORIES_ENABLED = true`, b0f67a1). Everything written before that date describes a
+three-category shop.
+
+**A hand-written nav is a claim about scope in exactly the same way**, and it has no mechanism for
+noticing that the shop grew.
+
+#### ★★★ WHY THE SWEEP MISSED IT: THE SIGNATURE ASSUMED THE BARE TRIPLE
+
+The sweep looked for the literal **skincare / makeup / hair** set. **`savings-hub.html` carries
+K-Beauty and Savings Hub alongside it**, so it is not the bare triple a grep matches.
+
+> **A SIGNATURE THAT WORKS ON THREE SURFACES AND FAILS ON THE FOURTH BECAUSE THE FOURTH HAS EXTRA
+> ITEMS.** The pattern encoded *what the frozen navs looked like on the pages already found*, and a
+> superset is invisible to it. **Adding an item to a stale nav hides it from the search for stale
+> navs.**
+>
+> It is item 539's class again: a pattern pinned to an assumed output shape, returning a clean zero.
+
+#### THE SCOPE, MEASURED 2 SEPTEMBER
+
+**24 static files carry a hand-written nav. 19 are frozen. 5 are current.**
+
+```
+FROZEN (19)   savings-hub.html, about.html, privacy.html, terms.html,
+              work-with-us.html, and 14 of the 18 articles
+CURRENT (5)   index.html, and the four supplement articles
+```
+
+**Each was copied from a template at a different time, so they may have drifted from each other as well
+as from `SiteNav`.** The 19 are not assumed identical; that is a second measurement nobody has taken.
+
+#### ★★★ THE ITEM'S CENTRE: THE FOURTH INSTANCE ARRIVED TONIGHT, FROM MY OWN HAND
+
+**`public/articles/supplement-starter-protein-creatine.html`, published two hours ago, is in the frozen
+19** -- added while this item was being written.
+
+> **AN ARTICLE ABOUT SUPPLEMENTS, SHIPPED WITH A NAV THAT DOES NOT LINK TO SUPPLEMENTS**, produced by
+> following a documented five-step procedure **correctly**. **The procedure is right. The file it
+> starts from is four categories out of date.**
+
+`docs/article-template.html` carries the Stage-1 triple and no Fragrance, Bath & Body or Supplements.
+Every article built from it inherits a nav that was accurate on 28 June.
+
+> **★★★ THAT IS A WRITER PRODUCING DEFECTS AT THE RATE THE TEMPLATE IS COPIED**, which is item 435's
+> shape with a documented process standing in front of it.
+>
+> Item 435: a column was backfilled to zero and **the importer refilled it, 654 to 0 to 192**, because
+> the function that wrote the defect was never changed. **The rate of return was the measure.** Here
+> the writer is a person following instructions, and the instructions are correct at every step.
+>
+> **A PROCESS DOCUMENT MAKES THE DEFECT HARDER TO SEE, NOT EASIER.** A wrong step invites doubt. **A
+> right step performed on a stale source produces a defect that looks like compliance** -- and looked
+> like compliance to me, tonight, while writing the item about it.
+
+**Fixing the 19 without fixing the template clears a symptom whose writer is unchanged**, and the rate
+of return would be one per article published.
+
+#### ★★ AND THE PARITY TEST GUARDS THE ONE STATIC NAV NOBODY CAN REACH
+
+`lib/__tests__/nav-parity.test.ts` compares `components/SiteNav.tsx` against the two nav blocks in
+**`public/index.html`** and nothing else.
+
+```
+/index.html   308 -> /        (item 515, closed 31 August)
+```
+
+**Both files still exist, so the test runs and compares live files. It is not erroring and it is not
+lying.** The question is what its green means.
+
+> **★★★ THE INVERSION IS EXACT.** `public/index.html` is **the only static nav the test guards, the
+> only one that is current, and the only one that is unreachable.** The nineteen that are frozen are
+> also the nineteen that are served, and not one of them is compared to anything.
+>
+> **The test is green about the file that cannot be wrong in a way a visitor could see.**
+
+**A parity test's reference copy is an assumption about which artefact matters**, and item 515's
+redirect changed the answer without touching the test. **Neither half knew about the other.**
+
+*Whether the test should point at the served files, or at `SiteNav` alone, or be retired in favour of
+one nav, is not decided here.*
+
+#### THREE MEASUREMENTS OWED, RECORDED AS OWED RATHER THAN ASSUMED
+
+**1. THE 19 ARE NOT KNOWN TO AGREE WITH EACH OTHER.** What was measured is that each disagrees with
+`SiteNav`. **That is a different fact.**
+
+> Eighteen articles copied from a template at eighteen different moments **may carry several different
+> stale navs**, and "the frozen nav" is a phrase that assumes one. **Nothing has compared them to each
+> other**, and a fix scoped to "restore the nav" cannot be written until somebody knows whether there
+> is one nav to restore or five.
+
+**2. WHETHER THE TEMPLATE IS THE ONLY SOURCE.** The five current files got their navs somehow and the
+mechanism is unrecorded. **If a second path exists, fixing the template leaves it open.**
+
+**3. WHAT THE PARITY TEST'S REFERENCE SHOULD BE.** Not a detail: **it decides what a fix has to
+satisfy.** Pointing it at the served files, at `SiteNav` alone, or retiring it in favour of a single
+nav are three different definitions of done.
+
+#### WHEN THIS RESUMES, THE ORDER IS FIXED
+
+> **TEMPLATE FIRST, THEN THE 19, THEN THE PARITY TEST'S REFERENCE.**
+
+**The template first**, because every hour it is unchanged is another possible instance, and because
+fixing 19 files first means fixing 20 later. **The 19 second**, once measurement 1 says whether they
+are one problem or several. **The reference last**, because it defines what done means, and answering
+it first would be deciding the shape of a fix nobody has scoped.
