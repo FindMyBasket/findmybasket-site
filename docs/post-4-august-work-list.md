@@ -46294,6 +46294,12 @@ blip during a build is unmeasured, and that measurement is what would decide it.
 **Raised:** 2 September 2026, Phase 0.5 of the Awin Offers brief · **OPEN. THE PHASE 1 DECISION IS NOT
 MADE BY MEASUREMENT, because the measurement could not be taken.**
 
+> **⚠ CAUSE CORRECTED BY ITEM 574.** `pagination` carries only `pageSize` and defines no page number, so
+> the probe sent a parameter the API never had. Sixty identical pages were the correct response. And
+> `pagination.pageSize` itself returns 500. **The lesson stands; the cause was our request, not their
+> paging.**
+
+
 ```
 pagination : {"page":1,"pageSize":200,"total":30105}
 pages walked          : 60
@@ -46398,6 +46404,11 @@ has never been shown to work. **Item 569's shape in the payload rather than in a
 **Raised:** 2 September 2026, Phase 0.5, question 9 · **OPEN. This decides how Phase 3 may present an
 offer, and it is worse than a missing field.**
 
+> **⚠ CORRECTED BY ITEM 574.** `voucher.code` is null **when there is no membership with the
+> advertiser** -- documented, and every sampled row was a not-joined advertiser. On the joined
+> population 27 of 93 carry a code. **The schema was not ambiguous; our reading of it was.**
+
+
 The five delivery-mentioning offers on page one. Four are Secret Sales:
 
 ```
@@ -46449,3 +46460,164 @@ classified, however obviously delivery-related the wording appears."*
 **They are also not ours.** Secret Sales is not among our 20 joined advertisers, so they could never be
 served. **Their value is as a fixture, not as inventory** -- and a fixture drawn from the real feed is
 the thing section 4 asks for and could not have written.
+
+---
+
+### 574. The joined population is 93 offers, five are real delivery offers, and thirteen are one footnote
+
+**Raised:** 2 September 2026, Phase 0.5 with the documented filters · **THE PHASE 1 DECISION, MADE BY
+MEASUREMENT.** · Corrects items 572 and 573.
+
+`filters: {"membership":"joined"}`, one call, no pagination.
+
+```
+total reported          93
+rows returned           93        complete, distinct ids 93 of 93
+distinct advertisers    11        of our 20 joined programmes
+```
+
+**Nine of twenty joined advertisers have no offers at all.**
+
+#### ★★★ THE ITEM'S CENTRE: THE DELIVERY BUCKET IS 20 AND THE REAL COUNT IS FIVE
+
+**Thirteen of the twenty are Boots discount offers carrying an identical boilerplate footnote:**
+
+```
+title       : Save 22% on selected premium beauty & Fragrance with code SAVE22
+description : (*) Standard Delivery £3.95. Click & Collect £1.50 on orders under £15.
+terms       : T&C apply & online only.
+```
+
+**That footnote is not an offer. It is Boots' standing delivery terms, pasted into the description of
+every promotion they publish.**
+
+> **THE BRIEF'S "AN OFFER THAT MERELY MENTIONS DELIVERY IN PASSING" IS NOT AN EDGE CASE. IT IS THE
+> DOMINANT PATTERN IN THE POPULATION WE CAN ACTUALLY USE**, at 13 of 20, and it is boilerplate rather
+> than prose, so it will recur on every future Boots offer without variation.
+
+**AND IT CARRIES EXTRACTABLE NUMBERS, WHICH IS THE HARM.** A threshold extractor reading that
+description finds **£3.95** and **£15**.
+
+```
+Boots, in our retailers table   tiered, cost 3.95, threshold 25.00
+the footnote's numbers          3.95, and 15
+```
+
+> **A CLASSIFIER THAT EXTRACTED THE FOOTNOTE WOULD SET BOOTS' FREE-DELIVERY THRESHOLD TO 15 AND BE
+> WRONG IN THE DIRECTION THAT MAKES BOOTS WIN BASKETS IT SHOULD NOT.** The £15 is a Click & Collect
+> floor, not a delivery threshold, and nothing in the text distinguishes them but the words either
+> side.
+>
+> **This is the whole of Phase 2's risk, demonstrated on real data before anything was built** -- and
+> the brief was right to forbid inference from partial matches, because a partial match is exactly what
+> this is.
+
+**BOTH EXTRACTABLE NUMBERS ARE WRONG, AND THEY ARE WRONG DIFFERENTLY.** The £3.95 is Boots' real cost
+and would be harmless. **The £15 is a Click & Collect floor**, a different product with a different
+meaning, sitting in the same sentence. **Nothing distinguishes them but the words either side.**
+
+> **★★★ THE BRIEF CALLED "MENTIONS DELIVERY IN PASSING" AN EDGE CASE TO REFUSE. IT IS THE DOMINANT
+> PATTERN IN THE USABLE POPULATION.**
+>
+> And it is **boilerplate rather than prose**, which changes what kind of problem it is. Prose varies,
+> so a classifier meeting it fails unpredictably and occasionally. **Boilerplate is identical every
+> time**: it will match the same way on every Boots offer published from now on, so a classifier that
+> gets it wrong gets it wrong systematically, on the retailer with the most offers in the set.
+>
+> **IT IS THE STRONGEST ARGUMENT THE BRIEF MADE WITHOUT KNOWING IT.** Section 4's refusal clause was
+> written as caution about an unusual case. **The measurement shows it was the main case**, and the
+> brief would have been right for a reason its author had not seen.
+
+#### THE FIVE REAL ONES, AND THEY ARE THE BUILD
+
+```
+16  Gorgeous Shop  : Unlock Unlimited Free Delivery
+17  Gorgeous Shop  : FREE UK Saver Delivery on orders over £25
+18  Beauty Flash   : FREE UK Express Delivery (Next Working Day) on orders over £125
+19  Beauty Flash   : FREE UK Saver Delivery on orders over £25
+20  Perfume Click  : Free Delivery
+```
+
+**Three carry an extractable threshold in the title. Two do not.**
+
+- **17 and 19** are the clean case: a number, a currency, an "over". Both retailers are live and tiered
+  in our table, so an override is computable.
+- **18** is extractable and is **a different service tier**, next-day rather than standard. Applying it
+  to a basket priced on standard delivery would be wrong at £125.
+- **16 and 20** are exactly what section 4 refuses: *"Unlock Unlimited Free Delivery"* and *"Free
+  Delivery"*, with no threshold, no scope and no amount.
+
+> **SO THE REAL YIELD IS TWO OFFERS, FROM TWO RETAILERS, BOTH TIERED AT £25 TODAY.** Gorgeous Shop is
+> `tiered/2.95/25.00` and Beauty Flash is `tiered/2.95/25.00`. **Both offers say free over £25, which
+> is what the table already says.** The override would change nothing for either.
+
+#### ★★★ THE PHASE 1 DECISION, AND THE MEASUREMENT MADE IT
+
+**Two candidate offers, and both are already reflected in the stored terms.** A build that retrieved,
+stored, refreshed, classified and integrated offers would today change **zero** basket outcomes.
+
+**That is not an argument against the work. It is the measurement the brief asked for**, and it says
+the value is entirely in the future population rather than the current one.
+
+#### DECIDED: PHASES 1 TO 3 ARE HELD, BY MEASUREMENT RATHER THAN ARGUMENT
+
+**The brief asked for a number and the number answers itself.** Two candidate offers, both already
+reflected in stored terms, zero basket outcomes changed.
+
+#### ★★ WHAT THE HOLD IS NOT, STATED SO IT IS NOT MISREAD LATER
+
+- **NOT that the mechanism is wrong.** An offer overriding a delivery threshold for one basket
+  calculation is sound, and item 572's Q12 finding stands: `deliveryFor` takes a terms object rather
+  than a retailer id, so the override needs no restructuring of the option builders.
+- **NOT that delivery offers are the wrong target.** They remain the one offer class that is
+  structurally unambiguous and lands on the differentiator. Section 1's reasoning is unchanged.
+- **NOT that the API is unusable.** One filtered call returns the exact population, complete, with a
+  documented exclusivity filter. **The instrument works; the material is thin.**
+
+> **THE REASONING HOLDS AND THE POPULATION DOES NOT JUSTIFY THE BUILD TODAY.** Those are separable, and
+> collapsing them would retire a correct design on the strength of a temporary count.
+
+**REVISIT WHEN: a joined advertiser runs a threshold-moving offer that is not already in the table.**
+That is one condition, checkable in one call, and it is the whole trigger.
+
+#### CORRECTIONS TO 572 AND 573
+
+**572's pagination finding is superseded in cause, not in lesson.** `pagination` carries **only**
+`pageSize` and there is no page number, so the probe was sending a parameter the API never defined and
+**sixty identical pages were the correct response.**
+
+**AND `pagination.pageSize` RETURNS 500, WHICH THE DOCUMENTATION DID NOT PREDICT.** It is documented,
+with a stated range of 10 to 200, and it fails alone and in combination:
+
+```
+baseline, empty body        200   rows=200  total=30,104
+pagination.pageSize only    500   Internal Server Error
+filters only                200   rows=93   total=93
+pagination + filters        500   Internal Server Error
+```
+
+> **THE ISOLATION MATRIX IS WHAT ESTABLISHED IT**, and the method is the part worth keeping: vary **one
+> element at a time from a known-good baseline** and report every result, rather than trying variations
+> until one returns 200.
+>
+> **GUESSING WOULD HAVE FOUND A WORKING SHAPE AND NEVER LEARNED WHICH ELEMENT FAILED.** Dropping
+> `pagination` and keeping `filters` returns 200 either way -- so the correct request and the correct
+> *understanding* are reachable by different routes, and only one of them tells you that a documented
+> parameter is broken. **That is a finding to send back to Awin, and guessing would have discarded
+> it.**
+
+**573's `voucher.code` finding is corrected and survives weakened.** The documentation says the code is
+null **when there is no membership with the advertiser**. Every voucher row in the page-one sample was
+a not-joined advertiser, so null meant *not joined*. **On the joined population, 27 of 93 carry a
+code.**
+
+> **THE SCHEMA WAS NOT AMBIGUOUS. OUR READING OF IT WAS.** The field is documented and we inferred its
+> meaning from data instead of reading it -- **and the inference was wrong in the direction that would
+> have misled a user**, because the probe printed *"applies automatically"* on offers requiring a code.
+>
+> **What survives: a null still reads as "no code" to any caller who has not read the docs**, and our
+> own probe was that caller. The handling stands, the reasoning for it changes.
+
+**Criterion 25 is now answerable directly.** `filters.exclusiveOnly: true` returns **1 offer** across
+the whole population, and on the joined set `voucher.exclusive` is true on exactly one row. **No
+waiting for a positive case: the filter asks the question.**
