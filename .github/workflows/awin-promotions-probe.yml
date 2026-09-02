@@ -34,6 +34,11 @@ name: awin-promotions-probe (read-only)
         required: false
         default: '{"membership":"joined"}'
         type: string
+      dump_all:
+        description: 'Print every row verbatim (advertiser, title, description, terms, type, code, dates). 1 to enable.'
+        required: false
+        default: '0'
+        type: string
       page_size:
         description: 'pagination.pageSize, 10 to 200. The ONLY documented pagination control; there is no page number.'
         required: false
@@ -56,4 +61,5 @@ jobs:
           PROBE_METHOD: ${{ inputs.method }}
           PROBE_FILTERS: ${{ inputs.filters }}
           PROBE_PAGE_SIZE: ${{ inputs.page_size }}
+          PROBE_DUMP_ALL: ${{ inputs.dump_all }}
         run: node scripts/awin-promotions-probe.mjs
