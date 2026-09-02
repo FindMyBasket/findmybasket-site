@@ -30,15 +30,19 @@ const path = PATH_TMPL.replace('{publisherId}', String(PUB)).replace('{publisher
 const url = `https://api.awin.com${path.startsWith('/') ? path : '/' + path}`;
 console.log(`${METHOD} ${url}\n`);
 
+const call = async (body) => {
+  const r = await fetch(url, {
+    method: METHOD,
+    headers: { Authorization: `Bearer ${TOKEN}`, Accept: 'application/json', 'Content-Type': 'application/json' },
+    ...(METHOD === 'POST' ? { body: JSON.stringify(body ?? {}) } : {}),
+  });
+  return { r, t: await r.text() };
+};
+
 const t0 = Date.now();
 let res, text;
 try {
-  res = await fetch(url, {
-    method: METHOD,
-    headers: { Authorization: `Bearer ${TOKEN}`, Accept: 'application/json', 'Content-Type': 'application/json' },
-    ...(METHOD === 'POST' ? { body: JSON.stringify({}) } : {}),
-  });
-  text = await res.text();
+  ({ r: res, t: text } = await call({}));
 } catch (e) {
   console.log('=== Q2 CREDENTIAL / TRANSPORT ===');
   console.log(`  TRANSPORT FAILURE, the question never reached Awin: ${e.message}`);
@@ -66,9 +70,43 @@ if (!res.ok) { console.log(`\n  non-2xx. body (first 600): ${text.slice(0, 600)}
 let json;
 try { json = JSON.parse(text); } catch { console.log('  body is not JSON. First 600:'); console.log(text.slice(0,600)); process.exit(0); }
 
-const rows = Array.isArray(json) ? json : (json.data ?? json.promotions ?? json.results ?? []);
+let rows = Array.isArray(json) ? json : (json.data ?? json.promotions ?? json.results ?? []);
 console.log(`\n=== Q3 COUNT ===\n  top-level type : ${Array.isArray(json) ? 'array' : 'object[' + Object.keys(json).join(', ') + ']'}`);
-console.log(`  offers returned: ${Array.isArray(rows) ? rows.length : 'not an array'}`);
+console.log(`  page 1 rows    : ${rows.length}`);
+console.log(`  pagination     : ${JSON.stringify(json.pagination ?? null)}`);
+
+// ── PAGE THROUGH. The page-1 counts are not the population and must not be reported as
+//    one. The pagination object's shape is printed above rather than assumed; this walks
+//    whichever of the common shapes it turns out to be, and STOPS AND SAYS SO if it is
+//    none of them, rather than reporting a partial view as complete.
+const pg = json.pagination ?? {};
+const total = pg.total ?? pg.totalResults ?? pg.count ?? null;
+const perPage = pg.limit ?? pg.perPage ?? pg.pageSize ?? rows.length;
+let pagesWalked = 1, paginationUnderstood = false;
+if (total !== null && perPage > 0) {
+  paginationUnderstood = true;
+  const pages = Math.ceil(total / perPage);
+  console.log(`  total reported : ${total}  ->  ${pages} pages of ${perPage}`);
+  for (let p = 2; p <= pages && p <= 60; p++) {
+    let body = { page: p };
+    if (pg.offset !== undefined) body = { offset: (p - 1) * perPage, limit: perPage };
+    const { r, t } = await call(body);
+    if (!r.ok) { console.log(`  page ${p}: HTTP ${r.status} -- STOPPED. Counts below cover ${pagesWalked} page(s).`); break; }
+    let j; try { j = JSON.parse(t); } catch { console.log(`  page ${p}: unparseable -- STOPPED.`); break; }
+    const more = Array.isArray(j) ? j : (j.data ?? []);
+    if (!more.length) { console.log(`  page ${p}: empty, stopping.`); break; }
+    rows = rows.concat(more); pagesWalked = p;
+  }
+} else {
+  console.log('  *** PAGINATION SHAPE NOT RECOGNISED. The counts below are PAGE ONE ONLY.');
+  console.log('  *** Reporting them as the population would be the error this line exists to prevent.');
+}
+console.log(`  pages walked   : ${pagesWalked}`);
+console.log(`  rows collected : ${rows.length}${paginationUnderstood ? '' : '   (PAGE ONE ONLY)'}`);
+
+const joined = rows.filter(r => r?.advertiser?.joined === true);
+console.log(`\n  offers from JOINED advertisers : ${joined.length} of ${rows.length}`);
+console.log(`  distinct joined advertisers    : ${new Set(joined.map(r => r.advertiser.id)).size}`);
 
 // ── Q1 schema, field by field, as returned ─────────────────────────────────────────
 const shape = (v) => Array.isArray(v) ? 'array' : v === null ? 'null' : typeof v;
@@ -96,6 +134,15 @@ const F = (r, ...names) => { for (const n of names) { const v = n.split('.').red
 
 // ── Q4 exclusivity / attribution ───────────────────────────────────────────────────
 console.log('\n=== Q4 EXCLUSIVITY, ATTRIBUTION, ASSIGNMENT ===');
+const exclTrue = rows.filter(r => r?.voucher?.exclusive === true);
+const codeSet  = rows.filter(r => r?.voucher?.code != null && String(r.voucher.code).trim() !== '');
+console.log(`  rows with voucher.exclusive === true : ${exclTrue.length}`);
+console.log(`  rows with a non-null voucher.code    : ${codeSet.length}`);
+if (!exclTrue.length && !codeSet.length) {
+  console.log('  *** CRITERION 25 CAN BE NEITHER SATISFIED NOR REFUTED FROM THIS POPULATION.');
+  console.log('  *** The fields exist and no row exercises them. That is a finding, not a pass.');
+}
+codeSet.slice(0, 10).forEach(r => console.log(`    code "${r.voucher.code}"  exclusive=${r.voucher.exclusive}  ${r.advertiser?.name}`));
 const excl = [...fields.keys()].filter(k => /exclusiv|assign|publisher|attribut|restrict|private|bespoke/i.test(k));
 if (!excl.length) console.log('  NO FIELD relating to exclusivity, assignment or publisher attribution.');
 else for (const k of excl) {
@@ -120,9 +167,18 @@ const textOf = r => [F(r,'title'),F(r,'description'),F(r,'terms'),F(r,'voucherCo
 const DELIVERY = /\b(free\s+(uk\s+)?(delivery|shipping|postage)|delivery|shipping|postage|p&p)\b/i;
 const DISCOUNT = /(\d+\s*%|£\s*\d|\bsave\b|\boff\b)/i;
 const buckets = { delivery: [], discount: [], other: [] };
+const jb = { delivery: [], discount: [], other: [] };
+joined.forEach(r => { const t = textOf(r);
+  if (DELIVERY.test(t)) jb.delivery.push(r); else if (DISCOUNT.test(t)) jb.discount.push(r); else jb.other.push(r); });
 rows.forEach(r => { const t = textOf(r);
   if (DELIVERY.test(t)) buckets.delivery.push(r); else if (DISCOUNT.test(t)) buckets.discount.push(r); else buckets.other.push(r); });
-console.log('\n=== Q7 COMPOSITION (all returned offers) ===');
+console.log('\n=== Q7 COMPOSITION, JOINED ADVERTISERS ONLY (what the brief asks for) ===');
+console.log(`  delivery-mentioning : ${jb.delivery.length}`);
+console.log(`  price discount      : ${jb.discount.length}`);
+console.log(`  everything else     : ${jb.other.length}`);
+jb.delivery.forEach((r,i) => console.log(`    joined delivery ${i+1}: ${r.advertiser?.name} :: ${r.title}`));
+
+console.log('\n=== Q7 COMPOSITION (all returned offers, joined or not) ===');
 console.log(`  delivery-mentioning : ${buckets.delivery.length}`);
 console.log(`  price discount      : ${buckets.discount.length}`);
 console.log(`  everything else     : ${buckets.other.length}`);
