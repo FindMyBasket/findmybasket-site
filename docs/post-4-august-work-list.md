@@ -45457,3 +45457,70 @@ comparison is favourable.** The rule is about the adjacency, not about the numbe
 
 **What the Spotlight may carry:** the brand's own story, its assets, the range, and outbound product
 links. **What it may not:** any number that came from the comparison engine, and any route into it.
+
+---
+
+### 560. The honest paragraph was specified in the frozen-state form, and rank is the most fragile version of it
+
+**Raised:** 2 September 2026, drafting the Optimum Nutrition Edit · **CLOSED — the copy is written in
+the structural form.** · **A CORRECTION TO AN INSTRUCTION, recorded because the instruction was right
+about the substance and wrong about the form.**
+
+**The brief asked for the ranking to be named in the copy: *21st, 74th, 75th and 76th of 82*.** The
+substance was correct and is the whole point of the paragraph. **The form was the one
+`docs/standing-rule-frozen-catalogue-state.md` exists to refuse** — it covers *"prices, retailer names,
+product IDs, feed IDs, merchant IDs, delivery thresholds and costs, and **counts** of any of those"*,
+with only two safe forms: **read it at request time, or state the structure not the values.**
+
+> **THE PARAGRAPH AS SPECIFIED WOULD HAVE BEEN STALE WITHIN WEEKS**, in an article whose entire purpose
+> is being trusted about a number.
+
+#### ★★★ RANK IS THE MOST FRAGILE WAY TO SAY IT, AND THAT IS THE FINDING
+
+| | moves when |
+|---|---|
+| **ON's rank on the page** | **any product is added or removed** — including one nobody buys, at any price, from any brand |
+| **ON's price per 100g** | ON's price moves, or Boots' does |
+
+**A rank is a statement about every other row on the page.** It is the most sensitive quantity
+available and the one that looks most like a hard fact.
+
+#### THE EVIDENCE IS SIX DAYS OLD AND WAS ALREADY IN THE REGISTER
+
+```
+27 Aug  item 441 measured /compare/whey-protein   67 ranked
+ 2 Sep  the same page                             82 ranked      +22%
+```
+
+**Healf's onboarding moved it, silently, and nothing on the page or in the register announced it.** No
+ON price changed. No ON product changed. **Every ON rank on that page moved anyway** — which is item
+551's mechanism arriving in the copy layer: *the input that moves it is the roster.*
+
+> **AN ARTICLE NAMING "21st OF 82" WOULD HAVE BEEN WRONG BY THE NEXT ONBOARDING**, and the next
+> onboarding is the strategy. **The claim would have been falsified by the company succeeding.**
+
+#### ★★ THE STRUCTURAL FORM IS ALSO THE MORE TRUTHFUL ONE, WHICH IS NOT THE USUAL TRADE
+
+The standing rule is normally a durability argument: state the structure because values drift. **Here
+the structural form is more accurate on the day it is written, not merely later.**
+
+> *"In the bottom half of every whey we track, and the Clear Whey range at the very bottom"* is what a
+> reader needs and what remains true. **"21st of 82" is precise about a quantity whose precision is
+> spurious** — it implies the gap between 21st and 22nd means something, when the two can be a penny
+> apart, and it invites a reader to check a number that will have moved.
+>
+> **PRECISION AND ACCURACY POINT IN OPPOSITE DIRECTIONS HERE**, and the rule that looks like a
+> durability constraint is doing editorial work.
+
+#### THE SAME CATCH, APPLIED TWICE MORE IN THE SAME DRAFT
+
+- **The size clause** — *"from 240g tubs to a 930g twin-pack"* was the measured correction to a wrong
+  claim, and it is frozen state: **those sizes are Boots' assortment, not ON's range.** Dropped
+  entirely rather than corrected.
+- **The flavour count** — the superlative *"more flavours than anyone else keeps on a shelf"* is
+  unsupportable (we hold no competitor's full range). **The proposed fix was to name the count we can
+  see, and that fix reintroduces the defect this item is about.** Taken as *"in a long list of
+  flavours"*.
+
+> **★ A FIX THAT TRADES AN UNVERIFIABLE CLAIM FOR A PERISHABLE ONE IS NOT A FIX.** Both fail; they
+> fail on different days. **The structural form is the only version that fails on neither.**
