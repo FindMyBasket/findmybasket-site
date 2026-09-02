@@ -63,16 +63,24 @@
      cells -- the results -- so the prompt would land BELOW the entire
      results block, which is the position it is leaving. */
   .rb-layout {
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto auto 1fr;
   }
 
   .rb-col-left  { grid-column: 1; grid-row: 1; }
-  .rb-col-right { grid-column: 2; grid-row: 1 / span 2; }
+  .rb-col-right { grid-column: 2; grid-row: 1 / span 3; }
 
   .rb-layout > .rb-save-card {
     grid-column: 1;
     grid-row: 2;
     margin-top: 0;
+  }
+
+  /* The disclosure follows the prompt into column 1 rather than staying in the
+     results column, so item 245's value-commitment-disclosure order reads the
+     same down the left column as it does down the mobile stack. */
+  .rb-layout > .rb-results-disclosure {
+    grid-column: 1;
+    grid-row: 3;
   }
 
   /* STICKY IS DROPPED FROM THE ROUTINE LIST, DELIBERATELY, AND IT IS A TRADE.

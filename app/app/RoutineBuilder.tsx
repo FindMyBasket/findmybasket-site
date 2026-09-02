@@ -1504,18 +1504,6 @@ export default function RoutineBuilder() {
 
 
 
-            {/* DISCLOSURE LAST. It was the first child of the results block, above
-                the cards. It is a legal/truststatement about how the links are
-                monetised, not a piece of the answer, and putting it first delayed
-                the result to make a declaration nobody arrived for. Below the cards
-                and below the save prompt it is still on the screen, still before any
-                outbound click, and no longer standing in front of the value.
-                Item 245, phase 0.5. */}
-            {results && results.length > 0 && (
-              <div className="rb-results-disclosure">
-                <AffiliateDisclosure variant="banner" />
-              </div>
-            )}
 
             {/* The per-item "Also check Amazon / eBay" links this note described were
                 REMOVED in phase 0.3. Note kept, corrected, rather than deleted: it is
@@ -1620,6 +1608,28 @@ export default function RoutineBuilder() {
                     <a href="/account">Have an account? Sign in</a>
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* THE DISCLOSURE MOVED OUT WITH THE PROMPT, AND HAD TO (item 556).
+                Item 245 phase 0.5 fixed the order as VALUE, THEN COMMITMENT, THEN THE
+                DISCLOSURE. Lifting only the save card out of the results column left the
+                disclosure behind it in source order, which pushed the prompt 262px DOWN at
+                390 -- a mobile regression produced by a desktop change, on the surface the
+                change was explicitly not supposed to touch. Measured, not reasoned about.
+
+                Both are grid children now: source order keeps 245's sequence at mobile, and
+                the CSS places both in column 1 at desktop. */}
+            {/* DISCLOSURE LAST. It was the first child of the results block, above
+                the cards. It is a legal/truststatement about how the links are
+                monetised, not a piece of the answer, and putting it first delayed
+                the result to make a declaration nobody arrived for. Below the cards
+                and below the save prompt it is still on the screen, still before any
+                outbound click, and no longer standing in front of the value.
+                Item 245, phase 0.5. */}
+            {results && results.length > 0 && (
+              <div className="rb-results-disclosure">
+                <AffiliateDisclosure variant="banner" />
               </div>
             )}
           </div>
