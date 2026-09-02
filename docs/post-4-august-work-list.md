@@ -44380,6 +44380,15 @@ separates items by **whether they can decay**.
 > none has been written. What is recorded is the question a check would have to ask, and that it is not
 > the same question 545 identified.
 
+**SO THE TENSE TEST IS NECESSARY AND NOT SUFFICIENT.** It correctly excludes the historical items, which
+is most of the register and the reason item 545 declined to retrofit 502 headers. **It does not
+separate a present-tense claim that can be checked from one that merely sounds like it can.**
+
+> **A CHECK WOULD HAVE TO ASK BOTH QUESTIONS: *can this decay*, and *could this ever have been wrong*.**
+> The first identifies the input set. **The second is what makes a member of that set answerable**, and
+> an item passing the first while failing the second is worse than an unmarked one — it is inside the
+> checkable population, reads as verified every time it is read, and no run can return a verdict on it.
+
 **IT DOES NOT MOVE ITEM 546's POINT 5, AND NAMING GetItems AS THE ALTERNATIVE IS WHY.** GetItems is the
 route already in production: live-only, buy-box, **no `deliveryInfo`** (item 199), and a price that
 cannot be held beyond 24 hours. **Amazon has confirmed that the route with the 24-hour ceiling is the
@@ -44411,8 +44420,9 @@ it was attached to and is the part of that item worth carrying forward.
 
 ### 550. A monitor whose coverage depends on a fact nobody has checked
 
-**Raised:** 2 September 2026, out of item 546's credential question · **OPEN. Robbie settles it in the
-Vercel dashboard — five minutes, and nothing here can do it.** · **FILED BECAUSE IT SURVIVED FOUR
+**Raised:** 2 September 2026, out of item 546's credential question · **OPEN — Robbie is reading the
+credential ID now and will report its last four characters against the laptop's `e57d`.** Nothing here
+can do it. · **FILED BECAUSE IT SURVIVED FOUR
 EXCHANGES BY BEING MENTIONED**, which is this file's founding defect and is dealt with below.
 
 **Two Creators credential pairs exist under one Associates account (`findmybasket-21`).** The laptop
@@ -44467,19 +44477,37 @@ statement about one `.env` file whose relationship to the live site nobody has e
 is also a statement about production is the open question, and **it has been read as the stronger
 claim throughout**, including in the README section written on 1 September.
 
-#### ★★ WHY THIS IS AN ITEM AND NOT A NOTE, WHICH IS THE PART WORTH KEEPING
+#### ★★★ THE ITEM'S CENTRE: IT SURVIVED IN THE PLACE MOST LIKELY TO CATCH IT
 
-**It was raised, restated and agreed four times across two days without being written down.** Every
-mention ended with the same one-line disposition — *five minutes in the Vercel dashboard* — and each
-one felt like a resolution because it had been said out loud again.
+**Raised, restated and agreed four times across two days** — in four exchanges whose entire subject was
+the Amazon integration's record, **two of which added items to this file** — without once being
+written down.
 
 > **THAT IS THIS FILE's FOUNDING DEFECT, VERBATIM:** *"a record believed to exist because discussing it
 > repeatedly produces the same familiarity as having written it. Nothing surfaces its absence, because
 > there is no artefact to go stale."*
+
+**THE MECHANISM IS THE PART THAT GENERALISES, AND IT IS NOT FAMILIARITY.** Every mention ended with the
+same one-line disposition: *five minutes in the Vercel dashboard.* **Repeating a disposition feels like
+resolving it.** The sentence is short, it is correct, it names an owner and an action, and saying it
+again produces the sensation of having dealt with the thing rather than of having described it again.
+
+> **★★★ A THING THAT HAS AN OBVIOUS NEXT STEP IS THE THING LEAST LIKELY TO BE WRITTEN DOWN, BECAUSE THE
+> STEP STANDS IN FOR THE RECORD.**
 >
-> **AND IT SURVIVED IN THE ONE PLACE MOST LIKELY TO CATCH IT** — four exchanges whose entire subject
-> was the Amazon integration's record, two of which added items to this file, while the outstanding
-> question travelled alongside them as conversation.
+> **This inverts the intuition the register was built on.** The absent-record class was understood as
+> *vagueness* surviving because nothing pinned it — items 1, 3, 4 and 5 had no detail, which is why
+> they were recited. **This is the opposite case and it survived longer:** a question with a known
+> answer, a known owner, a known five-minute action, and no artefact anywhere.
+>
+> **THE OBVIOUSNESS IS LOAD-BEARING IN THE WRONG DIRECTION.** An item nobody knows how to close gets
+> written down because writing it is the only available move. **An item everybody knows how to close
+> gets deferred to the close**, and the close never happens because nothing is holding it.
+
+**FOUR MENTIONS, TWO OF WHICH SHIPPED ITEMS.** The exchanges that added items 546-549 to this file
+carried this question alongside them as conversation. **Proximity to the register is not protection**,
+and it may be the reverse: a session actively writing records feels like a session in which everything
+discussed is being recorded.
 
 #### WHAT CLOSES IT
 
@@ -44495,3 +44523,50 @@ secret needs to move.**
 
 **Either way the answer is worth recording, because "we checked and they match" and "nobody has
 checked" are the same green light from outside.**
+
+#### THE README's TWO ADDITIONS HAVE NO COMMIT BEHIND THEM
+
+`~/amazon-api-watch/README.md` gained the eligibility section and the feeds reason on 1 September.
+**That directory is not a git repository**, so both live on disk only — **no diff, no history, no CI,
+no review, and no second copy.** They sit beside a work list that has two integrity checks running on
+every push.
+
+> **THE DURABILITY GAP HAS MOVED FROM THE CREDENTIALS TO THE REASONING.** The SDK was relocated on
+> 3 August precisely because `~/Downloads` is *"a directory people empty"*, and the argument was about
+> a secret. **The same directory now holds the only copy of the analysis that says what the watcher
+> measures and why its feeds column reads the way it does** — and unlike the credentials, that cannot
+> be reissued.
+
+**Not proposed here.** The options (a repo, a copy into `docs/`, or accepting it) differ in what they
+assert about where that file's reasoning belongs, and that is a decision rather than a tidy-up.
+
+#### CODA: THE ALLOCATION CHECK I RAN IS NOT THE ONE THAT WORKS
+
+Before allocating 546 I checked remote **branches** for a colliding heading, found
+`item-546-index-answers`, confirmed it adds no `### 546.`, and proceeded. **That is the half-check item
+118 names as the one that keeps being skipped.**
+
+Item 118's rule: *"the check that actually works is `grep` on `main` AND `gh pr list --state open` —
+and the second is the one that keeps being skipped, because a number that does not exist yet is
+invisible to every tool except the PR list."*
+
+**The answer was right and the method was not.** `gh pr list --state open`, run afterwards, returned
+one PR — this one. **There was no other open PR to collide with, so an incomplete check and a complete
+check returned the same value.**
+
+> **★ THAT IS ITEM 548's SHAPE APPLIED TO MY OWN METHOD.** A check run against an empty population is
+> indistinguishable from a check that works. **Getting the right answer is not evidence of having
+> asked the right question**, and a branch list is not a superset of a PR list — item 118 is on record
+> that it is precisely the wrong half.
+
+**AND THE COUNT IN THE PROMPT WAS WRONG IN BOTH DIRECTIONS, WHICH IS WORTH RECORDING RATHER THAN
+QUIETLY FIXING.** The framing offered was *"three collisions caught by reading and none by a check."*
+
+| | measured |
+|---|---|
+| collisions | **four**, in two days — item 118, all caught before merge |
+| caught by a check | **at least two.** Item 42's gap was *"detected by `scripts/check-worklist-contiguity.sh` on its first run"*; item 263 was caught because contiguity refused 264 |
+
+**The checks are not the passive half of this, and recording them as never having caught anything would
+have retired the wrong instrument.** What is true is narrower and still worth holding: **the PR-list
+half is the one that gets skipped**, and it got skipped again today.
