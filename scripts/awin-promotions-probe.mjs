@@ -43,8 +43,24 @@ const FILTERS = JSON.parse(process.env.PROBE_FILTERS || '{"membership":"joined"}
 const PAGE_SIZE = Number(process.env.PROBE_PAGE_SIZE || 200);
 console.log(`filters: ${JSON.stringify(FILTERS)}   pageSize: ${PAGE_SIZE}\n`);
 
+// ── `pagination` IS OMITTED, AND THAT IS MEASURED RATHER THAN PREFERRED ──────────────
+//
+// The isolation matrix settled it. From the known-good empty body, varying one element:
+//
+//   baseline, empty body            200   rows=200  total=30,104
+//   pagination.pageSize only        500   Internal Server Error
+//   filters only                    200   rows=93   total=93
+//   pagination + filters            500   Internal Server Error
+//
+// `pagination.pageSize` IS DOCUMENTED AND RETURNS 500. `filters` works alone. Sending the
+// documented pagination object is what broke the first filtered call, and the filter is
+// what makes pagination unnecessary anyway: 93 rows come back complete in one response.
+//
+// SET PROBE_SEND_PAGINATION=1 to reintroduce it if Awin fix it; the default is to omit.
+const SEND_PAGINATION = process.env.PROBE_SEND_PAGINATION === '1';
+
 const call = async (filters) => {
-  const body = { pagination: { pageSize: PAGE_SIZE }, filters };
+  const body = { ...(SEND_PAGINATION ? { pagination: { pageSize: PAGE_SIZE } } : {}), filters };
   const r = await fetch(url, {
     method: METHOD,
     headers: { Authorization: `Bearer ${TOKEN}`, Accept: 'application/json', 'Content-Type': 'application/json' },
