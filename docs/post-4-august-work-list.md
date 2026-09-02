@@ -45756,3 +45756,71 @@ now   The best price for each product on its own, across N retailers -- delivery
 >
 > **The inference was the whole point of 479's correction, and it was the half the copy did not
 > carry.** A ban forced a rewrite, and the rewrite says what the item always meant.
+
+---
+
+### 564. Final wording agreed in conversation, never written to the file, reported as applied
+
+**Raised:** 2 September 2026, opening the approved documents to publish them · **OPEN as a practice
+finding; the copy itself is fixed in the published artefacts.**
+
+**`Optimum_Nutrition_Brand_Spotlight_v2.docx` and `Supplement_Starter_Edit_v2.docx` were handed over as
+final, with five fixes applied. Four were absent.**
+
+| fix | in v2 |
+|---|---|
+| disclosure to "our own editorial choice" | **no**, still *"Products are chosen on merit"* |
+| "plus a Platinum Creatine Plus" cut | **no** |
+| routine-builder routing cut from the Spotlight | **no** |
+| "nearly every flavour" softened | **no** |
+| the honest paragraph | **yes** |
+
+**v2 is v1 plus the plant-based rename and the paragraph.** The other five were agreed in conversation,
+restated back, and never reached the documents.
+
+> **THE DECISION AND THE ARTEFACT DIVERGED, AND ONLY READING THE FILE FOUND IT.** Both parties believed
+> the fixes were applied: one had agreed them, the other had reported them as final wording. **The
+> belief was symmetric and the file was the only thing that disagreed.**
+
+#### ★★★ IT IS THE WEEK'S RECURRING SHAPE, IN A DOCX
+
+Every version of this finding this week has been the same: **a record and the thing it records, drifting
+apart, with nothing connecting them.**
+
+| | record said | reality |
+|---|---|---|
+| item 516 | homepage JSON-LD has a defect | the homepage had none |
+| item 552 | Healf is not onboarded | live, 4,986 priced rows |
+| item 558 | Optimum Nutrition has no feed (from a page) | true, but unmeasured until probed |
+| item 562 | the rule is unfindable | the article template states it |
+| **564** | **the fixes are applied** | **four of five were not** |
+
+> **THE ARTEFACT IS ALWAYS THE ONE THAT KNOWS.** In every instance the disagreement was resolvable in
+> seconds by opening the thing itself, and in every instance the confident statement came from
+> somewhere else. **A `.docx` is the same failure surface as a homepage or a migration file.**
+
+#### ★★ THE CHECK COULD NOT HAVE CAUGHT IT, AND SAID SO THIS AFTERNOON
+
+`scripts/check-banned-word.sh` would have flagged *"best-value whey"* in the Edit. It did not, because
+`.docx` files in `~/Documents` are not in the repository.
+
+**Item 563 recorded that limit hours earlier:**
+
+> *"It reaches only the repository. Article copy written in a document, a CMS or a PDF template is
+> outside it, **which is precisely where this rule was born.** The check covers the surface that
+> shipped the violation and not the surface the rule was written for."*
+
+> **A LIMIT RECORDED IN THE AFTERNOON AND DEMONSTRATED IN THE EVENING**, on the first artefact that
+> exercised it. **The check is not weaker than it looked; it is exactly as strong as it said it was**,
+> and the value of writing the limit down is that nobody had to rediscover it when the word appeared.
+
+**The banned word entered the repository only when the copy did**, at which point the check ran and the
+article passed clean. **The gap is the window between writing copy and committing it**, and nothing
+covers that window today.
+
+#### WHAT WAS DONE
+
+**The five fixes were applied to the copy at publication** rather than to the documents. `.docx` files
+in `~/Documents` are outside version control and are not the artefact of record; **the published row
+and the published file are.** The documents are left as they are, stale, rather than edited into
+agreement with something that now lives elsewhere.
