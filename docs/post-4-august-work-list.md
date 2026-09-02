@@ -46228,3 +46228,61 @@ specific checkable claims about the codebase, and two of them were wrong when me
 >
 > **Not proposed here**, because where a brief lives is a decision rather than a tidy-up. But the two
 > corrections this Phase 0 produced would have been a diff rather than a report.
+
+---
+
+### 571. A failed RPC and a truncated one are the same symptom, and the guard names the wrong cause
+
+**Raised:** 2 September 2026, from a Vercel build failure on PR #571 · **OPEN. Not fixed — the guard is
+right to throw and its message is wrong.** · **The build itself was transient and passed on retry.**
+
+```
+Error: Brand index looks truncated: 0 brands. Expected thousands.
+       Check fmb_brand_index() and the PostgREST row cap.
+Export encountered errors on following paths: /brands/all
+```
+
+**Re-measured minutes later: `jsonb_array_length(fmb_brand_index())` returns 3,060.** The function is
+healthy, was healthy, and the same commit built clean on retry. **The build could not reach the data,
+and nothing in the failure says so.**
+
+#### THE MECHANISM IS ONE DESTRUCTURING
+
+```js
+const { data } = await supabase.rpc('fmb_brand_index');
+const rows = ((data ?? []) as [...]).map(...)
+```
+
+**The error is discarded.** A failed call yields `data = null`, `rows = []`, `brands.length = 0`, and
+the guard fires with a message about truncation.
+
+| what happened | what the message says |
+|---|---|
+| the call failed and returned nothing | *"looks truncated… check the PostgREST row cap"* |
+| the call succeeded and returned 900 rows | *"looks truncated… check the PostgREST row cap"* |
+
+> **AN EMPTY RESULT AND A BROKEN INSTRUMENT MUST NOT LOOK THE SAME.** Item 22's finding, and item
+> 194's `cannot_run` contract, arriving on the build path. **The guard is correct to throw** -- a
+> brandless A-Z is worse than a failed deploy, which is the reasoning its own comment gives. **It is
+> the diagnosis that is wrong**, and it points the next reader at a row cap that had nothing to do
+> with it.
+
+#### ★★ THE COMMENT ABOVE IT DESCRIBES THE OTHER CAUSE, AT LENGTH
+
+The twelve lines above that call are a careful account of the real truncation incident: **the first
+version returned `table (...)`, hit PostgREST's 1,000-row cap, and rendered 934 brands and 9 letter
+sections with no error anywhere.** That is why the guard exists.
+
+> **SO THE GUARD WAS BUILT FOR A CAUSE THAT HAS BEEN FIXED, AND FIRED FOR ONE NOBODY WROTE DOWN.**
+> The shape returned is now `jsonb`, which cannot be row-capped. **The failure it was written to catch
+> is structurally impossible, and the failure it actually catches is unnamed in its own message** --
+> which is item 568's shape one layer over: a repair's record outliving the hazard it repaired.
+
+#### NOT FIXED, AND THE FIX IS TWO LINES AND A DECISION
+
+Capturing `error` and distinguishing the two cases is small. **The decision is what a build should do
+when the database is unreachable** -- throwing is defensible and so is retrying, and they are different
+answers about whether a deploy should depend on a live third-party read at build time.
+
+**`/brands/all` is not the only page reading the catalogue at build.** The blast radius of a Supabase
+blip during a build is unmeasured, and that measurement is what would decide it.
