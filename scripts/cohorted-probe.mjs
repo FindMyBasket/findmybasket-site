@@ -36,7 +36,20 @@ const OAUTH = process.env.AWIN_OAUTH_TOKEN;
 const FEEDKEY = process.env.AWIN_API_KEY;
 const SB = process.env.SUPABASE_URL;
 const SKEY = process.env.SUPABASE_SERVICE_KEY;
-const TARGET = /cohorted/i;
+// PARAMETERISED 2 September 2026 (item 558). Everything below this line was already
+// generic; only the target was not, and item 483 recorded that as the reason Healf's
+// mid -> fid resolution became "a question rather than a lookup". It has now blocked
+// two onboardings, so the one hardcoded line is the one that changed.
+//
+// MATCH BY ADVERTISER ID WHEN ONE IS GIVEN. A name regex is what this script had, and a
+// name is the weaker key: programmes rename, and /cohorted/i would also match a second
+// programme with that word in it. An id is exact and is what the deep link carries.
+//
+// THE FILE IS STILL CALLED cohorted-probe.mjs AND THAT IS NOW WRONG -- flagged in item
+// 558 rather than renamed here, because five citations point at this path.
+const TARGET_ID = process.env.PROBE_ADVERTISER_ID ? Number(process.env.PROBE_ADVERTISER_ID) : null;
+const TARGET = new RegExp(process.env.PROBE_TARGET || 'cohorted', 'i');
+const LABEL = process.env.PROBE_LABEL || (TARGET_ID ? `advertiser ${TARGET_ID}` : 'Cohorted.co.uk');
 
 const redact = (s) => String(s).replace(/apikey\/[^/\s]+/gi, 'apikey/REDACTED')
   .replace(/[0-9a-f]{24,}/gi, 'REDACTED');
@@ -47,7 +60,7 @@ function need(name, v) {
 need('AWIN_OAUTH_TOKEN', OAUTH); need('AWIN_API_KEY', FEEDKEY);
 
 console.log('==================================================================');
-console.log(' Cohorted.co.uk — onboarding probe (READ ONLY)');
+console.log(` ${LABEL} — onboarding probe (READ ONLY)`);
 console.log('==================================================================\n');
 
 // ── 1. The programme ────────────────────────────────────────────────────────────────
@@ -55,11 +68,15 @@ const pr = await fetch(`https://api.awin.com/publishers/${PUB}/programmes?relati
   { headers: { Authorization: `Bearer ${OAUTH}`, Accept: 'application/json' } });
 if (!pr.ok) { console.error(`CANNOT RUN: programmes ${pr.status}`); process.exit(1); }
 const programmes = await pr.json();
-const hit = programmes.filter((p) => TARGET.test(`${p.programmeInfo?.name ?? p.name ?? ''}`));
+const hit = programmes.filter((p) => {
+  const info = p.programmeInfo ?? p;
+  if (TARGET_ID !== null) return Number(info.id) === TARGET_ID;
+  return TARGET.test(`${info.name ?? ''}`);
+});
 console.log(`── Programme ─────────────────────────────────────────────────────`);
 console.log(`  joined programmes total : ${programmes.length}`);
 if (!hit.length) {
-  console.log('  NO JOINED PROGRAMME MATCHES /cohorted/i.');
+  console.log(`  NO JOINED PROGRAMME MATCHES ${TARGET_ID !== null ? 'advertiser id ' + TARGET_ID : TARGET}.`);
   console.log('  Acceptance may not have propagated, or the programme name differs.');
   console.log('  This is a finding, not a failure — nothing further can be probed.');
   process.exit(0);

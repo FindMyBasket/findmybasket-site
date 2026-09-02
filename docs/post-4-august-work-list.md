@@ -45348,3 +45348,305 @@ conclude the integration broke. **It did not; the sample data aged.**
 > the accurate phrase and it is different from *"stable"*. **With the column blank, a loss event
 > produces a bad day and no number** — the one observation the watcher exists for is currently
 > uncapturable.
+
+---
+
+### 558. Optimum Nutrition has no feed, measured — and the check needed one line changed to run
+
+**Raised and run:** 2 September 2026 · **CLOSED. Item 458's `links-only` filing is CONFIRMED and now
+has evidence behind it.** · **READ-ONLY probe. Nothing configured, nothing written.**
+
+```
+── Programme ──────────────────────────────────
+  joined programmes total : 20
+  name           : Optimum Nutrition UK
+  advertiser id  : 19863        currency: GBP   region: GB
+
+── Feed ───────────────────────────────────────
+  feeds visible on this account : 610
+  NO FEED for this advertiser. Joined but no datafeed published, or not yet visible.
+```
+
+**Joined, and no datafeed among 610 visible.** So they stay `links-only`, they get no `retailers` row,
+and they do not enter `docs/onboarding-completeness.md` — **state 1 of that definition is a feed
+census, and there is no feed to census.**
+
+#### ★ THE CLAIM WAS RIGHT AND ITS BASIS WAS NOT, WHICH IS WORTH SEPARATING
+
+**Item 458 recorded "no product feed" from the programme page.** That is a reading of what a page
+says, not a measurement of what the account can see. **This is the first time it has been probed.**
+
+> **A CLAIM THAT SURVIVES ITS OWN VERIFICATION IS NOT THE SAME CLAIM IT WAS BEFOREHAND.** Nothing about
+> the filing changes; **what changes is that it can now be wrong in a checkable way.** Had the page been
+> stale — the failure mode item 482 recorded, where a confirmation is not a verification — the
+> `links-only` status would have been correct by accident and nobody could have told.
+
+#### THE CHECK COULD NOT BE RUN AS IT STOOD, AND ITEM 483 SAW THIS COMING
+
+`scripts/cohorted-probe.mjs` resolves an advertiser to a feed and has an explicit `NO FEED` branch —
+**exactly the check** — and everything in it was generic **except one line**: `const TARGET =
+/cohorted/i`. The workflow took no inputs.
+
+Item 483, on Healf: *"`cohorted-probe.mjs` — which does exactly this resolution — takes no inputs and
+has its advertiser hardcoded. So the resolution was a question rather than a lookup."* That produced a
+confirmed `fid=521` which **404'd**, because a confirmation is not a verification.
+
+> **THE HARDCODED LINE HAS NOW BLOCKED TWO ONBOARDINGS AND WAS RECORDED AS A PROBLEM AFTER THE FIRST.**
+> Item 483 named it precisely and did not change it, because Healf's answer arrived by another route.
+> **A defect that is diagnosed and routed around does not stop being load-bearing.**
+
+**Changed: the one line, plus workflow inputs.** Matching is now by **advertiser id** when one is given
+— a name regex is the weaker key, since programmes rename and a word can appear in more than one
+programme name, while **an id is exact and is what the deep link carries.** Defaults reproduce the
+original Cohorted run.
+
+**THE FILE IS STILL CALLED `cohorted-probe.mjs` AND THAT IS NOW WRONG.** Not renamed here: citations
+point at the path, and a rename is a separate act from making the thing runnable. **Recorded so the
+name is a known defect rather than a puzzle.**
+
+---
+
+### 559. STANDING RULE: a Brand Spotlight carries no comparison content, in either direction
+
+**Raised and decided:** 2 September 2026 · **Robbie's call. STANDING RULE for this surface, not a
+one-off for Optimum Nutrition.** · **Reaches further than item 459 and the difference is the point.**
+
+**A Brand Spotlight carries no prices, no per-unit figures, no comparison language, and no links into
+`/compare/*`. Outbound goes to the AWIN deep link for products, and that is the whole of its commercial
+mechanism.**
+
+#### THIS IS THE STRATEGY DOCUMENT'S FIREWALL APPLIED, NOT A NEW RULE
+
+> *"A brand can earn a hub through partnership on CPA, or buy enhanced placement through a fee, **but
+> money never buys a better comparison result**."* — `docs/strategy.md`
+
+**A Spotlight is the paid tier.** Comparison content on a bought page is money sitting beside a
+comparison result, which is the arrangement the clause exists to prevent — **whether or not the
+comparison is favourable.** The rule is about the adjacency, not about the number.
+
+#### ★★★ IT REACHES FURTHER THAN 459, AND 459 DELIBERATELY DID NOT REACH HERE
+
+| | decides | direction |
+|---|---|---|
+| **459** (27 Aug) | compare rows do not get brand-direct links | **comparison surface → brand** |
+| **559** (this) | a brand page does not get comparison content | **brand surface → comparison** |
+
+**Same firewall, both directions, and the second was still open.**
+
+> **AND 459 EXPLICITLY REFUSED THE FIREWALL AS ITS REASON**, which is why this does not contradict it.
+> That item recorded: *"the clause is about **ranking** — about whether money can move a product up a
+> list. Nothing here moves anything."* On a compare row, position and the per-100g figure are computed
+> before any link renders, so a destination cannot reach back into them. **The clause genuinely did not
+> cover that case.**
+>
+> **It covers this one, because a Spotlight is bought.** 459's reason was a *defect* — a page making a
+> price claim and routing to a price it did not check. **This item's reason is the clause itself**, and
+> the two are not the same argument arriving twice.
+
+#### FOR OPTIMUM NUTRITION THE SEPARATION IS COMPLETE, WHICH MAKES IT THE CLEAN CASE TO SET IT ON
+
+**No feed (item 558, measured). Thirty live products, every one Boots-only, zero multi-retailer.**
+
+> **ANY PRICE ON AN ON SPOTLIGHT WOULD BE BOOTS' PRICE WEARING THE BRAND'S NAME.** Not a price we
+> negotiated, not a price the brand sets, and not a price we could refresh if it moved — the feed that
+> would let us hold their own price is the one item 558 confirmed does not exist.
+>
+> **A rule is best set where its instance is unambiguous.** Here there is no version of "show a price"
+> that is even technically available, so the decision is not trading anything away and cannot be read
+> as caution about a close call.
+
+**What the Spotlight may carry:** the brand's own story, its assets, the range, and outbound product
+links. **What it may not:** any number that came from the comparison engine, and any route into it.
+
+---
+
+### 560. The honest paragraph was specified in the frozen-state form, and rank is the most fragile version of it
+
+**Raised:** 2 September 2026, drafting the Optimum Nutrition Edit · **CLOSED — the copy is written in
+the structural form.** · **A CORRECTION TO AN INSTRUCTION, recorded because the instruction was right
+about the substance and wrong about the form.**
+
+**The brief asked for the ranking to be named in the copy: *21st, 74th, 75th and 76th of 82*.** The
+substance was correct and is the whole point of the paragraph. **The form was the one
+`docs/standing-rule-frozen-catalogue-state.md` exists to refuse** — it covers *"prices, retailer names,
+product IDs, feed IDs, merchant IDs, delivery thresholds and costs, and **counts** of any of those"*,
+with only two safe forms: **read it at request time, or state the structure not the values.**
+
+> **THE PARAGRAPH AS SPECIFIED WOULD HAVE BEEN STALE WITHIN WEEKS**, in an article whose entire purpose
+> is being trusted about a number.
+
+#### ★★★ RANK IS THE MOST FRAGILE WAY TO SAY IT, AND THAT IS THE FINDING
+
+| | moves when |
+|---|---|
+| **ON's rank on the page** | **any product is added or removed** — including one nobody buys, at any price, from any brand |
+| **ON's price per 100g** | ON's price moves, or Boots' does |
+
+**A rank is a statement about every other row on the page.** It is the most sensitive quantity
+available and the one that looks most like a hard fact.
+
+#### THE EVIDENCE IS SIX DAYS OLD AND WAS ALREADY IN THE REGISTER
+
+```
+27 Aug  item 441 measured /compare/whey-protein   67 ranked
+ 2 Sep  the same page                             82 ranked      +22%
+```
+
+**Healf's onboarding moved it, silently, and nothing on the page or in the register announced it.** No
+ON price changed. No ON product changed. **Every ON rank on that page moved anyway** — which is item
+551's mechanism arriving in the copy layer: *the input that moves it is the roster.*
+
+> **AN ARTICLE NAMING "21st OF 82" WOULD HAVE BEEN WRONG BY THE NEXT ONBOARDING**, and the next
+> onboarding is the strategy. **The claim would have been falsified by the company succeeding.**
+
+#### ★★ THE STRUCTURAL FORM IS ALSO THE MORE TRUTHFUL ONE, WHICH IS NOT THE USUAL TRADE
+
+The standing rule is normally a durability argument: state the structure because values drift. **Here
+the structural form is more accurate on the day it is written, not merely later.**
+
+> *"In the bottom half of every whey we track, and the Clear Whey range at the very bottom"* is what a
+> reader needs and what remains true. **"21st of 82" is precise about a quantity whose precision is
+> spurious** — it implies the gap between 21st and 22nd means something, when the two can be a penny
+> apart, and it invites a reader to check a number that will have moved.
+>
+> **PRECISION AND ACCURACY POINT IN OPPOSITE DIRECTIONS HERE**, and the rule that looks like a
+> durability constraint is doing editorial work.
+
+#### THE SAME CATCH, APPLIED TWICE MORE IN THE SAME DRAFT
+
+- **The size clause** — *"from 240g tubs to a 930g twin-pack"* was the measured correction to a wrong
+  claim, and it is frozen state: **those sizes are Boots' assortment, not ON's range.** Dropped
+  entirely rather than corrected.
+- **The flavour count** — the superlative *"more flavours than anyone else keeps on a shelf"* is
+  unsupportable (we hold no competitor's full range). **The proposed fix was to name the count we can
+  see, and that fix reintroduces the defect this item is about.** Taken as *"in a long list of
+  flavours"*.
+
+> **★ A FIX THAT TRADES AN UNVERIFIABLE CLAIM FOR A PERISHABLE ONE IS NOT A FIX.** Both fail; they
+> fail on different days. **The structural form is the only version that fails on neither.**
+
+#### TWO SMALLER CORRECTIONS FROM THE SAME READ
+
+**The prominence premise was two of four, not three.** The Edit names Optimum Nutrition in **Protein**
+and **Creatine**; *The extras* and *How to choose without overpaying* name no brand. **The concern that
+prompted the honest paragraph was right and its measurement was one section out** — and the paragraph
+is worth having either way, since two of four with the top-of-page recommendation is still the position
+a reader checks.
+
+**The hero image shows an 899g (2 lb) tub. Boots carries no 899g size** — 300g, 450g, 465g, 768g, 780g,
+and a 930g twin-pack. **Cosmetic, and worth knowing**: it is a brand asset showing a US format, so a
+layout placing it beside a product link would picture a tub nobody can buy from the retailer the link
+goes to. **Not a copy claim and not a frozen-state instance** — the image asserts nothing — but it is
+the same failure a reader experiences: shown one thing, sold another.
+
+---
+
+### 561. Item 559 named a path when it meant a surface, and the first draft walked through the gap
+
+**Raised:** 2 September 2026, applying item 559 to the Optimum Nutrition Spotlight · **CLOSED — 559 is
+widened below.** · **The rule was written hours earlier, by me, and failed on its first use.**
+
+**559 said: *"no links into `/compare/*`"*.** The Spotlight draft carried:
+
+> *"Add these to our routine builder to plan the full set and **see where to buy each piece**."*
+
+**The routine builder is `/app`. It is also the comparison engine** — it shows prices, ranks retailers,
+computes delivered totals and names a best option. **It is more comparison than a compare page is**: a
+type page ranks one nutrient by unit price, while the builder runs the optimiser.
+
+> **THE RULE NAMED A PATH WHEN IT MEANT A SURFACE, AND THE FIRST DRAFT IT WAS APPLIED TO WALKED
+> STRAIGHT THROUGH THE GAP.** The draft was not evading anything — `/app` simply is not `/compare`, and
+> a reader applying the rule as written would let it through every time.
+
+#### ★★★ A RULE EXPRESSED AS A PATH IS A RULE ABOUT ROUTING, NOT ABOUT CONTENT
+
+**`/compare/*` is where comparison output happens to be published. It is not what comparison output
+is.** A path is an address; the hazard is a category of content. **The two coincide until they do
+not**, and nothing announces the day they stop — a new route, a widget, an embed, or a surface that
+predates the rule, as `/app` did.
+
+**It is item 238's shape in the copy layer.** There, the `.order()` rule was scoped to the paging
+helper — the mechanism — rather than to the hazard, and did not cover the function that needed it.
+**Here the mechanism is a URL prefix.**
+
+> **AND IT IS THE SECOND TIME IN ONE SESSION.** The house rule against a banned discount word is
+> recorded once, inside a step-13 spec for a client PDF generator, and item 562 records what that
+> scoping cost. **Two rules, both correct, both filed under the mechanism that happened to prompt
+> them.**
+
+#### 559 AS WIDENED
+
+**A Brand Spotlight carries no comparison content and no route into the comparison engine.**
+
+**The comparison engine is:** the basket optimiser (`/app`, the routine builder), the per-unit type
+pages (`/compare/*`), and any surface rendering a price, a per-unit figure, a saving, a retailer
+ranking or a delivered total from catalogue data.
+
+**Outbound to the brand's affiliate deep link is the whole of a Spotlight's commercial mechanism.**
+
+> **STATED AS THE CATEGORY, WITH THE PATHS AS EXAMPLES RATHER THAN AS THE DEFINITION.** If a fourth
+> comparison surface ships, the rule already covers it — which is the property the first version did
+> not have, and the reason it failed within hours of being written.
+
+**The Spotlight section was cut rather than reworded.** *"A dependable stack: Gold Standard or Clear
+Whey for protein, Creatine Monohydrate for the basics"* keeps the shape and drops the routing.
+
+---
+
+### 562. The banned discount word is in shipped copy, and the rule is recorded inside a PDF spec
+
+**Raised:** 2 September 2026, from a copy correction on the Optimum Nutrition Edit · **OPEN — two
+shipped strings, not fixed here.** · **MEASURED, not inferred.**
+
+`app/app/RoutineBuilder.tsx`, rendered to visitors on `/app`:
+
+```js
+1299   `The cheapest each product can be bought for, across ${n} retailers — delivery not included.`
+1300   'The cheapest each product can be bought for — delivery not included.'
+```
+
+**Those are the only two user-facing instances** — every other occurrence in `app/`, `components/`,
+`lib/` and `public/` is a comment or an identifier. **They shipped with item 479 on 27 August**, in the
+change that corrected the partial-fallback description from claiming an optimisation it had skipped.
+**The correction was right and it introduced this.**
+
+#### WHERE THE RULE LIVES, AND WHY THAT IS THE FINDING
+
+**One place: `docs/dashboard-build-brief.md`, step 13 — a spec for a client PDF generator.**
+
+> *"…never the banned discount word (use best value, best price, or costs less)…"*
+
+**Three properties, each of which alone would be survivable:**
+
+1. **It is scoped to a mechanism.** Step 13 builds a PDF. Nothing says the rule governs site copy,
+   article copy or component strings — **and the site is where the word actually shipped.**
+2. **It does not name the word it bans.** *"The banned discount word"* is unsearchable by the thing it
+   forbids. **A grep for the word finds violations and never finds the rule.**
+3. **Nothing enforces it.** No lint rule, no CI check, no test.
+
+> **★★ THE RULE IS UNFINDABLE BY THE ONLY SEARCH ANYONE WOULD RUN.** Someone about to write the word
+> greps for it, finds two shipped uses and some identifiers, and concludes it is house style.
+> **The evidence available at the point of decision argues for the violation.**
+
+#### ★★ IT IS ITEM 561's FINDING IN A SECOND PLACE, AND THAT PAIR IS THE POINT
+
+Item 561: *a rule expressed as a path is a rule about routing rather than about content.* **Here a rule
+about editorial register is expressed as a bullet in a build spec.** Both rules are correct. **Both
+were filed under the mechanism that happened to prompt them rather than under the hazard they name**,
+and both failed on a surface their author would have said they covered.
+
+> **TWO INSTANCES IN ONE SESSION, FOUND BY UNRELATED ROUTES.** 561 was found by applying a rule and
+> watching it miss. **This was found by breaking a rule nobody knew was there** — I wrote *"the
+> cheapest whey on that page"* into an article, and it was caught by Robbie rather than by any
+> artefact.
+
+#### NOT FIXED HERE
+
+**Two strings, and the replacement is not mechanical.** *"The best-priced each product can be bought
+for"* is ungrammatical; the sentence needs rewriting, and it sits in the partial-fallback branch whose
+wording item 479 chose deliberately. **A copy decision, not a substitution.**
+
+**What is owed beyond the two strings:** the rule needs a home that is not a PDF spec, and it needs to
+name the word. **A lint rule over `app/` and `components/` would make it enforceable** — recorded as
+the obvious candidate, not proposed, because the register rules as a set have never been collected
+anywhere and a check for one of them would imply the others are checked too.

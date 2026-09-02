@@ -13,8 +13,26 @@ name: Cohorted onboarding probe (read-only)
 # AWIN_API_KEY is the FEED credential (productdata.awin.com) that eight live paths depend on.
 # Neither value is ever printed — datafeed URLs embed the api key and are redacted before output.
 
+# PARAMETERISED 2 September 2026 (item 558). Was input-less with its advertiser hardcoded,
+# which item 483 recorded as the reason a mid -> fid resolution became a question rather
+# than a lookup. Defaults reproduce the original Cohorted run exactly.
 "on":
   workflow_dispatch:
+    inputs:
+      advertiser_id:
+        description: 'AWIN advertiser (merchant) id, e.g. 19863. Exact match; preferred over name.'
+        required: false
+        type: string
+      target:
+        description: 'Programme-name regex, used only when advertiser_id is blank. Default: cohorted'
+        required: false
+        default: 'cohorted'
+        type: string
+      label:
+        description: 'Report header'
+        required: false
+        default: ''
+        type: string
 
 jobs:
   probe:
@@ -27,6 +45,9 @@ jobs:
           node-version: '22'
       - name: Probe
         env:
+          PROBE_ADVERTISER_ID: ${{ inputs.advertiser_id }}
+          PROBE_TARGET: ${{ inputs.target }}
+          PROBE_LABEL: ${{ inputs.label }}
           AWIN_OAUTH_TOKEN: ${{ secrets.AWIN_OAUTH_TOKEN }}
           AWIN_API_KEY: ${{ secrets.AWIN_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
