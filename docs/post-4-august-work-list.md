@@ -44570,3 +44570,458 @@ QUIETLY FIXING.** The framing offered was *"three collisions caught by reading a
 **The checks are not the passive half of this, and recording them as never having caught anything would
 have retired the wrong instrument.** What is true is narrower and still worth holding: **the PR-list
 half is the one that gets skipped**, and it got skipped again today.
+
+---
+
+### 551. The results block has no upper bound, and the input that moves it is the roster
+
+**Raised:** 2 September 2026, from Robbie's report that the save prompt had dropped to the bottom of
+`/app` · **OPEN — the cap is specified and building under item 553.** · **THE RETENTION LOOP: a routine
+that is not saved cannot be alerted on.**
+
+> **THE RESULTS BLOCK's HEIGHT IS A PURE FUNCTION OF RETAILER COVERAGE, AND NOTHING BOUNDS IT.** Cards
+> grow sublinearly with basket size, rows grow as cards × products, and **the input that moves it is the
+> roster rather than the basket.**
+
+```js
+const allOptions = [...singleOptions, ...twoOptions].sort((a, b) => a.total - b.total);
+```
+
+**No cap, no slice.** Every viable single retailer plus every viable *pair* — quadratic in retailer
+count. **Nine active retailers stocking one product produce nine option cards for a ONE-ITEM routine.**
+
+#### MEASURED, 390 x 844, LIVE
+
+| basket | cards | rows | results height | save prompt at | screens |
+|---|---:|---:|---:|---:|---:|
+| 1 product | 9 | 9 | 2,493px | **3,224px** | **3.8** |
+| 3 products | 19 | 57 | 6,904px | **7,801px** | **9.2** |
+| 5 products | 21 | 105 | 9,507px | **10,570px** | **12.5** |
+
+At three products the prompt sits **88.9%** down the page on mobile, **90%** on desktop. Above it:
+`rb-optimise-btn` 56px, `rb-savings-summary` 99px, `rb-results` **6,904px** — the results are **98.6%
+of everything above the prompt.**
+
+#### ★★★ IT DID NOT MOVE AND THE CONTENT ABOVE IT DID NOT GROW. BOTH ANSWERS ARE NO
+
+The question put was whether the prompt was reordered or whether the page above it grew. **Neither, and
+that is the finding.**
+
+**It has not moved since 23 August** — commit `f94ffba`, item 245 phase 0.5, which put it below the
+cards on reasoning that stands: *"asking to save a result before showing it inverts the exchange."*
+
+```
+before f94ffba   save-card @ line 1271, results open @ 1352   -> prompt ABOVE results
+after  f94ffba   save-card @ line 1408, results open @ 1272   -> prompt BELOW results
+```
+
+**Nothing has touched `RoutineBuilder.tsx` since 27 August**, and a diff of the entire results-rendering
+block from 23 August to today is **one comment renumber and item 479 swapping one `descText` string**.
+No element, row or card was added above the prompt.
+
+**And every block named as recent predates the reorder:**
+
+| block | first appears |
+|---|---|
+| qualitative branches (`rb-savings-qualitative`) | **2 August** |
+| per-retailer cards (`rb-shop-retailer-btn`) | **10 May**, original port |
+| unpriced items (`Not tracked yet`) | **10 May**, original port |
+
+**So the reorder was made with all of them already on the page.** It was not right-for-then and later
+overtaken.
+
+> **★★★ THE THING THAT CHANGED IS OUTSIDE THE COMPONENT ENTIRELY.** Both halves of a
+> reorder-or-growth question can be no while the page still degrades, because the height is set by data
+> the component does not contain. **A diff of the file answers neither question**, and a diff is what
+> anyone would reach for.
+>
+> **AND IT DEGRADES ON SUCCESS.** Adding retailers is the strategy; three landed this month. **Every
+> onboarding makes this page worse, silently, with no code change and nothing watching** — the roster
+> is not an input anyone would think to check when a layout regresses.
+
+#### ★★ THE MEASUREMENT CORRECTION, KEPT PROMINENT
+
+**The first sweep returned 34 cards and 18,279px for baskets of one, two, three AND five products — the
+same answer four times.** The iframes were reading the routine from `localStorage` rather than the URL
+param, so one stale accumulated basket was measured four times and read as four data points.
+
+> **A SWEEP THAT RETURNS THE SAME ANSWER FOR EVERY INPUT IS MEASURING THE INSTRUMENT.**
+
+**It was caught by the shape of the result, not by a check** — four identical rows where the input
+varied. Had the basket sizes been close enough for the heights to differ slightly, it would have
+produced a plausible curve and gone in as fact. **Every figure above is from the re-run that clears
+`fmb_routine` before each load.**
+
+#### ITEM 433's CONDITIONAL NEVER REACHED THE BUILDER
+
+Checked because a shared-layout change was the obvious candidate. **It is not one.** The link blocks
+live in `components/CategoryPage.tsx`, imported by exactly the six category roots and **zero times** by
+`/app`, which composes `SiteNav` + `RoutineBuilder` + `SiteFooter` and takes only `SiteFooter` from
+`SiteLayout`.
+
+*(The item cited in the report was 509, which is L'Oréal Professionnel barcode-merge hold rates and
+unrelated. 433 is the layout item.)*
+
+---
+
+### 552. Four tracker entries say pending and are live, against the file's own definition
+
+**Raised:** 2 September 2026, while measuring item 551's retailer coverage · **OPEN — recorded and
+being corrected; whether a live entry is deleted or marked is a separate decision, below.**
+
+`docs/partnership-tracker.md` defines its own vocabulary: **`live` — *"Has a `retailers` row with
+`active = true`. Leaves this file."*** Measured against the database, 2 September:
+
+| entry | tracker | database |
+|---|---|---|
+| The Fragrance Shop | `approved-pending-integration`, `parked` | **`active = true`** |
+| Niche Beauty | `approved-pending-integration`, `parked` | **`active = true`** |
+| MyProtein | `approved-pending-integration` | **`active = true`** |
+| Healf | `approved-pending-integration` | **`active = true`** |
+
+**Four of the file's six entries are wrong, and wrong by the file's own test.** Two of them additionally
+carry `parked` with a stated parking reason — a queue position for retailers that are already serving
+traffic.
+
+#### ★★ IT IS NOT A TIDY-UP, BECAUSE THE STALENESS LANDS ON A LIVE MEASUREMENT
+
+**Niche Beauty is one of the nine active retailers in item 551's measured basket.** It is contributing
+option cards to the page whose height that item is about, while this file records it as not yet
+onboarded.
+
+> **A REGISTER THAT UNDERSTATES THE ROSTER UNDERSTATES EVERY QUANTITY DERIVED FROM THE ROSTER.** Item
+> 551's mechanism is *"the input that moves it is the roster"* — and the artefact a reader would consult
+> to ask "has the roster changed?" says three of these four have not gone live yet.
+
+#### WHY IT DRIFTED, AND IT IS THE OPPOSITE OF THE USUAL CAUSE
+
+**The go-live is the event that should remove an entry, and it is also the busiest day that entry will
+ever have.** Onboarding writes a `retailers` row, an import config, delivery terms and a
+`platform_changes` marker — **four artefacts, none of which is this file.** Nothing in the go-live path
+touches the tracker, so the transition it exists to record is the one moment nobody is reading it.
+
+**`platform_changes` holds no retailer row since 20 August**, so the boundary table did not catch it
+either.
+
+#### THE DECISION THIS NEEDS, NOT TAKEN HERE
+
+**The vocabulary says a live retailer LEAVES THE FILE.** Applied literally, fixing this means deleting
+four detailed entries — including MyProtein's stage log and Healf's three-part pre-onboarding
+sequence, which are reasoning rather than status.
+
+- **Mark `live` and keep the entry** — the file stops being wrong today, and its own rule is now
+  violated in the other direction.
+- **Excise the four** — obeys the rule, and destroys the record of how each was decided.
+- **A `live` section within the file** — a third state the vocabulary does not have.
+
+**Marked rather than excised for now**, because deletion is not reversible from this file and the
+reasoning in those entries is cited nowhere else. **The choice is Robbie's**, and the interim state is
+recorded here rather than left to look deliberate.
+
+#### ★★★ AMENDED 2 SEPTEMBER: ONE OF THE FOUR IS NOT A STALE STATUS LINE, IT IS A STALE DOCUMENT
+
+**Four stale status lines was the reading. It understated Healf.**
+
+The other three carry a wrong word in a status field above a body that is still broadly true. **Healf's
+body describes a world that no longer exists** — in the present tense, with emphasis, throughout:
+
+```
+"NOT ONBOARDED -- recorded before any work."
+"Nothing configured. No secret, no workflow, no config row, no retailer row."
+"Nothing is configured. Nothing is imported. No retailer row exists."
+```
+
+**Healf is `active = true` with 4,986 priced rows and 4,778 live supplements.** The entry closes by
+stating that no retailer row exists, about a retailer carrying more supplement products than any other
+in the catalogue.
+
+> **ITEM 545 ARRIVING IN A SECOND FILE.** *"An absent item invites the question 'does this exist?'; a
+> present one that describes it in detail forecloses it."* Written about the work list; true of any
+> register.
+>
+> **AND THE DETAIL IS WHAT MAKES THIS ONE WORSE RATHER THAN BETTER.** It is the most thorough of the
+> four entries — a feed-format argument, a three-part prerequisite list, a measured brand baseline —
+> and every paragraph of that thoroughness is evidence that somebody looked carefully. **A reader has
+> no reason to check a record this specific**, which is exactly why it could sit three days past the
+> event it says has not happened.
+
+#### WHAT SURVIVES IN IT AND WHAT DOES NOT — THE DOCUMENT IS BEING KEPT, SO THIS MATTERS
+
+**Reusable at the fifth onboarding, unchanged:**
+
+- **The Darwin download URL as a GitHub secret** (`DARWIN_FEED_URL_HEALF`, the shape `_BB` and `_ADG`
+  already use) — it carries credentials and must not be a config value.
+- **`feed_url = 'storage://awin-feeds/…'` as a pointer**, so **the credential never touches the
+  database.** Both existing Google-feed retailers store exactly this shape.
+- **Counting rows with an empty `aw_deep_link` rather than inferring them** — the importer skips a row
+  for no match id, no price or out of stock, **not for a missing deep link**, so such a row stores with
+  `url = ''`: a product page with no click-out.
+
+**Not reusable: the final paragraph, and the three sentences quoted above.**
+
+> **ONLY A READER WHO REACHED THE END WOULD LEARN THAT**, and the end is where the entry is most
+> emphatic and most wrong. **The reusable material is in the middle.**
+
+**RESOLVED by item 555** — moved to `docs/onboarding-completeness.md`, which carries it as a plan that
+was overtaken rather than as a worked record, and states the disagreement rather than editing it away.
+
+---
+
+### 553. The option cap: top 2 by total, plus the best pair if it is not already there
+
+**Raised:** 2 September 2026 · **BUILT. Display-only.** · **Fixes item 551's symptom; item 551 carries
+the mechanism.**
+
+**THE RULE:** top 2 by delivered total, plus the best `split` if neither of those is one. **Never more
+than three cards.** Everything else sits behind a count and a toggle.
+
+#### ★★ TWO RULES WERE REJECTED AND EACH FAILED FOR THE OTHER'S REASON
+
+**"Best single + best pair"** — the first proposal, and it shows the two answers the page exists to
+give. **Measured: at every basket size, `options[0]` AND `options[1]` are both singles, and the best
+pair is at index 2.**
+
+```
+1 product    9 cards   9 singles,  0 splits    best pair: none
+3 products  19 cards   9 singles, 10 splits    best pair: index 2
+5 products  21 cards   9 singles, 12 splits    best pair: index 2
+```
+
+> So it renders cards 0 and 2 **while the copy states a saving computed against card 1**, which is not
+> on the page. `saving = options[1].total - options[0].total`, and the page says *"versus the next-best
+> way to buy this basket."*
+>
+> **THAT IS ITEM 245's OWN FAILURE ONE STEP ON.** It replaced a headline anchored to *a basket nobody
+> would assemble*. **Anchoring to a basket nobody can SEE is the same defect** — and it is worse in one
+> respect: the old figure was checkable and wrong, this one is not checkable at all.
+
+**"Top 2 by total"** — arithmetic verifiable by construction, the saving is literally card 0 minus card
+1. **And at three products it hides all ten splits**, so the visitor never learns that splitting is an
+option. **The rule that protects the number hides the differentiator.**
+
+> **★ THE VARIANT COSTS HALF A SCREEN AND REMOVES BOTH OBJECTIONS.** `options[1]` stays visible so the
+> stated saving is checkable against the cards on screen, and a split is always shown when one exists.
+
+#### DISPLAY-ONLY, AND THAT IS THE LOAD-BEARING PART
+
+**`results` is never narrowed.** The cap is derived beside the render and applied in the JSX map. Three
+things read the full list and all three break on a sliced one:
+
+| reader | breaks how |
+|---|---|
+| `saving = options[1].total - options[0].total` | the headline figure silently changes |
+| `results.length === 1` | drives *"One way to buy this basket"* — true for every capped basket |
+| the suspect guard | reads the spread across every option |
+
+> **SLICING BEFORE `finishRender` WAS THE SMALLER-LOOKING CHANGE AND IT REWRITES THE HEADLINE.** One
+> line, in the obvious place, and the number on the page becomes a different number with nothing saying
+> so.
+
+**Two smaller traps, both taken:**
+
+- **`isBest` now keys off identity, not position** (`opt === results[0]`). Under the cap the best pair
+  can render second while being `options[2]`; a loop index would have promoted it to *best value*.
+- **`hiddenOptionCount` is `results.length - cappedResults.length`, not `- 3`.** The cap yields two or
+  three depending on whether a split is already in the top two, and the constant overstates by one on
+  every basket whose runner-up is a split.
+
+#### A COUNT AND A TOGGLE, NOT A DISCLOSURE
+
+**`"16 other ways to buy this basket"`,** collapsing to *"Show fewer"*. No fetch — the options are
+already computed client-side, so the toggle is pure display.
+
+> **THE COMPARE PAGES' RULE DOES NOT APPLY HERE, AND THE DISTINCTION IS THE REASON.** *"A page that
+> silently omits what it cannot price is incomplete in a way the visitor cannot see"* (items 441, 455)
+> governs rows omitted for a **DATA** reason, where the omission hides a limitation. **These are omitted
+> for a RANKING reason on a list sorted ascending** — everything hidden is worse than everything shown,
+> by construction. Nineteen ways to buy a three-item basket is an inventory, not information.
+>
+> **What honesty requires is the number**, so the omission is stated rather than silent. That is one
+> line, and it is not a disclosure block.
+
+**Expansion resets on every run** and on `resetResults`, so a fresh basket never inherits the previous
+one's expanded state.
+
+#### MEASURED AFTER BUILDING, ON THE PREVIEW DEPLOY — NOT PROJECTED
+
+390 x 844, same instrument as item 551, `fmb_routine` cleared before each load.
+
+| basket | cards | kinds | toggle | prompt at | screens | was |
+|---|---:|---|---|---:|---:|---:|
+| 1 product | **2** | single + single | "7 other ways…" | 1,443px | **1.7** | 3.8 |
+| 3 products | **3** | single + single + split | "16 other ways…" | 2,201px | **2.6** | 9.2 |
+| 5 products | **3** | single + single + split | "18 other ways…" | 2,638px | **3.1** | 12.5 |
+| 3, desktop 1440 | 3 | single + single + split | — | 1,753px | **1.9** | 8.0 |
+
+**At three products the page fell from 8,773px to 3,368px, and the prompt from 88.9% down the page to
+65.4%.**
+
+> **A, B AND C ARE UNNECESSARY. ITEM 245's ORDERING IS PRESERVED RATHER THAN REVERSED** — the sticky
+> prompt, the second prompt and the move-it-back all traded against the fold, and none of them is
+> needed once the thing above the prompt is bounded.
+
+#### ★★ THE PREDICTION HELD RATHER THAN APPROXIMATELY HELD
+
+The pre-build estimate came from hiding cards in the live DOM and re-measuring.
+
+```
+predicted   1,375   2,133   2,570
+actual      1,443   2,201   2,638
+delta        +68     +68     +68
+```
+
+**Identical across all three baskets, and it is the toggle button** — an element that did not exist
+when the estimate was made and that the simulation had no way to include.
+
+> **A CONSTANT OFFSET IS A DIFFERENT RESULT FROM A CLOSE ONE.** Three deltas within a few pixels of
+> each other would have meant the method was roughly right. **The same integer three times means the
+> method was exactly right and one known element was missing** — the residual is explained rather than
+> tolerated, and the estimate would have been exact had the button been drawn first.
+
+**Functional checks on the same build:** toggle expands 3 → 19 and collapses back, label flips to *Show
+fewer*; `isBest` lands on the true `options[0]` and not on the split promoted into slot 3; card 3 is the
+best split; `options[1]` is on screen, so the stated saving is checkable against the cards — **which is
+also what made item 554 visible.**
+
+---
+
+### 554. Three states reach the qualitative block and only two sentences exist
+
+**Raised:** 2 September 2026, surfaced by item 553's cap · **OPEN. NOT FIXED — a copy decision, and it
+wants the treatment the savings panel got.** · **PRE-EXISTING. The cap did not cause it; the cap made
+it visible.**
+
+On a three-product basket the page renders:
+
+```
+"Everything in your basket is best value at one retailer, delivery included.
+ The next-best way to buy it costs the same."
+
+        card 1   Stylevana                    £41.67
+        card 2   YesStyle                     £42.03      <- differs by £0.36
+        card 3   Stylevana + Perfume Click    £44.47
+```
+
+#### THE MECHANISM: `suspect` NEVER LEAVES THE FUNCTION
+
+`suspect` is **a local inside the optimiser** (`let suspect = false`), set when any product's price
+spread across retailers exceeds 2.5×. It is read once, to compute `suppressed`, and **is never lifted
+to state.**
+
+So at render time the component knows only `showSavings === false`. **It cannot distinguish the three
+cases item 245's own comment names:**
+
+> `one viable option` — nothing to compare against · `next best is equal` — a comparison WAS made and
+> came out level · **`suspect spread` — the correctness guard fired; no figure is claimed at all**
+
+**Two sentences exist for three states, and the third borrows the second's.** The suspect case renders
+*"the next-best way to buy it costs the same"* — **which asserts exactly the comparison the guard fired
+to avoid.**
+
+> **★★ DOCUMENTATION DESCRIBING BEHAVIOUR NO CODE IMPLEMENTS**, and the comment is unusually good: it
+> enumerates the three states, explains why collapsing them "made the old copy read as an apology", and
+> says each should state what the optimiser found. **Every word of that is a specification, and the
+> discriminator it depends on was never plumbed through.**
+>
+> Same class as item 233 (`kind='coverage'`, documentation in a column read by no code that runs) and
+> item 235's two-tier gate. **The comment is not wrong about what SHOULD happen. It is wrong that it
+> does.**
+
+#### ★ THE GUARD'S SILENCE IS LOUDER THAN ITS FINDING
+
+`suspect` fires because the data is not trustworthy enough to state a saving. **The page then states a
+stronger claim than the one that was suppressed** — not "we cannot say", but "they cost the same",
+which is a positive assertion of equality about the very numbers the guard distrusted.
+
+**Suppressing a figure and asserting its value are not adjacent behaviours**, and the guard ends up
+producing the second while intending the first.
+
+#### WHY IT IS FILED NOW: THE CAP RAISED ITS EXPOSURE
+
+**`options[1]` was card 2 of 19, far below the fold. It is now card 2 of 3, directly beneath the
+claim.** The sentence has been wrong for as long as the guard has existed; until item 553 nobody could
+see the numbers it was wrong about without scrolling past seventeen cards.
+
+> **A DISPLAY CHANGE DID NOT INTRODUCE THE DEFECT AND DID NOT FIND IT EITHER — IT MADE IT LEGIBLE.**
+> The measurement that found it was checking that the cap worked.
+
+#### NOT FIXED HERE, AND THE SHAPE OF THE FIX IS NOT OBVIOUS
+
+Lifting `suspect` into state is one line and is **not** the decision. The decision is what the third
+sentence should say, and the honest options differ in what they concede:
+
+- **Name the uncertainty** — *"prices for one of these products vary too widely across retailers for us
+  to state a saving."* True, and it tells a shopper something is wrong with our data.
+- **Say nothing at all** — render no qualitative line in the suspect case. Matches the comment's *"no
+  figure is claimed"* exactly, and a missing sentence where two others appear is its own signal.
+- **State the comparison without the claim** — show both totals and let the reader do it.
+
+**Item 245 rewrote this copy once already and the rewrite is why the block reads well.** This wants the
+same treatment rather than a patch, which is why it is filed rather than fixed.
+
+---
+
+### 555. There is no place where an onboarding starts
+
+**Raised:** 2 September 2026, out of item 552 · **CLOSED by `docs/onboarding-completeness.md`.** · **A
+DEFINITION AND A MOVE. No retailer, config row or column was touched.**
+
+**Four retailers have arrived — three of them this month — and each reconstructed the sequence.**
+
+`docs/departure-completeness.md` was written on 23 August because three retailers had departed and
+*"each invented its own shutdown"*. **The mirror was true of arrivals and nobody had said so.** A
+departure had a document; an arrival had a tracker entry describing the *relationship*, a work-list
+item describing the *decision*, and a sequence that lived in whoever had done the last one.
+
+#### WHY NOT THE TWO PLACES FIRST PROPOSED
+
+**A retailers section in this work list.** It is the register of *work*; these are records of work
+**completed**. 555 items, integrity checks that test numbering rather than content, so four entries
+would be findable only by grep — **which is how the tracker drifted in the first place.**
+
+**A plain onboarding-record document.** The same thing minus the framing. The departure document's
+value is not that it stores three shutdowns; it is that it states what *done* means, so a fourth can be
+checked against it.
+
+> **A RECORD FILE WITHOUT A DEFINITION IS AN ARCHIVE. WITH ONE IT IS A RUNBOOK THAT HAPPENS TO CARRY
+> ITS EVIDENCE.**
+
+#### THE MOVE, NOT A COPY
+
+Four entries **cut** from `docs/partnership-tracker.md`, status corrected to `live`, **nothing else
+edited — including the statements now known to be false.** They are records of what was believed at the
+time. The tracker keeps its rule and its vocabulary; nothing exists in two places.
+
+**Extracted mechanically and conservation-checked:** every line of the old tracker appears in one of the
+two files afterwards, except the four headings, which were rewritten to `live` with a MOVED note. **Not
+retyped** — a transcription error in a 300-line move has no diff and no artefact.
+
+`20260803090000_platform_changes_fragrance_shop_expected.sql` cites the tracker three times and now
+carries **a forwarding note rather than an edit.** Those lines were true on 3 August; rewriting them
+would make the migration assert something it did not say.
+
+#### ★★ WHERE THE FOUR DISAGREE IS WHERE THE DEFINITION IS UNCERTAIN, AND IT IS STATED
+
+Four disagreements, none corrected — correcting them is a change, and this was a definition and a move.
+
+| | |
+|---|---|
+| **A** | `delivery_terms_source` has **four shapes**: two enum-like tokens, two sentences carrying a person and a date. **The stronger provenance is in the weaker form**, so the fix is not to flatten the sentences back to tokens |
+| **B** | Two of four carry no `delivery_terms_note` — **and they are the two whose source is a bare token**, so the row with the least provenance carries the least explanation |
+| **C** | **MyProtein is live with `enabled = false` and that is correct** — item 324's re-import guard. State 5 says *inert before the first import*; MyProtein is inert **after** it. **The same value means two things at two points, and a check reading the flag alone would score it incomplete and be wrong** |
+| **D** | **Healf's `feed_format` is `awin`; its record argues at length that it is Google Shopping.** Either the plan changed and nothing recorded it, or the config is wrong. **This document cannot tell which, and says so** |
+
+#### ★★★ THE HEALF RECORD IS A PLAN THAT WAS OVERTAKEN
+
+Its own text says *"NOT ONBOARDED — recorded before any work"* and closes *"Nothing is configured.
+Nothing is imported. No retailer row exists."* **Healf is live with 4,986 priced rows.**
+
+> **THE ENTRY DID NOT GO STALE IN ITS STATUS LINE. ITS ENTIRE BODY DESCRIBES A WORLD THAT NO LONGER
+> EXISTS**, in the present tense, with emphasis — **and it is the most detailed of the four.** Item
+> 545's finding in a second file: *"an absent item invites the question; a present one that describes
+> it in detail forecloses it."*
+
+**It is still the most valuable of the four**, because the Darwin URL as a GitHub secret, the
+`storage://` pointer that keeps the credential out of the database, and counting empty `aw_deep_link`
+rows rather than inferring them are all reusable at the fifth onboarding. **What is not reusable is its
+final paragraph**, and only a reader who reached the end would learn that.

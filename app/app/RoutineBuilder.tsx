@@ -192,6 +192,10 @@ export default function RoutineBuilder() {
   // basket_optimised count in that window. Null until the first run.
   const [optimisedItemCount, setOptimisedItemCount] = useState<number | null>(null);
 
+  // ITEM 553: the option list is CAPPED FOR DISPLAY ONLY. See the derivation below
+  // the render guard; this flag is the "show all" toggle and resets with the results.
+  const [showAllOptions, setShowAllOptions] = useState(false);
+
   // Save routine state
   const [saveEmail, setSaveEmail] = useState('');
   const [saveStatus, setSaveStatus] = useState<
@@ -462,6 +466,8 @@ export default function RoutineBuilder() {
     setShowSaveCard(false);
     setErrorMsg(null);
     setOptimisedItemCount(null);
+    // A fresh run must not inherit the previous basket's expansion. Item 553.
+    setShowAllOptions(false);
   }, []);
 
   const runOptimiser = useCallback(async (
@@ -819,6 +825,7 @@ export default function RoutineBuilder() {
     setSavings(roundedSaving);
     setShowSavings(!suppressed);
     setShowSaveCard(true);
+    setShowAllOptions(false);   // item 553
     setResults(options);
     // Snapshot the basket size for every optimiser-basket event tied to THESE
     // results, so a later routine edit (which leaves stale results on screen) can't
@@ -1048,6 +1055,30 @@ export default function RoutineBuilder() {
             .map(b => b.retailerName),
         ).size
       : 0;
+
+  // ── THE DISPLAY CAP (item 553) ────────────────────────────────────────
+  //
+  // Derived here rather than in finishRender so `results` is never narrowed: the
+  // saving, the one-way copy and the suspect guard all read the full list.
+  //
+  // The best pair is appended rather than substituted, so the two answers the page
+  // exists to give -- the cheapest single basket and the cheapest split -- are both
+  // present, while options[1] stays visible and the stated saving remains checkable
+  // against the cards on screen.
+  const cappedResults = (() => {
+    if (!results) return [];
+    const keep = results.slice(0, 2);
+    if (!keep.some(o => o.type === 'split')) {
+      const bestPair = results.find(o => o.type === 'split');
+      if (bestPair) keep.push(bestPair);
+    }
+    return keep;
+  })();
+
+  // NOT `results.length - 3`. The cap yields two OR three depending on whether a
+  // split already sits in the top two, and a hardcoded arithmetic would overstate
+  // the hidden count by one on every basket whose runner-up is a split.
+  const hiddenOptionCount = results ? results.length - cappedResults.length : 0;
 
   // ── RENDER ────────────────────────────────────────────────────────────
 
@@ -1286,8 +1317,35 @@ export default function RoutineBuilder() {
               </div>
             ) : !results ? null : (
               <div className="rb-results">
-                {results.map((opt, i) => {
-                  const isBest = i === 0;
+                {/* ── THE CAP IS DISPLAY-ONLY, AND THAT IS LOAD-BEARING ────────────────
+                    Item 553. `results` stays whole: THREE things read the full list and
+                    all three break on a sliced one.
+                      · `saving` is options[1].total - options[0].total (item 245)
+                      · `results.length === 1` drives the "one way to buy this basket" copy
+                      · the suspect guard reads the spread across every option
+                    Slicing before finishRender would have been the smaller-looking change
+                    and would have quietly rewritten the headline figure.
+
+                    THE RULE: top 2 by total, plus the best pair if it is not already among
+                    them. Never more than three cards.
+
+                    WHY NOT "best single + best pair", which was the first proposal. At every
+                    basket size measured, options[0] AND options[1] are both singles and the
+                    best pair sits at index 2 -- so that rule shows cards 0 and 2 while the
+                    copy states a saving computed against card 1, WHICH IS NOT ON THE PAGE.
+                    That is item 245's own failure one step on: it replaced a headline
+                    anchored to a basket nobody would assemble, and anchoring to a basket
+                    nobody can SEE is the same defect.
+
+                    WHY NOT "top 2" alone. The arithmetic is verifiable, and at three products
+                    it hides all ten splits -- so the rule that protects the number also hides
+                    the differentiator. The extra card costs half a screen and removes both
+                    objections. Item 551 carries the measurements. */}
+                {(showAllOptions ? results : cappedResults).map((opt, i) => {
+                  // IDENTITY, NOT POSITION. Under the cap the best pair can render second
+                  // while being options[2]; keying "best" off the loop index would promote
+                  // it. results[0] is the recommendation in both views. Item 553.
+                  const isBest = opt === results[0];
                   // Was `worstViableTotal - opt.total` -- how much CHEAPER this
                   // option is than the WORST one -- rendered with the word "more".
                   // The variable name stated the referent and the label stated its
@@ -1418,6 +1476,29 @@ export default function RoutineBuilder() {
                     </div>
                   );
                 })}
+
+                {/* A COUNT AND A TOGGLE, NOT A DISCLOSURE. The compare pages' rule --
+                    "a page that silently omits what it cannot price is incomplete in a
+                    way the visitor cannot see" -- governs rows omitted for a DATA reason,
+                    where the omission hides a limitation. These are omitted for a RANKING
+                    reason on a list sorted ascending by delivered total: everything hidden
+                    is worse than everything shown, by construction. Nineteen ways to buy a
+                    three-item basket is an inventory, not information.
+
+                    What honesty does require is the NUMBER, so the omission is stated
+                    rather than silent. Item 553. */}
+                {hiddenOptionCount > 0 && (
+                  <button
+                    type="button"
+                    className="rb-more-options-btn"
+                    onClick={() => setShowAllOptions(v => !v)}
+                    aria-expanded={showAllOptions}
+                  >
+                    {showAllOptions
+                      ? 'Show fewer'
+                      : `${hiddenOptionCount} other way${hiddenOptionCount === 1 ? '' : 's'} to buy this basket`}
+                  </button>
+                )}
               </div>
             )}
 

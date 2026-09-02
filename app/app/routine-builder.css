@@ -900,3 +900,24 @@
 .rb-results-disclosure {
   margin-top: 1.5rem;
 }
+
+/* Item 553: the "N other ways to buy this basket" toggle. Quiet by design — it is
+   an escape hatch from a ranked list, not a call to action competing with the save
+   prompt below it. */
+.rb-more-options-btn {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: transparent;
+  border: 1px solid var(--rb-border, #e5e0d8);
+  border-radius: 10px;
+  color: var(--rb-ink-light, #6b6560);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.rb-more-options-btn:hover {
+  border-color: var(--rb-gold, #c9a961);
+  color: var(--rb-ink, #2b2724);
+}
