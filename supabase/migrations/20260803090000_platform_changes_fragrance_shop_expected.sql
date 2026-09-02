@@ -94,3 +94,15 @@ BEGIN
   RAISE NOTICE 'OK: The Fragrance Shop go-live recorded as expected, id %', r.id;
 END
 $$;
+
+-- ── FORWARDING NOTE, 2 September 2026 (work-list item 555) ───────────────────────────
+-- The three references above to docs/partnership-tracker.md were correct when written.
+-- The Fragrance Shop went live and its entry LEFT that file, which is what the tracker's
+-- own vocabulary says a live retailer does.
+--
+-- ITS DELIVERY TERMS AND ONBOARDING RECORD ARE NOW IN docs/onboarding-completeness.md.
+--
+-- The lines above are not edited. They describe where the record was on 3 August and they
+-- were true then; rewriting them would make this migration assert something it did not say.
+-- A forwarding line is the honest form -- the same shape as item 9, which was superseded
+-- rather than rewritten.

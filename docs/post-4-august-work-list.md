@@ -44718,6 +44718,53 @@ sequence, which are reasoning rather than status.
 reasoning in those entries is cited nowhere else. **The choice is Robbie's**, and the interim state is
 recorded here rather than left to look deliberate.
 
+#### ★★★ AMENDED 2 SEPTEMBER: ONE OF THE FOUR IS NOT A STALE STATUS LINE, IT IS A STALE DOCUMENT
+
+**Four stale status lines was the reading. It understated Healf.**
+
+The other three carry a wrong word in a status field above a body that is still broadly true. **Healf's
+body describes a world that no longer exists** — in the present tense, with emphasis, throughout:
+
+```
+"NOT ONBOARDED -- recorded before any work."
+"Nothing configured. No secret, no workflow, no config row, no retailer row."
+"Nothing is configured. Nothing is imported. No retailer row exists."
+```
+
+**Healf is `active = true` with 4,986 priced rows and 4,778 live supplements.** The entry closes by
+stating that no retailer row exists, about a retailer carrying more supplement products than any other
+in the catalogue.
+
+> **ITEM 545 ARRIVING IN A SECOND FILE.** *"An absent item invites the question 'does this exist?'; a
+> present one that describes it in detail forecloses it."* Written about the work list; true of any
+> register.
+>
+> **AND THE DETAIL IS WHAT MAKES THIS ONE WORSE RATHER THAN BETTER.** It is the most thorough of the
+> four entries — a feed-format argument, a three-part prerequisite list, a measured brand baseline —
+> and every paragraph of that thoroughness is evidence that somebody looked carefully. **A reader has
+> no reason to check a record this specific**, which is exactly why it could sit three days past the
+> event it says has not happened.
+
+#### WHAT SURVIVES IN IT AND WHAT DOES NOT — THE DOCUMENT IS BEING KEPT, SO THIS MATTERS
+
+**Reusable at the fifth onboarding, unchanged:**
+
+- **The Darwin download URL as a GitHub secret** (`DARWIN_FEED_URL_HEALF`, the shape `_BB` and `_ADG`
+  already use) — it carries credentials and must not be a config value.
+- **`feed_url = 'storage://awin-feeds/…'` as a pointer**, so **the credential never touches the
+  database.** Both existing Google-feed retailers store exactly this shape.
+- **Counting rows with an empty `aw_deep_link` rather than inferring them** — the importer skips a row
+  for no match id, no price or out of stock, **not for a missing deep link**, so such a row stores with
+  `url = ''`: a product page with no click-out.
+
+**Not reusable: the final paragraph, and the three sentences quoted above.**
+
+> **ONLY A READER WHO REACHED THE END WOULD LEARN THAT**, and the end is where the entry is most
+> emphatic and most wrong. **The reusable material is in the middle.**
+
+**RESOLVED by item 555** — moved to `docs/onboarding-completeness.md`, which carries it as a plan that
+was overtaken rather than as a worked record, and states the disagreement rather than editing it away.
+
 ---
 
 ### 553. The option cap: top 2 by total, plus the best pair if it is not already there
@@ -44911,3 +44958,70 @@ sentence should say, and the honest options differ in what they concede:
 
 **Item 245 rewrote this copy once already and the rewrite is why the block reads well.** This wants the
 same treatment rather than a patch, which is why it is filed rather than fixed.
+
+---
+
+### 555. There is no place where an onboarding starts
+
+**Raised:** 2 September 2026, out of item 552 · **CLOSED by `docs/onboarding-completeness.md`.** · **A
+DEFINITION AND A MOVE. No retailer, config row or column was touched.**
+
+**Four retailers have arrived — three of them this month — and each reconstructed the sequence.**
+
+`docs/departure-completeness.md` was written on 23 August because three retailers had departed and
+*"each invented its own shutdown"*. **The mirror was true of arrivals and nobody had said so.** A
+departure had a document; an arrival had a tracker entry describing the *relationship*, a work-list
+item describing the *decision*, and a sequence that lived in whoever had done the last one.
+
+#### WHY NOT THE TWO PLACES FIRST PROPOSED
+
+**A retailers section in this work list.** It is the register of *work*; these are records of work
+**completed**. 555 items, integrity checks that test numbering rather than content, so four entries
+would be findable only by grep — **which is how the tracker drifted in the first place.**
+
+**A plain onboarding-record document.** The same thing minus the framing. The departure document's
+value is not that it stores three shutdowns; it is that it states what *done* means, so a fourth can be
+checked against it.
+
+> **A RECORD FILE WITHOUT A DEFINITION IS AN ARCHIVE. WITH ONE IT IS A RUNBOOK THAT HAPPENS TO CARRY
+> ITS EVIDENCE.**
+
+#### THE MOVE, NOT A COPY
+
+Four entries **cut** from `docs/partnership-tracker.md`, status corrected to `live`, **nothing else
+edited — including the statements now known to be false.** They are records of what was believed at the
+time. The tracker keeps its rule and its vocabulary; nothing exists in two places.
+
+**Extracted mechanically and conservation-checked:** every line of the old tracker appears in one of the
+two files afterwards, except the four headings, which were rewritten to `live` with a MOVED note. **Not
+retyped** — a transcription error in a 300-line move has no diff and no artefact.
+
+`20260803090000_platform_changes_fragrance_shop_expected.sql` cites the tracker three times and now
+carries **a forwarding note rather than an edit.** Those lines were true on 3 August; rewriting them
+would make the migration assert something it did not say.
+
+#### ★★ WHERE THE FOUR DISAGREE IS WHERE THE DEFINITION IS UNCERTAIN, AND IT IS STATED
+
+Four disagreements, none corrected — correcting them is a change, and this was a definition and a move.
+
+| | |
+|---|---|
+| **A** | `delivery_terms_source` has **four shapes**: two enum-like tokens, two sentences carrying a person and a date. **The stronger provenance is in the weaker form**, so the fix is not to flatten the sentences back to tokens |
+| **B** | Two of four carry no `delivery_terms_note` — **and they are the two whose source is a bare token**, so the row with the least provenance carries the least explanation |
+| **C** | **MyProtein is live with `enabled = false` and that is correct** — item 324's re-import guard. State 5 says *inert before the first import*; MyProtein is inert **after** it. **The same value means two things at two points, and a check reading the flag alone would score it incomplete and be wrong** |
+| **D** | **Healf's `feed_format` is `awin`; its record argues at length that it is Google Shopping.** Either the plan changed and nothing recorded it, or the config is wrong. **This document cannot tell which, and says so** |
+
+#### ★★★ THE HEALF RECORD IS A PLAN THAT WAS OVERTAKEN
+
+Its own text says *"NOT ONBOARDED — recorded before any work"* and closes *"Nothing is configured.
+Nothing is imported. No retailer row exists."* **Healf is live with 4,986 priced rows.**
+
+> **THE ENTRY DID NOT GO STALE IN ITS STATUS LINE. ITS ENTIRE BODY DESCRIBES A WORLD THAT NO LONGER
+> EXISTS**, in the present tense, with emphasis — **and it is the most detailed of the four.** Item
+> 545's finding in a second file: *"an absent item invites the question; a present one that describes
+> it in detail forecloses it."*
+
+**It is still the most valuable of the four**, because the Darwin URL as a GitHub secret, the
+`storage://` pointer that keeps the credential out of the database, and counting empty `aw_deep_link`
+rows rather than inferring them are all reusable at the fifth onboarding. **What is not reusable is its
+final paragraph**, and only a reader who reached the end would learn that.
