@@ -79,7 +79,45 @@ if (res.status === 401 || res.status === 403) {
   console.log(`  body (first 400): ${text.slice(0, 400)}`);
   process.exit(0);
 }
-if (!res.ok) { console.log(`\n  non-2xx. body (first 600): ${text.slice(0, 600)}`); process.exit(0); }
+if (!res.ok) {
+  console.log(`\n  non-2xx. body (first 600): ${text.slice(0, 600)}`);
+
+  // ── ISOLATION MATRIX, RUN ON FAILURE RATHER THAN GUESSED AT ─────────────────────────
+  //
+  // A 500 on a documented request shape is not a signal to try variations one at a time
+  // until something returns 200 -- that is how a wrong parameter becomes a believed one
+  // (item 572). This varies ONE thing at a time from a known-good baseline and reports
+  // every result, so the failing element is identified rather than stumbled past.
+  //
+  // The baseline is the empty body, which is known to return 200 with 200 rows.
+  console.log('\n=== ISOLATION MATRIX: one variable at a time from a known-good baseline ===');
+  const cases = [
+    ['baseline, empty body                    ', {}],
+    ['pagination.pageSize only                ', { pagination: { pageSize: PAGE_SIZE } }],
+    ['filters only, as sent                   ', { filters: FILTERS }],
+    ['filters.membership only                 ', { filters: { membership: FILTERS.membership ?? 'joined' } }],
+    ['filters.status only                     ', { filters: { status: 'active' } }],
+    ['filters.type only                       ', { filters: { type: 'voucher' } }],
+    ['filters.exclusiveOnly only              ', { filters: { exclusiveOnly: true } }],
+    ['pagination + filters, as sent           ', { pagination: { pageSize: PAGE_SIZE }, filters: FILTERS }],
+  ];
+  for (const [label, body] of cases) {
+    let r, t;
+    try {
+      r = await fetch(url, {
+        method: METHOD,
+        headers: { Authorization: `Bearer ${TOKEN}`, Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      t = await r.text();
+    } catch (e) { console.log(`  ${label} TRANSPORT FAIL ${e.message}`); continue; }
+    let n = '';
+    try { const j = JSON.parse(t); const d = Array.isArray(j) ? j : (j.data ?? []); n = ` rows=${d.length} total=${j?.pagination?.total ?? '-'}`; } catch {}
+    console.log(`  ${label} ${r.status}${n}${r.ok ? '' : '  ' + t.slice(0, 90)}`);
+  }
+  console.log('\nISOLATION COMPLETE. Nothing was written.');
+  process.exit(0);
+}
 
 let json;
 try { json = JSON.parse(text); } catch { console.log('  body is not JSON. First 600:'); console.log(text.slice(0,600)); process.exit(0); }
