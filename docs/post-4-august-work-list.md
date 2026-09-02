@@ -45524,3 +45524,129 @@ the structural form is more accurate on the day it is written, not merely later.
 
 > **★ A FIX THAT TRADES AN UNVERIFIABLE CLAIM FOR A PERISHABLE ONE IS NOT A FIX.** Both fail; they
 > fail on different days. **The structural form is the only version that fails on neither.**
+
+#### TWO SMALLER CORRECTIONS FROM THE SAME READ
+
+**The prominence premise was two of four, not three.** The Edit names Optimum Nutrition in **Protein**
+and **Creatine**; *The extras* and *How to choose without overpaying* name no brand. **The concern that
+prompted the honest paragraph was right and its measurement was one section out** — and the paragraph
+is worth having either way, since two of four with the top-of-page recommendation is still the position
+a reader checks.
+
+**The hero image shows an 899g (2 lb) tub. Boots carries no 899g size** — 300g, 450g, 465g, 768g, 780g,
+and a 930g twin-pack. **Cosmetic, and worth knowing**: it is a brand asset showing a US format, so a
+layout placing it beside a product link would picture a tub nobody can buy from the retailer the link
+goes to. **Not a copy claim and not a frozen-state instance** — the image asserts nothing — but it is
+the same failure a reader experiences: shown one thing, sold another.
+
+---
+
+### 561. Item 559 named a path when it meant a surface, and the first draft walked through the gap
+
+**Raised:** 2 September 2026, applying item 559 to the Optimum Nutrition Spotlight · **CLOSED — 559 is
+widened below.** · **The rule was written hours earlier, by me, and failed on its first use.**
+
+**559 said: *"no links into `/compare/*`"*.** The Spotlight draft carried:
+
+> *"Add these to our routine builder to plan the full set and **see where to buy each piece**."*
+
+**The routine builder is `/app`. It is also the comparison engine** — it shows prices, ranks retailers,
+computes delivered totals and names a best option. **It is more comparison than a compare page is**: a
+type page ranks one nutrient by unit price, while the builder runs the optimiser.
+
+> **THE RULE NAMED A PATH WHEN IT MEANT A SURFACE, AND THE FIRST DRAFT IT WAS APPLIED TO WALKED
+> STRAIGHT THROUGH THE GAP.** The draft was not evading anything — `/app` simply is not `/compare`, and
+> a reader applying the rule as written would let it through every time.
+
+#### ★★★ A RULE EXPRESSED AS A PATH IS A RULE ABOUT ROUTING, NOT ABOUT CONTENT
+
+**`/compare/*` is where comparison output happens to be published. It is not what comparison output
+is.** A path is an address; the hazard is a category of content. **The two coincide until they do
+not**, and nothing announces the day they stop — a new route, a widget, an embed, or a surface that
+predates the rule, as `/app` did.
+
+**It is item 238's shape in the copy layer.** There, the `.order()` rule was scoped to the paging
+helper — the mechanism — rather than to the hazard, and did not cover the function that needed it.
+**Here the mechanism is a URL prefix.**
+
+> **AND IT IS THE SECOND TIME IN ONE SESSION.** The house rule against a banned discount word is
+> recorded once, inside a step-13 spec for a client PDF generator, and item 562 records what that
+> scoping cost. **Two rules, both correct, both filed under the mechanism that happened to prompt
+> them.**
+
+#### 559 AS WIDENED
+
+**A Brand Spotlight carries no comparison content and no route into the comparison engine.**
+
+**The comparison engine is:** the basket optimiser (`/app`, the routine builder), the per-unit type
+pages (`/compare/*`), and any surface rendering a price, a per-unit figure, a saving, a retailer
+ranking or a delivered total from catalogue data.
+
+**Outbound to the brand's affiliate deep link is the whole of a Spotlight's commercial mechanism.**
+
+> **STATED AS THE CATEGORY, WITH THE PATHS AS EXAMPLES RATHER THAN AS THE DEFINITION.** If a fourth
+> comparison surface ships, the rule already covers it — which is the property the first version did
+> not have, and the reason it failed within hours of being written.
+
+**The Spotlight section was cut rather than reworded.** *"A dependable stack: Gold Standard or Clear
+Whey for protein, Creatine Monohydrate for the basics"* keeps the shape and drops the routing.
+
+---
+
+### 562. The banned discount word is in shipped copy, and the rule is recorded inside a PDF spec
+
+**Raised:** 2 September 2026, from a copy correction on the Optimum Nutrition Edit · **OPEN — two
+shipped strings, not fixed here.** · **MEASURED, not inferred.**
+
+`app/app/RoutineBuilder.tsx`, rendered to visitors on `/app`:
+
+```js
+1299   `The cheapest each product can be bought for, across ${n} retailers — delivery not included.`
+1300   'The cheapest each product can be bought for — delivery not included.'
+```
+
+**Those are the only two user-facing instances** — every other occurrence in `app/`, `components/`,
+`lib/` and `public/` is a comment or an identifier. **They shipped with item 479 on 27 August**, in the
+change that corrected the partial-fallback description from claiming an optimisation it had skipped.
+**The correction was right and it introduced this.**
+
+#### WHERE THE RULE LIVES, AND WHY THAT IS THE FINDING
+
+**One place: `docs/dashboard-build-brief.md`, step 13 — a spec for a client PDF generator.**
+
+> *"…never the banned discount word (use best value, best price, or costs less)…"*
+
+**Three properties, each of which alone would be survivable:**
+
+1. **It is scoped to a mechanism.** Step 13 builds a PDF. Nothing says the rule governs site copy,
+   article copy or component strings — **and the site is where the word actually shipped.**
+2. **It does not name the word it bans.** *"The banned discount word"* is unsearchable by the thing it
+   forbids. **A grep for the word finds violations and never finds the rule.**
+3. **Nothing enforces it.** No lint rule, no CI check, no test.
+
+> **★★ THE RULE IS UNFINDABLE BY THE ONLY SEARCH ANYONE WOULD RUN.** Someone about to write the word
+> greps for it, finds two shipped uses and some identifiers, and concludes it is house style.
+> **The evidence available at the point of decision argues for the violation.**
+
+#### ★★ IT IS ITEM 561's FINDING IN A SECOND PLACE, AND THAT PAIR IS THE POINT
+
+Item 561: *a rule expressed as a path is a rule about routing rather than about content.* **Here a rule
+about editorial register is expressed as a bullet in a build spec.** Both rules are correct. **Both
+were filed under the mechanism that happened to prompt them rather than under the hazard they name**,
+and both failed on a surface their author would have said they covered.
+
+> **TWO INSTANCES IN ONE SESSION, FOUND BY UNRELATED ROUTES.** 561 was found by applying a rule and
+> watching it miss. **This was found by breaking a rule nobody knew was there** — I wrote *"the
+> cheapest whey on that page"* into an article, and it was caught by Robbie rather than by any
+> artefact.
+
+#### NOT FIXED HERE
+
+**Two strings, and the replacement is not mechanical.** *"The best-priced each product can be bought
+for"* is ungrammatical; the sentence needs rewriting, and it sits in the partial-fallback branch whose
+wording item 479 chose deliberately. **A copy decision, not a substitution.**
+
+**What is owed beyond the two strings:** the rule needs a home that is not a PDF spec, and it needs to
+name the word. **A lint rule over `app/` and `components/` would make it enforceable** — recorded as
+the obvious candidate, not proposed, because the register rules as a set have never been collected
+anywhere and a check for one of them would imply the others are checked too.
