@@ -30,11 +30,19 @@ const path = PATH_TMPL.replace('{publisherId}', String(PUB)).replace('{publisher
 const url = `https://api.awin.com${path.startsWith('/') ? path : '/' + path}`;
 console.log(`${METHOD} ${url}\n`);
 
-const call = async (body) => {
-  const r = await fetch(url, {
+// PAGE PARAMETERS GO IN THE QUERY STRING AND IN THE BODY, BOTH, and the reason is a
+// measured failure. The first paginated run posted {page: N} in the body alone; the API
+// ignored it and returned page one sixty times. 12,000 rows collapsed to 200 distinct
+// promotionIds, and EVERY DERIVED COUNT WAS AN EXACT MULTIPLE OF 60 -- which is the only
+// reason it was caught. Sending both is not belt and braces; it is not yet known which
+// the API reads, and the distinct-id guard below now settles it either way.
+const call = async (page, pageSize) => {
+  const u = new URL(url);
+  if (page != null) { u.searchParams.set('page', String(page)); u.searchParams.set('pageSize', String(pageSize)); }
+  const r = await fetch(u, {
     method: METHOD,
     headers: { Authorization: `Bearer ${TOKEN}`, Accept: 'application/json', 'Content-Type': 'application/json' },
-    ...(METHOD === 'POST' ? { body: JSON.stringify(body ?? {}) } : {}),
+    ...(METHOD === 'POST' ? { body: JSON.stringify(page != null ? { page, pageSize } : {}) } : {}),
   });
   return { r, t: await r.text() };
 };
@@ -42,7 +50,7 @@ const call = async (body) => {
 const t0 = Date.now();
 let res, text;
 try {
-  ({ r: res, t: text } = await call({}));
+  ({ r: res, t: text } = await call());
 } catch (e) {
   console.log('=== Q2 CREDENTIAL / TRANSPORT ===');
   console.log(`  TRANSPORT FAILURE, the question never reached Awin: ${e.message}`);
@@ -88,9 +96,7 @@ if (total !== null && perPage > 0) {
   const pages = Math.ceil(total / perPage);
   console.log(`  total reported : ${total}  ->  ${pages} pages of ${perPage}`);
   for (let p = 2; p <= pages && p <= 60; p++) {
-    let body = { page: p };
-    if (pg.offset !== undefined) body = { offset: (p - 1) * perPage, limit: perPage };
-    const { r, t } = await call(body);
+    const { r, t } = await call(p, perPage);
     if (!r.ok) { console.log(`  page ${p}: HTTP ${r.status} -- STOPPED. Counts below cover ${pagesWalked} page(s).`); break; }
     let j; try { j = JSON.parse(t); } catch { console.log(`  page ${p}: unparseable -- STOPPED.`); break; }
     const more = Array.isArray(j) ? j : (j.data ?? []);
@@ -103,6 +109,21 @@ if (total !== null && perPage > 0) {
 }
 console.log(`  pages walked   : ${pagesWalked}`);
 console.log(`  rows collected : ${rows.length}${paginationUnderstood ? '' : '   (PAGE ONE ONLY)'}`);
+
+// ── THE PAGINATION GUARD. A paged read that silently returns the same page is
+//    indistinguishable from a working one by row count alone, and every derived figure
+//    is then a clean multiple of the page count. Distinct ids is the only cheap test.
+const ids = new Set(rows.map(r => r?.promotionId).filter(v => v != null));
+console.log(`  DISTINCT promotionIds : ${ids.size}`);
+if (rows.length && ids.size < rows.length * 0.9) {
+  console.log('  *** PAGINATION IS NOT WORKING. Distinct ids are far below rows collected,');
+  console.log(`  *** which means the same page came back repeatedly (${(rows.length / Math.max(ids.size,1)).toFixed(1)}x duplication).`);
+  console.log('  *** EVERY COUNT BELOW IS A COUNT OF THE DUPLICATED SET AND MUST NOT BE READ');
+  console.log('  *** AS A POPULATION MEASUREMENT. Deduplicating by promotionId before counting.');
+  const seen = new Set();
+  rows = rows.filter(r => { const k = r?.promotionId; if (k == null || seen.has(k)) return false; seen.add(k); return true; });
+  console.log(`  *** deduplicated to ${rows.length} rows. Counts below cover THOSE, not ${total}.`);
+}
 
 const joined = rows.filter(r => r?.advertiser?.joined === true);
 console.log(`\n  offers from JOINED advertisers : ${joined.length} of ${rows.length}`);
