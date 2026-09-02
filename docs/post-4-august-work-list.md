@@ -44420,9 +44420,9 @@ it was attached to and is the part of that item worth carrying forward.
 
 ### 550. A monitor whose coverage depends on a fact nobody has checked
 
-**Raised:** 2 September 2026, out of item 546's credential question · **OPEN — Robbie is reading the
-credential ID now and will report its last four characters against the laptop's `e57d`.** Nothing here
-can do it. · **FILED BECAUSE IT SURVIVED FOUR
+**Raised:** 2 September 2026, out of item 546's credential question · **CLOSED same day — production
+holds the same pair the watcher tests (`…e57d`), so the monitor covers the surface it was assumed to
+cover.** See the closing block at the end of this item. · **FILED BECAUSE IT SURVIVED FOUR
 EXCHANGES BY BEING MENTIONED**, which is this file's founding defect and is dealt with below.
 
 **Two Creators credential pairs exist under one Associates account (`findmybasket-21`).** The laptop
@@ -44523,6 +44523,59 @@ secret needs to move.**
 
 **Either way the answer is worth recording, because "we checked and they match" and "nobody has
 checked" are the same green light from outside.**
+
+#### CLOSED 2 SEPTEMBER 2026 — THE COVERAGE WAS COMPLETE, AND NOBODY KNEW THAT EITHER
+
+**Robbie read `CREATORS_CREDENTIAL_ID` in the Vercel dashboard. The last four characters are `e57d`,
+matching the pair in `~/amazon-api-watch/sdk/examples/.env`.**
+
+**Production holds the same pair the watcher tests.** The second pair exists on the account and is not
+the one production uses, so the split this item was about does not exist in practice.
+
+> **THE MONITOR's COVERAGE WAS UNKNOWN RATHER THAN ABSENT, AND IT TURNED OUT TO BE COMPLETE.** The
+> record moves from *"one instrument with daily cadence and unknown coverage"* to **one instrument
+> covering the surface it was assumed to cover.**
+
+**Both failure modes now land on the same reading.** An entitlement change is account-level (item 549)
+and a credential-level failure — rotation, revocation, an expired secret, a typo on a redeploy — is
+pair-level. **With one pair in play, either would show in the daily run**, and the daily run is what the
+series is for.
+
+#### THE FETCH LOG's BLIND STRETCHES ARE NOT A COVERAGE GAP
+
+`amazon_live_fetch_log` records only days somebody visited a product page carrying an ASIN, and it held
+**five consecutive zero days, 12–16 August.** That was raised here as the reason it could not substitute
+for the watcher.
+
+**It does not need to.** The watcher was calling **the same credential** on each of those days, so a
+credential-level failure would have surfaced in the series with production silent. **The gap is in the
+second instrument's cadence and it is covered by the first**, which is the arrangement this item could
+not previously assert.
+
+*The two instruments remain worth keeping apart for the reason 1 September demonstrated: the laptop
+recorded `NETWORK_FAIL` at 08:14 and production called the API successfully at 20:08. **Agreement about
+the credential is not redundancy about the transport.***
+
+#### ★★★ WHAT IT COST, AND WHAT SETTLED IT — 550's OWN FINDING, DEMONSTRATED ON ITSELF
+
+```
+raised, restated and agreed   4 times across 2 days
+filed                          once
+closed by                      4 characters read from a dashboard
+```
+
+**The disposition was "five minutes in the Vercel dashboard" every one of those four times. The five
+minutes only happened after it was written down.**
+
+> **A THING THAT HAS AN OBVIOUS NEXT STEP IS THE THING LEAST LIKELY TO BE WRITTEN DOWN, BECAUSE THE
+> STEP STANDS IN FOR THE RECORD** — and this item is now its own worked example. **Writing it down is
+> what caused the step**, which is the strongest available evidence that the record was doing something
+> the four agreements were not.
+>
+> **THE COST OF THE DELAY WAS ZERO AND THAT IS NOT THE POINT.** The answer was reassuring, so the two
+> days bought nothing and lost nothing. **Had it been the other answer, the watcher would have spent
+> those two days reporting `OK` about a credential production was not using** — and the item would
+> have been written after the outage rather than before it.
 
 #### THE README's TWO ADDITIONS HAVE NO COMMIT BEHIND THEM
 
