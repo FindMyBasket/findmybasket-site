@@ -44794,3 +44794,120 @@ already computed client-side, so the toggle is pure display.
 
 **Expansion resets on every run** and on `resetResults`, so a fresh basket never inherits the previous
 one's expanded state.
+
+#### MEASURED AFTER BUILDING, ON THE PREVIEW DEPLOY — NOT PROJECTED
+
+390 x 844, same instrument as item 551, `fmb_routine` cleared before each load.
+
+| basket | cards | kinds | toggle | prompt at | screens | was |
+|---|---:|---|---|---:|---:|---:|
+| 1 product | **2** | single + single | "7 other ways…" | 1,443px | **1.7** | 3.8 |
+| 3 products | **3** | single + single + split | "16 other ways…" | 2,201px | **2.6** | 9.2 |
+| 5 products | **3** | single + single + split | "18 other ways…" | 2,638px | **3.1** | 12.5 |
+| 3, desktop 1440 | 3 | single + single + split | — | 1,753px | **1.9** | 8.0 |
+
+**At three products the page fell from 8,773px to 3,368px, and the prompt from 88.9% down the page to
+65.4%.**
+
+> **A, B AND C ARE UNNECESSARY. ITEM 245's ORDERING IS PRESERVED RATHER THAN REVERSED** — the sticky
+> prompt, the second prompt and the move-it-back all traded against the fold, and none of them is
+> needed once the thing above the prompt is bounded.
+
+#### ★★ THE PREDICTION HELD RATHER THAN APPROXIMATELY HELD
+
+The pre-build estimate came from hiding cards in the live DOM and re-measuring.
+
+```
+predicted   1,375   2,133   2,570
+actual      1,443   2,201   2,638
+delta        +68     +68     +68
+```
+
+**Identical across all three baskets, and it is the toggle button** — an element that did not exist
+when the estimate was made and that the simulation had no way to include.
+
+> **A CONSTANT OFFSET IS A DIFFERENT RESULT FROM A CLOSE ONE.** Three deltas within a few pixels of
+> each other would have meant the method was roughly right. **The same integer three times means the
+> method was exactly right and one known element was missing** — the residual is explained rather than
+> tolerated, and the estimate would have been exact had the button been drawn first.
+
+**Functional checks on the same build:** toggle expands 3 → 19 and collapses back, label flips to *Show
+fewer*; `isBest` lands on the true `options[0]` and not on the split promoted into slot 3; card 3 is the
+best split; `options[1]` is on screen, so the stated saving is checkable against the cards — **which is
+also what made item 554 visible.**
+
+---
+
+### 554. Three states reach the qualitative block and only two sentences exist
+
+**Raised:** 2 September 2026, surfaced by item 553's cap · **OPEN. NOT FIXED — a copy decision, and it
+wants the treatment the savings panel got.** · **PRE-EXISTING. The cap did not cause it; the cap made
+it visible.**
+
+On a three-product basket the page renders:
+
+```
+"Everything in your basket is best value at one retailer, delivery included.
+ The next-best way to buy it costs the same."
+
+        card 1   Stylevana                    £41.67
+        card 2   YesStyle                     £42.03      <- differs by £0.36
+        card 3   Stylevana + Perfume Click    £44.47
+```
+
+#### THE MECHANISM: `suspect` NEVER LEAVES THE FUNCTION
+
+`suspect` is **a local inside the optimiser** (`let suspect = false`), set when any product's price
+spread across retailers exceeds 2.5×. It is read once, to compute `suppressed`, and **is never lifted
+to state.**
+
+So at render time the component knows only `showSavings === false`. **It cannot distinguish the three
+cases item 245's own comment names:**
+
+> `one viable option` — nothing to compare against · `next best is equal` — a comparison WAS made and
+> came out level · **`suspect spread` — the correctness guard fired; no figure is claimed at all**
+
+**Two sentences exist for three states, and the third borrows the second's.** The suspect case renders
+*"the next-best way to buy it costs the same"* — **which asserts exactly the comparison the guard fired
+to avoid.**
+
+> **★★ DOCUMENTATION DESCRIBING BEHAVIOUR NO CODE IMPLEMENTS**, and the comment is unusually good: it
+> enumerates the three states, explains why collapsing them "made the old copy read as an apology", and
+> says each should state what the optimiser found. **Every word of that is a specification, and the
+> discriminator it depends on was never plumbed through.**
+>
+> Same class as item 233 (`kind='coverage'`, documentation in a column read by no code that runs) and
+> item 235's two-tier gate. **The comment is not wrong about what SHOULD happen. It is wrong that it
+> does.**
+
+#### ★ THE GUARD'S SILENCE IS LOUDER THAN ITS FINDING
+
+`suspect` fires because the data is not trustworthy enough to state a saving. **The page then states a
+stronger claim than the one that was suppressed** — not "we cannot say", but "they cost the same",
+which is a positive assertion of equality about the very numbers the guard distrusted.
+
+**Suppressing a figure and asserting its value are not adjacent behaviours**, and the guard ends up
+producing the second while intending the first.
+
+#### WHY IT IS FILED NOW: THE CAP RAISED ITS EXPOSURE
+
+**`options[1]` was card 2 of 19, far below the fold. It is now card 2 of 3, directly beneath the
+claim.** The sentence has been wrong for as long as the guard has existed; until item 553 nobody could
+see the numbers it was wrong about without scrolling past seventeen cards.
+
+> **A DISPLAY CHANGE DID NOT INTRODUCE THE DEFECT AND DID NOT FIND IT EITHER — IT MADE IT LEGIBLE.**
+> The measurement that found it was checking that the cap worked.
+
+#### NOT FIXED HERE, AND THE SHAPE OF THE FIX IS NOT OBVIOUS
+
+Lifting `suspect` into state is one line and is **not** the decision. The decision is what the third
+sentence should say, and the honest options differ in what they concede:
+
+- **Name the uncertainty** — *"prices for one of these products vary too widely across retailers for us
+  to state a saving."* True, and it tells a shopper something is wrong with our data.
+- **Say nothing at all** — render no qualitative line in the suspect case. Matches the comment's *"no
+  figure is claimed"* exactly, and a missing sentence where two others appear is its own signal.
+- **State the comparison without the claim** — show both totals and let the reader do it.
+
+**Item 245 rewrote this copy once already and the rewrite is why the block reads well.** This wants the
+same treatment rather than a patch, which is why it is filed rather than fixed.
