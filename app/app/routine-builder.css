@@ -52,12 +52,46 @@
     align-items: start;
   }
 
-  /* Routine list stays in view while the right column scrolls. Top offset
-     clears the fixed site nav, matching the product page's sticky column.
-     align-self: start so the column does not stretch to the row height. */
+  /* ── TWO ROWS, THREE CHILDREN (item 556) ──────────────────────────
+     The save prompt is the third child of .rb-layout. Explicit placement
+     puts it in column 1 under the routine list; the results column spans
+     both rows so row 1 is sized by the LEFT column rather than by the
+     results, which is what keeps the prompt beside them instead of below.
+
+     AUTO-PLACEMENT DOES NOT WORK HERE and the reason is worth stating: with
+     three children and no spanning, row 1's height is the taller of the two
+     cells -- the results -- so the prompt would land BELOW the entire
+     results block, which is the position it is leaving. */
+  .rb-layout {
+    grid-template-rows: auto auto 1fr;
+  }
+
+  .rb-col-left  { grid-column: 1; grid-row: 1; }
+  .rb-col-right { grid-column: 2; grid-row: 1 / span 3; }
+
+  .rb-layout > .rb-save-card {
+    grid-column: 1;
+    grid-row: 2;
+    margin-top: 0;
+  }
+
+  /* The disclosure follows the prompt into column 1 rather than staying in the
+     results column, so item 245's value-commitment-disclosure order reads the
+     same down the left column as it does down the mobile stack. */
+  .rb-layout > .rb-results-disclosure {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  /* STICKY IS DROPPED FROM THE ROUTINE LIST, DELIBERATELY, AND IT IS A TRADE.
+     A sticky item in a column that now has a second item below it pins the
+     first while the second slides behind it -- the prompt would disappear
+     under the panel on scroll, which is the opposite of the change. The
+     routine list following the scroll was worth having when the column held
+     one thing; the prompt being reachable is worth more, and item 553's cap
+     means the results are ~1,264px at desktop rather than the 6,740px that
+     made stickiness matter. Recorded rather than silently removed. */
   .rb-col-left {
-    position: sticky;
-    top: 96px;
     align-self: start;
   }
 }

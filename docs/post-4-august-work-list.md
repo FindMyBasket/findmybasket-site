@@ -45078,3 +45078,273 @@ Nothing is imported. No retailer row exists."* **Healf is live with 4,986 priced
 `storage://` pointer that keeps the credential out of the database, and counting empty `aw_deep_link`
 rows rather than inferring them are all reusable at the fifth onboarding. **What is not reusable is its
 final paragraph**, and only a reader who reached the end would learn that.
+
+---
+
+### 556. The prompt leaves the results flow at desktop, and mobile is a separate decision
+
+**Raised:** 2 September 2026 · **BUILT for desktop. MOBILE UNCHANGED AND OPEN — see the end.** ·
+**THE SPLIT IS THE ANSWER AND IS STATED AS ONE RATHER THAN SMOOTHED.**
+
+Item 553's cap put the prompt at 1.9–3.1 screens. **This makes its position independent of the results
+rather than bounded against them**, because the input item 551 identified — the roster — is still
+unbounded and the cap only narrows what is drawn from it.
+
+#### THE LAYOUT ALREADY HAD THE ROOM
+
+```
+>=880px   .rb-layout   grid-template-columns: minmax(300px,360px) 1fr
+<880px    .rb-layout   grid-template-columns: 1fr          single stack, source order
+```
+
+Measured at 1440x900: the left column is **360px wide and 421px tall**, holding only the routine list,
+**in a 900px viewport — roughly 480px of unused vertical space in a column that already existed.**
+
+#### ★★ ITEM 245's OBJECTION DOES NOT REACH IT, AND THE TEST IS `showSaveCard`
+
+Item 245 moved the prompt below the cards because *"asking to save a result before showing it inverts
+the exchange."* **That is about sequence, and the sequence is already guarded**: `showSaveCard` is set
+only in `finishRender`, so **the prompt cannot exist before an answer does.** Beside the results is not
+in front of them.
+
+**The distinction is real at desktop and it is a rationalisation at 390**, which is the half worth
+writing down.
+
+#### ★★★ AT 390 THERE IS NO PANEL, AND APPENDING TO THE COLUMN IS WORSE THAN THE POSITION 245 REVERSED
+
+```
+left column ends   663px
+optimise button    683px
+savings            758px
+results            877px
+```
+
+**A prompt in the left column at mobile lands above the optimise button** — above the primary action,
+above the savings, above the answer. **That is further forward than the pre-23-August position**, which
+sat between the savings figure and the option cards.
+
+> The layout's own comment says the single stack is source order *"so there are no order overrides to
+> keep the mobile flow honest."* **Putting the prompt in the panel and then fixing mobile means adding
+> the override that comment exists to refuse.**
+
+**So the build is a third grid child, not a child of either column.** Source order gives mobile exactly
+what it has today; explicit placement gives desktop column 1, row 2.
+
+*Auto-placement does not work and the reason is recorded in the CSS: with three children and no
+spanning, row 1's height is the taller cell — the results — so the prompt would land below the entire
+results block, which is the position it is leaving.*
+
+#### ★★★ THE EXPANDED STATE IS THE SHARPER ARGUMENT, AND IT WAS MEASURED AND NOT REPORTED
+
+| | collapsed | expanded |
+|---|---:|---:|
+| **390 x 844** | 2,201px · 2.6 screens | **7,869px · 9.3 screens** |
+| **1440 x 900** | 1,753px · 1.9 screens | **7,297px · 8.1 screens** |
+
+**The cap bounded the default view and did nothing for the expanded state.** A visitor who taps *"16
+other ways to buy this basket"* is returned to within a few hundred pixels of where item 551 found the
+prompt in the first place.
+
+> **AND THAT VISITOR IS, BY CONSTRUCTION, THE MOST ENGAGED ONE ON THE PAGE.** They have run the
+> optimiser, read the recommendation and asked to see the alternatives. **The retention prompt is
+> furthest from exactly the person most likely to use it.**
+
+**I measured this while verifying the cap and did not report it.** The numbers were in the same probe
+that produced item 553's confirmation table; the collapsed figures answered the question that had been
+asked and the expanded ones were not part of it.
+
+> **★ A MEASUREMENT THAT ANSWERS THE QUESTION ASKED CAN CARRY THE ANSWER TO A BETTER ONE**, and
+> reporting only the first is how the better one goes missing. Item 497 recorded this exact shape —
+> *"a probe designed to settle two hypotheses answered a third question neither of them asked"* — and
+> there the extra fields were noticed. **Here they were collected, computed, and dropped.**
+
+> **★★★ AND IT IS A WORSE VERSION OF ITEM 497's SHAPE, NOT THE SAME ONE.** There, a probe designed to
+> settle two hypotheses returned `seller` and `sellerPrice` — fields neither hypothesis asked for — and
+> **they were noticed, weighed, and reversed the recommendation.** The extra evidence did work.
+>
+> **Here the extra evidence was collected, computed and lost.** The expanded figures came out of the
+> same probe that confirmed the cap, in the same result object, and only the collapsed ones reached the
+> write-up. **Nothing suppressed them; they simply were not what had been asked.**
+>
+> **THAT IS THE MORE DANGEROUS VERSION: A PROBE THAT RETURNS THE ANSWER AND THE COUNTER-EVIDENCE
+> TOGETHER, WHERE ONLY THE ANSWER SURVIVES THE WRITE-UP.** A probe that returns nothing useful is
+> obviously incomplete. **One that returns a clean confirmation of the question asked looks finished**,
+> and the finding it also contains is invisible precisely because the report reads well without it.
+
+**This is what makes the panel immune rather than capped.** Its position depends on the routine list's
+height, which is the basket, not the roster and not the toggle.
+
+#### ★★★ THE ITEM'S CENTRE: A DESKTOP CHANGE PRODUCED A MOBILE REGRESSION, AND EVERY DESKTOP NUMBER WAS CORRECT
+
+**The first build lifted the save card out of the results column and left the disclosure behind it.**
+In source order the prompt then followed the disclosure, so at 390 it rendered **below** it:
+
+```
+390 x 844    before  2,201px      after the first build  2,463px      +262px
+1440 x 900   save card at 743px, column 1, expanded 743px -- exactly as designed
+```
+
+> **A DESKTOP CHANGE PRODUCED A MOBILE REGRESSION, ON THE SURFACE THE CHANGE WAS EXPLICITLY SCOPED NOT
+> TO TOUCH.** The whole design of this item is that mobile keeps source order and is left alone. **It
+> was left alone in intent and moved 262px in fact.**
+
+**AND THE PASS THAT PRODUCED IT LOOKED CLEAN ON THE AXIS BEING MEASURED.** Desktop was 0.8 screens
+collapsed, 0.8 expanded, in the panel column — every number the change was made for, correct on the
+first attempt. **A verification limited to the thing being built would have passed it.**
+
+> **★ ONLY THE PROBE DISAGREED.** Mobile was not reasoned about wrongly; it was **asserted unchanged
+> and not measured** — and "unchanged" is the easiest claim in the world to make about a surface you
+> did not touch on purpose. **The reason it was caught is that the probe measured both viewports out of
+> habit rather than because either was in doubt.**
+
+**THE FIX IS STRUCTURAL, NOT A NUDGE.** Both the prompt and the disclosure are grid children now, so
+item 245's **value → commitment → disclosure** order reads the same down the left column at desktop as
+it does down the stack at mobile. **One source order, two layouts, no override** — which is what the
+first build was already trying to do and had only half done.
+
+*Ordering by CSS instead would have re-created the thing the layout comment refuses: the mobile stack's
+honesty depends on source order meaning what it says.*
+
+#### MEASURED AFTER THE FIX
+
+| | collapsed | **expanded** | in panel column | before disclosure |
+|---|---:|---:|:---:|:---:|
+| **1440 x 900** | **743px · 0.8 screens** | **743px · 0.8 screens** | ✅ | ✅ |
+| **390 x 844** | 2,221px · 2.6 screens | 7,889px · 9.3 screens | n/a | ✅ |
+
+**Desktop does not move when all nineteen options open.** That is the property the cap could not
+provide, and it is the item's purpose demonstrated rather than argued.
+
+**Mobile lands at 2,221 rather than the 2,201 it started at — 20px of grid gap.** *Stated rather than
+rounded: "unchanged" was the requirement and 20px is not zero, and a claim of unchanged that is
+actually twenty pixels is how a hundred goes unnoticed later.*
+
+#### MOBILE IS OPEN, AND OPTION C IS WHAT THE EXPANDED CASE REOPENS
+
+**Not built. Recorded as the decision this change does not answer.**
+
+The cap left mobile at 2.6 screens collapsed, which is fine, and **9.3 expanded**, which is not. The
+panel cannot help — there is no panel at 390 and putting one there costs the order override above.
+
+**Option C, the sticky prompt, was set aside when the cap made it unnecessary for the default case.
+The expanded case is precisely the case it was for.** It trades fold space on the surface where fold
+space is scarcest, and that trade was not worth making at 2.6 screens. **At 9.3 it is a different
+question.**
+
+---
+
+### 557. The gate analysis existed on one laptop, in a file with no commit behind it
+
+**Raised:** 2 September 2026, out of item 550's closing · **CLOSED — the analysis is below; the README
+keeps what it runs.** · **The reason this was worth doing is not tidiness.**
+
+`~/amazon-api-watch/README.md` carried **nine sections and 285 lines**, in a directory that is not a git
+repository: **no diff, no history, no CI, no review, no second copy.** Item 550 closed on 2 September
+*depending on that file being read.*
+
+> **THE ENTITLEMENT ANALYSIS EXISTS NOWHERE ELSE.** Items 7, 8 and 9 hold the three surfaces; item 549
+> holds the Feeds resolution; item 550 holds the credential coverage. **The gate reconstruction, the
+> floor argument and the vocabulary reasoning were in one file on one machine.**
+
+#### THE TEST, AND FOUR SECTIONS SPLIT UNDER IT
+
+*If the script were rewritten tomorrow, would this sentence still be true?* **Instructions describe the
+script and die with it; findings describe Amazon and outlive it.**
+
+| § | Verdict |
+|---|---|
+| 1 · the hand-filled column | **SPLIT** |
+| 2 · 3 Aug, ~10-in-30 plus evaluation lag | analytical |
+| 3 · 4 Aug, 12 is sufficient | analytical |
+| 4 · verdict vocabulary | **SPLIT** |
+| 5 · 1 Sep, margin unmeasured | analytical |
+| 5b · the feeds reason | **DUPLICATE — item 549** |
+| 6 · the sample ASINs are stale | **SPLIT** |
+| 7 · the SDK lives here | operating |
+| 8 · Keychain declined | operating |
+| 9 · the watcher is a production monitor | **DUPLICATE — item 550** |
+
+> **★★ THE FOUR SPLITS ARE THE WORK; THE CLASSIFICATION IS NOT.** §1 reads as an instruction — *fill in
+> this column* — and **its centre is a fact about Amazon's Reporting surface**: `ListReports` is
+> *entitled* and returns an empty collection because Amazon has generated no reports for this account,
+> not because we ask wrongly. §4 reads as a glossary of five tokens and **its centre is why two failure
+> kinds must not share one**: the scenario it guards is the floor being crossed on a day the network
+> also fails, and those are uncorrelated.
+>
+> **A SECTION'S FORM AND ITS CONTENT POINT DIFFERENT WAYS.** Sorting by what a section looks like
+> would have left both findings on the laptop.
+
+**Two are duplication rather than migration**, and both were written today — §5b hours after item 549,
+§9 hours after item 550, **by me, into both files.** They are removed with a pointer.
+
+#### ★ THE TWO DUPLICATIONS WERE WRITTEN INTO BOTH FILES THE SAME DAY, HOURS AFTER THE ITEMS EXISTED
+
+§5b was written into this README hours after **item 549** recorded the same Feeds finding. §9 was
+written hours after **item 550** recorded the same credential finding. **Both by the same person, in
+one session, in the file that was already known to be the fragile copy.**
+
+> **THE MOTION THAT PUT THEM THERE WAS "KEEP THE README CURRENT", AND IT WAS THE RIGHT INSTINCT
+> POINTED AT THE WRONG ARTEFACT.** Each was a real finding written down promptly. **Neither needed to
+> be written twice, and the second copy was the one with no history behind it.**
+>
+> **A FILE ACCUMULATES DUPLICATES FASTEST WHILE SOMEBODY IS ACTIVELY LOOKING AFTER IT.** Both entries
+> exist *because* the README was being maintained that day — which is also the day it was identified
+> as holding the only copy of anything. **Maintenance and migration pulled in opposite directions and
+> maintenance was faster.**
+
+#### THE ANALYSIS, MIGRATED
+
+**A. THE SHIPPED COUNT IS DASHBOARD-ONLY, AND THAT IS PERMANENT.** `ListReports` authenticates and
+returns `{reports: []}`. **The Reporting surface is entitled**; the collection is empty because Amazon
+has generated no reports for this account. There is no parameter, no other endpoint and no credential
+that produces the trailing-30-day figure. **Confirmed 4 August 2026. Not an open item.** If `reports=`
+ever becomes non-zero, that is item 7 firing and the position genuinely changes.
+
+**B. THE PAIRING IS WHAT DISCRIMINATES.** The API verdict alone says nothing about *why*. Paired with
+the shipped count it separates three live hypotheses:
+
+| observation | conclusion |
+|---|---|
+| clears within ~2 days, shipped flat | **evaluation lag** — the ~10-in-30 reconstruction is right |
+| shipped climbs to 13–15, still `AssociateNotEligible` | **"qualified" is narrower than "shipped"** |
+| clears exactly as shipped crosses N | **N is the real threshold**, undocumented anywhere |
+
+**C. 3 AUGUST — SUPPORTED, NOT CONFIRMED.** Product data flipped to `OK` while shipped moved 11 → 12
+overnight, which matches row 1 and rules out a threshold of 13+. **Deliberately not called confirmed:**
+one overnight increment on one account is weak, and a periodic re-evaluation job that happened to run
+explains it equally well. **Do not restate this as a confirmed threshold.**
+
+**D. 4 AUGUST — 12 IS SUFFICIENT AND THE FLOOR IS UNKNOWN.** Shipped held at 12 across two days and
+access held both. Two flat days establish only that **12 is sufficient**; they say nothing about how far
+below 12 access survives, **and that lower number is the one that matters.**
+
+> **IT CAN ONLY BE LEARNED BY FALLING.** No amount of holding steady above a floor reveals where it is.
+> **Every day access holds adds confidence that the current volume is safe and none at all about the
+> threshold** — so the sharpest available test remains a future *loss* event read against the shipped
+> count at that moment. **The useful observation is the one nobody wants.**
+
+**E. WHY `NETWORK_FAIL` AND `UNKNOWN` MUST NOT SHARE A TOKEN.** A transport failure means the question
+never reached Amazon and the row says nothing about entitlement. An unrecognised response means Amazon
+answered something new and **is worth investigating.** Before the split they were one token.
+
+> **THE SCENARIO IT PROTECTS AGAINST IS THE FLOOR BEING CROSSED ON A DAY THE NETWORK ALSO FAILS.** The
+> two are uncorrelated and one of them had already happened that week. **A real answer is never
+> retried** — retrying an `AssociateNotEligible` would mask the one observation the watcher exists to
+> capture.
+
+*The `2026-08-04T08:33:29Z` row was recorded `UNKNOWN` and reclassified `NETWORK_FAIL*`. The asterisk
+means reclassified after the fact, not observed as such; the 17:29 run the same day returned `OK` with
+shipped unchanged, so access held throughout. **No future row carries an asterisk.***
+
+**F. A PARTIAL RESULT IS A SUCCESSFUL CALL.** A partial `itemsResult` alongside an `errors` array is
+the API returning what it can. **Entitlement failure looks different: no `itemsResult` at all, and a
+`reason`.** Anyone re-running the shipped samples will see two dead ASINs and an out-of-stock item and
+conclude the integration broke. **It did not; the sample data aged.**
+
+**G. THE POSITION AS OF 1 SEPTEMBER.** 31 `OK` runs, zero refusals since 2 August, four `NETWORK_FAIL`.
+**`shipped_items_30d` blank for 29 consecutive runs; last value 12, on 4 August.**
+
+> **A MONTH OF `OK` IS A MONTH OF EVIDENCE ABOUT THE WRONG VARIABLE.** *"Held, margin unmeasured"* is
+> the accurate phrase and it is different from *"stable"*. **With the column blank, a loss event
+> produces a bad day and no number** — the one observation the watcher exists for is currently
+> uncapturable.
