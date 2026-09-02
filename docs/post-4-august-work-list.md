@@ -46538,6 +46538,15 @@ meaning, sitting in the same sentence. **Nothing distinguishes them but the word
 20  Perfume Click  : Free Delivery
 ```
 
+> **⚠ CORRECTED BY ITEM 575: FIVE IS FOUR.** *"Unlock Unlimited Free Delivery"* **is a paid
+> subscription**, and its own terms say so: *"These Terms & Conditions govern the use of the Premier
+> Next Day Delivery service ('the Service'). **By purchasing the Service**, you agree..."*
+>
+> **THE HEADLINE AND THE TERMS CONTRADICT EACH OTHER AND ONLY THE TERMS WERE READ.** The title was
+> taken at face value because it was in the delivery bucket for the right reason; **being correctly
+> classified is not the same as being correctly understood.** A classifier keying on the title would
+> have offered a shopper free delivery that costs money.
+
 **Three carry an extractable threshold in the title. Two do not.**
 
 - **17 and 19** are the clean case: a number, a currency, an "over". Both retailers are live and tiered
@@ -46621,3 +46630,129 @@ code.**
 **Criterion 25 is now answerable directly.** `filters.exclusiveOnly: true` returns **1 offer** across
 the whole population, and on the joined set `voucher.exclusive` is true on exactly one row. **No
 waiting for a positive case: the filter asks the question.**
+
+---
+
+### 575. All 93 offers read: narrow, short-lived or unverifiable, and the three are not the same problem
+
+**Raised:** 2 September 2026, Phase 0.5 · **REPORT ONLY. No surface proposed.** · Item 574 bucketed the
+93 and read the delivery ones; this reads all of them.
+
+**The question was whether, discounting delivery, any of it is useful to a shopper.** The brief
+excluded discount offers from the *optimiser* because exclusions live in free text and applying one
+wrongly produces a wrong total we generated. **That is about applying them and says nothing about
+showing them.**
+
+#### WHO HAS THEM
+
+```
+YesStyle 20 · Boots 18 · Stylevana 14 · Gorgeous Shop 12 · Beauty Flash 9
+ilapothecary 6 · MyProtein 4 · Perfume Click 4 · 100percentpure DE/AT 3
+Debenhams 2 · Niche-Beauty 1
+```
+
+**Nine of eleven are live retailers.** ilapothecary is a brand-hub partner, not a catalogue retailer;
+100percentpure DE/AT is neither. **Five active retailers have nothing**: Beauty Bay, Escentual, Healf,
+The Fragrance Shop, The Organic Pharmacy.
+
+#### STRAIGHTFORWARD SITE-WIDE: EFFECTIVELY ZERO
+
+Six candidates, and **every one hedges in its own text**: *"up to"*, *"selected"*, *"eligible"*,
+*"almost everything"*, or no stated scope. **Not one is a clean unconditional percentage.** The closest
+is ilapothecary's 15% sitewide, and ilapothecary is not a retailer.
+
+#### ★★★ THE ITEM'S CENTRE: THREE FAILURE MODES, AND ONLY ONE DISQUALIFIES
+
+| | count | verdict |
+|---|---:|---|
+| **narrow** | ~30 single-brand | **fine, and checkable** |
+| **short-lived** | 18 expiring on one date, 4 within two days | **a surface problem** |
+| **unverifiable** | 13 Boots "selected" | **disqualifying** |
+
+**NARROW IS FINE BECAUSE A BRAND IS A SCOPE WE CAN VERIFY.** *"Abib 50% OFF"* is a claim we can check
+against `normalised_brand`. It is narrow in the sense of covering few products and precise in the sense
+that matters.
+
+**SHORT-LIVED IS A PROPERTY OF THE SURFACE, NOT THE OFFER.** Eighteen YesStyle brand offers share one
+end date. **Any page built from them empties overnight**, and a weekly rebuild would show expired
+offers for six days. That constrains where such material could live; it does not make it false.
+
+> **UNVERIFIABLE IS THE ONE THAT DISQUALIFIES, AND IT IS BOOTS' ENTIRE SET.** *"Save up to half price
+> on selected skincare"*, terms *"T&C apply"*. **Neither we nor the shopper can determine whether any
+> given product is included.** It is not narrow -- narrow would be checkable. **It is unbounded, and
+> unbounded is the one thing that cannot be presented honestly.**
+
+#### ★★★ AND BOOTS IS THE LARGEST RETAILER IN THE CATALOGUE
+
+**That is the shape of the whole finding.** Boots contributes the most offers of any single retailer
+after YesStyle, carries more products than anyone, and **contributes nothing usable**, because its
+entire offer vocabulary is *"selected"*.
+
+> **THE RETAILER WITH THE MOST TO OFFER OFFERS THE LEAST THAT CAN BE CHECKED**, and the two facts are
+> unrelated to each other -- which is why a count of offers per retailer predicts nothing about value.
+
+#### THE BRAND MATCH: TWENTY-FIVE OF THIRTY-THREE, AND IT IS THIRTY RATHER THAN THREE
+
+Named brands matched against `normalised_brand`, **and against the offering retailer**, because a
+brand we carry elsewhere is not an offer a shopper can act on.
+
+| offer | brand | at that retailer | anywhere |
+|---|---|---:|---:|
+| Boots | Clinique | **279** | 594 |
+| YesStyle | Judydoll | **248** | 356 |
+| Gorgeous Shop | Redken | **245** | 428 |
+| Gorgeous Shop | Kerastase | **229** | 606 |
+| Beauty Flash | Goldwell | **212** | 284 |
+| Beauty Flash | Dermalogica | **208** | 267 |
+| Gorgeous Shop | Goldwell | **194** | 284 |
+| Gorgeous Shop | Elizabeth Arden | **183** | 435 |
+| Beauty Flash | Elizabeth Arden | **172** | 435 |
+| Stylevana | Medicube | **155** | 430 |
+| YesStyle | ETUDE | **148** | 393 |
+| YesStyle | SANA | **120** | 139 |
+| YesStyle | Sulwhasoo | **88** | 140 |
+| Stylevana | Numbuzin | **71** | 238 |
+| YesStyle | **Abib** | **63** | 174 |
+| YesStyle | LAKA | 61 | 168 |
+| YesStyle | Dr. Ceuracle | 58 | 118 |
+| YesStyle | Realbarrier | 52 | 76 |
+| Gorgeous Shop | ELEMIS | 41 | 151 |
+| Stylevana | Celimax | 38 | 96 |
+| YesStyle | FULLY | 38 | 52 |
+| Stylevana | Dr Althea | 31 | 89 |
+| Boots | The Ordinary | 30 | 192 |
+| YesStyle | colorgram | 25 | 87 |
+| Stylevana | KSECRET | 21 | 97 |
+| YesStyle | shaishaishai | 11 | 17 |
+| Stylevana | **CENTELLIAN 24** | **0** | 63 |
+
+**Eight named brands are not in the catalogue at all**: Dr.G, Momcozy, My Scheming, NEOGEN, SCINIC,
+SIGHTFUTURE, SKIN&LAB, TTVV. Checked for spelling variants; the only near hit is `reco skinlab`, a
+different brand.
+
+> **SO THE ANSWER IS THIRTY, NOT THREE** -- twenty-five brands matched, twenty-six offer-retailer pairs
+> with stock, and half of them carrying over 100 products at the retailer running the offer.
+>
+> **AND ONE ROW IS THE REASON THE QUERY HAD TO BE RUN AGAINST THE RETAILER RATHER THAN THE CATALOGUE.**
+> Stylevana's CENTELLIAN 24 offer matches a brand we carry **63 products of, none of them at
+> Stylevana.** Matched on brand and unusable in fact. **A catalogue-wide match would have counted it.**
+
+#### FMB15: THE ONLY OFFER IN 93 WRITTEN FOR US
+
+`FMB15`, ilapothecary, 15% off, 28 days. **A code carrying our own name, from a brand-hub partner
+rather than a retailer** -- which is to say the only bespoke commercial term in the entire population
+comes from the one relationship that is not a catalogue relationship.
+
+#### THE MATERIAL'S QUALITY, WHICH IS A SEPARATE FINDING FROM ITS SCOPE
+
+- **ilapothecary: three of six rows are malformed or duplicated.** `[45]` and `[46]` carry **a bare
+  code string as the title** -- `AWIN15`, `SUNSHINE15` -- with terms *"AWIN15 at checkout"*.
+  `WELLNESS15` appears twice, once as `promotion` and once as `voucher`.
+- **MyProtein: two rows whose entire terms field is the single character `Y`.**
+- **100percentpure DE/AT: three offers in German**, euro thresholds, for a market we do not serve.
+- **YesStyle `END26` is day-of-week restricted** -- *"(Tue - Fri)"* -- and its only terms are a bare
+  URL. **Shown on a Saturday it is false.**
+
+> **A FEED CAN BE COMPLETE, WELL TYPED, CORRECTLY FILTERED AND STILL BE POOR MATERIAL.** Every field
+> was populated on all 93 rows. **Populated is not the same as meaningful**, and no schema check would
+> have found a terms field containing `Y`.
