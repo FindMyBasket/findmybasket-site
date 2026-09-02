@@ -46286,3 +46286,132 @@ answers about whether a deploy should depend on a live third-party read at build
 
 **`/brands/all` is not the only page reading the catalogue at build.** The blast radius of a Supabase
 blip during a build is unmeasured, and that measurement is what would decide it.
+
+---
+
+### 572. The promotions endpoint does not paginate under two parameter shapes, and 12,000 rows were 200
+
+**Raised:** 2 September 2026, Phase 0.5 of the Awin Offers brief · **OPEN. THE PHASE 1 DECISION IS NOT
+MADE BY MEASUREMENT, because the measurement could not be taken.**
+
+```
+pagination : {"page":1,"pageSize":200,"total":30105}
+pages walked          : 60
+rows collected        : 12000
+DISTINCT promotionIds : 200          <- 60.0x duplication
+```
+
+**`{page: N}` in the POST body: ignored. `?page=N&pageSize=200` in the query string: ignored.** Both
+return page one. The response advertises 30,105 offers across 151 pages and **200 of them, 0.66%, are
+all that has been seen.**
+
+#### ★★★ THE FIRST PAGED RUN REPORTED "0 JOINED ADVERTISERS OF 12,000" AND IT WAS A STATEMENT ABOUT 200
+
+**Nothing errored.** 60 pages fetched, 60 HTTP 200s, 12,000 rows collected, every field populated.
+**The only thing wrong was that they were the same 200 rows sixty times.**
+
+> **IT WAS CAUGHT BY ARITHMETIC, NOT BY THE PROBE.** Every derived count came back an exact multiple of
+> 60: delivery 5 -> 300, discount 39 -> 2340, other 156 -> 9360, `voucher.exclusive` null 181 -> 10860.
+> **A clean multiple of the page count is the signature**, and it is only visible if somebody happens to
+> divide.
+>
+> **THIS IS THE `localStorage` SWEEP AGAIN, TWELVE HOURS LATER.** Item 551 recorded four iframes
+> returning an identical value for four different inputs because they read stored state rather than the
+> parameter. **Same shape: a loop that varies its input, an API that ignores it, and a result set that
+> looks larger than it is.** There the tell was four identical rows; here it was sixty identical pages.
+
+**THE GUARD IS NOW IN THE PROBE.** Distinct `promotionId` against rows collected, with a loud refusal
+and a deduplication before any count is printed.
+
+> **A PAGED READ THAT SILENTLY RETURNS THE SAME PAGE IS INDISTINGUISHABLE FROM A WORKING ONE BY ROW
+> COUNT ALONE.** Row count is the figure everyone reads and the one figure that cannot detect this.
+
+#### WHAT IS ESTABLISHED, AND IT IS 0.66% OF THE POPULATION
+
+| | measured | over |
+|---|---|---|
+| total offers | **30,105** | reported by the API |
+| seen | **200** | page one |
+| from our 20 joined advertisers | **0** | of those 200 |
+| delivery-mentioning, joined | **0** | of those 200 |
+| `voucher.exclusive === true` | **0** | of those 200 |
+| non-null `voucher.code` | **0** | of those 200 |
+
+> **"ZERO ON PAGE ONE IS A FINDING ONLY IF IT SURVIVES THE REST", AND THE REST IS UNREACHABLE.** The
+> brief's Phase 1 decision was to be made by measurement rather than argument. **It cannot be made
+> yet**, and reporting the page-one zeros as the answer would be the error the brief's own conventions
+> exist to prevent.
+
+**Not guessed at further.** `offset`/`limit`, `pageNumber`, a nested pagination object and a versioned
+path are all untried, and trying them one at a time until something moves is how a wrong parameter
+becomes a believed one. **What settles it is Awin's documentation or a controlled probe with a known
+expected difference between two pages** -- the shape item 199 used to prove `deliveryInfo` unsupported.
+
+#### CRITERION 25 IS UNEXERCISED, NOT SATISFIED
+
+`voucher.exclusive` and `voucher.attributable` **exist on the 20 rows that carry a `voucher` object,
+and are `false` on all 20. Never `true` anywhere seen.** `voucher.code` is `null` on all 20.
+
+**So §25 -- *"exclusive offers not assigned to this publisher are excluded, or if the payload cannot
+distinguish them, no offer requiring a code is used at all"* -- can be neither satisfied nor refuted.**
+The field exists, which argues for the first branch; no row exercises it, which means the first branch
+has never been shown to work. **Item 569's shape in the payload rather than in a rule.**
+
+---
+
+### 573. The structured code field says no code is required and four of five need one
+
+**Raised:** 2 September 2026, Phase 0.5, question 9 · **OPEN. This decides how Phase 3 may present an
+offer, and it is worse than a missing field.**
+
+The five delivery-mentioning offers on page one. Four are Secret Sales:
+
+```
+title       : Free delivery on 1000s of Hugo Boss styles from GBP 20
+description : Code: FREEDEL
+terms       : Code: FREEDEL
+voucher.code: null
+```
+
+**The code is in the prose. The structured field is null.**
+
+#### ★★★ A NULL READS AS "NO CODE REQUIRED", NOT AS "UNKNOWN"
+
+**That is the whole finding.** A missing field announces itself. **A null in a field named `code` is
+read by any consumer as an offer that applies automatically**, and the probe's own summary said exactly
+that: *"(none - Q9: applies automatically)"* on four offers that require `FREEDEL` at checkout.
+
+> **PHASE 3 WOULD TELL A USER A TOTAL THEY CANNOT REPRODUCE.** The brief's own words at section 5: *"a
+> basket total the user cannot reproduce is a trust failure even when the arithmetic is right."* **The
+> payload actively produces that failure** by encoding "there is a code, in the prose" as "there is no
+> code".
+>
+> **AND IT IS ITEM 22's DISTINCTION IN A THIRD PARTY'S SCHEMA.** An absent value and a negative value
+> must not share a representation. Here they do, in a field we do not control, and the honest handling
+> is to treat `voucher.code === null` as **unknown** rather than as **none** -- which inverts what the
+> field appears to say.
+
+**CONSEQUENCE FOR §23**, which requires the interface to state whether a code is needed: **it cannot be
+derived from `voucher.code`.** Either the terms text is parsed for a code, which is the free-text
+problem Phase 2 exists to avoid, or **no offer is presented as automatic unless something other than a
+null says so.**
+
+#### ★★ THE SECRET SALES ROWS ARE PHASE 2's FIRST TEST CASE, AND THEY ARE REAL
+
+Section 4 requires constructed offers the classifier must reject. **These four need no construction.**
+
+```
+terms : "Code: FREEDEL"
+```
+
+**Unambiguously about delivery. No extractable threshold. No scope. No amount.** Exactly what section 4
+says must be refused: *"if the threshold cannot be extracted with certainty, the offer is not
+classified, however obviously delivery-related the wording appears."*
+
+> **A REAL REFUSAL CASE IS WORTH MORE THAN A CONSTRUCTED ONE**, because a constructed case tests the
+> classifier against its author's imagination and a real one tests it against the corpus. **These four
+> are the corpus's own answer to "how bad does the wording get", and the answer is three words.**
+
+**They are also not ours.** Secret Sales is not among our 20 joined advertisers, so they could never be
+served. **Their value is as a fixture, not as inventory** -- and a fixture drawn from the real feed is
+the thing section 4 asks for and could not have written.
