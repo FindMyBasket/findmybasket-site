@@ -45158,8 +45158,66 @@ asked and the expanded ones were not part of it.
 > *"a probe designed to settle two hypotheses answered a third question neither of them asked"* — and
 > there the extra fields were noticed. **Here they were collected, computed, and dropped.**
 
+> **★★★ AND IT IS A WORSE VERSION OF ITEM 497's SHAPE, NOT THE SAME ONE.** There, a probe designed to
+> settle two hypotheses returned `seller` and `sellerPrice` — fields neither hypothesis asked for — and
+> **they were noticed, weighed, and reversed the recommendation.** The extra evidence did work.
+>
+> **Here the extra evidence was collected, computed and lost.** The expanded figures came out of the
+> same probe that confirmed the cap, in the same result object, and only the collapsed ones reached the
+> write-up. **Nothing suppressed them; they simply were not what had been asked.**
+>
+> **THAT IS THE MORE DANGEROUS VERSION: A PROBE THAT RETURNS THE ANSWER AND THE COUNTER-EVIDENCE
+> TOGETHER, WHERE ONLY THE ANSWER SURVIVES THE WRITE-UP.** A probe that returns nothing useful is
+> obviously incomplete. **One that returns a clean confirmation of the question asked looks finished**,
+> and the finding it also contains is invisible precisely because the report reads well without it.
+
 **This is what makes the panel immune rather than capped.** Its position depends on the routine list's
 height, which is the basket, not the roster and not the toggle.
+
+#### ★★★ THE ITEM'S CENTRE: A DESKTOP CHANGE PRODUCED A MOBILE REGRESSION, AND EVERY DESKTOP NUMBER WAS CORRECT
+
+**The first build lifted the save card out of the results column and left the disclosure behind it.**
+In source order the prompt then followed the disclosure, so at 390 it rendered **below** it:
+
+```
+390 x 844    before  2,201px      after the first build  2,463px      +262px
+1440 x 900   save card at 743px, column 1, expanded 743px -- exactly as designed
+```
+
+> **A DESKTOP CHANGE PRODUCED A MOBILE REGRESSION, ON THE SURFACE THE CHANGE WAS EXPLICITLY SCOPED NOT
+> TO TOUCH.** The whole design of this item is that mobile keeps source order and is left alone. **It
+> was left alone in intent and moved 262px in fact.**
+
+**AND THE PASS THAT PRODUCED IT LOOKED CLEAN ON THE AXIS BEING MEASURED.** Desktop was 0.8 screens
+collapsed, 0.8 expanded, in the panel column — every number the change was made for, correct on the
+first attempt. **A verification limited to the thing being built would have passed it.**
+
+> **★ ONLY THE PROBE DISAGREED.** Mobile was not reasoned about wrongly; it was **asserted unchanged
+> and not measured** — and "unchanged" is the easiest claim in the world to make about a surface you
+> did not touch on purpose. **The reason it was caught is that the probe measured both viewports out of
+> habit rather than because either was in doubt.**
+
+**THE FIX IS STRUCTURAL, NOT A NUDGE.** Both the prompt and the disclosure are grid children now, so
+item 245's **value → commitment → disclosure** order reads the same down the left column at desktop as
+it does down the stack at mobile. **One source order, two layouts, no override** — which is what the
+first build was already trying to do and had only half done.
+
+*Ordering by CSS instead would have re-created the thing the layout comment refuses: the mobile stack's
+honesty depends on source order meaning what it says.*
+
+#### MEASURED AFTER THE FIX
+
+| | collapsed | **expanded** | in panel column | before disclosure |
+|---|---:|---:|:---:|:---:|
+| **1440 x 900** | **743px · 0.8 screens** | **743px · 0.8 screens** | ✅ | ✅ |
+| **390 x 844** | 2,221px · 2.6 screens | 7,889px · 9.3 screens | n/a | ✅ |
+
+**Desktop does not move when all nineteen options open.** That is the property the cap could not
+provide, and it is the item's purpose demonstrated rather than argued.
+
+**Mobile lands at 2,221 rather than the 2,201 it started at — 20px of grid gap.** *Stated rather than
+rounded: "unchanged" was the requirement and 20px is not zero, and a claim of unchanged that is
+actually twenty pixels is how a hundred goes unnoticed later.*
 
 #### MOBILE IS OPEN, AND OPTION C IS WHAT THE EXPANDED CASE REOPENS
 
@@ -45218,6 +45276,21 @@ script and die with it; findings describe Amazon and outlive it.**
 
 **Two are duplication rather than migration**, and both were written today — §5b hours after item 549,
 §9 hours after item 550, **by me, into both files.** They are removed with a pointer.
+
+#### ★ THE TWO DUPLICATIONS WERE WRITTEN INTO BOTH FILES THE SAME DAY, HOURS AFTER THE ITEMS EXISTED
+
+§5b was written into this README hours after **item 549** recorded the same Feeds finding. §9 was
+written hours after **item 550** recorded the same credential finding. **Both by the same person, in
+one session, in the file that was already known to be the fragile copy.**
+
+> **THE MOTION THAT PUT THEM THERE WAS "KEEP THE README CURRENT", AND IT WAS THE RIGHT INSTINCT
+> POINTED AT THE WRONG ARTEFACT.** Each was a real finding written down promptly. **Neither needed to
+> be written twice, and the second copy was the one with no history behind it.**
+>
+> **A FILE ACCUMULATES DUPLICATES FASTEST WHILE SOMEBODY IS ACTIVELY LOOKING AFTER IT.** Both entries
+> exist *because* the README was being maintained that day — which is also the day it was identified
+> as holding the only copy of anything. **Maintenance and migration pulled in opposite directions and
+> maintenance was faster.**
 
 #### THE ANALYSIS, MIGRATED
 
