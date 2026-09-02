@@ -29,14 +29,6 @@ console.log(`token present, length ${TOKEN.length}`);
 const path = PATH_TMPL.replace('{publisherId}', String(PUB)).replace('{publisherid}', String(PUB));
 const url = `https://api.awin.com${path.startsWith('/') ? path : '/' + path}`;
 console.log(`${METHOD} ${url}`);
-console.log(`filters: ${JSON.stringify(FILTERS)}   pageSize: ${PAGE_SIZE}\n`);
-
-// PAGE PARAMETERS GO IN THE QUERY STRING AND IN THE BODY, BOTH, and the reason is a
-// measured failure. The first paginated run posted {page: N} in the body alone; the API
-// ignored it and returned page one sixty times. 12,000 rows collapsed to 200 distinct
-// promotionIds, and EVERY DERIVED COUNT WAS AN EXACT MULTIPLE OF 60 -- which is the only
-// reason it was caught. Sending both is not belt and braces; it is not yet known which
-// the API reads, and the distinct-id guard below now settles it either way.
 // ── THE DOCUMENTED REQUEST SHAPE, read rather than inferred ──────────────────────────
 //
 // pagination CARRIES ONLY pageSize, 10 to 200. THERE IS NO PAGE NUMBER. The earlier probe
@@ -49,6 +41,7 @@ console.log(`filters: ${JSON.stringify(FILTERS)}   pageSize: ${PAGE_SIZE}\n`);
 // than 151 pages. The count that decides Phase 1 is one call.
 const FILTERS = JSON.parse(process.env.PROBE_FILTERS || '{"membership":"joined"}');
 const PAGE_SIZE = Number(process.env.PROBE_PAGE_SIZE || 200);
+console.log(`filters: ${JSON.stringify(FILTERS)}   pageSize: ${PAGE_SIZE}\n`);
 
 const call = async (filters) => {
   const body = { pagination: { pageSize: PAGE_SIZE }, filters };
