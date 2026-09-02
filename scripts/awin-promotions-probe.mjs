@@ -255,4 +255,24 @@ console.log('\n=== Q9 CODE REQUIRED VERSUS AUTOMATIC (delivery bucket) ===');
 const withCode = buckets.delivery.filter(r => F(r,'voucherCode','code'));
 console.log(`  requires a code : ${withCode.length}`);
 console.log(`  automatic       : ${buckets.delivery.length - withCode.length}`);
+
+// ── FULL DUMP: every row read rather than counted ────────────────────────────────────
+// PROBE_DUMP_ALL=1. Bucketing answers "how many"; only reading answers "is any of this
+// worth anything". The buckets above are this probe's own crude regex and item 574
+// showed it counting 20 where the real number was five.
+if (process.env.PROBE_DUMP_ALL === '1') {
+  console.log('\n=== ALL ROWS, VERBATIM ===');
+  const days = (a, b) => (a && b) ? Math.round((new Date(b) - new Date(a)) / 86400000) : null;
+  const nowD = (e) => e ? Math.round((new Date(e) - Date.now()) / 86400000) : null;
+  rows.sort((a, b) => String(F(a,'advertiserName','advertiser.name')).localeCompare(String(F(b,'advertiserName','advertiser.name'))));
+  rows.forEach((r, i) => {
+    const code = F(r, 'voucher.code');
+    console.log(`\n[${String(i+1).padStart(2)}] ${F(r,'advertiser.name')}  (id ${F(r,'advertiser.id')})`);
+    console.log(`     type=${F(r,'type')}  status=${F(r,'status')}  code=${code ?? 'NONE'}  exclusive=${F(r,'voucher.exclusive') ?? '-'}`);
+    console.log(`     runs ${String(F(r,'startDate')).slice(0,10)} -> ${String(F(r,'endDate')).slice(0,10)}  (${days(F(r,'startDate'),F(r,'endDate'))}d total, ${nowD(F(r,'endDate'))}d left)`);
+    console.log(`     TITLE : ${F(r,'title')}`);
+    const d = F(r,'description'); if (d) console.log(`     DESC  : ${String(d).replace(/\s+/g,' ').slice(0,300)}`);
+    const t = F(r,'terms');       if (t) console.log(`     TERMS : ${String(t).replace(/\s+/g,' ').slice(0,400)}`);
+  });
+}
 console.log('\nPROBE COMPLETE. Nothing was written.');
