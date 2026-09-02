@@ -28,7 +28,8 @@ console.log(`token present, length ${TOKEN.length}`);
 
 const path = PATH_TMPL.replace('{publisherId}', String(PUB)).replace('{publisherid}', String(PUB));
 const url = `https://api.awin.com${path.startsWith('/') ? path : '/' + path}`;
-console.log(`${METHOD} ${url}\n`);
+console.log(`${METHOD} ${url}`);
+console.log(`filters: ${JSON.stringify(FILTERS)}   pageSize: ${PAGE_SIZE}\n`);
 
 // PAGE PARAMETERS GO IN THE QUERY STRING AND IN THE BODY, BOTH, and the reason is a
 // measured failure. The first paginated run posted {page: N} in the body alone; the API
@@ -36,21 +37,33 @@ console.log(`${METHOD} ${url}\n`);
 // promotionIds, and EVERY DERIVED COUNT WAS AN EXACT MULTIPLE OF 60 -- which is the only
 // reason it was caught. Sending both is not belt and braces; it is not yet known which
 // the API reads, and the distinct-id guard below now settles it either way.
-const call = async (page, pageSize) => {
-  const u = new URL(url);
-  if (page != null) { u.searchParams.set('page', String(page)); u.searchParams.set('pageSize', String(pageSize)); }
-  const r = await fetch(u, {
+// ── THE DOCUMENTED REQUEST SHAPE, read rather than inferred ──────────────────────────
+//
+// pagination CARRIES ONLY pageSize, 10 to 200. THERE IS NO PAGE NUMBER. The earlier probe
+// sent {page: N} in the body and then in the query string; the API had never defined that
+// parameter, so it returned page one sixty times -- CORRECTLY. Sixty 200s, 12,000 rows,
+// 200 distinct ids. Item 572.
+//
+// AND PAGING IS LARGELY UNNECESSARY, which is the better half. filters.membership takes
+// "joined", so the population this project cares about is ONE SERVER-SIDE FILTER rather
+// than 151 pages. The count that decides Phase 1 is one call.
+const FILTERS = JSON.parse(process.env.PROBE_FILTERS || '{"membership":"joined"}');
+const PAGE_SIZE = Number(process.env.PROBE_PAGE_SIZE || 200);
+
+const call = async (filters) => {
+  const body = { pagination: { pageSize: PAGE_SIZE }, filters };
+  const r = await fetch(url, {
     method: METHOD,
     headers: { Authorization: `Bearer ${TOKEN}`, Accept: 'application/json', 'Content-Type': 'application/json' },
-    ...(METHOD === 'POST' ? { body: JSON.stringify(page != null ? { page, pageSize } : {}) } : {}),
+    body: JSON.stringify(body),
   });
-  return { r, t: await r.text() };
+  return { r, t: await r.text(), body };
 };
 
 const t0 = Date.now();
 let res, text;
 try {
-  ({ r: res, t: text } = await call());
+  ({ r: res, t: text } = await call(FILTERS));
 } catch (e) {
   console.log('=== Q2 CREDENTIAL / TRANSPORT ===');
   console.log(`  TRANSPORT FAILURE, the question never reached Awin: ${e.message}`);
@@ -83,51 +96,25 @@ console.log(`\n=== Q3 COUNT ===\n  top-level type : ${Array.isArray(json) ? 'arr
 console.log(`  page 1 rows    : ${rows.length}`);
 console.log(`  pagination     : ${JSON.stringify(json.pagination ?? null)}`);
 
-// ── PAGE THROUGH. The page-1 counts are not the population and must not be reported as
-//    one. The pagination object's shape is printed above rather than assumed; this walks
-//    whichever of the common shapes it turns out to be, and STOPS AND SAYS SO if it is
-//    none of them, rather than reporting a partial view as complete.
+// ONE CALL. No page walking: pageSize is the only documented pagination control, and
+// the filter does the work the pages were being used for.
 const pg = json.pagination ?? {};
-const total = pg.total ?? pg.totalResults ?? pg.count ?? null;
-const perPage = pg.limit ?? pg.perPage ?? pg.pageSize ?? rows.length;
-let pagesWalked = 1, paginationUnderstood = false;
-if (total !== null && perPage > 0) {
-  paginationUnderstood = true;
-  const pages = Math.ceil(total / perPage);
-  console.log(`  total reported : ${total}  ->  ${pages} pages of ${perPage}`);
-  for (let p = 2; p <= pages && p <= 60; p++) {
-    const { r, t } = await call(p, perPage);
-    if (!r.ok) { console.log(`  page ${p}: HTTP ${r.status} -- STOPPED. Counts below cover ${pagesWalked} page(s).`); break; }
-    let j; try { j = JSON.parse(t); } catch { console.log(`  page ${p}: unparseable -- STOPPED.`); break; }
-    const more = Array.isArray(j) ? j : (j.data ?? []);
-    if (!more.length) { console.log(`  page ${p}: empty, stopping.`); break; }
-    rows = rows.concat(more); pagesWalked = p;
-  }
-} else {
-  console.log('  *** PAGINATION SHAPE NOT RECOGNISED. The counts below are PAGE ONE ONLY.');
-  console.log('  *** Reporting them as the population would be the error this line exists to prevent.');
-}
-console.log(`  pages walked   : ${pagesWalked}`);
-console.log(`  rows collected : ${rows.length}${paginationUnderstood ? '' : '   (PAGE ONE ONLY)'}`);
-
-// ── THE PAGINATION GUARD. A paged read that silently returns the same page is
-//    indistinguishable from a working one by row count alone, and every derived figure
-//    is then a clean multiple of the page count. Distinct ids is the only cheap test.
+console.log(`  total reported : ${pg.total ?? '(none)'}`);
 const ids = new Set(rows.map(r => r?.promotionId).filter(v => v != null));
-console.log(`  DISTINCT promotionIds : ${ids.size}`);
-if (rows.length && ids.size < rows.length * 0.9) {
-  console.log('  *** PAGINATION IS NOT WORKING. Distinct ids are far below rows collected,');
-  console.log(`  *** which means the same page came back repeatedly (${(rows.length / Math.max(ids.size,1)).toFixed(1)}x duplication).`);
-  console.log('  *** EVERY COUNT BELOW IS A COUNT OF THE DUPLICATED SET AND MUST NOT BE READ');
-  console.log('  *** AS A POPULATION MEASUREMENT. Deduplicating by promotionId before counting.');
-  const seen = new Set();
-  rows = rows.filter(r => { const k = r?.promotionId; if (k == null || seen.has(k)) return false; seen.add(k); return true; });
-  console.log(`  *** deduplicated to ${rows.length} rows. Counts below cover THOSE, not ${total}.`);
+console.log(`  DISTINCT promotionIds : ${ids.size} of ${rows.length}`);
+if (rows.length && ids.size < rows.length) console.log('  *** DUPLICATES PRESENT -- investigate before counting.');
+if (pg.total != null && rows.length < pg.total) {
+  console.log(`  *** ${rows.length} of ${pg.total} returned. THIS IS NOT THE FULL POPULATION;`);
+  console.log('  *** raise pageSize or narrow the filter before reading the counts as complete.');
 }
 
 const joined = rows.filter(r => r?.advertiser?.joined === true);
-console.log(`\n  offers from JOINED advertisers : ${joined.length} of ${rows.length}`);
-console.log(`  distinct joined advertisers    : ${new Set(joined.map(r => r.advertiser.id)).size}`);
+console.log(`\n  rows with advertiser.joined === true : ${joined.length} of ${rows.length}`);
+console.log(`  distinct advertisers                : ${new Set(rows.map(r => r?.advertiser?.id)).size}`);
+if (FILTERS.membership === 'joined' && joined.length !== rows.length) {
+  console.log('  *** membership=joined was requested and some rows report joined=false.');
+  console.log('  *** The filter and the field disagree. Report both, trust neither yet.');
+}
 
 // ── Q1 schema, field by field, as returned ─────────────────────────────────────────
 const shape = (v) => Array.isArray(v) ? 'array' : v === null ? 'null' : typeof v;

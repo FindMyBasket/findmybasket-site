@@ -25,9 +25,19 @@ name: awin-promotions-probe (read-only)
         default: '/publisher/{publisherId}/promotions'
         type: string
       method:
-        description: 'HTTP method. The brief says POST; GET is available to settle that.'
+        description: 'HTTP method. Settled: POST.'
         required: false
         default: 'POST'
+        type: string
+      filters:
+        description: 'filters object as JSON. membership joined|notJoined, type voucher|promotion, exclusiveOnly bool, advertiserIds array, status. Default: joined.'
+        required: false
+        default: '{"membership":"joined"}'
+        type: string
+      page_size:
+        description: 'pagination.pageSize, 10 to 200. The ONLY documented pagination control; there is no page number.'
+        required: false
+        default: '200'
         type: string
 
 jobs:
@@ -44,4 +54,6 @@ jobs:
           AWIN_OAUTH_TOKEN: ${{ secrets.AWIN_OAUTH_TOKEN }}
           PROBE_PATH: ${{ inputs.path }}
           PROBE_METHOD: ${{ inputs.method }}
+          PROBE_FILTERS: ${{ inputs.filters }}
+          PROBE_PAGE_SIZE: ${{ inputs.page_size }}
         run: node scripts/awin-promotions-probe.mjs
