@@ -46478,7 +46478,7 @@ distinct advertisers    11        of our 20 joined programmes
 
 **Nine of twenty joined advertisers have no offers at all.**
 
-#### ★★★ THE DELIVERY BUCKET IS 20 AND THE REAL COUNT IS FIVE
+#### ★★★ THE ITEM'S CENTRE: THE DELIVERY BUCKET IS 20 AND THE REAL COUNT IS FIVE
 
 **Thirteen of the twenty are Boots discount offers carrying an identical boilerplate footnote:**
 
@@ -46512,6 +46512,22 @@ the footnote's numbers          3.95, and 15
 > the brief was right to forbid inference from partial matches, because a partial match is exactly what
 > this is.
 
+**BOTH EXTRACTABLE NUMBERS ARE WRONG, AND THEY ARE WRONG DIFFERENTLY.** The £3.95 is Boots' real cost
+and would be harmless. **The £15 is a Click & Collect floor**, a different product with a different
+meaning, sitting in the same sentence. **Nothing distinguishes them but the words either side.**
+
+> **★★★ THE BRIEF CALLED "MENTIONS DELIVERY IN PASSING" AN EDGE CASE TO REFUSE. IT IS THE DOMINANT
+> PATTERN IN THE USABLE POPULATION.**
+>
+> And it is **boilerplate rather than prose**, which changes what kind of problem it is. Prose varies,
+> so a classifier meeting it fails unpredictably and occasionally. **Boilerplate is identical every
+> time**: it will match the same way on every Boots offer published from now on, so a classifier that
+> gets it wrong gets it wrong systematically, on the retailer with the most offers in the set.
+>
+> **IT IS THE STRONGEST ARGUMENT THE BRIEF MADE WITHOUT KNOWING IT.** Section 4's refusal clause was
+> written as caution about an unusual case. **The measurement shows it was the main case**, and the
+> brief would have been right for a reason its author had not seen.
+
 #### THE FIVE REAL ONES, AND THEY ARE THE BUILD
 
 ```
@@ -46541,18 +46557,54 @@ the footnote's numbers          3.95, and 15
 stored, refreshed, classified and integrated offers would today change **zero** basket outcomes.
 
 **That is not an argument against the work. It is the measurement the brief asked for**, and it says
-the value is entirely in the future population rather than the current one. **Whether that is worth
-Phases 1 to 3 now is Robbie's call, and it is a different question from the one the brief opened
-with.**
+the value is entirely in the future population rather than the current one.
+
+#### DECIDED: PHASES 1 TO 3 ARE HELD, BY MEASUREMENT RATHER THAN ARGUMENT
+
+**The brief asked for a number and the number answers itself.** Two candidate offers, both already
+reflected in stored terms, zero basket outcomes changed.
+
+#### ★★ WHAT THE HOLD IS NOT, STATED SO IT IS NOT MISREAD LATER
+
+- **NOT that the mechanism is wrong.** An offer overriding a delivery threshold for one basket
+  calculation is sound, and item 572's Q12 finding stands: `deliveryFor` takes a terms object rather
+  than a retailer id, so the override needs no restructuring of the option builders.
+- **NOT that delivery offers are the wrong target.** They remain the one offer class that is
+  structurally unambiguous and lands on the differentiator. Section 1's reasoning is unchanged.
+- **NOT that the API is unusable.** One filtered call returns the exact population, complete, with a
+  documented exclusivity filter. **The instrument works; the material is thin.**
+
+> **THE REASONING HOLDS AND THE POPULATION DOES NOT JUSTIFY THE BUILD TODAY.** Those are separable, and
+> collapsing them would retire a correct design on the strength of a temporary count.
+
+**REVISIT WHEN: a joined advertiser runs a threshold-moving offer that is not already in the table.**
+That is one condition, checkable in one call, and it is the whole trigger.
 
 #### CORRECTIONS TO 572 AND 573
 
 **572's pagination finding is superseded in cause, not in lesson.** `pagination` carries **only**
 `pageSize` and there is no page number, so the probe was sending a parameter the API never defined and
-sixty identical pages were the correct response. **And `pagination.pageSize` itself returns 500** --
-documented, and broken. The isolation matrix established that `filters` alone works and `pagination`
-alone does not, which guessing would have found eventually without ever establishing which element
-caused it.
+**sixty identical pages were the correct response.**
+
+**AND `pagination.pageSize` RETURNS 500, WHICH THE DOCUMENTATION DID NOT PREDICT.** It is documented,
+with a stated range of 10 to 200, and it fails alone and in combination:
+
+```
+baseline, empty body        200   rows=200  total=30,104
+pagination.pageSize only    500   Internal Server Error
+filters only                200   rows=93   total=93
+pagination + filters        500   Internal Server Error
+```
+
+> **THE ISOLATION MATRIX IS WHAT ESTABLISHED IT**, and the method is the part worth keeping: vary **one
+> element at a time from a known-good baseline** and report every result, rather than trying variations
+> until one returns 200.
+>
+> **GUESSING WOULD HAVE FOUND A WORKING SHAPE AND NEVER LEARNED WHICH ELEMENT FAILED.** Dropping
+> `pagination` and keeping `filters` returns 200 either way -- so the correct request and the correct
+> *understanding* are reachable by different routes, and only one of them tells you that a documented
+> parameter is broken. **That is a finding to send back to Awin, and guessing would have discarded
+> it.**
 
 **573's `voucher.code` finding is corrected and survives weakened.** The documentation says the code is
 null **when there is no membership with the advertiser**. Every voucher row in the page-one sample was
