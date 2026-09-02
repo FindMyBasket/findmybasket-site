@@ -1,0 +1,47 @@
+name: awin-promotions-probe (read-only)
+
+# Phase 0.5 of the Awin Offers brief. ONE authenticated read against api.awin.com,
+# to answer Q1-Q9 of the discovery phase.
+#
+# WRITES NOTHING. No database, no storage, no import trigger, no file. Prints and stops.
+#
+# WHY THIS EXISTS AS A NEW WORKFLOW. Phase 0 forbids code changes, and every existing
+# route to api.awin.com has a hardcoded endpoint list -- awin-shape-probe, awin-rate-card
+# and awin-weekly-pull each reach fixed paths, and none of them reaches /promotions. So
+# Phase 0 as written could not answer its own questions 1 to 9. Approved separately as
+# Phase 0.5 rather than folded into Phase 0 as a revised interpretation.
+#
+# CREDENTIAL. Reads AWIN_OAUTH_TOKEN and ONLY that. AWIN_API_KEY is the FEED credential
+# that eight live paths depend on. A 401 is REPORTED AS A FINDING and is never retried
+# with the feed key: a probe that tried both would establish which credential works while
+# destroying the record of which should.
+
+"on":
+  workflow_dispatch:
+    inputs:
+      path:
+        description: 'API path. {publisherId} is substituted. Default: the promotions endpoint.'
+        required: false
+        default: '/publisher/{publisherId}/promotions'
+        type: string
+      method:
+        description: 'HTTP method. The brief says POST; GET is available to settle that.'
+        required: false
+        default: 'POST'
+        type: string
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Probe the promotions endpoint and print the shape
+        env:
+          AWIN_OAUTH_TOKEN: ${{ secrets.AWIN_OAUTH_TOKEN }}
+          PROBE_PATH: ${{ inputs.path }}
+          PROBE_METHOD: ${{ inputs.method }}
+        run: node scripts/awin-promotions-probe.mjs
