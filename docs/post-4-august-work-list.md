@@ -46002,18 +46002,31 @@ CURRENT (5)   index.html, and the four supplement articles
 **Each was copied from a template at a different time, so they may have drifted from each other as well
 as from `SiteNav`.** The 19 are not assumed identical; that is a second measurement nobody has taken.
 
-#### ★★★ THE FOURTH INSTANCE ARRIVED TONIGHT, FROM MY OWN HAND
+#### ★★★ THE ITEM'S CENTRE: THE FOURTH INSTANCE ARRIVED TONIGHT, FROM MY OWN HAND
 
 **`public/articles/supplement-starter-protein-creatine.html`, published two hours ago, is in the frozen
-19.**
+19** -- added while this item was being written.
+
+> **AN ARTICLE ABOUT SUPPLEMENTS, SHIPPED WITH A NAV THAT DOES NOT LINK TO SUPPLEMENTS**, produced by
+> following a documented five-step procedure **correctly**. **The procedure is right. The file it
+> starts from is four categories out of date.**
 
 `docs/article-template.html` carries the Stage-1 triple and no Fragrance, Bath & Body or Supplements.
-**Every article built from it inherits a nav that was accurate on 28 June.** The template is the
-propagation mechanism, and it is still propagating.
+Every article built from it inherits a nav that was accurate on 28 June.
 
-> **AN ARTICLE ABOUT SUPPLEMENTS, SHIPPED WITH A NAV THAT DOES NOT LINK TO SUPPLEMENTS**, by following
-> a documented five-step procedure correctly. **Nothing in the procedure is wrong except the file it
-> starts from.**
+> **★★★ THAT IS A WRITER PRODUCING DEFECTS AT THE RATE THE TEMPLATE IS COPIED**, which is item 435's
+> shape with a documented process standing in front of it.
+>
+> Item 435: a column was backfilled to zero and **the importer refilled it, 654 to 0 to 192**, because
+> the function that wrote the defect was never changed. **The rate of return was the measure.** Here
+> the writer is a person following instructions, and the instructions are correct at every step.
+>
+> **A PROCESS DOCUMENT MAKES THE DEFECT HARDER TO SEE, NOT EASIER.** A wrong step invites doubt. **A
+> right step performed on a stale source produces a defect that looks like compliance** -- and looked
+> like compliance to me, tonight, while writing the item about it.
+
+**Fixing the 19 without fixing the template clears a symptom whose writer is unchanged**, and the rate
+of return would be one per article published.
 
 #### ★★ AND THE PARITY TEST GUARDS THE ONE STATIC NAV NOBODY CAN REACH
 
@@ -46039,11 +46052,28 @@ redirect changed the answer without touching the test. **Neither half knew about
 *Whether the test should point at the served files, or at `SiteNav` alone, or be retired in favour of
 one nav, is not decided here.*
 
-#### WHAT IS OWED BEFORE ANY FIX
+#### THREE MEASUREMENTS OWED, RECORDED AS OWED RATHER THAN ASSUMED
 
-1. **Diff the 19 against each other**, not only against `SiteNav`. They may be several different stale
-   navs rather than one.
-2. **The template first.** Fixing 19 files while the source of new ones is unchanged is item 435's
-   shape: a symptom cleared while the writer still produces the defect, measured by the rate of return.
-3. **Decide what the parity test's reference should be**, because that decision changes what a fix
-   even has to satisfy.
+**1. THE 19 ARE NOT KNOWN TO AGREE WITH EACH OTHER.** What was measured is that each disagrees with
+`SiteNav`. **That is a different fact.**
+
+> Eighteen articles copied from a template at eighteen different moments **may carry several different
+> stale navs**, and "the frozen nav" is a phrase that assumes one. **Nothing has compared them to each
+> other**, and a fix scoped to "restore the nav" cannot be written until somebody knows whether there
+> is one nav to restore or five.
+
+**2. WHETHER THE TEMPLATE IS THE ONLY SOURCE.** The five current files got their navs somehow and the
+mechanism is unrecorded. **If a second path exists, fixing the template leaves it open.**
+
+**3. WHAT THE PARITY TEST'S REFERENCE SHOULD BE.** Not a detail: **it decides what a fix has to
+satisfy.** Pointing it at the served files, at `SiteNav` alone, or retiring it in favour of a single
+nav are three different definitions of done.
+
+#### WHEN THIS RESUMES, THE ORDER IS FIXED
+
+> **TEMPLATE FIRST, THEN THE 19, THEN THE PARITY TEST'S REFERENCE.**
+
+**The template first**, because every hour it is unchanged is another possible instance, and because
+fixing 19 files first means fixing 20 later. **The 19 second**, once measurement 1 says whether they
+are one problem or several. **The reference last**, because it defines what done means, and answering
+it first would be deciding the shape of a fix nobody has scoped.
