@@ -41,10 +41,18 @@ export async function getSubcategoryStats(
   // query. Skincare's 45,124 products all sit in `face`, so the bound was 1.0x the
   // category and nothing here said so. That is why the audit that caught the
   // category-scoped walks did not catch these.
-  const { data } = await supabase.rpc('fmb_scope_stats', {
+  const { data, error } = await supabase.rpc('fmb_scope_stats', {
     p_category: category,
     p_subcategory: subcategory,
   });
+  // A FAILED READ IS NOT AN EMPTY ONE. SubcategoryPage notFound()s when
+  // total_products is 0, so swallowing this error hands it a zero it cannot tell
+  // from a real one and the page 404s on a transient database failure. See the
+  // write-up on getSubcategoryProducts below -- this is the same guard, on the
+  // other query that feeds the same notFound(). Item 576.
+  if (error) {
+    throw new Error(`fmb_scope_stats failed for ${category}/${subcategory}: ${error.message}`);
+  }
   const r = (data as { total_products: number; total_brands: number; total_retailers: number }[] | null)?.[0];
   return {
     total_products: Number(r?.total_products ?? 0),
@@ -196,6 +204,16 @@ export async function getSubcategoryProducts(
   if (productType) {
     query = query.eq('product_type', productType);
   } else if (complementOf && complementOf.length > 0) {
+    // STILL SLOW ON SUPPLEMENTS, AND KNOWN. `not in` on the derived expression cannot use
+    // idx_products_supplements_derived_type -- an index answers "which rows equal this",
+    // not "which rows equal none of these" -- so /supplements?other=1 still runs 1.5-2.4 s
+    // (measured 4 Sep) where every ?type= link now runs under 0.6 s.
+    //
+    // LEFT AS IS BECAUSE ITS FAILURE MODE IS DIFFERENT, NOT BECAUSE IT IS FINE. This branch
+    // is reached only from CategoryPage, which has no notFound() -- a timeout here degrades
+    // to an empty grid, not a 404. That is QUIETER AND NOT BETTER: a silent empty is a page
+    // that lies about the catalogue with a 200, and nothing measures it. Work-list item 576.
+    //
     // PostgREST in-list: quote each value, since type names contain spaces and '&'.
     const list = complementOf.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -236,9 +254,81 @@ export async function getSubcategoryProducts(
   // The rule existed, the evidence was in this file, and this call still had the
   // bug — because the rule was scoped to the paging helper and the evidence was
   // written up against one caller. Work-list item 238.
-  const { data: products, count: totalCount } = await query
+  const { data: products, count: totalCount, error } = await query
     .order('id', { ascending: true })
     .range(offset, offset + candidateLimit - 1);
+
+  // ── A FAILED READ IS NOT AN EMPTY ONE, AND THE DIFFERENCE IS A 404 ──
+  //
+  // `error` USED TO BE DISCARDED HERE. On any PostgREST failure `products` comes back
+  // null and `count` null, so `totalCount ?? 0` returned 0 -- and SubcategoryPage reads
+  // a 0 under ?type= as "this type matches nothing" and calls notFound(). A transient
+  // database failure was therefore rendered as a HARD 404 on a link the site's own
+  // browse chips emit.
+  //
+  // THAT IS THE WORST AVAILABLE FAILURE, NOT MERELY AN UGLY ONE. 60,032 pages are already
+  // crawled-and-declined; a 404 is the one response that tells Google a page it was offered
+  // does not exist. A 500 is honest, retryable, and not a de-indexing signal. A 404 on a
+  // link the site renders itself is none of those. When the two are indistinguishable at
+  // the call site, the code picks the irreversible one.
+  //
+  // ── IT BECAME BROKEN. THE CODE DID NOT CHANGE; THE CATALOGUE CROSSED A CEILING. ──
+  //
+  // /supplements/supplements?type=Vitamins 404'd intermittently from 30 August to 4
+  // September. The derivation shipped 27 August (20260827111048) against 1,946 rows in that
+  // subcategory and produced ZERO 500s on 27-29 August. 4,017 rows landed on the 28th.
+  // The first failure is 30 August. Same code, three times the scan.
+  //
+  // So "it has been broken since it launched" is exactly wrong, and the shape of the
+  // evidence says why it looked that way: the pages were at ~97% of the timeout budget
+  // rather than over it -- 2.76-3.64 s measured against anon's 3 s statement_timeout --
+  // so EVERY LOAD WAS A COIN FLIP. A defect that fires on some loads and not others reads
+  // as a broken page seen intermittently, not as a threshold that moved.
+  //
+  // ── WHAT IT WAS NOT: THE CHIPS AND THE FILTER READING DIFFERENT COLUMNS ──
+  //
+  // The standing hypothesis was that the chip is built from the derived type while the
+  // query filters the stored column, so the chip says Vitamins and the filter finds
+  // nothing. It is a good theory and the code refutes it without any measurement:
+  // fmb_product_type_facets and this query BOTH read products_active, and the facets RPC
+  // filters `product_type is not null`. If the stored column were what either of them saw,
+  // every supplements row would have been excluded and NO CHIPS WOULD HAVE RENDERED AT ALL.
+  // The chips existing is the refutation. Both sides saw the same 600 rows throughout; the
+  // data was never wrong and nothing ever disagreed.
+  //
+  // The query was simply SLOW. product_type on that view is COALESCE'd from
+  // fmb_supplement_type() at read time, so filtering on it is a filter on an EXPRESSION and
+  // derived the value per row: 1,794 ms for 6,660 rows, against 130 ms for the same query
+  // shape over skincare's 27,243. The timeout returned a 500, the 500 arrived here as an
+  // empty result, and the empty-type guard did the rest.
+  //
+  // Fixed at the source by idx_products_supplements_derived_type (1,794 ms -> 47 ms), but
+  // THE CONVERSION OF AN ERROR INTO A 404 IS THE DEFECT THAT OUTLIVES ANY ONE SLOW QUERY.
+  // The index removes today's way of reaching this line. It removes no other.
+  //
+  // AND THE RULE ALREADY EXISTED. supabase/migrations/README.md convention 10, added 3
+  // August: "Any supabase-js call whose result is acted on must read `error`, and must
+  // classify an error differently from an empty result." It even names this call site's
+  // family -- "Where it will recur: anywhere supabase-js is called without checking error.
+  // That is not a hypothetical set... and no sweep has been run." The sweep was not run,
+  // and the rule was written down in a document about MIGRATION conventions while the
+  // hazard lived in page queries. Same failure as item 238's .order() rule: correct
+  // guidance, filed where the code that needed it would never be read against it.
+  //
+  // THE SWEEP IS STILL NOT RUN. Counted 4 September: of 98 awaited supabase-js results,
+  // 44 do not read `error` at all, and a further 15 read it and then collapse it into
+  // the same branch as "no rows" -- which satisfies the rule's first half, breaches its
+  // second, and LOOKS LIKE COMPLIANCE to any search for a missing `error`.
+  // getValidSubcategories, seventy lines below, is one of the 15. Five notFound() sites
+  // can still be reached by a query failure, one of them
+  // (app/edit/[slug]/page.tsx:76, fed by edit-queries.ts:166) byte-for-byte this guard.
+  // Two call sites fixed here is not the set. Work-list item 576.
+  if (error) {
+    throw new Error(
+      `products_active read failed for ${category}/${subcategory ?? '*'}` +
+        `${productType ? ` type=${productType}` : ''}: ${error.message}`
+    );
+  }
 
   if (!products || products.length === 0) {
     return { products: [], totalCount: totalCount ?? 0 };
