@@ -47059,3 +47059,323 @@ Left as is because its failure mode differs, **not because it is fine.** It is r
 404** — a page that lies about the catalogue with a 200. **A silent empty rather than a live error,
 which is quieter and not better**, and nothing measures it. Same family as the empty-population
 filter: the failure and the correct answer are rendered identically.
+
+---
+
+### 578. Onboarding's six states stop at the first import, and the refresh path has now been an afterthought twice
+
+**Raised:** 4 September 2026 · **OPEN. NOT STARTED — a slot is proposed below, nothing is applied.**
+· **Second instance. Item 490 was the first and was fixed reactively.**
+
+**The Fragrance Shop has no refresh schedule.** Live since 31 August, `active = true`,
+`enabled = true`, `last_import_status = 'ok'`, **3,199 priced rows, one import, 91 hours ago.**
+Nothing reads as wrong anywhere: the status is `ok` because the one import succeeded.
+
+#### THE FILE THAT LOOKS LIKE THE REFRESH JOB IS A CENSUS
+
+`.github/workflows/refresh-fragrance-shop.yml` **exists**, and it is `workflow_dispatch` only. Its
+own header says what it is:
+
+> `name: fragrance shop census` — *"MEASURE-ONLY. THIS WORKFLOW WRITES NOTHING… no upload to the
+> rakuten-feeds bucket, no call to import-rakuten-feed, no row in retailers or
+> retailer_import_config, no dry run. It fetches, counts, and prints."*
+
+**The `refresh-` prefix is the whole trap.** A directory listing shows `refresh-debenhams`,
+`refresh-healf`, `refresh-fragrance-shop` and reads as three refreshes. Two are; the third is a probe
+that was named for the retailer rather than for what it does. **A file whose name asserts a capability
+it does not have is worse than an absent file**, because the absent one is countable.
+
+#### ★ SECOND INSTANCE, AND THE FIRST ONE'S WRITE-UP PREDICTED IT
+
+Item 490, 28 August, on Healf:
+
+> *"`refresh-healf.yml` shipped with no schedule, and the reason was correct at the time:
+> `retailers.active` was FALSE, so a daily run would refresh a retailer nobody could see. **NOTHING
+> ABOUT THE FILE CHANGED AND IT BECAME WRONG ANYWAY.** `active` flipped true in the same sequence…
+> A DECISION CORRECT AT THE MOMENT IT WAS MADE, WHOSE JUSTIFICATION WAS CONSUMED BY A LATER STEP IN
+> THE SAME SEQUENCE."*
+
+That was applied as `13 3 * * *` **the same day it was noticed**, and the noticing was the mechanism.
+**Three days later The Fragrance Shop went live with no schedule and nothing noticed for four days.**
+
+**Item 538's shape with a different mechanism**, exactly as suspected: there, `retailers.active` went
+true and the surface asserting the retailer count was not a surface anything revalidates. Here
+`retailers.active` goes true and **the schedule that keeps the retailer's prices true is not a step
+anything sequences.** Both are a flag flipping while the thing downstream of it is nobody's step.
+
+#### ★★★ THE DEFINITION IS MISSING THE STATE THAT HAS FAILED TWICE
+
+`docs/onboarding-completeness.md` — *"A completed onboarding should be in all six"*:
+
+| # | State | About |
+|---|---|---|
+| 1 | Feed census read, not counted | before |
+| 2 | Delivery terms with `delivery_terms_source` | before |
+| 3 | Allowlist value verified against the feed | before |
+| 4 | A dry run whose classification is read by name | before |
+| 5 | `retailer_import_config` written inert, `enabled = false` | **the first import** |
+| 6 | `retailers.logo_path` present before `active` flips | go-live |
+
+**Every state is about reaching the first import safely. None is about the second one.** State 5 is
+the closest and points the wrong way — it exists to make the config *inert*, and says the config
+"does nothing until someone decides it should." **It names the decision and not the schedule, so a
+retailer can satisfy all six states, go live, and never refresh again.** The Fragrance Shop does
+satisfy all six.
+
+> **AND THE 2 SEPTEMBER VERIFICATION TABLE PROVES THE DEFINITION IS WHAT FAILED, NOT THE CHECKING.**
+> That table checked all four retailers against all six states, column by column, and lists The
+> Fragrance Shop as `config enabled: true`, `live priced rows: 3,199`. **It was correct and it was
+> complete.** It could not surface the missing cron because **there is no row for scheduling** — the
+> audit inherits the definition's blind spot, so running it more often would never have found this.
+> A check derived from a definition cannot find what the definition omits.
+
+**The proposed state 7:** *a recurring refresh is scheduled, and has completed at least twice.* Twice
+rather than once, because the first run is the onboarding import and would satisfy a
+"has-run" test without proving anything recurs.
+
+#### WHAT A RAKUTEN CRON NEEDS — refresh-superdrug.yml's shape, not refresh-healf.yml's
+
+Healf is Darwin over `SUPABASE_SERVICE_KEY` / `SUPABASE_PROJECT_REF`: two `curl` calls, preflight then
+import. **The Fragrance Shop is Rakuten SFTP and cannot use that shape.** The only worked precedent is
+`.github/workflows/refresh-superdrug.yml.disabled` — Rakuten LinkShare, disabled 20 July when the feed
+ceased (`ba8be9c`), cron was `0 3 * * *`:
+
+| step | needs |
+|---|---|
+| Download `cmp` feed via SFTP | `sshpass -p … sftp aftp.linksynergy.com` with **`RAKUTEN_SFTP_USER`** and **`RAKUTEN_SFTP_PASSWORD`** |
+| Decompress and convert to NDJSON | the cmp XML reader — **`<URL><product>…</product></URL>` nests, and a naive `<product .*?</product>` regex truncates every record and reports an all-zero census** (recorded in the census workflow's own header) |
+| Upload to Supabase Storage | `rakuten-feeds` bucket, `SUPABASE_PROJECT_REF` + `SUPABASE_SERVICE_KEY` |
+| Trigger the import | `POST /functions/v1/import-rakuten-feed` |
+
+**Open question that must be answered before it is written:** the census discovers the SFTP directory
+by listing, because *"Superdrug's feed lived in /50336/, which is not its SID, so the path cannot be
+derived"* — and **a guessed path fails as an empty fetch, which reads as a finding about the feed.**
+A daily cron must either pin the discovered directory or keep listing; pinning is faster and breaks
+silently if Rakuten moves it.
+
+##### THE PROPOSED SLOT: `0 1 * * *`
+
+The daily window, measured:
+
+```
+02:00 debenhams (GH)      05:30 organic-pharmacy · homepage-demo (GH)
+02:37 sync-adg-feed (GH)  06:00 gorgeous-shop      07:45 regroup-shade-strays
+03:00 sync-bb-feed (GH)   06:30 beauty-bay         08:00 niche-beauty
+03:13 healf (GH)          07:00 beauty-flash       09:00 MONITOR
+03:30 stylevana           07:30 perfume-click      09:30 categoriser-safety-net
+04:00 escentual                                    09:45 catalog-health-snapshot
+04:30 boots                                        10:00 yesstyle
+```
+
+**01:00 is empty, and everything from 02:00 to 10:00 is not.** Superdrug's old `0 3 * * *` now
+collides with `sync-bb-feed`. 01:00 puts the SFTP download, the NDJSON conversion and the import
+**before** the AWIN window rather than inside it — Rakuten's convert step is the long one — and leaves
+**eight hours before the 09:00 monitor**, so a failure is reported the same morning rather than the
+next one.
+
+> **AND IT EXPOSES SOMETHING ALREADY TRUE: `refresh-yesstyle` RUNS AT 10:00, AFTER THE 09:00 MONITOR.**
+> YesStyle is the one retailer whose daily failure cannot be reported until the following day. Not
+> caused by this item and not proposed for change here — noted because the window was measured.
+
+#### AND NOTHING WILL AGE THE ROWS OUT — FOR A REASON THAT IS NOT THE ONE IT LOOKS LIKE
+
+`absence_threshold_days` was **NULL** on retailer 35, the only active retailer without a value, and
+that reads like the explanation. **It is not.** `fmb_apply_absence_handling` opens with
+`COALESCE(absence_threshold_days, 30)`, so NULL was always 30; **9999 is the value that means never**
+(YesStyle, Boots-as-seeded). Set explicitly to 30 on 4 September — `20260904160940` — which changes
+no behaviour and is worth exactly that.
+
+**THE ROWS DO NOT AGE OUT BECAUSE ABSENCE HANDLING ONLY RUNS INSIDE AN IMPORT.**
+`fmb_apply_absence_handling` has one caller — `supabase/functions/_shared/run-metrics.ts`, at run
+finalisation — and there is no scheduled sweep. **No cron means no import means no absence handling,
+whatever the column says.**
+
+> **THE THRESHOLD IS NOT A TIMER. IT IS A RULE APPLIED BY A RUN THAT IS NOT HAPPENING.** Healf's
+> *"a week later its 4,373 rows begin aging out"* was true because Healf's cron was applied the same
+> day; the deadline came from the run, not the number. **A retailer with no schedule has no
+> deadline, and therefore no forcing function** — its rows sit at their last price indefinitely, on
+> a 200, with `last_import_status = 'ok'`. **The absence of a deadline is worse than a harsh one:**
+> a deadline produces a discovery, and this produces nothing at all.
+
+And when the cron does land, `c_min_baseline = 3` skips absence handling until three runs are
+logged, so the first refreshes cannot mass-flip a catalogue that has gone unseen for 30+ days. The
+number should be calibrated against a real sample once those runs exist; today it is a placeholder
+that is honest about being one.
+
+#### THE THIRD RETAILER IS CORRECTLY HELD, AND IT IS NOW HOLDING A REFRESH
+
+**MyProtein, 238 hours, `active = true`, `enabled = false` — correct**, under item 324's re-import
+guard, with the reason machine-readable rather than a bare flag:
+
+```
+finding_key: held:import:33:tier5-leak-would-duplicate
+detail: {"retailer_id": 33, "would_create_on_reimport": 177,
+         "unblocks_when": "item 314 family-grouping-at-import lands, or
+                           createdUrls is DB-populated across runs"}
+```
+
+**Item 314's build has not landed.** Its own table records it as *"open on its own terms, not on
+MyProtein's"*, and nothing since has changed that. **The hold is therefore open-ended**, and it has
+changed character: it was a guard against a *re-import* creating 177 near-duplicates, and it is now
+also the reason a live retailer's 609 rows are ten days stale.
+
+**AND THERE IS NO DATE ON IT.** `absence_threshold_days = 30` looks like a deadline — it is the same
+trap as the paragraph above. MyProtein has `enabled = false`, so **no import runs, so absence
+handling never fires, so nothing ages out on any date.** Its 609 rows will be served at their
+25 August prices indefinitely. Re-priced in full as **item 580**.
+
+> **A guard whose cost was "no re-import" now costs "no refresh", and nothing re-priced it when the
+> retailer went live.** Same shape as item 490 and as this item's own centre: a decision correct when
+> made, whose surrounding conditions moved.
+
+#### NOT STARTED
+
+No cron applied, no state 7 written, no workflow authored. The slot and the shape are proposed so the
+decision is a review rather than a design. **Item 490 was fixed the day it was noticed and the class
+was recorded but not closed — that recording is this item's evidence, and it did not prevent the
+second instance.**
+
+---
+
+### 579. A detector that has been right for 27 days, reporting to nobody
+
+**Raised and FIXED:** 4 September 2026 · **The wiring is built and committed. It deploys from the
+repository via `deploy-edge-function`, which has not been run yet.**
+
+`fmb_detect_frozen_feeds()` runs nightly at 11:30 and writes `feed_freeze_findings`. **Nothing read
+that table.** `monitor-retailer-feeds` contained no reference to it; the only code touching it was
+the migration that created it. Detection with no consumer, since 2 August.
+
+#### WHAT IT HAD BEEN RIGHT ABOUT
+
+Beauty Flash, flagged **8 August**, `resolved_at` NULL, open **27 days**:
+
+```
+inflated_bytes 19,422,985 · staged_rows 10,862 — IDENTICAL EVERY DAY SINCE 4 AUGUST
+```
+
+**31 consecutive days of a byte-identical feed**, each one importing `ok` and stamping fresh
+`last_updated` on 8,850 price rows. Then on 4 September the feed 404'd (`fid 87846`) and the daily
+email reported a **33-hour** staleness. **The true age of those prices is a month**, and the 404 is
+not the beginning of the problem — it is the first moment the problem became visible to any
+instrument that was being read.
+
+#### ★ WHY EVERY OTHER CHECK ON THAT PAGE MISSES IT, BY CONSTRUCTION
+
+**Staleness asks "when did we last import?" and a frozen feed answers with today's date.** The
+import is running, succeeding, and writing rows; only the *content* is dead. Every other signal in
+the monitor — `last_import_at`, `last_import_status`, `retailer_prices.last_updated` — is a fact
+about the **run**, and the run is healthy. Nothing that reads those columns can see this, which is
+why a dedicated detector was written, and why its output being unread cost the whole thing.
+
+> **THIS IS THE THIRD MEMBER OF A FAMILY THIS WEEK, AND THE FAMILY IS "BUILT, CORRECT, UNWIRED".**
+> Convention 10 named its own recurrence and said *"no sweep has been run"* — and none was, for
+> thirty-two days, until it produced a live 404 (item 576). Here a detector named its own finding
+> and wrote it to a table with no reader, for twenty-seven days. **In both cases the work was done
+> and the last connection was not made**, and in both cases the missing piece is the cheap one.
+
+#### AND THE TABLE WAS NEVER RESOLVED EITHER, WHICH IS THE SAME ABSENCE
+
+Six rows open on 4 September; **one is a live freeze.** The other five are streaks that *ended* and
+were never closed — The Organic Pharmacy's oldest dates from **27 June**, its feed has moved three
+times since. `resolved_at` is set **by hand** by design (*"Detection only — a person decides what to
+do"*), and with no consumer, no person ever saw a row to decide about. **A table nobody reads is
+also a table nobody closes.**
+
+> **SO THE FIX COULD NOT BE "SELECT WHERE resolved_at IS NULL".** That renders six findings of which
+> five ended weeks ago, every morning, and **the section is ignored inside a week** — item 194's
+> failure mode reached through item 194's own mechanism, on the very first day of the fix.
+> **Reporting an ended freeze as current is not a smaller error than missing a live one. It is the
+> error that destroys the channel.**
+
+#### THE FIX
+
+`20260904161220_frozen_feeds_current_view` — `fmb_frozen_feeds_current` applies the detector's own
+definition of a live streak: `last_seen_on` equals the retailer's most recent feed observation. It
+returns **one row** today. A retailer whose import failed *today* stays current on yesterday's
+observation, which is precisely the Beauty Flash case and the one where dropping it would be worst.
+
+`monitor-retailer-feeds` now reads that view and treats it exactly as `standing_check_findings` is
+treated — part of the **send condition** (not merely part of the body, so a freeze alone triggers an
+email), a subject part, a section, a line in the `alert_sent` payload, and `frozen_feeds: 0`
+asserted in the `all_healthy` payload, *"because a zero here is a claim that the question was
+asked"*. Held retailers are excluded, for the reason they are excluded from `stale`: a deliberate
+non-importer has a deliberately unmoving feed.
+
+**Not deployed by this change.** `deploy-edge-function.yml` exists because *"on 19 August an edge
+function was overwritten with a placeholder"* by a deploy that did not come from the repository, and
+it deploys **from the repository**. Merging is therefore not shipping: the workflow must be
+dispatched for `monitor-retailer-feeds`.
+
+#### WHAT THIS DOES NOT DO
+
+It does not fix Beauty Flash. The 404 on `fid 87846` and a month of frozen content are a live
+retailer problem needing an AWIN answer, and this change only ensures that **tomorrow's 09:00 email
+says so.**
+
+---
+
+### 580. Re-pricing the MyProtein hold: the guard is sound, the thing it now costs was never priced
+
+**Raised:** 4 September 2026 · **DECISION REQUIRED, NOT TAKEN. Four options, one recommended. No
+change applied.**
+
+Item 324's guard is correct and should stay: a re-import creates **177 near-duplicate products**
+while item 314's grouping build is unlanded, and 314's own table records it *"open on its own terms,
+not on MyProtein's"*.
+
+**What was never priced is the other side.** The guard was costed as *"no re-import"* — a deferral of
+new data. Since `active` went true it also costs *"no refresh"* on a **live** retailer, and nobody
+re-opened the arithmetic when that changed.
+
+#### THE MEASUREMENT, 4 SEPTEMBER
+
+| | |
+|---|---|
+| Price rows served | **609**, all `in_stock` |
+| Last updated | **25 August 17:56** — 9.9 days |
+| Products also stocked by another active retailer | **83** |
+| Products MyProtein-only | **526** |
+| `enabled` | false · `active` **true** |
+
+#### ★ THE DEADLINE I REPORTED DOES NOT EXIST, AND ITS ABSENCE IS THE FINDING
+
+`absence_threshold_days = 30` was read as putting a date on this — *"around 25 September those rows
+begin aging out"*. **That is wrong.** `fmb_apply_absence_handling` is called from exactly one place,
+`_shared/run-metrics.ts`, at import finalisation. **MyProtein's importer is disabled, so no run
+happens, so absence handling never fires.** Nothing expires on 25 September or on any other date.
+
+> **A GUARD WITH NO EXPIRY IS NOT A PAUSE, IT IS A STATE.** The hold was accepted as temporary
+> because it was attached to a build that would land. That build is open on its own terms, and the
+> hold has no clock of its own — so *"held until item 314"* and *"held indefinitely"* are currently
+> the same arrangement, and only the first one was ever agreed to.
+
+#### WHAT THE 609 ROWS ARE COSTING
+
+**526 of 609 are sole-retailer listings** — they contribute no comparison, and a sole-retailer card
+is exactly where a stale price is least detectable and most consequential: the site states one price,
+the click-through shows another, and nothing on our side disagrees with itself. The **83 comparable**
+products are the smaller number and the visible one: a stale MyProtein price competes against
+retailers refreshed this morning and can win or lose a comparison on nine-day-old data.
+
+#### THE OPTIONS
+
+| | Action | Buys | Costs |
+|---|---|---|---|
+| **A** | Leave as is | Nothing new to decide | Indefinite silent drift; the arrangement nobody agreed to |
+| **B** | `active = false` | Removes 609 stale rows from the catalogue; **creates no duplicates**; config, records and hold all preserved; reversible in one statement | Loses 83 comparable products and the supplements proposition's headline retailer from the strip |
+| **C** | Re-import now | Fresh prices | **177 near-duplicate products**, the exact thing item 324 exists to prevent; cleanup cost unmeasured |
+| **D** | Land item 314 | Fixes the class, unblocks MyProtein and the 17,848 ungrouped duplicates behind it | A build, not a decision — and it is what the hold has been waiting on since 25 August |
+
+**Recommended: B now, D on its own timetable.** B is the only option that stops serving prices we
+know are stale **without** creating the duplicates the guard exists to prevent, and it is the only
+one that is one statement and reversible. It converts an indefinite invisible state into a visible,
+deliberate one — which is what the hold was supposed to be.
+
+**Explicitly not recommended: A.** Not because 9.9 days is intolerable, but because **A has no next
+event.** Every other option ends with someone deciding something; A ends with the same conversation
+in October against older prices.
+
+**If A is chosen anyway, it needs a clock.** The honest form is a `standing_check_findings` row that
+escalates on age, so the hold reports itself rather than waiting to be remembered — the mechanism
+already exists and already carries the hold's reason.
