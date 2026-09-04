@@ -39,9 +39,9 @@ a fourth can be checked against it.
 
 ---
 
-## The six states
+## The seven states
 
-A completed onboarding should be in **all six**. Each names the thing it prevents.
+A completed onboarding should be in **all seven**. Each names the thing it prevents.
 
 | # | State | Prevents |
 |---|---|---|
@@ -51,6 +51,7 @@ A completed onboarding should be in **all six**. Each names the thing it prevent
 | **4** | **A dry run whose classification is read by name** | A silent misfile. Counts agree while `Body Care` holds collagen capsules and a toothbrush (item 322). |
 | **5** | **`retailer_import_config` written inert — `enabled = false` — before any import** | Harvesting and publishing becoming one act. The config exists, is reviewable, and does nothing until someone decides it should. |
 | **6** | **`retailers.logo_path` present before `active` flips** | A retailer counted in the headline and not pictured in the strip. `getListedRetailers` counts on `active AND unlisted_reason IS NULL`; the logo is a separate column and a separate act. |
+| **7** | **A recurring refresh is scheduled, and has completed at least twice** | A retailer going live once and never updating again. The Fragrance Shop was `active`, `enabled`, `last_import_status = 'ok'` and **four days stale on a single import** — nothing read as wrong anywhere, because the one import succeeded. **Twice, not once**: the first run is the onboarding import, so a has-run test passes without anything recurring. Item 578. |
 
 ---
 
@@ -68,6 +69,35 @@ A completed onboarding should be in **all six**. Each names the thing it prevent
 | live priced rows | 9,422 | 609 | 4,986 | 3,199 |
 
 **No column is uniform across all four except `active` and the logo.**
+
+---
+
+## ★ Why state 7 was added on 4 September, and why this table could not have found it
+
+**State 7 is the second instance, not the first.** Item 490 recorded Healf shipping with no cron on
+28 August — correctly, because `active` was false at the time — and *"NOTHING ABOUT THE FILE CHANGED
+AND IT BECAME WRONG ANYWAY"* when `active` flipped later in the same sequence. That was fixed the day
+it was noticed, **and the noticing was the mechanism**. Three days later The Fragrance Shop went live
+the same way and nothing noticed for four days.
+
+Every one of states 1–6 is about reaching the **first** import safely. State 5 is the closest and
+points the wrong way: it exists to make the config *inert*. **So a retailer could satisfy all six,
+go live, and never refresh again — and The Fragrance Shop did satisfy all six.**
+
+> **THE 2 SEPTEMBER TABLE ABOVE IS THE EVIDENCE, AND IT IS EVIDENCE THAT THE DEFINITION FAILED
+> RATHER THAN THE CHECKING.** It was run against all four retailers, column by column, and it was
+> correct and complete. It lists The Fragrance Shop as `enabled: true`, `3,199 live priced rows`,
+> and says nothing about scheduling **because there is no row for scheduling**.
+>
+> **A check derived from a definition cannot find what the definition omits.** The audit inherits
+> the definition's blind spot, so running it more often, or more carefully, would never have found
+> this. Only changing the definition does — which is what state 7 is.
+
+**How to verify state 7**, since it is the only state not answerable from `retailer_import_config`
+alone: a schedule lives either in `.github/workflows/*.yml` as a `cron:` or in `cron.job` as a
+pg_cron entry, and **the presence of a workflow file is not the presence of a schedule** —
+`refresh-fragrance-shop.yml` exists, is named like a refresh job, and is a `workflow_dispatch`
+census that writes nothing. Check the `cron:` key and the run history, not the filename.
 
 ---
 

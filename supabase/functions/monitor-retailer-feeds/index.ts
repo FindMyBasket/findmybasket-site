@@ -255,6 +255,46 @@ Deno.serve(async (req: Request) => {
     const checkFindings = allCheckRows.filter((f) => f.kind !== "coverage");
     const checkCoverage = allCheckRows.filter((f) => f.kind === "coverage");
 
+    // 1d. FROZEN FEEDS. A feed served byte-identically day after day, importing 'ok' each time.
+    //
+    // THE DETECTOR WAS BUILT ON 2 AUGUST AND HAD NO CONSUMER UNTIL NOW. fmb_detect_frozen_feeds
+    // runs nightly at 11:30 and writes feed_freeze_findings; NOTHING READ THAT TABLE. It flagged
+    // Beauty Flash on 8 August and the row sat open for 27 days while the daily email reported
+    // the retailer as healthy every morning -- because it was healthy by every measure the email
+    // had: status 'ok', rows fresh, last_updated moving. The feed behind them had not changed
+    // since 4 August. Work-list item 579.
+    //
+    // IT IS THE OPPOSITE FAILURE TO A STALE FEED AND THAT IS WHY THE OTHER CHECKS MISS IT.
+    // Staleness asks "when did we last import?" and a frozen feed answers with today's date. The
+    // import IS running, IS succeeding, and IS writing rows; only the CONTENT is dead. Nothing
+    // that reads last_import_at or last_updated can see it, which is every other check here.
+    // READS fmb_frozen_feeds_current, NOT feed_freeze_findings DIRECTLY. resolved_at is set by
+    // hand, so the table's open rows include streaks that ENDED and were never closed -- on
+    // 4 September six were open and one was live, the oldest dead row dating from 27 June. The
+    // view applies the detector's own definition of a live streak. Listing the five dead ones
+    // every morning would bury the live one and get the section ignored, which is item 194's
+    // failure mode reached through item 194's own mechanism.
+    const { data: freezeRows, error: fzErr } = await supabase
+      .from("fmb_frozen_feeds_current")
+      .select("retailer_id, retailer_name, kind, first_seen_on, last_seen_on, days_identical, frozen_bytes, staged_rows")
+      .order("days_identical", { ascending: false });
+    // Convention 10: an empty result and a broken query look identical downstream.
+    if (fzErr) console.error("fmb_frozen_feeds_current read failed:", fzErr);
+    // Held retailers are excluded for the same reason they are excluded from `stale`: a retailer
+    // that is deliberately not importing has a feed that is deliberately not moving, and calling
+    // that a finding would report the hold as a fault every morning.
+    const frozenFeeds = (freezeRows ?? [])
+      .filter((f) => !heldById.has(f.retailer_id))
+      .map((f) => ({
+        retailer_id: f.retailer_id as number,
+        retailer_name: (f.retailer_name as string) ?? `#${f.retailer_id}`,
+        kind: f.kind as string,
+        days_identical: Number(f.days_identical ?? 0),
+        first_seen_on: f.first_seen_on as string | null,
+        last_seen_on: f.last_seen_on as string | null,
+        frozen_bytes: f.frozen_bytes === null ? null : Number(f.frozen_bytes),
+      }));
+
     const now = Date.now();
 
     // 2. Import failures (fast signal). Read the per-retailer import status
@@ -365,7 +405,7 @@ Deno.serve(async (req: Request) => {
     // can be perfectly healthy -- so leaving it out of this test would reproduce the
     // original defect one layer up: detected, formatted, and never sent.
     if (failures.length === 0 && stale.length === 0 && deliveryUnknown.length === 0
-        && checkFindings.length === 0 && !gateFellBack) {
+        && checkFindings.length === 0 && frozenFeeds.length === 0 && !gateFellBack) {
       // Everything healthy — no email, just return status
       return new Response(
         JSON.stringify({
@@ -383,6 +423,10 @@ Deno.serve(async (req: Request) => {
           delivery_unknown: 0,
           // Asserted, not omitted: absent would mean nobody asked.
           standing_check_findings: 0,
+          // Same reason, and it is the whole point of item 579: for 27 days this run was
+          // reporting healthy while a live freeze sat unread. A zero here is a claim that
+          // the question was asked, which is what "healthy" was silently missing.
+          frozen_feeds: 0,
           // Coverage is asserted even when healthy: its absence would read as "nothing is out
           // of scope", which is a different fact from "nothing is wrong".
           check_coverage: checkCoverage.map((c) => c.summary),
@@ -395,7 +439,9 @@ Deno.serve(async (req: Request) => {
     }
 
     // 5. Build alert email
-    const problemCount = failures.length + stale.length;
+    // frozenFeeds counts. A feed serving the same bytes for a month is a problem whether or not
+    // any other check can see it, and problem_count is the number the caller logs.
+    const problemCount = failures.length + stale.length + frozenFeeds.length;
     const subjectParts: string[] = [];
     if (failures.length > 0) subjectParts.push(`${failures.length} import failure${failures.length === 1 ? "" : "s"}`);
     if (stale.length > 0) subjectParts.push(`${stale.length} stale`);
@@ -405,6 +451,12 @@ Deno.serve(async (req: Request) => {
         escalated > 0
           ? `${checkFindings.length} check finding${checkFindings.length === 1 ? "" : "s"} (${escalated} ESCALATED)`
           : `${checkFindings.length} check finding${checkFindings.length === 1 ? "" : "s"}`,
+      );
+    }
+    if (frozenFeeds.length > 0) {
+      const worst = frozenFeeds[0];
+      subjectParts.push(
+        `${frozenFeeds.length} frozen feed${frozenFeeds.length === 1 ? "" : "s"} (worst ${worst.days_identical}d)`,
       );
     }
     if (deliveryUnknown.length > 0) {
@@ -570,6 +622,29 @@ ${checkFindings.map((f) => `
 </tr>`).join("")}
 </table>` : "";
 
+    const frozenSection = frozenFeeds.length > 0 ? `
+<h1 style="margin: 0 0 8px; font-family: Georgia, serif; font-size: 22px; color: #c0392b;">
+${frozenFeeds.length} frozen feed${frozenFeeds.length === 1 ? "" : "s"}
+</h1>
+<p style="margin: 0 0 20px; font-size: 14px; color: #4a4845;">
+These retailers imported <strong>successfully</strong> and their rows are <strong>fresh</strong>. The feed behind them
+has served <strong>byte-identical content</strong> for the days shown, so every import has been rewriting the same
+prices. <strong>No other check on this page can see it</strong> — staleness asks when we last imported, and a frozen
+feed answers with today's date. Treat the day count as the true age of these prices.
+</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-bottom: 28px;">
+${frozenFeeds.map((f) => `
+<tr>
+  <td style="padding: 10px; border-bottom: 1px solid #e5e0d8; font-size: 14px;">
+    <strong>${escapeHtml(f.retailer_name)}</strong><br>
+    <span style="color:#4a4845;">identical since ${escapeHtml(f.first_seen_on ?? "?")}${f.frozen_bytes === null ? "" : ` &middot; ${f.frozen_bytes.toLocaleString()} bytes`}</span>
+  </td>
+  <td style="padding: 10px; border-bottom: 1px solid #e5e0d8; font-size: 14px; text-align: right; white-space: nowrap; color: ${f.days_identical >= 14 ? "#c0392b" : "#8a8680"};">
+    ${f.days_identical >= 14 ? "<strong>" : ""}${f.days_identical} days${f.days_identical >= 14 ? "</strong>" : ""}
+  </td>
+</tr>`).join("")}
+</table>` : "";
+
     const deliverySection = deliveryUnknown.length > 0 ? `
 <h1 style="margin: 0 0 8px; font-family: Georgia, serif; font-size: 22px; color: #c0392b;">
 ${deliveryUnknown.length} active retailer${deliveryUnknown.length === 1 ? "" : "s"} without delivery terms
@@ -621,6 +696,7 @@ Find<span style="color: #c9a96e;">My</span>Basket — Feed Monitor</div>
 </td></tr>
 <tr><td style="padding: 24px 28px;">
 ${checkFindingsSection}
+${frozenSection}
 ${coverageSection}
 ${deliverySection}
 ${gateSection}
@@ -659,6 +735,7 @@ Automated monitor. Runs daily at 09:00 UTC. Staleness threshold: ${staleHours}h.
             })),
             delivery_unknown: deliveryUnknown.map((d) => d.name),
             check_findings: checkFindings.length,
+            frozen_feeds: frozenFeeds.map((f) => `${f.retailer_name} (${f.days_identical}d)`),
           },
           html,
         }, null, 2),
@@ -700,6 +777,11 @@ Automated monitor. Runs daily at 09:00 UTC. Staleness threshold: ${staleHours}h.
         problem_count: problemCount,
         import_failures: failures.map((f) => ({ retailer: f.retailer_name, error: f.last_import_error })),
         stale_retailers: stale.map((s) => s.retailer_name),
+        frozen_feeds: frozenFeeds.map((f) => ({
+          retailer: f.retailer_name,
+          days_identical: f.days_identical,
+          identical_since: f.first_seen_on,
+        })),
         held_retailers: heldStale.map((s) => s.retailer_name),
         statuses,
       }, null, 2),
