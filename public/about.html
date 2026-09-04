@@ -321,13 +321,22 @@ footer { background: var(--ink); padding: 48px; display: flex; align-items: cent
     sweep this block; nothing detects it. See the copy-sweep step in
     docs/superdrug-removal-plan.md.
 
-    4 SEPTEMBER 2026, AND THE NUMBER WAS RIGHT FOR THE WRONG REASON. This block read
-    "13" and listed 13 names while FOURTEEN were live: The Fragrance Shop went live
-    31 August and was never added, so the count and the list were wrong together and
-    agreed with each other. MyProtein going off the same day took the true count to 13
-    -- WHICH MADE THIS PARAGRAPH ACCIDENTALLY CORRECT WHILE STILL NAMING A RETAILER
-    THAT IS OFF AND OMITTING ONE THAT IS ON. A hardcoded count that matches is not
-    evidence the list behind it does. Both corrected here; item 581.
+    THE FRAGRANCE SHOP IS THE FIFTH, AND THE FIRST WHERE THE COUNT WENT RIGHT WHILE THE
+    LIST STAYED WRONG. It went live 31 August and was never added: this block read "13"
+    over 13 names while FOURTEEN were live, so the count and the list were wrong
+    TOGETHER AND AGREED WITH EACH OTHER. Then MyProtein went off on 4 September and took
+    the true count to 13 -- MAKING THIS PARAGRAPH CORRECT WITHOUT ANYONE TOUCHING IT,
+    while the list still named a retailer that is off and still omitted one that is on.
+
+    SO THE NUMBER AGREEING WITH THE LIST IS NOT EVIDENCE THAT EITHER IS RIGHT. They are
+    written by the same hand at the same moment and go stale together; their agreement
+    measures only that nobody has edited them. And a count that becomes correct by
+    coincidence is the one nobody re-checks -- a wrong number invites a second look, a
+    right one ends the inspection. Item 582.
+
+    IF YOU ARE EDITING THIS BLOCK: the site's own answer is getListedRetailers()
+    (lib/retailers.ts), which is `active = true AND unlisted_reason IS NULL`. Check the
+    names AND the integer against that query, not against the list above them.
   -->
   <p>Currently live across 13 UK retailers covering skincare, makeup, hair, fragrance and supplements:</p>
 
