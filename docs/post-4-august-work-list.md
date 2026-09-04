@@ -47379,3 +47379,112 @@ in October against older prices.
 **If A is chosen anyway, it needs a clock.** The honest form is a `standing_check_findings` row that
 escalates on age, so the hold reports itself rather than waiting to be remembered — the mechanism
 already exists and already carries the hold's reason.
+
+---
+
+### 581. MyProtein off: the guard's other side, and a correction that landed on the instruction built from it
+
+**Raised, decided and APPLIED:** 4 September 2026 · **Option B from item 580. Robbie's call, taken on
+the re-priced cost.** · `20260904162712`
+
+`retailers.active = false` on id 33, `unlisted_reason` set. Homepage verified at **13** with 13 marks.
+
+#### ★★★ THE CORRECTION CAME AFTER THE INSTRUCTION AND INVALIDATED ITS PREMISE
+
+Robbie's instruction was to re-price the guard **because** *"around 25 September its 609 rows begin
+aging out of a catalogue still showing them, so that needs a decision before the date rather than a
+discovery after it."* **The date does not exist**, and the reasoning it came from was mine — reported
+in item 578 and then acted on.
+
+`absence_threshold_days` reads like a timer and is not one. `fmb_apply_absence_handling` has exactly
+one caller, `_shared/run-metrics.ts`, **at import finalisation**. MyProtein's importer is disabled, so
+no run happens, so nothing ages out on 25 September or on any other date. Its rows sit at 25 August
+prices **indefinitely**.
+
+> **AND THE ABSENCE IS WORSE THAN THE DEADLINE WAS.** A deadline forces a decision; nothing forces
+> anything. The instruction was right for a reason that was wrong, and the corrected reason argues
+> **harder** for acting, not less — which is why option B was taken rather than re-opened.
+
+**FOURTH INSTANCE THIS WEEK OF AN ABSENCE DOING LOAD-BEARING WORK**, and they are the same shape
+every time — nothing is where a signal should be, and nothing is indistinguishable from fine:
+
+| | the absence | what it held up |
+|---|---|---|
+| 576 | convention 10's sweep, never run | 59 of 98 call sites, one of them a live 404 |
+| 578 | no cron sequenced to a go-live | The Fragrance Shop, 4 days stale on a green status |
+| 579 | no reader on `feed_freeze_findings` | Beauty Flash, frozen 31 days, reported healthy for 27 |
+| **581** | **no expiry on a hold** | **MyProtein, indefinite, agreed to as temporary** |
+
+**A missing thing emits nothing.** Every defect this week was a mechanism that was built and correct;
+what was absent in each case was the *connection*, and an absent connection has no error state, no
+log line and no signature to grep for. [[built-correct-and-unwired]] is the family; this is the entry
+where the absence was in a **decision** rather than in code.
+
+#### THE COST, STATED PLAINLY
+
+**Measured immediately before the flip, and it is not the number that was quoted:**
+
+| | |
+|---|---|
+| MyProtein products in the catalogue | **565** (not 609 — that is the price-row count; 44 sit outside `products_active` for other reasons) |
+| **Leave outright** | **494** — no other active retailer stocks them |
+| Survive, losing the offer | **71** |
+| By category | supplements **438** · skincare **40** · bath_body **13** · hair **3** |
+| Listed retailers | **14 → 13**, verified live |
+
+**IT IS NOT 609 AND IT IS NOT ONLY SUPPLEMENTS.** Supplements loses 438, and three other categories
+lose 56 between them — MyProtein was carrying skincare, bath and body and hair rows nobody was
+counting when this was scoped.
+
+**And MyProtein was the onboarding that made the per-unit comparison pages possible.** This is not a
+retailer being tidied away. It is switching off the one that carried the supplements proposition,
+because its prices can no longer be stood behind. **Reversible in one statement, and not free.**
+
+#### WHY, IN ONE SENTENCE THAT IS THE WHOLE ARGUMENT
+
+**526 of the 609 rows were sole-retailer listings, and that is where a stale price is least detectable
+and most consequential: we state one price, the click-through shows another, and nothing on our side
+disagrees with itself.** A comparison page carrying a stale price has a rival price beside it and can
+look wrong. A sole-retailer card is asserted alone — no second offer contradicts it, no comparison
+looks odd, and no check fires.
+
+#### `unlisted_reason` IS THE RECORD, NOT THE MECHANISM
+
+`getListedRetailers` filters `active = true AND unlisted_reason IS NULL`, so `active = false` alone
+already dropped both the count and the strip. It is set anyway because the column carries **why**
+(Branded Beauty is the precedent), and because a retailer off for a reason that will expire must not
+read as a departure. **This is not a departure**: the programme is live, the config is intact, the
+hold record is intact, and the reversal statement is written into the column itself.
+
+#### THE HOMEPAGE DID HOLD 14, EXACTLY AS ITEM 538 SAID IT WOULD
+
+Verified rather than assumed. After the flip the live homepage still read **14 UK retailers** with 14
+marks including MyProtein's; `fmb_revalidate_paths(array['/'])` was called and it went to **13 with
+13 marks**, count and strip agreeing. **`revalidate = 3600` is still the only thing that would ever
+have corrected it** — item 538 remains open and this is its second confirmed instance.
+
+#### ★★ AND /about WAS ACCIDENTALLY RIGHT, WHICH IS WORSE THAN BEING WRONG
+
+`public/about.html` is served live and read **"Currently live across 13 UK retailers"** over a list of
+13 names — **while fourteen were live.** The Fragrance Shop went live on 31 August and was never
+added, so the count and the list were wrong *together* and agreed with each other.
+
+> **MYPROTEIN GOING OFF MADE THAT SENTENCE TRUE WITHOUT ANYONE TOUCHING IT** — and the list under it
+> still named a retailer that is off and still omitted one that is on. **A hardcoded count that
+> matches is not evidence that the list behind it does**, and a number that becomes correct by
+> coincidence is the one nobody will ever re-check.
+
+The file's own comment demanded this: *"A retailer change MUST sweep this block; nothing detects it."*
+Swept here — MyProtein out, The Fragrance Shop in, 13 names against 13 marks. **The comment has now
+been proved right four times and is still the only mechanism.** [[frozen-catalogue-state-in-copy]].
+
+#### ITEM 314 IS NOW HOLDING A SWITCHED-OFF RETAILER, NOT A GUARD
+
+The hold's referent has changed twice. It began as *"do not re-import"* — a deferral of new data. It
+became *"do not refresh"* when `active` went true. **It is now "a retailer is off until this lands".**
+
+**That is a heavier thing to be blocking, and item 314 should be re-read at that weight when it is
+next prioritised.** Its own note says it is *"open on its own terms, not on MyProtein's"*, which was
+accurate when the cost was 177 hypothetical duplicates. The cost today is 494 products and a mark on
+the homepage, and the decision about when MyProtein returns is no longer a guard's decision — it is
+item 314's.

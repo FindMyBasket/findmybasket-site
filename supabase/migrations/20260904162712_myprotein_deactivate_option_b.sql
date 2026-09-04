@@ -1,0 +1,56 @@
+-- MYPROTEIN OFF. Item 580, option B. Robbie's decision, taken on the re-priced cost.
+--
+-- 609 price rows, all in_stock, last written 25 August 17:56. Item 324's guard is sound and
+-- STAYS: a re-import creates 177 near-duplicate products while item 314's grouping build is
+-- unlanded. What was never priced is the other side of that guard. It was costed as "no
+-- re-import" -- a deferral of new data -- and since `active` went true it has also meant "no
+-- refresh" on a LIVE retailer, which nobody re-opened the arithmetic on.
+--
+-- ── WHY THIS AND NOT LEAVING IT ─────────────────────────────────────────────
+--
+-- 526 of the 609 rows are SOLE-RETAILER listings, and that is where a stale price is least
+-- detectable and most consequential: the site states one price, the click-through shows
+-- another, and NOTHING ON OUR SIDE DISAGREES WITH ITSELF. There is no second offer to contradict
+-- the first, no comparison that looks wrong, and no check that fires. A comparison page carrying
+-- a stale price at least has a rival price next to it; a sole-retailer card is asserted alone.
+--
+-- AND THE HOLD HAD NO CLOCK. absence_threshold_days = 30 reads like a deadline and is not one:
+-- fmb_apply_absence_handling runs at IMPORT FINALISATION and MyProtein's importer is disabled,
+-- so nothing ages out on any date. "Held until item 314" and "held indefinitely" were therefore
+-- the same arrangement, and only the first was ever agreed to. Option A had no next event.
+--
+-- ── THE COST, STATED RATHER THAN FOOTNOTED ──────────────────────────────────
+--
+-- MEASURED 4 September, immediately before this ran:
+--
+--     565 MyProtein products are in products_active
+--     494 LEAVE the catalogue outright -- no other active retailer stocks them
+--      71 survive and lose the MyProtein offer
+--
+--     by category, leaving:  supplements 438 · skincare 40 · bath_body 13 · hair 3
+--
+--     homepage: 14 listed retailers -> 13, and the strip loses a mark
+--
+-- IT IS NOT 609 AND IT IS NOT ONLY SUPPLEMENTS. 609 is the price-row count; 44 of those products
+-- are already outside products_active for other reasons, and the loss reaches four categories.
+--
+-- AND MYPROTEIN WAS THE ONBOARDING THAT MADE THE PER-UNIT COMPARISON PAGES POSSIBLE. This is
+-- not a retailer being tidied away; it is switching off the one that carried the supplements
+-- proposition, because its prices can no longer be stood behind. REVERSIBLE IN ONE STATEMENT,
+-- AND NOT FREE.
+--
+-- ── unlisted_reason IS THE RECORD, NOT THE MECHANISM ────────────────────────
+--
+-- getListedRetailers filters `active = true AND unlisted_reason IS NULL`, so active = false
+-- alone already drops both the count and the strip. unlisted_reason is set anyway because the
+-- column exists to carry WHY -- Branded Beauty's entry is the precedent -- and because a
+-- retailer that is off for a reason that will expire must not read as a departure. THIS IS NOT
+-- A DEPARTURE. The programme is live, the config is intact, the hold record is intact.
+--
+-- ITEM 314 NOW DECIDES WHEN MYPROTEIN COMES BACK, AND IT IS NO LONGER HOLDING A GUARD -- IT IS
+-- HOLDING A SWITCHED-OFF RETAILER. That is a heavier thing to be blocking, and it should be
+-- read that way when 314 is next prioritised.
+update public.retailers
+   set active = false,
+       unlisted_reason = 'OFF 4 Sep 2026 pending item 314, NOT A DEPARTURE. The AWIN programme is live and the config and hold record are intact; this is reversible with `update retailers set active = true, unlisted_reason = null where id = 33`. Switched off because item 324 correctly blocks a re-import until item 314''s family-grouping build lands (a re-import creates 177 near-duplicate products), and with the importer disabled nothing refreshed the 609 rows, which had sat at 25 Aug prices for ten days. 526 of them were sole-retailer listings, where a stale price is least detectable and most consequential -- we state one price, the click-through shows another, and nothing on our side disagrees with itself. Cost measured before the flip: 494 products leave the catalogue (supplements 438, skincare 40, bath_body 13, hair 3), 71 survive and lose the offer, listed retailers 14 -> 13. Item 580.'
+ where id = 33;
