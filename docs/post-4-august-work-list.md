@@ -46756,3 +46756,214 @@ comes from the one relationship that is not a catalogue relationship.
 > **A FEED CAN BE COMPLETE, WELL TYPED, CORRECTLY FILTERED AND STILL BE POOR MATERIAL.** Every field
 > was populated on all 93 rows. **Populated is not the same as meaningful**, and no schema check would
 > have found a terms field containing `Y`.
+
+---
+
+### 576. A live 404 that was never a data bug: the catalogue crossed a timeout and the code turned the timeout into a 404
+
+`https://www.findmybasket.co.uk/supplements/supplements?type=Vitamins` returned 404 intermittently
+while 600 products carried that type. Reported 4 September.
+
+#### THE DIAGNOSIS THAT WAS PROPOSED, AND WHY THE EVIDENCE ALREADY REFUTED IT
+
+The hypothesis was a derived-versus-stored mismatch: `product_type` is null on every supplements
+row and the browse type is computed at read time inside `products_active`, so a chip built from the
+derived value and a query filtering the stored column would disagree — the chip says Vitamins and
+the filter finds nothing. Which would mean **the chips had never worked and the 404 was the
+empty-type guard firing correctly on a filter that could not match.**
+
+**It is refuted by the chips existing, with no measurement required.** `fmb_product_type_facets`
+and `getSubcategoryProducts` both read `products_active`, and the facets RPC filters
+`product_type is not null`. If either had been reading the stored column, every supplements row
+would have been excluded and **no chips would have rendered at all.** A rendered chip reading
+`Vitamins 600` is proof that the facet side saw the derived value; the filter reads the same view.
+
+Both sides saw the same 600 rows throughout. Nothing ever disagreed. Verified independently as well
+as argued: 13 product types on `supplements/supplements`, counts identical from the facets path and
+from the page's own filter predicate.
+
+#### ★ THE CENTRE: IT BECAME BROKEN. THE CODE DID NOT CHANGE AND THE CATALOGUE CROSSED A CEILING
+
+| | |
+|---|---|
+| Derivation shipped (`20260827111048`) | **27 August**, 1,946 rows in `supplements/supplements` |
+| 500s on that query, 27–29 August | **zero** |
+| Rows added **28 August** | **4,017** |
+| First 500 in the edge logs | **30 August** |
+| Rows now | **6,660** |
+
+Same code, three times the scan. "Broken since the day it launched" is not merely unproven, it is
+**contradicted by the logs for the launch window** — the code that is alleged to have never worked
+served 17 requests on day one without a failure.
+
+#### AND IT WAS A COIN FLIP, NOT A BROKEN PAGE — WHICH IS WHY IT PRESENTED AS INTERMITTENT
+
+Measured 4 September, before the fix:
+
+| surface | chip latency | budget used |
+|---|---|---|
+| makeup / hair / fragrance / bath-and-body / skincare (66 chips) | 0.2 – 1.4 s | ≤47% |
+| `/supplements/sports` (12 chips) | 0.2 – 0.9 s | ≤30% |
+| **`/supplements/supplements` (12 chips)** | **2.76 – 3.64 s** | **~97%** |
+| **`/supplements?type=` (12 links)** | **2.25 – 4.23 s** | **~97%** |
+
+`anon`'s `statement_timeout` is 3 s. **The pages sat at ~97% of the budget rather than over it**, so
+every load resolved independently and a URL 404'd and 200'd minutes apart. A defect that fires on
+some loads reads as a broken page seen intermittently; it does not read as a threshold that moved.
+It is also why every check aimed at the data passed — the data was clean on every single load.
+
+#### THE MECHANISM
+
+`products_active.product_type` is `COALESCE(product_type, fmb_supplement_type(name, brand))`.
+Filtering on it filters an **expression**, so Postgres ran twelve regexes over a brand-stripped name
+for every supplements row in scope and discarded the misses.
+
+| query | candidate rows | time |
+|---|---|---|
+| supplements `?type=Vitamins` | 6,660 | **1,794 ms** |
+| skincare `?type=Moisturiser` | 27,243 | **130 ms** |
+
+Four times the rows, one fourteenth the time. Then: timeout → PostgREST 500 → `getSubcategoryProducts`
+discarded `error` → `totalCount ?? 0` → 0 → `SubcategoryPage` `notFound()`.
+
+#### ★ THE ERROR-TO-404 CONVERSION IS THE DEFECT THAT OUTLIVES THE INDEX
+
+The index removes today's route to that line. It removes no other. **60,032 pages are already
+crawled-and-declined**, and a 404 is the one response that tells Google a page it was offered does
+not exist. **A 500 is honest, retryable and not a de-indexing signal. A 404 on a link the site
+renders itself is none of those.** When the two are indistinguishable at the call site, the code
+picks the irreversible one.
+
+**AND THE RULE ALREADY EXISTED, WRITTEN DOWN, THIRTY-TWO DAYS EARLIER.**
+`supabase/migrations/README.md` convention 10, added 3 August: *"Any `supabase-js` call whose result
+is acted on must read `error`, and must classify an error differently from an empty result."* It even
+names where it would recur: *"anywhere `supabase-js` is called without checking `error`. That is not
+a hypothetical set... and no sweep has been run."* **The sweep was not run.** The rule was filed in a
+document about migration conventions while the hazard lived in page queries — the same failure as
+item 238, where the `.order()` rule sat sixty lines from the function that needed it and did not
+cover it. *The reasoning now sits on the code it protects.*
+
+#### THE INDEX TRADE-OFF, CHOSEN RATHER THAN DEFAULT
+
+`20260904152424_index_supplements_derived_product_type`: a partial expression index on the exact
+`products_active` expression. **1,794 ms → 47 ms.** Type counts identical before and after — it
+changed speed, not answers.
+
+**Not a backfill, and that is a decision with a cost.** Read-time derivation *is* the design: the
+categoriser deliberately nulls `product_type` on supplements, so writing values into the column would
+freeze them and be undone on every re-import. Indexing the expression keeps the semantics — new and
+edited rows are derived and indexed automatically.
+
+**The cost is that `fmb_supplement_type` is declared IMMUTABLE, which is what makes it indexable,
+while its body is a vocabulary expected to grow.** Adding a type does not rebuild the index; the old
+classification stays until it does. **Any change to that function must be followed by
+`REINDEX INDEX CONCURRENTLY idx_products_supplements_derived_type`.** Recorded on the index comment
+and in the migration, because a stale expression index reports no error and shows no signal.
+
+
+#### ★★★ THE LARGER HALF: THE RULE ALREADY EXISTED, AND NAMED WHERE IT WOULD RECUR
+
+`supabase/migrations/README.md` **convention 10, written 3 August 2026**, four weeks before this
+defect shipped:
+
+> **The rule.** Any `supabase-js` call whose result is acted on must read `error`, and must
+> classify an error differently from an empty result. Two different messages, not one, because
+> they send someone to two different places.
+>
+> **Where it will recur:** anywhere `supabase-js` is called without checking `error`. **That is not
+> a hypothetical set.** It is every call site that currently destructures only `data`, and **no
+> sweep has been run.**
+
+It was right, it was specific, it predicted the recurrence, it named the population — **and the
+sweep was still not run thirty-two days later, when the population produced a live 404.**
+
+#### ★★ THIRD INSTANCE OF THE SHAPE, AND THE TABLE IS THE POINT
+
+| # | the rule | filed under | breached on |
+|---|---|---|---|
+| 238 | every `.range()` must follow `.order()` on a unique column | `fetchAllRows`, the **paging helper** that prompted it | `getSubcategoryProducts` — a paginator in the same file that never called the helper |
+| — | a banned word | the **client PDF spec** it was agreed in | copy written outside that document |
+| **576** | read `error`; classify it differently from empty | `supabase/migrations/README.md` — **migration conventions** | `lib/subcategory-queries.ts`, a page query, which no one reads migration conventions against |
+
+**All three correct. All three filed under the mechanism that prompted them. All three breached on a
+surface their author would have said they covered** — and in each case the breach is not a
+disagreement with the rule but a failure to *encounter* it. A rule is only as wide as the document
+it lives in gets read.
+
+> Item 238's write-up already said this in its own words: *"the rule existed, the evidence was in
+> this file, and this call still had the bug — because the rule was scoped to the paging helper."*
+> **The remedy applied then was to move the rule onto the code it protects, and that remedy was not
+> generalised.** This item's fix does the same thing for convention 10, one call site at a time,
+> which is the same non-generalisation again unless the sweep is run.
+
+#### THE SWEEP IS STILL NOT RUN — TWO CALL SITES, NOT THE SET
+
+This item fixed **two**: `getSubcategoryProducts` and `getSubcategoryStats`, the two whose zero
+feeds `SubcategoryPage`'s `notFound()`. **The rule's own text says the set is not hypothetical, and
+it is not.** Counted 4 September, read-only, nothing changed:
+
+```
+awaited supabase-js results assigned or destructured        98
+  read `error`                                              54
+  DO NOT read `error`                                       44   <- the set the rule named
+      on page-render paths                                  38
+      in the feed-monitor edge function                      6
+```
+
+**AND THE COUNT IS AN UNDERSTATEMENT, BECAUSE THE RULE HAS TWO HALVES.** A further **15** call sites
+read `error` and then collapse it into the same branch as "no rows" — `if (error || !data) return []`,
+`return null`, `break`. They satisfy the first half and breach the second, **and they are invisible to
+a search for a missing `error`: they look like compliance.** `getValidSubcategories` is one of them,
+in the file this item fixed, twelve lines from the fix.
+
+> **59 of 98 call sites fail convention 10 — 60% — and a grep for the obvious signature finds 44 of
+> them.** The rule's own recurrence prediction is only accurate for three quarters of its population.
+
+#### FIVE `notFound()` SITES CAN STILL BE REACHED BY A QUERY FAILURE
+
+Nine `notFound()` calls exist. Two are non-query guards (`Number.isNaN`, a static lookup). Two were
+fixed by this item. **Five remain:**
+
+| site | fed by | how the error becomes a 404 |
+|---|---|---|
+| `app/edit/[slug]/page.tsx:76` | `getEditProducts` (`edit-queries.ts:166`) | **byte-for-byte the guard fixed here** — `if (productType && totalCount === 0) notFound()`, no `error` read |
+| `components/SubcategoryPage.tsx:63` | `getValidSubcategories` | reads `error`, `return []`, absent value 404s |
+| `app/brands/[slug]/page.tsx:54` | `findBrandBySlug` | `if (error \|\| …) break` ends the paging loop early; brand resolves null |
+| `components/BrandPage.tsx:63` | `resolveBrandAliasSlug` (`brand-queries.ts:502`) | no `error` read; null alias falls through to `notFound()` |
+| `app/product/[id]/page.tsx:286` | `getProductById` (`product-queries.ts:63`) | reads `error`, `return null` — **its own comment records 446 products that once 404'd at their own URL** |
+
+#### AND THE WIDEST BLAST RADIUS IS NOT A 404 AT ALL
+
+`lib/retailers.ts:15`:
+
+```ts
+const { data } = await supabase.from('retailers').select('id').eq('active', true);
+return new Set((data ?? []).map((r) => r.id as number));
+```
+
+**On any failure this returns an empty set**, it is `cache()`d per request, and **eight call sites**
+use it to filter `retailer_prices`. An empty set filters every price out of every comparison: each
+product card renders with no retailers, no price and no saving, **on a 200, sitewide, for the whole
+request.** Nothing 404s and nothing logs. **A silent empty is the failure mode this class produces
+when there is no `notFound()` to convert it into a loud one** — same shape as `?other=1` above, at
+sitewide scale.
+
+#### THE SWEEP IS NOT STARTED. THE COUNT IS THE DECISION
+
+**44 unchecked + 15 miscategorised = 59.** Not proposed here, and deliberately not begun: the fix is
+not uniform. Five sites need a throw, fifteen need a *distinction* rather than a check, and
+`getActiveRetailerIds` needs a decision about what a page should do when it cannot learn which
+retailers are live. **That is the difference between an afternoon and a week, and it is Robbie's
+call, not a follow-on commit.**
+
+#### THE REMAINING CASE: `/supplements?other=1`
+
+`not in` on the derived expression **cannot use the index** — an index answers *which rows equal
+this*, not *which rows equal none of these*. It still runs **1.5–2.4 s** where every `?type=` link is
+now under 0.6 s.
+
+Left as is because its failure mode differs, **not because it is fine.** It is reached only from
+`CategoryPage`, which has no `notFound()`, so a timeout there degrades to an **empty grid, not a
+404** — a page that lies about the catalogue with a 200. **A silent empty rather than a live error,
+which is quieter and not better**, and nothing measures it. Same family as the empty-population
+filter: the failure and the correct answer are rendered identically.
