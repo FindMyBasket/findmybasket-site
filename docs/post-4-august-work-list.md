@@ -47436,6 +47436,13 @@ where the absence was in a **decision** rather than in code.
 lose 56 between them — MyProtein was carrying skincare, bath and body and hair rows nobody was
 counting when this was scoped.
 
+> **AND THE DECISION WAS SCOPED AS A SUPPLEMENTS ONE THROUGHOUT.** Item 580 costed it against the
+> supplements proposition, the per-unit comparison pages and 83 comparable supplement products. Every
+> sentence in the argument, on both sides, was about supplements. **MyProtein was carrying rows in
+> four categories**, and the three that were not supplements were never named — not weighed and
+> rejected, *absent from the frame*. The decision stands on the re-measurement, but it was taken on a
+> scope narrower than its effect, and the narrower scope came from the retailer's name.
+
 **And MyProtein was the onboarding that made the per-unit comparison pages possible.** This is not a
 retailer being tidied away. It is switching off the one that carried the supplements proposition,
 because its prices can no longer be stood behind. **Reversible in one statement, and not free.**
@@ -47488,3 +47495,97 @@ next prioritised.** Its own note says it is *"open on its own terms, not on MyPr
 accurate when the cost was 177 hypothetical duplicates. The cost today is 494 products and a mark on
 the homepage, and the decision about when MyProtein returns is no longer a guard's decision — it is
 item 314's.
+
+---
+
+### 582. /about read 13 over 13 names while fourteen were live, and then became correct by accident
+
+**Raised and CORRECTED:** 4 September 2026 · **Found while sweeping copy before switching MyProtein
+off (item 581), not by any check.**
+
+`public/about.html`, served live at `/about`:
+
+> *"Currently live across **13** UK retailers covering skincare, makeup, hair, fragrance and
+> supplements:"* — over a list of **13 names**.
+
+**Fourteen were live.** The Fragrance Shop went live 31 August and was never added. So the count and
+the list were **wrong together and agreed with each other** — internally consistent, mutually
+corroborating, and both false.
+
+#### ★★★ THEN THE ERROR REPAIRED HALF OF ITSELF
+
+MyProtein going off on 4 September took the true count to 13. **The sentence became true without
+anyone touching it** — while the list beneath it still named MyProtein, which is off, and still
+omitted The Fragrance Shop, which is on.
+
+> **A COUNT THAT MATCHES ITS LIST IS NOT EVIDENCE THE LIST IS RIGHT.** The two are written by the
+> same hand at the same moment and go stale together, so their agreement measures nothing except
+> that nobody has edited either. It is the shape of
+> [[consistency-check-is-not-correctness-check]] in prose rather than in SQL: a rule comparing a
+> column to its own source reports agreement, not truth.
+>
+> **AND A COUNT THAT BECOMES CORRECT BY COINCIDENCE IS THE ONE NOBODY RE-CHECKS.** Every future
+> reader who spot-checks this paragraph will count 13, read 13, and stop — the coincidence buys the
+> list permanent cover. **A wrong number invites a second look; a right one ends the inspection.**
+
+#### THE BARE-INTEGER CLASS, ARRIVING IN A PAIR
+
+Item 340 already stated the principle, on this page's sibling: *"A number that becomes right by
+coincidence is indistinguishable from a maintained one; knowingly leaving one is worse than the
+original"* — and replaced the bare integer with wording that stays true as the catalogue moves,
+because *"it drifts by construction — right for a day, then wrong in whichever direction the
+catalogue moves."* Item 494 is the same class with a date on it: *"error through no edit at all,
+which is the property a bare integer has by construction."*
+
+**What is new here is that it arrived as a PAIR.** A lone integer drifts and is eventually caught by
+someone who knows the real number. **A count plus a list that drift together produce a corroborating
+witness**: the reader checks the number against the names, finds them consistent, and concludes the
+block is maintained. **Two stale artefacts are harder to detect than one, because they alibi each
+other.**
+
+#### ★★ THE FILE'S OWN COMMENT HAS BEEN RIGHT FIVE TIMES AND IS STILL THE ONLY MECHANISM
+
+> *"A retailer change MUST sweep this block; nothing detects it."*
+
+Its own history, written above it: **Gorgeous Shop, Atelier De Glow and Perfume Click** *"added and
+were missing from this list for days"*; **Niche Beauty** *"went live 9 August and was missing for
+seven."* Four named retailers. **The Fragrance Shop is the fifth** — and the first where the count
+went right while the list stayed wrong.
+
+*(Recorded earlier today as "proved right four times"; that undercounts. The comment names four
+retailers, and this is the fifth failure.)*
+
+**The comment is a correct rule with no enforcement, addressed to whoever happens to read the file
+they are already editing.** It has now been proved right five times and has prevented nothing — the
+same shape as convention 10's *"no sweep has been run"* (item 576) and item 238's `.order()` rule:
+correct guidance, filed where the person who needed it would not be reading.
+
+#### THIS IS THE ARGUMENT FOR ITEM 538's TRIGGER
+
+Item 538 is *"REPORTED, NOT BUILT. The answer decides whether it is one line or a trigger, and it is
+a trigger."* It now has **three confirmed instances, two of them today**:
+
+| | surface | held |
+|---|---|---|
+| 1 Sep | homepage retailer count | said 13 for a full hour after `active` flipped, until `fmb_revalidate_paths` by hand |
+| 4 Sep | homepage retailer count | said **14** after MyProtein went off, until `fmb_revalidate_paths` by hand (item 581) |
+| 4 Sep | **`/about`** | **cannot revalidate at all — it is a static file, and a deploy is the only correction** |
+
+> **THE THIRD IS THE ONE THAT SETTLES THE SHAPE OF THE FIX.** The two homepage instances are a
+> caching problem and a revalidation trigger closes them. **`/about` is not cached-stale, it is
+> hand-written**, so no trigger reaches it. A `retailers.active` change needs to fire *two different
+> kinds of thing* — a revalidation for the rendered surfaces and a **failing check** for the
+> hand-maintained ones — and only the first is what item 538 currently scopes.
+
+**The check is cheap and the definition already exists.** `getListedRetailers` is the site's own
+answer to "who is listed"; a test asserting that `public/about.html`'s `<li>` names and its integer
+both match that query would have failed on 31 August, and again this morning, and would have named
+the retailer in both directions. **Not built here** — item 538 owns the decision and this is its
+third instance, not a fourth item.
+
+#### CORRECTED
+
+MyProtein out, The Fragrance Shop in — **13 names against the 13 marks the homepage renders**,
+verified against `getListedRetailers`' predicate rather than against the old list. The block's
+comment gains this instance, and states the new failure mode: the number agreeing with the list is
+not evidence either is right.
