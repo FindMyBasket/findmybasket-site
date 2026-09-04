@@ -47059,3 +47059,158 @@ Left as is because its failure mode differs, **not because it is fine.** It is r
 404** — a page that lies about the catalogue with a 200. **A silent empty rather than a live error,
 which is quieter and not better**, and nothing measures it. Same family as the empty-population
 filter: the failure and the correct answer are rendered identically.
+
+---
+
+### 578. Onboarding's six states stop at the first import, and the refresh path has now been an afterthought twice
+
+**Raised:** 4 September 2026 · **OPEN. NOT STARTED — a slot is proposed below, nothing is applied.**
+· **Second instance. Item 490 was the first and was fixed reactively.**
+
+**The Fragrance Shop has no refresh schedule.** Live since 31 August, `active = true`,
+`enabled = true`, `last_import_status = 'ok'`, **3,199 priced rows, one import, 91 hours ago.**
+Nothing reads as wrong anywhere: the status is `ok` because the one import succeeded.
+
+#### THE FILE THAT LOOKS LIKE THE REFRESH JOB IS A CENSUS
+
+`.github/workflows/refresh-fragrance-shop.yml` **exists**, and it is `workflow_dispatch` only. Its
+own header says what it is:
+
+> `name: fragrance shop census` — *"MEASURE-ONLY. THIS WORKFLOW WRITES NOTHING… no upload to the
+> rakuten-feeds bucket, no call to import-rakuten-feed, no row in retailers or
+> retailer_import_config, no dry run. It fetches, counts, and prints."*
+
+**The `refresh-` prefix is the whole trap.** A directory listing shows `refresh-debenhams`,
+`refresh-healf`, `refresh-fragrance-shop` and reads as three refreshes. Two are; the third is a probe
+that was named for the retailer rather than for what it does. **A file whose name asserts a capability
+it does not have is worse than an absent file**, because the absent one is countable.
+
+#### ★ SECOND INSTANCE, AND THE FIRST ONE'S WRITE-UP PREDICTED IT
+
+Item 490, 28 August, on Healf:
+
+> *"`refresh-healf.yml` shipped with no schedule, and the reason was correct at the time:
+> `retailers.active` was FALSE, so a daily run would refresh a retailer nobody could see. **NOTHING
+> ABOUT THE FILE CHANGED AND IT BECAME WRONG ANYWAY.** `active` flipped true in the same sequence…
+> A DECISION CORRECT AT THE MOMENT IT WAS MADE, WHOSE JUSTIFICATION WAS CONSUMED BY A LATER STEP IN
+> THE SAME SEQUENCE."*
+
+That was applied as `13 3 * * *` **the same day it was noticed**, and the noticing was the mechanism.
+**Three days later The Fragrance Shop went live with no schedule and nothing noticed for four days.**
+
+**Item 538's shape with a different mechanism**, exactly as suspected: there, `retailers.active` went
+true and the surface asserting the retailer count was not a surface anything revalidates. Here
+`retailers.active` goes true and **the schedule that keeps the retailer's prices true is not a step
+anything sequences.** Both are a flag flipping while the thing downstream of it is nobody's step.
+
+#### ★★★ THE DEFINITION IS MISSING THE STATE THAT HAS FAILED TWICE
+
+`docs/onboarding-completeness.md` — *"A completed onboarding should be in all six"*:
+
+| # | State | About |
+|---|---|---|
+| 1 | Feed census read, not counted | before |
+| 2 | Delivery terms with `delivery_terms_source` | before |
+| 3 | Allowlist value verified against the feed | before |
+| 4 | A dry run whose classification is read by name | before |
+| 5 | `retailer_import_config` written inert, `enabled = false` | **the first import** |
+| 6 | `retailers.logo_path` present before `active` flips | go-live |
+
+**Every state is about reaching the first import safely. None is about the second one.** State 5 is
+the closest and points the wrong way — it exists to make the config *inert*, and says the config
+"does nothing until someone decides it should." **It names the decision and not the schedule, so a
+retailer can satisfy all six states, go live, and never refresh again.** The Fragrance Shop does
+satisfy all six.
+
+> **AND THE 2 SEPTEMBER VERIFICATION TABLE PROVES THE DEFINITION IS WHAT FAILED, NOT THE CHECKING.**
+> That table checked all four retailers against all six states, column by column, and lists The
+> Fragrance Shop as `config enabled: true`, `live priced rows: 3,199`. **It was correct and it was
+> complete.** It could not surface the missing cron because **there is no row for scheduling** — the
+> audit inherits the definition's blind spot, so running it more often would never have found this.
+> A check derived from a definition cannot find what the definition omits.
+
+**The proposed state 7:** *a recurring refresh is scheduled, and has completed at least twice.* Twice
+rather than once, because the first run is the onboarding import and would satisfy a
+"has-run" test without proving anything recurs.
+
+#### WHAT A RAKUTEN CRON NEEDS — refresh-superdrug.yml's shape, not refresh-healf.yml's
+
+Healf is Darwin over `SUPABASE_SERVICE_KEY` / `SUPABASE_PROJECT_REF`: two `curl` calls, preflight then
+import. **The Fragrance Shop is Rakuten SFTP and cannot use that shape.** The only worked precedent is
+`.github/workflows/refresh-superdrug.yml.disabled` — Rakuten LinkShare, disabled 20 July when the feed
+ceased (`ba8be9c`), cron was `0 3 * * *`:
+
+| step | needs |
+|---|---|
+| Download `cmp` feed via SFTP | `sshpass -p … sftp aftp.linksynergy.com` with **`RAKUTEN_SFTP_USER`** and **`RAKUTEN_SFTP_PASSWORD`** |
+| Decompress and convert to NDJSON | the cmp XML reader — **`<URL><product>…</product></URL>` nests, and a naive `<product .*?</product>` regex truncates every record and reports an all-zero census** (recorded in the census workflow's own header) |
+| Upload to Supabase Storage | `rakuten-feeds` bucket, `SUPABASE_PROJECT_REF` + `SUPABASE_SERVICE_KEY` |
+| Trigger the import | `POST /functions/v1/import-rakuten-feed` |
+
+**Open question that must be answered before it is written:** the census discovers the SFTP directory
+by listing, because *"Superdrug's feed lived in /50336/, which is not its SID, so the path cannot be
+derived"* — and **a guessed path fails as an empty fetch, which reads as a finding about the feed.**
+A daily cron must either pin the discovered directory or keep listing; pinning is faster and breaks
+silently if Rakuten moves it.
+
+##### THE PROPOSED SLOT: `0 1 * * *`
+
+The daily window, measured:
+
+```
+02:00 debenhams (GH)      05:30 organic-pharmacy · homepage-demo (GH)
+02:37 sync-adg-feed (GH)  06:00 gorgeous-shop      07:45 regroup-shade-strays
+03:00 sync-bb-feed (GH)   06:30 beauty-bay         08:00 niche-beauty
+03:13 healf (GH)          07:00 beauty-flash       09:00 MONITOR
+03:30 stylevana           07:30 perfume-click      09:30 categoriser-safety-net
+04:00 escentual                                    09:45 catalog-health-snapshot
+04:30 boots                                        10:00 yesstyle
+```
+
+**01:00 is empty, and everything from 02:00 to 10:00 is not.** Superdrug's old `0 3 * * *` now
+collides with `sync-bb-feed`. 01:00 puts the SFTP download, the NDJSON conversion and the import
+**before** the AWIN window rather than inside it — Rakuten's convert step is the long one — and leaves
+**eight hours before the 09:00 monitor**, so a failure is reported the same morning rather than the
+next one.
+
+> **AND IT EXPOSES SOMETHING ALREADY TRUE: `refresh-yesstyle` RUNS AT 10:00, AFTER THE 09:00 MONITOR.**
+> YesStyle is the one retailer whose daily failure cannot be reported until the following day. Not
+> caused by this item and not proposed for change here — noted because the window was measured.
+
+#### AND THE FRAGRANCE SHOP WILL NOT AGE OUT, WHICH IS NOT A MERCY
+
+`absence_threshold_days` is **NULL** for retailer 35 (Beauty Flash 7, Healf 7, MyProtein 30). Healf's
+cron got a deadline from its threshold — *"a week later Healf's 4,373 rows begin aging out"* — and
+**that deadline is what turned item 490 into a dated obligation.** The Fragrance Shop has no such
+deadline, so its 3,199 rows will sit at whatever price they last had **indefinitely, on a 200, with
+`last_import_status = 'ok'`.** The retailer with no threshold is the one that can drift furthest, and
+it is the one nobody was warned about.
+
+#### THE THIRD RETAILER IS CORRECTLY HELD, AND IT IS NOW HOLDING A REFRESH
+
+**MyProtein, 238 hours, `active = true`, `enabled = false` — correct**, under item 324's re-import
+guard, with the reason machine-readable rather than a bare flag:
+
+```
+finding_key: held:import:33:tier5-leak-would-duplicate
+detail: {"retailer_id": 33, "would_create_on_reimport": 177,
+         "unblocks_when": "item 314 family-grouping-at-import lands, or
+                           createdUrls is DB-populated across runs"}
+```
+
+**Item 314's build has not landed.** Its own table records it as *"open on its own terms, not on
+MyProtein's"*, and nothing since has changed that. **The hold is therefore open-ended**, and it has
+changed character: it was a guard against a *re-import* creating 177 near-duplicates, and it is now
+also the reason a live retailer's 609 rows are ten days stale. `absence_threshold_days = 30` puts a
+date on it — **around 25 September those rows begin aging out of a catalogue that shows them.**
+
+> **A guard whose cost was "no re-import" now costs "no refresh", and nothing re-priced it when the
+> retailer went live.** Same shape as item 490 and as this item's own centre: a decision correct when
+> made, whose surrounding conditions moved.
+
+#### NOT STARTED
+
+No cron applied, no state 7 written, no workflow authored. The slot and the shape are proposed so the
+decision is a review rather than a design. **Item 490 was fixed the day it was noticed and the class
+was recorded but not closed — that recording is this item's evidence, and it did not prevent the
+second instance.**
