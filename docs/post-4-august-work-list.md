@@ -46080,6 +46080,98 @@ it first would be deciding the shape of a fix nobody has scoped.
 
 ---
 
+### 577. The savings hub's own header is skincare-only, and the sweep that could have caught it edited the line above it
+
+**Raised:** 4 September 2026 · **OPEN. NOT STARTED — filed beside item 567 deliberately: same file,
+same cause, and Robbie is holding 567.** · **The wording is a copy decision, not a substitution.**
+
+`public/savings-hub.html`, live now:
+
+```
+Savings Hub
+Spend less on skincare.
+Without switching products.
+Price comparisons, retailer guides and savings tips for UK skincare shoppers.
+```
+
+**The site is six categories.** The page's own grid carries **18 article cards**, and **five of them
+are supplements** — Starter guide, Value, Label Guide, Formats, Dosage.
+
+#### SAME FILE, SAME CAUSE AS 567
+
+`savings-hub.html` has been static since **7 May 2026**. **Fragrance went live 29 June** (b0f67a1);
+bath & body and supplements later still. Item 567 records the nav frozen at the Stage-1 triple —
+Skincare, Makeup, Hair, K-Beauty, Savings Hub. **The copy above that nav is frozen at the same
+moment and for the same reason.** One file, two defects, and the second is not a nav.
+
+#### THE MEASUREMENTS, TAKEN RATHER THAN ACCEPTED
+
+The item was reported as *"three occurrences of skincare in four lines"* on a page carrying
+*"eighteen articles including one about supplements published today."* Three of those figures are
+off, and **each correction makes the item worse rather than better**:
+
+| reported | measured | |
+|---|---|---|
+| 3 × `skincare` in the four header lines | **2** | but **31 in the file**, and the `<title>`, `<meta description>`, `og:description` and `twitter:description` are **all skincare-only** |
+| 18 articles | **18** ✓ | 18 cards, 18 files on disk, all linked, no orphans either way |
+| one supplements article, **published today** | **five** supplements articles | newest **2 September** (item 567's own instance); four on 24 August. **None published today.** |
+
+**The header understates it and the metadata is worse than the header.** The visible h1 is two
+occurrences; the four strings Google reads are skincare-only in full, on a hub whose largest single
+topic by card count is supplements.
+
+> **A NOTE ON HOW THE ARTICLE COUNT WAS NEARLY MISSED.** The first count returned **zero article
+> links**, because the cards do not use `<a href>` — they navigate by
+> `onclick="window.location='/articles/…'"`. A grep for `href=".*articles"` returns a clean zero and
+> that zero reads as *"the hub indexes nothing"*, which would have been a spectacular and entirely
+> invented finding. **Item 539's class again**, and the third time this month: a pattern pinned to an
+> assumed output shape, returning a well-formed answer to a question nobody asked.
+
+#### ★★★ THE CENTRE: ITEM 495's SWEEP OPENED THIS FILE, CHANGED A LINE, AND LEFT THE DEFECT THREE LINES ABOVE IT
+
+The item was filed on the belief that the 28 August tagline sweep **did not reach** this page. **It
+did.** `9b12220` edited `public/savings-hub.html` — one line, line 10:
+
+```diff
+-  <meta name="keywords" content="… skincare price guide, beauty deals UK"/>
++  <meta name="keywords" content="… skincare price guide, health and beauty deals UK"/>
+```
+
+**Line 8 is the skincare-only `<title>`. Line 9 is the skincare-only `<meta description>`.** The
+sweep changed line 10 and left both.
+
+> **THE SWEEP WAS SCOPED TO THE TERM, NOT TO THE CLAIM.** It searched for `beauty` — the word being
+> replaced — and found **49 occurrences across 42 lines**, correctly, and changed every one. A page
+> whose umbrella term is `skincare` is invisible to that search **even with the file open and being
+> edited**, because the string that makes it wrong is not the string being swept.
+>
+> **The claim was "our self-description names the wrong scope." The pattern was "the word `beauty`."**
+> Those coincide on 42 lines and diverge here, and nothing in a sweep that finds and fixes 49 of 49
+> can report the divergence — **a complete sweep and a correct one look identical from inside.**
+
+**This is worth stating because the next scope change will have the same problem.** A seventh
+category, or a rename, will be swept by searching for the term it replaces, and every surface that
+names the scope some *other* way — a category name standing in for the whole shop, as here — will
+again be missed by a sweep that succeeds completely on its own terms. Family of item 476 (a claim
+about scope with no mechanism for noticing the scope moved) and item 539 (a pattern encoding an
+assumed shape), and the mechanism 567 already names: **adding to a stale surface hides it from the
+search for stale surfaces.**
+
+#### WHY IT IS NOT BEING FIXED HERE
+
+**The wording is a copy decision, not a substitution.** There is no correct string to swap in
+mechanically: "Spend less on skincare" is not repaired by "Spend less on health and beauty", which is
+worse copy for a page whose grid is five supplements guides, four price guides and two K-beauty
+pieces. **That is a writing call and it is Robbie's.**
+
+And it belongs with 567 because it is the same file. **Fixing the header while the nav below it still
+omits three categories ships a page that names six categories in prose and links three** — which
+would read as a finished change and be a worse state than the one it replaced.
+
+**Not started. No fix proposed. Filed beside 567 so the file is opened once.**
+
+---
+
 ### 568. The Offers brief inherited its hazard from the record of that hazard's repair
 
 **Raised:** 2 September 2026, Phase 0 of the Awin Offers brief · **CLOSED as a correction. The rule
