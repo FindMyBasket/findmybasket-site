@@ -1,0 +1,51 @@
+-- BEAUTY FLASH'S FEED ROTATED: 87846 -> 116878. Advertiser 53381 unchanged. Item 588.
+--
+-- VERIFIED BEFORE APPLYING, AND THE VERIFICATION IS THE POINT. Item 482: "a confirmation is not a
+-- verification", and item 483's fid=521 was a confirmed number that 404'd because it was a Darwin
+-- URL rather than a feed id. A rotated id is exactly the shape that gets typed rather than read.
+--
+--   1. AWIN's OWN datafeed list (scripts/awin-feed-list.mjs, added today): of 606 feeds visible on
+--      this account, advertiser 53381 publishes EXACTLY ONE -- fid 116878, "Beauty Flash", 11,018
+--      products, last imported 2026-09-05 10:12. fid 87846 is not in the list at all, which is why
+--      it 404s rather than erroring some other way.
+--
+--      THE LIST IS THE ONLY THING THAT PROVES OWNERSHIP. feed-diag downloads a feed and reports its
+--      shape, but the columns it requests carry no merchant identity, so a wrong-but-valid fid
+--      belonging to another advertiser passes every check it makes and mislabels every figure.
+--      That is item 482's silent half, and it is why a download alone was not accepted as proof.
+--
+--   2. feed-diag on 116878: 11,018 rows, gzip verified, column set identical to the importer's
+--      request. Downloadable, and the shape is ours.
+--
+-- ── THE ROTATION DID CARRY A FORMAT CHANGE, AND IT IS INERT ──────────────────
+--
+-- product_type went 0% -> 100%. The profile recorded in import-awin-feed on 3 Aug reads
+-- "Beauty Flash ean 0.0% product_GTIN 96.4% category_name 100% product_type 0%"; the new feed fills
+-- product_type on every row. IT CHANGES NOTHING HERE: category_name is the PRIMARY and is 100%
+-- filled, product_type is only its `_alt`, so the fallback is never consulted. Checked rather than
+-- assumed -- the same change on a feed whose category_name was empty would have re-categorised
+-- every row.
+--
+-- The other two sibling pairs are unchanged and already handled by sibling_coalesce = true:
+--   ean 0.0% / product_GTIN 98.6%                      -> coalesced (was 96.4%, so slightly better)
+--   merchant_product_category_path 0.0% / merchant_category 100%  -> coalesced
+--
+-- feed-diag prints "IMPORTER READS ean, SO THIS IS LOST" against the first pair. THAT WARNING IS
+-- THE DIAG'S OWN GENERIC NOTE AND IS WRONG FOR THIS IMPORTER: import-awin-feed requests both halves
+-- of every pair and coalesces when configured to, which Beauty Flash is. Believing it would have
+-- been a false alarm, and today has produced three of those against two false negatives.
+--
+-- category_path_must_contain DOES NOT HOLD OR FAIL: it is `[]`. Nothing was ever filtering Beauty
+-- Flash on path, so the question has no purchase here; category_excludes and name_excludes are
+-- empty too.
+--
+-- ── WHAT THIS DOES NOT ADDRESS ───────────────────────────────────────────────
+--
+-- 10,866 barcodes (98.6% product_GTIN) are matched on but only ONE of 8,850 stored Beauty Flash
+-- products carries an ean. That gap predates the rotation -- it is the same on the old feed by the
+-- stored evidence -- and it is not fixed here.
+update public.retailer_import_config
+   set awin_feed_id = '116878',
+       updated_at = now()
+ where retailer_id = 27
+   and awin_feed_id = '87846';
