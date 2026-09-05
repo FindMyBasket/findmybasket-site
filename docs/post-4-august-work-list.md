@@ -48450,6 +48450,11 @@ data**:
 > `ean` across the offers we have grouped as one product. That is **14.1% of the 90,131** live
 > products carrying any barcode at all.
 
+**★ THAT FIGURE IS WRONG TWICE OVER AND ITEM 590 REPLACES IT. It counted offers from INACTIVE
+retailers, and it counted zero-padding as disagreement. The live figure is 4,272 on the raw column
+and 1,086 on the normalised one.** Left standing above as it was written, because item 590 is about
+what re-measuring it found.
+
 Picking one would be inventing a fact. And the disagreement is **not obviously a barcode problem**:
 two retailers stating different GTINs for what we call one product is exactly what a **wrong grouping**
 looks like from the other side. It is the same signal as item 314's near-duplicates, arriving through
@@ -48467,3 +48472,143 @@ a column instead of a URL.
 **Nothing decided and nothing applied.** The figure that opened this — one stored `ean` — turned out
 to measure a column nobody fills rather than a barcode nobody has, and **the interesting number is
 the 12,698, which was not visible until the first one was explained.**
+
+---
+
+### 590. Mostly bad barcodes, and about one in five bad groupings
+
+**Raised:** 5 September 2026 · **A READ, NOT A DECISION. Nothing proposed, nothing applied.** ·
+Answers item 589's question 3 and only question 3.
+
+#### THE NUMBER THAT PROMPTED THIS WAS WRONG TWICE OVER
+
+Item 589 reported **12,698** live products where retailers disagree about the barcode. Re-measured:
+
+| | |
+|---|---|
+| 589's figure | 12,698 |
+| …counting only **active** retailers | **4,272** |
+| …and only real disagreement, not formatting | **1,086** |
+
+**It counted offers from inactive retailers** — Superdrug, Branded Beauty, Atelier De Glow, Skin Cupid
+and now MyProtein — because the subquery filtered `products_active` but never joined `retailers`.
+[[retailer-liveness-needs-both-flags]], and I wrote that memory. **And it counted zero-padding as
+disagreement.**
+
+#### LAYER 1: THREE QUARTERS ARE NOT DISAGREEMENTS AT ALL
+
+Of the 4,272 that differ on the raw `ean`:
+
+| shape | n | |
+|---|---|---|
+| **Same barcode, zero-padded** — UPC-12 against EAN-13 | **3,184** | **74.5%** |
+| One character apart (check digit / transcription) | **2** | 0.05% |
+| Two characters apart | 61 | 1.4% |
+| Genuinely different numbers | 1,025 | 24.0% |
+
+**The dominant shape is a formatting difference, and the database already handles it**:
+`retailer_prices.ean_normalised` exists, and counting disagreement on *that* column gives **1,086** —
+independently reproducing the 1,025 above from a different direction. [[calibration-frame-method]].
+
+**Two of the four shapes predicted were essentially absent** (2 check-digit cases) or **dominant and
+already solved** (3,184 length cases). The interesting population is the remaining ~1,086.
+
+#### ★★★ LAYER 2: THE ANSWER — MOSTLY BARCODES, ABOUT A FIFTH GROUPINGS
+
+Price behaviour separates them, measured against the **agreeing products as a control** rather than
+against intuition:
+
+| | products | median max/min price | **≥2× spread** |
+|---|---|---|---|
+| Agreeing (control) | 13,345 | **1.02** | **3.6%** |
+| **Disagreeing** | 937 | **1.33** | **20.4%** |
+
+Retailers price the *same* product within 2% of each other at the median. Where the barcodes
+disagree, the median spread is 33% and **a ≥2× spread is 5.7 times more common**.
+
+> **SO ROUGHLY 20% OF THE 1,086 — ON THE ORDER OF 150 TO 190 PRODUCTS — ARE TWO DIFFERENT THINGS
+> MERGED UNDER ONE ID, AND THE OTHER ~80% ARE ONE PRODUCT WEARING TWO LEGITIMATE BARCODES.**
+> Subtracting the 3.6% control rate from 20.4% leaves 16.8 points attributable to the disagreement
+> rather than to ordinary retailer variation.
+
+**Reading the extremes confirms the proxy rather than resting on it:**
+
+```
+RMS Beauty SuperSerum Mist   Beauty Flash £4  ean 5060597930017 | Niche Beauty £49  ean 816248022113
+Weleda Calendula Shampoo     Gorgeous  £8.25  ean 4001638096515 | Niche Beauty £100 ean 5999556687894
+Omorovicza Illuminating      Beauty Flash £5.95 ean 4001638098014 (a WELEDA prefix) | NB £59 …
+Radox Muscle Soak 500ml      Boots £1.75  ean 5045094799190      | Debenhams £12.49 ean 5000231070112
+```
+
+**£4 against £49 is not a pricing difference.** And the Omorovicza row carries `4001638`, which is
+**Weleda's GS1 company prefix** — a mis-grouping visible in the barcode itself without reading a
+single name.
+
+#### THE SHAPES, AGAINST THE FOUR PREDICTED
+
+| predicted | found |
+|---|---|
+| check-digit variant | **2 products.** Effectively absent |
+| UPC-against-EAN length | **3,184 — the dominant shape**, and already solved by `ean_normalised` |
+| shade or size variant grouped together | **present** — COSRX patch pack sizes, a Rohto lip balm at £47.79 that is a multipack |
+| straight mismatch between unrelated products | **present and stark** — the four rows above |
+
+**And two shapes the list did not anticipate, both of which are *correct* barcodes:**
+
+- **BRAND BARCODE RE-ISSUE.** Clarins carries two generations — `3380810…` and `3666057…` — and
+  retailers hold whichever their catalogue was built from. Boots/Debenhams/Escentual on one,
+  Beauty Flash/Gorgeous Shop/Perfume Click on the other, **across at least a dozen Clarins products
+  in the first 22 sampled.** Both are real barcodes for the same product.
+- **RELABELLER CODES.** Stylevana supplies `648722…`, `711745…`, `761373…` — its own codes, not the
+  manufacturer's. The 27 August finding, and it is real.
+
+**Neither is a defect in our data.** They are the world being more complicated than one barcode per
+product, and they account for a large part of the ~80%.
+
+#### ★★ IT DOES NOT CLUSTER BY RETAILER, WHICH ANSWERS THE STYLEVANA HYPOTHESIS
+
+| retailer | holds the minority barcode | of appearances | rate |
+|---|---|---|---|
+| Stylevana | **150** | 641 | 23.4% |
+| Boots | 52 | 214 | **24.3%** |
+| **Niche Beauty** | 49 | 124 | **39.5%** |
+| Perfume Click | 45 | 226 | 19.9% |
+| Beauty Bay | 45 | 210 | 21.4% |
+| Debenhams | 42 | 208 | 20.2% |
+| YesStyle | 27 | 637 | 4.2% |
+
+**Stylevana holds the most minority barcodes in absolute terms and at a rate indistinguishable from
+Boots**, which is not a relabeller. **So this is not one feed supplying relabeller codes** — the
+27 August finding explains a share, not the population.
+
+**The outlier is Niche Beauty at 39.5%**, nearly double the field, and it appears on the expensive
+side of most of the extreme cases above. That is a lead, not a conclusion, and it is not chased here.
+
+**Nor does it cluster by brand:** the largest is COSRX at **5.3%** of the 1,086, in a K-beauty-heavy
+long tail (skin1004, medicube, missha, kose, pyunkang yul) — consistent with importers, parallel
+imports and multiple packaging generations rather than with one bad source.
+
+#### TWO INSTRUMENT ERRORS OF MINE, IN ONE SITTING
+
+Consistent with item 587's tally, both produced well-formed wrong answers rather than errors:
+
+1. **12,698** — the disagreement count, inflated by inactive retailers *and* by formatting. **A false
+   alarm**, and it is the number the last item was built on.
+2. A retailer-clustering query mixing `GROUP BY` with window functions returned
+   **`holds_minority = 0` for all thirteen retailers** — impossible, and impossible in a way that
+   reads as a clean result. Caught only because *zero for everyone* is not a shape the world
+   produces.
+
+#### WHAT THIS CHANGES FOR THE OTHER TWO QUESTIONS — STATED, NOT PROPOSED
+
+- **Q1 (JSON-LD barcode):** the ~80% finding makes this safer than it looked. For a product whose
+  offers agree — **85,516 of 89,788**, and the majority barcode where they do not — there is a
+  defensible value to publish. It needs no `products.ean` and no backfill.
+- **Q2 (populate `products.ean`):** still a decision, and now a smaller one. 3,184 resolve by
+  normalising, ~880 by taking the majority, and **~150–190 should not be given a barcode at all
+  because the product itself is wrong.**
+- **The ~150–190 are the real find**, and they are a grouping defect that a barcode check surfaced —
+  item 314's family, reached from a different direction. **They are also cheaply listable**, by price
+  spread and by GS1 prefix mismatch, which the next item could do.
+
+**Nothing applied. Nothing proposed. Question 3 only, as asked.**
