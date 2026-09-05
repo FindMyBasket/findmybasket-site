@@ -47830,6 +47830,29 @@ data point on a channel already measured twice as unread.
 5 September — **47 of them** — because no check has ever closed one. That is item 579's defect in a
 second table, and a check that only opens rows builds the pile that makes its own channel unreadable.
 
+#### ★ BOTH WRITE PATHS WERE EXERCISED, BECAUSE A CLEAN RUN PROVES NEITHER
+
+The first run against the live table came back green — roster 13, `about.html` 13 names and count 13,
+**"Every served surface agrees with the table."** And it wrote **nothing**, which is correct and
+proves nothing: `if (WRITE)` never reached its body, so the recording and resolving branches were
+exactly as unverified as they had been before the run. **A guard whose reporting path has never
+executed is the thing this item is about.** [[empty-population-filter]] — a filter that excludes zero
+rows reads exactly like one that works.
+
+So both branches were driven on the branch, against the live table:
+
+| | |
+|---|---|
+| Injected `<li>ZZZ Test Retailer</li>` into `about.html`, dispatched | `FINDINGS: about.html list: LISTS a retailer not on the roster — ZZZ Test Retailer`, and the row appears as `about:names:extra`, `kind=finding`, `status=open`, `report_count=1` |
+| Reverted, dispatched again | `Every served surface agrees with the table`, and the same row is `status=resolved`, `resolved_at` stamped |
+
+**The finding it raised was also the correct shape** — it caught an *extra* name, the direction that
+matters when a retailer is switched off, which is the case that had never been tested because it had
+never happened before yesterday.
+
+The temporary commit and its revert are both on the branch rather than amended away, so the test is
+visible in the history rather than asserted in prose.
+
 #### WHAT IS NOT BUILT, STATED RATHER THAN IMPLIED
 
 **The `repository_dispatch` door is open and the room is empty.** The workflow now accepts a
