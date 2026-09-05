@@ -48946,3 +48946,94 @@ than at a claim.
 **The barcode thread closes here.** It began as *"the largest unexplained figure in the report"* and
 ends with **no confirmed defect, two nominations, one durable schema finding and one standing rule** —
 which is a better outcome than the 12,698 it started from, and unrecognisable as the same question.
+
+---
+
+### 594. Two splits, and the arc from twelve and a half thousand to two
+
+**Raised, reported and APPLIED:** 5 September 2026 · **Robbie confirmed both on the retailers' own
+pages.** · Snapshots: `split_snapshot_20260905`, `split_snapshot_products_20260905`
+
+#### ★★★ THE ARC
+
+| | count | |
+|---|---|---|
+| 1 | **12,698** | included inactive retailers |
+| 2 | **4,272** | included zero-padding |
+| 3 | **1,086** | the real disagreement population |
+| 4 | **~190** | price-spread proxy |
+| 5 | **19** | expensive side a cluster |
+| 6 | **2** | **confirmed, and both split** |
+
+**Every step downward, and the last one needed a human opening a retailer's website** — because we do
+not store what each retailer calls its own product (item 592). **Two confirmed defects from a
+population first measured at twelve and a half thousand.**
+
+#### ★★ WHAT SETTLED THEM, AND NEITHER WAS REACHABLE BY THE AUDIT THAT FOUND THEM
+
+**33721 — a bundle prefix visible in the data.** `50561823…` is Beauty Flash and Gorgeous Shop's
+bundle series, and every Coco & Eve row carrying it is a duo or trio **named as one**:
+
+```
+5056182340668  £50  "…Shampoo 280ml & Boost…"        98348
+5056182340675  £46  "…Shampoo 280ml & C…"            123713
+5056182340699  £41  "…Shampoo 280ml & L…"            163825
+5056182345328  £50  "…Shampoo 280ml & Youth Re…"     98349
+5056182345335  £50  "Coco & Eve Sweet Repair … Shampoo 280ml"   ← 33721, the ONLY single-named member
+5056182345342  £46  "…Shampoo 280ml & …"             98350
+5056182345359  £82  "…280ml, Condition…" (trio)      98351
+5056182345366  £76  "…280ml, Co…" (trio)             123714
+```
+
+**33721 is the only member of the series whose name is one product, at £50 — exactly its duo
+siblings' price.** The evidence was in the catalogue the whole time and **the barcode audit could not
+see it**, because the audit compares barcodes *within* a product and this required comparing a
+barcode *across* products of one brand.
+
+**142162 — a page visible only in a browser.** Gorgeous Shop and Beauty Flash's £70 rows are
+**La Biosthetique Vitamin C and Niacin Illuminating Concentrate 30ml**, not a Miild eyebrow brush.
+Nothing in our data says so: the names are not stored, the URL is a `cread.php` redirect, and both
+barcodes are well-formed. **Only the retailer's own page settles it.**
+
+> **ITEM 592's FINDING DEMONSTRATED TWICE, IN BOTH DIRECTIONS.** One case needed evidence the audit
+> held but could not reach; the other needed evidence we do not hold at all. **The audit nominated
+> and could not conclude, exactly as the standing rule says it cannot** —
+> `docs/standing-rule-unread-population-counts.md`.
+
+#### THE SPLIT, AND WHAT EACH SIDE KEEPS
+
+| | keeps id | keeps | moves to a new id |
+|---|---|---|---|
+| **33721** | `33721` — *Coco & Eve Sweet Repair … Shampoo 280ml* | **Boots £25**, ean `8886482911810` (Singapore, the brand's own) | **`163873`** *…Shampoo 280ml & Conditioner* — Beauty Flash £50 + Gorgeous Shop £50, ean `5056182345335` |
+| **142162** | `142162` — *Miild 08 Dual-Ended Eyebrow Brush* | **Niche Beauty £22**, ean `5709994023327` (Denmark, brand's own) | **`163874`** *La Biosthetique Vitamin C and Niacin Illuminating Concentrate 30ml* — Beauty Flash £70 + Gorgeous Shop £70, ean `4040218846416` |
+
+**The id stays with the side that matches the name it already had**, so no URL changes and no
+redirect is owed. Both originals now hold **one offer and one barcode**.
+
+**The two new products carry no image and are therefore NOT servable yet**, deliberately: the only
+image available was the wrong product's. `import-awin-feed` backfills `products.image_url` on the
+update path (index.ts:1983), and both moved rows keep their `merchant_product_id` (39913, 35011), so
+**tomorrow's Gorgeous Shop 06:00 and Beauty Flash 07:00 runs will match them in place and supply the
+image.** Self-healing, and invisible beats wrong in the meantime.
+
+**Reversible in one statement** from `split_snapshot_20260905`, which holds all six price rows as
+they were.
+
+#### A LEAD, EXPLICITLY NOT A CAUSE
+
+Both wrong-side retailers have **`existing_brands_only = true`**; both correct-side retailers
+(Boots, Niche Beauty) have it false. And **La Biosthetique has zero products in the catalogue.**
+
+**That is suggestive and it is not the mechanism.** `existing_brands_only` gates *creation* only
+(index.ts:2706) — a row that has already matched never reaches it. So it does not cause a mis-match;
+it removes the escape hatch, meaning a brand we do not carry can only ever appear by riding on
+someone else's product. **What actually matched a La Biosthetique serum to a Miild brush is not
+established here**, and after five over-claims in this thread it is not going to be guessed at.
+
+#### THE STANDING CAUTION STANDS
+
+> **Treat any defect-population count as an upper bound until some members have been read
+> individually.**
+
+**It earned itself five times in one thread and the sixth step proved it again** — 19 became 2, and
+the 17 that fell away were the site working correctly.
