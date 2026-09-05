@@ -48612,3 +48612,135 @@ Consistent with item 587's tally, both produced well-formed wrong answers rather
   spread and by GS1 prefix mismatch, which the next item could do.
 
 **Nothing applied. Nothing proposed. Question 3 only, as asked.**
+
+---
+
+### 591. Reading the 146: three causes wearing one signature, and item 314 is not one of them
+
+**Raised:** 5 September 2026 · **A READ. Nothing applied, nothing proposed.** · Item 590 estimated
+150–190 grouping errors from price spread. **Read individually, that estimate is too high for
+groupings and was measuring something broader.**
+
+#### THE LIST
+
+| filter | n |
+|---|---|
+| price spread ≥2× | 191 |
+| GS1 country prefix differs | 564 |
+| **both — the list read here** | **146** |
+| spread ≥3× | 57 |
+
+#### ★★ FIRST, A METHOD FINDING: THE NAMES ARE NOT THERE TO READ
+
+The instruction was to read the names, because only names answer whether two things are one thing.
+**They cannot be read, and this is worth recording before the conclusions.**
+
+- `products.name` is **one** name — the merged row's. It cannot describe the two things inside it.
+- `retailer_prices` stores **no retailer-side name**: `id, product_id, retailer_id, price, url,
+  in_stock, last_updated, external_product_id, external_handle, ean, mpn, ean_normalised,
+  mpn_normalised`.
+- The URL is an **AWIN affiliate redirect** — every single one is `cread.php`, so **the slug carries
+  no product identity either.**
+
+> **WE STORE WHAT EACH RETAILER CHARGES AND NOT WHAT EACH RETAILER SAYS IT IS SELLING.** That is
+> fine for a price comparison and disqualifying for a grouping audit. The reading below is therefore
+> done from **the catalogue name, the two barcodes and the two prices** — which turns out to be
+> enough, because a GS1 prefix names the brand owner and an implausible price names itself.
+
+#### ★★★ READ, THE 146 ARE THREE DIFFERENT DEFECTS
+
+The discriminator is whether the expensive side is **one row** or **a group of rows**:
+
+| | n | what it is |
+|---|---|---|
+| Expensive side is a **cluster** of retailers | **19** | **A real grouping error** — two coherent groups, each with its own barcode and its own price level |
+| Expensive side is a **lone outlier** among 3+ offers | **77** | **One bad row** — a wrong price, a multipack sold as a single, or one retailer's row attached to the wrong product |
+| Only two offers | 50 | **Undetermined** — no majority to be an outlier against |
+
+**So the grouping-error core is 19 confirmed, plus an unknown share of the 50 — not 150–190.** Item
+590's price-spread estimate was measuring *"something is wrong with this product's offers"*, which is
+a broader and still-useful population, but it is **not** all grouping.
+
+**And the third cause is visible in the barcodes themselves:**
+
+```
+Omorovicza Illuminating Moisturiser   Beauty Flash £5.95  ean 4001638098014
+Und Gretel LIETH Foundation           Beauty Flash £5.95  ean 4001638098090
+Weleda Calendula Shampoo 200ml        Gorgeous Shop £8.25 ean 4001638096515
+```
+
+**`4001638` is Weleda's GS1 company prefix.** It is correct on the Weleda row and **wrong on the
+Omorovicza and Und Gretel rows** — two different brands wearing one supplier's prefix, at an
+identical £5.95, from the same two retailers. That is **a defective feed row, not a merge**: nothing
+about our grouping produced it, and no regrouping fixes it.
+
+#### ★★ ITEM 314 IS A DIFFERENT DEFECT, AND THE EVIDENCE IS THAT THEY AVOID EACH OTHER
+
+The hypothesis was that these might be item 314's family surfaced by a second detector — one through
+URLs at import, one through barcodes after the fact.
+
+| | |
+|---|---|
+| Product rows sharing a retailer URL with another row (314's signature) | **29,603** |
+| Of 107,260 live products | **27.6%** |
+| **Expected overlap with the 146, if independent** | **~40** |
+| **Actual overlap** | **7** |
+
+**Seven, against a chance expectation of forty.** They are not the same defect and they are not
+independent either — **they are anti-correlated, and mechanically they must be:**
+
+> **ITEM 314 IS UNDER-GROUPING: one real product split across many rows.** These 146 are
+> **OVER-GROUPING: one row holding two real products.** They are inverse errors, so a product that
+> has already been over-grouped is *less* likely to also be under-grouped. **Two problems, two
+> detectors — not one problem seen twice.**
+
+That is a cleaner answer than a partial overlap would have been, and it means fixing item 314 will
+not touch these and fixing these will not touch item 314.
+
+#### ★ THE CONTROL IS THE METHOD, AND IT IS THE PART TO KEEP
+
+**1.02 and 3.6% are what make 1.33 and 20.4% mean anything.** A fifth of products having a wide price
+spread is a number with nothing to compare it to — it could be the ordinary state of retail. The
+agreeing products say it is not: **where retailers agree on the barcode they agree on the price to
+within 2% at the median**, and a ≥2× spread occurs 3.6% of the time.
+
+> Without the control this item would have reported *"20% of disagreeing products have a big price
+> spread"* and that sentence is compatible with there being no defect at all.
+> [[calibration-frame-method]].
+
+#### NICHE BEAUTY: A LEAD ABOUT BARCODES, NOT ABOUT PRICES
+
+39.5% minority-barcode rate against a field of ~24%, nearly double, and it appears on the expensive
+side of most extremes. **But its prices are not broken:** across the **1,294** products it shares
+with another active retailer, its median is **1.20× the cheapest**, with only **5.5%** at ≥2× and
+**8** at ≥5×. That is premium positioning, not defective rows.
+
+**So the lead is about where Niche Beauty's barcodes come from, not what it charges** — and the eight
+≥5× rows are the ones worth opening. Not chased here.
+
+#### THE TWO SHAPES NOBODY PREDICTED, KEPT
+
+- **Brand barcode re-issue.** Clarins runs `3380810…` and `3666057…` concurrently, and retailers hold
+  whichever generation their catalogue was built from — Boots/Debenhams/Escentual on one,
+  Beauty Flash/Gorgeous Shop/Perfume Click on the other.
+- **Relabeller codes.** Stylevana's `648722…`, `711745…`, `761373…`.
+
+**Both are correct barcodes. Neither is a defect. Together they are most of the ~80%** that are one
+product wearing two legitimate numbers.
+
+#### AND THE STYLEVANA HYPOTHESIS STAYS REFUTED
+
+**23.4% against Boots' 24.3%.** The 27 August finding is real and explains a share, not the
+population — the right kind of negative, because it closes a plausible single-cause story that would
+have made the rest invisible.
+
+#### THREE CORRECTIONS OF MINE IN THIS THREAD, RECORDED TOGETHER
+
+1. **12,698 → 4,272 → 1,086.** The first counted **inactive** retailers; the second counted
+   zero-padding as disagreement.
+2. **The subquery filtered `products_active` but never joined `retailers`** — the liveness rule I
+   wrote as a memory, missed in the query that tests it. **A rule you have written down is not a
+   rule you apply.**
+3. **"150–190 are bad groupings"** was itself an over-claim, corrected here to **19 confirmed plus
+   part of 50 undetermined.** The price-spread proxy was measuring a broader population than the one
+   I named it for.
