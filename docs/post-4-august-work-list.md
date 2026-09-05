@@ -47736,3 +47736,108 @@ so an unparseable surface cannot suppress a comparison the guard *can* make.
 **And the schedule is the fourth question.** Weekly, on Mondays, means a retailer going live on a
 Monday evening is unguarded for six days — **which is exactly what happened**. A roster change is an
 event, and the check belongs on it as well as on a clock.
+
+---
+
+### 584. Repairing the roster guard, and what actually reads a red workflow run
+
+**Raised and APPLIED:** 5 September 2026 · **Item 583's four repairs, plus the one the reporting
+question exposed.** · **Not a new check under item 538 — Category 2 is one file and the guard
+already parsed it correctly.**
+
+#### ★★★ THE CENTRE: ITEM 340's RULE, CORRECTLY APPLIED, DISABLED THE GUARD BUILT THREE DAYS EARLIER TO ENFORCE IT
+
+`roster-parity` was written **25 August** and parsed a bare `12` out of `work-with-us.html`.
+**28 August**, item 494 replaced it:
+
+```diff
+-      <span class="stat-num">12</span>
+-      <span class="stat-label">UK retailers currently live</span>
++      <span class="stat-num">Every</span>
++      <span class="stat-label">retailer we carry, compared on price and delivery in one basket</span>
+```
+
+That is **item 340's rule applied exactly as written** — *"a bare integer was the wrong shape… it
+drifts by construction"*. The commit did not touch `roster-parity.mts`.
+
+> **A GUARD AGAINST STALE HARDCODED NUMBERS WAS BROKEN BY THE REMOVAL OF A STALE HARDCODED NUMBER.**
+> **Neither step was wrong.** The guard was right to parse what was there; the sweep was right to
+> take it away. **What was missing is any connection between them** — three days and two authors
+> apart, with no test tying the parser to the surface it parses.
+>
+> This is not carelessness caught in the act. It is two correct actions whose interaction nobody
+> owned, which is the only kind of defect that survives a codebase this well annotated.
+
+#### ★★ AND THE RED BEING UNREAD IS THE SHARPER HALF
+
+The run did **everything right**. It refused to report parity it could not verify, exited **1** as
+`cannot_run` rather than **0** as agreement, and named the surface and the reason:
+
+```
+cannot_run — a surface parsed empty, which is NOT agreement:
+  work-with-us: could not parse the stat integer
+```
+
+**Item 255's lesson held exactly.** *"gone-ids-drift.yml reported 'No drift' twice while failing to
+load its own script"* — the preflight built from that lesson worked on its first real test. **The
+guard did not lie, did not guess, and did not degrade to a green tick.**
+
+> **THE FAILURE WAS DOWNSTREAM OF EVERY MECHANISM WORKING.** Detection worked, classification
+> worked, the exit contract worked, the message was precise and named the fix. **And nobody looked.**
+>
+> **Fourth absence this week with the variable changed, and this one is the worst kind: not missing,
+> not silent, not wrong. Present, correct, loud, and nobody looking.**
+
+| | the absence | shape |
+|---|---|---|
+| 576 | convention 10's sweep, never run | never started |
+| 579 | no reader on `feed_freeze_findings` | wrote to a table with no consumer |
+| 581 | no expiry on a hold | a decision with no clock |
+| **584** | **no reader on a red tick** | **wired, correct, loud, ignored** |
+
+#### ★★★ WHAT READS A RED WORKFLOW RUN, AND WHEN — MEASURED
+
+**The reporting question was the right one, and the answer is: almost nothing.**
+
+| channel | who it reaches | evidence |
+|---|---|---|
+| GitHub's failure email on a **scheduled** run | the account that last committed the workflow file — one message among the day's notifications | — |
+| The Actions tab | whoever opens it | **item 191 measured this**: two red workflows, one broken and one working-and-finding, ignored **14 days** and **25 days** |
+| `standing_check_findings` → the **09:00 monitor email** | read every morning, escalates at 3 reports | **3 of 13** scheduled workflows use it |
+| Anything aggregating run status | **nothing** | — |
+
+**Item 191 established on 18 August that a red tick is not a channel.** `roster-parity` was built on
+25 August — seven days later — and reported to it. It was then red for five days, which is the third
+data point on a channel already measured twice as unread.
+
+> **THE HOUSE ALREADY HAS A WORKING CONSUMER AND THIS CHECK WAS NOT PLUGGED INTO IT.**
+> `migration-ledger`, `brand-hub-programmes` and `re-derive-asins` write findings into
+> `standing_check_findings`; `monitor-retailer-feeds` emails them at 09:00 and escalates one
+> reported three times. **The gap was never that no consumer existed. It was that the newest guard
+> did not use the one that did.**
+
+#### THE FIVE REPAIRS
+
+| | | |
+|---|---|---|
+| 1 | **work-with-us is now OPTIONAL** | Absent means *makes no countable claim*, which is the correct end state after item 494 — not a fault. The regex still matches a returning integer under any retailer-ish label, so re-adding one is guarded again with no edit here. |
+| 2 | **Per-surface parsing** | `about.html` — the only served, hand-typed, visitor-facing surface — is PRIMARY and still `cannot_run` if unreadable. Every other surface failing is reported as that surface's problem and the rest still run. Item 255's rule is preserved where it matters: an empty parse is never agreement, it is an unparsed surface. |
+| 3 | **The strip is demoted to a NOTE** | `/index.html` 308s to `/`, whose strip renders from `getListedRetailers` and cannot drift. **It is measurably stale right now** — still lists MyProtein, still omits The Fragrance Shop — and no visitor can reach it. A finding nobody needs to act on competes with one they do, which is how a channel dies. Item 567's shape, now with the strip. |
+| 4 | **Daily at 08:20, and on the event** | Weekly-on-Mondays left a Monday-evening go-live unguarded for six days, **which is exactly what happened.** 08:20 is 40 minutes before the 09:00 monitor, so a drift found this morning is in *this* morning's email. Plus `push` on the surface files and a `repository_dispatch` type. |
+| 5 | **★ `--write-findings`** | Findings go to `standing_check_findings`, so the 09:00 email carries them. **This is the repair that would have made the other four unnecessary to discover by hand.** |
+
+**And it resolves its own findings.** Every row in `standing_check_findings` was `open` on
+5 September — **47 of them** — because no check has ever closed one. That is item 579's defect in a
+second table, and a check that only opens rows builds the pile that makes its own channel unreadable.
+
+#### WHAT IS NOT BUILT, STATED RATHER THAN IMPLIED
+
+**The `repository_dispatch` door is open and the room is empty.** The workflow now accepts a
+`roster-changed` event, and **nothing in the database calls GitHub today.** Firing it from a
+`retailers.active` change needs a token in the database and a decision about where that lives —
+that is a design decision, not a repair, and it is the remaining half of item 538's second category.
+The daily run closes the window from six days to under twenty-four hours without it.
+
+**And the 47 open findings are not triaged here.** They are a real backlog and at least three of
+them are migration-ledger rows for files written yesterday, which would now resolve if that check
+resolved its own findings. It does not. **Same repair, different script**, and not folded in.
