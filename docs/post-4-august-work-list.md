@@ -49037,3 +49037,88 @@ established here**, and after five over-claims in this thread it is not going to
 
 **It earned itself five times in one thread and the sixth step proved it again** — 19 became 2, and
 the 17 that fell away were the site working correctly.
+
+---
+
+### 595. A deliberate non-finding: what matched a serum to a brush is unknown, and is not recoverable
+
+**Raised:** 5 September 2026 · **RECORDED AS UNKNOWN. Not chased, and the reason for not chasing it
+is measured rather than assumed.** · Closes the barcode thread.
+
+#### ★★★ THE CENTRE: ITEM 592 PROVED TWICE IN ONE PAIR, IN OPPOSITE DIRECTIONS
+
+The two confirmed defects were settled by two different kinds of evidence, and **neither was
+reachable by the audit that nominated them**:
+
+| | settled by | why the audit could not |
+|---|---|---|
+| **33721** Coco & Eve | **evidence we hold** — the `50561823…` bundle series, every member a duo or trio named as one, 33721 the only single-named member at exactly its siblings' £50 | the audit compares barcodes **within** a product; this needed a comparison **across** products of one brand |
+| **142162** Miild | **evidence we do not hold at all** — the retailer's own page, showing La Biosthetique | names are not stored, the URL is a `cread.php` redirect, and both barcodes are well-formed |
+
+> **ONE CASE NEEDED EVIDENCE WE HOLD AND THE AUDIT COULD NOT REACH. THE OTHER NEEDED EVIDENCE WE DO
+> NOT HOLD AT ALL.** Item 592 said the audit can nominate and not conclude; **this pair demonstrates
+> both ways that is true** — a reachability failure and an absence — and they need different
+> remedies. The first is a query nobody wrote. The second is a column nobody fills.
+
+#### THE NON-FINDING, STATED AS ONE
+
+`existing_brands_only = true` on both wrong-side retailers, `false` on both correct-side ones, and
+**La Biosthetique has zero products in the catalogue.** A tidy story, and it is not the mechanism.
+
+**The flag gates CREATION only** (`import-awin-feed/index.ts:2706`): the check sits after
+`countCreateNew++`, on the path taken by a row that has **failed** to match. **A row that already
+matched never reaches it.** So it did not cause the mis-match — **it removed the escape hatch**,
+leaving a brand we do not carry able to appear only by riding on someone else's product.
+
+**What actually matched a La Biosthetique serum to a Miild eyebrow brush is unknown.**
+
+#### ★★ WHY RECORDING IT AS UNKNOWN MATTERS MORE THAN THE ANSWER WOULD
+
+**A plausible cause would have closed the question.** `existing_brands_only` is exactly plausible
+enough: it correlates perfectly across all four retailers, it is about brands, and the missing brand
+is right there. Written down as the cause it would have ended the enquiry, and **the enquiry is the
+only remaining thread from a defect that reached production** — a serum sold on a brush's page, at
+two retailers, for however long.
+
+> **AN UNKNOWN CAUSE STAYS OPEN. A WRONG ONE CLOSES.** After five over-claims in this thread, the
+> cheaper error is obvious: a sixth would have been the first one to look like a conclusion.
+
+#### WHAT WOULD ESTABLISH IT — AND IT IS NOT ONE QUERY AWAY
+
+**Checked rather than assumed, and the answer is that it is not recoverable:**
+
+| store | holds | per-row match provenance? |
+|---|---|---|
+| `retailer_prices` | id, product_id, retailer_id, price, url, in_stock, last_updated, external_product_id, external_handle, ean, mpn, ean_normalised, mpn_normalised | **no — and no `created_at`, so not even *when* the link was made** |
+| `scrape_log.details` | `counts`, `duration_ms`, `excluded_total` | **no — aggregates only**, across 88 runs back to 22 July |
+| `import_run_state` | run_id, retailer_id, kind, key, meta | **empty — 0 rows**, the monitor's cleanup deletes it |
+
+**The match tier was never persisted, the link date was never persisted, and the slice state has been
+cleaned up.** Re-running the import cannot reproduce the decision either: both moved rows keep their
+`merchant_product_id`, so a fresh run now takes the *update* path against the corrected ids and makes
+no matching decision at all. **The evidence was never written and the situation that produced it no
+longer exists.**
+
+Three things would establish it, none of them cheap and none of them chased here:
+
+1. **Simulate the original decision by hand** — take feed row `35011`, reconstruct the catalogue as it
+   was, and read which tier fires. Requires the matcher read closely and a catalogue state we do not
+   snapshot.
+2. **A scratch environment** to replay a feed against a synthetic catalogue.
+3. **Persist match provenance going forward** — a `match_tier` on `retailer_prices`, written at link
+   time. **Answers the next one, never this one.**
+
+> **AND (3) IS THE SAME SHAPE AS ITEM 592's MISSING NAME.** The importer knows the tier at the moment
+> it links, exactly as it knows the retailer's own product name at the moment it writes the row, and
+> **writes down neither.** Two independent investigations in one thread both ended at the same
+> sentence: *the importer knew and did not record it.* That is a stronger argument for per-row
+> provenance than either finding alone, and it is still not a proposal.
+
+#### THE THREAD CLOSES HERE
+
+**19 became 2, and the 17 that fell away were the site working correctly.** The standing rule earned
+itself a sixth time on the last step — `docs/standing-rule-unread-population-counts.md`.
+
+**Nothing else in the barcode thread is open.** Two defects found and split, one durable schema
+finding recorded, one standing rule written, one cause recorded as unknown and shown to be
+unrecoverable rather than merely unchased.
