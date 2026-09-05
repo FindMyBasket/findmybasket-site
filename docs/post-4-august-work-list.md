@@ -49463,14 +49463,39 @@ channel.** Throwing on `error` would have converted **every genuine missing-prod
 across 107,260 crawled URLs** — and Google retries a 500 while it removes a 404, so dead URLs would
 have stayed alive and the fix would have been strictly worse than the defect.
 
-> **THE INSTRUCTION TO STATE WHICH CONDITION MEANS ABSENT BEFORE CHANGING ANYTHING IS WHAT CAUGHT
-> IT.** Nothing in the diff would have looked wrong. `if (error) throw` reads as obviously correct in
-> every one of the other four, and it is obviously correct in them.
+**AND THE DIRECTION IS WHAT MAKES IT WORSE THAN THE DEFECT IT REPAIRS.** Google **retries** a 500
+and **removes** a 404. The defect 404s a live product occasionally; the botched fix would have
+**kept 107,260 dead URLs indexed indefinitely** while every dashboard showed a diligent error-handling
+commit. **A fix that fails in the opposite direction to the bug is not a partial improvement, it is a
+second bug wearing the first one's justification.**
 
-**Fixed by changing the query rather than the branch**: `.maybeSingle()` returns
-`{ data: null, error: null }` for zero rows and errors only on a real failure, so the split is
-unambiguous and **depends on no error-code string.** Three existing uses in this codebase, one of
-them in the same file.
+#### ★★★ THE TRANSFERABLE HALF: NOTHING IN THE DIFF WOULD HAVE LOOKED WRONG
+
+`if (error) throw new Error(...)` is **the correct line in four of these five files.** It is the line
+this entire stage exists to add. In the fifth it is catastrophic, and **the difference is not in the
+line, the function, or the diff — it is in a method call twelve lines above it.**
+
+> **A REVIEWER READING FIVE COMMITS WOULD HAVE APPROVED ALL FIVE**, and been right four times. No
+> test covers it, no type catches it, and the fifth diff is *character-for-character* the shape of the
+> four that are correct.
+>
+> **ONLY STATING WHICH CONDITION MEANS ABSENT, PER SITE, BEFORE TOUCHING ANY OF THEM, SURFACED IT.**
+> Not a review of the change — an account of the current behaviour, written before the change existed.
+> The question *"which branch means the thing does not exist"* has an answer at every one of these
+> sites, and at exactly one of them the answer is *"the error branch"*.
+
+#### FIXING THE QUERY RATHER THAN THE BRANCH, RECORDED AS A CHOICE
+
+Two repairs were available:
+
+| | |
+|---|---|
+| **Branch on the error code** — `if (error && error.code !== 'PGRST116') throw` | works, and **teaches every future caller a PostgREST string.** The knowledge that `PGRST116` means *no rows* would then live at each call site, be copied by pattern-matching, and rot silently when PostgREST changes it |
+| **`.maybeSingle()`** ✓ | **removes the ambiguity at its source.** Zero rows becomes `{ data: null, error: null }`, so `error` means only what it says and the branch below needs no special knowledge at all |
+
+**The second is right because it makes the trap stop existing rather than documenting it.** Three
+existing uses in this codebase, one of them in the same file — so it is the house pattern, and
+`.single()` was the outlier.
 
 #### ALL FIVE, WITH THE SPLIT STATED
 
@@ -49513,8 +49538,15 @@ then reporting, through the same `return null` as a genuine miss, that the brand
 | 582 | *"a retailer change MUST sweep this block"* | four retailers | the fifth, five times running |
 | **599** | **the empty-type guard must not eat a query failure** | **`getSubcategoryProducts`, 4 Sep** | **`getEditProducts`, byte-for-byte identical, one day later** |
 
-**#5 was a copy-paste of a fix made the previous day into a file nobody looked at when making it.**
-That is the shape, and it is now frequent enough to be the expectation rather than the surprise.
+**★ AND THIS ITEM'S OWN ENTRY IS THE SHARPEST OF THE FOUR.** The others span weeks, documents and
+authors. This one is **one day**: the guard was fixed in `getSubcategoryProducts` on 4 September and
+the byte-for-byte identical guard in `getEditProducts` was not opened while doing it. **Same week,
+same person, same defect, same shape of fix — and a file that was never searched for.**
+
+> **THAT IS WHY IT IS NOW THE EXPECTATION RATHER THAN THE SURPRISE.** If a fix made yesterday did not
+> reach its twin one directory away, no fix should be assumed to have reached anything. **The
+> question after any repair is not "is it correct" but "where else is this", and it has to be asked
+> as a search rather than as a memory.**
 
 #### VERIFICATION
 
