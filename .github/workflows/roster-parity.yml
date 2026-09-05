@@ -1,25 +1,59 @@
 name: roster parity (read-only)
 
-# THE RETAILER ROSTER IS NAMED BY HAND IN THREE PLACES AND HAS DRIFTED FIVE TIMES.
-# Superdrug, Gorgeous Shop, Atelier De Glow, Perfume Click, and Niche Beauty — which was live for
-# seven days before about.html mentioned it. lib/__tests__/nav-parity.test.ts exists because two
-# NAVS drifted once; the roster, which drifted five times, had no check until this one.
+# THE RETAILER ROSTER IS NAMED BY HAND AND HAS DRIFTED SIX TIMES.
+# Superdrug, Gorgeous Shop, Atelier De Glow, Perfume Click, Niche Beauty — live seven days before
+# about.html mentioned it — and The Fragrance Shop, live 31 August and still missing on 4 September.
+# lib/__tests__/nav-parity.test.ts exists because two NAVS drifted once; the roster had no check
+# until this one.
 #
 # WHY A WORKFLOW AND NOT A UNIT TEST. A file-to-file comparison needs no credentials and would have
 # PASSED ON 16 AUGUST 2026, when about.html read "11 UK retailers" over a list of 11 and was wrong.
-# Three surfaces agreeing with each other and all stale is the actual failure mode, so the
-# comparison has to be against `retailers` — which needs a key, which needs to run where the key is.
+# Surfaces agreeing with each other and all stale is the actual failure mode, so the comparison has
+# to be against `retailers` — which needs a key, which needs to run where the key is.
 #
-# WRITES NOTHING. Reads three files and one table, prints, exits.
+# WRITES NOTHING TO THE SITE. Reads files and one table, prints, records findings, exits.
 #
 # EXIT CONTRACT (item 194): 0 for ok or findings, 1 ONLY for cannot_run. A run that could not read
-# a file, could not parse a surface, or could not reach the table exits 1 — it does NOT report
-# agreement. gone-ids-drift.yml reported "No drift" twice while failing to load its own script
-# (item 255); the preflight in roster-parity.mts is that lesson written down as assertions.
+# the primary surface or reach the table exits 1 — it does NOT report agreement. gone-ids-drift.yml
+# reported "No drift" twice while failing to load its own script (item 255); the preflight in
+# roster-parity.mts is that lesson written down as assertions.
+#
+# ── REPAIRED 5 SEPTEMBER 2026, ITEM 584 ──────────────────────────────────────────────
+#
+# It ran ONCE, on 31 August, went red with cannot_run, and stayed red for five days while the
+# retailer it existed to catch went live twelve hours later. Three changes here, one in the script.
+#
+# 1. DAILY, NOT WEEKLY, AND AT 08:20. Weekly-on-Mondays left a Monday-evening go-live unguarded for
+#    six days — which is exactly what happened to The Fragrance Shop. 08:20 is deliberate: findings
+#    are written 40 minutes before monitor-retailer-feeds runs at 09:00, so a drift detected this
+#    morning is in this morning's email rather than tomorrow's.
+#
+# 2. ON THE EVENT AS WELL AS THE CLOCK. A roster change is an EVENT and nothing sequenced it with
+#    checking the surfaces that name it — item 538's whole argument. Two triggers added:
+#    `push` on the surface files (an edit is checked immediately), and `repository_dispatch` typed
+#    `roster-changed` so a retailers.active change can fire this directly. THE DISPATCH CALLER IS
+#    NOT BUILT: nothing in the database calls GitHub today, and inventing that wiring is a
+#    decision, not a repair. The door is open and the room is empty — recorded in item 584 rather
+#    than left implied.
+#
+# 3. --write-findings, WHICH IS THE ONE THAT COST FIVE DAYS. Item 191 measured what a red tick is
+#    worth on this repository: two red workflows ignored 14 and 25 days. This workflow was written
+#    seven days after that item and reported to a red tick and nothing else. Findings now go to
+#    standing_check_findings, which the 09:00 email reads — the consumer migration-ledger and
+#    brand-hub-programmes already use.
 
 "on":
   schedule:
-    - cron: "20 8 * * 1"      # Mondays, after the weekend imports
+    - cron: "20 8 * * *"      # daily, 40 minutes before the 09:00 monitor
+  push:
+    branches: [main]
+    paths:
+      - public/about.html
+      - public/index.html
+      - public/work-with-us.html
+      - scripts/roster-parity.mts
+  repository_dispatch:
+    types: [roster-changed]
   workflow_dispatch:
 
 jobs:
@@ -32,8 +66,8 @@ jobs:
         with:
           node-version: 22
       - run: npm ci --omit=dev --no-audit --no-fund || npm i --no-audit --no-fund
-      - name: Compare the three surfaces against retailers
+      - name: Compare the surfaces against retailers
         env:
           SUPABASE_URL: https://crtrjoescntlcjiwdtrt.supabase.co
           SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: npx tsx scripts/roster-parity.mts
+        run: npx tsx scripts/roster-parity.mts --write-findings
