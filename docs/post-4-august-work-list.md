@@ -49122,3 +49122,121 @@ itself a sixth time on the last step — `docs/standing-rule-unread-population-c
 **Nothing else in the barcode thread is open.** Two defects found and split, one durable schema
 finding recorded, one standing rule written, one cause recorded as unknown and shown to be
 unrecoverable rather than merely unchased.
+
+---
+
+### 596. `getActiveRetailerIds`: what a page should do when it cannot learn which retailers are live
+
+**Raised:** 5 September 2026 · **REPORT ONLY. Nothing applied.** · The decision is what a page owes a
+visitor, not what the function returns.
+
+```ts
+// lib/retailers.ts:15
+export const getActiveRetailerIds = cache(async (): Promise<Set<number>> => {
+  const { data } = await supabase.from('retailers').select('id').eq('active', true);
+  return new Set((data ?? []).map((r) => r.id as number));
+});
+```
+
+**On any failure this returns an empty set**, and six of the eight call sites feed it straight into
+`.in('retailer_id', [...])` — which matches nothing.
+
+#### ★★ FIRST, THE BLAST RADIUS IS NARROWER THAN I SAID, AND THE CORRECTION MATTERS
+
+I reported *"every card renders with no retailer, no price and no saving, sitewide"*. **The product
+page's price table is not affected.** `getRetailerOffers` runs its **own** `retailers … eq('active',
+true)` query and never touches this function.
+
+| surface | affected by an empty set? |
+|---|---|
+| Category, subcategory, brand, edit, compare listings | **yes** — every card loses its price |
+| Product page **carousels** ("More from this brand", "Related") | **yes** |
+| Product page **price table** — the comparison itself | **no** |
+
+**Still the widest failure mode on the site**, and still silent — but the page a shopper lands on from
+Google with a specific product in mind keeps working. That distinction turns out to decide the answer.
+
+#### THE EIGHT CALL SITES
+
+| # | site | function | consumer | on failure today |
+|---|---|---|---|---|
+| 1 | `edit-queries.ts:29` | `getEditStats` | `/edit/[slug]` | stats read 0 |
+| 2 | `edit-queries.ts:175` | `getEditProducts` | `/edit/[slug]` | no products |
+| 3 | `subcategory-queries.ts:339` | `getSubcategoryProducts` | category + subcategory pages | no products |
+| 4 | `brand-queries.ts:231` | `getBrandStats` | brand pages | stats read 0 |
+| 5 | `brand-queries.ts:393` | `getBrandProducts` | brand pages, brand hub | no products |
+| 6 | `brand-queries.ts:698` | `getTypeByUnitPrice` | four `/compare` pages | empty table |
+| 7 | `product-queries.ts:314` | `getMoreFromBrand` | **product page carousel** | empty strip |
+| 8 | `product-queries.ts:388` | `fetchRelated` → `getRelatedProducts` | **product page carousel** | empty strip |
+
+#### ★★★ MY READ, AND IT IS NOT UNIFORM ACROSS THE EIGHT
+
+**Throw on 1–6. Do not throw on 7–8.**
+
+> **On a listing page, an empty result is a lie a visitor cannot detect.** A category page reading
+> *"45,124 products"* above a grid where every card shows no price is indistinguishable from a
+> catalogue with no retailers, and the visitor's only available conclusion is that the site does not
+> work. **An error at least says so.** That is the case for throwing and I think it is right.
+>
+> **On the product page it inverts.** The price comparison — the thing the page exists for and the
+> thing the visitor arrived for — **is unaffected**. Throwing there destroys a working page because a
+> recommendation strip could not load. **A 500 is worse than an empty result on exactly those two
+> call sites**, and they are the two where the missing content is decoration.
+
+So the decision is not *"should this function throw"* but *"which callers can survive not knowing"* —
+and the honest shape is a function that throws by default with **two callers explicitly opting out**,
+each with the reason written at the call site. A silent empty set everywhere is wrong; a 500
+everywhere is wrong on the site's most-landed-on page.
+
+#### `cache()` — ONE FAILURE PER REQUEST, AND THAT IS LOAD-BEARING
+
+React's `cache()` memoises **per request, including a rejection**: the first call's outcome is
+returned to every subsequent caller in the same render without re-invoking.
+
+- **One failure per request, not one per call site.** A brand page calling it twice fails once.
+- **No partial state.** Without `cache()`, eight independent calls could each succeed or fail, and a
+  page could render some modules with retailers and some without — **a half-priced page, which is
+  worse than either extreme** because nothing about it looks wrong.
+- **A retry costs a page load**, not a call. There is no in-render recovery, and there should not be.
+
+**The wrapper is doing real work and any change must keep it.** It is also why "throw" is coherent:
+the failure is already all-or-nothing within a request.
+
+#### ★★ WHAT A VISITOR SEES — AND TODAY THE ANSWER IS NOT "AN ERROR BOUNDARY"
+
+**There is no `app/error.tsx` and no `app/global-error.tsx` in this repository**, and the product page
+uses no `Suspense`.
+
+So an unhandled throw in a server component renders **Next's built-in default error page** — an
+unstyled *"Application error: a server-side exception has occurred"* with a digest, no nav, no
+branding, HTTP 500.
+
+> **THE QUESTION ASSUMED A CHOICE BETWEEN AN ERROR BOUNDARY AND AN UNHANDLED THROW. THERE IS NO
+> BOUNDARY, SO THEY ARE THE SAME THING**, and it is the worst-looking of the three options. **Any
+> decision to throw should ship `app/error.tsx` first** — otherwise "be honest about the failure"
+> delivers an unbranded white page, and the change is hard to defend on a Monday morning.
+
+**One thing throwing buys that empty does not:** a thrown error appears in Vercel runtime logs and in
+`get_runtime_errors`. **The empty set appears nowhere at all** — no log line, no alert, no 500 in the
+edge logs. That asymmetry is the strongest argument for the change, stronger than the visitor
+experience: **today this failure is not merely bad, it is unobservable.**
+
+#### THE SEQUENCE, REPORTED RATHER THAN STARTED
+
+Convention 10's own text says the set is not hypothetical, and **59 of 98 is a week rather than an
+afternoon.** Proposed order, each stage independently shippable:
+
+| stage | what | why it is first or later |
+|---|---|---|
+| **0** | `app/error.tsx` | **Nothing else should ship before it.** Every later stage converts silence into an error page, and there is no error page. |
+| **1** | `getActiveRetailerIds` + the two opt-outs | One function, eight call sites, the widest blast radius, and the decision above is already made. |
+| **2** | The **five `notFound()` sites** | A 404 is the only failure a crawler acts on permanently. `edit/[slug]:76` is byte-for-byte the guard already fixed in 576, so it is the cheapest. |
+| **3** | The **15 that read `error` and collapse it** | They pass a grep for the missing check, so they need reading rather than searching — `getRetailerOffers`'s `if (!retailers) return []` is one, found today by accident. |
+| **4** | The **44 with no `error` read** | The largest and the least urgent: most degrade a module rather than a page, and stages 1–3 remove every instance that misleads a visitor or a crawler. |
+
+**Stage 4 is the one to schedule and stages 0–2 are the ones to do.** The count that makes this look
+like a week is dominated by the stage with the least consequence per site — which is exactly the shape
+the standing rule warns about, an aggregate standing in for a read population.
+
+**Nothing applied. The decision above is a recommendation, and stage 0 is a precondition rather than
+a preference.**
