@@ -1,0 +1,44 @@
+name: awin feed list (read-only)
+
+# WHOSE FEED IS THAT ID? feed-diag.yml proves a feed exists and downloads; it cannot prove WHOSE,
+# because the columns it requests carry no merchant identity. A wrong-but-valid fid therefore passes
+# every check feed-diag makes and mislabels every figure downstream — item 482's failure mode.
+#
+# This reads AWIN's own datafeed list, which maps Feed ID -> Advertiser ID and name. The mapping is
+# READ rather than typed, which is the whole point.
+#
+# WRITES NOTHING. One GET, prints, exits.
+
+"on":
+  workflow_dispatch:
+    inputs:
+      advertiser:
+        description: 'AWIN advertiser (merchant) id, e.g. 53381 for Beauty Flash. Lists every feed it publishes.'
+        required: false
+        default: ''
+        type: string
+      fid:
+        description: 'A feed id to look up. Reports which advertiser owns it, or that it is absent.'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Look up
+        env:
+          AWIN_API_KEY: ${{ secrets.AWIN_API_KEY }}
+          ADV: ${{ inputs.advertiser }}
+          FID: ${{ inputs.fid }}
+        run: |
+          ARGS=""
+          [ -n "$ADV" ] && ARGS="$ARGS --advertiser $ADV"
+          [ -n "$FID" ] && ARGS="$ARGS --fid $FID"
+          node scripts/awin-feed-list.mjs $ARGS
