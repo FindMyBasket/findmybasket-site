@@ -47816,6 +47816,31 @@ data point on a channel already measured twice as unread.
 > reported three times. **The gap was never that no consumer existed. It was that the newest guard
 > did not use the one that did.**
 
+#### ★★★ THE ITEM'S ANSWER: A CONSUMER EXISTED AND THE NEWEST GUARD DID NOT USE IT
+
+Not "there was no way to report this". **There was, it works, it is read every morning, and this
+check was not plugged into it.**
+
+**Item 191 measured the red-tick channel as unread on 18 August** — two red workflows, one broken and
+one working-and-finding, ignored **14 days** and **25 days**. `roster-parity` was written **seven days
+later** and reported to that channel. Its five red days are **the third data point on a channel
+already measured twice as unread**, and the measurement was in this repository the whole time.
+
+> **THE RULE GOING FORWARD: A CHECK THAT CANNOT REACH THE 09:00 EMAIL HAS NO CONSUMER, WHATEVER IT
+> EXITS.** Three of thirteen scheduled workflows write to `standing_check_findings`. Exit codes,
+> log lines and step summaries are not channels on this repository — they are things a person would
+> have to go and look at, and item 191 measured how often that happens.
+
+#### AND THE UNTESTED-BRANCH CATCH IS THE STANDARD TO KEEP
+
+The first live run was **green**, agreed with the table, and **wrote nothing** — so `if (WRITE)` never
+executed and both the recording and resolving branches were left **exactly as untested as before the
+run**. A green run is evidence about the surfaces, not about the reporting path.
+
+> **A GUARD VERIFIED ONLY BY A PASSING RUN IS A GUARD NOBODY HAS WATCHED WORK.** The passing path is
+> the one that exercises least. Drive the failure path deliberately — inject, observe, revert,
+> observe — or the half that matters ships unrun.
+
 #### THE FIVE REPAIRS
 
 | | | |
@@ -47864,3 +47889,111 @@ The daily run closes the window from six days to under twenty-four hours without
 **And the 47 open findings are not triaged here.** They are a real backlog and at least three of
 them are migration-ledger rows for files written yesterday, which would now resolve if that check
 resolved its own findings. It does not. **Same repair, different script**, and not folded in.
+
+---
+
+### 585. The findings table records arrivals and not departures, so nothing distinguishes a queue from an archive
+
+**Raised:** 5 September 2026 · **REPORTED, NOT TRIAGED. The measurement is the deliverable; the
+decision is Robbie's.** · **Item 579's defect confirmed in a second table.**
+
+`standing_check_findings` is the consumer item 584 just plugged `roster-parity` into — the table the
+09:00 email reads. **No check has ever closed a row in it.**
+
+#### THE TABLE, MEASURED
+
+```
+54 rows total · 53 open · 1 resolved
+   the one resolved row was resolved yesterday, by the check built yesterday
+```
+
+| | | |
+|---|---|---|
+| Rows whose `first_seen` ≠ `last_seen` | **0 of 54** | nothing has ever been re-stamped |
+| Rows with `report_count` > 1 | **0 of 54** | nothing has ever been re-counted |
+| Writers that can resolve their own rows | **1 of 4** | `roster-parity`, since yesterday |
+
+**`last_seen` never moves and `report_count` never increments.** The PostgREST upsert sends neither
+column, so `resolution=merge-duplicates` rewrites the payload's fields and leaves both at their
+insert values. The two batches of migration-ledger rows — 10 on 24 August, 38 on 31 August — are
+**48 distinct keys with no overlap**, so no row has ever even been re-offered.
+
+#### ★★★ THEREFORE THE ESCALATION RULE HAS NEVER FIRED AND CANNOT
+
+`monitor-retailer-feeds` renders **ESCALATED** at `report_count >= 3`, and its own copy explains why:
+
+> *"A finding reported **3 times** and still open turns the detector red: that is not a judgement
+> that the finding is severe, it means **this channel is not working**."*
+
+**`report_count` is 1 on every row that has ever existed.** The condition is unreachable. **The
+mechanism built to detect an unread channel is itself unread by construction** — and it is the exact
+mechanism that would have flagged this table.
+
+> That is item 584's shape one layer up. There, a guard reported to a channel already measured as
+> unread. Here, **the escalation designed to catch exactly that cannot evaluate to true.**
+
+#### THE TRIAGE ANSWER: EVERY OPEN ROW IS STILL TRUE. THERE IS NO ARCHIVE.
+
+The worry was a pile of dead findings. **It is not.** Checked row by row rather than assumed:
+
+| kind | n | verdict |
+|---|---|---|
+| `migration-ledger` `remote_only:` | **45** | **all still true** — no local file exists for any of the 45 versions |
+| `migration-ledger` `local_only:` | **2** | **both still true** — both files exist and neither version is in the ledger |
+| `name-hygiene` defect (`and`-vs-`&`) | 1 | still true; gated on the `match-key.ts` change (items 285, 294) |
+| `coverage` rows | 3 | **permanent by design** — never escalate, never resolve |
+| `held:`-prefixed rows | 2 | **permanent standing decisions**, not defects |
+| `roster-parity` | 1 | resolved yesterday |
+
+**0 stale rows.** The table is a **queue**, and every item in it is real.
+
+> **AND TWO INDEPENDENT METHODS AGREE, WHICH IS WHY THAT NUMBER CAN BE TRUSTED.** The 45 + 2 came
+> from testing each finding key against the filesystem and the ledger. The table's own `coverage`
+> row says *"119 local-only and 170 remote-only… 117 + 125 are the accepted baseline"* — **119−117 = 2
+> and 170−125 = 45.** The arithmetic nobody was reading and the check I ran by hand produce the same
+> pair. [[calibration-frame-method]].
+
+#### BUT THE TABLE CANNOT SAY THAT, WHICH IS THE ACTUAL DEFECT
+
+**An archive and a queue are rendered identically.** `status = 'open'` on a row from 24 August means
+either *"still true, eight times over"* or *"fixed in August, nobody closed it"*, and **nothing in
+the table distinguishes them.** I could only tell by re-deriving all 47 from the filesystem — which
+is the check re-run by hand, i.e. the table contributed nothing to answering the question it exists
+to answer.
+
+**It is item 579 in a second table.** `feed_freeze_findings`: `resolved_at` manual, nobody reading,
+five of six rows dead on arrival. Here: nothing resolving, three of four writers unable to, and the
+liveness signal frozen at insert. **Two tables, same absence — a record of arrivals with no record
+of departures.**
+
+#### ★★ AND IT IS THREE ROW TYPES IN ONE TABLE, WITH A VOCABULARY FOR TWO
+
+| type | how it is marked | should it ever close? |
+|---|---|---|
+| **finding** | `kind='finding'` | **yes** — it is work |
+| **coverage** | `kind='coverage'` | **no** — a standing population statement |
+| **hold** | `finding_key` prefix `held:` | **no** — a deliberate decision that must persist |
+
+`kind` has two values and the table holds three kinds. **A hold is a `finding` wearing a key prefix**,
+read only by item 290's write guard. So *"53 open findings"* is not a backlog figure: five of them are
+permanent by design and were never going to close. **A count that mixes work with standing decisions
+cannot be triaged, only re-derived.**
+
+#### WHAT TRIAGE WOULD TAKE — SCOPED, NOT DONE
+
+1. **Make re-reporting visible.** Bump `last_seen` and `report_count` on conflict — a trigger, or the
+   columns in the payload. **Without this the escalation rule stays dead and "how long has this been
+   open" is unanswerable from the table.** Smallest change, largest effect, and it is the one that
+   makes the other three checkable.
+2. **Give the other three writers a resolve pass.** `roster-parity`'s is six lines: PATCH rows for
+   this check whose key is not in this run's set. `migration-ledger` needs it most — it is 47 of the
+   53.
+3. **Separate the three types.** Either a third `kind` for holds, or exclude `held:` from the
+   findings count in the monitor. Until then any count of "open findings" overstates the work by five.
+4. **Then the 47 are a decision, not a chore.** They are precisely the divergences accrued *since*
+   item 235's baseline — the thing that rule exists to stop growing, still growing. **That is item
+   235's reconciliation, not triage**, and it should be priced as such.
+
+**Not done here.** The measurement says what the table contains; what to do about 47 real
+divergences is a separate decision, and doing it under the heading of "tidying a findings table"
+would be the third time this week that a real backlog got moved rather than answered.
