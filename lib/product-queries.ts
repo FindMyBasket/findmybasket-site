@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { getActiveRetailerIds } from './retailers';
+import { getActiveRetailerIdsOrEmpty } from './retailers';
 import { summarisePriceRows, brandSlug, nextBestSavingPct, nextBestPrice, type FeaturedProduct } from './queries';
 import { deliveryFor } from './delivery';
 import { pickFamilyOffer, type FamilyPriceRow } from './family-offer';
@@ -311,7 +311,10 @@ export async function getMoreFromBrand(
   if (rows.length === 0) return [];
 
   const productIds = rows.map(r => r.id);
-  const activeRetailerIds = await getActiveRetailerIds();
+  // OPTS OUT OF THE THROW. "More from this brand" is a carousel; the price comparison this page
+  // exists for comes from getRetailerOffers, which runs its own retailers query and is unaffected.
+  // Throwing here would 500 a working product page because a recommendation strip could not load.
+  const activeRetailerIds = await getActiveRetailerIdsOrEmpty();
   const { data: prices } = await supabase
     .from('retailer_prices')
     .select('product_id, retailer_id, price, in_stock')
@@ -385,7 +388,11 @@ async function fetchRelated(
   if (!rows || rows.length === 0) return [];
 
   const productIds = rows.map(r => r.id);
-  const activeRetailerIds = await getActiveRetailerIds();
+  // OPTS OUT OF THE THROW, for the same reason as getMoreFromBrand above and stated again rather
+  // than cross-referenced: this is the "Related products" strip, the page's price table does not
+  // depend on it, and an empty strip is a smaller loss to a visitor than a 500 on the page they
+  // arrived at for a price.
+  const activeRetailerIds = await getActiveRetailerIdsOrEmpty();
   const { data: prices } = await supabase
     .from('retailer_prices')
     .select('product_id, retailer_id, price, in_stock')

@@ -49240,3 +49240,114 @@ the standing rule warns about, an aggregate standing in for a read population.
 
 **Nothing applied. The decision above is a recommendation, and stage 0 is a precondition rather than
 a preference.**
+
+---
+
+### 597. Stage 0 and stage 1: an error page that lets you keep browsing, and a function that throws
+
+**Raised, designed and APPLIED:** 5 September 2026 · **Stages 0 and 1 of item 596's five.** ·
+`app/error.tsx` created; `getActiveRetailerIds` now throws, with two named opt-outs.
+
+#### ★★★ THE CENTRE: THE FAILURE IS NOT UNDETECTED, IT IS UNDETECTABLE
+
+An empty set from `getActiveRetailerIds` produced **no log line, no alert, no 500, no edge-log
+entry** — and a page that renders *correctly* with nothing on it. Every card on every listing page
+showed no retailer, no price and no saving, under a product count that was still right.
+
+A throw reaches **Vercel's runtime logs and `get_runtime_errors`.**
+
+> **THAT ASYMMETRY IS THE REASON FOR THE CHANGE, AND IT IS STRONGER THAN ANYTHING A VISITOR SEES.**
+> A bad failure that someone notices is a bug. **A bad failure that nothing can notice is not on any
+> list, has no age, and cannot be prioritised** — it is discovered only by someone happening to look
+> at the right page at the right moment. Every other argument here is about which of two bad
+> renderings is less bad; this one is about whether the failure exists as far as the system is
+> concerned.
+
+#### A CORRECTION TO MY OWN SCOPE, WHICH IS WHAT DECIDED THE DESIGN
+
+I reported this as *"every card sitewide"*. **The product page's price table is not affected** —
+`getRetailerOffers` runs its own `retailers … eq('active', true)` query and never calls this
+function.
+
+| surface | affected |
+|---|---|
+| Category, subcategory, brand, edit, compare listings | **yes** |
+| Product page **carousels** | **yes** |
+| Product page **price table** | **no** |
+
+**Had that stayed wrong, the answer would have been "throw everywhere"** — and throwing on the
+product page destroys a working comparison for a recommendation strip. The correction is not a
+footnote; it is the whole reason the design has two shapes.
+
+#### STAGE 0 — `app/error.tsx`, DESIGNED RATHER THAN DEFAULTED
+
+**It carries the full site chrome, and that was not a given.** `error.tsx` must be a Client
+Component, which usually costs the layout. It does not here: `SiteLayout` is a plain non-async
+composer and its whole subtree is already client-safe — `SiteNav`, `SiteSearch`, `RoutineIndicator`
+and `CookieSettingsButton` all carry `'use client'`; `SiteFooter` and `Logo` fetch nothing. **So the
+visitor keeps the nav, the categories and the search box.**
+
+**What it says.** Not *"something went wrong, try again"*. It states that the failure is ours, that
+nothing the visitor did caused it and nothing they try will fix it, and that the rest of the site
+works. **A comparison site's error page telling someone to retry is worse than one that lets them
+keep browsing** — they arrived for a price, and the useful response is a route to the price.
+
+**`reset()` is offered and is secondary.** It re-renders the segment, which helps a transient failure
+and does nothing for a broken query, **and a visitor cannot tell which they have.** Making it the
+primary action would be advice we know is usually wrong.
+
+**★ IT DOES NOT LIST THE CATEGORIES ITSELF, DELIBERATELY.** `SiteNav` already carries them. A
+hand-written copy here would be **the twentieth frozen nav** — item 567 has nineteen still on the
+Stage-1 triple, and `about.html`'s list was wrong for five retailers in a row (item 582). **A moment's
+convenience against a permanent drift surface**, on a page nobody will ever think to re-check.
+
+**No `console.error`.** The server error is already captured by Vercel, which is this item's centre;
+re-logging it in the browser adds a line nobody reads to a signal that already works. **The digest is
+shown**, small, because it is the only thing a visitor could usefully quote.
+
+#### `global-error.tsx` — NOT ADDED, AND THE REASON IS MEASURED
+
+They catch different things: `error.tsx` covers everything **below** the root layout; `global-error.tsx`
+covers the root layout itself and **replaces** it, so it must render its own `<html>` and `<body>`
+and cannot use `SiteLayout`.
+
+**`app/layout.tsx` is 97 lines, fully static** — no `await`, no `async`, no fetch, a literal
+`metadata` object and a synchronous `RootLayout`. **There is nothing in it that can throw at
+runtime.**
+
+> So `global-error.tsx` would be **an unstyled, unbranded page guarding a component that cannot
+> fail** — and a second error surface that will drift from the first, since nothing would ever
+> exercise it. **Not added.** If the root layout ever gains a data dependency, that change should
+> bring it.
+
+#### STAGE 1 — THROW, WITH TWO OPT-OUTS NAMED AT THE CALL SITE
+
+`getActiveRetailerIds` now reads `error`, throws on it, **and throws on an empty result too** — an
+empty `retailers` table is not a real state, and reporting it as one would silently price nothing.
+
+`getActiveRetailerIdsOrEmpty()` wraps the cached call in a `try/catch`. **Two callers use it**,
+`getMoreFromBrand` and `fetchRelated`, **each carrying its own reason in full rather than a
+cross-reference** — because the next person reads one call site, not both.
+
+**`cache()` is load-bearing and is untouched.** React memoises per request *including a rejection*,
+so this is one failure per request rather than one per call site. Without it, eight independent calls
+could each succeed or fail and a page could render **some modules priced and others not — a
+half-priced page, which is worse than either extreme because nothing about it looks wrong.** The
+wrapper is what makes "throw" coherent: the failure is already all-or-nothing within a request.
+
+#### VERIFICATION, AND ITS LIMIT
+
+`tsc` clean, 260 tests pass, and `next build` reports **✓ Compiled successfully** — which is the step
+that checks `error.tsx`'s client/server boundary. The build then fails locally at *Collecting page
+data* on `/sitemap.xml`, because it needs Supabase credentials this machine does not have. **That is
+unrelated to the change and it is not a pass I can claim** — the PR's Vercel build runs the same
+steps with credentials, and that is the check that counts.
+
+#### STAGES 2 TO 4 UNCHANGED
+
+**2** the five `notFound()` sites · **3** the fifteen that read `error` and collapse it · **4** the
+forty-four.
+
+**And the standing rule applies to the 44**: it is the largest stage and the least consequential per
+site, so the count that makes this look like a week is dominated by the part that matters least.
+`docs/standing-rule-unread-population-counts.md`.
