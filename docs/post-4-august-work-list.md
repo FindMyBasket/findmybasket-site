@@ -48216,3 +48216,142 @@ Stated so the six items are not mistaken for a closed set:
 
 **Six merged, and none of the six closes any of these.** The day moved the machinery that finds
 things, not the backlog of things found.
+
+---
+
+### 588. The freeze and the 404 were one event: Beauty Flash's feed rotated on 4 August and nobody read the detector that said so
+
+**Raised, verified and APPLIED:** 5 September 2026 · `20260905105853` · **Feed id 87846 → 116878,
+advertiser 53381 unchanged. Imported. 191 prices moved after 31 frozen days.**
+
+#### ★★★ THE PAIR IS ONE EVENT, AND THAT IS THE FINDING
+
+| | |
+|---|---|
+| **4 August** | bytes freeze at **19,422,985 / 10,862 rows** |
+| **8 August** | `fmb_detect_frozen_feeds` flags it — **4 days in** |
+| 4 Aug – 3 Sep | 31 consecutive byte-identical days; every import `ok`, every row re-stamped fresh |
+| **4 September** | fid 87846 **404s** |
+| **5 September** | advertiser 53381 publishes exactly one feed: **116878** |
+
+**The freeze was the migration beginning, not a separate defect.** AWIN stood up a new feed id and
+left the old one serving a **static snapshot** — not an error, not an outage, a file that had stopped
+being regenerated. When the old id was finally withdrawn it became a 404. **Same event, two stages,
+31 days apart.**
+
+> **AND THEY READ AS COMPLETELY DIFFERENT PROBLEMS, WHICH IS WHY NOBODY JOINED THEM.** A frozen feed
+> reads as *the supplier has a stuck export* — their problem, wait for it. A 404 reads as *an
+> outage* — ours or theirs, chase it today. **One says be patient and the other says be urgent, and
+> here they were the same fact at two stages of one migration.** The detector found the first half;
+> the second half is what got anyone's attention.
+>
+> **The stage that was cheap to act on produced no urgency, and the stage that produced urgency was
+> the one where the data had already been wrong for a month.**
+
+#### ★★ WOULD THE DETECTOR HAVE CAUGHT THE ROTATION EARLIER? IT DID. IT WAS NOT READ.
+
+**Yes, and this is the unread-channel finding landing on the retailer the detector was built for.**
+
+It flagged on **8 August**, four days into the freeze and **27 days before the 404**. And it was not
+a generic detector that happened to catch this:
+
+- Its threshold was calibrated on Beauty Flash's own volatility — the detection migration's header
+  reads *"longest legitimate streak observed **3 days** (Beauty Flash x5, Gorgeous Shop x1)"*.
+- It carries a **per-retailer override written for this retailer**:
+  `UPDATE retailer_import_config SET freeze_min_days = 5 WHERE retailer_id = 27`.
+
+**The detector was tuned using Beauty Flash's history, given a bespoke threshold for Beauty Flash,
+fired correctly on Beauty Flash four days in — and its finding sat unread for 27 days** because
+nothing read `feed_freeze_findings` until item 579 wired it into the 09:00 email yesterday. Item
+584's answer, arriving on the case that motivated it.
+
+**27 days of warning, delivered to nobody.**
+
+#### VERIFIED BEFORE CHANGING ANYTHING
+
+**`feed-diag` cannot answer the question that mattered.** It proves a feed exists, downloads, and has
+a given shape — and the columns it requests carry **no merchant identity**, so a wrong-but-valid fid
+belonging to another advertiser passes every check it makes. That is item 482's silent half, and a
+rotated id is precisely the shape that gets typed rather than read.
+
+So `scripts/awin-feed-list.mjs` was added first: it reads AWIN's own `datafeed/list`, the
+**Feed ID → Advertiser ID** mapping.
+
+```
+feeds visible on this account: 606
+advertiser 53381: 1 feed
+  fid 116878  advertiser 53381 "Beauty Flash"  products 11018  last imported 2026-09-05 10:12
+fid 87846: absent
+```
+
+Exists, owned by Beauty Flash, refreshing today — **and the old id is not in the account at all**,
+which is *why* it 404s rather than failing some other way. Then `feed-diag` on 116878: 11,018 rows,
+gzip verified, column set identical to the importer's request.
+
+#### THE SHAPE, OLD AGAINST NEW — ONE REAL CHANGE, AND IT IS INERT
+
+| | old (recorded 3 Aug) | new | effect |
+|---|---|---|---|
+| rows | 10,862 staged | **11,018** | +156 |
+| `ean` / `product_GTIN` | 0.0% / 96.4% | 0.0% / **98.6%** | none — `sibling_coalesce` already reads both |
+| `merchant_product_category_path` / `merchant_category` | — | 0.0% / 100% | none — coalesced |
+| **`product_type`** | **0%** | **100%** | **none, and it had to be checked** |
+
+**`product_type` 0% → 100% is a genuine format change carried by the rotation.** It is inert only
+because `category_name` is the **primary** and is 100% filled, so `product_type` — bound as its
+`_alt` — is never consulted. **The identical change on a feed whose `category_name` was empty would
+have re-categorised all 11,018 rows silently.** Stylevana's rotation carrying no change was one data
+point; this one carried a change that happened not to matter.
+
+> **AND feed-diag'S OWN WARNING WAS WRONG.** It prints *"only product_GTIN populated — IMPORTER READS
+> ean, SO THIS IS LOST"*. `import-awin-feed` requests **both halves of every sibling pair** and
+> coalesces when configured to, which Beauty Flash is. **A fourth false alarm in two days**, from a
+> tool, against two false negatives — and it would have blocked a correct import.
+
+**`category_path_must_contain` neither holds nor fails: it is `[]`.** Nothing was filtering Beauty
+Flash on path, so the question has no purchase. `sibling_coalesce = true` still holds and is now
+load-bearing for the barcode.
+
+#### WHAT 31 FROZEN DAYS COST, MEASURED
+
+Snapshot before, import, diff:
+
+| | |
+|---|---|
+| Price rows | 8,850 → **9,279** |
+| **Prices changed** | **191** |
+| Unchanged | 8,659 |
+| New products | **429** · gone: **0** |
+| Stock flips | 4 |
+
+Of the 191: **165 went up, 26 went down**, mean absolute move **£5.39**, mean **13.1%**, largest
+**£111.00**.
+
+> **THE DIRECTION IS THE COST.** 165 of 191 were being shown **cheaper than they actually were** —
+> for up to a month, on a price-comparison site, with the click-through landing on a higher price.
+> A stale price that is too *high* loses a sale; a stale price that is too *low* spends a visitor's
+> trust. **The freeze failed in the expensive direction, and 87% of the movement was that way.**
+
+**2.2% of rows moved in 31 days**, which is also worth saying plainly: the freeze was not
+catastrophic, and the detector was still right to fire on day four. **The cost of reading it would
+have been minutes; the cost of not reading it was 191 wrong prices and 429 products absent for a
+month.**
+
+#### A MISTAKE OF MINE, RECORDED
+
+The AWIN list probe had to reach `main` before it could be dispatched — GitHub only runs
+`workflow_dispatch` from the default branch. **I branched it from the item-587 branch instead of
+`main`**, so PR #592 squashed item 587's 115 work-list lines in alongside it while its title and
+description said *probe* only. **The merged commit's contents exceeded its stated scope**, which is
+exactly what a reviewer reading the description could not have caught. Nothing was lost — 587's text
+is on `main`, verified identical — and #591 was closed as superseded rather than merged. **Branch
+from `main`, not from wherever the last item left the checkout.**
+
+#### CLOSED AND STILL OPEN
+
+`feed_freeze_findings` for retailer 27 is **resolved**, with the rotation recorded as the cause —
+`fmb_frozen_feeds_current` now returns **zero rows**. Tomorrow's 09:00 email reports Beauty Flash
+healthy for the first time since 4 August, and it will be true rather than uncontradicted.
+
+**Still open:** 10,866 barcodes are matched on and only **one** of 8,850 stored Beauty Flash products
+carries an `ean`. That predates the rotation and is not fixed here.
