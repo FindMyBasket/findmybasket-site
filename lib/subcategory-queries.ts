@@ -420,7 +420,13 @@ export async function getValidSubcategories(category: TopCategory): Promise<stri
     .select('subcategory')
     .eq('top_category', category);
 
-  if (error || !data) return [];
+  // FAILED -> throw. An unreadable view is not "this category has no subcategories".
+  if (error) throw new Error(`getValidSubcategories(${category}) read failed: ${error.message}`);
+  // ABSENT -> [], and SubcategoryPage:63 still 404s any slug not in the list. Unchanged, and it
+  // must be: a category that genuinely has no subcategories should 404 its children. An empty list
+  // is NOT treated as impossible here, unlike getActiveRetailerIds -- a category with no products
+  // yet is a real state, whereas a retailers table with no rows is not.
+  if (!data) return [];
 
   const unique = new Set<string>();
   for (const row of data as { subcategory: string | null }[]) {

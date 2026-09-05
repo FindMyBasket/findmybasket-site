@@ -58,9 +58,23 @@ export async function getProductById(id: number): Promise<ProductDetail | null> 
     .from('products_servable')
     .select('id, name, brand, normalised_brand, top_category, subcategory, product_type, image_url, ingredients, concerns, ean, canonical_size, shade, description, amazon_asin')
     .eq('id', id)
-    .single();
+    // .maybeSingle(), NOT .single(), AND THE DIFFERENCE IS 107,260 URLs.
+    //
+    // `.single()` reports ZERO ROWS AS AN ERROR (PGRST116). So "this product does not exist" and
+    // "the database is unreachable" arrive on the same channel, and the obvious fix -- read `error`
+    // and throw -- would convert every genuine missing-product 404 into a 500, across the entire
+    // product sitemap. Google retries a 500 and removes a 404: getting this backwards would keep
+    // dead URLs alive and is a worse failure than the one being fixed.
+    //
+    // `.maybeSingle()` returns { data: null, error: null } for zero rows and errors only on a real
+    // failure, which makes the split below unambiguous and free of any dependence on an error code.
+    .maybeSingle();
 
-  if (error || !data) return null;
+  // FAILED -> throw. With .maybeSingle() an error is never "no such product".
+  if (error) throw new Error(`getProductById(${id}) read failed: ${error.message}`);
+  // ABSENT -> null, and app/product/[id]/page.tsx:286 still 404s on it. THAT BRANCH MUST NOT MOVE:
+  // it is the correct response to a product id that does not exist, on 107,260 crawled URLs.
+  if (!data) return null;
 
   return {
     id: data.id,

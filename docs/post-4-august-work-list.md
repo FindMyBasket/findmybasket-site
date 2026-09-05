@@ -49296,10 +49296,30 @@ keep browsing** — they arrived for a price, and the useful response is a route
 and does nothing for a broken query, **and a visitor cannot tell which they have.** Making it the
 primary action would be advice we know is usually wrong.
 
-**★ IT DOES NOT LIST THE CATEGORIES ITSELF, DELIBERATELY.** `SiteNav` already carries them. A
-hand-written copy here would be **the twentieth frozen nav** — item 567 has nineteen still on the
-Stage-1 triple, and `about.html`'s list was wrong for five retailers in a row (item 582). **A moment's
-convenience against a permanent drift surface**, on a page nobody will ever think to re-check.
+**★★★ IT DOES NOT LIST THE CATEGORIES ITSELF, AND THAT IS THIS ITEM'S SHARPEST DECISION.**
+`SiteNav` already carries them. A hand-written copy here would be **the twentieth instance of item
+567** — nineteen static navs still on the Stage-1 triple, and `about.html`'s list wrong for five
+retailers in a row (item 582).
+
+> **AND IT WOULD BE ON THE ONE PAGE NOBODY WILL EVER THINK TO RE-CHECK.** A retailer change prompts a
+> sweep of the nav, the homepage, `about.html`. Nobody opens the error page to see whether its
+> category list is current, because nobody opens the error page at all — it is seen only by visitors,
+> only when something else has already failed. **A drift surface with no reader is the worst kind:
+> it cannot be noticed, only encountered.**
+>
+> **The convenience is a moment's; the drift surface is permanent, and it outlives the convenience by
+> the life of the file.** That asymmetry is the whole argument, and it holds even though a hardcoded
+> list would have been three lines and correct today.
+
+**★★ AND THE FULL-CHROME PROPERTY IS THE LAYOUT'S, NOT A CHOICE OF MINE.** `error.tsx` **must** be a
+Client Component, which normally costs you the site chrome entirely. It works here **only** because
+`SiteLayout` happens to be a plain non-async composer whose whole subtree is client-safe.
+
+> **NOTHING ENFORCES THAT, AND A LATER CHANGE COULD TAKE IT AWAY WITHOUT ANYONE CONNECTING THE TWO.**
+> One `await` in `SiteLayout`, one server-only import in `SiteFooter`, and this page stops compiling —
+> and the person making that change is editing the layout, not the error page. **It is a property
+> being relied on rather than a guarantee**, and it is recorded here so the breakage has somewhere to
+> be traced back to.
 
 **No `console.error`.** The server error is already captured by Vercel, which is this item's centre;
 re-logging it in the browser adds a line nobody reads to a signal that already works. **The digest is
@@ -49351,3 +49371,157 @@ forty-four.
 **And the standing rule applies to the 44**: it is the largest stage and the least consequential per
 site, so the count that makes this look like a week is dominated by the part that matters least.
 `docs/standing-rule-unread-population-counts.md`.
+
+---
+
+### 598. Stage 2 reported: the five `notFound()` sites, ranked by what a crawler can reach
+
+**Raised:** 5 September 2026 · **REPORT. Nothing changed.** · Stage 2 of item 596's five.
+
+**A 404 is the only failure Google acts on permanently.** A 500 is retried; an empty module is
+invisible to it; **a 404 is an instruction to drop the URL.** That is what makes these five worse
+than the 44, and it is why the ranking below is by crawler reach rather than by code.
+
+#### THE FIVE, WITH THEIR EXPOSURE MEASURED
+
+| | site | fed by | how it fails | **crawler-reachable URLs** |
+|---|---|---|---|---|
+| **1** | `app/product/[id]/page.tsx:286` | `getProductById` | reads `error`, `return null` | **107,260** — the entire product sitemap (45,000 + 45,000 + 17,260) |
+| **2** | `app/brands/[slug]/page.tsx:54` | `findBrandBySlug` | `if (error \|\| …) break` ends the paging loop early, brand resolves null | **3,025** brand pages in `sitemap-pages.xml` |
+| **3** | `components/BrandPage.tsx:63` | `resolveBrandAliasSlug` | no `error` read; null alias falls through | same 3,025, **second-order** — only reached once #2 has already failed to find the brand |
+| **4** | `components/SubcategoryPage.tsx:63` | `getValidSubcategories` | reads `error`, `return []`, absent value 404s | **18** subcategory pages, plus their **79** `?type=` chip variants |
+| **5** | `app/edit/[slug]/page.tsx:76` | `getEditProducts` | no `error` read; `totalCount === 0` | **1** sitemap URL, plus **35** `?type=` chip variants |
+
+**Sitemap-advertised is not the whole exposure.** The `?type=` variants are absent from the sitemap
+and reachable by following links from the page above them — **which is exactly how the 404 that
+started this entire thread was found.** A crawler follows chips.
+
+#### ★★★ THE ORDER TO DO THEM IN IS NOT THE ORDER OF THEIR IMPORTANCE, AND BOTH ARE WORTH SAYING
+
+**`edit/[slug]:76` should still be done first**, for the reason given: it is **byte-for-byte the guard
+already fixed** in `SubcategoryPage` — `if (productType && productResult.totalCount === 0)
+notFound();` — fed by a query that discards `error`. The fix is the one already written, applied to a
+second file. No design decision, no risk, and it proves the pattern on the cheapest possible case.
+
+> **BUT IT IS THE LEAST EXPOSED OF THE FIVE BY FOUR ORDERS OF MAGNITUDE — ONE SITEMAP URL AGAINST
+> 107,260.** Doing it first is right and it should not be allowed to imply it matters most.
+>
+> **The product page is the one that matters**, and its own comment already says so: *"446 products
+> with a live, in-stock, buyable offer were returning 404 at their own URL."* That is this exact
+> guard, on this exact route, having already happened once at scale.
+
+**The week's most repeated shape** is the one `edit/[slug]` demonstrates: **the same defect in a
+second file, fixed in the first and not swept.** Convention 10's sweep (item 576), item 238's
+`.order()` rule, item 582's `about.html` list, and now this. **Four instances of "the rule was
+applied where it was found and nowhere else."**
+
+#### WHAT EACH FIX LOOKS LIKE — SCOPED, NOT WRITTEN
+
+| | change | shape |
+|---|---|---|
+| 5 | `getEditProducts`: read `error`, throw | **identical to the fix already shipped**; copy it |
+| 1 | `getProductById`: distinguish `error` from *no such product* | `error` → throw; `!data` → `null` (a genuine 404). **Currently one branch does both.** |
+| 4 | `getValidSubcategories`: same split | `error` → throw; empty list → 404 only if the list is genuinely empty |
+| 2 | `findBrandBySlug`: the `break` is the bug | an error mid-loop must not read as *"the brand is not here"*; it must abort the whole lookup |
+| 3 | `resolveBrandAliasSlug`: read `error` | null-on-error is indistinguishable from *no alias exists* |
+
+**Every one is the same two-line shape** — separate "the query failed" from "the thing does not
+exist" — and **#2 is the only one that is not**, because there the collapse happens inside a loop and
+the fix is control flow rather than a branch.
+
+#### WHY THIS IS A REPORT AND NOT FIVE COMMITS
+
+Two of the five (#1, #4) change what a **404 means** on routes with 107,260 and 18 sitemap entries.
+Getting the split backwards — throwing where the product genuinely does not exist — would turn
+legitimate 404s into 500s **at catalogue scale**, and Google treats a 500 on a sitemap URL as a
+retryable outage rather than a removal. **That is a worse failure than the one being fixed**, and it
+is worth one review before five changes rather than after.
+
+**Nothing changed. The order recommended is 5 → 1 → 4 → 2 → 3**: cheapest-and-proven first, then by
+exposure, with the loop-shaped one last because it is the only one that is not a copy of a fix
+already made.
+
+---
+
+### 599. Stage 2 applied: five error-to-404 conversions closed, and the one that nearly went backwards
+
+**Raised and APPLIED:** 5 September 2026 · **All five of item 598's sites, in the order 5 → 1 → 4 →
+2 → 3.** · No `notFound()` guard was touched and no absent branch moved.
+
+#### ★★★ #1 WAS A TRAP, AND THE TRAP WAS THE FIX ITSELF
+
+`getProductById` ended with `if (error || !data) return null;` and the obvious repair is *"read
+`error`, throw on it"*. **That would have been catastrophic**, because of one word further up:
+
+```ts
+.eq('id', id)
+.single();      // ← zero rows is reported as an ERROR (PGRST116)
+```
+
+**`.single()` puts "this product does not exist" and "the database is unreachable" on the same
+channel.** Throwing on `error` would have converted **every genuine missing-product 404 into a 500,
+across 107,260 crawled URLs** — and Google retries a 500 while it removes a 404, so dead URLs would
+have stayed alive and the fix would have been strictly worse than the defect.
+
+> **THE INSTRUCTION TO STATE WHICH CONDITION MEANS ABSENT BEFORE CHANGING ANYTHING IS WHAT CAUGHT
+> IT.** Nothing in the diff would have looked wrong. `if (error) throw` reads as obviously correct in
+> every one of the other four, and it is obviously correct in them.
+
+**Fixed by changing the query rather than the branch**: `.maybeSingle()` returns
+`{ data: null, error: null }` for zero rows and errors only on a real failure, so the split is
+unambiguous and **depends on no error-code string.** Three existing uses in this codebase, one of
+them in the same file.
+
+#### ALL FIVE, WITH THE SPLIT STATED
+
+| | site | **ABSENT** — still 404s | **FAILED** — now throws |
+|---|---|---|---|
+| **5** | `getEditProducts` | `products` empty, no error → `totalCount 0` → `edit/[slug]:76` 404s | `error` set (was discarded entirely) |
+| **1** | `getProductById` | `!data` under `.maybeSingle()` → `null` → `product/[id]:286` 404s | any `error` — which now never means "no such product" |
+| **4** | `getValidSubcategories` | `!data` → `[]` → `SubcategoryPage:63` 404s an unknown slug | `error` set |
+| **2** | `findBrandBySlug` | `data.length === 0` → `break` → pages exhausted → null → `brands/[slug]:54` 404s | `error` mid-scan |
+| **3** | `resolveBrandAliasSlug` | `!data` → `null` → `BrandPage:63` 404s | `error` set (was never read) |
+
+**Every absent branch is unchanged and verified present after the edit.** That half must not move,
+and it did not: a product id that does not exist, a slug that is not a subcategory, a brand with no
+alias and an exhausted page all still 404, which is the correct answer in each case.
+
+#### #2 WAS THE ONLY ONE THAT IS NOT A COPY, BECAUSE THE COLLAPSE IS CONTROL FLOW
+
+```ts
+if (error || !data || data.length === 0) break;    // three conditions, two meanings, one answer
+```
+
+`data.length === 0` means **the pages are exhausted** — `break` is exactly right. `error` means **the
+scan failed part-way**, and breaking on it leaves the loop having read some prefix of the brands and
+then reporting, through the same `return null` as a genuine miss, that the brand is not here.
+
+> **A PARTIAL RESULT IS INDISTINGUISHABLE FROM A COMPLETE ONE** — item 146's shape, the right answer
+> from the wrong rows, arriving through an **early exit** rather than through pagination. The file
+> already records what that costs: *"6 of 30 sampled single-product brands were 404ing live, roughly
+> 60 pages"*, from the `.order()` defect a few lines above. **Same page, same 404, a different way of
+> not reading all the rows.**
+
+#### ★★ THE WEEK'S MOST REPEATED SHAPE, NOW FOUR INSTANCES
+
+**A rule applied where it was found and nowhere else:**
+
+| | the rule | applied at | not applied at |
+|---|---|---|---|
+| 576 | convention 10 — read `error`, classify it apart from empty | two call sites | the other 57 |
+| 238 | every `.range()` must follow `.order()` | the paging helper | a paginator in the same file |
+| 582 | *"a retailer change MUST sweep this block"* | four retailers | the fifth, five times running |
+| **599** | **the empty-type guard must not eat a query failure** | **`getSubcategoryProducts`, 4 Sep** | **`getEditProducts`, byte-for-byte identical, one day later** |
+
+**#5 was a copy-paste of a fix made the previous day into a file nobody looked at when making it.**
+That is the shape, and it is now frequent enough to be the expectation rather than the surprise.
+
+#### VERIFICATION
+
+`tsc` clean, 260 tests pass. All five absent branches confirmed present after the edit; all eleven
+`notFound()` calls across the five files untouched. **The live check is the Vercel build on the PR** —
+locally `next build` cannot complete page collection without Supabase credentials, as recorded in
+item 597.
+
+**Stages 3 and 4 remain**: the fifteen that read `error` and collapse it, then the forty-four. The
+standing rule still applies to the 44.
