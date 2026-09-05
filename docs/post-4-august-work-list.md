@@ -48224,7 +48224,7 @@ things, not the backlog of things found.
 **Raised, verified and APPLIED:** 5 September 2026 · `20260905105853` · **Feed id 87846 → 116878,
 advertiser 53381 unchanged. Imported. 191 prices moved after 31 frozen days.**
 
-#### ★★★ THE PAIR IS ONE EVENT, AND THAT IS THE FINDING
+#### ★★ THE PART THAT GENERALISES: THE PAIR IS ONE EVENT
 
 | | |
 |---|---|
@@ -48248,9 +48248,21 @@ being regenerated. When the old id was finally withdrawn it became a 404. **Same
 > **The stage that was cheap to act on produced no urgency, and the stage that produced urgency was
 > the one where the data had already been wrong for a month.**
 
-#### ★★ WOULD THE DETECTOR HAVE CAUGHT THE ROTATION EARLIER? IT DID. IT WAS NOT READ.
+#### ★★★ THE CENTRE: IT FIRED ON 8 AUGUST, AND WAS NOT READ
 
-**Yes, and this is the unread-channel finding landing on the retailer the detector was built for.**
+**It fired on 8 August — 27 days before the 404 — and this is the unread-channel finding landing on
+the retailer the detector was built for.**
+
+> **TUNED ON BEAUTY FLASH, FOR BEAUTY FLASH, CORRECT ABOUT BEAUTY FLASH, UNREAD.** Every part of that
+> sentence is load-bearing. This was not a generic check that happened to cover the case: its
+> threshold was derived from *this retailer's own volatility history*, and it carries a per-retailer
+> override written for *this retailer's id*. It then fired on the fourth day of a real freeze, at the
+> retailer it was shaped around, and produced no consequence for twenty-seven days.
+>
+> **ITEM 584's ANSWER ARRIVING ON THE CASE THAT MOTIVATED THE DETECTOR.** 584 concluded that a
+> consumer existed and the newest guard had not used it. Here the guard is not new, the case is the
+> one it was built for, and the conclusion is the same: **the finding was correct, specific, early,
+> and addressed to nobody.**
 
 It flagged on **8 August**, four days into the freeze and **27 days before the 404**. And it was not
 a generic detector that happened to catch this:
@@ -48297,11 +48309,17 @@ gzip verified, column set identical to the importer's request.
 | `merchant_product_category_path` / `merchant_category` | — | 0.0% / 100% | none — coalesced |
 | **`product_type`** | **0%** | **100%** | **none, and it had to be checked** |
 
-**`product_type` 0% → 100% is a genuine format change carried by the rotation.** It is inert only
-because `category_name` is the **primary** and is 100% filled, so `product_type` — bound as its
-`_alt` — is never consulted. **The identical change on a feed whose `category_name` was empty would
-have re-categorised all 11,018 rows silently.** Stylevana's rotation carrying no change was one data
-point; this one carried a change that happened not to matter.
+**`product_type` 0% → 100% is a genuine format change carried by the rotation, and it does nothing
+only by luck of configuration.** It is inert because `category_name` is the **primary** and is 100%
+filled, so `product_type` — bound as its `_alt` — is never consulted. **The identical change on a
+feed whose primary was empty would have silently re-categorised all 11,018 rows**, with no error, no
+count discrepancy, and a `last_import_status` of `ok`.
+
+> **STYLEVANA'S ROTATION CARRYING NOTHING WAS ONE DATA POINT. THIS IS THE SECOND, AND IT POINTS THE
+> OTHER WAY.** Two rotations, two different answers — so a rotation is not a no-op, and *"the last
+> one was fine"* is a sample of one. **A rotation must be re-measured against the recorded column
+> profile rather than assumed to be the same feed under a new number**; the profile in
+> `import-awin-feed` exists precisely so there is something to diff against.
 
 > **AND feed-diag'S OWN WARNING WAS WRONG.** It prints *"only product_GTIN populated — IMPORTER READS
 > ean, SO THIS IS LOST"*. `import-awin-feed` requests **both halves of every sibling pair** and
@@ -48339,13 +48357,20 @@ month.**
 
 #### A MISTAKE OF MINE, RECORDED
 
-The AWIN list probe had to reach `main` before it could be dispatched — GitHub only runs
-`workflow_dispatch` from the default branch. **I branched it from the item-587 branch instead of
-`main`**, so PR #592 squashed item 587's 115 work-list lines in alongside it while its title and
-description said *probe* only. **The merged commit's contents exceeded its stated scope**, which is
-exactly what a reviewer reading the description could not have caught. Nothing was lost — 587's text
-is on `main`, verified identical — and #591 was closed as superseded rather than merged. **Branch
-from `main`, not from wherever the last item left the checkout.**
+**#592's description said *probe* only, and the squashed commit carried 115 work-list lines.** Its
+contents exceeded its stated scope **in a way a reviewer reading the description could not detect** —
+the diff would have shown it, the description contradicted it, and a squash merge makes the
+description the permanent record.
+
+**The mechanism is mundane and is the part worth keeping:** the AWIN list probe had to reach `main`
+before it could be run at all, because **GitHub dispatches `workflow_dispatch` only from the default
+branch**. That forced an out-of-order merge, and I created the branch from wherever the checkout
+already was — the item-587 branch — rather than from `main`.
+
+> **A CONSTRAINT ON WHERE CODE MUST LIVE BECAME A DEFECT IN WHAT A COMMIT CLAIMED.** Nothing about
+> the probe was wrong and nothing was lost: 587's text is on `main`, verified identical, and #591 was
+> closed as superseded rather than merged. **Branch from `main`, not from wherever the last item left
+> the checkout** — and when a workflow must be merged early to be runnable, merge it *alone*.
 
 #### CLOSED AND STILL OPEN
 
@@ -48355,3 +48380,90 @@ healthy for the first time since 4 August, and it will be true rather than uncon
 
 **Still open:** 10,866 barcodes are matched on and only **one** of 8,850 stored Beauty Flash products
 carries an `ean`. That predates the rotation and is not fixed here.
+
+---
+
+### 589. The barcode is not missing — `products.ean` is, and it has exactly one reader
+
+**Raised:** 5 September 2026 · **REPORTED, NOTHING DECIDED.** · Item 588 left this as *"10,866
+barcodes matched against one stored ean on 8,850 products"* and called it the largest unexplained
+figure in the report. It is explained, and it is not what it looked like.
+
+#### THE FIGURE WAS TRUE AND THE INFERENCE FROM IT WAS WRONG
+
+**Nothing is lost.** The barcode is stored — on the **offer**, not the product:
+
+| | |
+|---|---|
+| `retailer_prices.ean` | **152,340 of 179,435** rows — **84.9%** |
+| Beauty Flash's share of that | **7,925 of 9,279** — 85.4% |
+| Distinct products reachable via an offer barcode | **119,199** |
+| **`products.ean`** | **8 of 144,899** |
+
+**`products.ean` is empty for the entire catalogue, not for Beauty Flash.** Eight rows in 144,899,
+across every retailer and every import path. It was never a Beauty Flash symptom and the rotation had
+nothing to do with it.
+
+#### WHY: THE IMPORTER COLLECTS IT AND DROPS IT AT THE INSERT
+
+`createActions` carries `ean: string` all the way through matching. The `products` insert does not:
+
+```ts
+const productRows = chunk.map(c => ({
+  name: c.name, brand: c.brand, normalised_brand: …,
+  category: …, product_type: …, top_category: …, subcategory: …,
+  tags: …, canonical_size: …, shade: …, match_key: …,
+  image_url: …, description: …, description_source_retailer_id: …,
+}));                                  // ← no `ean`
+```
+
+The value is **requested from AWIN, coalesced from `product_GTIN`, used for tier-1 matching, carried
+in the action object, and then not written.** It reaches `retailer_prices` on the offer path, which
+is why 84.9% is populated there. **Both facts are true at once, and reading only the second one is
+what made this look like a data loss.**
+
+#### ★★ IT HAS ONE LIVE READER, AND IT IS STRUCTURED DATA
+
+Grepping the site for readers of `products.ean` returns exactly one that ships:
+
+```ts
+// app/product/[id]/page.tsx — JSON-LD Product
+sku: product.ean ?? `fmb-${product.id}`,
+```
+
+**So every product page emits `sku: "fmb-<id>"`**, a synthetic identifier meaningful to nobody, on
+**107,260 live products** — and the block carries **no `gtin13`, `gtin`, or `mpn` field at all**.
+
+> **THE COST IS NOT MATCHING. IT IS PUBLISHING.** Matching already uses the feed value at import time
+> and `retailer_prices.ean` afterwards; the DQ snapshots read `rp.ean` correctly
+> (`20260727120000`, `20260815100400`). Nothing downstream is broken by the empty column. **What we
+> forgo is telling Google what these products are** — the single strongest identifier a
+> merchant-listing rich result can carry — while holding one for **89,788 of 107,260 live
+> products (83.7%)** from an active retailer.
+
+#### ★★★ AND IT IS NOT A BACKFILL, WHICH IS WHY THIS IS A REPORT
+
+The obvious next step — copy `rp.ean` up to `products.ean` — **does not survive contact with the
+data**:
+
+> **12,698 live products have retailers disagreeing about the barcode** — more than one distinct
+> `ean` across the offers we have grouped as one product. That is **14.1% of the 90,131** live
+> products carrying any barcode at all.
+
+Picking one would be inventing a fact. And the disagreement is **not obviously a barcode problem**:
+two retailers stating different GTINs for what we call one product is exactly what a **wrong grouping**
+looks like from the other side. It is the same signal as item 314's near-duplicates, arriving through
+a column instead of a URL.
+
+**So there are at least three separable questions here, and only the first is small:**
+
+1. **Should the JSON-LD carry a barcode at all?** It can be read from the offers at render time
+   without touching `products.ean` — the product page already loads the offers.
+2. **Should `products.ean` be populated, and from which offer** when retailers disagree? A rule
+   (most-common? highest-trust retailer? only when unanimous?) is a decision, not a migration.
+3. **Are the 12,698 disagreements bad barcodes or bad groupings?** Unknown, unmeasured, and the
+   answer changes what (1) and (2) should do.
+
+**Nothing decided and nothing applied.** The figure that opened this — one stored `ean` — turned out
+to measure a column nobody fills rather than a barcode nobody has, and **the interesting number is
+the 12,698, which was not visible until the first one was explained.**
