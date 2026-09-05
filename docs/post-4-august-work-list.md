@@ -48744,3 +48744,138 @@ have made the rest invisible.
 3. **"150–190 are bad groupings"** was itself an over-claim, corrected here to **19 confirmed plus
    part of 50 undetermined.** The price-spread proxy was measuring a broader population than the one
    I named it for.
+
+---
+
+### 592. The 19 were not 19: there is no confirmed grouping error in the 146, and the name we do not store is why
+
+**Raised:** 5 September 2026 · **REPORT. Nothing split, nothing written, and the instruction to report
+before splitting is what caught this.** · Supersedes item 591's "19 worth fixing by hand".
+
+#### ★★★ THE CENTRE: WE STORE WHAT EACH RETAILER CHARGES AND NOT WHAT EACH RETAILER SAYS IT IS SELLING
+
+| | |
+|---|---|
+| `products.name` | the **merged row's** name — it cannot describe the two things inside it |
+| `retailer_prices` | **no name column.** `id, product_id, retailer_id, price, url, in_stock, last_updated, external_product_id, external_handle, ean, mpn, ean_normalised, mpn_normalised` |
+| the offer URL | an **AWIN `cread.php` redirect** — every one, carrying no product identity |
+
+**Correct for a price comparison and disqualifying for a grouping audit.** A price needs a product id
+and a number; deciding whether two offers are one product needs the words each retailer used, and
+those words are the one thing not kept.
+
+> **AND IT BOUNDS EVERY FUTURE AUDIT, NOT JUST THIS ONE.** The undetermined cases below are
+> undetermined **because of this**, not because the sample was small. More products would not help;
+> the missing column is not a sampling problem and no amount of the data we do keep substitutes for
+> it. Every grouping question this month has ended at the same wall.
+
+#### WHAT IT WOULD TAKE — REPORTED, NOT PROPOSED
+
+**It is a column and a write, not a fetch.** All three importers already hold the retailer's own
+product name at insert time:
+
+- `import-awin-feed` requests `product_name` in its column set and reads it per row.
+- `import-rakuten-feed` and `import-shopify-feed` both carry `name` into their create actions.
+
+Each uses it to derive `products.name` **on create**, and discards it **on update and on link** —
+which is every subsequent run, and every offer attached to an existing product. **The value is in
+memory, one assignment away from the row it belongs to.**
+
+`retailer_prices.external_handle` already exists and is populated on **4,358 of 179,435** rows
+(2.4%), so there is precedent for a per-offer text column and no precedent for filling it.
+
+**Not proposed here.** The scope question is whether it is backfillable (it is not — past feed rows
+are gone) and therefore whether a column that only fills going forward is worth having, which is a
+decision about how long you are prepared to wait for an audit to become possible.
+
+#### ★★★ AND THE 19 WERE NOT 19. THEY WERE NOT 4 EITHER.
+
+Item 591 reported **19 confirmed grouping errors** and called them worth fixing by hand. **Read
+individually, none of them survives.**
+
+| test | result |
+|---|---|
+| Expensive side is a *cluster* of retailers | 19 |
+| …but a **single barcode itself spans ≥2×** of the price range | **15 of 19** |
+| Two barcode groups, **each with ≥2 offers**, non-overlapping ranges, ≥2× apart | **0 of 146** |
+
+**Seventeen of the nineteen are COSRX, and the shape is identical every time:**
+
+```
+COSRX Aloe Soothing Sun Cream 50ml
+  Stylevana    £5.93  [761373892776]   ← Stylevana's own relabeller code
+  YesStyle     £6.17  [8809416470191]
+  Beauty Flash £22    [8809416470191]  ← SAME BARCODE as YesStyle
+  Gorgeous Shop £22   [8809416470191]  ← SAME BARCODE as YesStyle
+```
+
+**Three of four offers share one barcode across a 3.6× price range.** That is not two products merged.
+It is **one product, correctly grouped, sold by Asian importers at £6 and UK stockists at £22** —
+which is precisely the price difference the site exists to surface. **My discriminator flagged the
+site working.**
+
+> **HAD ITEM 591's RECOMMENDATION BEEN ACTED ON, FIFTEEN CORRECTLY-GROUPED PRODUCTS WOULD HAVE BEEN
+> SPLIT**, destroying real comparisons on the catalogue's best-covered brand. **The instruction to
+> report each pair for approval rather than split them is what stopped it** — not a later check, not
+> a test, and nothing in the data would have objected.
+
+#### WHAT IS ACTUALLY LEFT: TWO CANDIDATES, NEITHER CONFIRMED
+
+```
+Coco & Eve Sweet Repair Shampoo 280ml
+  Boots         £25  [8886482911810]   888648 = Singapore (brand's own)
+  Beauty Flash  £50  [5056182345335]   505618 = UK
+  Gorgeous Shop £50  [5056182345335]
+
+Miild 08 Dual-Ended Eyebrow Brush
+  Niche Beauty  £22  [5709994023327]   570999 = Denmark (brand is Danish)
+  Beauty Flash  £70  [4040218846416]   404021 = Germany
+  Gorgeous Shop £70  [4040218846416]
+```
+
+Both are **two-against-one**, not two established groups — a single cheap offer against a pair. Both
+have disjoint barcodes, a 2–3× gap, and a GS1 prefix that does not match the brand's country on one
+side. **They are worth a person opening two browser tabs. They are not worth a programme, and they
+are 2, not 19.**
+
+#### ★★ THE SECOND FINDING: ITEM 314 IS SETTLED AS SEPARATE, ON EVIDENCE
+
+| | |
+|---|---|
+| Rows sharing a retailer URL with another row (314's signature) | 29,603 — **27.6%** of live products |
+| Expected overlap with the 146 if independent | **~40** |
+| **Actual** | **7** |
+
+**Necessary rather than lucky.** Item 314 is **under-grouping** — one product split across many rows.
+These are **over-grouping** — one row holding two products. They are inverse operations, so a product
+already over-grouped is *less* likely to also be under-grouped, and the measured overlap being **six
+times below chance** is what that prediction looks like when it is true.
+
+**Settled on evidence rather than on argument**, which matters because the argument alone would have
+been a plausible story either way.
+
+#### THE CORRECTIONS, WHICH NOW NUMBER FOUR AND BELONG TOGETHER
+
+1. **12,698 → 4,272** — counted **inactive** retailers.
+2. **4,272 → 1,086** — counted zero-padding as disagreement.
+3. **"150–190 grouping errors"** — the price-spread proxy was measuring a broader population.
+4. **"19 confirmed" → 0 confirmed, 2 candidates** — the cluster test flagged importer-vs-UK pricing.
+
+> **THE SHARPEST IS THE LIVENESS ONE.** The subquery filtered `products_active` and never joined
+> `retailers` — and the rule it broke is one I had written down as a memory, *"retailer liveness
+> needs both flags"*, then failed to apply **in the query that tests exactly that**. **A rule you
+> have written down is not a rule you apply.** Item 583's shape, in my own working rather than in
+> the repository's.
+
+Each correction came from looking at the rows rather than the aggregate, and **each one made the
+number smaller.** That direction is not a coincidence: an aggregate over a population you have not
+read will tend to over-count, because every ambiguous member is silently counted in.
+
+#### NICHE BEAUTY: A CLOSED LEAD, WHICH IS A RESULT
+
+39.5% minority-barcode rate against a field of ~24% — nearly double — **and its prices are fine.**
+Across the **1,294** products it shares with another active retailer its median is **1.20× the
+cheapest**, with 5.5% at ≥2× and **8** at ≥5×. **Premium positioning, not defective rows.**
+
+**The eight are the only part worth opening**, and closing the other 1,286 is the useful half of that
+answer.
