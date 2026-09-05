@@ -48752,7 +48752,7 @@ have made the rest invisible.
 **Raised:** 5 September 2026 · **REPORT. Nothing split, nothing written, and the instruction to report
 before splitting is what caught this.** · Supersedes item 591's "19 worth fixing by hand".
 
-#### ★★★ THE CENTRE: WE STORE WHAT EACH RETAILER CHARGES AND NOT WHAT EACH RETAILER SAYS IT IS SELLING
+#### ★★ THE DURABLE FINDING: WE STORE WHAT EACH RETAILER CHARGES AND NOT WHAT EACH RETAILER SAYS IT IS SELLING
 
 | | |
 |---|---|
@@ -48788,7 +48788,21 @@ memory, one assignment away from the row it belongs to.**
 are gone) and therefore whether a column that only fills going forward is worth having, which is a
 decision about how long you are prepared to wait for an audit to become possible.
 
-#### ★★★ AND THE 19 WERE NOT 19. THEY WERE NOT 4 EITHER.
+#### ★★★ THE CENTRE: THE DISCRIMINATOR FLAGGED THE SITE WORKING
+
+Recorded as a standing rule at `docs/standing-rule-unread-population-counts.md`.
+
+> **AN AUDIT FOR OVER-GROUPING CANNOT DISTINGUISH A WRONGLY-MERGED PAIR FROM A GENUINELY WIDE PRICE
+> RANGE**, because both present as two clusters inside one id — **and the wide range is the product
+> rather than the defect.** Three offers on one barcode across a 3.6× spread is one product,
+> correctly grouped, sold at £6 by importers and £22 by UK stockists: **precisely what the platform
+> exists to show.** The signal the audit rests on is the signal the catalogue legitimately produces.
+
+**And nothing in the data would have objected.** No test, no constraint, no later check would have
+fired on splitting fifteen correctly-grouped products. **Reporting for approval rather than splitting
+is what caught it** — not a safeguard, an instruction.
+
+#### AND THE 19 WERE NOT 19. THEY WERE NOT 4 EITHER.
 
 Item 591 reported **19 confirmed grouping errors** and called them worth fixing by hand. **Read
 individually, none of them survives.**
@@ -48879,3 +48893,56 @@ cheapest**, with 5.5% at ≥2× and **8** at ≥5×. **Premium positioning, not 
 
 **The eight are the only part worth opening**, and closing the other 1,286 is the useful half of that
 answer.
+
+---
+
+### 593. A standing rule from a count that fell five times
+
+**Raised:** 5 September 2026 · **RULE RECORDED, no work proposed.** ·
+`docs/standing-rule-unread-population-counts.md`
+
+> **A count of a defect population is an UPPER BOUND until some of it has been read.**
+
+#### WHY IT EARNED A DOCUMENT RATHER THAN A LINE IN AN ITEM
+
+It corrected itself **five times in one thread, every step downward**:
+
+| | count | what the previous one had silently included |
+|---|---|---|
+| 1 | **12,698** | offers from **inactive** retailers |
+| 2 | **4,272** | zero-padding counted as disagreement |
+| 3 | **1,086** | the real disagreement population |
+| 4 | **150–190** | a proxy measuring *"something is wrong here"*, not grouping |
+| 5 | **19** | products whose expensive side was a cluster |
+| 6 | **0 confirmed, 2 candidates** | |
+
+**The direction is not coincidence.** An aggregate over an unread population **over-counts by
+construction**: every ambiguous member is silently included, because **a filter cannot abstain.**
+There is no matching force in the other direction — a filter narrow enough to miss real cases is
+usually narrow enough to be noticed. **The error has a direction, and the direction is up.**
+
+#### THE STEP THAT MATTERS IS THE LAST ONE
+
+Fifteen of the nineteen were one product, correctly grouped, at £6 from importers and £22 from UK
+stockists. **The audit's own signal is the signal the catalogue legitimately produces**, so it could
+nominate and never conclude. Item 592 has the reading.
+
+**Five practical clauses in the rule**, of which the fifth is the general form: *ask what the audit's
+signal looks like when the system is working, and where that is indistinguishable from the defect,
+the audit can only nominate.* That is [[verify-the-world-not-the-claim]] pointed at a detector rather
+than at a claim.
+
+#### WHAT STAYS OPEN, AND IT IS SMALL
+
+- **Two candidates**, Coco & Eve 33721 and Miild 142162 — **two browser tabs, Robbie's**. Not a
+  programme.
+- **The retailer-side name**, item 592's durable finding: a column and a write rather than a fetch,
+  `external_handle` as precedent for the column and none for filling it, **not backfillable because
+  past feed rows are gone.** The bound stands — **the undetermined cases are undetermined because of
+  the column, not the sample, so more products would not help.**
+- **Niche Beauty closed** at a 1.20× median across 1,294 shared products, **eight at ≥5× worth
+  opening.**
+
+**The barcode thread closes here.** It began as *"the largest unexplained figure in the report"* and
+ends with **no confirmed defect, two nominations, one durable schema finding and one standing rule** —
+which is a better outcome than the 12,698 it started from, and unrecognisable as the same question.
