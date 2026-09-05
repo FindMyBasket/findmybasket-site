@@ -82,7 +82,27 @@ export async function findBrandBySlug(slug: string): Promise<BrandLookup | null>
       .order('id')
       .range(offset, offset + PAGE_SIZE - 1);
 
-    if (error || !data || data.length === 0) break;
+    // ── THREE CONDITIONS, TWO MEANINGS, AND THE `break` GAVE THEM ONE ANSWER ──
+    //
+    // This is the only one of item 598's five that is not a copy of a fix already made, because the
+    // collapse is CONTROL FLOW rather than a return value.
+    //
+    // `data.length === 0` means THE PAGES ARE EXHAUSTED -- absent, and `break` is exactly right.
+    // `error` means THE SCAN FAILED PART-WAY. Breaking on it leaves the loop having read some
+    // prefix of the brands and then reporting, through the same `return null` as a genuine miss,
+    // that the brand is not here. A PARTIAL RESULT IS INDISTINGUISHABLE FROM A COMPLETE ONE, which
+    // is item 146's shape -- the right count from the wrong rows -- arriving through an early exit
+    // rather than through pagination.
+    //
+    // The file already records what that costs: "6 of 30 sampled single-product brands were 404ing
+    // live, roughly 60 pages", from the .order() defect a few lines above. Same page, same 404, a
+    // different way of not reading all the rows.
+    //
+    // ABSENT -> break -> null -> app/brands/[slug]/page.tsx:54 still 404s. Unchanged, and it must be.
+    if (error) {
+      throw new Error(`findBrandBySlug(${slug}) scan failed at offset ${offset}: ${error.message}`);
+    }
+    if (!data || data.length === 0) break;
 
     for (const row of data) {
       if (!row.normalised_brand) continue;
@@ -499,10 +519,14 @@ export async function resolveBrandAliasSlug(slug: string): Promise<string | null
   let current = slug;
 
   for (let hop = 0; hop < ALIAS_HOP_CAP; hop++) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('brand_aliases')
       .select('alias, canonical')
       .limit(500);
+    // FAILED -> throw. A failed alias read is not "there is no alias": returning null sends the
+    // caller to notFound(), so an outage would 404 a brand page that has a perfectly good redirect.
+    if (error) throw new Error(`resolveBrandAliasSlug(${slug}) read failed: ${error.message}`);
+    // ABSENT -> null, and BrandPage:63 still 404s. Unchanged.
     if (!data) return null;
 
     const next = data.find(r => r.canonical && brandSlug(r.canonical) !== current

@@ -163,8 +163,21 @@ export async function getEditProducts(
     query = query.eq('product_type', productType);
   }
 
-  const { data: products, count: totalCount } = await query
+  const { data: products, count: totalCount, error } = await query
     .range(offset, offset + candidateLimit - 1);
+
+  // ABSENT vs FAILED. `error` set means THE QUERY FAILED; an empty `products` with no error means
+  // THIS TYPE GENUINELY MATCHES NOTHING. app/edit/[slug]/page.tsx:76 turns the second into a 404,
+  // and until now it turned the first into one too.
+  //
+  // THIS IS BYTE-FOR-BYTE THE GUARD ALREADY FIXED IN getSubcategoryProducts (item 576) -- the same
+  // condition, the same discarded `error`, in a second file. The fix there was written on 4
+  // September and not swept here. Fourth instance this week of a rule applied where it was found
+  // and nowhere else: convention 10's sweep, item 238's .order() rule, item 582's about.html list,
+  // and this. Item 599.
+  if (error) {
+    throw new Error(`getEditProducts read failed for ${edit.slug}: ${error.message}`);
+  }
 
   if (!products || products.length === 0) {
     return { products: [], totalCount: totalCount ?? 0 };

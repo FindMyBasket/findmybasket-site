@@ -49440,3 +49440,88 @@ is worth one review before five changes rather than after.
 **Nothing changed. The order recommended is 5 → 1 → 4 → 2 → 3**: cheapest-and-proven first, then by
 exposure, with the loop-shaped one last because it is the only one that is not a copy of a fix
 already made.
+
+---
+
+### 599. Stage 2 applied: five error-to-404 conversions closed, and the one that nearly went backwards
+
+**Raised and APPLIED:** 5 September 2026 · **All five of item 598's sites, in the order 5 → 1 → 4 →
+2 → 3.** · No `notFound()` guard was touched and no absent branch moved.
+
+#### ★★★ #1 WAS A TRAP, AND THE TRAP WAS THE FIX ITSELF
+
+`getProductById` ended with `if (error || !data) return null;` and the obvious repair is *"read
+`error`, throw on it"*. **That would have been catastrophic**, because of one word further up:
+
+```ts
+.eq('id', id)
+.single();      // ← zero rows is reported as an ERROR (PGRST116)
+```
+
+**`.single()` puts "this product does not exist" and "the database is unreachable" on the same
+channel.** Throwing on `error` would have converted **every genuine missing-product 404 into a 500,
+across 107,260 crawled URLs** — and Google retries a 500 while it removes a 404, so dead URLs would
+have stayed alive and the fix would have been strictly worse than the defect.
+
+> **THE INSTRUCTION TO STATE WHICH CONDITION MEANS ABSENT BEFORE CHANGING ANYTHING IS WHAT CAUGHT
+> IT.** Nothing in the diff would have looked wrong. `if (error) throw` reads as obviously correct in
+> every one of the other four, and it is obviously correct in them.
+
+**Fixed by changing the query rather than the branch**: `.maybeSingle()` returns
+`{ data: null, error: null }` for zero rows and errors only on a real failure, so the split is
+unambiguous and **depends on no error-code string.** Three existing uses in this codebase, one of
+them in the same file.
+
+#### ALL FIVE, WITH THE SPLIT STATED
+
+| | site | **ABSENT** — still 404s | **FAILED** — now throws |
+|---|---|---|---|
+| **5** | `getEditProducts` | `products` empty, no error → `totalCount 0` → `edit/[slug]:76` 404s | `error` set (was discarded entirely) |
+| **1** | `getProductById` | `!data` under `.maybeSingle()` → `null` → `product/[id]:286` 404s | any `error` — which now never means "no such product" |
+| **4** | `getValidSubcategories` | `!data` → `[]` → `SubcategoryPage:63` 404s an unknown slug | `error` set |
+| **2** | `findBrandBySlug` | `data.length === 0` → `break` → pages exhausted → null → `brands/[slug]:54` 404s | `error` mid-scan |
+| **3** | `resolveBrandAliasSlug` | `!data` → `null` → `BrandPage:63` 404s | `error` set (was never read) |
+
+**Every absent branch is unchanged and verified present after the edit.** That half must not move,
+and it did not: a product id that does not exist, a slug that is not a subcategory, a brand with no
+alias and an exhausted page all still 404, which is the correct answer in each case.
+
+#### #2 WAS THE ONLY ONE THAT IS NOT A COPY, BECAUSE THE COLLAPSE IS CONTROL FLOW
+
+```ts
+if (error || !data || data.length === 0) break;    // three conditions, two meanings, one answer
+```
+
+`data.length === 0` means **the pages are exhausted** — `break` is exactly right. `error` means **the
+scan failed part-way**, and breaking on it leaves the loop having read some prefix of the brands and
+then reporting, through the same `return null` as a genuine miss, that the brand is not here.
+
+> **A PARTIAL RESULT IS INDISTINGUISHABLE FROM A COMPLETE ONE** — item 146's shape, the right answer
+> from the wrong rows, arriving through an **early exit** rather than through pagination. The file
+> already records what that costs: *"6 of 30 sampled single-product brands were 404ing live, roughly
+> 60 pages"*, from the `.order()` defect a few lines above. **Same page, same 404, a different way of
+> not reading all the rows.**
+
+#### ★★ THE WEEK'S MOST REPEATED SHAPE, NOW FOUR INSTANCES
+
+**A rule applied where it was found and nowhere else:**
+
+| | the rule | applied at | not applied at |
+|---|---|---|---|
+| 576 | convention 10 — read `error`, classify it apart from empty | two call sites | the other 57 |
+| 238 | every `.range()` must follow `.order()` | the paging helper | a paginator in the same file |
+| 582 | *"a retailer change MUST sweep this block"* | four retailers | the fifth, five times running |
+| **599** | **the empty-type guard must not eat a query failure** | **`getSubcategoryProducts`, 4 Sep** | **`getEditProducts`, byte-for-byte identical, one day later** |
+
+**#5 was a copy-paste of a fix made the previous day into a file nobody looked at when making it.**
+That is the shape, and it is now frequent enough to be the expectation rather than the surprise.
+
+#### VERIFICATION
+
+`tsc` clean, 260 tests pass. All five absent branches confirmed present after the edit; all eleven
+`notFound()` calls across the five files untouched. **The live check is the Vercel build on the PR** —
+locally `next build` cannot complete page collection without Supabase credentials, as recorded in
+item 597.
+
+**Stages 3 and 4 remain**: the fifteen that read `error` and collapse it, then the forty-four. The
+standing rule still applies to the 44.
