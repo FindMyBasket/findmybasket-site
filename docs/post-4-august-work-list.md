@@ -47528,6 +47528,22 @@ omitted The Fragrance Shop, which is on.
 > reader who spot-checks this paragraph will count 13, read 13, and stop — the coincidence buys the
 > list permanent cover. **A wrong number invites a second look; a right one ends the inspection.**
 
+#### ★★★ THE CENTRE IS THE PAIR, NOT THE COUNT
+
+The count being wrong is the symptom and it is the boring half. **The finding is that two
+hand-maintained artefacts drifted together and thereby vouched for each other.**
+
+> **A LONE STALE INTEGER DRIFTS AND IS EVENTUALLY CAUGHT BY SOMEONE WHO KNOWS THE REAL NUMBER.**
+> **A COUNT AND A LIST DRIFTING TOGETHER PRODUCE A CORROBORATING WITNESS.** The reader checks the
+> number against the names, finds them consistent, and concludes the block is maintained. **Two
+> stale artefacts alibi each other**, and the check that feels most like diligence — counting the
+> list — is the one that certifies the error.
+>
+> **AND ACCIDENTAL CORRECTNESS IS THE STATE THAT ENDS INSPECTION RATHER THAN INVITING IT.** A wrong
+> number invites a second look. A right one closes the question. **The coincidence buys the list
+> permanent cover** — every future reader who spot-checks this paragraph counts 13, reads 13, and
+> stops.
+
 #### THE BARE-INTEGER CLASS, ARRIVING IN A PAIR
 
 Item 340 already stated the principle, on this page's sibling: *"A number that becomes right by
@@ -47589,3 +47605,134 @@ MyProtein out, The Fragrance Shop in — **13 names against the 13 marks the hom
 verified against `getListedRetailers`' predicate rather than against the old list. The block's
 comment gains this instance, and states the new failure mode: the number agreeing with the list is
 not evidence either is right.
+
+---
+
+### 583. The guard that would have caught it was disabled by the correct fix to the class it guards
+
+**Raised:** 4 September 2026 · **REPORTED, NOT FIXED. This rescopes item 538 rather than adding to
+it.** · **The answer to "what else is in the second category" is: one file, and a guard already
+covers it.**
+
+Item 582 asked what else carries a hand-typed roster claim. **The better finding was the one
+suspected: the check exists.** `scripts/roster-parity.mts` + `.github/workflows/roster-parity.yml`,
+built **25 August** (`f50a65f`), compares three hand-maintained surfaces against
+`active = true AND unlisted_reason IS NULL` — the exact predicate — weekly on Mondays.
+
+**It parses `about.html`'s `<li>` names AND its prose integer.** Its own header states the failure
+item 582 hit, three weeks before item 582 hit it:
+
+> *"A roster check built that way would catch a count disagreeing with its own list — and **WOULD
+> HAVE PASSED ON 16 AUGUST 2026, when about.html read "11 UK retailers" over a list of 11 and was
+> wrong** because it omitted Niche Beauty."*
+>
+> *"Three surfaces agreeing with each other and all stale is the actual failure mode."*
+
+**It would have caught The Fragrance Shop and MyProtein, in both directions, on names and on count.**
+
+#### ★★★ IT HAS BEEN RED SINCE 31 AUGUST, AND THE THING THAT BROKE IT WAS A CORRECT FIX
+
+Its only scheduled run, ever:
+
+```
+2026-08-31 08:37  schedule  completed/FAILURE
+  cannot_run — a surface parsed empty, which is NOT agreement:
+    work-with-us: could not parse the stat integer
+```
+
+**The parse failed because the integer was deliberately removed, and removing it was right.**
+`39024cf`, 28 August, item 494:
+
+```diff
+-      <span class="stat-num">12</span>
+-      <span class="stat-label">UK retailers currently live</span>
++      <span class="stat-num">Every</span>
++      <span class="stat-label">retailer we carry, compared on price and delivery in one basket</span>
+```
+
+That is **item 340's principle applied correctly** — *"a bare integer was the wrong shape… it drifts
+by construction"* — and the commit did not touch `roster-parity.mts`, which had been built three days
+earlier to parse that exact markup.
+
+> **A GUARD AGAINST STALE HARDCODED NUMBERS WAS DISABLED BY THE REMOVAL OF A STALE HARDCODED
+> NUMBER.** The remediation of one instance of the class destroyed the detector for the whole class.
+> Nothing was done wrong at either step: the guard was right to parse what was there, and the sweep
+> was right to remove it. **What is missing is that the two were three days and one author apart,
+> and no test tied them together.**
+
+#### THE TIMELINE, WHICH IS THE ARGUMENT
+
+| | |
+|---|---|
+| **25 Aug** | roster-parity built, parsing three surfaces including work-with-us's `12` |
+| **28 Aug** | item 494 correctly replaces that `12` with `Every`; the parser is not updated |
+| **31 Aug 08:37** | first and only scheduled run — `cannot_run`, **exit 1, red** |
+| **31 Aug 20:49** | The Fragrance Shop's first import. `about.html` never swept |
+| **4 Sep** | found by hand, while sweeping copy for a different change |
+
+**Four days red, one scheduled run missed, and it is weekly — so the next chance was Monday 7
+September and it would have failed then too.**
+
+#### ★★ THE PREFLIGHT WORKED PERFECTLY. THAT IS NOT THE CONSOLATION IT SOUNDS LIKE
+
+The run did **exactly** what item 255 taught it to: it refused to report parity it could not verify,
+and exited 1 as `cannot_run` rather than 0 as agreement. *"gone-ids-drift.yml reported 'No drift'
+twice while failing to load its own script"* — that lesson held. **The guard did not lie.**
+
+> **AND THE RED WAS NOT READ.** This is the week's fourth absence doing load-bearing work
+> ([[built-correct-and-unwired]]) with the variable changed: 576 was a sweep never run, 579 a table
+> with no reader, 581 a hold with no expiry — **this one was wired, correct, loud, and ignored.** A
+> signal nobody watches is worth what an absent one is worth, and it costs more to build.
+
+#### AND THE ALL-OR-NOTHING PREFLIGHT IS WHY ONE DEAD SURFACE SILENCED A LIVE ONE
+
+`about.html` — the surface that actually drifted — **was never compared**, because the preflight
+aborts the whole run when any surface parses empty. The guard's three surfaces are not equal:
+
+| surface | status | can it drift? |
+|---|---|---|
+| `public/index.html` strip | **308-redirects to `/`, not served.** The live strip renders from `getListedRetailers` | **No** — it cannot drift because nobody sees it |
+| `public/about.html` count + list | **served**, hand-typed | **Yes. This is the only one.** |
+| `public/work-with-us.html` integer | **served**, but the integer is gone by design | **No claim left to check** |
+
+**One dead surface, one real one, and one that correctly stopped making a claim — and the third
+kills the run before the second is reached.** It is also item 567's shape again: *"the parity test
+guards the one static nav nobody can reach"*, now with the roster strip.
+
+#### THE POPULATION, MEASURED — THE SECOND CATEGORY IS ONE FILE
+
+Swept every `public/*.html`, `public/articles/*.html`, `app/**` and `components/**` for surfaces
+naming three or more live retailers, then classified each:
+
+- **`public/about.html` — the only served surface making a hand-typed roster claim** (prose count +
+  `<li>` list). Everything else is out:
+- `public/index.html` — guarded but **not served** (308).
+- `public/work-with-us.html` — **no longer makes a count claim** (correctly).
+- `public/savings-hub.html`, three articles — retailer names in **article titles and editorial
+  prose**, not roster claims. Frozen-catalogue class, different item.
+- `app/product/[id]/page.tsx` — six retailer names, **all in code comments**.
+
+> **SO ITEM 538 SHOULD NOT SCOPE A NEW CHECK.** The second category is one file, and a guard that
+> parses it correctly already exists. **The work is repairing a guard, not writing one** — which is
+> a much smaller decision than the one 538 was about to take.
+
+#### WHAT ITEM 538 SHOULD DECIDE, RESTATED
+
+A `retailers.active` change has to fire two different kinds of thing, and only the first is in
+538's current scope:
+
+1. **Revalidation, for rendered surfaces.** Homepage count and strip. **Twice confirmed** —
+   1 September and 4 September, both corrected by a hand-called `fmb_revalidate_paths`. This is what
+   538 already describes and it is still right.
+2. **A failing check, for hand-maintained files.** **No trigger can ever reach these**, because the
+   staleness is in a file rather than a cache — a deploy is the only correction. **This does not
+   need building. It needs `roster-parity` green.**
+
+**Three repairs, all small, none applied here:** update the work-with-us parse to match a surface
+that no longer carries an integer (or drop that surface, since it no longer makes a claim); decide
+whether the unserved `index.html` strip is still worth guarding; and make the preflight per-surface,
+so an unparseable surface cannot suppress a comparison the guard *can* make.
+
+**And the schedule is the fourth question.** Weekly, on Mondays, means a retailer going live on a
+Monday evening is unguarded for six days — **which is exactly what happened**. A roster change is an
+event, and the check belongs on it as well as on a clock.
