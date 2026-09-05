@@ -48043,6 +48043,13 @@ The database is the one place every writer already passes through.
 | **resolve** (open → not open) | unchanged | **held** — a resolution is not a sighting | kept |
 | **re-open** (resolved → open) | **reset to 1** | now | **reset** — a new occurrence |
 
+**★ THE DISTINCTION THAT MAKES THE THREE PATHS RIGHT RATHER THAN CONVENIENT IS THAT A RESOLUTION IS
+NOT A SIGHTING.** Without it, all three are just "an UPDATE happened" and any rule for them is
+arbitrary. With it, each path follows: a resolve must not increment a *sighting* count and must not
+move a *last seen* timestamp, because the finding was not seen — it was closed. A re-report was
+seen, so both move. A re-open was seen for the first time again, so both reset. **The column names
+were already the specification; nothing was choosing to honour them.**
+
 Re-open resets deliberately: a returning finding inheriting an old count would **escalate on history
 rather than on neglect**, and ESCALATED is a claim about the present. Coverage rows stay pinned at 1
 as before, but their `last_seen` now moves, because *"when was this last confirmed"* is a real
@@ -48061,17 +48068,29 @@ resolve                         -> report_count 4 held, last_seen HELD, resolved
 re-open                         -> report_count 1, resolved_at null, first_seen reset
 ```
 
-**One assertion of mine was wrong and the trigger was right.** `first_seen = last_seen` after three
-same-transaction re-reports looked like a failure; `now()` is transaction time, so it is a property
-of the test, not the trigger. The separate-transaction run is what shows the column moving. **A test
-harness can fail in the direction of a false alarm as easily as a false pass.**
+**★ ONE ASSERTION OF MINE WAS WRONG AND THE TRIGGER WAS RIGHT.** `first_seen = last_seen` after three
+same-transaction re-reports looked like the fix had failed. It had not: **`now()` is transaction
+time**, so three re-reports inside one statement necessarily share it. The failure was in the
+harness, and the separate-transaction run is what shows the column moving by ten seconds.
+
+> **A HARNESS CAN FAIL TOWARD A FALSE ALARM AS EASILY AS A FALSE PASS**, and the false alarm is the
+> one that gets believed here, because it arrives wearing the shape of diligence — a check that
+> *found something* reads as a check that worked. **The next move after a harness reports a failure
+> is the same as after it reports a pass: ask what the instrument would have said if the thing under
+> test were correct.** Had that assertion been trusted, the repair would have been "fixed" a second
+> time, against a defect that was never there.
 
 #### WHAT THIS DOES NOT DO
 
 **The 54 existing rows still read `report_count = 1`**, and correctly — none has been re-offered
-since the trigger existed. They begin counting at each check's next run. **Nothing is backfilled**:
-inventing a count for sightings that were never recorded would put a number on the exact history
-this item exists because we do not have.
+since the trigger existed. They begin counting at each check's next run.
+
+> **★ NOTHING IS BACKFILLED, AND THAT IS THE CALL RATHER THAN AN OMISSION. Inventing a count for
+> sightings that were never recorded would put a number on the exact history this item exists
+> because we do not have.** A row from 24 August could be given a plausible 6, and the 6 would be
+> arithmetic on the schedule, not evidence of six sightings — a manufactured measurement in the
+> table whose whole defect was that it measured nothing. The honest state is a real 1 that starts
+> counting today.
 
 #### REPAIRS 2 AND 3 ARE WORTH DOING AND ARE NOT THIS
 
@@ -48115,3 +48134,85 @@ They are precisely the divergences accrued **since** item 235's baseline — the
 to stop growing, still growing. **They stay item 235's reconciliation.** Folding them into a findings
 tidy-up would be **the third time this week a real backlog was moved rather than answered**, after
 `?other=1` and the convention 10 sweep.
+
+---
+
+### 587. Six items from one 404, none of them on any list this morning
+
+**Raised:** 5 September 2026 · **RECORD. No work proposed.** · Written because the chain was not
+planned and would not be reconstructable from the six items read separately.
+
+#### THE CHAIN
+
+| | | found by |
+|---|---|---|
+| | a 404 on a supplements chip | reported |
+| **576** | an error being converted into a 404 | measuring why the 404 happened |
+| **576** | convention 10 unswept, **59 of 98** call sites | reading the rule the fix cited |
+| **583** | a guard red since **31 August** | asking what else carried a typed list |
+| **584** | a channel measured unread on **18 August** | asking what reads a red run |
+| **586** | an escalation rule that could never fire | asking what the unread channel escalates to |
+
+**Every one was found by following the previous one.** Not one was on a list this morning, and the
+last three are about the machinery that was supposed to surface the first three.
+
+> **THE CHAIN RUNS TOWARDS THE INSTRUMENTS.** It starts at a page a visitor sees and ends at the
+> condition a monitor tests for. Each step was a question about *why the previous defect had not
+> been caught*, and each answer was a mechanism that existed, was correct, and was not connected to
+> anything — [[built-correct-and-unwired]]. **Four days of catalogue growth surfaced six defects,
+> five of them older than the growth.**
+
+#### ★★ THE INSTRUMENT TALLY, CORRECTED — THEY DID NOT FAIL IN ONE DIRECTION
+
+The day's summary was put to me as *"four instruments failing toward a false negative and none the
+other way until now."* **Counted, it is neither four nor one-directional.** Five instrument failures,
+in both directions, and the false alarms outnumber the false negatives:
+
+| | direction | what it reported | what was true |
+|---|---|---|---|
+| zsh ate `--include=*.ts` | **false negative** | 0 supabase calls in every directory | 100 call sites |
+| `grep 'href=".*articles"'` | **false negative** | 0 article links on the savings hub | 18 cards, navigating by `onclick` |
+| first unchecked-call classifier | **false alarm** | 51 unchecked call sites | 44 — it counted query builders and fire-and-forget writes |
+| `not_reseen_in_7d` on findings | **false alarm** | 9 rows gone stale | 0 — `last_seen` never moves, so it measured insert age |
+| `first_seen = last_seen` assertion | **false alarm** | the new trigger had failed | it was correct; `now()` is transaction time |
+
+**Two toward a false negative, three toward a false alarm.** So *"instruments here fail toward
+missing things"* is not the lesson, and believing it would be the more dangerous conclusion — it
+licenses trusting any instrument that *does* report something.
+
+> **THE PATTERN IS NOT DIRECTION, IT IS SHAPE.** Every one of the five produced a **well-formed
+> answer to a question nobody asked**: a zero from a pattern that could not match, a count from a
+> filter selecting the wrong rows, a failure from an assertion about the wrong clock. **None of them
+> errored.** [[grep-html-as-text-false-alarm]], [[empty-population-filter]].
+>
+> **So the check is the same in both directions: ask what the instrument would print if the thing
+> under test were correct — and if that is indistinguishable from what it just printed, the
+> instrument has told you nothing.** A false alarm costs a second fix to a defect that was never
+> there; a false negative costs the finding. Both are cheap to catch and neither announces itself.
+
+#### AND FIVE OF THE SIX WERE FOUND WHILE LOOKING AT SOMETHING ELSE
+
+576 was reported. **577 was found sweeping copy before a retailer change. 579 while answering a
+question about a monitor. 583 while asking what else carried a typed list. 584 while asking who
+reads a red run. 586 while measuring a table nobody had counted.** The one that was reported is the
+only one a visitor could see; the five behind it were all invisible by construction, and each was
+one question deeper than the last.
+
+**That is the argument for the questions rather than for the fixes.** Each answer was cheap once
+asked. Nothing on this list would have been found by looking harder at the 404.
+
+#### OPEN AND UNCHANGED AT THE END OF THE DAY
+
+Stated so the six items are not mistaken for a closed set:
+
+| | |
+|---|---|
+| **Beauty Flash `fid 87846`** | Robbie's, with AWIN. Tomorrow's 09:00 email now says **31 days frozen** rather than 33 hours stale |
+| **Item 314** | unlanded, and now holding a switched-off retailer rather than a guard (item 581) |
+| **The two sweeps** | convention 10's error handling, **59 of 98**; and item 567's **19 frozen static navs** |
+| **Repairs 2 and 3** | three of four writers cannot close a row; `kind` has two values for three types (item 586) |
+| **The offers page and social output** | held, per Robbie |
+| **The savings hub** | nav frozen at the Stage-1 triple (567) and header skincare-only on a six-category site (577) |
+
+**Six merged, and none of the six closes any of these.** The day moved the machinery that finds
+things, not the backlog of things found.
