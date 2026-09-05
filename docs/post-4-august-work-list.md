@@ -47997,3 +47997,121 @@ cannot be triaged, only re-derived.**
 **Not done here.** The measurement says what the table contains; what to do about 47 real
 divergences is a separate decision, and doing it under the heading of "tidying a findings table"
 would be the third time this week that a real backlog got moved rather than answered.
+
+---
+
+### 586. Escalation at three was not a rule that had not fired — it was a state the table could not reach
+
+**Raised and APPLIED:** 5 September 2026 · **Repair 1 of item 585's four, and only repair 1.**
+· `20260905103056`
+
+#### ★★★ THE CENTRE
+
+`monitor-retailer-feeds` renders **ESCALATED** at `report_count >= 3`, and its own copy says what
+that means:
+
+> *"A finding reported **3 times** and still open turns the detector red: that is not a judgement
+> that the finding is severe, it means **this channel is not working**."*
+
+**`report_count` was 1 on all 54 rows that have ever existed.** `first_seen = last_seen` on all 54.
+The checks upsert through PostgREST with `resolution=merge-duplicates`, which issues
+`ON CONFLICT DO UPDATE SET <the payload's columns>` — and **neither column is in any payload**, so
+`DO UPDATE` left both at their insert values, for every check, since 19 August.
+
+> **A GUARD WHOSE OWN TRIGGER CONDITION IS UNATTAINABLE IS NOT A GUARD THAT HAS NOT FIRED. IT IS ONE
+> THAT CANNOT.** The distinction is the whole item. "Never escalated" reads as *nothing has been
+> neglected for three cycles*, which is reassuring and is a statement about the world. The truth was
+> a statement about the schema, and it was **unfalsifiable**: no history of neglect, however long,
+> could ever have produced the state the rule tests for.
+>
+> **AND IT IS ITEM 584's SHAPE ONE LAYER UP.** There, a guard reported to a channel item 191 had
+> already measured as unread. Here, **the escalation designed to detect exactly that — a channel
+> nobody is reading — was itself unreachable.** The detector of unread detectors was undetectable.
+
+#### THE FIX, AND WHY IT IS A TRIGGER
+
+Four writers upsert into this table and three are not being changed today. Putting `last_seen` and an
+incremented count into each payload means **four places that must agree, computed client-side**, and
+a check written next month gets it wrong by omission — **which is exactly how this defect arrived.**
+The database is the one place every writer already passes through.
+
+**Three UPDATE paths, which are not the same event:**
+
+| path | count | `last_seen` | `first_seen` |
+|---|---|---|---|
+| **re-report** (open → open) | **+1** | moves | **kept** — it is the age of the problem |
+| **resolve** (open → not open) | unchanged | **held** — a resolution is not a sighting | kept |
+| **re-open** (resolved → open) | **reset to 1** | now | **reset** — a new occurrence |
+
+Re-open resets deliberately: a returning finding inheriting an old count would **escalate on history
+rather than on neglect**, and ESCALATED is a claim about the present. Coverage rows stay pinned at 1
+as before, but their `last_seen` now moves, because *"when was this last confirmed"* is a real
+question about a standing population statement.
+
+#### VERIFIED BY DRIVING ALL THREE PATHS, BECAUSE A PASSING CHECK PROVES NONE OF THEM
+
+Item 584's standard, applied to its own repair. Exercised against the live table with the exact
+statement shape PostgREST issues, then deleted:
+
+```
+insert                          -> report_count 1
+re-report x2 (same txn)         -> report_count 3   ESCALATED reachable
+re-report (separate txn)        -> report_count 4,  last_seen > first_seen by 10s
+resolve                         -> report_count 4 held, last_seen HELD, resolved_at later than it
+re-open                         -> report_count 1, resolved_at null, first_seen reset
+```
+
+**One assertion of mine was wrong and the trigger was right.** `first_seen = last_seen` after three
+same-transaction re-reports looked like a failure; `now()` is transaction time, so it is a property
+of the test, not the trigger. The separate-transaction run is what shows the column moving. **A test
+harness can fail in the direction of a false alarm as easily as a false pass.**
+
+#### WHAT THIS DOES NOT DO
+
+**The 54 existing rows still read `report_count = 1`**, and correctly — none has been re-offered
+since the trigger existed. They begin counting at each check's next run. **Nothing is backfilled**:
+inventing a count for sightings that were never recorded would put a number on the exact history
+this item exists because we do not have.
+
+#### REPAIRS 2 AND 3 ARE WORTH DOING AND ARE NOT THIS
+
+**2 — three of four writers cannot close a row.** `migration-ledger`, `brand-hub-programmes` and
+`re-derive-asins` write and never resolve; only `roster-parity` can, since yesterday. **Three checks
+can raise and none can close.** `roster-parity`'s resolve pass is six lines and `migration-ledger`
+needs it most, holding 47 of the 53 open rows. Scoped, not written.
+
+**3 — `kind` has two values and the table holds three types.** A **hold** is a `finding` wearing a
+`held:` key prefix, read only by item 290's write guard:
+
+| type | marked by | should it close? |
+|---|---|---|
+| finding | `kind='finding'` | yes — it is work |
+| coverage | `kind='coverage'` | no — a standing population statement |
+| **hold** | **a key prefix, not a column** | **no — a deliberate decision** |
+
+**So "53 open findings" overstates the work by five** — three coverage rows and two permanent
+standing decisions. A count that mixes work with decisions cannot be triaged, only re-derived.
+**This one is a vocabulary change and it is a decision**, not a repair: either a third `kind`, or the
+monitor excluding `held:`.
+
+#### AND THE TRIAGE ANSWER IS GOOD NEWS, WHICH IS WORTH SAYING PLAINLY
+
+**Zero stale rows. Every open finding is still true.** The fear was an archive of dead findings and
+it is not that: 45 `remote_only` versions have no local file, 2 `local_only` versions are absent from
+the ledger, the name-hygiene defect is still gated, and the remaining five were never going to close.
+**It is a queue and the queue is real.**
+
+**Two independent methods agree on 2 and 45** — testing each finding key against the filesystem and
+the ledger, and the table's own coverage arithmetic (119−117, 170−125). [[calibration-frame-method]].
+
+> **AND WHAT IT COST TO ESTABLISH IS THE POINT.** Answering "is this a queue or an archive" required
+> **re-deriving all 47 by hand — which is the check re-run.** The table contributed nothing to the
+> question it exists to answer, because **an archive and a queue render identically from it.** That
+> is the defect repair 1 begins to close: after this, a row that keeps being found says so.
+
+#### THE 47 ARE NOT A TIDYING JOB
+
+They are precisely the divergences accrued **since** item 235's baseline — the thing that rule exists
+to stop growing, still growing. **They stay item 235's reconciliation.** Folding them into a findings
+tidy-up would be **the third time this week a real backlog was moved rather than answered**, after
+`?other=1` and the convention 10 sweep.
